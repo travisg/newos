@@ -1715,7 +1715,7 @@ int vm_page_fault(addr address, addr fault_address, bool is_write, bool is_user,
 	return INT_NO_RESCHEDULE;
 }
 
-#define TRACE_PFAULT 1
+#define TRACE_PFAULT 0
 
 #if TRACE_PFAULT
 #define TRACE dprintf("in pfault at line %d\n", __LINE__)
@@ -1737,8 +1737,8 @@ static int vm_soft_fault(addr address, bool is_write, bool is_user)
 	int change_count;
 	int err;
 
-	dprintf("vm_soft_fault: thid 0x%x address 0x%x, is_write %d, is_user %d\n",
-		thread_get_current_thread_id(), address, is_write, is_user);
+//	dprintf("vm_soft_fault: thid 0x%x address 0x%x, is_write %d, is_user %d\n",
+//		thread_get_current_thread_id(), address, is_write, is_user);
 
 	address = ROUNDOWN(address, PAGE_SIZE);
 

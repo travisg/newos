@@ -39,8 +39,11 @@ static int sh4_handle_exception(void *_frame)
 	// NOTE: not safe to do anything that may involve the FPU before
 	// it is certain it is not an fpu exception
 
-	dprintf("sh4_handle_exception: frame 0x%x code 0x%x, pc 0x%x, ssr 0x%x, sr 0x%x\n",
-		frame, frame->excode, frame->spc, frame->ssr, get_sr());
+//	dprintf("sh4_handle_exception: frame 0x%x code 0x%x, pc 0x%x, ssr 0x%x, sr 0x%x, pr 0x%x\n",
+//		frame, frame->excode, frame->spc, frame->ssr, get_sr(), frame->pr);
+//	dprintf("regs: 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x\n",
+//		frame->r0, frame->r1, frame->r2, frame->r3, frame->r4, frame->r5, frame->r6, frame->r7,
+//		frame->r8, frame->r9, frame->r10, frame->r11, frame->r12, frame->r13, frame->r14, frame->sgr);
 	switch(frame->excode) {
 		case 0:  // reset
 		case 1:  // manual reset
@@ -54,6 +57,12 @@ static int sh4_handle_exception(void *_frame)
 			ret = general_protection_fault(frame->excode);
 			break;
 		case 11:  { // TRAPA
+			/*
+			** arg layout:
+			** r4-r7:  arg 1 - 4
+			** r0-r3:  arg 5 - 8
+			** r8-r13: arg 8 - 13
+			*/
 			unsigned int *trap = (unsigned int *)0xff000020;
 			uint64 retcode;
 			unsigned int args[MAX_ARGS];
@@ -113,12 +122,10 @@ static int sh4_handle_exception(void *_frame)
 		case EXCEPTION_PAGE_FAULT_READ:
 		case EXCEPTION_PAGE_FAULT_WRITE: {
 			addr newip;
-/*
-			if(!(frame->ssr & 0x000000f0)) {
-				dprintf("page_fault: enabling interrupts\n");
+			if((frame->ssr & 0x000000f0) == 0) {
+//				dprintf("page_fault: enabling interrupts\n");
 				int_enable_interrupts();
 			}
-*/
 			ret = vm_page_fault(frame->page_fault_addr, frame->spc,
 				frame->excode == EXCEPTION_PAGE_FAULT_WRITE, (frame->ssr & 0x40000000) == 0, &newip);
 			if(newip != 0)
@@ -138,6 +145,8 @@ static int sh4_handle_exception(void *_frame)
 	if(!(frame->ssr & 0x40000000) || (frame->excode == 11)) {
 		thread_atkernel_exit();
 	}
+
+//	dprintf("sh4_handle_exception: exit\n");
 
 	return 0;
 }

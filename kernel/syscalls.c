@@ -32,8 +32,8 @@
 
 int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_ret)
 {
-//	dprintf("syscall_dispatcher: call 0x%x, arg0 0x%x, arg1 0x%x arg2 0x%x arg3 0x%x arg4 0x%x\n",
-//		call_num, arg0, arg1, arg2, arg3, arg4);
+//	dprintf("syscall_dispatcher: thread 0x%x call 0x%x, arg0 0x%x, arg1 0x%x arg2 0x%x arg3 0x%x arg4 0x%x\n",
+//		thread_get_current_thread_id(), call_num, arg0, arg1, arg2, arg3, arg4);
 
 	switch(call_num) {
 		case SYSCALL_NULL:
@@ -83,12 +83,6 @@ int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_re
 			break;
 		case SYSCALL_WSTAT:
 			*call_ret = user_wstat((const char *)arg0, (struct file_stat *)arg1, (int)arg2);
-			break;
-		case SYSCALL_GETCWD:
-			*call_ret = user_getcwd((char*)arg0, (size_t)arg1);
-			break;
-		case SYSCALL_SETCWD:
-			*call_ret = user_setcwd((const char*)arg0);
 			break;
 		case SYSCALL_SYSTEM_TIME:
 			*call_ret = system_time();
@@ -171,6 +165,12 @@ int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_re
 			break;
 		case SYSCALL_GET_CURRENT_PROC_ID:
 			*call_ret = proc_get_current_proc_id();
+			break;
+		case SYSCALL_GETCWD:
+			*call_ret = user_getcwd((char*)arg0, (size_t)arg1);
+			break;
+		case SYSCALL_SETCWD:
+			*call_ret = user_setcwd((const char*)arg0);
 			break;
 		default:
 			*call_ret = -1;

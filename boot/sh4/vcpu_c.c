@@ -9,10 +9,16 @@
 #include <libc/string.h>
 #include <arch/sh4/sh4.h>
 
-#define CHATTY_TLB 1
+#define SAVE_CPU_STATE 0
+
+#define ROUNDUP(a, b) (((a) + ((b)-1)) & ~((b)-1))
+
+#define CHATTY_TLB 0
 
 extern vcpu_struct kernel_struct;
-
+#if SAVE_CPU_STATE
+extern unsigned int last_ex_cpu_state[];
+#endif
 unsigned int next_utlb_ent = 0;
 
 unsigned int vector_base();
@@ -21,6 +27,8 @@ unsigned int boot_stack[256] = { 0, };
 void vcpu_clear_all_itlb_entries();
 void vcpu_clear_all_utlb_entries();
 void vcpu_dump_utlb_entry(int ent);
+void vcpu_dump_all_itlb_entries();
+void vcpu_dump_all_utlb_entries();
 
 unsigned int get_sr();
 void set_sr(unsigned int sr);
@@ -69,6 +77,53 @@ asm(
 "	rts\n"
 "	nop\n"
 );
+
+#if SAVE_CPU_STATE
+static void dump_cpu_state()
+{
+	int i;
+	unsigned int *stack;
+	unsigned int *stack_top;
+
+	dprintf("dump_cpu_state entry\n");
+
+	dprintf("registers:\n");
+	for(i=0; i<16; i++) {
+		dprintf("r%d 0x%x\n", i, last_ex_cpu_state[i]);
+	}
+	dprintf("gbr 0x%x\n", last_ex_cpu_state[16]);
+	dprintf("mach 0x%x\n", last_ex_cpu_state[17]);
+	dprintf("macl 0x%x\n", last_ex_cpu_state[18]);
+	dprintf("pr 0x%x\n", last_ex_cpu_state[19]);
+	dprintf("spc 0x%x\n", last_ex_cpu_state[20]);
+	dprintf("sgr 0x%x\n", last_ex_cpu_state[21]);
+	dprintf("ssr 0x%x\n", last_ex_cpu_state[22]);
+	dprintf("fpul 0x%x\n", last_ex_cpu_state[23]);
+	dprintf("fpscr 0x%x\n", last_ex_cpu_state[24]);
+
+	stack = (unsigned int *)(get_sgr() - 0x200);
+	stack_top = (unsigned int *)ROUNDUP((unsigned int)stack, PAGE_SIZE);
+	dprintf("stack at 0x%x to 0x%x\n", stack, stack_top);
+	// dump the stack
+	for(;stack < stack_top; stack++)
+		dprintf("0x%x\n", *stack);
+
+	dprintf("utlb entries:\n");
+	vcpu_dump_all_utlb_entries();
+	dprintf("itlb entries:\n");
+	vcpu_dump_all_itlb_entries();
+
+
+	for(;;);
+}
+#endif
+int reentrant_fault()
+{
+	dprintf("bad reentrancy fault\n");
+	dprintf("spinning forever\n");
+	for(;;);
+	return 0;
+}
 
 static int default_vector(void *_frame)
 {
@@ -200,6 +255,9 @@ unsigned int tlb_miss(unsigned int excode, unsigned int pc)
 #if CHATTY_TLB
 	dprintf("tlb_miss: excode 0x%x, pc 0x%x, sgr 0x%x, fault_address 0x%x\n", excode, pc, get_sgr(), fault_addr);
 #endif
+
+//	if(fault_addr == 0 || pc == 0 || get_sgr() == 0)
+//		dump_cpu_state();
 
 	if(fault_addr >= P1_AREA) {
 		pd = (struct pdent *)kernel_struct.kernel_pgdir;
@@ -382,7 +440,7 @@ void vcpu_dump_all_utlb_entries()
 {
 	int i;
 
-	for(i=0; i<4; i++) {
+	for(i=0; i<64; i++) {
 		vcpu_dump_utlb_entry(i);
 	}
 }

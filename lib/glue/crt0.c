@@ -7,8 +7,8 @@ extern int __stdio_deinit();
 extern int __heap_init();
 extern void sys_exit(int retcode);
 
-extern unsigned long __ctor_list;
-extern unsigned long __ctor_end;
+extern unsigned long __ctor_list[];
+extern unsigned long *__ctor_end;
 
 extern int main();
 
@@ -33,10 +33,11 @@ int _start()
 void _call_ctors()
 {
 	void (*f)();
+	int i;
 
-	for((unsigned long)f = __ctor_list; (unsigned long)f <= __ctor_end; f++) {
-		if(f)
-			f();
+	for(i = 0; (unsigned long)&__ctor_list[i] < (unsigned long)&__ctor_end; i++) {
+		f = (void *)__ctor_list[i];
+		f();
 	}
 }
 

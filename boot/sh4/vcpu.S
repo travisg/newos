@@ -2,6 +2,9 @@
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
+
+#define SAVE_CPU_STATE 0
+
 .text
 .align 2
 
@@ -98,6 +101,62 @@ TLB_miss_ent:
 	shlr2	r4
 	shlr	r4			/* shift the exception code over 5 bits */
 
+#if SAVE_CPU_STATE
+	/* dump the entire cpu state */
+	mov.l	cpu_state_addr,r0
+
+	stc		r0_bank,r1
+	mov.l	r1,@(0,r0)
+	stc		r1_bank,r1
+	mov.l	r1,@(4,r0)
+	stc		r2_bank,r1
+	mov.l	r1,@(8,r0)
+	stc		r3_bank,r1
+	mov.l	r1,@(12,r0)
+	stc		r4_bank,r1
+	mov.l	r1,@(16,r0)
+	stc		r5_bank,r1
+	mov.l	r1,@(20,r0)
+	stc		r6_bank,r1
+	mov.l	r1,@(24,r0)
+	stc		r7_bank,r1
+	mov.l	r1,@(28,r0)
+
+	mov.l	r8,@(32,r0)
+	mov.l	r9,@(36,r0)
+	mov.l	r10,@(40,r0)
+	mov.l	r11,@(44,r0)
+	mov.l	r12,@(48,r0)
+	mov.l	r13,@(52,r0)
+	mov.l	r14,@(56,r0)
+
+	mov.l	r15,@(60,r0)
+
+	add		#64,r0
+
+	stc		gbr,r1
+	mov.l	r1,@(0,r0)
+	sts		mach,r1
+	mov.l	r1,@(4,r0)
+	sts		macl,r1
+	mov.l	r1,@(8,r0)
+	sts		pr,r1
+	mov.l	r1,@(12,r0)
+
+	stc		spc,r1
+	mov.l	r1,@(16,r0)
+	stc		sgr,r1
+	mov.l	r1,@(20,r0)
+	stc		ssr,r1
+	mov.l	r1,@(24,r0)
+
+	sts		fpul,r1
+	mov.l	r1,@(28,r0)
+	sts		fpscr,r1
+	mov.l	r1,@(32,r0)
+
+#endif
+
 	/* we can stay on reg bank 1, switch to a tlb stack */
 	mov.l	tlb_stack_addr2,r15
 
@@ -162,6 +221,9 @@ tea_addr2:	.long	0xff00000c
 expevt_addr2:	.long	0xff000024
 tlb_miss_handler:	.long	_tlb_miss
 tlb_stack_addr2:	.long	tlb_stack_end-4
+#if SAVE_CPU_STATE
+cpu_state_addr:	.long	_last_ex_cpu_state
+#endif
 
 TLB_miss_ent_end:
 	.skip 0x200-(TLB_miss_ent_end-TLB_miss_ent)
@@ -171,45 +233,78 @@ interrupt_ent:
 	shlr2	r0
 	shlr	r0			/* shift the exception code over 3 bits */
 
+	/*
+	** args to here are
+	** r0: exception number (shifted left 3 bits from the cpus version
+	** r1: page fault address (if applicable, it still gets saved)
+	*/
 switch_banks_and_enter_kernel:
 	/* disable interrupts */
 	mov.l	imask,r3
-	stc	sr,r2
-	or	r3,r2
-	ldc	r2,sr
+	stc		sr,r2
+	or		r3,r2
+	ldc		r2,sr
 
+	/* check to see if we are not already using the saved_* locations */
+	mov.l	is_pushing_registers,r2
+	mov		#1,r3
+	and		r2,r3
+	bf		_save_regs
+
+	/* okay, we are in a bad state right now.
+	** apparently we were already in the process of moving saved registers
+	** from the saved_* locations. This will happen if we take a page fault
+	** while pushing registers to the kernel stack, for example. We are toast.
+	*/
+	mov.l	tlb_stack_addr3,r15
+	mov.l	reentrant_fault_handler,r2
+	jsr		@r2
+	nop
+
+_save_regs:
 	/* save the saved registers into memory */
+	/* this ends up with the important registers in saved_spc and friends */
+	mov.l	is_pushing_registers_addr,r2
+	mov		#1,r3
+	mov.l	r3,@r2
+
 	mov.l	save_stack,r2
 	stc.l	spc,@-r2
 	stc.l	ssr,@-r2
 	stc.l	sgr,@-r2
 	mov.l	r0,@-r2			/* put the modified exception code there too */
-	mov.l	r1,@-r2			/* put the saved page fault address on the stack */
+	mov.l	r1,@-r2			/* put the saved page fault address */
 
 	/* see if we need to load the kernel stack or stay on the current one */
-	stc	ssr,r0
+	stc		ssr,r0
 	mov.l	md_bit_mask,r1
-	and	r1,r0
+	and		r1,r0
 	cmp/eq	r1,r0
-	bt	_keep_current_stack
+	bt		_keep_current_stack
 	nop
 
 	/* we need to set the stack because we came from user space */
 	mov.l	kstack,r15
-	bra	_have_set_stack
+	bra		_have_set_stack
 	nop
 
 _keep_current_stack:
-	stc	sgr,r15
+	stc		sgr,r15
 
 _have_set_stack:
 	/* enable exceptions & swap banks back to 0 */
 	mov.l	bl_rb_bit_mask,r0
-	stc	sr,r1
-	and	r0,r1
-	ldc	r1,sr
+	stc		sr,r1
+	and		r0,r1
+	ldc		r1,sr
 
-	/* at this point, we may take a TLB exception */
+	/*
+	** From now on we can take exceptions, though taking any between now
+	** and the time at which we move saved stuff out of saved_sgr and other
+	** fixed save points would be fatal. We are only pushing it on the kernel
+	** stack, which has to be present always anyway, so its not a problem, since
+	** a page fault is the only one we can realistically take right now anyway.
+	*/
 
 	/* start pushing registers */
 	mov.l	r8,@-r15
@@ -288,6 +383,12 @@ _after_r0r7_save:
 	mov.l	saved_pfault,r12
 	mov.l	r12,@-r15
 
+	/* record that we are not in a critical section now where we cant */
+	/* take an exception */
+	mov.l	is_pushing_registers_addr,r2
+	mov		#0,r3
+	mov.l	r3,@r2
+
 	/* arg1: address of the iframe */
 	mov		r15,r4
 
@@ -297,6 +398,12 @@ _after_r0r7_save:
 	mov.l	@(r0,r2),r1
 	jsr	@r1
 	nop
+
+	/* entering a critical section now where we cant */
+	/* take an exception */
+	mov.l	is_pushing_registers_addr,r2
+	mov		#1,r3
+	mov.l	r3,@r2
 
 	/* restore everything and get outta here */
 	add		#0x8,r15		/* pop the pfault and excode data from the stack */
@@ -313,7 +420,6 @@ _after_r0r7_save:
 	lds.l	@r15+,macl
 	lds.l	@r15+,mach
 	ldc.l	@r15+,gbr
-
 
 	/* restore the floating point registers */
 	lds.l	@r15+,fpscr
@@ -391,23 +497,30 @@ _after_r0r7_restore:
 	ldc	r15,ssr
 	mov.l	saved_sgr,r15
 
+	/* record that we are not in a critical section now where we cant */
+	/* take an exception */
+	mov.l	is_pushing_registers_addr,r2
+	mov		#0,r3
+	mov.l	r3,@r2
+
 	/* get out of here */
 	rte
 	nop
 
 .align 2
+reentrant_fault_handler:	.long	_reentrant_fault
 modified_sr_addr:	.long	modified_sr
 vector_table_addr: .long	vector_table
 trap_exception:	.long	0x2c
 vector_base_addr: .long	_vector_base
 md_bit_mask:	.long	0x40000000
 bl_rb_bit_mask:	.long	0xcfffffff
-save_stack:	.long	saved_spc+4
 saved_page_fault_addr: .long	saved_pfault
 saved_excode_addr: .long	saved_excode
 saved_spc_addr:	.long	saved_spc
 saved_ssr_addr:	.long	saved_ssr
 saved_sgr_addr:	.long	saved_sgr
+tlb_stack_addr3:	.long	tlb_stack_end-4
 intevt_addr:	.long	0xff000028
 tra_addr:	.long	0xff000020
 imask:		.long	0x000000f0
@@ -423,7 +536,13 @@ saved_ssr:	.long	0
 saved_spc:	.long	0		/* these four addresses are used to
 					save the saved registers while we switch to another
 					stack and register set */
+save_stack:	.long	saved_spc+4
 modified_sr:	.long	0
+
+/* stores whether or not we are in a state at which we cannot take a fault */
+is_pushing_registers:	.long	0
+is_pushing_registers_addr:	.long	is_pushing_registers
+
 /* These memory locations are written to by the kernel */
 .globl _kernel_struct
 _kernel_struct:
@@ -438,9 +557,19 @@ vector_table:
 	.endr
 
 .data
-.align 2
+.align 4
 tlb_stack:
 	.rep	0x1000
 	.long	0
 	.endr
 tlb_stack_end:
+
+#if SAVE_CPU_STATE
+.align 4
+.global _last_ex_cpu_state
+_last_ex_cpu_state:
+	.rep	0x1000
+	.long	99
+	.endr
+#endif
+

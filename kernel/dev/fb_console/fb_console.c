@@ -20,8 +20,15 @@
 
 #include "font.h"
 
+
+#if 0
+// this version makes the sh4 compiler throw up
 #define WRAP(x, limit) ((x) % (limit))
 #define INC_WITH_WRAP(x, limit) WRAP((x) + 1, (limit))
+#else
+#define WRAP(x, limit) (((x) >= (limit)) ? ((x) - (limit)) : (x))
+#define INC_WITH_WRAP(x, limit) WRAP((x) + 1, (limit))
+#endif
 
 enum {
 	CONSOLE_OP_WRITEXY = 2376
@@ -150,6 +157,8 @@ static void scrup(void)
 	// move the pointer to the top line down one
 	console.first_line = INC_WITH_WRAP(console.first_line, console.num_lines);
 
+//	dprintf("scrup: first_line now %d\n", console.first_line);
+
 	line_num = console.first_line;
 	for(i=0; i<console.rows; i++) {
 		console.dirty_lines[line_num] = 1;
@@ -157,7 +166,7 @@ static void scrup(void)
 	}
 
 	// clear out the last line
-	last_line = (console.first_line + console.rows) % console.num_lines;
+	last_line = WRAP(console.first_line + console.rows, console.num_lines);
 	console.lines[last_line][0] = 0;
 }
 

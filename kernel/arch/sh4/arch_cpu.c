@@ -33,6 +33,8 @@ void sh4_set_kstack(addr kstack)
 void sh4_set_user_pgdir(addr pgdir)
 {
 //	dprintf("sh4_set_user_pgdir: setting pgdir to 0x%x\n", pgdir);
+	if((addr)vcpu->user_pgdir != pgdir)
+		arch_cpu_global_TLB_invalidate();
 	vcpu->user_pgdir = (unsigned int *)pgdir;
 }
 
@@ -47,7 +49,7 @@ void sh4_invl_page(addr va)
 
 	// wipe it out of the data tlbs
 	for(i=0; i<UTLB_COUNT; i++) {
-		struct utlb_addr_array *ua = (struct utlb_addr_array *)(ITLB + (i << ITLB_ADDR_SHIFT));
+		struct utlb_addr_array *ua = (struct utlb_addr_array *)(UTLB + (i << UTLB_ADDR_SHIFT));
 		if(ua->vpn == (va >> 10))
 			ua->valid = 0;
 	}
@@ -86,7 +88,7 @@ void arch_cpu_global_TLB_invalidate()
 
 	// wipe out the data tlbs
 	for(i=0; i<UTLB_COUNT; i++) {
-		struct utlb_addr_array *ua = (struct utlb_addr_array *)(ITLB + (i << ITLB_ADDR_SHIFT));
+		struct utlb_addr_array *ua = (struct utlb_addr_array *)(UTLB + (i << UTLB_ADDR_SHIFT));
 		ua->valid = 0;
 	}
 

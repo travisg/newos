@@ -108,6 +108,9 @@ static int map_tmap(vm_translation_map *map, addr va, addr pa, unsigned int lock
 	pt = (struct ptent *)PHYS_TO_P1(pd[index].ppn << 12);
 	index = (va >> 12) & 0x000003ff;
 
+	if(pt[index].v)
+		panic("map_tmap: va 0x%x already mapped to pa 0x%x\n", va, pt[index].ppn << 12);
+
 	// insert the mapping
 	pt[index].wt = 0;
 	pt[index].pr = (lock & LOCK_KERNEL) ? (lock & 0x1) : (lock | 0x2);
@@ -137,8 +140,7 @@ static int unmap_tmap(vm_translation_map *map, addr start, addr end)
 		dprintf("unmap_tmap: asked to free pages 0x%x to 0x%x\n", start, end);
 #endif
 
-restart:
-	while(start >= end) {
+	for(; start < end; start += PAGE_SIZE) {
 		if(map->arch_data->is_user) {
 			if(start >= P1_AREA) {
 				// invalid
@@ -162,18 +164,15 @@ restart:
 		index = (start >> 12) & 0x000003ff;
 
 		if(pt[index].v == 0)
-			return -1;
+			continue;
 
 		pt[index].v = 0;
-
-		start += PAGE_SIZE;
 
 		sh4_invl_page(start);
 	}
 	return 0;
 }
 
-// XXX currently assumes this translation map is active
 static int query_tmap(vm_translation_map *map, addr va, addr *out_physical, unsigned int *out_flags)
 {
 	struct pdent *pd;

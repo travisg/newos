@@ -181,7 +181,7 @@ FUNC(enable_exceptions)
 	nop
 
 .align 2
-bl_bit_mask:	.long	0x000000f0
+bl_bit_mask:	.long	0x10000000
 
 FUNC(arch_int_restore_interrupts)
 	mov.l	inverse_imask_bit_mask,r0
