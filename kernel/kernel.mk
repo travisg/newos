@@ -2,6 +2,7 @@ KERNEL_DIR = kernel
 KERNEL_LIB = $(KERNEL_DIR)/kernel.o
 KERNEL_OBJS = \
         $(KERNEL_DIR)/main.o \
+        $(KERNEL_DIR)/elf.o \
         $(KERNEL_DIR)/faults.o \
         $(KERNEL_DIR)/khash.o \
         $(KERNEL_DIR)/int.o \

@@ -14,6 +14,7 @@
 #include <arch_int.h>
 #include <sem.h>
 #include <vfs.h>
+#include <elf.h>
 
 struct proc_key {
 	proc_id id;
@@ -178,9 +179,6 @@ static struct thread *create_thread_struct(char *name)
 	if(t->arch_info == NULL)
 		goto err2;
 	
-	// XXX remove
-	dprintf("create_thread_struct: returning struct @ 0x%x\n", t);
-	
 	return t;
 
 err2:
@@ -191,13 +189,13 @@ err:
 	return NULL;
 }
 
-struct thread *thread_create_user_thread(char *name, struct proc *p, int priority)
+struct thread *thread_create_user_thread(char *name, struct proc *p, int priority, addr entry)
 {
 	struct thread *t;
 	unsigned int *stack_addr;
 	int state;
 	char stack_name[64];
-	
+
 	t = create_thread_struct(name);
 	if(t == NULL)
 		return NULL;
@@ -206,11 +204,17 @@ struct thread *thread_create_user_thread(char *name, struct proc *p, int priorit
 	t->state = THREAD_STATE_READY;
 	t->next_state = THREAD_STATE_READY;
 
+	sprintf(stack_name, "%s_kstack", name);
+	vm_create_area(t->proc->kaspace, stack_name, (void **)&stack_addr,
+		AREA_ANY_ADDRESS, KSTACK_SIZE, LOCK_RW|LOCK_KERNEL);
+	t->kernel_stack_area = vm_find_area_by_name(t->proc->kaspace, stack_name);
+	arch_thread_initialize_kthread_stack(t, func, &thread_entry);
+
 	sprintf(stack_name, "%s_stack", name);
 	vm_create_area(t->proc->aspace, stack_name, (void **)&stack_addr,
 		AREA_ANY_ADDRESS, STACK_SIZE, LOCK_RW);
 	t->kernel_stack_area = vm_find_area_by_name(t->proc->aspace, stack_name);
-	
+
 	state = int_disable_interrupts();
 	GRAB_THREAD_LOCK();
 
@@ -627,6 +631,13 @@ int test_thread_starter_thread()
 	return 0;	
 }
 
+int test_thread4()
+{
+	proc_create_user_proc("/boot/testapp", "testapp", 5);
+
+	return 0;
+}
+
 int test_thread3()
 {
 	int fd;
@@ -756,6 +767,9 @@ int thread_test()
 	t = create_kernel_thread("test thread 3", &test_thread3, 5);
 	thread_enqueue_run_q(t);
 
+	t = create_kernel_thread("test thread 4", &test_thread4, 5);
+	thread_enqueue_run_q(t);
+
 //	t = create_kernel_thread("panic thread", &panic_thread, THREAD_MAX_PRIORITY);
 //	thread_enqueue_run_q(t);
 	
@@ -881,10 +895,14 @@ static struct proc *create_proc_struct(const char *name)
 	return p;
 }
 
-struct proc *proc_create_user_proc(const char *name, struct proc *parent, int priority)
+struct proc *proc_create_user_proc(const char *path, const char *name, int priority)
 {
 	struct proc *p;
 	struct thread *t;
+	int err;
+	addr entry;
+	
+	dprintf("proc_create_user_proc: entry '%s', name '%s'\n", path, name);
 	
 	p = create_proc_struct(name);
 	if(p == NULL)
@@ -897,8 +915,15 @@ struct proc *proc_create_user_proc(const char *name, struct proc *parent, int pr
 	
 	hash_insert(proc_hash, p);
 	
-	// create an initial thread
-	t = thread_create_user_thread("main thread", p, priority);
+	err = elf_load(path, p, 0, &entry);
+	if(err < 0){
+		// XXX clean up proc
+		return NULL;
+	}	
+	
+	t = create
+	 
+	dprintf("proc_create_user_proc: loaded elf. entry = 0x%x\n", entry);
 	
 	return p;
 }

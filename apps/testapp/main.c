@@ -1,3 +1,6 @@
+int a;
+int b = 1;
+
 int main();
 
 int _start()

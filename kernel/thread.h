@@ -75,7 +75,7 @@ struct thread *thread_get_thread_struct_locked(thread_id id);
 struct thread *thread_create_user_thread(char *name, struct proc *p, int priority);
 
 struct proc *proc_get_kernel_proc();
-struct proc *proc_create_user_proc(const char *name, struct proc *parent, int priority);
+struct proc *proc_create_user_proc(const char *path, const char *name, int priority);
 
 #if 1
 // XXX remove later
