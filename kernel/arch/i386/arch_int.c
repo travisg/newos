@@ -149,9 +149,13 @@ void i386_handle_trap(struct int_frame frame)
 			ret = i386_page_fault(cr2, frame.eip);
 			break;
 		}
-		case 99:
-			ret = syscall_dispatcher(frame.eax, frame.ecx, frame.edx, (unsigned long *)&frame.eax);
+		case 99: {
+			uint64 retcode;
+			ret = syscall_dispatcher(frame.eax, frame.ebx, frame.ecx, frame.edx, frame.esi, frame.edi, &retcode);
+			frame.eax = retcode & 0xffffffff;
+			frame.edx = retcode >> 32;
 			break;
+		}
 		default:
 			if(frame.vector >= 0x20) {
 				interrupt_ack(frame.vector); // ack the 8239 (if applicable)

@@ -1,3 +1,8 @@
+#include <types.h>
+#include <string.h>
+#include <printf.h>
+#include <libsys/syscalls.h>
+
 int a;
 int b = 1;
 
@@ -5,16 +10,25 @@ int main();
 
 int _start()
 {
-	char *foo = (char *)0x0;
-
-	*foo = 'Z';
-
 	return main();
 }
 
 int main()
 {
-	asm("int $99");
+	int fd;
+	size_t len;
+	
+	fd = sys_open("/dev/console", "", STREAM_TYPE_DEVICE);
+	if(fd < 0)
+		return -1;
+
+	for(;;) {
+		sys_snooze(1000000);
+		len = strlen("booyah!");
+		sys_write(fd, "booyah!", 0, &len);
+	}
+
+	for(;;);
 	return 0;
 }
 

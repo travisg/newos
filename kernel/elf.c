@@ -36,12 +36,12 @@ int elf_load(const char *path, struct proc *p, int flags, addr *entry)
 	
 	dprintf("elf_load: entry path '%s', proc 0x%x\n", path, p);
 	
-	fd = vfs_open(NULL, path, "", STREAM_TYPE_FILE);
+	fd = sys_open(path, "", STREAM_TYPE_FILE);
 	if(fd < 0)
 		return fd;
 
 	len = sizeof(eheader);
-	err = vfs_read(fd, &eheader, 0, &len);
+	err = sys_read(fd, &eheader, 0, &len);
 	if(err < 0)
 		goto error;
 	if(len != sizeof(eheader)) {
@@ -63,7 +63,7 @@ int elf_load(const char *path, struct proc *p, int flags, addr *entry)
 	
 	len = eheader.e_phnum * eheader.e_phentsize;
 	dprintf("reading in program headers at 0x%x, len 0x%x\n", eheader.e_phoff, len);
-	err = vfs_read(fd, pheaders, eheader.e_phoff, &len);
+	err = sys_read(fd, pheaders, eheader.e_phoff, &len);
 	if(err < 0) {
 		dprintf("error reading in program headers\n");
 		goto error;
@@ -91,7 +91,7 @@ int elf_load(const char *path, struct proc *p, int flags, addr *entry)
 		}
 		
 		len = pheaders[i].p_filesz;
-		err = vfs_read(fd, area_addr + (pheaders[i].p_vaddr % PAGE_SIZE), pheaders[i].p_offset, &len);
+		err = sys_read(fd, area_addr + (pheaders[i].p_vaddr % PAGE_SIZE), pheaders[i].p_offset, &len);
 		if(err < 0) {
 			dprintf("error reading in seg %d\n", i);
 			goto error;
@@ -106,7 +106,7 @@ int elf_load(const char *path, struct proc *p, int flags, addr *entry)
 	err = 0;
 
 error:
-	vfs_close(fd);
+	sys_close(fd);
 
 	return err;
 }

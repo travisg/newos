@@ -141,9 +141,9 @@ int zero_dev_init(kernel_args *ka)
 {
 	// create device node
 	vfs_register_filesystem("zero_dev_fs", &zero_hooks);
-	vfs_create(NULL, "/dev", "", STREAM_TYPE_DIR);
-	vfs_create(NULL, "/dev/zero", "", STREAM_TYPE_DIR);
-	vfs_mount("/dev/zero", "zero_dev_fs");
+	sys_create("/dev", "", STREAM_TYPE_DIR);
+	sys_create("/dev/zero", "", STREAM_TYPE_DIR);
+	sys_mount("/dev/zero", "zero_dev_fs");
 
 	return 0;
 }

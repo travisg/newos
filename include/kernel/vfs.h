@@ -41,21 +41,27 @@ struct fs_calls {
 int vfs_init(kernel_args *ka);
 int vfs_register_filesystem(const char *name, struct fs_calls *calls);
 void *vfs_new_ioctx();
-
-int vfs_mount(const char *path, const char *fs_name);
-int vfs_unmount(const char *path);
-
-int vfs_open(void *_base_vnode, const char *path, const char *stream, stream_type stream_type);
-int vfs_seek(int fd, off_t pos, seek_type seek_type);
-int vfs_read(int fd, void *buf, off_t pos, size_t *len);
-int vfs_write(int fd, const void *buf, off_t pos, size_t *len);
-int vfs_ioctl(int fd, int op, void *buf, size_t len);
-int vfs_close(int fd);
-int vfs_create(void *_base_vnode, const char *path, const char *stream, stream_type stream_type);
-
 int vfs_helper_getnext_in_path(const char *path, int *start_pos, int *end_pos);
-
 int vfs_test();
+
+int sys_mount(const char *path, const char *fs_name);
+int sys_unmount(const char *path);
+
+int sys_open(const char *path, const char *stream, stream_type stream_type);
+int sys_seek(int fd, off_t pos, seek_type seek_type);
+int sys_read(int fd, void *buf, off_t pos, size_t *len);
+int sys_write(int fd, const void *buf, off_t pos, size_t *len);
+int sys_ioctl(int fd, int op, void *buf, size_t len);
+int sys_close(int fd);
+int sys_create(const char *path, const char *stream, stream_type stream_type);
+
+int user_open(const char *path, const char *stream, stream_type stream_type);
+int user_seek(int fd, off_t pos, seek_type seek_type);
+int user_read(int fd, void *buf, off_t pos, size_t *len);
+int user_write(int fd, const void *buf, off_t pos, size_t *len);
+int user_ioctl(int fd, int op, void *buf, size_t len);
+int user_close(int fd);
+int user_create(const char *path, const char *stream, stream_type stream_type);
 
 #endif
 

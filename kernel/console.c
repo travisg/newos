@@ -33,7 +33,7 @@ int kprintf(const char *fmt, ...)
 		ret = vsprintf(temp,fmt,args);
 		va_end(args);
 	
-		vfs_write(console_fd, temp, 0, &ret);
+		sys_write(console_fd, temp, 0, &ret);
 	}
 	return ret;
 }
@@ -51,7 +51,7 @@ int kprintf_xy(int x, int y, const char *fmt, ...)
 	
 		buf.x = x;
 		buf.y = y;
-		vfs_ioctl(console_fd, CONSOLE_OP_WRITEXY, &buf, ret + sizeof(buf.x) + sizeof(buf.y));
+		sys_ioctl(console_fd, CONSOLE_OP_WRITEXY, &buf, ret + sizeof(buf.x) + sizeof(buf.y));
 	}
 	return ret;
 }
@@ -60,7 +60,7 @@ int con_init(kernel_args *ka)
 {
 	dprintf("con_init: entry\n");
 
-	console_fd = vfs_open(NULL, "/dev/console", "", STREAM_TYPE_DEVICE);
+	console_fd = sys_open("/dev/console", "", STREAM_TYPE_DEVICE);
 	dprintf("console_fd = %d\n", console_fd);
 	
 /*

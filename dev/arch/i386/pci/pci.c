@@ -329,9 +329,9 @@ int pci_bus_init(kernel_args *ka)
 {
 	// create device node
 	vfs_register_filesystem("pci_bus_fs", &pci_hooks);
-	vfs_create(NULL, "/bus", "", STREAM_TYPE_DIR);
-	vfs_create(NULL, "/bus/pci", "", STREAM_TYPE_DIR);
-	vfs_mount("/bus/pci", "pci_bus_fs");
+	sys_create("/bus", "", STREAM_TYPE_DIR);
+	sys_create("/bus/pci", "", STREAM_TYPE_DIR);
+	sys_mount("/bus/pci", "pci_bus_fs");
 
 	return 0;
 }

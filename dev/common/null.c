@@ -140,9 +140,9 @@ int null_dev_init(kernel_args *ka)
 {
 	// create device node
 	vfs_register_filesystem("null_dev_fs", &null_hooks);
-	vfs_create(NULL, "/dev", "", STREAM_TYPE_DIR);
-	vfs_create(NULL, "/dev/null", "", STREAM_TYPE_DIR);
-	vfs_mount("/dev/null", "null_dev_fs");
+	sys_create("/dev", "", STREAM_TYPE_DIR);
+	sys_create("/dev/null", "", STREAM_TYPE_DIR);
+	sys_mount("/dev/null", "null_dev_fs");
 
 	return 0;
 }

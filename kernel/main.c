@@ -61,7 +61,7 @@ int _start(kernel_args *oldka, int cpu)
 		con_init(&ka);
 		kprintf("durn\n");
 	
-#if 0
+#if 1
 		// XXX remove
 		vfs_test();
 #endif	

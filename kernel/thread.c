@@ -639,13 +639,13 @@ int test_thread5()
 {
 	int fd;
 	
-	fd = vfs_open(NULL, "/bus/pci", "", STREAM_TYPE_DEVICE);
+	fd = sys_open("/bus/pci", "", STREAM_TYPE_DEVICE);
 	if(fd < 0) {
 		dprintf("test_thread5: error opening /bus/pci\n");
 		return 1;
 	}
 	
-	vfs_ioctl(fd, 99, NULL, 0);
+	sys_ioctl(fd, 99, NULL, 0);
 
 	return 0;
 }
@@ -664,13 +664,13 @@ int test_thread3()
 	size_t len;
 
 	kprintf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
-	fd = vfs_open(NULL, "/boot/testfile", "", STREAM_TYPE_FILE);
+	fd = sys_open("/boot/testfile", "", STREAM_TYPE_FILE);
 	if(fd < 0)
 		panic("could not open /boot/testfile\n");
 	len = sizeof(buf);
-	vfs_read(fd, buf, 0, &len);
-	vfs_write(0, buf, 0, &len);
-	vfs_close(fd);
+	sys_read(fd, buf, 0, &len);
+	sys_write(0, buf, 0, &len);
+	sys_close(fd);
 
 	return 0;
 }
@@ -681,7 +681,7 @@ int test_thread2()
 		char str[65];
 		size_t len = sizeof(str) - 1;
 		
-		if(vfs_read(0, str, 0, &len) < 0) {
+		if(sys_read(0, str, 0, &len) < 0) {
 			dprintf("error reading from console!\n");
 			break;
 		}
@@ -951,6 +951,14 @@ static int proc_create_proc2(void)
 	t = thread_get_current_thread();
 	p = t->proc;
 
+	// create a new ioctx for this process
+	p->ioctx = vfs_new_ioctx();
+	if(p->ioctx == NULL) {
+		// XXX clean up proc
+		panic("proc_create_proc2: could not create new ioctx\n");
+		return NULL;
+	}
+		
 	// create an address space for this process
 	p->aspace = vm_create_aspace(p->name, USER_BASE, USER_SIZE);
 	if(p->aspace == NULL) {

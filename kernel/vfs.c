@@ -1,4 +1,5 @@
 #include <string.h>
+#include <ctype.h>
 
 #include <kernel/kernel.h>
 #include <boot/stage2.h>
@@ -56,6 +57,17 @@ static fs_id next_fsid = 0;
 static sem_id vfs_sem;
 static sem_id vfs_mount_sem;
 static sem_id vfs_vnode_sem;
+
+/* function declarations */
+static int vfs_mount(const char *path, const char *fs_name, bool kernel);
+static int vfs_unmount(const char *path);
+static int vfs_open(const char *path, const char *stream, stream_type stream_type, bool kernel);
+static int vfs_seek(int fd, off_t pos, seek_type seek_type, bool kernel);
+static int vfs_read(int fd, void *buf, off_t pos, size_t *len, bool kernel);
+static int vfs_write(int fd, const void *buf, off_t pos, size_t *len, bool kernel);
+static int vfs_ioctl(int fd, int op, void *buf, size_t len, bool kernel);
+static int vfs_close(int fd, bool kernel);
+static int vfs_create(const char *path, const char *stream, stream_type stream_type, bool kernel);
 
 #define VNODE_HASH_TABLE_SIZE 1024
 static void *vnode_table;
@@ -270,7 +282,7 @@ int vfs_init(kernel_args *ka)
 	// bootstrap the root filesystem
 	bootstrap_rootfs();	
 
-	err = vfs_mount("/", "rootfs");
+	err = sys_mount("/", "rootfs");
 	if(err < 0)
 		panic("error mounting rootfs!\n");
 
@@ -282,22 +294,19 @@ int vfs_test()
 	int fd;
 	int err;
 	
-	fd = vfs_open(NULL, "/", "", STREAM_TYPE_DIR);
+	fd = sys_open("/", "", STREAM_TYPE_DIR);
 	dprintf("fd = %d\n", fd);
-	vfs_close(fd);
+	sys_close(fd);
 
-	vfs_create(NULL, "/boot", "", STREAM_TYPE_DIR);
-	vfs_create(NULL, "/boot", "", STREAM_TYPE_DIR);
-	
-	fd = vfs_open(NULL, "/", "", STREAM_TYPE_DIR);
+	fd = sys_open("/", "", STREAM_TYPE_DIR);
 	dprintf("fd = %d\n", fd);
 
-	vfs_create(NULL, "/foo", "", STREAM_TYPE_DIR);
-	vfs_create(NULL, "/foo/bar", "", STREAM_TYPE_DIR);
-	vfs_create(NULL, "/foo/bar/gar", "", STREAM_TYPE_DIR);
-	vfs_create(NULL, "/foo/bar/tar", "", STREAM_TYPE_DIR);
+	sys_create("/foo", "", STREAM_TYPE_DIR);
+	sys_create("/foo/bar", "", STREAM_TYPE_DIR);
+	sys_create("/foo/bar/gar", "", STREAM_TYPE_DIR);
+	sys_create("/foo/bar/tar", "", STREAM_TYPE_DIR);
 
-	fd = vfs_open(NULL, "/foo/bar", "", STREAM_TYPE_DIR);
+	fd = sys_open("/foo/bar", "", STREAM_TYPE_DIR);
 	if(fd < 0)
 		panic("unable to open /foo/bar\n");
 
@@ -305,10 +314,10 @@ int vfs_test()
 		char buf[64];
 		int buf_len;
 
-		vfs_seek(fd, 0, SEEK_SET);
+		sys_seek(fd, 0, SEEK_SET);
 		for(;;) {
 			buf_len = sizeof(buf);
-			err = vfs_read(fd, buf, -1, &buf_len);
+			err = sys_read(fd, buf, -1, &buf_len);
 			if(err < 0)
 				panic("readdir returned %d\n", err);
 			if(buf_len > 0) 
@@ -318,29 +327,28 @@ int vfs_test()
 		}
 	}
 #if 1
-	err = vfs_mount("/boot", "rootfs");
+	sys_create("/test", "", STREAM_TYPE_DIR);
+	sys_create("/test", "", STREAM_TYPE_DIR);
+	
+	err = sys_mount("/test", "rootfs");
 	if(err < 0)
 		panic("failed mount test\n");
 
-	fd = vfs_open(NULL, "/boot", "", STREAM_TYPE_DIR);
+	fd = sys_open("/boot", "", STREAM_TYPE_DIR);
 	dprintf("fd = %d\n", fd);
-	vfs_close(fd);
+	sys_close(fd);
 	
-	if(vfs_create(NULL, "/boot/foo", "", STREAM_TYPE_DIR) < 0)
-		panic("could not create /boot/foo\n");
-	if(vfs_create(NULL, "/boot/foo/bar", "", STREAM_TYPE_DIR) < 0)
-		panic("could not create /boot/foo/bar\n");
-	fd = vfs_open(NULL, "/boot/foo", "", STREAM_TYPE_DIR);
+	fd = sys_open("/boot", "", STREAM_TYPE_DIR);
 	if(fd < 0)
-		panic("unable to open dir /boot/foo\n");
+		panic("unable to open dir /boot\n");
 	{
 		char buf[64];
 		int buf_len;
 
-		vfs_seek(fd, 0, SEEK_SET);
+		sys_seek(fd, 0, SEEK_SET);
 		for(;;) {
 			buf_len = sizeof(buf);
-			err = vfs_read(fd, buf, -1, &buf_len);
+			err = sys_read(fd, buf, -1, &buf_len);
 			if(err < 0)
 				panic("readdir returned %d\n", err);
 			if(buf_len > 0) 
@@ -365,10 +373,9 @@ static int get_new_fd(struct ioctx *ioctx)
 	return -1;
 }
 
-static struct ioctx *get_current_ioctx()
+static struct ioctx *get_current_ioctx(bool kernel)
 {
 	struct ioctx *ioctx;
-	bool kernel = true; // XXX figure this out later
 
 	if(kernel) {
 		ioctx = proc_get_kernel_proc()->ioctx;
@@ -378,30 +385,45 @@ static struct ioctx *get_current_ioctx()
 	return ioctx;
 }
 
-static struct vnode *get_base_vnode(struct ioctx *ioctx)
+static struct vnode *get_base_vnode(struct ioctx *ioctx, const char *path, bool kernel)
 {
 	struct vnode *base_vnode;
+	bool get_root_vnode = false;
+	int i;
 	
-	if(ioctx == NULL)
-		ioctx = get_current_ioctx();
-
-	sem_acquire(ioctx->io_sem, 1);
-
-	base_vnode = ioctx->cwd;
-
-	inc_vnode_ref_count(base_vnode, false);
-
-	sem_release(ioctx->io_sem, 1);	
-
+	for(i=0; path[i] != '\0'; i++) {
+		if(!isspace(path[i])) {
+			if(path[i] == '/') {
+				get_root_vnode = true;
+			}
+			break;
+		}
+	}	
+	
+	if(get_root_vnode) {
+		base_vnode = root_vnode;
+		inc_vnode_ref_count(base_vnode, false);
+	} else {
+		if(ioctx == NULL)
+			ioctx = get_current_ioctx(kernel);
+	
+		sem_acquire(ioctx->io_sem, 1);
+	
+		base_vnode = ioctx->cwd;
+	
+		inc_vnode_ref_count(base_vnode, false);
+	
+		sem_release(ioctx->io_sem, 1);	
+	}
 	return base_vnode;
 }
 
-static int get_vnode_from_fd(int fd, struct ioctx *ioctx, struct vnode **v, void **cookie)
+static int get_vnode_from_fd(int fd, struct ioctx *ioctx, bool kernel, struct vnode **v, void **cookie)
 {
 	int err;
 	
 	if(ioctx == NULL)
-		ioctx = get_current_ioctx();
+		ioctx = get_current_ioctx(kernel);
 
 	sem_acquire(ioctx->io_sem, 1);
 
@@ -494,7 +516,7 @@ int vfs_register_filesystem(const char *name, struct fs_calls *calls)
 	return 0;
 }
 
-int vfs_mount(const char *path, const char *fs_name)
+static int vfs_mount(const char *path, const char *fs_name, bool kernel)
 {
 	struct fs_mount *mount;
 	int err = 0;
@@ -539,25 +561,26 @@ int vfs_mount(const char *path, const char *fs_name)
 		err = mount->fs->calls->fs_mount(&mount->cookie, 0, NULL, mount->id, &mount->root_vnode.priv_vnode);
 		if(err < 0)
 			goto err1;
+		root_vnode = &mount->root_vnode;
 	} else {
 		int fd;
 		struct ioctx *ioctx;
 		void *null_cookie;
 		
-		fd = vfs_open(NULL, path, "", STREAM_TYPE_DIR);
+		fd = sys_open(path, "", STREAM_TYPE_DIR);
 		if(fd < 0) {
 			err = fd;
 			goto err1;
 		}
 		// get the vnode this mount will cover
-		ioctx = get_current_ioctx();
-		err = get_vnode_from_fd(fd, ioctx, &covered_vnode, &null_cookie);
+		ioctx = get_current_ioctx(kernel);
+		err = get_vnode_from_fd(fd, ioctx, kernel, &covered_vnode, &null_cookie);
 		if(err < 0) {
-			vfs_close(fd);
+			sys_close(fd);
 			goto err1;
 		}
 		dec_fd_ref_count(ioctx, fd, false);
-		vfs_close(fd);
+		sys_close(fd);
 
 		// mount it
 		err = mount->fs->calls->fs_mount(&mount->cookie, 0, covered_vnode, mount->id, &mount->root_vnode.priv_vnode);
@@ -565,8 +588,6 @@ int vfs_mount(const char *path, const char *fs_name)
 			goto err1;		
 	}
 
-	root_vnode = &mount->root_vnode;
-	
 	mount->root_vnode.id = next_vnode_id++;
 	mount->root_vnode.ref_count++;
 	mount->root_vnode.mount = mount;
@@ -601,7 +622,7 @@ err:
 	return err;
 }
 
-int vfs_unmount(const char *path)
+static int vfs_unmount(const char *path)
 {
 	struct fs_mount *mount;
 	struct fs_mount *last_mount;
@@ -643,11 +664,11 @@ err:
 	return err;
 }
 
-int vfs_open(void *_base_vnode, const char *path, const char *stream, stream_type stream_type)
+static int vfs_open(const char *path, const char *stream, stream_type stream_type, bool kernel)
 {
 	int fd;
 	struct ioctx *ioctx;
-	struct vnode *base_vnode = _base_vnode;
+	struct vnode *base_vnode;
 	struct vnode *new_vnode;
 	void *v;
 	void *cookie;
@@ -658,9 +679,8 @@ int vfs_open(void *_base_vnode, const char *path, const char *stream, stream_typ
 	dprintf("vfs_open: entry. path = '%s', base_vnode 0x%x\n", path, base_vnode);
 #endif	
 
-	ioctx = get_current_ioctx();
-	if(base_vnode == NULL)
-		base_vnode = get_base_vnode(ioctx);
+	ioctx = get_current_ioctx(kernel);
+	base_vnode = get_base_vnode(ioctx, path, kernel);
 
 	redir.vnode = base_vnode;
 	redir.path = path;
@@ -702,7 +722,7 @@ err:
 	return err;
 }
 
-int vfs_seek(int fd, off_t pos, seek_type seek_type)
+static int vfs_seek(int fd, off_t pos, seek_type seek_type, bool kernel)
 {
 	struct ioctx *ioctx;
 	struct vnode *vnode;
@@ -713,8 +733,8 @@ int vfs_seek(int fd, off_t pos, seek_type seek_type)
 	dprintf("vfs_rewinddir: fd = %d\n", fd);
 #endif
 
-	ioctx = get_current_ioctx();
-	err = get_vnode_from_fd(fd, ioctx, &vnode, &cookie);
+	ioctx = get_current_ioctx(kernel);
+	err = get_vnode_from_fd(fd, ioctx, kernel, &vnode, &cookie);
 	if(err < 0)
 		return err;
 
@@ -726,7 +746,7 @@ int vfs_seek(int fd, off_t pos, seek_type seek_type)
 	return err;
 }	
 
-int vfs_read(int fd, void *buf, off_t pos, size_t *len)
+static int vfs_read(int fd, void *buf, off_t pos, size_t *len, bool kernel)
 {
 	struct ioctx *ioctx;
 	struct vnode *vnode;
@@ -737,8 +757,8 @@ int vfs_read(int fd, void *buf, off_t pos, size_t *len)
 	dprintf("vfs_read: fd = %d\n", fd);
 #endif
 
-	ioctx = get_current_ioctx();
-	err = get_vnode_from_fd(fd, ioctx, &vnode, &cookie);
+	ioctx = get_current_ioctx(kernel);
+	err = get_vnode_from_fd(fd, ioctx, kernel, &vnode, &cookie);
 	if(err < 0)
 		return err;
 	
@@ -751,7 +771,7 @@ int vfs_read(int fd, void *buf, off_t pos, size_t *len)
 	return err;
 }
 
-int vfs_write(int fd, const void *buf, off_t pos, size_t *len)
+static int vfs_write(int fd, const void *buf, off_t pos, size_t *len, bool kernel)
 {
 	struct ioctx *ioctx;
 	struct vnode *vnode;
@@ -762,8 +782,8 @@ int vfs_write(int fd, const void *buf, off_t pos, size_t *len)
 	dprintf("vfs_write: fd = %d\n", fd);
 #endif
 
-	ioctx = get_current_ioctx();
-	err = get_vnode_from_fd(fd, ioctx, &vnode, &cookie);
+	ioctx = get_current_ioctx(kernel);
+	err = get_vnode_from_fd(fd, ioctx, kernel, &vnode, &cookie);
 	if(err < 0)
 		return err;
 	
@@ -776,7 +796,7 @@ int vfs_write(int fd, const void *buf, off_t pos, size_t *len)
 	return err;
 }
 
-int vfs_ioctl(int fd, int op, void *buf, size_t len)
+static int vfs_ioctl(int fd, int op, void *buf, size_t len, bool kernel)
 {
 	struct ioctx *ioctx;
 	struct vnode *vnode;
@@ -787,8 +807,8 @@ int vfs_ioctl(int fd, int op, void *buf, size_t len)
 	dprintf("vfs_ioctl: fd = %d, buf = 0x%x, op = %d\n", fd, buf, op);
 #endif
 
-	ioctx = get_current_ioctx();
-	err = get_vnode_from_fd(fd, ioctx, &vnode, &cookie);
+	ioctx = get_current_ioctx(kernel);
+	err = get_vnode_from_fd(fd, ioctx, kernel, &vnode, &cookie);
 	if(err < 0)
 		return err;
 
@@ -801,25 +821,24 @@ int vfs_ioctl(int fd, int op, void *buf, size_t len)
 	return err;
 }
 
-int vfs_close(int fd)
+static int vfs_close(int fd, bool kernel)
 {
 	struct ioctx *ioctx;
 
-	ioctx = get_current_ioctx();
+	ioctx = get_current_ioctx(kernel);
 #if MAKE_NOIZE
 	dprintf("vfs_close: fd = %d, ioctx = 0x%x\n", fd, ioctx);
 #endif
 	return dec_fd_ref_count(ioctx, fd, false);
 }
 
-int vfs_create(void *_base_vnode, const char *path, const char *stream, stream_type stream_type)
+static int vfs_create(const char *path, const char *stream, stream_type stream_type, bool kernel)
 {
-	struct vnode *base_vnode = _base_vnode;
+	struct vnode *base_vnode;
 	struct redir_struct redir;
 	int err;
 
-	if(base_vnode == NULL)
-		base_vnode = get_base_vnode(NULL);
+	base_vnode = get_base_vnode(NULL, path, kernel);
 
 	redir.vnode = base_vnode;
 	redir.path = path;
@@ -870,4 +889,86 @@ int vfs_helper_getnext_in_path(const char *path, int *start_pos, int *end_pos)
 	
 	return 1;
 }
+
+int sys_mount(const char *path, const char *fs_name)
+{
+	return vfs_mount(path, fs_name, true);
+}
+
+int sys_unmount(const char *path)
+{
+	return vfs_unmount(path);
+}
+
+int sys_open(const char *path, const char *stream, stream_type stream_type)
+{
+	return vfs_open(path, stream, stream_type, true);
+}
+
+int sys_seek(int fd, off_t pos, seek_type seek_type)
+{
+	return vfs_seek(fd, pos, seek_type, true);
+}
+
+int sys_read(int fd, void *buf, off_t pos, size_t *len)
+{
+	return vfs_read(fd, buf, pos, len, true);
+}
+
+int sys_write(int fd, const void *buf, off_t pos, size_t *len)
+{
+	return vfs_write(fd, buf, pos, len, true);
+}
+
+int sys_ioctl(int fd, int op, void *buf, size_t len)
+{
+	return vfs_ioctl(fd, op, buf, len, true);
+}
+
+int sys_close(int fd)
+{
+	return vfs_close(fd, true);
+}
+
+int sys_create(const char *path, const char *stream, stream_type stream_type)
+{
+	return vfs_create(path, stream, stream_type, true);
+}
+
+int user_open(const char *path, const char *stream, stream_type stream_type)
+{
+	return vfs_open(path, stream, stream_type, false);
+}
+
+int user_seek(int fd, off_t pos, seek_type seek_type)
+{
+	return vfs_seek(fd, pos, seek_type, false);
+}
+
+int user_read(int fd, void *buf, off_t pos, size_t *len)
+{
+	return vfs_read(fd, buf, pos, len, false);
+}
+
+int user_write(int fd, const void *buf, off_t pos, size_t *len)
+{
+	return vfs_write(fd, buf, pos, len, false);
+}
+
+int user_ioctl(int fd, int op, void *buf, size_t len)
+{
+	return vfs_ioctl(fd, op, buf, len, false);
+}
+
+int user_close(int fd)
+{
+	return vfs_close(fd, false);
+}
+
+int user_create(const char *path, const char *stream, stream_type stream_type)
+{
+	return vfs_create(path, stream, stream_type, false);
+}
+
+
 
