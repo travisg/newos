@@ -51,6 +51,8 @@ struct proc {
 	int state;
 	int pending_signals;
 	char *name;
+	char **args;
+	int  argc;
 	void *ioctx;
 	sem_id proc_creation_sem;
 	aspace_id aspace_id;
@@ -125,15 +127,17 @@ thread_id thread_create_user_thread(char *name, proc_id pid, addr entry, void *a
 thread_id thread_create_kernel_thread(const char *name, int (*func)(void *args), void *args);
 
 struct proc *proc_get_kernel_proc(void);
-proc_id proc_create_proc(const char *path, const char *name, int priority);
+proc_id proc_create_proc(const char *path, const char *name, char **args, int argc, int priority);
 int proc_kill_proc(proc_id);
 int proc_wait_on_proc(proc_id id, int *retcode);
 proc_id proc_get_kernel_proc_id(void);
 proc_id proc_get_current_proc_id(void);
+char **user_proc_get_arguments(void);
+int user_proc_get_arg_count(void);
 
 // used in syscalls.c
 int user_thread_wait_on_thread(thread_id id, int *uretcode);
-proc_id user_proc_create_proc(const char *path, const char *name, int priority);
+proc_id user_proc_create_proc(const char *path, const char *name, char **args, int argc, int priority);
 int user_proc_wait_on_proc(proc_id id, int *uretcode);
 thread_id user_thread_create_user_thread(char *uname, proc_id pid, addr entry, void *args);
 int user_thread_snooze(time_t time);

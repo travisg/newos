@@ -12,4 +12,6 @@
 /* the following is for OS object names: semaphores, threads, regions, etc.. */
 #define SYS_MAX_OS_NAME_LEN   32
 
+#define SYS_THREAD_ARG_LENGTH_MAX 255
+
 #endif

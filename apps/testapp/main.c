@@ -23,14 +23,19 @@ static int test_thread(void *args)
 	return 0;
 }
 
-int main()
+int main(int argc, char **argv)
 {
 	int fd;
 	size_t len;
 	char c;
 	int rc = 0;
+	int cnt;
 
-	printf("test\n");
+	printf("testapp\n");
+
+	for(cnt = 0; cnt< argc; cnt++) {
+		printf("arg %d = %s \n",cnt,argv[cnt]);
+	}
 
 	printf("my thread id is %d\n", sys_get_current_thread_id());
 #if 0

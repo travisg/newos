@@ -31,6 +31,13 @@ struct thread_key {
 	thread_id id;
 };
 
+
+struct proc_arg {
+	char *path;
+	char **args;
+	unsigned int argc;
+};
+
 static struct proc *create_proc_struct(const char *name, bool kernel);
 static int proc_struct_compare(void *_p, void *_key);
 static unsigned int proc_struct_hash(void *_p, void *_key, int range);
@@ -199,6 +206,85 @@ static int thread_struct_compare(void *_t, void *_key)
 	else return 1;
 }
 
+// Frees the argument list
+// Parameters
+// 	args  argument list.
+//  args  number of arguments
+
+static void free_arg_list(char **args, int argc)
+{
+	int  cnt = argc;
+
+	if(args != NULL) {
+		for(cnt = 0; cnt < argc; cnt++){
+			kfree(args[cnt]);
+		}
+
+	    kfree(args);
+	}
+}
+
+// Copy argument list from  userspace to kernel space
+// Parameters
+//			args   userspace parameters
+//       argc   number of parameters
+//       kargs  usespace parameters
+//			return < 0 on error and **kargs = NULL
+
+static int user_copy_arg_list(char **args, int argc, char ***kargs)
+{
+	char **largs;
+	int err;
+	int cnt;
+	char *source;
+	char buf[SYS_THREAD_ARG_LENGTH_MAX+1];
+
+	*kargs = NULL;
+
+	if((addr)args >= KERNEL_BASE && (addr)args <= KERNEL_TOP)
+		return ERR_VM_BAD_USER_MEMORY;
+
+	largs = kmalloc((argc + 1) * sizeof(char *));
+	if(largs == NULL){
+		return ERR_NO_MEMORY;
+	}
+
+	// scan all parameters and copy to kernel space
+
+	for(cnt = 0; cnt < argc; cnt++) {
+		err = user_memcpy(&source, &(args[cnt]), sizeof(char *));
+		if(err < 0) goto error;
+
+		if((addr)source >= KERNEL_BASE && (addr)source <= KERNEL_TOP){
+			err = ERR_VM_BAD_USER_MEMORY;
+			goto error;
+		}
+
+		err = user_strncpy(buf,source, SYS_THREAD_ARG_LENGTH_MAX);
+		if(err < 0) goto error;
+
+		buf[SYS_THREAD_ARG_LENGTH_MAX] = 0;
+		largs[cnt] = kstrdup(buf);
+
+		dprintf("user_copy_arg_list : par %d = %s ptr=%d \n",cnt,buf,largs[cnt]);
+
+		if(largs[cnt] == NULL){
+			err = ERR_NO_MEMORY;
+			goto error;
+		}
+	}
+
+	largs[argc] = NULL;
+
+	*kargs = largs;
+	return NO_ERROR;
+
+error:
+	free_arg_list(largs,cnt);
+	dprintf("user_copy_arg_list failed %d \n",err);
+	return err;
+}
+
 static unsigned int thread_struct_hash(void *_t, void *_key, int range)
 {
 	struct thread *t = _t;
@@ -226,10 +312,11 @@ static struct thread *create_thread_struct(const char *name)
 		if(t == NULL)
 			goto err;
 	}
-	t->name = (char *)kmalloc(strlen(name) + 1);
+
+	t->name = kstrdup(name);
 	if(t->name == NULL)
 		goto err1;
-	strcpy(t->name, name);
+
 	t->id = atomic_add(&next_thread_id, 1);
 	t->proc = NULL;
 	t->sem_blocking = -1;
@@ -1452,10 +1539,10 @@ static struct proc *create_proc_struct(const char *name, bool kernel)
 	if(p == NULL)
 		goto error;
 	p->id = atomic_add(&next_proc_id, 1);
-	p->name = (char *)kmalloc(strlen(name)+1);
+	p->name = kstrdup(name);
 	if(p->name == NULL)
 		goto error1;
-	strcpy(p->name, name);
+
 	p->num_threads = 0;
 	p->ioctx = NULL;
 	p->aspace_id = -1;
@@ -1466,9 +1553,12 @@ static struct proc *create_proc_struct(const char *name, bool kernel)
 	p->main_thread = NULL;
 	p->state = PROC_STATE_BIRTH;
 	p->pending_signals = SIG_NONE;
+	p->args =NULL;
+	p->argc =0;
 	p->proc_creation_sem = sem_create(0, "proc_creation_sem");
 	if(p->proc_creation_sem < 0)
 		goto error2;
+
 	if(arch_proc_init_proc_struct(p, kernel) < 0)
 		goto error3;
 
@@ -1484,14 +1574,31 @@ error:
 	return NULL;
 }
 
+
+static int get_arguments_data_size(char **args,int argc)
+{
+	int cnt;
+	int tot_size = 0;
+
+	for(cnt = 0;cnt < argc;cnt++) tot_size += strlen(args[cnt]) + 1;
+	tot_size += (argc + 1)*sizeof(char *);
+
+	return tot_size;
+}
+
 static int proc_create_proc2(void *args)
 {
 	int err;
 	struct thread *t;
 	struct proc *p;
+	struct proc_arg *pargs = args;
 	char *path;
 	addr entry;
 	char ustack_name[128];
+	int tot_top_size;
+	char **uargs;
+	char *udest;
+	unsigned int  cnt;
 
 	t = thread_get_current_thread();
 	p = t->proc;
@@ -1499,17 +1606,36 @@ static int proc_create_proc2(void *args)
 	dprintf("proc_create_proc2: entry thread %d\n", t->id);
 
 	// create an initial primary stack region
-	t->user_stack_base = ((USER_STACK_REGION  - STACK_SIZE) + USER_STACK_REGION_SIZE);
+
+	tot_top_size = STACK_SIZE + PAGE_ALIGN(get_arguments_data_size(pargs->args,pargs->argc));
+	t->user_stack_base = ((USER_STACK_REGION  - tot_top_size) + USER_STACK_REGION_SIZE);
 	sprintf(ustack_name, "%s_primary_stack", p->name);
 	t->user_stack_region_id = vm_create_anonymous_region(p->aspace_id, ustack_name, (void **)&t->user_stack_base,
-		REGION_ADDR_EXACT_ADDRESS, STACK_SIZE, REGION_WIRING_LAZY, LOCK_RW);
+		REGION_ADDR_EXACT_ADDRESS, tot_top_size, REGION_WIRING_LAZY, LOCK_RW);
 	if(t->user_stack_region_id < 0) {
 		panic("proc_create_proc2: could not create default user stack region\n");
 		sem_delete_etc(p->proc_creation_sem, -1);
 		return t->user_stack_region_id;
 	}
 
-	path = args;
+	uargs = (char **)(t->user_stack_base + STACK_SIZE);
+	udest = (char *)(t->user_stack_base+STACK_SIZE+(pargs->argc + 1)*sizeof(char *));
+//	dprintf("addr: stack base=0x%x uargs = 0x%x  udest=0x%x tot_top_size=%d \n\n",t->user_stack_base,uargs,udest,tot_top_size);
+
+	for(cnt = 0;cnt < pargs->argc;cnt++){
+		uargs[cnt] = udest;
+		user_strcpy(udest, pargs->args[cnt]);
+		udest += strlen(pargs->args[cnt]) + 1;
+	}
+	uargs[cnt] = NULL;
+
+	p->args = uargs;
+	p->argc = pargs->argc;
+
+	if(pargs->args != NULL)
+		free_arg_list(pargs->args,pargs->argc);
+
+	path = pargs->path;
 	dprintf("proc_create_proc2: loading elf binary '%s'\n", path);
 
 	err = elf_load_uspace(path, p, 0, &entry);
@@ -1520,7 +1646,8 @@ static int proc_create_proc2(void *args)
 	}
 
 	// free the args
-	kfree(args);
+	kfree(pargs->path);
+	kfree(pargs);
 
 	dprintf("proc_create_proc2: loaded elf. entry = 0x%lx\n", entry);
 
@@ -1538,16 +1665,16 @@ static int proc_create_proc2(void *args)
 	return 0;
 }
 
-proc_id proc_create_proc(const char *path, const char *name, int priority)
+proc_id proc_create_proc(const char *path, const char *name,char **args,int argc, int priority)
 {
 	struct proc *p;
 	thread_id tid;
 	int err;
 	unsigned int state;
 	int sem_retcode;
-	void *args;
+	struct proc_arg *pargs;
 
-	dprintf("proc_create_proc: entry '%s', name '%s'\n", path, name);
+	dprintf("proc_create_proc: entry '%s', name '%s' args=%d argc=%d\n", path, name,args,argc);
 
 	p = create_proc_struct(name, false);
 	if(p == NULL)
@@ -1560,15 +1687,23 @@ proc_id proc_create_proc(const char *path, const char *name, int priority)
 	int_restore_interrupts(state);
 
 	// copy the args over
-	args = kmalloc(strlen(path) + 1);
-	if(!args) {
-		// XXX clean up proc
+	pargs = kmalloc(sizeof(struct proc_arg));
+	if(pargs == NULL){
+		//XXX clean up proc
 		return ERR_NO_MEMORY;
 	}
-	strcpy(args, path);
+	pargs->path = kstrdup(path);
+	if(pargs->path == NULL){
+		//XXX clean up proc
+		kfree(pargs);
+		return ERR_NO_MEMORY;
+	}
+	pargs->argc = argc;
+	pargs->args = args;
+
 
 	// create a kernel thread, but under the context of the new process
-	tid = thread_create_kernel_thread_etc(name, proc_create_proc2, args, p);
+	tid = thread_create_kernel_thread_etc(name, proc_create_proc2, pargs, p);
 	if(tid < 0) {
 		// XXX clean up proc
 		return tid;
@@ -1603,29 +1738,96 @@ proc_id proc_create_proc(const char *path, const char *name, int priority)
 	return sem_retcode;
 }
 
-proc_id user_proc_create_proc(const char *upath, const char *uname, int priority)
+proc_id user_proc_create_proc(const char *upath, const char *uname,char **args,int argc, int priority)
 {
 	char path[SYS_MAX_PATH_LEN];
 	char name[SYS_MAX_OS_NAME_LEN];
+	char **kargs;
 	int rc;
+
+	dprintf("user_proc_create_proc : argc=%d \n",argc);
 
 	if((addr)upath >= KERNEL_BASE && (addr)upath <= KERNEL_TOP)
 		return ERR_VM_BAD_USER_MEMORY;
 	if((addr)uname >= KERNEL_BASE && (addr)uname <= KERNEL_TOP)
 		return ERR_VM_BAD_USER_MEMORY;
+	rc = user_copy_arg_list(args,argc,&kargs);
+	if(rc < 0)
+		goto error;
 
 	rc = user_strncpy(path, upath, SYS_MAX_PATH_LEN-1);
 	if(rc < 0)
-		return rc;
+		goto error;
+
 	path[SYS_MAX_PATH_LEN-1] = 0;
 
 	rc = user_strncpy(name, uname, SYS_MAX_OS_NAME_LEN-1);
 	if(rc < 0)
-		return rc;
+		goto error;
+
 	name[SYS_MAX_OS_NAME_LEN-1] = 0;
 
-	return proc_create_proc(path, name, priority);
+	return proc_create_proc(path, name,kargs,argc, priority);
+error:
+	free_arg_list(kargs,argc);
+	return rc;
 }
+
+static char *proc_get_argument(int arg_no)
+{
+   struct proc *p;
+	char   *ret;
+	int state = int_disable_interrupts();
+	GRAB_PROC_LOCK();
+
+	p = thread_get_current_thread()->proc;
+
+	if(arg_no > p->argc ) {
+		ret= NULL;
+	} else if(arg_no == 0){
+		ret = p->name;
+	} else {
+		ret = (p->args)[arg_no - 1];
+	}
+
+	RELEASE_PROC_LOCK();
+	int_restore_interrupts(state);
+	return ret;
+
+}
+
+int user_proc_get_arg_count(void)
+{
+	bool state;
+	int err;
+
+	state = int_disable_interrupts();
+	GRAB_PROC_LOCK();
+
+	err = thread_get_current_thread()->proc->argc;
+
+	RELEASE_PROC_LOCK();
+	int_restore_interrupts(state);
+
+	return err;
+}
+
+
+char **user_proc_get_arguments(void)
+{
+	char **args;
+	int  state;
+
+	state = int_disable_interrupts();
+	GRAB_PROC_LOCK();
+
+	args = thread_get_current_thread()->proc->args;
+
+	RELEASE_PROC_LOCK();
+	int_restore_interrupts(state);
+	return args;
+}
+
 
 int proc_kill_proc(proc_id id)
 {

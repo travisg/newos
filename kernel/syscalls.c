@@ -117,7 +117,7 @@ int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_re
 			*call_ret = 0;
 			break;
 		case SYSCALL_PROC_CREATE_PROC:
-			*call_ret = user_proc_create_proc((const char *)arg0, (const char *)arg1, (int)arg2);
+			*call_ret = user_proc_create_proc((const char *)arg0, (const char *)arg1, (char **)arg2, (int )arg3, (int)arg4);
 			break;
 		case SYSCALL_THREAD_WAIT_ON_THREAD:
 			*call_ret = user_thread_wait_on_thread((thread_id)arg0, (int *)arg1);
@@ -231,6 +231,12 @@ int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_re
 			break;
 		case SYSCALL_FDDUP2:
 			*call_ret = user_dup2(arg0, arg1);
+			break;
+		case SYSCALL_PROC_GET_ARGUMENT:
+			*call_ret = (addr)user_proc_get_arguments();
+			break;
+		case SYSCALL_PROC_GET_ARG_COUNT:
+			*call_ret = (addr)user_proc_get_arg_count();
 			break;
 		default:
 			*call_ret = -1;

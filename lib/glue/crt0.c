@@ -2,15 +2,19 @@
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
+
+#include <libsys/syscalls.h>
+
 extern int __stdio_init(void);
 extern int __stdio_deinit(void);
 extern int __heap_init(void);
+
 extern void sys_exit(int retcode);
 
 extern void (*__ctor_list)(void);
 extern void (*__ctor_end)(void);
 
-extern int main();
+extern int main(int argc,char **argv);
 
 int _start(void);
 void _call_ctors(void);
@@ -18,13 +22,12 @@ void _call_ctors(void);
 int _start(void)
 {
 	int retcode;
-
 	_call_ctors();
 
 	__heap_init();
 	__stdio_init();
 
-	retcode = main();
+	retcode = main(sys_proc_get_arguments_count(),sys_proc_get_arguments());
 
 	__stdio_deinit();
 	sys_exit(retcode);
@@ -34,7 +37,7 @@ int _start(void)
 void _call_ctors(void)
 { 
 	void (**f)();
-        
+
         for(f = &__ctor_list; f < &__ctor_end; f++) {
                 (**f)();
         }

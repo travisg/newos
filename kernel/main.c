@@ -143,9 +143,9 @@ static int main2(void *unused)
 	// start the init process
 	{
 		proc_id pid;
-		pid = proc_create_proc("/boot/bin/init", "init", 5);
+		pid = proc_create_proc("/boot/bin/init", "init", NULL, 0, 5);
 		if(pid < 0)
-			kprintf("error starting 'init'\n");
+			kprintf("error starting 'init' error = %d \n",pid);
 	}
 
 	return 0;

@@ -128,7 +128,7 @@ int sys_set_sem_owner(sem_id id, proc_id proc);
 
 thread_id sys_get_current_thread_id();
 void sys_exit(int retcode);
-proc_id sys_proc_create_proc(const char *path, const char *name, int priority);
+proc_id sys_proc_create_proc(const char *path, const char *name, char **args, int argc, int priority);
 thread_id sys_thread_create_thread(const char *name, int (*func)(void *args), void *args);
 int sys_thread_wait_on_thread(thread_id tid, int *retcode);
 int sys_thread_suspend_thread(thread_id tid);
@@ -137,6 +137,8 @@ int sys_thread_kill_thread(thread_id tid);
 int sys_proc_kill_proc(proc_id pid);
 proc_id sys_get_current_proc_id();
 int sys_proc_wait_on_proc(proc_id pid, int *retcode);
+char **sys_proc_get_arguments(void);
+int sys_proc_get_arguments_count(void);
 region_id sys_vm_create_anonymous_region(char *name, void **address, int addr_type,
 	addr size, int wiring, int lock);
 region_id sys_vm_clone_region(char *name, void **address, int addr_type,

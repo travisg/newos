@@ -16,8 +16,10 @@ int cmd_exit(int argc, char *argv[])
 
 int cmd_exec(int argc, char *argv[])
 {
+	bool must_wait=true;
 	proc_id pid;
-
+	int  arg_len;
+	char *tmp = argv[argc - 1];
 	if(argc <= 1) {
 		printf("not enough args to exec\n");
 		return 0;
@@ -25,11 +27,31 @@ int cmd_exec(int argc, char *argv[])
 
 	printf("executing binary '%s'\n", argv[1]);
 
-	pid = sys_proc_create_proc(argv[1], argv[1], 5);
+	// a hack to support the unix '&'
+	if(argc >= 2) {
+		arg_len = strlen(tmp);
+		if(arg_len > 0){
+			tmp += arg_len -1;
+			if(*tmp == '&'){
+				if(arg_len == 1){
+					argc --;
+				} else {
+					*tmp = 0;
+				}
+				must_wait = false;
+			}
+		}
+	}
+
+	pid = sys_proc_create_proc(argv[1], argv[1], argv+1, argc - 1, 5);
 	if(pid >= 0) {
 		int retcode;
-		sys_proc_wait_on_proc(pid, &retcode);
-		printf("spawned process was pid 0x%x, retcode 0x%x\n", pid, retcode);
+
+		printf("spawned process pid=0x%x \n",pid);
+		if(must_wait) {
+			sys_proc_wait_on_proc(pid, &retcode);
+			printf("return code of process 0x%x = 0x%x\n", pid, retcode);
+		}
 	} else {
 		printf("Error: cannot execute '%s'\n", argv[1]);
 		return 0; // should be -1, but the shell would exit
