@@ -118,7 +118,7 @@ int sys_setcwd(const char* path);
 int sys_dup(int fd);
 int sys_dup2(int ofd, int nfd);
 
-bigtime_t sys_system_bigtime();
+bigtime_t sys_system_time();
 int sys_snooze(bigtime_t time);
 
 /* sem functions */

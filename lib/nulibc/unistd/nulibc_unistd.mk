@@ -10,6 +10,8 @@ NULIBC_UNISTD_OBJS = \
 	$(NULIBC_UNISTD_OBJ_DIR)/pread.o \
 	$(NULIBC_UNISTD_OBJ_DIR)/pwrite.o \
 	$(NULIBC_UNISTD_OBJ_DIR)/read.o \
+	$(NULIBC_UNISTD_OBJ_DIR)/sleep.o \
+	$(NULIBC_UNISTD_OBJ_DIR)/usleep.o \
 	$(NULIBC_UNISTD_OBJ_DIR)/write.o
 
 DEPS += $(NULIBC_UNISTD_OBJS:.o=.d)
