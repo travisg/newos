@@ -170,6 +170,10 @@ int probe_memory(kernel_args *ka)
 	dprintf("alloc_brk: 0x%x\n", MON(int, MG_alloc_brk));
 	dprintf("mon_stack: 0x%x\n", MON(int, MG_mon_stack));
 
+	/* record allocated ram */
+	ka->num_phys_alloc_ranges = 1;
+	ka->phys_alloc_range[0].start = ROUNDOWN(MON(int, MG_alloc_base), PAGE_SIZE);
+
 	return 0;
 }
 

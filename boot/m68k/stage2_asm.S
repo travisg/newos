@@ -35,3 +35,13 @@ set_srp:
 	.long	0x4e7b0807		// movec %d0,%srp
 	rts
 
+.globl get_vbr
+get_vbr:
+	.long	movec %vbr,%d0
+	rts
+
+.globl set_vbr
+set_vbr:
+	.long	movec %d0,%vbr
+	rts
+

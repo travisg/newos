@@ -17,6 +17,8 @@ int _start(char *boot_args, char *monitor)
 {
 	unsigned int bootdir_pages;
 
+	memset(&ka, 0, sizeof(ka));
+
 	init_nextmon(monitor);
 	dprintf("\nNewOS stage2: args '%s', monitor %p\n", boot_args, monitor);
 
@@ -50,7 +52,7 @@ int _start(char *boot_args, char *monitor)
 	ka.cpu_kstack[0].start = allocate_page(&ka);
 	ka.cpu_kstack[0].size = PAGE_SIZE;
 
-	ka.num_cpus = 0;
+	ka.num_cpus = 1;
 
 	return 0;
 }
