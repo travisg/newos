@@ -888,7 +888,7 @@ int user_sem_get_next_sem_info(proc_id uproc, uint32 *ucookie, struct sem_info *
 	rc2 = user_memcpy(&cookie, ucookie, sizeof(uint32));
 	if(rc2 < 0)
 		return rc2;
-	rc = user_sem_get_next_sem_info(uproc, &cookie, &info);
+	rc = sem_get_next_sem_info(uproc, &cookie, &info);
 	rc2 = user_memcpy(uinfo, &info, sizeof(struct sem_info));
 	if(rc2 < 0)
 		return rc2;
