@@ -580,7 +580,7 @@ int vm_translation_map_create(vm_translation_map *new_map, bool kernel)
 		return ERR_NO_MEMORY;
 
 	new_map->arch_data = kmalloc(sizeof(vm_translation_map_arch_info));
-	if(new_map == NULL)
+	if(new_map->arch_data == NULL)
 		return ERR_NO_MEMORY;
 
 	new_map->arch_data->num_invalidate_pages = 0;
