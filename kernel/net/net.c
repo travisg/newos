@@ -9,6 +9,7 @@
 #include <kernel/cbuf.h>
 #include <kernel/heap.h>
 #include <kernel/net/net.h>
+#include <kernel/net/net_timer.h>
 #include <kernel/net/if.h>
 #include <kernel/net/ethernet.h>
 #include <kernel/net/loopback.h>
@@ -98,10 +99,12 @@ static int net_test_thread4(void *unused)
 	memset(&addr, 0, sizeof(addr));
 	addr.addr.len = 4;
 	addr.addr.type = ADDR_TYPE_IP;
-	addr.port = 9999;
-	NETADDR_TO_IPV4(addr.addr) = IPV4_DOTADDR_TO_ADDR(192,168,1,1);
+	addr.port = 9;
+	NETADDR_TO_IPV4(addr.addr) = IPV4_DOTADDR_TO_ADDR(192,168,0,3);
 
 	socket_connect(id, &addr);
+
+	return 0;
 }
 
 static int net_test_thread(void *unused)
@@ -138,6 +141,7 @@ int net_init(kernel_args *ka)
 {
 	dprintf("net_init: entry\n");
 
+	net_timer_init();
 	if_init();
 	ethernet_init();
 	arp_init();
@@ -185,18 +189,18 @@ int net_init_postdev(kernel_args *ka)
 	address = kmalloc(sizeof(ifaddr));
 	address->addr.len = 4;
 	address->addr.type = ADDR_TYPE_IP;
-	NETADDR_TO_IPV4(address->addr) = IPV4_DOTADDR_TO_ADDR(192,168,1,99); // 192.168.0.99
+	NETADDR_TO_IPV4(address->addr) = IPV4_DOTADDR_TO_ADDR(192,168,0,99); // 192.168.0.99
 	address->netmask.len = 4;
 	address->netmask.type = ADDR_TYPE_IP;
 	NETADDR_TO_IPV4(address->netmask) = IPV4_DOTADDR_TO_ADDR(255,255,255,0); // 255.255.255.0
 	address->broadcast.len = 4;
 	address->broadcast.type = ADDR_TYPE_IP;
-	NETADDR_TO_IPV4(address->broadcast) = IPV4_DOTADDR_TO_ADDR(192,168,1,255); // 192.168.0.255
+	NETADDR_TO_IPV4(address->broadcast) = IPV4_DOTADDR_TO_ADDR(192,168,0,255); // 192.168.0.255
 	if_bind_address(i, address);
 
 	// set up an initial routing table
-	ipv4_route_add(IPV4_DOTADDR_TO_ADDR(192,168,1,0), IPV4_DOTADDR_TO_ADDR(255,255,255,0), IPV4_DOTADDR_TO_ADDR(192,168,1,99), i->id);
-	ipv4_route_add_gateway(0x00000000, 0x00000000, IPV4_DOTADDR_TO_ADDR(192,168,1,99), i->id, IPV4_DOTADDR_TO_ADDR(192,168,1,1));
+	ipv4_route_add(IPV4_DOTADDR_TO_ADDR(192,168,0,0), IPV4_DOTADDR_TO_ADDR(255,255,255,0), IPV4_DOTADDR_TO_ADDR(192,168,0,99), i->id);
+	ipv4_route_add_gateway(0x00000000, 0x00000000, IPV4_DOTADDR_TO_ADDR(192,168,0,99), i->id, IPV4_DOTADDR_TO_ADDR(192,168,0,1));
 
 	sys_close(net_fd);
 
