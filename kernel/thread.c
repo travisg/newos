@@ -277,13 +277,26 @@ static int _create_user_thread_kentry(void)
 	thread_atkernel_exit();
 
 	// jump to the entry point in user space
-	arch_thread_enter_uspace((addr)t->args, t->user_stack_base + STACK_SIZE);
+	arch_thread_enter_uspace((addr)t->entry, t->args, t->user_stack_base + STACK_SIZE);
 
 	// never get here
 	return 0;
 }
 
-static thread_id _create_thread(const char *name, proc_id pid, int priority, addr entry, bool kernel)
+static int _create_kernel_thread_kentry(void)
+{
+	int (*func)(void *args);
+	struct thread *t;
+
+	t = thread_get_current_thread();
+
+	// call the entry function with the appropriate args
+	func = (void *)t->entry;
+
+	return func(t->args);
+}
+
+static thread_id _create_thread(const char *name, proc_id pid, addr entry, void *args, bool kernel)
 {
 	struct thread *t;
 	struct proc *p;
@@ -295,7 +308,7 @@ static thread_id _create_thread(const char *name, proc_id pid, int priority, add
 	if(t == NULL)
 		return ERR_NO_MEMORY;
 
-	t->priority = priority;
+	t->priority = THREAD_MEDIUM_PRIORITY;
 	t->state = THREAD_STATE_BIRTH;
 	t->next_state = THREAD_STATE_SUSPENDED;
 
@@ -334,9 +347,12 @@ static thread_id _create_thread(const char *name, proc_id pid, int priority, add
 	if(t->kernel_stack_region_id < 0)
 		panic("_create_thread: error creating kernel stack!\n");
 
+	t->args = args;
+	t->entry = entry;
+
 	if(kernel) {
 		// this sets up an initial kthread stack that runs the entry
-		arch_thread_initialize_kthread_stack(t, (void *)entry, &thread_entry, &thread_kthread_exit);
+		arch_thread_initialize_kthread_stack(t, &_create_kernel_thread_kentry, &thread_entry, &thread_kthread_exit);
 	} else {
 		// create user stack
 		// XXX make this better. For now just keep trying to create a stack
@@ -360,7 +376,6 @@ static thread_id _create_thread(const char *name, proc_id pid, int priority, add
 		// copy the user entry over to the args field in the thread struct
 		// the function this will call will immediately switch the thread into
 		// user space.
-		t->args = (void *)entry;
 		arch_thread_initialize_kthread_stack(t, &_create_user_thread_kentry, &thread_entry, &thread_kthread_exit);
 	}
 
@@ -369,7 +384,7 @@ static thread_id _create_thread(const char *name, proc_id pid, int priority, add
 	return t->id;
 }
 
-thread_id user_thread_create_user_thread(char *uname, proc_id pid, int priority, addr entry)
+thread_id user_thread_create_user_thread(char *uname, proc_id pid, addr entry, void *args)
 {
 	char name[SYS_MAX_OS_NAME_LEN];
 	int rc;
@@ -384,22 +399,22 @@ thread_id user_thread_create_user_thread(char *uname, proc_id pid, int priority,
 		return rc;
 	name[SYS_MAX_OS_NAME_LEN-1] = 0;
 
-	return thread_create_user_thread(name, pid, priority, entry);
+	return thread_create_user_thread(name, pid, entry, args);
 }
 
-thread_id thread_create_user_thread(char *name, proc_id pid, int priority, addr entry)
+thread_id thread_create_user_thread(char *name, proc_id pid, addr entry, void *args)
 {
-	return _create_thread(name, pid, priority, entry, false);
+	return _create_thread(name, pid, entry, args, false);
 }
 
-thread_id thread_create_kernel_thread(const char *name, int (*func)(void), int priority)
+thread_id thread_create_kernel_thread(const char *name, int (*func)(void *), void *args)
 {
-	return _create_thread(name, proc_get_kernel_proc()->id, priority, (addr)func, true);
+	return _create_thread(name, proc_get_kernel_proc()->id, (addr)func, args, true);
 }
 
-static thread_id thread_create_kernel_thread_etc(const char *name, int (*func)(void), int priority, struct proc *p)
+static thread_id thread_create_kernel_thread_etc(const char *name, int (*func)(void *), void *args, struct proc *p)
 {
-	return _create_thread(name, p->id, priority, (addr)func, true);
+	return _create_thread(name, p->id, (addr)func, args, true);
 }
 
 int thread_suspend_thread(thread_id id)
@@ -469,6 +484,42 @@ int thread_resume_thread(thread_id id)
 	return retval;
 }
 
+int thread_set_priority(thread_id id, int priority)
+{
+	int state;
+	struct thread *t;
+	int retval;
+
+	// make sure the passed in priority is within bounds
+	if(priority > THREAD_MAX_PRIORITY)
+		priority = THREAD_MAX_PRIORITY;
+	if(priority < THREAD_MIN_PRIORITY)
+		priority = THREAD_MIN_PRIORITY;
+
+	state = int_disable_interrupts();
+	GRAB_THREAD_LOCK();
+
+	t = thread_get_thread_struct_locked(id);
+	if(t) {
+		if(t->state == THREAD_STATE_READY && t->priority != priority) {
+			// this thread is in a ready queue right now, so it needs to be reinserted
+			thread_dequeue_id(&run_q[t->priority], t->id);
+			t->priority = priority;
+			thread_enqueue_run_q(t);
+		} else {
+			t->priority = priority;
+		}
+		retval = NO_ERROR;
+	} else {
+		retval = ERR_INVALID_HANDLE;
+	}
+
+	RELEASE_THREAD_LOCK();
+	int_restore_interrupts(state);
+
+	return retval;
+}
+
 static void _dump_proc_info(struct proc *p)
 {
 	dprintf("PROC: 0x%x\n", p);
@@ -479,7 +530,6 @@ static void _dump_proc_info(struct proc *p)
 	dprintf("state:       %d\n", p->state);
 	dprintf("pending_signals: 0x%x\n", p->pending_signals);
 	dprintf("ioctx:       0x%x\n", p->ioctx);
-	dprintf("args:        0x%x\n", p->args);
 	dprintf("proc_creation_sem: 0x%x\n", p->proc_creation_sem);
 	dprintf("aspace_id:   0x%x\n", p->aspace_id);
 	dprintf("aspace:      0x%x\n", p->aspace);
@@ -562,7 +612,9 @@ static void _dump_thread_info(struct thread *t)
 	dprintf("sem_count:   0x%x\n", t->sem_count);
 	dprintf("sem_deleted_retcode: 0x%x\n", t->sem_deleted_retcode);
 	dprintf("sem_errcode: 0x%x\n", t->sem_errcode);
+	dprintf("fault_handler: 0x%x\n", t->fault_handler);
 	dprintf("args:        0x%x\n", t->args);
+	dprintf("entry:       0x%x\n", t->entry);
 	dprintf("proc:        0x%x\n", t->proc);
 	dprintf("return_code_sem: 0x%x\n", t->return_code_sem);
 	dprintf("kernel_stack_region_id: 0x%x\n", t->kernel_stack_region_id);
@@ -1257,208 +1309,6 @@ static void thread_context_switch(struct thread *t_from, struct thread *t_to)
 	arch_thread_context_switch(t_from, t_to);
 }
 
-#define NUM_TEST_THREADS 16
-/* thread TEST code */
-static sem_id thread_test_sems[NUM_TEST_THREADS];
-static thread_id thread_test_first_thid;
-
-int test_thread_starter_thread()
-{
-	thread_snooze(1000000); // wait a second
-
-	// start the chain of threads by releasing one of them
-	sem_release(thread_test_sems[0], 1);
-
-	return 0;
-}
-
-int test_thread5()
-{
-	int fd;
-
-	fd = sys_open("/bus/pci", STREAM_TYPE_DEVICE, 0);
-	if(fd < 0) {
-		dprintf("test_thread5: error opening /bus/pci\n");
-		return 1;
-	}
-
-	sys_ioctl(fd, 99, NULL, 0);
-
-	return 0;
-}
-
-int test_thread4()
-{
-	proc_id pid;
-
-	pid = proc_create_proc("/boot/testapp", "testapp", 5);
-	if(pid < 0)
-		return -1;
-
-	dprintf("test_thread4: finished created new process\n");
-
-	thread_snooze(1000000);
-
-	// kill the process
-//	proc_kill_proc(pid);
-
-	return 0;
-}
-
-int test_thread3()
-{
-	int fd;
-	char buf[1024];
-	ssize_t len;
-
-	kprintf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
-	fd = sys_open("/boot/testfile", STREAM_TYPE_FILE, 0);
-	if(fd < 0)
-		panic("could not open /boot/testfile\n");
-	len = sys_read(fd, buf, 0, sizeof(buf));
-	sys_write(0, buf, 0, len);
-	sys_close(fd);
-
-	return 0;
-}
-
-int test_thread2()
-{
-	while(1) {
-		char str[65];
-		ssize_t len;
-
-		len = sys_read(0, str, 0, sizeof(str) - 1);
-		if(len < 0) {
-			dprintf("error reading from console!\n");
-			break;
-		}
-		if(len > 1) dprintf("test_thread2: read %d bytes\n", len);
-		str[len] = 0;
-		kprintf("%s", str);
-	}
-	return 0;
-}
-
-int test_thread()
-{
-	int a = 0;
-	int tid = thread_get_current_thread_id();
-	int x, y;
-//	char c = 'a';
-
-	x = tid % 80;
-	y = (tid / 80) * 2 ;
-
-	while(1) {
-//		a += tid;
-		a++;
-#if 1
-		kprintf_xy(0, tid-1, "thread%d - %d    - 0x%x 0x%x - cpu %d", tid, a, system_time(), smp_get_current_cpu());
-#endif
-#if 0
-		dprintf("thread%d - %d    - %d %d - cpu %d\n", tid, a, system_time(), smp_get_current_cpu());
-#endif
-#if 0
-		kprintf("thread%d - %d    - %d %d - cpu %d\n", tid, a, system_time(), smp_get_current_cpu());
-#endif
-#if 0
-		kprintf_xy(x, y, "%c", c++);
-		if(c > 'z')
-			c = 'a';
-		kprintf_xy(x, y+1, "%d", smp_get_current_cpu());
-#endif
-#if 0
-		thread_snooze(10000 * tid);
-#endif
-#if 0
-		sem_acquire(thread_test_sems[tid - thread_test_first_thid], 1);
-
-		// release the next semaphore
-		{
-			sem_id sem_to_release;
-
-			sem_to_release = tid - thread_test_first_thid + 1;
-			if(sem_to_release >= NUM_TEST_THREADS)
-				sem_to_release = 0;
-			sem_to_release = thread_test_sems[sem_to_release];
-			sem_release(sem_to_release, 1);
-		}
-#endif
-#if 0
-		switch(tid - thread_test_first_thid) {
-			case 2: case 4:
-				if((a % 2048) == 0)
-					sem_release(thread_test_sem, _rand() % 16 + 1);
-				break;
-			default:
-				sem_acquire(thread_test_sem, 1);
-		}
-#endif
-#if 0
-		if(a > tid * 100) {
-			kprintf("thread %d exiting\n", tid);
-			break;
-		}
-#endif
-	}
-	return 1;
-}
-
-int panic_thread()
-{
-	dprintf("panic thread starting\n");
-
-	thread_snooze(10000000);
-	panic("gotcha!\n");
-	return 0;
-}
-
-int thread_test()
-{
-	thread_id tid;
-	int i;
-	char temp[64];
-
-#if 1
-	for(i=0; i<NUM_TEST_THREADS; i++) {
-		sprintf(temp, "test_thread%d", i);
-		tid = thread_create_kernel_thread(temp, &test_thread, 5);
-		thread_resume_thread(tid);
-		if(i == 0) {
-			thread_test_first_thid = tid;
-		}
-		sprintf(temp, "test sem %d", i);
-		thread_test_sems[i] = sem_create(0, temp);
-	}
-	tid = thread_create_kernel_thread("test starter thread", &test_thread_starter_thread, THREAD_MAX_PRIORITY);
-	thread_resume_thread(tid);
-#endif
-#if 0
-	tid = thread_create_kernel_thread("test thread 2", &test_thread2, 5);
-	thread_resume_thread(tid);
-#endif
-#if 0
-	tid = thread_create_kernel_thread("test thread 3", &test_thread3, 5);
-	thread_resume_thread(tid);
-#endif
-#if 0
-	tid = thread_create_kernel_thread("test thread 4", &test_thread4, 5);
-	thread_resume_thread(tid);
-#endif
-#if 0
-	tid = thread_create_kernel_thread("test thread 5", &test_thread5, 5);
-	thread_resume_thread(tid);
-#endif
-#if 0
-	tid = thread_create_kernel_thread("panic thread", &panic_thread, THREAD_MAX_PRIORITY);
-	thread_resume_thread(tid);
-#endif
-	dprintf("thread_test: done creating test threads\n");
-
-	return 0;
-}
-
 static int _rand()
 {
 	static int next = 0;
@@ -1626,7 +1476,7 @@ error:
 	return NULL;
 }
 
-static int proc_create_proc2(void)
+static int proc_create_proc2(void *args)
 {
 	int err;
 	struct thread *t;
@@ -1651,7 +1501,7 @@ static int proc_create_proc2(void)
 		return t->user_stack_region_id;
 	}
 
-	path = p->args;
+	path = args;
 	dprintf("proc_create_proc2: loading elf binary '%s'\n", path);
 
 	err = elf_load_uspace(path, p, 0, &entry);
@@ -1660,6 +1510,9 @@ static int proc_create_proc2(void)
 		sem_delete_etc(p->proc_creation_sem, -1);
 		return err;
 	}
+
+	// free the args
+	kfree(args);
 
 	dprintf("proc_create_proc2: loaded elf. entry = 0x%x\n", entry);
 
@@ -1671,34 +1524,10 @@ static int proc_create_proc2(void)
 	p->proc_creation_sem = -1;
 
 	// jump to the entry point in user space
-	arch_thread_enter_uspace(entry, t->user_stack_base + STACK_SIZE);
+	arch_thread_enter_uspace(entry, NULL, t->user_stack_base + STACK_SIZE);
 
 	// never gets here
 	return 0;
-}
-
-proc_id user_proc_create_proc(const char *upath, const char *uname, int priority)
-{
-	char path[SYS_MAX_PATH_LEN];
-	char name[SYS_MAX_OS_NAME_LEN];
-	int rc;
-
-	if((addr)upath >= KERNEL_BASE && (addr)upath <= KERNEL_TOP)
-		return ERR_VM_BAD_USER_MEMORY;
-	if((addr)uname >= KERNEL_BASE && (addr)uname <= KERNEL_TOP)
-		return ERR_VM_BAD_USER_MEMORY;
-
-	rc = user_strncpy(path, upath, SYS_MAX_PATH_LEN-1);
-	if(rc < 0)
-		return rc;
-	path[SYS_MAX_PATH_LEN-1] = 0;
-
-	rc = user_strncpy(name, uname, SYS_MAX_OS_NAME_LEN-1);
-	if(rc < 0)
-		return rc;
-	name[SYS_MAX_OS_NAME_LEN-1] = 0;
-
-	return proc_create_proc(path, name, priority);
 }
 
 proc_id proc_create_proc(const char *path, const char *name, int priority)
@@ -1708,6 +1537,7 @@ proc_id proc_create_proc(const char *path, const char *name, int priority)
 	int err;
 	unsigned int state;
 	int sem_retcode;
+	void *args;
 
 	dprintf("proc_create_proc: entry '%s', name '%s'\n", path, name);
 
@@ -1721,24 +1551,24 @@ proc_id proc_create_proc(const char *path, const char *name, int priority)
 	RELEASE_PROC_LOCK();
 	int_restore_interrupts(state);
 
+	// copy the args over
+	args = kmalloc(strlen(path) + 1);
+	if(!args) {
+		// XXX clean up proc
+		return ERR_NO_MEMORY;
+	}
+	strcpy(args, path);
+
 	// create a kernel thread, but under the context of the new process
-	tid = thread_create_kernel_thread_etc(name, proc_create_proc2, priority, p);
+	tid = thread_create_kernel_thread_etc(name, proc_create_proc2, args, p);
 	if(tid < 0) {
 		// XXX clean up proc
 		return tid;
 	}
 
-	// copy the args over
-	p->args = kmalloc(strlen(path) + 1);
-	if(p->args == NULL) {
-		// XXX clean up proc
-		return ERR_NO_MEMORY;
-	}
-	strcpy(p->args, path);
-
 	// create a new ioctx for this process
 	p->ioctx = vfs_new_ioctx();
-	if(p->ioctx == NULL) {
+	if(!p->ioctx) {
 		// XXX clean up proc
 		panic("proc_create_proc: could not create new ioctx\n");
 		return ERR_NO_MEMORY;
@@ -1763,6 +1593,30 @@ proc_id proc_create_proc(const char *path, const char *name, int priority)
 
 	// this will either contain the process id, or an error code
 	return sem_retcode;
+}
+
+proc_id user_proc_create_proc(const char *upath, const char *uname, int priority)
+{
+	char path[SYS_MAX_PATH_LEN];
+	char name[SYS_MAX_OS_NAME_LEN];
+	int rc;
+
+	if((addr)upath >= KERNEL_BASE && (addr)upath <= KERNEL_TOP)
+		return ERR_VM_BAD_USER_MEMORY;
+	if((addr)uname >= KERNEL_BASE && (addr)uname <= KERNEL_TOP)
+		return ERR_VM_BAD_USER_MEMORY;
+
+	rc = user_strncpy(path, upath, SYS_MAX_PATH_LEN-1);
+	if(rc < 0)
+		return rc;
+	path[SYS_MAX_PATH_LEN-1] = 0;
+
+	rc = user_strncpy(name, uname, SYS_MAX_OS_NAME_LEN-1);
+	if(rc < 0)
+		return rc;
+	name[SYS_MAX_OS_NAME_LEN-1] = 0;
+
+	return proc_create_proc(path, name, priority);
 }
 
 int proc_kill_proc(proc_id id)

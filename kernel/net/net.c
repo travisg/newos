@@ -19,7 +19,7 @@ uint8 buf[2048];
 int rx_thread()
 {
 	int err;
-	
+
 	if(net_fd < 0)
 		return -1;
 
@@ -64,9 +64,10 @@ int net_init(kernel_args *ka)
 		ethernet_set_station_addr(eaddr);
 	}
 
-	rx_thread_id = thread_create_kernel_thread("net_rx_thread", &rx_thread, 64);
+	rx_thread_id = thread_create_kernel_thread("net_rx_thread", &rx_thread, NULL);
 	if(rx_thread_id < 0)
 		panic("net_init: error creating rx_thread\n");
+	thread_set_priority(rx_thread_id, THREAD_HIGH_PRIORITY);
 	thread_resume_thread(rx_thread_id);
 
 	return 0;

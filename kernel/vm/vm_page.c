@@ -262,7 +262,8 @@ int vm_page_init_postthread(kernel_args *ka)
 	thread_id tid;
 
 	// create a kernel thread to clear out pages
-	tid = thread_create_kernel_thread("page scrubber", &page_scrubber, THREAD_LOWEST_PRIORITY);
+	tid = thread_create_kernel_thread("page scrubber", &page_scrubber, NULL);
+	thread_set_priority(tid, THREAD_LOWEST_PRIORITY);
 	thread_resume_thread(tid);
 
 	modified_pages_available = sem_create(0, "modified_pages_avail_sem");

@@ -126,16 +126,23 @@ skip_pgdir_swap:
 //	popfl
 	ret
 
-/* void i386_enter_uspace(addr entry, addr ustack_top); */
+/* void i386_enter_uspace(addr entry, void *args, addr ustack_top); */
 .global i386_enter_uspace
 i386_enter_uspace:
 	movl	4(%esp),%eax	// get entry point
-	movl	8(%esp),%ebx	// get user stack
+	movl	8(%esp),%edx	// get arguments
+	movl	12(%esp),%ebx	// get user stack
 	movw	$0x23,%cx
 	movw	%cx,%ds
 	movw	%cx,%es
 	movw	%cx,%fs
 	movw	%cx,%gs
+
+	// push the args onto the user stack
+	movl	%edx,-4(%ebx)	// args
+	xorl	%ecx,%ecx
+	movl	%ecx,-8(%ebx)	// fake return address
+	sub		$8,%ebx
 
 	pushl	$0x23			// user data segment
 	pushl	%ebx			// user stack

@@ -104,7 +104,7 @@ int sys_sem_release_etc(sem_id id, int count, int flags);
 thread_id sys_get_current_thread_id();
 void sys_exit(int retcode);
 proc_id sys_proc_create_proc(const char *path, const char *name, int priority);
-thread_id sys_thread_create_thread(const char *name, int priority, addr entry);
+thread_id sys_thread_create_thread(const char *name, int (*func)(void *args), void *args);
 int sys_thread_wait_on_thread(thread_id tid, int *retcode);
 int sys_thread_suspend_thread(thread_id tid);
 int sys_thread_resume_thread(thread_id tid);

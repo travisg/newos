@@ -1673,7 +1673,7 @@ int vm_init_postthread(kernel_args *ka)
 	vm_page_init_postthread(ka);
 
 	{
-		thread_id tid = thread_create_kernel_thread("max_commit_thread", &vm_thread_dump_max_commit, 30);
+		thread_id tid = thread_create_kernel_thread("max_commit_thread", &vm_thread_dump_max_commit, NULL);
 		thread_resume_thread(tid);
 	}
 

@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -62,7 +62,7 @@ int arch_thread_initialize_kthread_stack(struct thread *t, int (*start_func)(voi
 
 	// save the esp
 	t->arch_info.esp = kstack_top;
-	
+
 	return 0;
 }
 
@@ -120,14 +120,14 @@ void arch_thread_dump_info(void *info)
 	dprintf("\tesp: 0x%x\n", at->esp);
 }
 
-void arch_thread_enter_uspace(addr entry, addr ustack_top)
+void arch_thread_enter_uspace(addr entry, void *args, addr ustack_top)
 {
-	dprintf("arch_thread_entry_uspace: entry 0x%x, ustack_top 0x%x\n",
-		entry, ustack_top);
+	dprintf("arch_thread_entry_uspace: entry 0x%x, args 0x%x, ustack_top 0x%x\n",
+		entry, args, ustack_top);
 
 	int_disable_interrupts();
 
 	i386_set_kstack(thread_get_current_thread()->kernel_stack_base + KSTACK_SIZE);
 
-	i386_enter_uspace(entry, ustack_top - 4);
+	i386_enter_uspace(entry, args, ustack_top - 4);
 }

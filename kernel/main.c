@@ -76,7 +76,7 @@ int _start(kernel_args *oldka, int cpu)
 		// start a thread to finish initializing the rest of the system
 		{
 			thread_id tid;
-			tid = thread_create_kernel_thread("main2", &main2, 20);
+			tid = thread_create_kernel_thread("main2", &main2, NULL);
 			thread_resume_thread(tid);
 		}
 

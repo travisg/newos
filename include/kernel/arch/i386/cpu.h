@@ -84,7 +84,7 @@ typedef struct pdentry {
 
 void setup_system_time(unsigned int cv_factor);
 void i386_context_switch(unsigned int **old_esp, unsigned int *new_esp, addr new_pgdir);
-void i386_enter_uspace(addr entry, addr ustack_top);
+void i386_enter_uspace(addr entry, void *args, addr ustack_top);
 void i386_set_kstack(addr kstack);
 void i386_switch_stack_and_call(addr stack, void (*func)(void *), void *arg);
 

@@ -52,7 +52,6 @@ struct proc {
 	int pending_signals;
 	char *name;
 	void *ioctx;
-	void *args;
 	sem_id proc_creation_sem;
 	aspace_id aspace_id;
 	vm_address_space *aspace;
@@ -80,6 +79,7 @@ struct thread {
 	int sem_errcode;
 	int sem_flags;
 	addr fault_handler;
+	addr entry;
 	void *args;
 	struct proc *proc;
 	sem_id return_code_sem;
@@ -108,6 +108,7 @@ void thread_atkernel_exit();
 
 int thread_suspend_thread(thread_id id);
 int thread_resume_thread(thread_id id);
+int thread_set_priority(thread_id id, int priority);
 void thread_resched();
 void thread_start_threading();
 void thread_snooze(time_t time);
@@ -120,8 +121,8 @@ struct thread *thread_get_thread_struct(thread_id id);
 thread_id thread_get_current_thread_id();
 int thread_wait_on_thread(thread_id id, int *retcode);
 
-thread_id thread_create_user_thread(char *name, proc_id pid, int priority, addr entry);
-thread_id thread_create_kernel_thread(const char *name, int (*func)(void), int priority);
+thread_id thread_create_user_thread(char *name, proc_id pid, addr entry, void *args);
+thread_id thread_create_kernel_thread(const char *name, int (*func)(void *args), void *args);
 
 struct proc *proc_get_kernel_proc();
 proc_id proc_create_proc(const char *path, const char *name, int priority);
@@ -134,7 +135,7 @@ proc_id proc_get_current_proc_id();
 int user_thread_wait_on_thread(thread_id id, int *uretcode);
 proc_id user_proc_create_proc(const char *path, const char *name, int priority);
 int user_proc_wait_on_proc(proc_id id, int *uretcode);
-thread_id user_thread_create_user_thread(char *uname, proc_id pid, int priority, addr entry);
+thread_id user_thread_create_user_thread(char *uname, proc_id pid, addr entry, void *args);
 
 #if 1
 // XXX remove later

@@ -8,13 +8,13 @@
 #include <libsys/syscalls.h>
 #include <libsys/stdio.h>
 
-int test_thread()
+int test_thread(void *args)
 {
-	thread_id tid = sys_get_current_thread_id();
+	int i = (int)args;
 
 	sys_snooze(1000000);
 	for(;;) {
-		printf("%c", 'a' + tid);
+		printf("%c", 'a' + i);
 	}
 	return 0;
 }
@@ -115,7 +115,7 @@ int main()
 		int i;
 
 		for(i=0; i<10; i++) {
-			tids[i] = sys_thread_create_thread("foo", 10, (addr)&test_thread);
+			tids[i] = sys_thread_create_thread("foo", &test_thread, (void *)i);
 			sys_thread_resume_thread(tids[i]);
 		}
 
@@ -129,6 +129,12 @@ int main()
 		printf("thread_is dead\n");
 		sys_snooze(5000000);
 */
+	}
+#endif
+#if 0
+	{
+		for(;;)
+			sys_proc_create_proc("/boot/bin/true", "true", 32);
 	}
 #endif
 #if 0
