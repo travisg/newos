@@ -1,33 +1,40 @@
 OUTPUT_FORMAT("elf32-shl", "elf32-shl", "elf32-shl")
 OUTPUT_ARCH(sh)
 
+PHDRS 
+{
+	text PT_LOAD;
+	data PT_LOAD;
+}
+
 ENTRY(__start)
 SECTIONS
 {
-/*
-	. = 0x80000000 + SIZEOF_HEADERS;
-*/
-	. = 0xc0000000 + 0xa0;
+
+	. = 0xc0000000 + SIZEOF_HEADERS;
 
 	/* text/read-only data */
-	.text :	{ *(.text .gnu.linkonce.t.*) }
+	.text :	{ *(.text .gnu.linkonce.t.*) } :text
 
 	__ctor_list = .;
-	.ctors : { *(.ctors) }
+	.ctors : { *(.ctors) } :text
 	__ctor_end = .;
 
-	.rodata : { *(.rodata) }
+	.rodata :
+	{ 
+		*(.rodata)
+		. = ALIGN(0x1000);
+	} =0x9000
 
 	/* writable data  */
-	. = ALIGN(0x1000);
 	__data_start = .;
-	.data : { *(.data .gnu.linkonce.d.*) }
+	.data : { *(.data .gnu.linkonce.d.*) } :data
 
 	/* unintialized data (in same segment as writable data) */
 	__bss_start = .;
-	.bss : { *(.bss) }
+	.bss : { *(.bss) } :data
 
-	. = ALIGN(0x1000);
+	. = ALIGN(0x1000); 
 	_end = . ;
 
 	/* Strip unnecessary stuff */
