@@ -9,13 +9,14 @@
 #include <kernel/int.h>
 #include <kernel/debug.h>
 #include <kernel/heap.h>
+#include <kernel/cbuf.h>
 #include <sys/errors.h>
 
 #include <libc/string.h>
 
 struct port_msg {
 	int		msg_code;
-	void*	data;
+	cbuf*	data_cbuf;
 	size_t	data_len;
 };
 
@@ -614,8 +615,9 @@ port_read_etc(port_id id,
 	size_t 	siz;
 	int		res;
 	int		t;
-	void*	buf;
+	cbuf*	msg_store;
 	int32	code;
+	int		err;
 	
 	if(ports_active == false)
 		return ERR_PORT_NOT_ACTIVE;
@@ -693,8 +695,8 @@ port_read_etc(port_id id,
 
 	ports[slot].tail = (ports[slot].tail + 1) % ports[slot].capacity;
 
-	buf  = ports[slot].msg_queue[t].data;
-	code = ports[slot].msg_queue[t].msg_code;
+	msg_store	= ports[slot].msg_queue[t].data_cbuf;
+	code 		= ports[slot].msg_queue[t].msg_code;
 
 	// check output buffer size
 	siz	= min(buffer_size, ports[slot].msg_queue[t].data_len);
@@ -705,15 +707,23 @@ port_read_etc(port_id id,
 	int_restore_interrupts(state);
 
 	// copy message
-	// XXX: or does (by spec) the copy have to take place before the acquire succeeds ?
-	// may create memory exception
-	if (siz > 0) {
+/*	if (siz > 0) {
 		if (flags & PORT_FLAG_USE_USER_MEMCPY)
 			user_memcpy(msg_buffer, buf, siz);
 		else
 			memcpy(msg_buffer, buf, siz);
 	}
+*/
 	*msg_code = code;
+	if (siz > 0) {
+		if (flags & PORT_FLAG_USE_USER_MEMCPY) {
+			if ((err = cbuf_user_memcpy_from_chain(msg_buffer, msg_store, 0, siz) < 0))	{
+				sem_release(cached_semid, 1); // it's read anyway...
+				return err;
+			}
+		} else
+			cbuf_memcpy_from_chain(msg_buffer, msg_store, 0, siz);
+	}
 
 	// make one spot in queue available again for write
 	sem_release(cached_semid, 1);
@@ -776,8 +786,9 @@ port_write_etc(port_id id,
 	int res;
 	sem_id cached_semid;
 	int h;
-	void* buf;
+	cbuf* msg_store;
 	int c1, c2;
+	int err;
 	
 	if(ports_active == false)
 		return ERR_PORT_NOT_ACTIVE;
@@ -848,16 +859,17 @@ port_write_etc(port_id id,
 		return res;
 	}
 
-	// malloc memory for message
-	buf = kmalloc(buffer_size);
-	if (buf == NULL)
+	msg_store = cbuf_get_chain(buffer_size);
+	if (msg_store == NULL)
 		return ERR_NO_MEMORY;
-	// copy message
-	// XXX: or does (by spec) the copy have to take place before the acquire succeeds ?
 	if (flags & PORT_FLAG_USE_USER_MEMCPY)
-		user_memcpy(buf, msg_buffer, buffer_size);
+		// copy from user memory
+		if ((err = cbuf_user_memcpy_to_chain(msg_store, 0, msg_buffer, buffer_size)) < 0)
+			return err; // memory exception
 	else
-		memcpy(buf, msg_buffer, buffer_size);
+		// copy from kernel memory
+		if ((err = cbuf_memcpy_to_chain(msg_store, 0, msg_buffer, buffer_size)) < 0)
+			return err; // memory exception
 
 	// attach copied message to queue
 	state = int_disable_interrupts();
@@ -869,7 +881,7 @@ port_write_etc(port_id id,
 	if (h >= ports[slot].capacity)
 		panic("port %id: head > cap %d", ports[slot].id, ports[slot].capacity);
 	ports[slot].msg_queue[h].msg_code	= msg_code;
-	ports[slot].msg_queue[h].data		= buf;
+	ports[slot].msg_queue[h].data_cbuf	= msg_store;
 	ports[slot].msg_queue[h].data_len	= buffer_size;
 	ports[slot].head = (ports[slot].head + 1) % ports[slot].capacity;
 	ports[slot].total_count++;

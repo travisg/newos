@@ -321,6 +321,62 @@ int cbuf_memcpy_to_chain(cbuf *chain, size_t offset, const void *_src, size_t le
 	return NO_ERROR;
 }
 
+int cbuf_user_memcpy_to_chain(cbuf *chain, size_t offset, const void *_src, size_t len)
+{
+	cbuf *buf;
+	char *src = (char *)_src;
+	int buf_offset;
+	int err;
+
+	if((chain->flags & CBUF_FLAG_CHAIN_HEAD) == 0) {
+		dprintf("cbuf_memcpy_to_chain: chain at 0x%x not head\n", chain);
+		return ERR_INVALID_ARGS;
+	}
+
+	if(len + offset > chain->total_len) {
+		dprintf("cbuf_memcpy_to_chain: len + offset > size of cbuf chain\n");
+		return ERR_INVALID_ARGS;
+	}
+
+	// find the starting cbuf in the chain to copy to
+	buf = chain;
+	buf_offset = 0;
+	while(offset > 0) {
+		if(buf == NULL) {
+			dprintf("cbuf_memcpy_to_chain: end of chain reached too early!\n");
+			return ERR_GENERAL;
+		}
+		if(offset < buf->len) {
+			// this is the one
+			buf_offset = offset;
+			break;
+		}
+		offset -= buf->len;
+		buf = buf->next;
+	}
+
+	err = NO_ERROR;
+	while(len > 0) {
+		int to_copy;
+
+		if(buf == NULL) {
+			dprintf("cbuf_memcpy_to_chain: end of chain reached too early!\n");
+			return ERR_GENERAL;
+		}
+		to_copy = min(len, buf->len - buf_offset);
+		if ((err = user_memcpy((char *)buf->data + buf_offset, src, to_copy) < 0))
+			break; // memory exception
+
+		buf_offset = 0;
+		len -= to_copy;
+		src += to_copy;
+		buf = buf->next;
+	}
+
+	return err;
+}
+
+
 int cbuf_memcpy_from_chain(void *_dest, cbuf *chain, size_t offset, size_t len)
 {
 	cbuf *buf;
@@ -373,6 +429,63 @@ int cbuf_memcpy_from_chain(void *_dest, cbuf *chain, size_t offset, size_t len)
 
 	return NO_ERROR;
 }
+
+int cbuf_user_memcpy_from_chain(void *_dest, cbuf *chain, size_t offset, size_t len)
+{
+	cbuf *buf;
+	char *dest = (char *)_dest;
+	int buf_offset;
+	int err;
+
+	if((chain->flags & CBUF_FLAG_CHAIN_HEAD) == 0) {
+		dprintf("cbuf_memcpy_from_chain: chain at 0x%x not head\n", chain);
+		return ERR_INVALID_ARGS;
+	}
+
+	if(len + offset > chain->total_len) {
+		dprintf("cbuf_memcpy_from_chain: len + offset > size of cbuf chain\n");
+		return ERR_INVALID_ARGS;
+	}
+
+	// find the starting cbuf in the chain to copy from
+	buf = chain;
+	buf_offset = 0;
+	while(offset > 0) {
+		if(buf == NULL) {
+			dprintf("cbuf_memcpy_from_chain: end of chain reached too early!\n");
+			return ERR_GENERAL;
+		}
+		if(offset < buf->len) {
+			// this is the one
+			buf_offset = offset;
+			break;
+		}
+		offset -= buf->len;
+		buf = buf->next;
+	}
+
+	err = NO_ERROR;
+	while(len > 0) {
+		int to_copy;
+
+		if(buf == NULL) {
+			dprintf("cbuf_memcpy_from_chain: end of chain reached too early!\n");
+			return ERR_GENERAL;
+		}
+
+		to_copy = min(len, buf->len - buf_offset);
+		if ((err = user_memcpy(dest, (char *)buf->data + buf_offset, to_copy) < 0))
+			break;
+
+		buf_offset = 0;
+		len -= to_copy;
+		dest += to_copy;
+		buf = buf->next;
+	}
+
+	return err;
+}
+
 
 cbuf *cbuf_merge_chains(cbuf *chain1, cbuf *chain2)
 {
