@@ -6,8 +6,8 @@
 #define _CTYPE_H
 
 #ifdef __cplusplus
-extern "C"
-{
+namespace std
+{extern "C" {
 #endif
 
 int isalnum(int c);
@@ -28,8 +28,23 @@ unsigned char tolower(unsigned char c);
 unsigned char toupper(unsigned char c);
 
 #ifdef __cplusplus
-} /* "C" */
+}} /* "C" */
 #endif
 
 #endif
 
+#if defined(__cplusplus) && !defined(_NEWOS_NO_LIBC_COMPAT)
+using ::std::isalnum;
+using ::std::isalpha;
+using ::std::iscntrl;
+using ::std::isdigit;
+using ::std::isgraph;
+using ::std::islower;
+using ::std::isprint;
+using ::std::ispunct;
+using ::std::isspace;
+using ::std::isupper;
+using ::std::isxdigit;
+using ::std::tolower;
+using ::std::toupper;
+#endif

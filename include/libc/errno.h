@@ -10,8 +10,8 @@
 #include <newos/errors.h>
 
 #ifdef __cplusplus
-extern "C"
-{
+namespace std
+{extern "C" {
 #endif
 
 
@@ -84,8 +84,12 @@ extern int errno;
 
 
 #ifdef __cplusplus
-} /* "C" */
+}} /* "C" */
 #endif
 
 
+#endif
+
+#if defined(__cplusplus) && !defined(_NEWOS_NO_LIBC_COMPAT)
+using ::std::errno;
 #endif

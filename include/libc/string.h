@@ -12,7 +12,8 @@
 #include <libc/arch/string.h>
 
 #ifdef __cplusplus
-extern "C" {
+namespace std
+{extern "C" {
 #endif
 
 
@@ -38,6 +39,15 @@ char       *strstr(char const *, char const *);
 char       *strtok(char *, char const *);
 
 
+#ifdef __cplusplus
+}} /* extern "C" */
+#endif
+
+# ifdef __cplusplus
+extern "C"
+{
+# endif
+
 /* non standard */
 void  *bcopy(void const *, void *, size_t);
 void   bzero(void *, size_t);
@@ -47,10 +57,39 @@ int    strncasecmp(char const *, char const *, size_t);
 int    strnicmp(char const *, char const *, size_t);
 size_t strnlen(char const *s, size_t count);
 
+# ifdef __cplusplus
+}
+# endif
 
-#ifdef __cplusplus
-} /* extern "C" */
 #endif
 
+#if defined(__cplusplus) && !defined(_NEWOS_NO_LIBC_COMPAT)
+using ::std::memchr;
+using ::std::memcmp;
+using ::std::memcpy;
+using ::std::memmove;
+using ::std::memset;
 
+using ::std::memchr;
+using ::std::memcmp;
+using ::std::memcpy;
+using ::std::memmove;
+using ::std::memset;
+using ::std::strcat;
+using ::std::strchr;
+using ::std::strcmp;
+//using ::std::strcoll;
+using ::std::strcpy;
+//using ::std::strcspn;
+//using ::std::atrerror;
+using ::std::strlen;
+using ::std::strncat;
+using ::std::strncmp;
+using ::std::strncpy;
+using ::std::strpbrk;
+using ::std::strrchr;
+//using ::std::strapn;
+using ::std::strstr;
+using ::std::strtok;
+//using ::std::strxfrm;
 #endif

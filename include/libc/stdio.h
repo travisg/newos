@@ -11,12 +11,12 @@
 
 #include <newos/types.h>
 #include <sys/cdefs.h>
+
 #include <stdarg.h>
 
-
 #ifdef __cplusplus
-extern "C"
-{
+namespace std
+{extern "C" {
 #endif
 
 #define _STDIO_READ 0x0001
@@ -74,14 +74,67 @@ int vscanf(char const *format, va_list ap);
 int vsscanf(char const *str, char const *format, va_list ap);
 int vfscanf(FILE *stream, char const *format, va_list ap);
 
-// This function will be removed soon
-int getchar(void);
-
 int _v_printf(int (*_write)(void*, const void *, ssize_t ), void* arg, const char *fmt, va_list args);
 
 #ifdef __cplusplus
-}
+}}
 #endif
 
+// getchar goes off in it's own little non-standard world
+// This function will be removed soon
+# ifdef __cplusplus
+extern "C"
+# endif
+int getchar(void);
 
+
+
+#endif
+
+#if defined(__cplusplus) && !defined(_NEWOS_NO_LIBC_COMPAT)
+using ::std::FILE;
+
+using ::std::stdin;
+using ::std::stdout;
+using ::std::stderr;
+
+using ::std::clearerr;
+using ::std::fclose;
+using ::std::feof;
+using ::std::ferror;
+using ::std::fflush;
+using ::std::fgetc;
+//using ::std::fgetpos;
+using ::std::fgets;
+using ::std::fopen;
+using ::std::fprintf;
+//using ::std::fputc;
+//using ::std::fputs;
+//using ::std::fread;
+//using ::std::freopen;
+using ::std::fscanf;
+//using ::std::fseek;
+//using ::std::fsetpos;
+//using ::std::ftell;
+//using ::std::fwrite;
+//using ::std::getc;
+//using ::std::getchar;
+//using ::std::gets;
+//using ::std::perror;
+using ::std::printf;
+//using ::std::putc;
+//using ::std::remove;
+//using ::std::rename;
+//using ::std::rewind;
+using ::std::scanf;
+//using ::std::setbuf;
+//using ::std::setvbuf;
+using ::std::sprintf;
+using ::std::sscanf;
+//using ::std::tmpfile;
+//using ::std::tmpnam;
+using ::std::ungetc;
+using ::std::vfprintf;
+using ::std::vprintf;
+using ::std::vsprintf;
 #endif

@@ -5,15 +5,16 @@
 */
 
 #ifndef __newos__libc_stdlib__hh__
-#define __newos__libc_stdlib__hh__
+# define __newos__libc_stdlib__hh__
 
 
-#include <newos/types.h>
+# include <newos/types.h>
 
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+# ifdef __cplusplus
+namespace std
+{extern "C" {
+# endif
 
 
 int	      atoi(char const *);
@@ -22,44 +23,66 @@ long          atol(const char *num);
 unsigned long atoul(const char *num);
 
 long strtol(const char *nptr, char **endptr, int base);
-long long strtoll(const char *nptr, char **endptr, int base);
 unsigned long strtoul(const char *nptr, char **endptr, int base);
-unsigned long long strtoull(const char *nptr, char **endptr, int base);
 
 void * malloc(size_t);
 void   free(void *);
 void * realloc(void *, size_t);
-void * reallocf(void *, size_t);
 void * calloc(size_t, size_t);
-void * memalign(size_t, size_t);
-void * valloc(size_t);
-
-/* terrible hack to get around the different kernel name for malloc and free */
-#if KERNEL
-#define malloc kmalloc
-#define free kfree
-#include <kernel/heap.h>
-#endif
 
 char *getenv(char const *);
+
+void *bsearch(void const *, void const *, size_t, size_t, int (*) (void const *, void const *));
+void  qsort(void *, size_t, size_t, int (*)(void const *, void const *));
+
+# define	RAND_MAX	0x7fffffff
+int   rand(void);
+void  srand(unsigned);
+
+# if !KERNEL
+void abort(void);
+void exit(int);
+# endif
+
+# ifdef __cplusplus
+}} /* extern "C" */
+# endif
+
+/* terrible hack to get around the different kernel name for malloc and free */
+# if KERNEL
+#  define malloc kmalloc
+#  define free kfree
+#  include <kernel/heap.h>
+# endif
+
+# ifdef __cplusplus
+#  include <new>
+# endif
+
+# define max(a, b) ((a) > (b) ? (a) : (b))
+# define min(a, b) ((a) < (b) ? (a) : (b))
+
+// non (C++) standard stuff goes here
+# ifdef __cplusplus
+extern "C"
+{
+# endif
+
 int   setenv(char const *, char const *, int);
 int   putenv(char const *);
 void  unsetenv(char const *);
 
-void *bsearch(void const *, void const *, size_t, size_t, int (*) (void const *, void const *));
 int   heapsort(void *, size_t , size_t , int (*)(void const *, void const *));
 int   mergesort(void *, size_t, size_t, int (*)(void const *, void const *));
-void  qsort(void *, size_t, size_t, int (*)(void const *, void const *));
 int   radixsort(u_char const **, int, u_char const *, u_int);
 int   sradixsort(u_char const **, int, u_char const *, u_int);
 
+void * reallocf(void *, size_t);
+void * memalign(size_t, size_t);
+void * valloc(size_t);
 
-#define	RAND_MAX	0x7fffffff
-int   rand(void);
-int   rand_r(unsigned int *ctx);
-void  srand(unsigned);
-long  random(void);
-void  srandom(unsigned long);
+long long strtoll(const char *nptr, char **endptr, int base);
+unsigned long long strtoull(const char *nptr, char **endptr, int base);
 
 /* getopt related items */
 extern char *optarg;
@@ -70,22 +93,52 @@ extern int optreset;
 
 int getopt(int argc, char * const *argv, const char *optstring);
 
-#if !KERNEL
-void abort(void);
-void exit(int);
+int   rand_r(unsigned int *ctx);
+long  random(void);
+void  srandom(unsigned long);
+
+# if !KERNEL
 void _exit(int);
-#endif
+# endif
 
-#ifdef __cplusplus
-} /* extern "C" */
-#endif
+# ifdef __cplusplus
+}
+# endif
 
+#endif // end of include gaurd
 
-#ifdef __cplusplus
-# include <new>
-#endif
+#if defined(__cplusplus) && !defined(_NEWOS_NO_LIBC_COMPAT)
+using ::std::abort;
+//using ::std::atexit;
+using ::std::exit;
 
-#define max(a, b) ((a) > (b) ? (a) : (b))
-#define min(a, b) ((a) < (b) ? (a) : (b))
+using ::std::getenv;
+//using ::std::system;
 
+using ::std::calloc;
+using ::std::malloc;
+using ::std::realloc;
+using ::std::free;
+
+using ::std::atol;
+//using ::std::atof;
+using ::std::atoi;
+//using ::std::mblen;
+//using ::std::mbstowcs;
+//using ::std::mbtowc;
+//using ::std::strtod;
+using ::std::strtol;
+using ::std::strtoul;
+//using ::std::wctomb;
+//using ::std::wcstombs;
+
+using ::std::bsearch;
+using ::std::qsort;
+
+//using ::std::abs;
+//using ::std::div;
+//using ::std::labs;
+//using ::std::ldiv;
+using ::std::srand;
+using ::std::rand;
 #endif
