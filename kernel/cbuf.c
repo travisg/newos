@@ -683,7 +683,7 @@ void cbuf_test()
 	for(i=0; i < sizeof(temp); i++)
 		temp[i] = i;
 	for(i=0; i<7*1024*1024 / sizeof(temp); i++) {
-		if(i % 128 == 0) dprintf("%d\n", i*sizeof(temp));
+		if(i % 128 == 0) dprintf("%lud\n", i*sizeof(temp));
 		cbuf_memcpy_to_chain(buf, i*sizeof(temp), temp, sizeof(temp));
 	}
 	cbuf_free_chain(buf);

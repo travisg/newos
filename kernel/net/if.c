@@ -159,7 +159,7 @@ static int if_rx_thread(void *args)
 		ssize_t len;
 
 		len = sys_read(i->fd, i->rx_buf, 0, sizeof(i->rx_buf));
-		dprintf("if_rx_thread: got ethernet packet, size %d\n", len);
+		dprintf("if_rx_thread: got ethernet packet, size %ld\n", len);
 		if(len < 0) {
 			thread_snooze(10000);
 			continue;

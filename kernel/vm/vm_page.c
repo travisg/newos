@@ -216,7 +216,7 @@ int vm_page_init(kernel_args *ka)
 	all_pages = (vm_page *)vm_alloc_from_ka_struct(ka, num_pages * sizeof(vm_page), LOCK_KERNEL|LOCK_RW);
 
 	dprintf("vm_init: putting free_page_table @ %p, # ents %d (size 0x%x)\n",
-		all_pages, num_pages, num_pages * sizeof(vm_page));
+		all_pages, num_pages, (unsigned int)(num_pages * sizeof(vm_page)));
 
 	// initialize the free page table
 	for(i=0; i < num_pages - 1; i++) {

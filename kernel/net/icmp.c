@@ -27,7 +27,7 @@ int icmp_input(cbuf *buf, ifnet *i, ipv4_addr source_ipaddr)
 
 	header = (icmp_header *)cbuf_get_ptr(buf, 0);
 
-	dprintf("icmp_message: header type %d, code %d, checksum 0x%x, length %d\n", header->type, header->code, header->checksum, cbuf_get_len(buf));
+	dprintf("icmp_message: header type %d, code %d, checksum 0x%x, length %ld\n", header->type, header->code, header->checksum, cbuf_get_len(buf));
 
 	// calculate the checksum on the whole thing
 	if(cksum16(header, cbuf_get_len(buf)) != 0) {

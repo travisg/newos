@@ -748,7 +748,7 @@ void *vfs_new_ioctx(void *_parent_ioctx)
 		if(ioctx->cwd) {
 			inc_vnode_ref_count(ioctx->cwd);
 		}
-		
+
 
 		for(i = 0; i< table_size; i++) {
 			if(parent_ioctx->fds[i]) {
@@ -865,7 +865,7 @@ int vfs_test(void)
 		for(;;) {
 			len = sys_read(fd, buf, -1, sizeof(buf));
 			if(len < 0)
-				panic("readdir returned %d\n", len);
+				panic("readdir returned %ld\n", len);
 			if(len > 0)
 				dprintf("readdir returned name = '%s'\n", buf);
 			else
@@ -907,7 +907,7 @@ int vfs_test(void)
 		for(;;) {
 			len = sys_read(fd, buf, -1, sizeof(buf));
 			if(len < 0)
-				panic("readdir returned %d\n", len);
+				panic("readdir returned %ld\n", len);
 			if(len > 0)
 				dprintf("readdir returned name = '%s'\n", buf);
 			else
@@ -926,7 +926,7 @@ int vfs_test(void)
 		len = sys_read(fd, buf, 0, sizeof(buf));
 		if(len < 0)
 			panic("failed on read\n");
-		dprintf("read returned %d\n", len);
+		dprintf("read returned %ld\n", len);
 	}
 	sys_close(fd);
 	{
@@ -1674,7 +1674,7 @@ static int vfs_dup(int fd, bool kernel)
 	// Get current io context
 	curr_ioctx = get_current_ioctx(kernel);
 
-	// Try to get the fd structure 
+	// Try to get the fd structure
 	f = get_fd(curr_ioctx, fd);
 	if(!f) {
 		rc = ERR_INVALID_HANDLE;
@@ -1712,7 +1712,7 @@ static int vfs_dup2(int ofd, int nfd, bool kernel)
 	curr_ioctx = get_current_ioctx(kernel);
 	mutex_lock(&curr_ioctx->io_mutex);
 
-	
+
 	// Check for upper boundary, we do in the locked part
 	// because in the future the fd table might be resizeable
 	if((ofd >= curr_ioctx->table_size) || !curr_ioctx->fds[ofd]) {
@@ -1731,17 +1731,17 @@ static int vfs_dup2(int ofd, int nfd, bool kernel)
 	if(ofd == nfd) {
 		goto success;
 	}
-	
+
 
 	// Now do the work
 	evicted= curr_ioctx->fds[nfd];
 	curr_ioctx->fds[nfd]= curr_ioctx->fds[ofd];
 	atomic_add(&curr_ioctx->fds[ofd]->ref_count, 1);
-	
+
 
 	// Unlock the ioctx
 	mutex_unlock(&curr_ioctx->io_mutex);
-	
+
 
 	// Say bye bye to the evicted fd
 	if(evicted) {
