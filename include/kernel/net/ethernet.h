@@ -13,7 +13,7 @@
 
 typedef uint8 ethernet_addr[6];
 
-int ethernet_receive(cbuf *buf, ifnet *i);
+int ethernet_input(cbuf *buf, ifnet *i);
 int ethernet_output(cbuf *buf, ifnet *i, ethernet_addr target, int protocol_type);
 int ethernet_broadcast_output(cbuf *buf, ifnet *i, int protocol_type);
 int ethernet_init(void);

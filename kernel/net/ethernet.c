@@ -36,7 +36,7 @@ static void dump_ethernet_header(ethernet2_header *head)
 	dprintf(" type 0x%x\n", ntohs(head->type));
 }
 
-int ethernet_receive(cbuf *buf, ifnet *i)
+int ethernet_input(cbuf *buf, ifnet *i)
 {
 	int err;
 	ethernet2_header *e2_head;
@@ -55,10 +55,10 @@ int ethernet_receive(cbuf *buf, ifnet *i)
 
 	switch(ntohs(e2_head->type)) {
 		case PROT_TYPE_IPV4:
-			err = ipv4_receive(buf, i);
+			err = ipv4_input(buf, i);
 			break;
 		case PROT_TYPE_ARP:
-			err = arp_receive(buf, i);
+			err = arp_input(buf, i);
 			break;
 		default:
 			dprintf("ethernet_receive: unknown ethernet type 0x%x\n", ntohs(e2_head->type));

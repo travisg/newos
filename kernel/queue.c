@@ -1,10 +1,10 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #include <kernel/kernel.h>
 #include <kernel/queue.h>
-
+#include <kernel/heap.h>
 
 typedef struct queue_element {
 	void *next;
@@ -62,7 +62,7 @@ int queue_enqueue(queue *_q, void *e)
 		q->tail = elem;
 	}
 	elem->next = NULL;
-	q->count++;	
+	q->count++;
 	return 0;
 }
 
@@ -76,7 +76,7 @@ void *queue_dequeue(queue *_q)
 		q->head = q->head->next;
 	if(q->tail == elem)
 		q->tail = NULL;
-	
+
 	if(elem != NULL)
 		q->count--;
 
@@ -87,3 +87,63 @@ void *queue_peek(queue *q)
 {
 	return q->head;
 }
+
+/* fixed queue stuff */
+
+int fixed_queue_init(fixed_queue *q, int size)
+{
+	if(size <= 0)
+		return ERR_INVALID_ARGS;
+
+	q->table = kmalloc(size * sizeof(void *));
+	if(!q->table)
+		return ERR_NO_MEMORY;
+	q->head = 0;
+	q->tail = 0;
+	q->count = 0;
+	q->size = size;
+
+	return NO_ERROR;
+}
+
+void fixed_queue_destroy(fixed_queue *q)
+{
+	if(q->table)
+		kfree(q->table);
+}
+
+int fixed_queue_enqueue(fixed_queue *q, void *e)
+{
+	if(q->count == q->size)
+		return ERR_NO_MEMORY;
+
+	q->table[q->head++] = e;
+	if(q->head >= q->size) q->head = 0;
+	q->count++;
+
+	return NO_ERROR;
+}
+
+void *fixed_queue_dequeue(fixed_queue *q)
+{
+	void *e;
+
+	if(q->count <= 0)
+		return NULL;
+
+	e = q->table[q->tail++];
+ 	if(q->tail >= q->size) q->tail = 0;
+	q->count--;
+
+	return e;
+}
+
+void *fixed_queue_peek(fixed_queue *q)
+{
+	if(q->count <= 0)
+		return NULL;
+
+	return q->table[q->tail];
+}
+
+

@@ -42,6 +42,7 @@ enum {
 
 typedef struct arp_cache_entry {
 	struct arp_cache_entry *next;
+	struct arp_cache_entry *all_next;
 	ipv4_addr ip_addr;
 	netaddr link_addr;
 	time_t last_used_time;
@@ -50,18 +51,23 @@ typedef struct arp_cache_entry {
 // arp cache
 static void *arp_table;
 static mutex arp_table_mutex;
+static arp_cache_entry *arp_cache_entries;
 
 typedef struct arp_wait_request {
-	struct arp_wait_request *prev;
 	struct arp_wait_request *next;
+	ipv4_addr sender_ipaddr;
 	ipv4_addr ip_addr;
-	sem_id blocking_sem;
+	time_t last_attempt_time;
 	int attempt_count;
+	void (*callback)(int code, void *, ifnet *, netaddr *);
+	void *callback_args;
+	ifnet *i;
 } arp_wait_request;
 
 // list of threads blocked on arp requests
 static arp_wait_request *arp_waiters;
 static mutex arp_wait_mutex;
+static sem_id arp_wait_sem;
 
 static int arp_cache_compare(void *_e, void *_key)
 {
@@ -94,15 +100,15 @@ static void dump_arp_packet(arp_packet *arp)
 	dprintf("arp packet: src ");
 	dump_ethernet_addr(arp->sender_ethernet);
 	dprintf(" ");
-	dump_ipv4_addr(arp->sender_ipv4);
+	dump_ipv4_addr(ntohl(arp->sender_ipv4));
 	dprintf(" dest ");
 	dump_ethernet_addr(arp->target_ethernet);
 	dprintf(" ");
-	dump_ipv4_addr(arp->target_ipv4);
+	dump_ipv4_addr(ntohl(arp->target_ipv4));
 	dprintf(" op 0x%x\n", ntohs(arp->op));
 }
 
-int arp_receive(cbuf *buf, ifnet *i)
+int arp_input(cbuf *buf, ifnet *i)
 {
 	arp_packet *arp;
 
@@ -208,11 +214,12 @@ static int arp_send_request(ifnet *i, ipv4_addr sender_ipaddr, ipv4_addr ip_addr
 	return ethernet_broadcast_output(buf, i, PROT_TYPE_ARP);
 }
 
-int arp_lookup(ifnet *i, ipv4_addr sender_ipaddr, ipv4_addr ip_addr, ethernet_addr e_addr)
+int arp_lookup(ifnet *i, ipv4_addr sender_ipaddr, ipv4_addr ip_addr, ethernet_addr e_addr, void (*arp_callback)(int, void *args, ifnet *, netaddr *), void *callback_args)
 {
 	arp_cache_entry *e;
-	arp_wait_request wait;
+	arp_wait_request *wait;
 	int err;
+	bool wakeup_retransmit_thread;
 
 	// look in the arp table first
 	mutex_lock(&arp_table_mutex);
@@ -224,73 +231,48 @@ int arp_lookup(ifnet *i, ipv4_addr sender_ipaddr, ipv4_addr ip_addr, ethernet_ad
 	mutex_unlock(&arp_table_mutex);
 
 	if(e)
-		return 0;
+		return NO_ERROR;
 
-	// guess we're gonna have to send an arp request and wait
+	if(!arp_callback)
+		return ERR_NET_FAILED_ARP;
 
-	// put ourself in the wait list
-	wait.blocking_sem = sem_create(0, "arp_wait");
-	wait.attempt_count = 0;
-	wait.ip_addr = ip_addr;
+	// guess we're gonna have to send an arp request and set up a callback
+	wait = kmalloc(sizeof(arp_wait_request));
+	if(!wait)
+		return ERR_NO_MEMORY;
+	wait->sender_ipaddr = sender_ipaddr;
+	wait->ip_addr = ip_addr;
+	wait->last_attempt_time = system_time();
+	wait->attempt_count = 0;
+	wait->callback = arp_callback;
+	wait->callback_args = callback_args;
+	wait->i = i;
+
+	// put this on the list
+	wakeup_retransmit_thread = false;
 	mutex_lock(&arp_wait_mutex);
-	if(arp_waiters)
-		arp_waiters->prev = &wait;
-	arp_waiters = &wait;
-	wait.next = arp_waiters;
-	wait.prev = NULL;
+	if(!arp_waiters)
+		wakeup_retransmit_thread = true;
+	wait->next = arp_waiters;
+	arp_waiters = wait;
 	mutex_unlock(&arp_wait_mutex);
 
-retry_arp:
-	for(; wait.attempt_count < 5; wait.attempt_count++) {
-		// send the arp request
-		arp_send_request(i, sender_ipaddr, ip_addr);
+	// we just put the first item on the list, wake up the retransmit thread
+	if(wakeup_retransmit_thread)
+		sem_release(arp_wait_sem, 1);
 
-		// wait, and see if we timeout, or someone released us
-		err = sem_acquire_etc(wait.blocking_sem, 1, SEM_FLAG_TIMEOUT, 1000000, NULL);
-		if(err >= 0)
-			break;
-	}
-	if(wait.attempt_count >= 5) {
-		err = ERR_NET_FAILED_ARP;
-		goto out;
-	}
+	arp_send_request(i, sender_ipaddr, ip_addr);
 
-	// look it up in the table again
-	mutex_lock(&arp_table_mutex);
-	e = hash_lookup(arp_table, &ip_addr);
-	if(e) {
-		memcpy(e_addr, &e->link_addr.addr[0], 6);
-		e->last_used_time = system_time();
-	}
-	mutex_unlock(&arp_table_mutex);
-
-	// see if we found it
-	if(e)
-		err = 0;
-	else
-		goto retry_arp;
-
-out:
-	// remove ourself from the wait list
-	mutex_lock(&arp_wait_mutex);
-	if(wait.prev)
-		wait.prev->next = wait.next;
-	else
-		arp_waiters = wait.next;
-	if(wait.next)
-		wait.next->prev = wait.prev;
-	mutex_unlock(&arp_wait_mutex);
-
-	// deallocate the semaphore
-	sem_delete(wait.blocking_sem);
-
-	return err;
+	return ERR_NET_ARP_QUEUED;
 }
 
 int arp_insert(ipv4_addr ip_addr, netaddr *link_addr)
 {
 	arp_cache_entry *e;
 	arp_wait_request *wait;
+	arp_wait_request *removed_waiters;
+	arp_wait_request *last;
+	arp_wait_request *temp;
 
 #if 1
 	dprintf("arp_insert: ip addr ");
@@ -334,41 +316,158 @@ use_old_entry:
 	hash_insert(arp_table, e);
 	mutex_unlock(&arp_table_mutex);
 
-	// now, cycle through the arp wait list and wake up any threads that were waiting on
-	// an arp entry showing up in the arp cache
+	// now, cycle through the arp wait list and do any callbacks we were set to do
+	removed_waiters = NULL;
+	last = NULL;
 	mutex_lock(&arp_wait_mutex);
-	for(wait = arp_waiters; wait; wait = wait->next) {
-		if(wait->ip_addr == ip_addr)
-			sem_release(wait->blocking_sem, 1);
+	wait = arp_waiters;
+	while(wait) {
+		if(wait->ip_addr == ip_addr) {
+			if(last)
+				last->next = wait->next;
+			else
+				arp_waiters = wait->next;
+			temp = wait;
+			wait = wait->next;
+
+			// put this item on the just freed list
+			temp->next = removed_waiters;
+			removed_waiters = temp;
+			continue;
+		}
+		last = wait;
+		wait = wait->next;
 	}
 	mutex_unlock(&arp_wait_mutex);
 
+	// now we have a list of waiters that were woken up
+	while(removed_waiters) {
+		temp = removed_waiters;
+		removed_waiters = removed_waiters->next;
+
+		if(temp->callback)
+			temp->callback(ARP_CALLBACK_CODE_OK, temp->callback_args, temp->i, link_addr);
+		kfree(temp);
+	}
+
 	return 0;
+}
+
+static int arp_retransmit_thread(void *unused)
+{
+	arp_wait_request *wait;
+	arp_wait_request *removed_waiters;
+	arp_wait_request *last;
+	arp_wait_request *temp;
+	time_t now;
+	bool empty_queue;
+
+	for(;;) {
+		sem_acquire(arp_wait_sem, 1);
+
+		for(;;) {
+			now = system_time();
+			removed_waiters = NULL;
+			last = NULL;
+			empty_queue = true;
+			mutex_lock(&arp_wait_mutex);
+			wait = arp_waiters;
+			while(wait) {
+				empty_queue = false;
+				if(now - wait->last_attempt_time > 1000000) {
+					if(++wait->attempt_count > 5) {
+						// it's been tried too many times, put it on the free list
+						if(last)
+							last->next = wait->next;
+						else
+							arp_waiters = wait->next;
+						temp = wait;
+						wait = wait->next;
+
+						// put this item on the just freed list
+						temp->next = removed_waiters;
+						removed_waiters = temp;
+						continue;
+					} else {
+						// retransmit
+						wait->last_attempt_time = now;
+						arp_send_request(wait->i, wait->sender_ipaddr, wait->ip_addr);
+					}
+				}
+				last = wait;
+				wait = wait->next;
+			}
+			mutex_unlock(&arp_wait_mutex);
+
+			// the queue is empty, lets break out of here and potentially go back to blocking forever
+			if(empty_queue)
+				break;
+
+			// now we have a list of waiters that were woken up
+			while(removed_waiters) {
+				temp = removed_waiters;
+				removed_waiters = removed_waiters->next;
+
+				if(temp->callback)
+					temp->callback(ARP_CALLBACK_CODE_FAILED, temp->callback_args, temp->i, 0);
+				kfree(temp);
+			}
+
+			thread_snooze(500000); // 1/2 sec
+		}
+	}
 }
 
 static int arp_cleanup_thread(void *unused)
 {
 	struct hash_iterator i;
 	arp_cache_entry *e;
+	arp_cache_entry *last;
+	arp_cache_entry *temp;
+	arp_cache_entry *free_list;
 	time_t now;
 
 	for(;;) {
 		thread_snooze(1000000 * 60); // 1 min
-		mutex_lock(&arp_table_mutex);
+
+		free_list = NULL;
 		now = system_time();
 
-		hash_open(arp_table, &i);
-		for(e = hash_next(arp_table, &i); e; e = hash_next(arp_table, &i)) {
-			if(now - e->last_used_time > 1000000LL * 60 * 5) {
-				dprintf("arp_cleanup_thread: pruning arp entry for ");
-				dump_ipv4_addr(e->ip_addr);
-				dprintf("\n");
+		mutex_lock(&arp_table_mutex);
 
-				hash_remove(arp_table, e);
-				kfree(e);
+		free_list = NULL;
+		last = NULL;
+		e = arp_cache_entries;
+		while(e) {
+			if(now - e->last_used_time > 1000000LL * 60 * 5) {
+				// remove it from the list
+				if(last)
+					last->all_next = e->all_next;
+				else
+					arp_cache_entries = e->all_next;
+				temp = e;
+				e = e->all_next;
+
+				// add it to the free list
+				temp->all_next = free_list;
+				free_list = temp;
+				continue;
 			}
+			last = e;
+			e = e->all_next;
 		}
 		mutex_unlock(&arp_table_mutex);
+
+		// free any entries that we pulled out of the cache
+		while(free_list) {
+			dprintf("arp_cleanup_thread: pruning arp entry for ");
+			dump_ipv4_addr(e->ip_addr);
+			dprintf("\n");
+
+			temp = free_list;
+			free_list = free_list->all_next;
+			kfree(temp);
+		}
 	}
 }
 
@@ -378,14 +477,18 @@ int arp_init(void)
 
 	mutex_init(&arp_table_mutex, "arp_table_mutex");
 	mutex_init(&arp_wait_mutex, "arp_wait_mutex");
+	arp_wait_sem = sem_create(0, "arp_wait_sem");
 
 	arp_waiters = NULL;
+	arp_cache_entries = NULL;
 
 	arp_table = hash_init(256, (addr)&e->next - (addr)e, &arp_cache_compare, &arp_cache_hash);
 	if(!arp_table)
 		return -1;
 
 	thread_resume_thread(thread_create_kernel_thread("arp cache cleaner", &arp_cleanup_thread, NULL));
+	thread_resume_thread(thread_create_kernel_thread("arp retransmit thread", &arp_retransmit_thread, NULL));
+
 
 	return 0;
 }

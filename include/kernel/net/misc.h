@@ -7,6 +7,7 @@
 
 #include <kernel/net/net.h>
 
+// XXX fix for big endian machine
 #define ntohs(n) \
 	((((uint16)(n) & 0xff) << 8) | ((uint16)(n) >> 8))
 #define htons(h) \

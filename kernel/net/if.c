@@ -7,12 +7,17 @@
 #include <kernel/khash.h>
 #include <kernel/heap.h>
 #include <kernel/cbuf.h>
+#include <kernel/lock.h>
+#include <kernel/sem.h>
 #include <kernel/vfs.h>
 #include <kernel/thread.h>
+#include <kernel/queue.h>
 #include <kernel/arch/cpu.h>
 #include <kernel/net/ethernet.h>
 #include <kernel/net/if.h>
 #include <libc/string.h>
+
+#define TX_QUEUE_SIZE 64
 
 static void *iflist;
 static if_id next_id;
@@ -57,6 +62,10 @@ ifnet *if_register_interface(const char *path, int type)
 	i->link_addr = NULL;
 	i->fd = -1;
 	i->rx_thread = -1;
+	i->tx_thread = -1;
+	i->tx_queue_sem = sem_create(0, "tx_queue_sem");
+	mutex_init(&i->tx_queue_lock, "tx_queue_lock");
+	fixed_queue_init(&i->tx_queue, TX_QUEUE_SIZE);
 
 	hash_insert(iflist, i);
 
@@ -77,30 +86,59 @@ void if_bind_link_address(ifnet *i, ifaddr *addr)
 
 int if_output(cbuf *b, ifnet *i)
 {
-	uint8 buf[2048];
-	size_t len = cbuf_get_len(b);
+	bool release_sem = false;
 
-	// put the cbuf into a contiguous buffer
-	cbuf_memcpy_from_chain(buf, b, 0, len);
+	// stick the buffer on a transmit queue
+	mutex_lock(&i->tx_queue_lock);
+	fixed_queue_enqueue(&i->tx_queue, b);
+	if(i->tx_queue.count == 1)
+		release_sem = true;
+	mutex_unlock(&i->tx_queue_lock);
 
-	// free the cbuf
-	cbuf_free_chain(b);
+	if(release_sem)
+		sem_release(i->tx_queue_sem, 1);
 
-	return sys_write(i->fd, buf, 0, len);
+	return NO_ERROR;
 }
 
-int if_rx_thread(void *args)
+static int if_tx_thread(void *args)
+{
+	ifnet *i = args;
+	cbuf *buf;
+	int err;
+	ssize_t len;
+
+	if(i->fd < 0)
+		return -1;
+
+	for(;;) {
+		sem_acquire(i->tx_queue_sem, 1);
+
+		// pull a packet out of the queue
+		mutex_lock(&i->tx_queue_lock);
+		buf = fixed_queue_dequeue(&i->tx_queue);
+		mutex_unlock(&i->tx_queue_lock);
+		if(!buf)
+			continue;
+
+		// put the cbuf chain into a flat buffer
+		len = cbuf_get_len(buf);
+		cbuf_memcpy_from_chain(i->tx_buf, buf, 0, len);
+
+		cbuf_free_chain(buf);
+
+		sys_write(i->fd, i->tx_buf, 0, len);
+	}
+}
+
+static int if_rx_thread(void *args)
 {
 	ifnet *i = args;
 	int err;
 	cbuf *b;
 
-	// open the network device
-	i->fd = sys_open(i->path, STREAM_TYPE_DEVICE, 0);
-	if(i->fd < 0) {
-		dprintf("if_rx_thread: no net devices\n");
+	if(i->fd < 0)
 		return -1;
-	}
 
 	for(;;) {
 		ssize_t len;
@@ -126,10 +164,48 @@ int if_rx_thread(void *args)
 		}
 		cbuf_memcpy_to_chain(b, 0, i->rx_buf, len);
 
-		ethernet_receive(b, i);
+		ethernet_input(b, i);
 	}
 
 	return 0;
+}
+
+int if_boot_interface(ifnet *i)
+{
+	int err;
+
+	i->fd = sys_open(i->path, STREAM_TYPE_DEVICE, 0);
+	if(i->fd < 0)
+		return i->fd;
+
+	// create the receive thread
+	i->rx_thread = thread_create_kernel_thread("net_rx_thread", &if_rx_thread, i);
+	if(i->rx_thread < 0) {
+		err = i->rx_thread;
+		goto err1;
+	}
+	thread_set_priority(i->rx_thread, THREAD_HIGH_PRIORITY);
+
+	// create the transmit thread
+	i->tx_thread = thread_create_kernel_thread("net_tx_thread", &if_tx_thread, i);
+	if(i->tx_thread < 0) {
+		err = i->tx_thread;
+		goto err2;
+	}
+	thread_set_priority(i->tx_thread, THREAD_HIGH_PRIORITY);
+
+	// start the threads
+	thread_resume_thread(i->rx_thread);
+	thread_resume_thread(i->tx_thread);
+
+	return NO_ERROR;
+
+err2:
+	thread_kill_thread_nowait(i->rx_thread);
+err1:
+	sys_close(i->fd);
+err:
+	return err;
 }
 
 int if_init(void)

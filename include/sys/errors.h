@@ -86,5 +86,6 @@
 #define ERR_NET_GENERAL           -7168
 #define ERR_NET_FAILED_ARP        ERR_NET_GENERAL-1
 #define ERR_NET_BAD_PACKET        ERR_NET_GENERAL-2
+#define ERR_NET_ARP_QUEUED        ERR_NET_GENERAL-3
 
 #endif

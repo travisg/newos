@@ -28,6 +28,10 @@ typedef struct ipv4_header {
 	ipv4_addr dest;
 } _PACKED ipv4_header;
 
+#define IPV4_FLAG_MORE_FRAGS   0x2000
+#define IPV4_FLAG_MAY_NOT_FRAG 0x4000
+#define IPV4_FRAG_OFFSET_MASK  0x1fff
+
 typedef struct ipv4_routing_entry {
 	struct ipv4_routing_entry *next;
 	ipv4_addr network_addr;
@@ -151,6 +155,26 @@ static int ipv4_route_match(ipv4_addr ip_addr, if_id *interface_num, ipv4_addr *
 	return err;
 }
 
+static void ipv4_arp_callback(int arp_code, void *args, ifnet *i, netaddr *link_addr)
+{
+	cbuf *buf = args;
+
+	if(arp_code == ARP_CALLBACK_CODE_OK) {
+		// arp found us an address and called us back with it
+		ethernet_addr eaddr;
+
+		memcpy(eaddr, &link_addr->addr[0], 6);
+
+		ethernet_output(buf, i, eaddr, PROT_TYPE_IPV4);
+	} else if(arp_code == ARP_CALLBACK_CODE_FAILED) {
+		// arp retransmitted and failed, so we're screwed
+		cbuf_free_chain(buf);
+	} else {
+		// uh
+		;
+	}
+}
+
 int ipv4_output(cbuf *buf, ipv4_addr target_addr, int protocol)
 {
 	cbuf *header_buf;
@@ -202,17 +226,22 @@ int ipv4_output(cbuf *buf, ipv4_addr target_addr, int protocol)
 	buf = cbuf_merge_chains(header_buf, buf);
 
 	// do the arp thang
-	if(arp_lookup(i, if_addr, transmit_addr, eaddr) < 0) {
+	err = arp_lookup(i, if_addr, transmit_addr, eaddr, &ipv4_arp_callback, buf);
+	if(err == ERR_NET_ARP_QUEUED) {
+		// the arp request is queued up so we can just exit here
+		// and the rest of the work will be done via the arp callback
+		return NO_ERROR;
+	} else if(err < 0) {
 		dprintf("ipv4_output: failed arp lookup\n");
 		cbuf_free_chain(buf);
 		return ERR_NET_FAILED_ARP;
+	} else {
+		// we got the link later address, send the packet
+		return ethernet_output(buf, i, eaddr, PROT_TYPE_IPV4);
 	}
-
-	// send the packet
-	return ethernet_output(buf, i, eaddr, PROT_TYPE_IPV4);
 }
 
-int ipv4_receive(cbuf *buf, ifnet *i)
+int ipv4_input(cbuf *buf, ifnet *i)
 {
 	int err;
 	ipv4_header *header;
@@ -253,6 +282,14 @@ int ipv4_receive(cbuf *buf, ifnet *i)
 			err = NO_ERROR;
 			goto ditch_packet;
 		}
+	}
+
+	// see if it's a fragment
+	if(ntohs(header->flags_frag_offset) & IPV4_FLAG_MORE_FRAGS ||
+		(ntohs(header->flags_frag_offset) & IPV4_FRAG_OFFSET_MASK) != 0) {
+		dprintf("ipv4 packet is fragmented, cannot handle that now\n");
+		err = ERR_UNIMPLEMENTED;
+		goto ditch_packet;
 	}
 
 	// strip off the ip header

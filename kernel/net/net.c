@@ -94,14 +94,10 @@ int net_init(kernel_args *ka)
 	ipv4_route_add(0x0a000000, 0xffffff00, 0x0a000063, i->id);
 	ipv4_route_add_gateway(0x00000000, 0x00000000, 0x0a000063, i->id, 0xc0000001);
 
-	rx_thread_id = thread_create_kernel_thread("net_rx_thread", &if_rx_thread, i);
-	if(rx_thread_id < 0)
-		panic("net_init: error creating rx_thread\n");
-	i->rx_thread = rx_thread_id;
-	thread_set_priority(rx_thread_id, THREAD_HIGH_PRIORITY);
-	thread_resume_thread(rx_thread_id);
-
 	sys_close(net_fd);
+
+	if_boot_interface(i);
+
 
 #if 1
 	// start the test thread
