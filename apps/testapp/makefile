@@ -5,7 +5,11 @@ MY_TARGET :=  $(MY_TARGETDIR)/testapp
 ifeq ($(call FINDINLIST,$(MY_TARGET),$(ALL)),1)
 
 MY_OBJS := \
-	main.o
+	main.o \
+	pipetests.o \
+	porttests.o \
+	threadtests.o \
+	vmtests.o
 
 MY_INCLUDES := $(STDINCLUDE)
 MY_CFLAGS := $(USER_CFLAGS)
