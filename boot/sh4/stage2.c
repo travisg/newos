@@ -2,7 +2,7 @@
 #include <stage2.h>
 #include <string.h>
 
-#include "asm.h"
+#include "sh4.h"
 #include "serial.h"
 #include "mmu.h"
 #include "vcpu.h"
@@ -47,7 +47,7 @@ int _start()
 
 	// initialize the vcpu
 	vcpu_init(ka);
-	mmu_init();
+	mmu_init(ka, &next_paddr);
 
 	// map the kernel text & data
 	kernel_size = bootdir[2].be_size;
@@ -60,7 +60,9 @@ int _start()
 		next_vaddr += PAGE_SIZE;
 	}
 
+	dprintf("diffing the mapped memory\r\n");
 	dprintf("memcmp = %d\r\n", memcmp((void *)KERNEL_LOAD_ADDR, (void *)BOOTDIR + bootdir[2].be_offset * PAGE_SIZE, PAGE_SIZE)); 
+	dprintf("done diffing the memory\r\n");
 
 	// map in kernel bss
 	// XXX assume it's 64k
@@ -108,6 +110,9 @@ int _start()
 			i, ka->virt_alloc_range[i].start, ka->virt_alloc_range[i].size);
 	}
 		
+	// force an intital page write tlb
+	*(int *)KERNEL_LOAD_ADDR = 4;
+
 	dprintf("switching stack to 0x%x and calling 0x%x\r\n", 
 		ka->cpu_kstack[0].start + ka->cpu_kstack[0].size - 4, KERNEL_LOAD_ADDR + 0xa0);
 	switch_stacks_and_call(ka->cpu_kstack[0].start + ka->cpu_kstack[0].size - 4, KERNEL_LOAD_ADDR + 0xa0, (unsigned int)ka, 0);

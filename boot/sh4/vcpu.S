@@ -5,57 +5,108 @@
 _vector_base:
 	.skip	0x100
 exception_ent_1:
-#if 0
-        mov.l   is,r15
-        mov.l   r0,@-r15
-        mov.l   r1,@-r15
-        mov.l   r2,@-r15
-        mov.l   r3,@-r15
-        mov.l   r4,@-r15
-        mov.l   r5,@-r15
-        mov.l   r6,@-r15
-        mov.l   r7,@-r15
-        mov.l   r8,@-r15
-        mov.l   r9,@-r15
-        mov.l   r10,@-r15
-        mov.l   r11,@-r15
-        mov.l   r12,@-r15
-        mov.l   r13,@-r15
-        mov.l   r14,@-r15
-        sts.l   pr,@-r15
-
-        mov     r15,r4
-        mov.l   ih,r1
-        jsr     @r1
-        nop
-
-.align 2
-is:
-        .long   _int_stack+0x200-4
-ih:	.long	_default_vector
-#endif
 	mov.l	expevt_addr1,r0
 	mov.l	@r0,r0
 	shlr2	r0
 	shlr	r0			/* shift the exception code over 3 bits */
-
+#if 1
 	cmp/eq	#0x10,r0		/* test if it's a initial page write */
-	bf	_is_regular_exception	
+	bt	_tlb_ipw
 	nop
-	/* XXX deal with inital page write exception */
+#endif
 
-_is_regular_exception:
+	/* not a inital page write exception */
+	/* just enter the kernel and let it deal with it */
+	bra switch_banks_and_enter_kernel	
+	nop
+
+_tlb_ipw:
+	/* deal with inital page write exception */
+	/* we can stay on reg bank 1, switch to a tlb stack */
+	mov.l	tlb_stack_addr1,r15
+	sts.l	pr,@-r15		/* save the pr reg */
+	mov	r0,r4			/* arg 1, excode */
+	shlr2	r4			/* shift arg 1 over two more bits */
+	mov.l	r4,@-r15		/* save the excode for after the call */
+	stc	spc,r5			/* arg 2, spc */
+	mov.l	initial_page_write_handler,r1
+	jsr	@r1
+	nop
+
+	/* see if the tlb handler returned another exception code */
+	/* if so, the tlb ipw just elevated to a page fault or other such */
+	/* 'soft' faults. */
+	mov.l	@r15+,r1
+	lds.l	@r15+,pr
+	cmp/eq	r0,r1
+	bf	_soft_fault
+	nop
+
+	/* return from the tlb miss */
+	stc	sgr,r15
+	rte
+	nop
+	
+_soft_fault:
+	/* the tlb ipw handler returned another exception code */
+	/* we now need to enter the kernel with the soft fault */
+	shll2	r0
 	bra switch_banks_and_enter_kernel	
 	nop
 
 .align 2
 expevt_addr1:	.long	0xff000024
 exception_flag:	.long	handling_exception
+initial_page_write_handler:	.long	_tlb_initial_page_write
+tlb_stack_addr1:	.long	tlb_stack_end-4
 
 exception_ent_1_end:
 	.skip 0x300-(exception_ent_1_end-exception_ent_1)
 TLB_miss_ent:
+	mov.l	expevt_addr2,r4
+	mov.l	@r4,r4
+	shlr2	r4
+	shlr2	r4
+	shlr	r4			/* shift the exception code over 5 bits */
 	
+	/* we can stay on reg bank 1, switch to a tlb stack */
+	mov.l	tlb_stack_addr2,r15
+	sts.l	pr,@-r15		/* save the pr reg */
+	mov.l	r4,@-r15		/* save the exception code */
+
+	/* arg 1 is exception code already in r4 */
+	stc	spc,r5			/* arg 2, spc */
+	mov.l	tlb_miss_handler,r1
+	jsr	@r1
+	nop
+
+	/* see if the tlb miss handler returned another exception code */
+	/* if so, the tlb miss just elevated to a page fault or other such */
+	/* 'soft' faults. */
+	mov.l	@r15+,r1
+	lds.l	@r15+,pr
+	cmp/eq	r0,r1
+	bf	_soft_fault1
+	nop
+
+	/* return from the tlb miss */
+	stc	sgr,r15
+	rte
+	nop
+	
+_soft_fault1:
+	/* the tlb miss handler returned another exception code */
+	/* we now need to enter the kernel with the soft fault */
+
+	shll2	r0
+	bra switch_banks_and_enter_kernel	
+	nop
+
+.align 2
+expevt_addr2:	.long	0xff000024
+tlb_miss_handler:	.long	_tlb_miss
+tlb_stack_addr2:	.long	tlb_stack_end-4
+
 TLB_miss_ent_end:	
 	.skip 0x200-(TLB_miss_ent_end-TLB_miss_ent)
 interrupt_ent:
@@ -195,26 +246,29 @@ _after_r0r7_restore:
 
 .align 2
 modified_sr_addr:	.long	modified_sr
-modified_sr:	.long	0
 vector_table_addr: .long	vector_table
 trap_exception:	.long	0x2c
 vector_base_addr: .long	_vector_base
 bl_rb_bit_mask:	.long	0xcfffffff
-expevt_addr2:	.long	0xff000024
 save_stack:	.long	saved_spc+4
 saved_excode_addr: .long	saved_excode
 saved_spc_addr:	.long	saved_spc
 saved_ssr_addr:	.long	saved_ssr
 saved_sgr_addr:	.long	saved_sgr
-saved_excode:	.long	0
-saved_sgr:	.long	0
-saved_ssr:	.long	0
-saved_spc:	.long	0		/* these three addresses are used to
-					save the saved registers while we switch to another
-					stack and register set */	
 intevt_addr:	.long	0xff000028
 tra_addr:	.long	0xff000020
 
+/* the next memory addresses are used for temporary storage or
+   data structures for the kernel to write in. They're in the
+   text segment, I know, but it's much faster if we can reference
+   them pcrel. */
+saved_excode:	.long	0
+saved_sgr:	.long	0
+saved_ssr:	.long	0
+saved_spc:	.long	0		/* these four addresses are used to
+					save the saved registers while we switch to another
+					stack and register set */	
+modified_sr:	.long	0
 /* These memory locations are written to by the kernel */
 .globl _kernel_struct
 _kernel_struct:
@@ -231,5 +285,8 @@ vector_table:
 
 .data
 .align 2
-_int_stack:
-        .skip 0x200
+tlb_stack:
+	.rep	0x100
+	.long	0
+	.endr
+tlb_stack_end:
