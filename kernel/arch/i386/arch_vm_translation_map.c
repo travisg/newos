@@ -170,8 +170,11 @@ static void put_pgtable_in_pgdir(pdentry *e, addr_t pgtable_phys, int attributes
 	// put it in the pgdir
 	init_pdentry(e);
 	e->addr = ADDR_SHIFT(pgtable_phys);
-	e->user = !(attributes & LOCK_KERNEL);
-	e->rw = attributes & LOCK_RW;
+
+	// mark it user and read/write. 
+	// The pgtable entries will override it
+	e->user = 1;
+	e->rw = 1;
 	e->present = 1;
 }
 
