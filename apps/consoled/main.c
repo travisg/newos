@@ -124,23 +124,23 @@ static proc_id start_process(const char *path, const char *name, char **argv, in
 	int saved_stdin, saved_stdout, saved_stderr;
 	proc_id pid;
 
-	saved_stdin = _kern_dup(0);
-	saved_stdout = _kern_dup(1);
-	saved_stderr = _kern_dup(2);
+	saved_stdin = dup(0);
+	saved_stdout = dup(1);
+	saved_stderr = dup(2);
 
-	_kern_dup2(con->tty_slave_fd, 0);
-	_kern_dup2(con->tty_slave_fd, 1);
-	_kern_dup2(con->tty_slave_fd, 2);
+	dup2(con->tty_slave_fd, 0);
+	dup2(con->tty_slave_fd, 1);
+	dup2(con->tty_slave_fd, 2);
 
 	// XXX launch
 	pid = _kern_proc_create_proc(path, name, argv, argc, 5);
 
-	_kern_dup2(saved_stdin, 0);
-	_kern_dup2(saved_stdout, 1);
-	_kern_dup2(saved_stderr, 2);
-	_kern_close(saved_stdin);
-	_kern_close(saved_stdout);
-	_kern_close(saved_stderr);
+	dup2(saved_stdin, 0);
+	dup2(saved_stdout, 1);
+	dup2(saved_stderr, 2);
+	close(saved_stdin);
+	close(saved_stdout);
+	close(saved_stderr);
 
 	return pid;
 }
@@ -156,9 +156,9 @@ int main(void)
 	}
 
 	// move our stdin and stdout to the console
-	_kern_dup2(theconsole.tty_slave_fd, 0);
-	_kern_dup2(theconsole.tty_slave_fd, 1);
-	_kern_dup2(theconsole.tty_slave_fd, 2);
+	dup2(theconsole.tty_slave_fd, 0);
+	dup2(theconsole.tty_slave_fd, 1);
+	dup2(theconsole.tty_slave_fd, 2);
 
 	for(;;) {
 		proc_id shell_process;

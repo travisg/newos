@@ -8,13 +8,14 @@
 #include <stdio.h>
 #include <limits.h>
 #include <ctype.h>
+#include <unistd.h>
 
 #define MAX_BUFF_SIZE 64
 
 /* gross hack to get this to link inside the kernel */
 #if KERNEL
 #include <kernel/vfs.h>
-#define _kern_read sys_read
+#define read(fd, buf, size) sys_read(fd, buf, -1, size)
 #else
 #include <sys/syscalls.h>
 #endif
@@ -65,7 +66,7 @@ static int _sscanf_read(void* p)
 int vsscanf(char const *str, char const *format, va_list arg_ptr)
 {
     struct _sscanf_struct *val = (struct _sscanf_struct*)malloc(sizeof(struct _sscanf_struct));
-	
+
 	val->buff = (unsigned char*)malloc(MAX_BUFF_SIZE*sizeof(unsigned char));
 	val->buff_pos = 0;
 	val->count = 0;
@@ -108,15 +109,15 @@ static int _fscanf_read(void *p)
 
 	stream = val->stream;
 
-    if (stream->rpos >= stream->buf_pos) 
+    if (stream->rpos >= stream->buf_pos)
     {
-        int len = _kern_read(stream->fd, stream->buf, -1, stream->buf_size);
-        if (len==0) 
+        int len = read(stream->fd, stream->buf, stream->buf_size);
+        if (len==0)
         {
             stream->flags |= _STDIO_EOF;
             return EOF;
-        } 
-        else if (len < 0) 
+        }
+        else if (len < 0)
         {
             stream->flags |= _STDIO_ERROR;
             return EOF;
@@ -126,9 +127,9 @@ static int _fscanf_read(void *p)
     }
 	c = stream->buf[stream->rpos++];
 /*
-	_kern_write(1, "read: \'", -1, 7);
-	_kern_write(1, &c, -1, 1);
-	_kern_write(1, "\'\r\n", -1, 3);
+	write(1, "read: \'", 7);
+	write(1, &c, 1);
+	write(1, "\'\r\n", 3);
 */
 	val->count++;
     return (int)c;
@@ -226,7 +227,7 @@ static unsigned long long convertIntegralValue(int (*_read)(void*), void (*_push
 		// what to do?
 		return 0;
 	}
-	
+
 	if(width == 0)
 	{
 		return 0;
@@ -284,7 +285,7 @@ static unsigned long long convertIntegralValue(int (*_read)(void*), void (*_push
 	if(width > 0 && length >= width)
 	{
 		return 0;
-	}	
+	}
 
 	if (base == 0)
 	{
@@ -296,7 +297,7 @@ static unsigned long long convertIntegralValue(int (*_read)(void*), void (*_push
 	cutlim = (unsigned long long)ULLONG_MAX % qbase;
 
 
-	for (acc = 0, any = 0;; c = _read(arg), length++) 
+	for (acc = 0, any = 0;; c = _read(arg), length++)
 	{
 		if(c <= 0)
 		{
@@ -306,7 +307,7 @@ static unsigned long long convertIntegralValue(int (*_read)(void*), void (*_push
 		{
 			goto finish;
 		}
-		
+
 		if (!isascii(c))
 		break;
 		if (isdigit(c))
@@ -319,7 +320,7 @@ static unsigned long long convertIntegralValue(int (*_read)(void*), void (*_push
 			break;
 		if (any < 0 || acc > cutoff || (acc == cutoff && c > cutlim))
 			any = -1;
-		else 
+		else
 		{
 			any = 1;
 			acc *= qbase;
@@ -332,7 +333,7 @@ finish:
 	_push(arg, c);
 
 finish_EOF:
-	if (any < 0) 
+	if (any < 0)
 	{
 		acc = ULLONG_MAX;
 	}
@@ -351,16 +352,16 @@ int _v_scanf( int (*_read)(void*), void (*_push)(void*, unsigned char),  void* a
 	unsigned int fieldsRead = 0;
 	unsigned char fch;
 
-//	_kern_write(1, "\r\n_v_scanf\r\n", -1, 12);
+//	write(1, "\r\n_v_scanf\r\n", 12);
 
 	while (*format)
 	{
 		long long s_temp = 0;
 		fch = *format++;
 /*
-		_kern_write(1, "fch: \'", -1, 6);
-		_kern_write(1, &fch, -1, 1);
-		_kern_write(1, "\'\r\n", -1, 3);
+		write(1, "fch: \'", 6);
+		write(1, &fch, 1);
+		write(1, "\'\r\n", 3);
 */
 
     	if(isspace(fch))
@@ -388,12 +389,12 @@ keeplooking:
 
 			fch = *format++;
 /*
-			_kern_write(1, "fch: \'", -1, 6);
-			_kern_write(1, &fch, -1, 1);
-			_kern_write(1, "\'\r\n", -1, 3);
+			write(1, "fch: \'", 6);
+			write(1, &fch, 1);
+			write(1, "\'\r\n", 3);
 */
 			switch(fch)
-			{   
+			{
 				case '%':
 					if(_read_next_non_space(_read, arg) != '%')
 					{
@@ -559,7 +560,7 @@ read_signed_int:
 				case 'c':
 				{
 					width = 10;
-//					_kern_write(1, "hello", -1, 5);
+//					write(1, "hello", 5);
 					unsigned char* c = (unsigned char*)va_arg(arg_ptr, unsigned char*);
 					int i = 0;
 					if(width == -1)

@@ -865,17 +865,17 @@ static int pipefs_seek(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, off_t po
 		case STREAM_TYPE_DIR:
 			mutex_lock(&v->stream.u.dir.dir_lock);
 			switch(st) {
-				// only valid args are seek_type SEEK_SET, pos 0.
+				// only valid args are seek_type _SEEK_SET, pos 0.
 				// this rewinds to beginning of directory
-				case SEEK_SET:
+				case _SEEK_SET:
 					if(pos == 0) {
 						cookie->u.dir.ptr = cookie->s->u.dir.dir_head;
 					} else {
 						err = ERR_INVALID_ARGS;
 					}
 					break;
-				case SEEK_CUR:
-				case SEEK_END:
+				case _SEEK_CUR:
+				case _SEEK_END:
 				default:
 					err = ERR_INVALID_ARGS;
 			}

@@ -138,13 +138,13 @@ static int floppy_seek(dev_cookie _cookie, off_t pos, seek_type st)
 	mutex_lock(&cookie->flp->lock);
 
 	switch(st) {
-		case SEEK_END:
+		case _SEEK_END:
 			pos += DISK_SIZE;
-			goto SEEK_SET;
-		case SEEK_CUR:
+			goto _SEEK_SET;
+		case _SEEK_CUR:
 			pos += cookie->pos;
-SEEK_SET:
-		case SEEK_SET:
+_SEEK_SET:
+		case _SEEK_SET:
 			if(pos < 0)
 				pos = 0;
 			if(pos > DISK_SIZE)

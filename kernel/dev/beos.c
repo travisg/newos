@@ -352,18 +352,18 @@ static int translation_seek(dev_cookie _cookie, off_t pos, seek_type st)
 	off_t nupos;
 
 	switch(st) {
-	case SEEK_SET:
+	case _SEEK_SET:
 		if(pos < 0)
 			pos = 0;
  		cookie->pos = pos;
 		break;
-	case SEEK_CUR:
+	case _SEEK_CUR:
 		nupos = cookie->pos + pos;
 		if(nupos < 0)
 			nupos = 0;
 		cookie->pos = nupos;
 		break;
-	case SEEK_END:
+	case _SEEK_END:
 	default:
 		err = ERR_INVALID_ARGS;
 	}

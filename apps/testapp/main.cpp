@@ -112,7 +112,7 @@ int foo(int argc, char **argv)
 				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 			};
 			len = sizeof(buf);
-			_kern_write(fd, buf, 0, &len);
+			pwrite(fd, buf, &len, 0);
 		}
 	}
 #endif
@@ -125,7 +125,7 @@ int foo(int argc, char **argv)
 			char buf[1500];
 
 			len = sizeof(buf);
-			_kern_read(fd, buf, 0, &len);
+			pread(fd, buf, &len, 0);
 			printf("%d read %d bytes\n", foo++, len);
 		}
 	}
@@ -142,7 +142,7 @@ int foo(int argc, char **argv)
 		printf("fd = %d\n", fd);
 
 		bytes_read = 512;
-		rc = _kern_read(fd, buf, 0, &bytes_read);
+		rc = pread(fd, buf, &bytes_read, 0);
 		printf("rc = %d, bytes_read = %d\n", rc, bytes_read);
 
 		buf[0] = 'f';
@@ -152,10 +152,10 @@ int foo(int argc, char **argv)
 		buf[4] = 0;
 
 		bytes_read = 512;
-		rc = _kern_write(fd, buf, 1024, &bytes_read);
+		rc = pwrite(fd, buf, &bytes_read, 1024);
 		printf("rc = %d, bytes_read = %d\n", rc, bytes_read);
 
-		_kern_close(fd);
+		close(fd);
 	}
 #endif
 #if 0
@@ -168,15 +168,15 @@ int foo(int argc, char **argv)
 			_kern_thread_resume_thread(tids[i]);
 		}
 
-		_kern_snooze(5000000);
+		usleep(5000000);
 		_kern_proc_kill_proc(_kern_get_current_proc_id());
 /*
-		_kern_snooze(3000000);
+		usleep(3000000);
 		for(i=0; i<10; i++) {
 			_kern_thread_kill_thread(tids[i]);
 		}
 		printf("thread_is dead\n");
-		_kern_snooze(5000000);
+		usleep(5000000);
 */
 	}
 #endif
@@ -195,9 +195,9 @@ int foo(int argc, char **argv)
 
 		fd = _kern_open("/boot/testapp", "", STREAM_TYPE_FILE);
 
-		rc = _kern_read(fd, buf, 0, &len);
+		rc = pread(fd, buf, &len, 0);
 		printf("rc from read = 0x%x\n", rc);
-		_kern_close(fd);
+		close(fd);
 	}
 #endif
 #if 0
@@ -209,11 +209,11 @@ int foo(int argc, char **argv)
 		if(fd >= 0) {
 			printf("writing to the speaker\n");
 			data = 3;
-			_kern_write(fd, &data, 0, 1);
-			_kern_snooze(1000000);
+			pwrite(fd, &data, 1, 0);
+			usleep(1000000);
 			data = 0;
-			_kern_write(fd, &data, 0, 1);
-			_kern_close(fd);
+			pwrite(fd, &data, 1, 0);
+			close(fd);
 		}
 	}
 #endif
@@ -234,7 +234,7 @@ int foo(int argc, char **argv)
 			return -1;
 		}
 
-		bytes_read = _kern_read(fd, buf, -1, 3);
+		bytes_read = read(fd, buf, 3);
 		if(bytes_read < 3) {
 			printf("failed to read device\n");
 			return -1;
@@ -260,11 +260,11 @@ int foo(int argc, char **argv)
 		for(i=0; i<1*1024*1024; i += 512) {
 			for(j=0; j<512/4; j++)
 				buf[j] = i + j*4;
-			_kern_write(fd, buf, -1, sizeof(buf));
+			write(fd, buf, sizeof(buf));
 		}
 
-//		_kern_read(fd, buf, 0, sizeof(buf));
-//		_kern_write(fd, buf, 512, sizeof(buf));
+//		pread(fd, buf, sizeof(buf), 0);
+//		pwrite(fd, buf, sizeof(buf), 512);
 	}
 #endif
 #if 0
@@ -477,7 +477,7 @@ int foo(int argc, char **argv)
 
 			for(i=0; i<16; i++) {
 				memset(buf, 0, sizeof(buf));
-				err = _kern_read(fd, buf, -1, sizeof(buf));
+				err = read(fd, buf, sizeof(buf));
 				printf("read returns %d '%s'\n", err, buf);
 			}
 		}

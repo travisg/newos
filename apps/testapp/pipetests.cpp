@@ -43,14 +43,14 @@ int pipe_test(void)
 	id = _kern_thread_create_thread("pipe read thread", &pipe_read_thread, &fds[1]);
 	_kern_thread_resume_thread(id);
 
-	_kern_snooze(2000000);
+	usleep(2000000);
 
 	err = write(fds[0], "this is a test", sizeof("this is a test"));
 	printf("write returns %d\n", err);
 	if(err < 0)
 		return err;
 
-	_kern_snooze(2000000);
+	usleep(2000000);
 
 	close(fds[0]);
 	close(fds[1]);
@@ -61,7 +61,7 @@ int pipe_test(void)
 	err = write(fds[0], "this is a test", sizeof("this is a test"));
 	printf("write returns %d\n", err);
 
-	_kern_snooze(2000000);
+	usleep(2000000);
 #endif
 	return 0;
 }

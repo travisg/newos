@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 #include <win/Event.h>
 #include <win/protocol.h>
 #include <win/WindowFlags.h>
@@ -61,7 +62,7 @@ WindowManager::~WindowManager()
 int WindowManager::WaitForExit()
 {
 	for(;;)
-		_kern_snooze(1000000);
+		usleep(1000000);
 	return 0;
 }
 
@@ -439,7 +440,7 @@ void WindowManager::InputThread()
 retry:
 	event_port = _kern_port_find("input_event_port");
 	if(event_port < 0) {
-		_kern_snooze(1000000);
+		usleep(1000000);
 		goto retry;
 	}
 

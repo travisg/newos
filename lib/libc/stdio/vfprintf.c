@@ -7,14 +7,14 @@
 #include <stdio.h>
 #include <sys/syscalls.h>
 #include <errno.h>
-
+#include <unistd.h>
 
 static int _write(void* arg, const void* buf, ssize_t len)
 {
     int err;
     if(((FILE*)arg)->buf_pos > 0)
     {
-        err = _kern_write(((FILE*)arg)->fd, ((FILE*)arg)->buf, -1, ((FILE*)arg)->buf_pos);
+        err = write(((FILE*)arg)->fd, ((FILE*)arg)->buf, ((FILE*)arg)->buf_pos);
         if(err < 0)
         {
             errno = EIO;
@@ -23,7 +23,7 @@ static int _write(void* arg, const void* buf, ssize_t len)
         }
         ((FILE*)arg)->buf_pos = 0;
     }
-    err = _kern_write(((FILE*)arg)->fd, buf, -1, len);
+    err = write(((FILE*)arg)->fd, buf, len);
     if(err < 0)
     {
         errno = EIO;

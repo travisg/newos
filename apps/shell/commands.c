@@ -119,13 +119,13 @@ int cmd_cat(int argc, char *argv[])
 	}
 
 	for(;;) {
-		rc = _kern_read(fd, buf, -1, sizeof(buf) -1);
+		rc = read(fd, buf, sizeof(buf) -1);
 		if(rc <= 0)
 			break;
 
 		write(1, buf, rc);
 	}
-	_kern_close(fd);
+	close(fd);
 
 done_cat:
 	return 0;
@@ -140,9 +140,9 @@ int cmd_cd(int argc, char *argv[])
 		return 0;
 	}
 
-	rc = _kern_setcwd(argv[1]);
+	rc = chdir(argv[1]);
 	if (rc < 0) {
-		printf("cd: _kern_setcwd() returned error: %s!\n", strerror(rc));
+		printf("cd: chdir() returned error: %s!\n", strerror(rc));
 	}
 
 	return 0;
@@ -152,9 +152,9 @@ int cmd_pwd(int argc, char *argv[])
 {
 	char *cwd;
 
-	cwd= getcwd(NULL, 1024);
+	cwd= getwd(NULL);
 	if (!cwd) {
-		printf("cd: _kern_getcwd() returned error: %s!\n", "xx"); //strerror(rc));
+		printf("cd: getcwd() returned error: %s!\n", "xx"); //strerror(rc));
 	} else {
 		printf("pwd: cwd=\'%s\'\n", cwd);
 	}

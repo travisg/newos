@@ -8,6 +8,7 @@
 #include <newos/errors.h>
 #include <newos/net.h>
 #include <sys/syscalls.h>
+#include <unistd.h>
 
 static int usage(const char *argv[])
 {
@@ -157,7 +158,7 @@ static int do_if(int argc, const char *argv[], int curr_arg)
 			return fd;
 		}
 		err = _kern_ioctl(fd, op, &control, sizeof(control));
-		_kern_close(fd);
+		close(fd);
 
 		if(err < 0) {
 			printf("error calling ioctl %d (%s)\n", err, strerror(err));
@@ -259,7 +260,7 @@ static int do_route(int argc, const char *argv[], int curr_arg)
 			return fd;
 		}
 		err = _kern_ioctl(fd, op, &control, sizeof(control));
-		_kern_close(fd);
+		close(fd);
 
 		if(err < 0) {
 			printf("error calling ioctl %d (%s)\n", err, strerror(err));

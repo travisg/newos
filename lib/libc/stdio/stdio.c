@@ -6,10 +6,11 @@
 #include <sys/syscalls.h>
 #include <stdio.h>
 #include <string.h>
-#include <stdlib.h>  
+#include <stdlib.h>
 #include <fcntl.h>
 #include <newos/types.h>
 #include <errno.h>
+#include <unistd.h>
 
 #define BUFFER_SIZE 1024
 
@@ -73,7 +74,7 @@ static FILE *__create_FILE_struct(int fd, int flags)
 static int __delete_FILE_struct(int fd)
 {
     FILE *fNode, *fPrev;
-    
+
     /* Search for the FILE for the file descriptor */
     fPrev = (FILE*)0;
     fNode = __open_file_stack_top;
@@ -94,7 +95,7 @@ static int __delete_FILE_struct(int fd)
     }
 
     /* free the FILE space/semaphore*/
-    _kern_close(fd);
+    close(fd);
     _kern_sem_delete(fNode->sid);
     free(fNode->buf);
     free(fNode);
@@ -114,7 +115,7 @@ static int __delete_FILE_struct(int fd)
     }
     /* Free the space*/
     free(fNode);
-    
+
     return 0;
 }
 
@@ -135,7 +136,7 @@ int __stdio_init(void)
 int __stdio_deinit(void)
 {
     FILE *fNode, *fNext;
-    
+
     /* Iterate through the list, freeing everything*/
     fNode = __open_file_stack_top;
     _kern_sem_acquire(__open_file_stack_sem_id, 1);
@@ -147,7 +148,7 @@ int __stdio_deinit(void)
         _kern_sem_delete(fNode->sid);
         free(fNode);
         fNode = fNext;
-    } 
+    }
     _kern_sem_release(__open_file_stack_sem_id, 1);
     _kern_sem_delete(__open_file_stack_sem_id);
 
@@ -168,7 +169,7 @@ FILE *fopen(const char *filename, const char *mode)
         sys_flags = O_RDONLY;
         flags = _STDIO_READ;
     }
-    else if(!strcmp(mode, "w") || !strcmp(mode, "wb")) 
+    else if(!strcmp(mode, "w") || !strcmp(mode, "wb"))
     {
         sys_flags = O_WRONLY | O_CREAT | O_TRUNC;
         flags = _STDIO_WRITE;
@@ -183,12 +184,12 @@ FILE *fopen(const char *filename, const char *mode)
         sys_flags = O_RDWR;
         flags = _STDIO_READ | _STDIO_WRITE;
     }
-    else if(!strcmp(mode, "w+") || !strcmp(mode, "wb+") || !strcmp(mode, "w+b")) 
+    else if(!strcmp(mode, "w+") || !strcmp(mode, "wb+") || !strcmp(mode, "w+b"))
     {
         sys_flags = O_RDWR | O_CREAT | O_TRUNC;
         flags = _STDIO_READ | _STDIO_WRITE;
     }
-    else if(!strcmp(mode, "a+") || !strcmp(mode, "ab+") || !strcmp(mode, "a+b")) 
+    else if(!strcmp(mode, "a+") || !strcmp(mode, "ab+") || !strcmp(mode, "a+b"))
     {
         sys_flags = O_RDWR | O_CREAT | O_APPEND;
         flags = _STDIO_READ | _STDIO_WRITE;
@@ -203,11 +204,11 @@ FILE *fopen(const char *filename, const char *mode)
     {
         return (FILE*)0;
     }
-    
+
     f = __create_FILE_struct(fd, flags);
     if(f == (FILE*)0)
     {
-        _kern_close(fd);
+        close(fd);
     }
 
     return f;
@@ -245,12 +246,12 @@ int fflush(FILE *stream)
         if(stream->flags & _STDIO_WRITE )
         {
             _kern_sem_acquire(stream->sid, 1);
-            err = _kern_write(stream->fd, stream->buf, -1, stream->buf_pos);
+            err = write(stream->fd, stream->buf, stream->buf_pos);
             _kern_sem_release(stream->sid, 1);
             stream->buf_pos = 0;
         }
     }
-    
+
     if(err < 0)
     {
         errno = EIO;
@@ -283,7 +284,7 @@ int fprintf(FILE *stream, char const *fmt, ...)
 	va_start(args, fmt);
 	_kern_sem_acquire(stream->sid, 1);
     i = vfprintf(stream, fmt, args);
-    _kern_sem_release(stream->sid, 1);    
+    _kern_sem_release(stream->sid, 1);
 	va_end(args);
 
 	return i;
@@ -294,7 +295,7 @@ int feof(FILE *stream)
     int i = 0;
 	_kern_sem_acquire(stream->sid, 1);
     i = stream->flags & _STDIO_EOF;
-    _kern_sem_release(stream->sid, 1);    
+    _kern_sem_release(stream->sid, 1);
     return i;
 }
 
@@ -311,7 +312,7 @@ int getchar(void)
 {
 	char c;
 
-	_kern_read(stdin->fd, &c, -1, 1);
+	read(stdin->fd, &c, 1);
 	return c;
 }
 
@@ -326,22 +327,22 @@ char* fgets(char* str, int n, FILE * stream)
     for(;i > 0; i--)
     {
         int c;
-        
+
         if (stream->flags & _STDIO_EOF)
         {
             break;
         }
-        if (stream->rpos >= stream->buf_pos) 
+        if (stream->rpos >= stream->buf_pos)
         {
 
-            int len = _kern_read(stream->fd, stream->buf, -1, stream->buf_size);
+            int len = read(stream->fd, stream->buf, stream->buf_size);
 
-            if (len==0) 
+            if (len==0)
             {
                 stream->flags |= _STDIO_EOF;
                 break;
-            } 
-            else if (len < 0) 
+            }
+            else if (len < 0)
             {
                 stream->flags |= _STDIO_ERROR;
                 break;
@@ -350,7 +351,7 @@ char* fgets(char* str, int n, FILE * stream)
             stream->buf_pos=len;
         }
         c = stream->buf[stream->rpos++];
-        
+
         *tmp++ = c;
         if(c == '\n')
             break;
@@ -367,16 +368,16 @@ int fgetc(FILE *stream)
 {
     int c;
     _kern_sem_acquire(stream->sid, 1);
-    if (stream->rpos >= stream->buf_pos) 
+    if (stream->rpos >= stream->buf_pos)
     {
-        int len = _kern_read(stream->fd, stream->buf, -1, stream->buf_size);
-    
-        if (len==0) 
+        int len = read(stream->fd, stream->buf, stream->buf_size);
+
+        if (len==0)
         {
             stream->flags |= _STDIO_EOF;
             return EOF;
-        } 
-        else if (len < 0) 
+        }
+        else if (len < 0)
         {
             stream->flags |= _STDIO_ERROR;
             return EOF;
@@ -385,7 +386,7 @@ int fgetc(FILE *stream)
         stream->buf_pos=len;
     }
     c = stream->buf[stream->rpos++];
-    _kern_sem_release(stream->sid, 1);    
+    _kern_sem_release(stream->sid, 1);
     return c;
 }
 
@@ -397,7 +398,7 @@ int scanf(char const *fmt, ...)
 	va_start(args, fmt);
 	_kern_sem_acquire(stdout->sid, 1);
 	i = vfscanf(stdout, fmt, args);
-	_kern_sem_release(stdout->sid, 1);    
+	_kern_sem_release(stdout->sid, 1);
 	va_end(args);
 
 	return i;
@@ -410,7 +411,7 @@ int fscanf(FILE *stream, char const *fmt, ...)
 	va_start(args, fmt);
 	_kern_sem_acquire(stream->sid, 1);
 	i = vfscanf(stream, fmt, args);
-	_kern_sem_release(stream->sid, 1);    
+	_kern_sem_release(stream->sid, 1);
 	va_end(args);
 
 	return i;

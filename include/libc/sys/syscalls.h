@@ -19,9 +19,9 @@ typedef enum {
 } stream_type;
 
 typedef enum {
-	SEEK_SET = 0,
-	SEEK_CUR,
-	SEEK_END
+	_SEEK_SET = 0,
+	_SEEK_CUR,
+	_SEEK_END
 } seek_type;
 
 struct file_stat {

@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 /* globals */
 void (*disp_func)(const char *, struct file_stat *) = NULL;
@@ -94,7 +95,7 @@ static int do_ls(const char *arg)
 					strlcpy(filename, "..", sizeof(filename));
 					done_dotdot = true;
 				} else {
-					rc = _kern_read(fd, filename, -1, sizeof(filename));
+					rc = read(fd, filename, sizeof(filename));
 					if(rc <= 0)
 						break;
 				}
@@ -112,7 +113,7 @@ static int do_ls(const char *arg)
 				}
 				count++;
 			}
-			_kern_close(fd);
+			close(fd);
 
 			printf("%d files found\n", count);
 			break;

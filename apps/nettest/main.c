@@ -7,6 +7,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <socket/socket.h>
 
 static int fd;
@@ -182,7 +183,7 @@ int nettest4(void)
 	if(err < 0)
 		return err;
 
-	_kern_snooze(5000000);
+	usleep(5000000);
 
 	err = socket_close(fd);
 	printf("socket_close returns %d\n", err);
@@ -226,7 +227,7 @@ int nettest5(void)
 	printf("socket_write returns %d\n", err);
 
 	printf("sleeping for 5 seconds\n");
-	_kern_snooze(5000000);
+	usleep(5000000);
 
 	printf("closing fd %d\n", new_fd);
 	socket_close(new_fd);
@@ -272,25 +273,25 @@ int nettest6(void)
 		if(new_fd < 0)
 			continue;
 
-		saved_stdin = _kern_dup(0);
-		saved_stdout = _kern_dup(1);
-		saved_stderr = _kern_dup(2);
+		saved_stdin = dup(0);
+		saved_stdout = dup(1);
+		saved_stderr = dup(2);
 
-		_kern_dup2(new_fd, 0);
-		_kern_dup2(new_fd, 1);
-		_kern_dup2(new_fd, 2);
-		_kern_close(new_fd);
+		dup2(new_fd, 0);
+		dup2(new_fd, 1);
+		dup2(new_fd, 2);
+		close(new_fd);
 
 		// XXX launch
 		argv = "/boot/bin/shell";
 		err = _kern_proc_create_proc("/boot/bin/shell", "shell", &argv, 1, 5);
 
-		_kern_dup2(saved_stdin, 0);
-		_kern_dup2(saved_stdout, 1);
-		_kern_dup2(saved_stderr, 2);
-		_kern_close(saved_stdin);
-		_kern_close(saved_stdout);
-		_kern_close(saved_stderr);
+		dup2(saved_stdin, 0);
+		dup2(saved_stdout, 1);
+		dup2(saved_stderr, 2);
+		close(saved_stdin);
+		close(saved_stdout);
+		close(saved_stderr);
 		printf("_kern_proc_create_proc returns %d\n", err);
 	}
 }

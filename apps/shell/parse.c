@@ -3,6 +3,7 @@
 #include <sys/syscalls.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #include "parse.h"
 #include "commands.h"
@@ -167,9 +168,9 @@ int parse_line(const char *buf, char *argv[], int max_args, char *redirect_in, c
 
 		len = scan - start;
 		if(*scan != 0) scan++;
-        
+
 		if(replace){
-        
+
 				memcpy(tmp,start,len);
 				tmp[len]=0;
 				parse_vars_in_string(tmp,out,SCAN_SIZE);
@@ -178,7 +179,7 @@ int parse_line(const char *buf, char *argv[], int max_args, char *redirect_in, c
 
 				memcpy(out,start,len);
 				out[len]=0;
-                
+
 		}
 
 		switch(*type_char){
@@ -501,7 +502,7 @@ static int launch(int (*cmd)(int, char **), int argc, char **argv, char *r_in, c
 			new_in = _kern_create(r_in,STREAM_TYPE_FILE);
 		}
 	} else {
-		new_in = _kern_dup(0);
+		new_in = dup(0);
 	}
 	if(new_in < 0) {
 		err = new_in;
@@ -514,7 +515,7 @@ static int launch(int (*cmd)(int, char **), int argc, char **argv, char *r_in, c
 			new_out = _kern_create(r_out,STREAM_TYPE_FILE);
 		}
 	} else {
-		new_out = _kern_dup(1);
+		new_out = dup(1);
 	}
 	if(new_out < 0) {
 		err = new_out;
@@ -522,25 +523,25 @@ static int launch(int (*cmd)(int, char **), int argc, char **argv, char *r_in, c
 	}
 
 
-	saved_in = _kern_dup(0);
-	saved_out= _kern_dup(1);
+	saved_in = dup(0);
+	saved_out= dup(1);
 
-	_kern_dup2(new_in, 0);
-	_kern_dup2(new_out, 1);
-	_kern_close(new_in);
-	_kern_close(new_out);
+	dup2(new_in, 0);
+	dup2(new_out, 1);
+	close(new_in);
+	close(new_out);
 
 	retval= cmd(argc, argv);
 
-	_kern_dup2(saved_in, 0);
-	_kern_dup2(saved_out, 1);
-	_kern_close(saved_in);
-	_kern_close(saved_out);
+	dup2(saved_in, 0);
+	dup2(saved_out, 1);
+	close(saved_in);
+	close(saved_out);
 
 	return 0;
 
 err_2:
-	_kern_close(new_in);
+	close(new_in);
 err_1:
 	return err;
 }

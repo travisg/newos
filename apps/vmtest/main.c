@@ -7,6 +7,7 @@
 #include <sys/types.h>
 #include <sys/syscalls.h>
 #include <newos/errors.h>
+#include <unistd.h>
 
 int main(void)
 {
@@ -58,7 +59,7 @@ int main(void)
 		}
 
 		printf("pausing for 5 seconds...\n");
-		_kern_snooze(5000000);
+		usleep(5000000);
 		region2 = _kern_vm_create_anonymous_region("large2", &ptr2, REGION_ADDR_ANY_ADDRESS,
 			64*1024*1024, REGION_WIRING_LAZY, LOCK_RW);
 		if(region2 < 0) {
@@ -70,7 +71,7 @@ int main(void)
 		}
 
 		printf("pausing for 5 seconds...\n");
-		_kern_snooze(5000000);
+		usleep(5000000);
 		printf("deleting both regions\n");
 		_kern_vm_delete_region(region);
 		_kern_vm_delete_region(region2);
@@ -87,7 +88,7 @@ int main(void)
 		printf("you'll want to make sure serial debugging is off or the test will take forever,\n");
 		printf(" use the scroll lock key to toggle it on or off.\n");
 		printf("pausing for 2 seconds...\n");
-		_kern_snooze(2000000);
+		usleep(2000000);
 
 		t = _kern_system_time();
 		region = _kern_vm_create_anonymous_region("large", &ptr, REGION_ADDR_ANY_ADDRESS,

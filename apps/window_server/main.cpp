@@ -381,13 +381,13 @@ int main(int argc, char **argv)
 		screen->DrawLine(rand() % r.Width(), rand() % r.Height(), rand() % r.Width(), rand() % r.Height(), 0);
 	}
 
-	_kern_snooze(2000000);
+	usleep(2000000);
 
 	for(i = 0; i < 256; i++) {
 		Rect source;
 		Rect dest;
 
-		_kern_snooze(10000);
+		usleep(10000);
 
 		source.SetTo(rand() % r.Width(), rand() % r.Height(), rand() % r.Width(), rand() % r.Height());
 		dest.SetTo(rand() % r.Width(), rand() % r.Height(), rand() % r.Width(), rand() % r.Height());
@@ -401,7 +401,7 @@ int main(int argc, char **argv)
 		screen->CopyRect(source, dest);
 	}
 
-	_kern_snooze(1000000);
+	usleep(1000000);
 
 	{
 		Rect source(300, 300, 400, 400);
@@ -411,7 +411,7 @@ int main(int argc, char **argv)
 	}
 */
 	WindowManager *wm = new WindowManager(screen);
-	
+
 	wm->WaitForExit();
 	return 0;
 }

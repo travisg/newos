@@ -218,14 +218,14 @@ static int netblock_seek(dev_cookie _cookie, off_t pos, seek_type st)
 	mutex_lock(&cookie->dev->lock);
 
 	switch(st) {
-		case SEEK_SET:
+		case _SEEK_SET:
 			if(pos > cookie->dev->size)
 				pos = cookie->dev->size;
 			if(pos < 0)
 				pos = 0;
 			cookie->curr_pos = pos;
 			break;
-		case SEEK_CUR:
+		case _SEEK_CUR:
 			if(cookie->curr_pos + pos > cookie->dev->size)
 				cookie->curr_pos = cookie->dev->size;
 			else if(cookie->curr_pos + pos < 0)
@@ -233,7 +233,7 @@ static int netblock_seek(dev_cookie _cookie, off_t pos, seek_type st)
 			else
 				cookie->curr_pos = cookie->curr_pos + pos;
 			break;
-		case SEEK_END:
+		case _SEEK_END:
 			if(cookie->dev->size - pos > cookie->dev->size)
 				cookie->curr_pos = cookie->dev->size;
 			else if(cookie->dev->size + pos < 0)

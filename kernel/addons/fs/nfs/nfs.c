@@ -724,14 +724,14 @@ int nfs_seek(fs_cookie fs, fs_vnode _v, file_cookie _cookie, off_t pos, seek_typ
 			file_len = ntohl(attrstat.attributes.size);
 
 			switch(st) {
-				case SEEK_SET:
+				case _SEEK_SET:
 					if(pos < 0)
 						pos = 0;
 					if(pos > file_len)
 						pos = file_len;
 					cookie->u.file.pos = pos;
 					break;
-				case SEEK_CUR:
+				case _SEEK_CUR:
 					if(pos + cookie->u.file.pos > file_len)
 						cookie->u.file.pos = file_len;
 					else if(pos + cookie->u.file.pos < 0)
@@ -739,7 +739,7 @@ int nfs_seek(fs_cookie fs, fs_vnode _v, file_cookie _cookie, off_t pos, seek_typ
 					else
 						cookie->u.file.pos += pos;
 					break;
-				case SEEK_END:
+				case _SEEK_END:
 					if(pos > 0)
 						cookie->u.file.pos = file_len;
 					else if(pos + file_len < 0)
@@ -755,9 +755,9 @@ int nfs_seek(fs_cookie fs, fs_vnode _v, file_cookie _cookie, off_t pos, seek_typ
 		}
 		case STREAM_TYPE_DIR:
 			switch(st) {
-				// only valid args are seek_type SEEK_SET, pos 0.
+				// only valid args are seek_type _SEEK_SET, pos 0.
 				// this rewinds to beginning of directory
-				case SEEK_SET:
+				case _SEEK_SET:
 					if(pos == 0) {
 						cookie->u.dir.nfscookie = 0;
 						cookie->u.dir.at_end = false;
@@ -765,8 +765,8 @@ int nfs_seek(fs_cookie fs, fs_vnode _v, file_cookie _cookie, off_t pos, seek_typ
 						err = ERR_INVALID_ARGS;
 					}
 					break;
-				case SEEK_CUR:
-				case SEEK_END:
+				case _SEEK_CUR:
+				case _SEEK_END:
 				default:
 					err = ERR_INVALID_ARGS;
 			}

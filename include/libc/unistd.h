@@ -9,12 +9,15 @@
 
 
 #include <newos/types.h>
-#include <sys/syscalls.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+/* whence values for lseek() */
+#define SEEK_SET 0
+#define SEEK_CUR 1
+#define SEEK_END 2
 
 int     open(char const *, int, ...);
 int     close(int);

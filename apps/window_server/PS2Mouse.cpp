@@ -30,7 +30,7 @@ void PS2Mouse::GetPos(int *out_x, int *out_y, int *out_buttons)
 retry:
 	err = read(fFd, &data, sizeof(mouse_data));
 	if(err < 0) {
-		_kern_snooze(1000000);
+		usleep(1000000);
 		goto retry;
 	}
 

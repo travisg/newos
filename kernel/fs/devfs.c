@@ -752,17 +752,17 @@ static int devfs_seek(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, off_t pos
 		case STREAM_TYPE_DIR:
 			mutex_lock(&fs->lock);
 			switch(st) {
-				// only valid args are seek_type SEEK_SET, pos 0.
+				// only valid args are seek_type _SEEK_SET, pos 0.
 				// this rewinds to beginning of directory
-				case SEEK_SET:
+				case _SEEK_SET:
 					if(pos == 0) {
 						cookie->u.dir.ptr = cookie->s->u.dir.dir_head;
 					} else {
 						err = ERR_INVALID_ARGS;
 					}
 					break;
-				case SEEK_CUR:
-				case SEEK_END:
+				case _SEEK_CUR:
+				case _SEEK_END:
 				default:
 					err = ERR_INVALID_ARGS;
 			}
@@ -1023,12 +1023,12 @@ static int devfs_find_parent_node(char *path, struct devfs_vnode *current, struc
 			current->stream.type = STREAM_TYPE_DIR;
 			current->stream.u.dir.dir_head = NULL;
 			current->stream.u.dir.jar_head = NULL;
-		
+
 			hash_insert(thedevfs->vnode_list_hash, current);
 
 			devfs_insert_in_dir(*parent, current);
 		}
-	      
+
 		last = i;
 		*parent = current;
         }
@@ -1038,13 +1038,13 @@ static int devfs_find_parent_node(char *path, struct devfs_vnode *current, struc
 int devfs_publish_device(const char *path, dev_ident ident, struct dev_calls *calls)
 {
 	char temp[SYS_MAX_PATH_LEN + 1];
-	char *dir = NULL, 
-	     *name = temp, 
+	char *dir = NULL,
+	     *name = temp,
 	     *slash = NULL; // default to no path, just a name.
-	struct devfs_vnode *parent = NULL, 
+	struct devfs_vnode *parent = NULL,
 		           *child = NULL;
 	int errval = 0;
-	
+
 	strncpy(temp, path, SYS_MAX_PATH_LEN);
 	temp[SYS_MAX_PATH_LEN] = '\0';
 
@@ -1103,10 +1103,10 @@ int devfs_publish_indexed_device(const char *dir, dev_ident ident, struct dev_ca
 {
 	char temp[SYS_MAX_PATH_LEN + 1];
 	char number[SYS_MAX_PATH_LEN + 1];
-	struct devfs_vnode *parent = NULL, 
+	struct devfs_vnode *parent = NULL,
 		           *child = NULL;
 	int errval = 0;
-	
+
 	strncpy(temp, dir, SYS_MAX_PATH_LEN);
 	temp[SYS_MAX_PATH_LEN] = '\0';
 
@@ -1157,10 +1157,10 @@ int devfs_publish_indexed_directory(const char *dir)
 {
 	char temp[SYS_MAX_PATH_LEN + 1];
 	char number[SYS_MAX_PATH_LEN + 1];
-	struct devfs_vnode *parent = NULL, 
+	struct devfs_vnode *parent = NULL,
 		           *child = NULL;
 	int errval = 0;
-	
+
 	strncpy(temp, dir, SYS_MAX_PATH_LEN);
 	temp[SYS_MAX_PATH_LEN] = '\0';
 
@@ -1195,7 +1195,7 @@ int devfs_publish_indexed_directory(const char *dir)
 	child->stream.type = STREAM_TYPE_DIR;
 	child->stream.u.dir.dir_head = NULL;
 	child->stream.u.dir.jar_head = NULL;
-		
+
 	hash_insert(thedevfs->vnode_list_hash, child);
 
 	devfs_insert_in_dir(parent, child);

@@ -7,6 +7,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 typedef struct thread_time {
 	struct thread_time *next;
@@ -193,7 +194,7 @@ int main(int argc, char **argv)
 		if(err < 0)
 			return err;
 
-		_kern_snooze(1000000);
+		usleep(1000000);
 	}
 }
 

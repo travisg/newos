@@ -1,9 +1,10 @@
-/* 
+/*
 ** Copyright 2001, Manuel J. Petit. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 
 #include <unistd.h>
+#include <errno.h>
 #include <sys/syscalls.h>
 
 
@@ -15,7 +16,7 @@ dup2(int ofd, int nfd)
 	retval= _kern_dup2(ofd, nfd);
 
 	if(retval< 0) {
-		// set errno
+		errno = retval;
 	}
 
 	return retval;

@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <newos/errors.h>
+#include <unistd.h>
 
 #include "file_utils.h"
 #include "statements.h"
@@ -36,7 +37,7 @@ bool exists_file(const char *file_name)
 	int handle = _kern_open(file_name,STREAM_TYPE_FILE,0);
 	bool exists;
 	exists =( handle >= 0);
-	if(exists) _kern_close(handle);
+	if(exists) close(handle);
 	return exists;
 }
 
@@ -102,9 +103,9 @@ int read_file_in_buffer(const char *filename,char **buffer)
 		return file_no;
 	}
 
-	size = _kern_read(file_no,*buffer,0,stat.size);
+	size = pread(file_no, *buffer, stat.size, 0);
 
-	_kern_close(file_no);
+	close(file_no);
 
 	if(size < 0) free(*buffer);
 

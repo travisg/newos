@@ -884,7 +884,7 @@ int vfs_test(void)
 		char buf[64];
 		ssize_t len;
 
-		sys_seek(fd, 0, SEEK_SET);
+		sys_seek(fd, 0, _SEEK_SET);
 		for(;;) {
 			len = sys_read(fd, buf, -1, sizeof(buf));
 			if(len < 0)
@@ -926,7 +926,7 @@ int vfs_test(void)
 		char buf[64];
 		ssize_t len;
 
-		sys_seek(fd, 0, SEEK_SET);
+		sys_seek(fd, 0, _SEEK_SET);
 		for(;;) {
 			len = sys_read(fd, buf, -1, sizeof(buf));
 			if(len < 0)

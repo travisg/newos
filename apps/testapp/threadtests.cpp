@@ -11,7 +11,7 @@ int sleep_test(int arg)
 {
 	printf("should display 'booyah!' 10 times, one second apart\n");
 	for(int i = 0; i < 10; i++) {
-		_kern_snooze(1000000);
+		usleep(1000000);
 		printf("booyah!");
 	}
 
@@ -23,7 +23,7 @@ static int test_thread(void *args)
 	int i = (int)args;
 
 	for(;;) {
-		printf("%c", 'a' + i);
+//		printf("%c", 'a' + i);
 	}
 	return 0;
 }
@@ -95,16 +95,16 @@ int thread_spawn_test(int arg)
 
 	if(arg == 0) {
 		for(;;)
-			_kern_snooze(1000000);
+			usleep(1000000);
 	} else if(arg == 1) {
-		_kern_snooze(10000000);
+		usleep(10000000);
 		for(i=0; i<num_threads; i++) {
 			printf("killing thread %d...\n", tids[i]);
 			_kern_thread_kill_thread(tids[i]);
 		}
 	} else if(arg == 2) {
 		_kern_thread_wait_on_thread(tids[0], NULL);
-		_kern_snooze(1000000);
+		usleep(1000000);
 	}
 
 	printf("done\n");
