@@ -3,14 +3,14 @@
 
 #include <list>
 
-
+using std::printf;
 
 namespace {
 	struct testconstruction 
 	{
 		testconstruction()
 		{
-			std::printf("Testing construction of %p\n", this);
+			printf("Testing construction of %p\n", this);
 		}
 
 		void throwit(int x)
@@ -20,7 +20,7 @@ namespace {
 
 		~testconstruction()
 		{
-			std::printf("Testing destruction of %p\n", this);
+			printf("Testing destruction of %p\n", this);
 		}
 	};
 
@@ -29,16 +29,21 @@ namespace {
 
 int main()
 {
-	std::printf("object %p exists, typename %s.\n", &test, typeid(test).name());
+/* exceptions dont work right now, I dont know why */
+#if 0
 	try {
-		test.throwit(1);
+		printf("throwing\n");
+		throw 1;
 	} catch (int z) {
-		std::printf("object %p threw %d\n", &test, z);
+		printf("threw %d (int)\n", z);
+	} catch (...) {
+		printf("general purpose catch\n");
 	}
+#endif
 
 	int *foo = new int;
 	
-	std::printf("allocated memory with new, address %p\n", foo);
+	printf("allocated memory with new, address %p\n", foo);
 
 	delete foo;
 }

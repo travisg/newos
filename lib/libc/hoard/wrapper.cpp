@@ -67,7 +67,8 @@ extern "C" void * HOARD_CALLOC(size_t, size_t);
 extern "C" void * HOARD_MEMALIGN(size_t, size_t);
 extern "C" void * HOARD_VALLOC(size_t);
 
-
+/* let libsupc++ provide the new/delete implementations */
+#if 0
 void * operator new (size_t size)
 {
   return HOARD_MALLOC (size);
@@ -95,7 +96,7 @@ void operator delete[] (void * ptr)
 {
   HOARD_FREE (ptr);
 }
-
+#endif
 
 extern "C" void * HOARD_MALLOC (size_t sz)
 {

@@ -35,7 +35,7 @@ $(MY_TARGET_IN):: $(_TEMP_OBJS) $(MY_DEPS_IN) $(MY_GLUE_IN)
 	@echo linking $@
 	@$(LD) $(GLOBAL_LDFLAGS) $(MY_LDFLAGS_IN) --script=$(MY_LINKSCRIPT_IN) -L $(LIBGCC_PATH) -L $(LIBS_BUILD_DIR) $(MY_LIBPATHS_IN) -o $@ $(MY_GLUE_IN) $(_TEMP_OBJS) $(MY_LIBS_IN) $(LIBGCC)
 	@echo creating listing file $@.lst
-	@$(OBJDUMP) -S $@ > $@.lst
+	@$(OBJDUMP) -C -S $@ > $@.lst
 
 include templates/compile.mk
 

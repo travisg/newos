@@ -26,7 +26,7 @@ $(MY_TARGET_IN): $(LIBGLUE) $(_TEMP_OBJS)
 	@echo linking library $@
 	@$(LD) $(GLOBAL_LDFLAGS) -shared -soname $(notdir $(MY_TARGET_IN)) --script=$(MY_LINKSCRIPT_IN) -o $@ $^
 	@echo creating listing file $@.lst
-	@$(OBJDUMP) -S $@ > $@.lst
+	@$(OBJDUMP) -C -S $@ > $@.lst
 endif
 ifneq ($(MY_STATIC_TARGET_IN), ) 
 $(MY_STATIC_TARGET_IN): MY_TARGETDIR_IN:=$(MY_TARGETDIR_IN) 

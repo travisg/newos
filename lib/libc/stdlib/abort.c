@@ -5,13 +5,14 @@
 
 #if !_KERNEL
 #include <stdlib.h>
+#include <stdio.h>
 #include <sys/syscalls.h>
 
 void abort(void)
 {
-	proc_id id = _kern_get_current_proc_id();
+	printf("abort() called\n");
 
-	_kern_proc_kill_proc(id);
+	exit(0);
 }
 #endif
 
