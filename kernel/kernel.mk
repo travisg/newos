@@ -29,6 +29,8 @@ DEPS += $(KERNEL_OBJS:.o=.d)
 
 KERNEL = $(KERNEL_OBJ_DIR)/system
 
+kernel:	$(KERNEL)
+
 $(KERNEL): $(KERNEL_LIB) $(LIBS) $(DEV)
 	$(LD) -dN --script=$(KERNEL_ARCH_DIR)/kernel.ld -L $(LIBGCC_PATH) -o $@ $(KERNEL_LIB) $(KLIBS) $(DEV) $(LIBGCC)
 
