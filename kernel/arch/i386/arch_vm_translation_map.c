@@ -74,6 +74,8 @@ static spinlock_t tmap_list_lock;
 #define NUM_KERNEL_PGDIR_ENTS   (VADDR_TO_PDENT(KERNEL_SIZE))
 
 static int vm_translation_map_quick_query(addr_t va, addr_t *out_physical);
+static int get_physical_page_tmap(addr_t pa, addr_t *va, int flags);
+static int put_physical_page_tmap(addr_t va);
 
 static void flush_tmap(vm_translation_map *map);
 
@@ -158,7 +160,7 @@ static void destroy_tmap(vm_translation_map *map)
 
 	if(map->arch_data->pgdir_virt != NULL) {
 		// cycle through and free all of the user space pgtables
-		for(i = VADDR_TO_PDENT(USER_BASE); i < VADDR_TO_PDENT(USER_BASE + (USER_SIZE - 1)); i++) {
+		for(i = VADDR_TO_PDENT(USER_BASE); i <= VADDR_TO_PDENT(USER_BASE + (USER_SIZE - 1)); i++) {
 			addr_t pgtable_addr;
 			vm_page *page;
 
@@ -215,6 +217,10 @@ static int map_tmap(vm_translation_map *map, addr_t va, addr_t pa, unsigned int 
 
 		// we need to allocate a pgtable
 		page = vm_page_allocate_page(PAGE_STATE_CLEAR);
+
+		// mark the page WIRED
+		vm_page_set_state(page, PAGE_STATE_WIRED);
+		
 		pgtable = page->ppn * PAGE_SIZE;
 #if CHATTY_TMAP
 		dprintf("map_tmap: asked for free page for pgtable. 0x%x\n", pgtable);
@@ -231,7 +237,7 @@ static int map_tmap(vm_translation_map *map, addr_t va, addr_t pa, unsigned int 
 
 	// now, fill in the pentry
 	do {
-		err = vm_get_physical_page(ADDR_REVERSE_SHIFT(pd[index].addr), (addr_t *)&pt, PHYSICAL_PAGE_NO_WAIT);
+		err = get_physical_page_tmap(ADDR_REVERSE_SHIFT(pd[index].addr), (addr_t *)&pt, PHYSICAL_PAGE_NO_WAIT);
 	} while(err < 0);
 	index = VADDR_TO_PTENT(va);
 
@@ -241,7 +247,7 @@ static int map_tmap(vm_translation_map *map, addr_t va, addr_t pa, unsigned int 
 	pt[index].rw = attributes & LOCK_RW;
 	pt[index].present = 1;
 
-	vm_put_physical_page((addr_t)pt);
+	put_physical_page_tmap((addr_t)pt);
 
 	if(map->arch_data->num_invalidate_pages < PAGE_INVALIDATE_CACHE_SIZE) {
 		map->arch_data->pages_to_invalidate[map->arch_data->num_invalidate_pages] = va;
@@ -279,7 +285,7 @@ restart:
 	}
 
 	do {
-		err = vm_get_physical_page(ADDR_REVERSE_SHIFT(pd[index].addr), (addr_t *)&pt, PHYSICAL_PAGE_NO_WAIT);
+		err = get_physical_page_tmap(ADDR_REVERSE_SHIFT(pd[index].addr), (addr_t *)&pt, PHYSICAL_PAGE_NO_WAIT);
 	} while(err < 0);
 
 	for(index = VADDR_TO_PTENT(start); (index < 1024) && (start < end); index++, start += PAGE_SIZE) {
@@ -299,7 +305,7 @@ restart:
 		map->arch_data->num_invalidate_pages++;
 	}
 
-	vm_put_physical_page((addr_t)pt);
+	put_physical_page_tmap((addr_t)pt);
 
 	goto restart;
 }
@@ -322,7 +328,7 @@ static int query_tmap(vm_translation_map *map, addr_t va, addr_t *out_physical, 
 	}
 
 	do {
-		err = vm_get_physical_page(ADDR_REVERSE_SHIFT(pd[index].addr), (addr_t *)&pt, PHYSICAL_PAGE_NO_WAIT);
+		err = get_physical_page_tmap(ADDR_REVERSE_SHIFT(pd[index].addr), (addr_t *)&pt, PHYSICAL_PAGE_NO_WAIT);
 	} while(err < 0);
 	index = VADDR_TO_PTENT(va);
 
@@ -336,7 +342,7 @@ static int query_tmap(vm_translation_map *map, addr_t va, addr_t *out_physical, 
 	*out_flags |= pt[index].accessed ? PAGE_ACCESSED : 0;
 	*out_flags |= pt[index].present ? PAGE_PRESENT : 0;
 
-	vm_put_physical_page((addr_t)pt);
+	put_physical_page_tmap((addr_t)pt);
 
 //	dprintf("query_tmap: returning pa 0x%x for va 0x%x\n", *out_physical, va);
 
@@ -370,7 +376,7 @@ static int clear_flags_tmap(vm_translation_map *map, addr_t va, unsigned int fla
 	}
 
 	do {
-		err = vm_get_physical_page(ADDR_REVERSE_SHIFT(pd[index].addr), (addr_t *)&pt, PHYSICAL_PAGE_NO_WAIT);
+		err = get_physical_page_tmap(ADDR_REVERSE_SHIFT(pd[index].addr), (addr_t *)&pt, PHYSICAL_PAGE_NO_WAIT);
 	} while(err < 0);
 	index = VADDR_TO_PTENT(va);
 
@@ -384,7 +390,7 @@ static int clear_flags_tmap(vm_translation_map *map, addr_t va, unsigned int fla
 		tlb_flush = true;
 	}
 
-	vm_put_physical_page((addr_t)pt);
+	put_physical_page_tmap((addr_t)pt);
 
 	if(tlb_flush) {
 		if(map->arch_data->num_invalidate_pages < PAGE_INVALIDATE_CACHE_SIZE) {
