@@ -5,7 +5,7 @@
 #include <kernel/kernel.h>
 #include <kernel/cpu.h>
 #include <kernel/vm.h>
-#include <kernel/arch/cpu.h>
+#include <kernel/time.h>
 #include <boot/stage2.h>
 
 #include <string.h>

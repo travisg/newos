@@ -5,6 +5,8 @@
 #include <boot/stage2.h>
 #include <kernel/kernel.h>
 
+#include <sys/types.h>
+
 #include <kernel/arch/int.h>
 #include <kernel/arch/cpu.h>
 
@@ -20,25 +22,31 @@
 #include <kernel/arch/i386/timer.h>
 
 #define pit_clock_rate 1193180
-#define pit_max_timer_interval ((long long)0xffff * 1000000 / pit_clock_rate)
+#define pit_max_timer_interval ((bigtime_t)0xffff * 1000000 / pit_clock_rate)
 
-static void set_isa_hardware_timer(long long relative_timeout)
+static void set_isa_hardware_timer(bigtime_t relative_timeout, int type)
 {
-	unsigned short next_event_clocks;
+	uint16 next_ticks;
 
 	if (relative_timeout <= 0)
-		next_event_clocks = 2;			
+		next_ticks = 2;			
 	else if (relative_timeout < pit_max_timer_interval)
-		next_event_clocks = relative_timeout * pit_clock_rate / 1000000;
+		next_ticks = relative_timeout * pit_clock_rate / 1000000;
 	else
-		next_event_clocks = 0xffff;
+		next_ticks = 0xffff;
 
-	out8(0x30, 0x43);		
-	out8(next_event_clocks & 0xff, 0x40);
-	out8((next_event_clocks >> 8) & 0xff, 0x40);
+	if(type == HW_TIMER_ONESHOT) {
+		out8(0x30, 0x43); // mode 0 (countdown then stop), load LSB then MSB
+		out8(next_ticks & 0xff, 0x40);
+		out8((next_ticks >> 8) & 0xff, 0x40);
+	} else if(type == HW_TIMER_REPEATING) {
+		out8(0x36, 0x43); // mode 3 (square wave generator), load LSB then MSB
+		out8(next_ticks & 0xff, 0x40);
+		out8((next_ticks >> 8) & 0xff, 0x40);
+	}
 }
 
-static void clear_isa_hardware_timer()
+static void clear_isa_hardware_timer(void)
 {
 	// XXX do something here
 }
@@ -48,16 +56,16 @@ static int isa_timer_interrupt(void* data)
 	return timer_interrupt();
 }
 
-int apic_timer_interrupt()
+int apic_timer_interrupt(void)
 {
 	return timer_interrupt();
 }
 
-void arch_timer_set_hardware_timer(bigtime_t timeout)
+void arch_timer_set_hardware_timer(bigtime_t timeout, int type)
 {
 	// try the apic timer first
-	if(arch_smp_set_apic_timer(timeout) < 0) {
-		set_isa_hardware_timer(timeout);
+	if(arch_smp_set_apic_timer(timeout, type) < 0) {
+		set_isa_hardware_timer(timeout, type);
 	}
 }
 

@@ -8,6 +8,7 @@
 #include <kernel/khash.h>
 #include <kernel/sem.h>
 #include <kernel/arch/cpu.h>
+#include <kernel/time.h>
 #include <kernel/vm.h>
 #include <kernel/vm_priv.h>
 #include <kernel/vm_cache.h>

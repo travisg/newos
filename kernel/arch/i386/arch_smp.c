@@ -136,7 +136,7 @@ void arch_smp_ack_interrupt(void)
 
 #define MIN_TIMEOUT 1000
 
-int arch_smp_set_apic_timer(bigtime_t relative_timeout)
+int arch_smp_set_apic_timer(bigtime_t relative_timeout, int type)
 {
 	unsigned int config;
 	unsigned int ticks;
@@ -158,6 +158,12 @@ int arch_smp_set_apic_timer(bigtime_t relative_timeout)
 	apic_write(APIC_ICRT, 0); // zero out the timer
 
 	config = apic_read(APIC_LVTT) & ~APIC_LVTT_M; // unmask the timer
+
+	if(type == HW_TIMER_ONESHOT)
+		config &= ~APIC_LVTT_TM; // clear the periodic bit
+	else
+		config |= APIC_LVTT_TM; // periodic
+
 	apic_write(APIC_LVTT, config);
 
 	apic_write(APIC_ICRT, ticks); // start it up

@@ -8,6 +8,7 @@
 #include <kernel/lock.h>
 #include <kernel/sem.h>
 #include <kernel/heap.h>
+#include <kernel/time.h>
 #include <kernel/arch/cpu.h>
 #include <kernel/net/misc.h>
 #include <kernel/net/ethernet.h>

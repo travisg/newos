@@ -17,7 +17,6 @@ int atomic_or(volatile int *val, int incr);
 int atomic_set(volatile int *val, int set_to);
 int test_and_set(int *val, int set_to, int test_val);
 
-bigtime_t system_time(void);
 int arch_cpu_preboot_init(kernel_args *ka);
 int arch_cpu_init(kernel_args *ka);
 int arch_cpu_init2(kernel_args *ka);

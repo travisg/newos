@@ -11,6 +11,7 @@
 #include <kernel/int.h>
 #include <kernel/smp.h>
 #include <kernel/timer.h>
+#include <kernel/time.h>
 #include <kernel/cpu.h>
 #include <kernel/arch/cpu.h>
 #include <kernel/arch/int.h>

@@ -440,6 +440,7 @@ static int smp_boot_all_cpus(kernel_args *ka)
 	return 0;
 }
 
+// XXX fails on cpus with no RDTSC
 static void calculate_apic_timer_conversion_factor(kernel_args *ka)
 {
 	long long t1, t2;

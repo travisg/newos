@@ -6,6 +6,7 @@
 #include <kernel/thread.h>
 #include <kernel/sem.h>
 #include <kernel/lock.h>
+#include <kernel/time.h>
 #include <kernel/net/net_timer.h>
 #include <string.h>
 

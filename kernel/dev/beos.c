@@ -5,6 +5,7 @@
 #include <kernel/kernel.h>
 #include <kernel/elf.h>
 #include <kernel/sem.h>
+#include <kernel/time.h>
 #include <kernel/arch/cpu.h>
 #include <kernel/debug.h>
 #include <kernel/heap.h>

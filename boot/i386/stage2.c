@@ -45,7 +45,7 @@ static void load_elf_image(void *data, unsigned int *next_paddr,
 	addr_range *ar0, addr_range *ar1, unsigned int *start_addr, addr_range *dynamic_section);
 static int mmu_init(kernel_args *ka, unsigned int *next_paddr);
 static void mmu_map_page(unsigned int vaddr, unsigned int paddr);
-static int check_cpu(void);
+static int check_cpu(kernel_args *ka);
 
 // called by the stage1 bootloader.
 // State:
@@ -70,18 +70,17 @@ void _start(unsigned int mem, int in_vesa, unsigned int vesa_ptr, unsigned int c
 	dprintf("memsize = 0x%x, in_vesa %d, vesa_ptr 0x%x\n", mem, in_vesa, vesa_ptr);
 
 	// verify we can run on this cpu
-	if(check_cpu() < 0) {
+	if(check_cpu(ka) < 0) {
 		dprintf("\nSorry, this computer appears to be lacking some of the features\n");
-		dprintf("needed by NewOS. It is currently only able to run on\n");
-		dprintf("Pentium class cpus and above, with a few exceptions to\n");
-		dprintf("that rule.\n");
+		dprintf("needed by NewOS.\n");
 		dprintf("\nPlease reset your computer to continue.");
 
 		for(;;);
 	}
 
 	// calculate the conversion factor that translates rdtsc time to real microseconds
-	calculate_cpu_conversion_factor();
+	if(ka->arch_args.supports_rdtsc)
+		calculate_cpu_conversion_factor();
 
 	// calculate how big the bootdir is so we know where we can start grabbing pages
 	{
@@ -419,7 +418,7 @@ static void mmu_map_page(unsigned int vaddr, unsigned int paddr)
 	pgtable[(vaddr % (PAGE_SIZE * 1024)) / PAGE_SIZE] = paddr | DEFAULT_PAGE_FLAGS;
 }
 
-static int check_cpu(void)
+static int check_cpu(kernel_args *ka)
 {
 	unsigned int data[4];
 	char str[17];
@@ -451,7 +450,12 @@ static int check_cpu(void)
 
 	// check for bits we need
 	cpuid(1, data);
-	if(!(data[3] & 1<<4)) return -1; // check for rdtsc
+	if(data[3] & 1<<4) {
+		ka->arch_args.supports_rdtsc = true;
+	} else {
+		ka->arch_args.supports_rdtsc = false;
+		dprintf("CPU: does not support RDTSC, disabling high resolution timer\n");
+	}
 
 	return 0;
 }

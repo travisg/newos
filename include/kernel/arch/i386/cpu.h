@@ -105,6 +105,7 @@ struct arch_cpu_info {
 #define nop() __asm__ ("nop"::)
 
 void setup_system_time(unsigned int cv_factor);
+bigtime_t i386_cycles_to_time(uint64 cycles);
 void i386_context_switch(struct arch_thread *old, struct arch_thread *new, addr_t new_pgdir);
 void i386_enter_uspace(addr_t entry, void *args, addr_t ustack_top);
 void i386_set_kstack(addr_t kstack);
@@ -114,6 +115,7 @@ void i386_fsave_swap(void *old_fpu_state, void *new_fpu_state);
 void i386_fxsave_swap(void *old_fpu_state, void *new_fpu_state);
 desc_table *i386_get_gdt(void);
 void i386_set_task_gate(int n, uint32 seg);
+uint64 i386_rdtsc(void);
 
 #define read_cr3(value) \
 	__asm__("movl	%%cr3,%0" : "=r" (value))

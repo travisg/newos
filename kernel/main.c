@@ -11,6 +11,7 @@
 #include <kernel/int.h>
 #include <kernel/vm.h>
 #include <kernel/timer.h>
+#include <kernel/time.h>
 #include <kernel/smp.h>
 #include <kernel/sem.h>
 #include <kernel/port.h>
@@ -72,6 +73,7 @@ int _start(kernel_args *oldka, int cpu_num)
 		faults_init(&global_kernel_args);
 		smp_init(&global_kernel_args);
 		timer_init(&global_kernel_args);
+		time_init(&global_kernel_args);
 
 		arch_cpu_init2(&global_kernel_args);
 

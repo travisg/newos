@@ -5,9 +5,11 @@
 #ifndef _NEWOS_KERNEL_ARCH_I386_SMP_PRIV_H
 #define _NEWOS_KERNEL_ARCH_I386_SMP_PRIV_H
 
+#include <kernel/arch/timer.h>
+
 int i386_smp_interrupt(int vector);
 void arch_smp_ack_interrupt(void);
-int arch_smp_set_apic_timer(bigtime_t relative_timeout);
+int arch_smp_set_apic_timer(bigtime_t relative_timeout, int type);
 int arch_smp_clear_apic_timer(void);
 
 #define MP_FLT_SIGNATURE '_PM_'

@@ -7,6 +7,7 @@
 #include <kernel/lock.h>
 #include <kernel/heap.h>
 #include <kernel/khash.h>
+#include <kernel/time.h>
 #include <kernel/arch/cpu.h>
 #include <kernel/net/misc.h>
 #include <kernel/net/ethernet.h>

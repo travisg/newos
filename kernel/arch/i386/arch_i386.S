@@ -66,6 +66,12 @@ FUNCTION(test_and_set):
 
 	ret
 
+/* uint64 i386_rdtsc() */
+.global i386_rdtsc
+i386_rdtsc:
+	rdtsc
+	ret
+
 /* saves the conversion factor needed for system_time */
 .global cv_factor
 cv_factor:
@@ -76,10 +82,10 @@ FUNCTION(setup_system_time):
 	movl	%eax,cv_factor
 	ret
 
-/* long long system_time(); */
-FUNCTION(system_time):
-	/* load 64-bit factor into %eax (low), %edx (high) */
-	rdtsc		/* time in %edx,%eax */
+/* bigtime_t i386_cycles_to_time(uint64 cycles); */
+FUNCTION(i386_cycles_to_time):
+	movl	4(%esp),%eax
+	movl	8(%esp),%edx
 
 	pushl	%ebx
 	pushl	%ecx

@@ -18,6 +18,7 @@ MY_OBJS := \
 	gdb.o \
 	dev.o \
 	timer.o \
+	time.o \
 	port.o \
 	sem.o \
 	smp.o \

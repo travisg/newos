@@ -23,6 +23,7 @@ struct gdt_idt_descr {
 // kernel args
 typedef struct {
 	// architecture specific
+	int supports_rdtsc;
 	unsigned int system_time_cv_factor;
 	unsigned int phys_pgdir;
 	unsigned int vir_pgdir;

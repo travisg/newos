@@ -19,6 +19,7 @@
 #include <kernel/sem.h>
 #include <kernel/lock.h>
 #include <kernel/khash.h>
+#include <kernel/time.h>
 #include <newos/errors.h>
 
 #include <boot/stage2.h>

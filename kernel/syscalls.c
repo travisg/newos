@@ -12,7 +12,7 @@
 #include <kernel/port.h>
 #include <kernel/vm.h>
 #include <kernel/cpu.h>
-#include <kernel/arch/cpu.h>
+#include <kernel/time.h>
 #include <sys/resource.h>
 
 #define INT32TOINT64(x, y) ((int64)(x) | ((int64)(y) << 32))

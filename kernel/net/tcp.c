@@ -10,6 +10,7 @@
 #include <kernel/khash.h>
 #include <kernel/sem.h>
 #include <kernel/queue.h>
+#include <kernel/time.h>
 #include <kernel/arch/cpu.h>
 #include <kernel/net/tcp.h>
 #include <kernel/net/ipv4.h>
