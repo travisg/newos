@@ -33,6 +33,7 @@ extern "C" {
 
 #include <stdio.h>
 #include <sys/syscalls.h>
+#include <sys/atomic.h>
 
 int hoardGetThreadID (void)
 {
@@ -42,19 +43,20 @@ int hoardGetThreadID (void)
 
 void hoardLockInit (hoardLockType &lock)
 {
-  lock = sys_sem_create(1, "a hoard lock");
+ 	lock.ben = 0;
+	lock.sem = sys_sem_create(1, "a hoard lock");
 }
 
 
 void hoardLock (hoardLockType &lock)
 {
-  sys_sem_acquire(lock, 1);
+  if((atomic_add(&(lock.ben), 1)) >= 1) sys_sem_acquire(lock.sem, 1);
 }
 
 
 void hoardUnlock (hoardLockType &lock)
 {
-  sys_sem_release(lock, 1);
+  if((atomic_add(&(lock.ben), -1)) > 1) sys_sem_release(lock.sem, 1);
 }
 
 int hoardGetPageSize (void)
@@ -91,10 +93,10 @@ public:
 
 void * hoardSbrk (long size)
 {
-  // XXX not thread safe
-  return (void *)(brk += size);
+	void *ret = (void *)brk;
+	brk += size;
+	return ret;
 }
-
 
 void hoardUnsbrk (void * ptr, long size)
 {

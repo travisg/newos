@@ -73,7 +73,10 @@ typedef HANDLE 	hoardThreadType;
 
 #if defined(NEWOS)
 
-typedef sem_id			hoardLockType;
+typedef struct {
+  int32 ben;
+  sem_id sem;
+} hoardLockType;
 typedef thread_id		hoardThreadType;
 inline void * operator new(size_t, void *_P)
 	{return (_P); }
