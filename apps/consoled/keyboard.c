@@ -125,8 +125,15 @@ int process_key_events(_key_event *kevents, int num_events, char *out_buf, int b
 			if(c == 0)
 				continue;
 
-			if(kevents[i].modifiers & KEY_MODIFIER_CTRL && c >= 32)
-				c -= 32;
+			if(kevents[i].modifiers & KEY_MODIFIER_CTRL) {
+				if(c == ' ') {
+					c = 0;
+				} else {
+					char temp = toupper(c);
+					if(temp >= 'A' && temp <= ']')
+						c = temp - 'A' + 1;
+				}
+			}
 
 			out_buf[buf_pos++] = c;
 		} else {
