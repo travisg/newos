@@ -208,32 +208,32 @@ int shell_value_do_operation(shell_value *out,const shell_value *other,int oper_
 
 		i1 = out->value.val_number;
 		i2 = other->value.val_number;
-
+      printf("%dl %dl %d",i1,i2,oper_type);
 		switch(oper_type){
-			case SVO_ADD : i3 = i1+i2;break;
-			case SVO_SUB : i3 = i1-i2;break;
-			case SVO_MUL : i3 = i1*i2;break;
-			case SVO_DIV : i3 = i1/i2;break;
-			case SVO_BIGGER : i3 = i1>i2;break;
-			case SVO_LESS	: i3 = i1<i2;break;
-			case SVO_EQUAL :i3 = i1 == i2;break;
-			case SVO_BIGGER_E : i3 = i1>=i2;break;
-			case SVO_LESS_E : i3 = i1 <= i2;break;
-			case SVO_NOT_EQUAL : i3= i1 != i2;break;
+			case SVO_ADD       : i3 = i1+i2    ;break;
+			case SVO_SUB       : i3 = i1-i2    ;break;
+			case SVO_MUL       : i3 = i1*i2    ;break;
+			case SVO_DIV       : i3 = i1/i2    ;break;
+			case SVO_BIGGER    : i3 = i1>i2    ;break;
+			case SVO_LESS      : i3 = i1<i2    ;break;
+			case SVO_EQUAL     : i3 = i1 == i2 ;break;
+			case SVO_BIGGER_E  : i3 = i1 >=i2  ;break;
+			case SVO_LESS_E    : i3 = i1 <= i2 ;break;
+			case SVO_NOT_EQUAL : i3 = i1 != i2  ;break;
 			default: return SHE_INVALID_OPERATION;
 		}
 
 	} else {
 
-		i3 = strcmp(out->value.val_text,other->value.val_text);
+		i1 = strcmp(out->value.val_text,other->value.val_text);
 
 		switch(oper_type){
-			case SVO_EQUAL	   : i3 = i3 == 0;break;
-			case SVO_BIGGER	: i3 = i3 > 0;break;
-			case SVO_LESS		: i3 = i3 < 0;break;
-			case SVO_BIGGER_E : i3 = i3 >= 0;break;
-			case SVO_LESS_E	: i3 = i3 <= 0;break;
-			case SVO_NOT_EQUAL: i3 = i3 != 0;break;
+			case SVO_EQUAL	   : i3 = i1 == 0;break;
+			case SVO_BIGGER	: i3 = i1 > 0;break;
+			case SVO_LESS		: i3 = i1 < 0;break;
+			case SVO_BIGGER_E : i3 = i1 >= 0;break;
+			case SVO_LESS_E	: i3 = i1 <= 0;break;
+			case SVO_NOT_EQUAL: i3 = i1 != 0;break;
 			default : return SHE_INVALID_OPERATION;
 		}
 	}

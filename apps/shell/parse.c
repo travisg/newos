@@ -120,6 +120,7 @@ static bool  scan_string(scan_info *info,int max_len)
 int parse_line(const char *buf, char *argv[], int max_args, char *redirect_in, char *redirect_out)
 {
 	const char *scan=buf;
+	const char *type_char;
 	const char *start;
 	char out[SCAN_SIZE+1];
 	char tmp[SCAN_SIZE+1];
@@ -127,7 +128,7 @@ int parse_line(const char *buf, char *argv[], int max_args, char *redirect_in, c
 	int arg_cnt = 0;
 	int len = 0;
 	bool replace;
-
+	bool param;
 	redirect_in[0] = 0;
 	redirect_out[0] = 0;
 
@@ -138,18 +139,27 @@ int parse_line(const char *buf, char *argv[], int max_args, char *redirect_in, c
 		if(*scan == 0) break;
 
 		replace = true;
-
+		type_char = scan;
 		start = scan;
+		param = true;
 
-		if((*scan == '"') ||  (*scan == '\'')){
+		switch(*type_char){
+		case '\'':
+			replace  = false;
 
+      case  '"':
 			scan++;
-			while((*scan != 0) && (*scan != *start)) scan++;
-
-			if(*start == '\'') replace = false;
 			start++;
+			while((*scan != 0) && (*scan != *start)) scan++;
+			break;
 
-		} else {
+		case '>':
+		case '<':
+         start++;
+			while((*start != 0) && (isspace(*start))) start++;
+			scan = start;
+
+		default:
 
 			while((*scan != 0) && (!isspace(*scan))) scan++;
 
@@ -171,7 +181,7 @@ int parse_line(const char *buf, char *argv[], int max_args, char *redirect_in, c
                 
 		}
 
-		switch(*start){
+		switch(*type_char){
 
 		case '>':
 			strcpy(redirect_out,out);
@@ -483,22 +493,31 @@ static int launch(int (*cmd)(int, char **), int argc, char **argv, char *r_in, c
 	int new_in;
 	int new_out;
 	int retval= 0;
+   int err;
 
 	if(strcmp(r_in, "")!= 0) {
 		new_in = sys_open(r_in, STREAM_TYPE_ANY, 0);
+		if(new_in < 0) {
+			new_in = sys_create(r_in,STREAM_TYPE_FILE);
+		}
 	} else {
 		new_in = sys_dup(0);
 	}
 	if(new_in < 0) {
+		err = new_in;
 		goto err_1;
 	}
 
 	if(strcmp(r_out, "")!= 0) {
 		new_out = sys_open(r_out, STREAM_TYPE_ANY, 0);
+		if(new_out < 0){
+			new_out = sys_create(r_out,STREAM_TYPE_FILE);
+		}
 	} else {
 		new_out = sys_dup(1);
 	}
 	if(new_out < 0) {
+		err = new_out;
 		goto err_2;
 	}
 
@@ -518,12 +537,12 @@ static int launch(int (*cmd)(int, char **), int argc, char **argv, char *r_in, c
 	sys_close(saved_in);
 	sys_close(saved_out);
 
-	return retval;
+	return 0;
 
 err_2:
 	sys_close(new_in);
 err_1:
-	return 0;
+	return err;
 }
 
 
@@ -537,6 +556,7 @@ int shell_parse(const char *buf, int len)
 	char redirect_out[256];
 	cmd_handler_proc *handler = NULL;
 	int cnt;
+	int err;
 
 	// search for the command
 	argc = parse_line(buf, argv, 64, redirect_in, redirect_out);
@@ -552,11 +572,11 @@ int shell_parse(const char *buf, int len)
 		}
 	}
 
-	launch(handler, argc, argv, redirect_in, redirect_out);
+	err = launch(handler, argc, argv, redirect_in, redirect_out);
 
 	for(cnt = 0;cnt <argc;cnt++) free(argv[cnt]);
 
-	return 0;
+	return err;
 }
 
 
