@@ -7,6 +7,8 @@
 #ifndef __newos__libc_time__hh__
 #define __newos__libc_time__hh__
 
+#include <stddef.h>
+
 struct tm
 {
 	int tm_sec;    /* seconds*/
@@ -34,7 +36,7 @@ double difftime(time_t time1, time_t time2);
 struct tm *gmtime(const time_t *timer);
 
 time_t mktime(struct tm *timeptr);
-/*
+
 size_t strftime(char *str, size_t maxsize, const char *format, const struct tm *timeptr);
-*/
+
 #endif

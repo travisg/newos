@@ -9,31 +9,38 @@
 #include <time.h>
 #include <string.h>
 
-#include <stdio.h>
-
-static void asctime_helper(const struct tm *timeptr, char* buf);
-
 /*
-The kernel will eventually have a call like this to return the number of 
-microseconds since 0001/01/01 00:00:00
-
-static museconds_t getCurrentMUSecond()
-{
-	// The very 1st microsecond was on Jan 1, year 1.
-	// Sometime near Dec 12, 2003
-	return 63207652980000000L;
-}
+#include <stdio.h>
 */
 
-static char numbers[] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' };
+#define _LIBC_ENGLISH_
+
+#ifdef _LIBC_ENGLISH_
 static char months[12][4] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+static char* monthNames[] = { "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"};
 static char days[7][4] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
+static char* dayNames[] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
+#endif
+
+#ifdef _LIBC_DEUTSCH_
+static char months[12][4] = {"Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez" };
+static char* monthNames[] = { "Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"};
+static char days[7][4] = {"So ", "Mo ", "Di ", "Mi ", "Do ", "Fr ", "Sa "};
+static char* dayNames[] = {"Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"};
+#endif
+
+
+static char* numbers[] = { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9" };
 static int monthDay[12] = { 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334 };
 
-
 static char buf[26];
-
 static struct tm tm_buf;
+
+
+static void asctime_helper(const struct tm *timeptr, char* buf)
+{
+	strftime(buf, 26, "%a %b %d %H:%M:%S %Y", timeptr);
+}
 
 /*
 Return a pointer to a string of the form: "DDD MMM dd hh:mm:ss YYYY"
@@ -52,33 +59,6 @@ char *asctime(const struct tm *timeptr)
 	asctime_helper(timeptr, buf);
 	return buf;
 }
-
-static void asctime_helper(const struct tm *timeptr, char* buf)
-{
-	memcpy(buf, days[timeptr->tm_wday], 3);
-	buf[3] = ' ';
-	memcpy(buf+4, months[timeptr->tm_mon], 3);
-	buf[7] = ' ';
-	buf[8] = numbers[timeptr->tm_mday/10];
-	buf[9] = numbers[timeptr->tm_mday%10];
-	buf[10] = ' ';
-	buf[11] = numbers[timeptr->tm_hour/10];
-	buf[12] = numbers[timeptr->tm_hour%10];
-	buf[13] = ':';
-	buf[14] = numbers[timeptr->tm_min/10];
-	buf[15] = numbers[timeptr->tm_min%10];
-	buf[16] = ':';
-	buf[17] = numbers[timeptr->tm_sec/10];
-	buf[18] = numbers[timeptr->tm_sec%10];
-	buf[19] = ' ';
-	buf[20] = numbers[timeptr->tm_year/1000];
-	buf[21] = numbers[(timeptr->tm_year/100)%10];
-	buf[22] = numbers[(timeptr->tm_year/10)%10];
-	buf[23] = numbers[timeptr->tm_year%10];
-	buf[24] = '\n';
-	buf[25] = '\0';
-}
-
 
 double difftime(time_t time1, time_t time2)
 {
@@ -192,8 +172,6 @@ time_t mktime(struct tm* timeptr)
 					  + 86400L * day;
 	time_t t = 1000000L * secs;
 
-	printf("days: %ld secs: %lu\n", day, secs);					
-	printf("time_t: %Lu\n", t);
 	localtime_helper(t, timeptr);
 	
 	return t;
@@ -227,4 +205,148 @@ time_t time(time_t *timer)
 	return t;
 }
 
+static void _write(char* output, size_t* outdex, char* val, size_t max)
+{
+	int index = 0;
+	/*printf("outdex: %ld max: %ld val[index]: %c\n", *outdex, max, val[index]);*/
+	while(*outdex < (max - 1) && val[index] != '\0')
+	{
+		output[(*outdex)++] = val[index++];
+		/*printf("outdex: %ld max: %ld val[index]: %c\n", *outdex, max, val[index]);*/
+	}
+}
+
+size_t strftime(char *str, size_t maxsize, const char *format, const struct tm *timeptr)
+{
+	size_t outdex = 0;
+	if(maxsize == 0)
+	{
+		return 0;
+	}
+
+	while(*format != '\0' && outdex < (maxsize - 1))
+	{
+		char c = *format++;
+		if(c != '%')
+		{
+			/*printf("copy: %c\n", c);*/
+			str[outdex++] = c;
+		}
+		else
+		{
+			c = *format++;
+			switch(c)
+			{
+				case '\0':
+					str[outdex++] = '\0';
+					return outdex;
+				case '%':
+					_write( str, &outdex, "%", maxsize);
+				break;
+				case 'a':
+					_write( str, &outdex, days[timeptr->tm_wday], maxsize);
+				break;
+				case 'A':
+					_write( str, &outdex, dayNames[timeptr->tm_wday], maxsize);
+				break;
+				case 'b':
+					_write( str, &outdex, months[timeptr->tm_mon], maxsize);
+				break;
+				case 'B':
+					_write( str, &outdex, monthNames[timeptr->tm_mon], maxsize);
+				break;
+				case 'c':
+				break;
+				case 'd':
+					_write( str, &outdex, numbers[timeptr->tm_mday / 10], maxsize);
+					_write( str, &outdex, numbers[timeptr->tm_mday % 10], maxsize);
+				break;
+				case 'H':
+					_write( str, &outdex, numbers[timeptr->tm_hour / 10], maxsize);
+					_write( str, &outdex, numbers[timeptr->tm_hour % 10], maxsize);
+				break;
+				case 'I':
+				{
+					int hour = (timeptr->tm_hour > 12) 
+						? timeptr->tm_hour-12 
+						: timeptr->tm_hour;
+					_write( str, &outdex, numbers[hour / 10], maxsize);
+					_write( str, &outdex, numbers[hour % 10], maxsize);
+				}
+				break;
+				case 'j':
+					_write( str, &outdex, numbers[timeptr->tm_yday / 100], maxsize);
+					_write( str, &outdex, numbers[(timeptr->tm_yday / 10) % 10], maxsize);
+					_write( str, &outdex, numbers[timeptr->tm_yday % 10], maxsize);
+				break;
+				case 'm':
+					_write( str, &outdex, numbers[timeptr->tm_mon / 10], maxsize);
+					_write( str, &outdex, numbers[timeptr->tm_mon % 10], maxsize);
+				break;
+				case 'M':
+					_write( str, &outdex, numbers[timeptr->tm_min / 10], maxsize);
+					_write( str, &outdex, numbers[timeptr->tm_min % 10], maxsize);
+				break;
+				case 'p':
+					_write( str, &outdex, timeptr->tm_hour > 11 ? "pm": "am", maxsize);
+				break;
+				case 'S':
+					_write( str, &outdex, numbers[timeptr->tm_sec / 10], maxsize);
+					_write( str, &outdex, numbers[timeptr->tm_sec % 10], maxsize);
+				break;
+				case 'U':
+				{
+					int week = (timeptr->tm_yday >= timeptr->tm_wday) 
+						? (timeptr->tm_yday - timeptr->tm_wday) / 7 + 1
+						: 0;
+					_write( str, &outdex, numbers[week / 10], maxsize);
+					_write( str, &outdex, numbers[week % 10], maxsize);
+				}
+				break;
+				case 'w':
+					_write( str, &outdex, numbers[timeptr->tm_wday], maxsize);
+				break;
+				case 'W':
+				{
+					int week = (timeptr->tm_yday >= (timeptr->tm_wday + 1)) 
+						? (timeptr->tm_yday - (timeptr->tm_wday + 1)) / 7 + 1
+						: 0;
+					_write( str, &outdex, numbers[week / 10], maxsize);
+					_write( str, &outdex, numbers[week % 10], maxsize);
+				}
+				break;
+				case 'x':
+				break;
+				case 'X':
+				break;
+				case 'y':
+				{
+					int cYear = timeptr->tm_year % 100;
+					_write( str, &outdex, numbers[cYear / 10], maxsize);
+					_write( str, &outdex, numbers[cYear % 10], maxsize);
+				}
+				break;
+				case 'Y':
+				{
+					int year = timeptr->tm_year % 10000;
+					_write( str, &outdex, numbers[year / 1000], maxsize);
+					_write( str, &outdex, numbers[(year / 100) % 10], maxsize);
+					_write( str, &outdex, numbers[(year / 10) % 10], maxsize);
+					_write( str, &outdex, numbers[year % 10], maxsize);
+				}
+				case 'Z':
+				break;
+/*
+%c	date and time representation
+%x	date representation
+%X	time representation
+%Z	time zone (blank, if time zone not available)
+%%	%
+*/
+			}
+		}
+	}
+	str[outdex++] = '\0';
+	return outdex;
+}
 #endif
