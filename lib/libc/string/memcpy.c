@@ -8,7 +8,7 @@
 
 #if !_ASM_MEMCPY
 
-typedef int word;
+typedef long word;
 
 #define lsize sizeof(word)
 #define lmask (lsize - 1)

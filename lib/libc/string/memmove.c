@@ -7,7 +7,7 @@
 
 #if !_ASM_MEMMOVE
 
-typedef int word;
+typedef long word;
 
 #define lsize sizeof(word)
 #define lmask (lsize - 1)
