@@ -5,12 +5,15 @@
 
 #include <string.h>
 
+#include <pci_bus.h>
 #include <console_dev.h>
 #include <null.h>
 #include <zero.h>
 
 int devs_init(kernel_args *ka)
 {
+	pci_bus_init(ka);
+
 	console_dev_init(ka);
 	
 	null_dev_init(ka);

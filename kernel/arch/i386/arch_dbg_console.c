@@ -12,28 +12,28 @@ int arch_dbg_con_init(kernel_args *ka)
 {
 	short divisor = 115200 / dbg_baud_rate;
 
-	outb(0x80, 0x3fb);	/* set up to load divisor latch	*/
-	outb(divisor & 0xf, 0x3f8);		/* LSB */
-	outb(divisor >> 8, 0x3f9);		/* MSB */
-	outb(3, 0x3fb);		/* 8N1 */
+	out8(0x80, 0x3fb);	/* set up to load divisor latch	*/
+	out8(divisor & 0xf, 0x3f8);		/* LSB */
+	out8(divisor >> 8, 0x3f9);		/* MSB */
+	out8(3, 0x3fb);		/* 8N1 */
 
 	return 0;
 }
 
 char arch_dbg_con_read()
 {
-	while ((inb(0x3fd) & 1) == 0)
+	while ((in8(0x3fd) & 1) == 0)
 		;
 		
-	return inb(0x3f8);
+	return in8(0x3f8);
 }
 
 static void _arch_dbg_con_putch(const char c)
 {
-	while ((inb(0x3fd) & 0x64) == 0)
+	while ((in8(0x3fd) & 0x64) == 0)
 		;
 		
-	outb(c, 0x3f8);
+	out8(c, 0x3f8);
 }
 
 char arch_dbg_con_putch(const char c)

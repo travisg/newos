@@ -53,16 +53,16 @@ const char shifted_keymap[128] = {
 
 static void wait_for_output()
 {
-	while(inb(0x64) & 0x2)
+	while(in8(0x64) & 0x2)
 		;
 }
 
 static void set_leds()
 {
 	wait_for_output();
-	outb(0xed, 0x60);
+	out8(0xed, 0x60);
 	wait_for_output();
-	outb(leds, 0x60);
+	out8(leds, 0x60);
 }
 
 int keyboard_read(void *_buf, size_t *len)
@@ -128,7 +128,7 @@ int handle_keyboard_interrupt()
 	unsigned char key;
 	int retval = INT_NO_RESCHEDULE;
 	
-	key = inb(0x60);
+	key = in8(0x60);
 //	dprintf("handle_keyboard_interrupt: key = 0x%x\n", key);
 
 	if(key & 0x80) {

@@ -42,8 +42,8 @@ void interrupt_ack(int n)
 	if(n >= 0x20 && n < 0x30) {
 		// 8239 controlled interrupt
 		if(n > 0x27)
-			outb(0x20, 0xa0);	// EOI to pic 2	
-		outb(0x20, 0x20);	// EOI to pic 1
+			out8(0x20, 0xa0);	// EOI to pic 2	
+		out8(0x20, 0x20);	// EOI to pic 1
 	}
 }
 
@@ -65,9 +65,9 @@ void arch_int_enable_io_interrupt(int irq)
 	irq -= 0x20;
 	// if this is a external interrupt via 8239, enable it here
 	if (irq < 8)
-		outb(inb(0x21) & ~(1 << irq), 0x21);
+		out8(in8(0x21) & ~(1 << irq), 0x21);
 	else
-		outb(inb(0xa1) & ~(1 << (irq - 8)), 0xa1);
+		out8(in8(0xa1) & ~(1 << (irq - 8)), 0xa1);
 }
 
 void arch_int_disable_io_interrupt(int irq)
@@ -76,9 +76,9 @@ void arch_int_disable_io_interrupt(int irq)
 	irq -= 0x20;
 	// if this is a external interrupt via 8239, disable it here
 	if (irq < 8)
-		outb(inb(0x21) | (1 << irq), 0x21);
+		out8(in8(0x21) | (1 << irq), 0x21);
 	else
-		outb(inb(0xa1) | (1 << (irq - 8)), 0xa1);
+		out8(in8(0xa1) | (1 << (irq - 8)), 0xa1);
 }
 
 static void set_intr_gate(int n, void *addr)
@@ -164,16 +164,16 @@ int arch_int_init(kernel_args *ka)
 	idt = (desc_table *)ka->vir_idt;
 
 	// setup the interrupt controller
-	outb(0x11, 0x20);	// Start initialization sequence for #1.
-	outb(0x11, 0xa0);	// ...and #2.
-	outb(0x20, 0x21);	// Set start of interrupts for #1 (0x20).
-	outb(0x28, 0xa1);	// Set start of interrupts for #2 (0x28).
-	outb(0x04, 0x21);	// Set #1 to be the master.
-	outb(0x02, 0xa1);	// Set #2 to be the slave.
-	outb(0x01, 0x21);	// Set both to operate in 8086 mode.
-	outb(0x01, 0xa1);
-	outb(0xfb, 0x21);	// Mask off all interrupts (except slave pic line).
-	outb(0xff, 0xa1); 	// Mask off interrupts on the slave.
+	out8(0x11, 0x20);	// Start initialization sequence for #1.
+	out8(0x11, 0xa0);	// ...and #2.
+	out8(0x20, 0x21);	// Set start of interrupts for #1 (0x20).
+	out8(0x28, 0xa1);	// Set start of interrupts for #2 (0x28).
+	out8(0x04, 0x21);	// Set #1 to be the master.
+	out8(0x02, 0xa1);	// Set #2 to be the slave.
+	out8(0x01, 0x21);	// Set both to operate in 8086 mode.
+	out8(0x01, 0xa1);
+	out8(0xfb, 0x21);	// Mask off all interrupts (except slave pic line).
+	out8(0xff, 0xa1); 	// Mask off interrupts on the slave.
 
 	set_intr_gate(0,  &trap0);
 	set_intr_gate(1,  &trap1);

@@ -25,9 +25,9 @@ static void set_isa_hardware_timer(long long relative_timeout)
 	else
 		next_event_clocks = 0xffff;
 
-	outb(0x30, 0x43);		
-	outb(next_event_clocks & 0xff, 0x40);
-	outb((next_event_clocks >> 8) & 0xff, 0x40);
+	out8(0x30, 0x43);		
+	out8(next_event_clocks & 0xff, 0x40);
+	out8((next_event_clocks >> 8) & 0xff, 0x40);
 }
 
 static void clear_isa_hardware_timer()

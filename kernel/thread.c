@@ -630,6 +630,17 @@ int test_thread_starter_thread()
 	return 0;	
 }
 
+int test_thread5()
+{
+	int fd;
+	
+	fd = vfs_open(NULL, "/bus/pci", "", STREAM_TYPE_DEVICE);
+	
+	vfs_ioctl(fd, 99, NULL, 0);
+
+	return 0;
+}
+
 int test_thread4()
 {
 	proc_create_user_proc("/boot/testapp", "testapp", 5);
@@ -767,6 +778,9 @@ int thread_test()
 	thread_enqueue_run_q(t);
 
 	t = create_kernel_thread("test thread 4", &test_thread4, 5);
+	thread_enqueue_run_q(t);
+
+	t = create_kernel_thread("test thread 5", &test_thread5, 5);
 	thread_enqueue_run_q(t);
 
 //	t = create_kernel_thread("panic thread", &panic_thread, THREAD_MAX_PRIORITY);
