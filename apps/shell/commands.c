@@ -13,7 +13,6 @@
 
 struct command cmds[] = {
 	{"exec", &cmd_exec},
-	{"ls", &cmd_ls},
 	{"stat", &cmd_stat},
 	{"mount", &cmd_mount},
 	{"unmount", &cmd_unmount},
@@ -24,7 +23,6 @@ struct command cmds[] = {
 	{"help", &cmd_help},
 	{NULL, NULL}
 };
-
 
 int cmd_exec(int argc, char *argv[])
 {
@@ -226,63 +224,6 @@ int cmd_stat(int argc, char *argv[])
 	} else {
 		printf("stat failed for file '%s'\n", argv[1]);
 	}
-	return 0;
-}
-
-int cmd_ls(int argc, char *argv[])
-{
-	int rc;
-	int count = 0;
-	struct file_stat stat;
-	char *arg;
-
-	if(argc == 1) {
-		arg = ".";
-	} else {
-		arg = argv[1];
-	}
-
-	rc = sys_rstat(arg, &stat);
-	if(rc < 0) {
-		printf("sys_rstat() returned error: %s!\n", strerror(rc));
-		goto err_ls;
-	}
-
-	switch(stat.type) {
-		case STREAM_TYPE_FILE:
-		case STREAM_TYPE_DEVICE:
-			printf("%s    %d bytes\n", arg, (int)stat.size);
-			count++;
-			break;
-		case STREAM_TYPE_DIR: {
-			int fd;
-			char buf[1024];
-			int len;
-
-			fd = sys_open(arg, STREAM_TYPE_DIR, 0);
-			if(fd < 0) {
-				printf("ls: sys_open() returned error: %s!\n", strerror(fd));
-				goto done_ls;
-			}
-
-			for(;;) {
-				rc = sys_read(fd, buf, -1, sizeof(buf));
-				if(rc <= 0)
-					break;
-				printf("%s\n", buf);
-				count++;
-			}
-			sys_close(fd);
-			break;
-		}
-		default:
-			printf("%s    unknown file type\n", arg);
-			break;
-	}
-
-done_ls:
-	printf("%d files found\n", count);
-err_ls:
 	return 0;
 }
 

@@ -3,7 +3,6 @@
 
 int cmd_exit(int argc, char *argv[]);
 int cmd_exec(int argc, char *argv[]);
-int cmd_ls(int argc, char *argv[]);
 int cmd_stat(int argc, char *argv[]);
 int cmd_mount(int argc, char *argv[]);
 int cmd_unmount(int argc, char *argv[]);
