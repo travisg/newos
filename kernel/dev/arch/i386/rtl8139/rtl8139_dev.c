@@ -215,6 +215,12 @@ int rtl8139_init(rtl8139 *rtl)
 	RTL_WRITE_32(rtl, RT_TXADDR3, temp + 2*1024);
 	dprintf("second half of txbuf at 0x%lx\n", temp);
 
+/*
+	RTL_WRITE_32(rtl, RT_TXSTATUS0, RTL_READ_32(rtl, RT_TXSTATUS0) | 0xfffff000);
+	RTL_WRITE_32(rtl, RT_TXSTATUS1, RTL_READ_32(rtl, RT_TXSTATUS1) | 0xfffff000);
+	RTL_WRITE_32(rtl, RT_TXSTATUS2, RTL_READ_32(rtl, RT_TXSTATUS2) | 0xfffff000);
+	RTL_WRITE_32(rtl, RT_TXSTATUS3, RTL_READ_32(rtl, RT_TXSTATUS3) | 0xfffff000);
+*/
 	// Reset RXMISSED counter
 	RTL_WRITE_32(rtl, RT_RXMISSED, 0);
 
@@ -267,6 +273,16 @@ static void rtl8139_resetrx(rtl8139 *rtl)
 	RTL_WRITE_8(rtl, RT_CHIPCMD, RT_CMD_RX_ENABLE | RT_CMD_TX_ENABLE);
 }
 
+static void rtl8139_dumptxstate(rtl8139 *rtl)
+{
+	dprintf("tx state:\n");
+	dprintf("\ttxbn %d\n", rtl->txbn);
+	dprintf("\ttxstatus 0 0x%x\n", RTL_READ_32(rtl, RT_TXSTATUS0));
+	dprintf("\ttxstatus 1 0x%x\n", RTL_READ_32(rtl, RT_TXSTATUS1));
+	dprintf("\ttxstatus 2 0x%x\n", RTL_READ_32(rtl, RT_TXSTATUS2));
+	dprintf("\ttxstatus 3 0x%x\n", RTL_READ_32(rtl, RT_TXSTATUS3));
+}
+
 void rtl8139_xmit(rtl8139 *rtl, const char *ptr, ssize_t len)
 {
 	int i;
@@ -292,15 +308,18 @@ restart:
 	state = int_disable_interrupts();
 	acquire_spinlock(&rtl->reg_spinlock);
 
+#if 0
 	/* wait for clear-to-send */
 	if(!(RTL_READ_32(rtl, RT_TXSTATUS0 + rtl->txbn*4) & RT_TX_HOST_OWNS)) {
 		dprintf("rtl8139_xmit: no txbuf free\n");
+		rtl8139_dumptxstate(rtl);
 		release_spinlock(&rtl->reg_spinlock);
 		int_restore_interrupts(state);
 		mutex_unlock(&rtl->lock);
 		sem_release(rtl->tx_sem, 1);
 		goto restart;
 	}
+#endif
 
 	memcpy((void*)(rtl->txbuf + rtl->txbn * 0x800), ptr, len);
 	if(len < ETHERNET_MIN_SIZE)
@@ -465,19 +484,21 @@ static int rtl8139_txint(rtl8139 *rtl, uint16 int_status)
 	int rc = INT_NO_RESCHEDULE;
 
 	// transmit ok
-//	dprintf("tx\n");
+//	dprintf("tx %d\n", int_status);
+	if(int_status & RT_INT_TX_ERR) {
+		dprintf("err tx int:\n");
+		rtl8139_dumptxstate(rtl);
+	}
 
 	for(i=0; i<4; i++) {
 		if(i > 0 && rtl->last_txbn == rtl->txbn)
 			break;
 		txstat = RTL_READ_32(rtl, RT_TXSTATUS0 + rtl->last_txbn*4);
 //		dprintf("txstat[%d] = 0x%x\n", rtl->last_txbn, txstat);
-		if(txstat & RT_TX_HOST_OWNS) {
-//			dprintf("host now owns the buffer\n");
-		} else {
-//			dprintf("host no own\n");
+
+		if((txstat & (RT_TX_STATUS_OK | RT_TX_UNDERRUN | RT_TX_ABORTED)) == 0)
 			break;
-		}
+
 		if(++rtl->last_txbn >= 4)
 			rtl->last_txbn = 0;
 		sem_release_etc(rtl->tx_sem, 1, SEM_FLAG_NO_RESCHED);

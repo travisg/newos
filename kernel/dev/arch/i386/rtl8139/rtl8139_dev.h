@@ -71,6 +71,7 @@
 #define RT_TX_CARRIER_LOST	0x80000000	/* Carrier sense lost */
 #define RT_TX_ABORTED		0x40000000	/* Transmission aborted */
 #define RT_TX_OUT_OF_WINDOW	0x20000000	/* Out of window collision */
+#define RT_TX_CARRIER_HBEAT 0x10000000  /* not sure */ 
 #define RT_TX_STATUS_OK		0x00008000	/* Status ok: a good packet was transmitted */
 #define RT_TX_UNDERRUN		0x00004000	/* Transmit FIFO underrun */
 #define RT_TX_HOST_OWNS		0x00002000	/* Set to 1 when DMA operation is completed */
