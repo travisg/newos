@@ -133,6 +133,7 @@ static int target_endian = LE;
 #define fix(x) ((target_endian == BE) ? HOST_TO_BENDIAN32(x) : HOST_TO_LENDIAN32(x))
 
 static int make_sparcboot = 0;
+static int strip_debug = 0;
 
 void die(char *s, char *a)
 {
@@ -166,6 +167,29 @@ void *loadfile(char *file, int *size)
     }
     *size = 0;
     return NULL;
+}
+
+void *loadstripfile(char *file, int *size)
+{
+    char temp[256];
+    char cmd[4096];
+    void *retval;
+
+
+    if(strip_debug) {
+        strcpy(temp, "/tmp/mkboot.XXXXXXXX");
+        mktemp(temp);
+        sprintf(cmd, "cp %s %s; strip %s", file, temp, temp);
+        system(cmd);
+
+        retval = loadfile(temp, size);
+
+        unlink(temp);
+    } else {
+        retval = loadfile(file, size);
+    }
+
+    return retval;
 }
 
 // write a boot block to the head of the dir.
@@ -403,7 +427,8 @@ void makeboot(section *s, char *outfile)
         centry.be_name[31] = 0;
 
         if(!file) die("section %s has no file",s->name);
-        if(!(rawdata[c] = loadfile(file,&rawsize[c])))
+        rawdata[c]= ((strcmp(type, "elf32")==0)?loadstripfile:loadfile)(file,&rawsize[c]);
+        if(!rawdata[c])
            die("cannot load \"%s\"",file);
 
         if(stat(file,&statbuf))
@@ -485,16 +510,18 @@ usage:
 			make_sparcboot = 1;
 		} else if(!strcmp(*argv, "--bigendian")) {
 			target_endian = BE;
-		} else if(!strcmp(*argv,"-o")){
+		} else if(!strcmp(*argv,"-o")) {
 			argc--;
 			argv++;
-			if(argc){
+			if(argc) {
 				file = *argv;
 			} else {
 				goto usage;
 			}
+		} else if(!strcmp(*argv, "--strip-debug")) {
+			strip_debug = 1;
 		} else {
-			if(load_ini(*argv) == NULL){
+			if(load_ini(*argv) == NULL) {
 				fprintf(stderr,"warning: cannot load '%s'\n",*argv);
 			}
 		}

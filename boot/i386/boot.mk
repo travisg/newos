@@ -41,10 +41,10 @@ $(MAKEFLOP): $(MAKEFLOP).c
 	$(HOST_CC) -O3 $(MAKEFLOP).c -o $@
 
 $(FINAL): $(STAGE2) $(KERNEL) $(KERNEL_ADDONS) $(APPS) tools
-	$(BOOTMAKER) $(BOOT_DIR)/config.ini -o $(FINAL)
+	$(BOOTMAKER) --strip-debug $(BOOT_DIR)/config.ini -o $(FINAL)
 
 floppy: $(STAGE2) $(KERNEL) $(KERNEL_ADDONS) $(APPS) tools $(MAKEFLOP)
-	$(BOOTMAKER) $(BOOT_DIR)/config.ini -o $(FINAL).pre
+	$(BOOTMAKER) --strip-debug $(BOOT_DIR)/config.ini -o $(FINAL).pre
 	$(MAKEFLOP) $(BOOTBLOCK) $(FINAL).pre $(FINAL)
 	rm -f $(FINAL).pre
 	rm -f final.$(ARCH);ln -sf $(FINAL) final.$(ARCH)
