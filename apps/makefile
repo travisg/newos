@@ -4,6 +4,7 @@ APPS_DIR := apps
 include $(addsuffix /makefile, $(addprefix $(APPS_DIR)/, \
 	cpptest \
 	test_output \
+	test_time \
 	test_input \
 	false \
 	fibo \

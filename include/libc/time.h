@@ -20,18 +20,20 @@ struct tm
 	int tm_isdst;  /* Daylight Savings Time */
 };
 
-typedef unsigned long clock_t;
+typedef unsigned long long clock_t;
 typedef unsigned long long time_t;
 typedef unsigned long long museconds_t;
 
 char *asctime(const struct tm *timeptr);
 clock_t clock(void);
+struct tm *localtime(const time_t *timer);
+time_t time(time_t *timer);
+
+/*
 char *ctime(const time_t *timer);
 double difftime(time_t time1, time_t time2);
 struct tm *gmtime(const time_t *timer);
-struct tm *localtime(const time_t *timer);
 time_t mktime(struct tm *timeptr);
 size_t strftime(char *str, size_t maxsize, const char *format, const struct tm *timeptr);
-time_t time(time_t *timer);
-
+*/
 #endif
