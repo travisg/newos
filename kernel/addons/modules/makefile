@@ -1,8 +1,5 @@
-KERNEL_ADDONS_MODULES_DIR := $(KERNEL_ADDONS_DIR)/modules
-KERNEL_ADDONS_MODULES_BUILD_DIR := $(KERNEL_ADDONS_BUILD_DIR)/modules
-
 # include sub makefiles
-include $(addsuffix /makefile, $(addprefix $(KERNEL_ADDONS_MODULES_DIR)/, \
+include $(addsuffix /makefile, $(addprefix $(GET_LOCAL_DIR)/, \
 	generic/blkman \
 	generic/locked_pool \
 	generic/scsi_periph \
@@ -13,5 +10,7 @@ include $(addsuffix /makefile, $(addprefix $(KERNEL_ADDONS_MODULES_DIR)/, \
 	bus_managers/scsi \
 	bus_managers/usb \
 	busses/usb/ohci \
+	console/vga_text \
+	console/vmware \
 	arch/$(ARCH) \
 ))
