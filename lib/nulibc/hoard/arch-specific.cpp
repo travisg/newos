@@ -81,6 +81,14 @@ int __heap_init()
 	return 0;
 }
 
+class heap_init_hack_t
+{
+public:
+	heap_init_hack_t(void) {
+		__heap_init();
+	}
+} heap_init_hack;
+
 void * hoardSbrk (long size)
 {
   // XXX not thread safe
