@@ -9,6 +9,7 @@
 #include <kernel/vm_cache.h>
 #include <kernel/vm_store_anonymous_noswap.h>
 #include <kernel/vm_store_device.h>
+#include <kernel/vm_store_null.h>
 #include <kernel/vm_store_vnode.h>
 #include <kernel/heap.h>
 #include <kernel/debug.h>
@@ -616,6 +617,41 @@ region_id vm_map_physical_memory(aspace_id aid, char *name, void **address, int 
 	// modify the pointer returned to be offset back into the new region
 	// the same way the physical address in was offset
 	(*address) += map_offset;
+	return region->id;
+}
+
+region_id vm_create_null_region(aspace_id aid, char *name, void **address, int addr_type, addr size)
+{
+	vm_region *region;
+	vm_cache *cache;
+	vm_cache_ref *cache_ref;
+	vm_store *store;
+	addr map_offset;
+	int err;
+
+	vm_address_space *aspace = vm_get_aspace_from_id(aid);
+	if(aspace == NULL)
+		return ERR_VM_INVALID_ASPACE;
+
+	size = PAGE_ALIGN(size);
+
+	// create an null store object
+	store = vm_store_create_null();
+	if(store == NULL)
+		panic("vm_map_physical_memory: vm_store_create_null returned NULL");
+	cache = vm_cache_create(store);
+	if(cache == NULL)
+		panic("vm_map_physical_memory: vm_cache_create returned NULL");
+	cache_ref = vm_cache_ref_create(cache);
+	if(cache_ref == NULL)
+		panic("vm_map_physical_memory: vm_cache_ref_create returned NULL");
+
+	vm_cache_acquire_ref(cache_ref, true);
+	err = map_backing_store(aspace, store, address, 0, size, addr_type, 0, LOCK_RO, REGION_NO_PRIVATE_MAP, &region, name);
+	vm_cache_release_ref(cache_ref);
+	if(err < 0)
+		return err;
+
 	return region->id;
 }
 

@@ -653,8 +653,8 @@ int vm_translation_map_module_init2(kernel_args *ka)
 
 	dprintf("vm_translation_map_module_init2: creating iospace\n");
 	temp = (void *)IOSPACE_BASE;
-	vm_create_anonymous_region(vm_get_kernel_aspace_id(), "iospace", &temp,
-		REGION_ADDR_EXACT_ADDRESS, IOSPACE_SIZE, REGION_WIRING_WIRED_ALREADY, LOCK_RW|LOCK_KERNEL);
+	vm_create_null_region(vm_get_kernel_aspace_id(), "iospace", &temp,
+		REGION_ADDR_EXACT_ADDRESS, IOSPACE_SIZE);
 
 	dprintf("vm_translation_map_module_init2: done\n");
 
