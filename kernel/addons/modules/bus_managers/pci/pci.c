@@ -1086,6 +1086,8 @@ pci_device_probe(uint8 bus, uint8 dev, uint8 func)
 	pcii->u.h0.rom_base_pci =        read_pci_config(bus, dev, func, PCI_rom_base, 4);
 	pcii->u.h0.interrupt_line =      read_pci_config(bus, dev, func, PCI_interrupt_line, 1);
 	pcii->u.h0.interrupt_pin =       read_pci_config(bus, dev, func, PCI_interrupt_pin, 1) & PCI_pin_mask;
+	pcii->u.h0.max_latency =         read_pci_config(bus, dev, func, PCI_max_latency, 1);
+	pcii->u.h0.min_grant =           read_pci_config(bus, dev, func, PCI_min_grant, 1);
 
 	/* now add to list (at end) */
 	{
