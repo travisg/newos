@@ -83,7 +83,6 @@ int __heap_init()
 
 void * hoardSbrk (long size)
 {
-  printf("hoardSbrk: size %d\n", size);
   // XXX not thread safe
   return (void *)(brk += size);
 }
