@@ -2,10 +2,10 @@ Implement:
 
 PORTS:
  ppc port (iMac)
- mips port (SGI Indy)	
+ mips port (SGI Indy)
  sparc v8 port
  sparc v9 port
- alpha port
+ alpha port (DEC Multia)
 user-space loader
 disk based filesystem
 tty layer:
@@ -37,20 +37,19 @@ vfs:
  getcwd
  attributes (?)
 VM:
- swap
- page out
  cache layer
 
 In Progress:
+
 kernel module loading:
- symbols
  modules
+VM:
+ swap
+ page out
+
 
 Finish:
 
 sh4 console - dreamcast
-sh4 test_and_set - dreamcast
-sh4 invalidate_TLB - dreamcast
-ide driver cleanup
 
 Fix:
