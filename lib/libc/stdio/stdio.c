@@ -411,7 +411,7 @@ int ferror (FILE *stream)
 void clearerr(FILE *stream)
 {
 	_kern_sem_acquire(stream->sid, 1);
-    stream->flags &= stream->flags ^ _STDIO_ERROR;
+    stream->flags &= ~_STDIO_ERROR;
     _kern_sem_release(stream->sid, 1);
 }
 
@@ -423,7 +423,7 @@ int ungetc(int c, FILE *stream)
 		_kern_sem_release(stream->sid, 1);
 		return EOF;
 	}
-	stream->flags &= stream->flags ^ _STDIO_EOF;
+	stream->flags &= ~_STDIO_EOF;
 	stream->flags |= _STDIO_UNGET;
 	stream->unget = c;
 	_kern_sem_release(stream->sid, 1);
