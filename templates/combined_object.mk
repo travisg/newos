@@ -3,6 +3,7 @@ MY_TARGETDIR_IN := $(MY_TARGETDIR)
 MY_SRCDIR_IN := $(MY_SRCDIR)
 MY_OBJS_IN := $(MY_OBJS)
 MY_CFLAGS_IN := $(MY_CFLAGS)
+MY_CPPFLAGS_IN := $(MY_CPPFLAGS)
 MY_INCLUDES_IN := $(MY_INCLUDES)
 
 # create a new version in the target directory
@@ -24,5 +25,6 @@ MY_TARGETDIR :=
 MY_SRCDIR :=
 MY_OBJS :=
 MY_CFLAGS :=
+MY_CPPFLAGS :=
 MY_INCLUDES :=
 
