@@ -20,12 +20,26 @@ static void testGets(FILE* f)
 
 static void testScanf(FILE* f)
 {
-	unsigned long l;	
+	char c[10];
+	char s[11];
+	
+	unsigned int u;
+	int i;
+	int d;
+	int x;
 	//argument is ignored for now
-	printf("Enter a number:");
-	scanf("%u", &l);
-	printf("Just some value I chose %u\n", 143);
-	printf("You entered: %u\n", l);
+	printf("Read an unsigned int:");
+	scanf("%u", &u);
+	printf("Read an integer(undetermined base):");
+	scanf("%i", &i);
+	printf("Read an integer (base 10):");
+	scanf("%d", &d);
+	printf("Read an integer (base 16):");
+	scanf("%x", &x);
+	printf("Read a an char array (10):");
+	scanf("%10c", c);
+	printf("Read a an string (10):");
+	scanf("%10s", s);
 
 }
 

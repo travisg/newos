@@ -1,10 +1,14 @@
+/*
+** Copyright 2003, Justin Smith. All rights reserved.
+** Distributed under the terms of the NewOS License.
+** 2003/09/01
+*/
 #include <stdarg.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <limits.h>
 #include <ctype.h>
 #include <sys/syscalls.h>
-
 
 #define MAX_BUFF_SIZE 64
 
@@ -13,13 +17,16 @@ int _v_scanf( int (*_read)(void*), void (*_push)(void*, unsigned char),  void* a
 /**********************************************************/
 /* sscanf functions                                       */
 /**********************************************************/
+
 struct _sscanf_struct
 {
+
     int count;
 	int buff_pos;
 	unsigned char* buff;
 	unsigned char const *str;
     int pos;
+
 };
 
 static void _sscanf_push(void *p, unsigned char c)
@@ -27,13 +34,13 @@ static void _sscanf_push(void *p, unsigned char c)
 	struct _sscanf_struct *val = (struct _sscanf_struct*)p;
 	if(val->buff_pos < MAX_BUFF_SIZE)
 		val->buff[val->buff_pos++] = c;
+
 }
 
 static int _sscanf_read(void* p)
 {
 	struct _sscanf_struct *val = (struct _sscanf_struct*)p;
     int ch;
-	
 	if(val->buff_pos > 0)
 	{
 		return val->buff[--val->buff_pos];
@@ -50,8 +57,8 @@ static int _sscanf_read(void* p)
 
 int vsscanf(char const *str, char const *format, va_list arg_ptr)
 {
-    struct _sscanf_struct *val;
-    
+    struct _sscanf_struct *val = (struct _sscanf_struct*)malloc(sizeof(struct _sscanf_struct));
+	
 	val->buff = (unsigned char*)malloc(MAX_BUFF_SIZE*sizeof(unsigned char));
 	val->buff_pos = 0;
 	val->count = 0;
@@ -61,7 +68,9 @@ int vsscanf(char const *str, char const *format, va_list arg_ptr)
 }
 
 /**********************************************************/
+
 /* fscanf functions                                       */
+
 /**********************************************************/
 
 struct _fscanf_struct
@@ -94,7 +103,6 @@ static int _fscanf_read(void *p)
     if (stream->rpos >= stream->buf_pos) 
     {
         int len = sys_read(stream->fd, stream->buf, -1, stream->buf_size);
-    
         if (len==0) 
         {
             stream->flags |= _STDIO_EOF;
@@ -186,7 +194,6 @@ static int _read_next_non_space( int (*_read)(void*), void* arg)
 }
 
 /*  The code for this function is mostly taken from strtoull */
-//unsigned long long convertIntegralValue(int (*_read)(void*), void (*_push)(void*, unsigned char), void *arg, int base, short width);
 static unsigned long long convertIntegralValue(int (*_read)(void*), void (*_push)(void*, unsigned char), void *arg, int base, short width)
 {
 	unsigned long long acc;
@@ -260,7 +267,7 @@ static unsigned long long convertIntegralValue(int (*_read)(void*), void (*_push
 		}	
 		
 		if (!isascii(c))
-			break;
+		break;
 		if (isdigit(c))
 			c -= '0';
 		else if (isalpha(c))
@@ -275,6 +282,7 @@ static unsigned long long convertIntegralValue(int (*_read)(void*), void (*_push
 		{
 			any = 1;
 			acc *= qbase;
+
 			acc += c;
 		}
 	}
@@ -303,6 +311,9 @@ int _v_scanf( int (*_read)(void*), void (*_push)(void*, unsigned char),  void* a
 
 	while (*format)
 	{
+		long long s_temp = 0;
+		bool is_set = false;
+
 		fch = *format++;
     	if(isspace(fch))
     	{
@@ -333,14 +344,6 @@ keeplooking:
 
 			switch(fch)
 			{   
-				unsigned short* us;
-				short* s;
-				unsigned int* ui;
-				int* i;
-				unsigned long* ul;
-				long* l;
-				unsigned long long* ull;
-				long long* ll;
 				case '%':
 					if(_read_next_non_space(_read, arg) != '%')
 					{
@@ -361,16 +364,17 @@ keeplooking:
 				case '7':
 				case '8':
 				case '9':
+					if(width == -1)
+					{
+						width = 0;
+					}
 					do
 					{
-						if(width == -1)
-						{
-							width = 0;
-						}
 						width = 10 * width + (unsigned int)(fch - (unsigned char)'0');
 						fch = *format++;
 					}
 					while(isdigit(fch));
+					_push(arg, fch);
 					goto keeplooking;
 
 				case 'h':
@@ -384,56 +388,169 @@ keeplooking:
 					goto keeplooking;
 				case 'u':
 					fieldsRead++;
-					unsigned long long temp = convertIntegralValue(_read, _push, arg, 10, width);
+					unsigned long long u_temp = convertIntegralValue(_read, _push, arg, 10, width);
 					switch(size)
 					{
 						case SHORT:
-							us = (unsigned short*)va_arg(arg_ptr, unsigned short*);
-							if(temp > USHRT_MAX)
+						{
+							unsigned short* us = (unsigned short*)va_arg(arg_ptr, unsigned short*);
+							if(u_temp > USHRT_MAX)
 							{
 								*us = USHRT_MAX;
 								break;
 							}
-							*us = (unsigned short)temp;	
+							*us = (unsigned short)u_temp;
+						}
 						break;
 						case INT:
-							ui = (unsigned int*)va_arg(arg_ptr, unsigned int*);
-							if(temp > UINT_MAX)
+						{
+							unsigned int *ui = (unsigned int*)va_arg(arg_ptr, unsigned int*);
+							if(u_temp > UINT_MAX)
 							{
 								*ui = UINT_MAX;
 								break;
 							}
-							*ui = (unsigned int)temp;	
+							*ui = (unsigned int)u_temp;
+						}
 						break;
 						case LONG:
-							ul = (unsigned long*)va_arg(arg_ptr, unsigned long*);
-							if(temp > ULONG_MAX)
+						{
+							unsigned long *ul = (unsigned long*)va_arg(arg_ptr, unsigned long*);
+							if(u_temp > ULONG_MAX)
 							{
 								*ul = ULONG_MAX;
 								break;
 							}
-							*ul = (unsigned long)temp;	
+							*ul = (unsigned long)u_temp;
+						}
 						break;
 						default:
-							ull = (unsigned long long*)va_arg(arg_ptr, unsigned long long*);
-							if(temp > ULONG_LONG_MAX)
-							{
-								*ull = ULONG_LONG_MAX;
-								break;
-							}
-							*ull = (unsigned long long)temp;
+						{
+							unsigned long long *ull = (unsigned long long*)va_arg(arg_ptr, unsigned long long*);
+							*ull = (unsigned long long)u_temp;
+						}
 						break;
 							
 					}
 					break;
+				case 'i':
+					is_set = true;
+					s_temp = (long long)convertIntegralValue(_read, _push, arg, 0, width);
+				case 'd':
+					if(!is_set)
+					{
+						is_set = true;
+						s_temp = (long long)convertIntegralValue(_read, _push, arg, 10, width);
+					}
+				case 'o':
+					if(!is_set)
+					{
+						is_set = true;
+						s_temp = (long long)convertIntegralValue(_read, _push, arg, 8, width);
+					}
+				case 'x':
+				case 'X':
+				case 'p':
+					if(!is_set)
+						s_temp = (long long)convertIntegralValue(_read, _push, arg, 16, width);
+
+					fieldsRead++;
+					switch(size)
+					{
+						case SHORT:
+						{
+							short* s = (short*)va_arg(arg_ptr, short*);
+							if(s_temp > SHRT_MAX)
+							{
+								*s = SHRT_MAX;
+								break;
+							}
+							else if(s_temp < SHRT_MIN)
+							{
+								*s = SHRT_MIN;
+								break;
+							}
+							*s = (unsigned short)s_temp;
+						}
+						break;
+						case INT:
+						{
+							int *i = (int*)va_arg(arg_ptr, int*);
+							if(s_temp > INT_MAX)
+							{
+								*i = INT_MAX;
+								break;
+							}
+							else if(s_temp < INT_MIN)
+							{
+								*i = INT_MIN;
+							}
+							*i = (unsigned int)s_temp;
+						}
+						break;
+						case LONG:
+						{
+							long *l = (long*)va_arg(arg_ptr, long*);
+							if(s_temp > LONG_MAX)
+							{
+								*l = LONG_MAX;
+								break;
+							}
+							else if(s_temp < LONG_MIN)
+							{
+								*l = LONG_MIN;
+							}
+							*l = (unsigned long)s_temp;
+						}
+						break;
+						default:
+						{
+							long long *ll = (long long*)va_arg(arg_ptr, unsigned long long*);
+							*ll = (long long)s_temp;
+						}
+						break;
+							
+					}
+					break;
+				case 'c':
+				{
+					char* c = (char*)va_arg(arg_ptr, char*);
+					int i = 0;
+					if(width == -1)
+						width = 1;
+					for(; i < width; i++)
+					{
+						char temp = (char)_read(arg);
+						*(c+i) = temp;
+						if(!temp)
+							break;
+					}
+				}
+				break;
+				// Dangerous to use without specifying width.
+				case 's':
+				{
+					char* c = (char*)va_arg(arg_ptr, char*);
+					int i = 0;
+					do
+					{
+						char temp = (char)_read(arg);
+						if(temp == '\0' || isspace(temp))
+							break;
+						*(c+i++) = temp;
+					}while(!(width >= 0 && i >= width));
+					*(c+i) = '\0';
+					break;
+				}
 				default:
 					// not yet implemented
 					return EOF;
-
 			}
-		}	
+		}
 	}
 	return fieldsRead;
 }
+
+
 
 
