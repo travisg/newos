@@ -166,6 +166,7 @@ static void draw_char(unsigned char c, int x, int y)
 	}
 }
 
+#if 0
 int printf(const char *fmt, ...)
 {
 	int ret;
@@ -208,6 +209,7 @@ void putchar(char c)
 		char_y--;
 	}
 }
+#endif
 
 int s2_text_init(kernel_args *ka)
 {

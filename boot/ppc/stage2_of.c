@@ -243,7 +243,7 @@ void *of_claim(unsigned int vaddr, unsigned int size, unsigned int align)
 	return args.ret;
 }
 
-#if 0
+#if 1
 int printf(const char *fmt, ...)
 {
 	int ret;

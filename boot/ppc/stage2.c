@@ -28,7 +28,7 @@ void _start(int arg1, int arg2, void *openfirmware)
 	of_init(openfirmware);
 
 	// set up the framebuffer text mode
-	s2_text_init(&ka);
+//	s2_text_init(&ka);
 
 	printf("Welcome to the stage2 bootloader!\n");
 

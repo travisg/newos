@@ -379,6 +379,7 @@ int s2_mmu_init(kernel_args *ka)
 	dbats[0] = ibats[0] = BATU_LEN_256M | BATU_VS;
 	dbats[1] = ibats[1] = BATL_MC | BATL_PP_RW;
 
+#if 0
 	// map the framebuffer using a BAT to 256MB
 	{
 		unsigned int framebuffer_phys = ka->fb.mapping.start & ~((16*1024*1024) - 1);
@@ -389,6 +390,7 @@ int s2_mmu_init(kernel_args *ka)
 			ka->fb.mapping.start, 0x10000000 + ka->fb.mapping.start - framebuffer_phys);
 		s2_change_framebuffer_addr(ka, 0x10000000 + ka->fb.mapping.start - framebuffer_phys);
 	}
+#endif
 	setibats(ibats);
 	setdbats(dbats);
 

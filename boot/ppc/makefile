@@ -31,8 +31,8 @@ CONFIG_FILE := $(BOOT_SRCDIR)/config.ini
 SEMIFINAL := $(BOOT_TARGETDIR)/final.bootdir
 
 $(SEMIFINAL): $(STAGE2) $(ALL) $(TOOLS) $(MAKEFLOP) $(CONFIG_FILE)
-#	$(BOOTMAKER) --bigendian $(CONFIG_FILE) -o $(SEMIFINAL)
-	$(BOOTMAKER) --strip-debug --strip-binary $(STRIP) --bigendian $(CONFIG_FILE) -o $(SEMIFINAL)
+	$(BOOTMAKER) --bigendian $(CONFIG_FILE) -o $(SEMIFINAL)
+#	$(BOOTMAKER) --strip-debug --strip-binary $(STRIP) --bigendian $(CONFIG_FILE) -o $(SEMIFINAL)
 
 FINAL_ASMINCLUDE := $(BOOT_TARGETDIR)/final.asminclude
 
