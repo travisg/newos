@@ -98,6 +98,7 @@ static void scrup(void)
 		*(unsigned short *)i = 0x0720;
 	}
 }
+
 static void lf(void)
 {
 	if (y+1<bottom) {
@@ -107,11 +108,22 @@ static void lf(void)
 	}
 	scrup();
 }
+
 static void cr(void)
 {
 	pos -= x<<1;
 	x=0;
 }
+
+static void del(void)
+{
+	if (x > 0) {
+		pos -= 2;
+		x--;
+		*(unsigned short *)pos = 0x0720;
+	}
+}
+
 #if 0
 static void scrdown(void)
 {
@@ -136,14 +148,6 @@ static void ri(void)
 		return;
 	}
 	scrdown();
-}
-static void del(void)
-{
-	if (x) {
-		pos -= 2;
-		x--;
-		*(unsigned short *)pos = 0x0720;
-	}
 }
 
 static void csi_J(int par)
@@ -378,15 +382,6 @@ static void arch_con_puts(const char *s)
 //	set_cursor();
 }
 #endif
-/*
-static void arch_con_puts_xy(const char *s, int x, int y)
-{
-	save_cur();
-	gotoxy(x, y);
-	arch_con_puts(s);
-	restore_cur();
-}
-*/
 
 int console_open(void *_fs, void *_base_vnode, const char *path, const char *stream, stream_type stream_type, void **_vnode, void **_cookie, struct redir_struct *redir)
 {
@@ -474,11 +469,21 @@ int _console_write(const void *buf, size_t *len)
 
 	for(i=0; i<*len; i++) {
 		c = &((const char *)buf)[i];
-		if( *c == '\n') {
-			cr();
-			lf();
-		} else {
-			console_putch(*c); 
+		switch(*c) {
+			case '\n':
+				cr();
+				lf();
+				break;
+			case '\r':
+				cr();
+				break;
+			case 0x8: // backspace
+				del();
+				break;
+			case '\0':
+				break;
+			default:
+				console_putch(*c); 
 		}
 	}
 	return 0;
