@@ -35,7 +35,7 @@ int devs_init(kernel_args *ka)
 #ifdef ARCH_i386
 //	ide_bus_init(ka);
 	keyboard_dev_init(ka);
-	mouse_dev_init(ka);
+//	mouse_dev_init(ka);
 	console_dev_init(ka);
 	rtl8139_dev_init(ka);
 	netblock_dev_init(ka);
