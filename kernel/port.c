@@ -449,8 +449,7 @@ port_get_next_port_info(proc_id proc,
 	state = int_disable_interrupts();
 	GRAB_PORT_LIST_LOCK();
 	
-	// inc idx until ports found with owner == proc
-	// XXX TODO
+	info->id = -1; // used as found flag
 	while (slot < MAX_PORTS) {
 		GRAB_PORT_LOCK(ports[slot]);
 		if (ports[slot].id != -1)
@@ -473,7 +472,7 @@ port_get_next_port_info(proc_id proc,
 	RELEASE_PORT_LIST_LOCK();
 	int_restore_interrupts(state);
 
-	if (slot == MAX_PORTS)
+	if (info->id == -1)
 		return ERR_PORT_NOT_FOUND;
 	*cookie = slot;
 	return NO_ERROR;
@@ -638,7 +637,7 @@ port_read_etc(port_id id,
 		dprintf("read_port_etc: invalid port_id %d\n", id);
 		return ERR_INVALID_HANDLE;
 	}
-	// store sem_id in local variable 
+	// store sem_id in local variable
 	cached_semid = ports[slot].read_sem;
 
 	// unlock port && enable ints/
@@ -776,6 +775,7 @@ port_write_etc(port_id id,
 	sem_id cached_semid;
 	int h;
 	void* buf;
+	int c1, c2;
 	
 	if(ports_active == false)
 		return ERR_PORT_NOT_ACTIVE;
@@ -813,8 +813,8 @@ port_write_etc(port_id id,
 	
 	dprintf("port_write_etc(): port_id %d, wait\n", id);
 	
-	// XXX -> possible race condition if port gets deleted (->sem deleted too), therefore
-	// sem_id is cached in local variable up here
+	// XXX -> possible race condition if port gets deleted (->sem deleted too), 
+	// and queue is full therefore sem_id is cached in local variable up here
 	
 	// get 1 entry from the queue, block if needed
 	res = sem_acquire_etc(cached_semid, 1,
@@ -864,7 +864,7 @@ port_write_etc(port_id id,
 	h = ports[slot].head;
 	if (h < 0)
 		panic("port %id: head < 0", ports[slot].id);
-	if (h > ports[slot].capacity)
+	if (h >= ports[slot].capacity)
 		panic("port %id: head > cap %d", ports[slot].id, ports[slot].capacity);
 	ports[slot].msg_queue[h].msg_code	= msg_code;
 	ports[slot].msg_queue[h].data		= buf;
@@ -877,6 +877,11 @@ port_write_etc(port_id id,
 
 	RELEASE_PORT_LOCK(ports[slot]);
 	int_restore_interrupts(state);
+
+	sem_get_count(ports[slot].read_sem, &c1);
+	sem_get_count(ports[slot].write_sem, &c2);
+	dprintf("port_write_etc(): meta complete, semcount read_sem %d write_sem %d\n", c1, c2);
+	dprintf("port_write_etc(): will release sem %x now\n", cached_semid);
 
 	// release sem, allowing read (might reschedule)
 	sem_release(cached_semid, 1);
@@ -1157,7 +1162,7 @@ int	user_port_set_owner(port_id port, proc_id proc)
 int	user_port_write_etc(port_id uport, int32 umsg_code, void *umsg_buffer,
 				size_t ubuffer_size, uint32 uflags, time_t utimeout)
 {
-	if (umsg_buffer)
+	if (umsg_buffer == NULL)
 		return ERR_INVALID_ARGS;
 	if((addr)umsg_buffer >= KERNEL_BASE && (addr)umsg_buffer <= KERNEL_TOP)
 		return ERR_VM_BAD_USER_MEMORY;

@@ -191,8 +191,10 @@ port_id test_p1, test_p2, test_p3;
 void port_test()
 {
 	char testdata[5];
+	char testdata2[5];
 	thread_id t;
 	int res;
+	int code;
 
 	strcpy(testdata, "abcd");
 
@@ -204,8 +206,12 @@ void port_test()
 	printf("porttest: port_find()\n");
 	printf("'test port #1' has id %d (should be %d)\n", sys_port_find("test port #1"), test_p1);
 
-	printf("porttest: port_write() on 2 and 3\n");
+	printf("'test port #1' write, then read\n");
+	sys_port_write(test_p1, 666, &testdata, sizeof(testdata));
+	printf("'test port #1' now read\n");
+	sys_port_read(test_p1, &code, &testdata2, sizeof(testdata2));
 
+	printf("porttest: port_write() on 2 and 3\n");
 	sys_port_write(test_p2, 666, &testdata, sizeof(testdata));
 	sys_port_write(test_p3, 999, &testdata, sizeof(testdata));
 	printf("porttest: port_count(test_p1) = %d\n", sys_port_count(test_p1));
@@ -225,8 +231,9 @@ void port_test()
 	printf("porttest: write #3\n");
 	sys_port_write(test_p1, 3, &testdata, sizeof(testdata));
 
-//	printf("porttest: waiting on spawned thread\n");
-//	sys_thread_wait_on_thread(t, NULL);
+	printf("porttest: waiting on spawned thread\n");
+	sys_thread_wait_on_thread(t, &res);
+	printf("porttest: spawned thread exit: retval = %d\n", res);
 
 	printf("porttest: close p1\n");
 	sys_port_close(test_p2);
@@ -273,6 +280,6 @@ int port_test_thread_func(void* arg)
 	
 	printf("porttest_t: end port_test_thread_func()\n");
 
-	return 0;
+	return -666;
 }
 

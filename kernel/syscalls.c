@@ -33,8 +33,8 @@
 
 int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_ret)
 {
-//	dprintf("syscall_dispatcher: thread 0x%x call 0x%x, arg0 0x%x, arg1 0x%x arg2 0x%x arg3 0x%x arg4 0x%x\n",
-//		thread_get_current_thread_id(), call_num, arg0, arg1, arg2, arg3, arg4);
+	dprintf("syscall_dispatcher: thread 0x%x call 0x%x, arg0 0x%x, arg1 0x%x arg2 0x%x arg3 0x%x arg4 0x%x\n",
+		thread_get_current_thread_id(), call_num, arg0, arg1, arg2, arg3, arg4);
 
 	switch(call_num) {
 		case SYSCALL_NULL:
@@ -98,10 +98,10 @@ int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_re
 			*call_ret = user_sem_delete((sem_id)arg0);
 			break;
 		case SYSCALL_SEM_ACQUIRE:
-			*call_ret = user_sem_acquire_etc((sem_id)arg0, (int)arg1, SEM_FLAG_INTERRUPTABLE, 0, NULL);
+			*call_ret = user_sem_acquire_etc((sem_id)arg0, (int)arg1, 0, 0, NULL);
 			break;
 		case SYSCALL_SEM_ACQUIRE_ETC:
-			*call_ret = user_sem_acquire_etc((sem_id)arg0, (int)arg1, (int)arg2 | SEM_FLAG_INTERRUPTABLE, (time_t)INT32TOINT64(arg3, arg4), (int *)arg5);
+			*call_ret = user_sem_acquire_etc((sem_id)arg0, (int)arg1, (int)arg2, (time_t)INT32TOINT64(arg3, arg4), (int *)arg5);
 			break;
 		case SYSCALL_SEM_RELEASE:
 			*call_ret = user_sem_release((sem_id)arg0, (int)arg1);
@@ -230,7 +230,7 @@ int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_re
 			*call_ret = -1;
 	}
 
-//	dprintf("syscall_dispatcher: done with syscall 0x%x\n", call_num);
+	dprintf("syscall_dispatcher: done with syscall 0x%x\n", call_num);
 
 	return INT_RESCHEDULE;
 }

@@ -1172,8 +1172,6 @@ int user_thread_wait_on_thread(thread_id id, int *uretcode)
 		return ERR_VM_BAD_USER_MEMORY;
 
 	rc = thread_wait_on_thread(id, &retcode);
-	if(rc < 0)
-		return rc;
 
 	rc2 = user_memcpy(uretcode, &retcode, sizeof(retcode));
 	if(rc2 < 0)
