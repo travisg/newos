@@ -52,6 +52,7 @@ AddFile "vm_cache.c" "/build/ossrc/newos/kernel/vm/vm_cache.c"
 AddFile "vm_page.c" "/build/ossrc/newos/kernel/vm/vm_page.c"
 AddFile "vm_store_anonymous_noswap.c" "/build/ossrc/newos/kernel/vm/vm_store_anonymous_noswap.c"
 AddFile "vm_store_device.c" "/build/ossrc/newos/kernel/vm/vm_store_device.c"
+AddFile "vm_tests.c" "/build/ossrc/newos/kernel/vm/vm_tests.c"
 AddFile "vm_kernel.mk" "/build/ossrc/newos/kernel/vm/vm_kernel.mk"
 EndFileGroup "vm"
 AddFileGroup "kernel" "/build/ossrc/newos/kernel" -nomake

@@ -234,13 +234,13 @@ vm_region *_vm_create_region(vm_address_space *aspace, char *name, void **addres
 		case REGION_ADDR_ANY_ADDRESS: {
 			vm_region *r;
 			vm_region *next_r = NULL;
+			bool foundspot = false;
 			// find a hole big enough for a new region
-	
-			base = 0;
 	
 			r = aspace->virtual_map.region_list;
 			if(r == NULL) {
 				base = aspace->virtual_map.base;
+				foundspot = true;
 			} else if(r != NULL && r->base > aspace->virtual_map.base) {
 				// lets try to build the region at the beginning of the aspace
 				if(aspace->virtual_map.base + size > r->base) {
@@ -251,6 +251,7 @@ vm_region *_vm_create_region(vm_address_space *aspace, char *name, void **addres
 					// otherwise, we're done.
 					base = aspace->virtual_map.base;
 					r = NULL;
+					foundspot = true;
 				}
 			} else {
 				next_r = r->aspace_next;
@@ -262,12 +263,14 @@ vm_region *_vm_create_region(vm_address_space *aspace, char *name, void **addres
 					if(next_r->base - (r->base + r->size) >= size) {
 						// we have a spot
 						base = r->base + r->size;
+						foundspot = true;
 						break;
 					}
 				} else {
 					if((aspace->virtual_map.base + aspace->virtual_map.size) - (r->base + r->size) + 1 >= size) {
 						// we have a spot
 						base = r->base + r->size;
+						foundspot = true;
 						break;
 					}
 				}
@@ -276,7 +279,7 @@ vm_region *_vm_create_region(vm_address_space *aspace, char *name, void **addres
 					next_r = next_r->aspace_next;
 			}
 			
-			if(base == 0)
+			if(!foundspot)
 				break; // didn't find a spot
 
 			*address = (void *)base;

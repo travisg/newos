@@ -105,6 +105,29 @@ int syscall_dispatcher(unsigned long call_num, unsigned long arg0, unsigned long
 			}
 			break;
 		}
+		case SYSCALL_VM_CREATE_ANONYMOUS_REGION:
+			*call_ret = vm_create_anonymous_region(vm_get_current_user_aspace_id(),
+				(char *)arg0, (void **)arg1, (int)arg2,
+				(addr)arg3, (int)arg4, (int)arg5);
+			break;
+		case SYSCALL_VM_CLONE_REGION:
+			*call_ret = vm_clone_region(vm_get_current_user_aspace_id(),
+				(char *)arg0, (void **)arg1, (int)arg2,
+				(region_id)arg3, (int)arg4);
+			break;
+		case SYSCALL_VM_MMAP_FILE:
+			// XXX unimplemented
+			*call_ret = -1;
+			break;
+		case SYSCALL_VM_DELETE_REGION:
+			*call_ret = vm_delete_region(vm_get_current_user_aspace_id(), (region_id)arg0);
+			break;
+		case SYSCALL_VM_FIND_REGION_BY_NAME:
+			*call_ret = vm_find_region_by_name(vm_get_current_user_aspace_id(), (const char *)arg0);
+			break;
+		case SYSCALL_VM_GET_REGION_INFO:
+			*call_ret = vm_get_region_info((region_id)arg0, (vm_region_info *)arg1);
+			break;
 		default:
 			*call_ret = -1;
 			ret = INT_NO_RESCHEDULE;

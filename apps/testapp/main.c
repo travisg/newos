@@ -38,6 +38,29 @@ int main()
 	printf("waiting 5 seconds\n");
 	sys_snooze(5000000);
 #endif
+#if 1
+	printf("doing some region tests\n");
+	{
+		region_id region;
+		region_id region2;
+		vm_region_info info;
+		void *ptr, *ptr2;
+		
+		region = sys_vm_create_anonymous_region("foo", &ptr, REGION_ADDR_ANY_ADDRESS,
+			16*4096, REGION_WIRING_LAZY, LOCK_RW);
+		printf("region = 0x%x @ 0x%x\n", region, (unsigned int)ptr);
+		region2 = sys_vm_clone_region("foo2", &ptr2, REGION_ADDR_ANY_ADDRESS,
+			region, LOCK_RW);
+		printf("region2 = 0x%x @ 0x%x\n", region2, (unsigned int)ptr2);
+		
+		sys_vm_get_region_info(region, &info);
+		printf("info.base = 0x%x info.size = 0x%x\n", (unsigned int)info.base, (unsigned int)info.size);
+		
+		sys_vm_delete_region(region);
+		sys_vm_delete_region(region2);
+		printf("deleting both regions\n");
+	}
+#endif
 
 // XXX dangerous! This overwrites the beginning of your hard drive
 #if 0

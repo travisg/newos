@@ -72,6 +72,12 @@ SYSCALL1(sys_exit, 17)
 SYSCALL3(sys_proc_create_proc, 18)
 SYSCALL2(sys_thread_wait_on_thread, 19)
 SYSCALL2(sys_proc_wait_on_proc, 20)
+SYSCALL6(sys_vm_create_anonymous_region, 21)
+SYSCALL5(sys_vm_clone_region, 22);
+//SYSCALL0(sys_vm_mmap_file, 23);
+SYSCALL1(sys_vm_delete_region, 24);
+SYSCALL1(sys_vm_find_region_by_name, 25);
+SYSCALL2(sys_vm_get_region_info, 26);
 
 syscall0:
 	int		$99

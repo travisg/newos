@@ -24,6 +24,39 @@ typedef enum {
 #define SEM_FLAG_NO_RESCHED 1
 #define SEM_FLAG_TIMEOUT 2
 
+// info about a region that external entities may want to know
+typedef struct vm_region_info {
+	region_id id;
+	addr base;
+	addr size;
+	int lock;
+	int wiring;
+} vm_region_info;
+
+// args for the create_area funcs
+enum {
+	REGION_ADDR_ANY_ADDRESS = 0,
+	REGION_ADDR_EXACT_ADDRESS
+};
+
+enum {
+	REGION_WIRING_LAZY = 0,
+	REGION_WIRING_WIRED,
+	REGION_WIRING_WIRED_ALREADY,
+	REGION_WIRING_WIRED_CONTIG,
+	REGION_WIRING_WIRED_SPECIAL
+};
+
+enum {
+	PHYSICAL_PAGE_NO_WAIT = 0,
+	PHYSICAL_PAGE_CAN_WAIT,
+};
+
+#define LOCK_RO        0x0
+#define LOCK_RW        0x1
+#define LOCK_KERNEL    0x2
+#define LOCK_MASK      0x3
+
 int sys_null();
 int sys_open(const char *path, const char *stream, stream_type stream_type);
 int sys_seek(int fd, off_t pos, seek_type seek_type);
@@ -45,6 +78,14 @@ void sys_exit(int retcode);
 proc_id sys_proc_create_proc(const char *path, const char *name, int priority);
 int sys_thread_wait_on_thread(thread_id tid, int *retcode);
 int sys_proc_wait_on_proc(proc_id pid, int *retcode);
+region_id sys_vm_create_anonymous_region(char *name, void **address, int addr_type,
+	addr size, int wiring, int lock);
+region_id sys_vm_clone_region(char *name, void **address, int addr_type,
+	region_id source_region, int lock);	
+// mmap file
+int sys_vm_delete_region(region_id id);
+region_id sys_vm_find_region_by_name(const char *name);
+int sys_vm_get_region_info(region_id id, vm_region_info *info);
 
 #endif
 
