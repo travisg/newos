@@ -1,0 +1,7 @@
+# dev i386 console makefile
+KERNEL_DEV_I386_VMWCONSOLE_DIR := dev/arch/i386/vmwconsole
+
+MY_INCLUDES += -I$(KERNEL_DEV_I386_VMWCONSOLE_DIR)
+
+MY_OBJS += \
+	$(KERNEL_DEV_I386_VMWCONSOLE_DIR)/vmwconsole.o
