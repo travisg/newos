@@ -1,3 +1,4 @@
+#if !KERNEL
 /*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
@@ -43,3 +44,4 @@ int getchar(void)
 	sys_read(0, &c, 0, 1);
 	return c;
 }
+#endif

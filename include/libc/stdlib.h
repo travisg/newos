@@ -29,6 +29,13 @@ void * calloc(size_t, size_t);
 void * memalign(size_t, size_t);
 void * valloc(size_t);
 
+/* terrible hack to get around the different kernel name for malloc and free */
+#if KERNEL
+#define malloc kmalloc
+#define free kfree
+#include <kernel/heap.h>
+#endif
+
 char *getenv(char const *);
 int   setenv(char const *, char const *, int);
 int   putenv(char const *);
