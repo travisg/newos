@@ -11,7 +11,9 @@
 #include <kernel/cbuf.h>
 
 int udp_input(cbuf *buf, ifnet *i, ipv4_addr source_address, ipv4_addr target_address);
-int udp_open(netaddr *addr, uint16 port, void **prot_data);
+int udp_open(void **prot_data);
+int udp_bind(void *prot_data, sockaddr *addr);
+int udp_connect(void *prot_data, sockaddr *addr);
 int udp_close(void *prot_data);
 ssize_t udp_recvfrom(void *prot_data, void *buf, ssize_t len, sockaddr *saddr, int flags, bigtime_t timeout);
 ssize_t udp_sendto(void *prot_data, const void *buf, ssize_t len, sockaddr *addr);

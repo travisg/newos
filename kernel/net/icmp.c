@@ -35,6 +35,18 @@ int icmp_input(cbuf *buf, ifnet *i, ipv4_addr source_ipaddr)
 	// calculate the checksum on the whole thing
 	if(cbuf_ones_cksum16(buf, 0, 0xffff) != 0) {
 		dprintf("icmp message fails cksum\n");
+#if NET_CHATTY
+	{
+		int i;
+		for(i=0; i<cbuf_get_len(buf); i++) {
+			if((i % 8) == 0) {
+				dprintf("\n0x%x: ", i);
+			}
+			dprintf("0x%x ", *(unsigned char *)cbuf_get_ptr(buf, i));
+		}
+		dprintf("\n");
+	}
+#endif
 		err = ERR_NET_BAD_PACKET;
 		goto ditch_message;
 	}

@@ -14,6 +14,7 @@
 #include <kernel/net/ipv4.h>
 #include <kernel/net/misc.h>
 #include <string.h>
+#include <stdlib.h>
 
 typedef struct tcp_header {
 	uint16 source_port;
@@ -68,6 +69,15 @@ typedef struct tcp_socket {
 	uint16 local_port;
 	uint16 remote_port;
 
+	/* rx */
+	sem_id read_sem;
+	uint32 rx_win_size;
+	uint32 rx_win_low;
+
+	/* tx */
+	sem_id write_sem;
+	uint32 tx_win_low;
+
 } tcp_socket;
 
 typedef struct tcp_socket_key {
@@ -107,10 +117,22 @@ typedef struct udp_endpoint {
 
 static tcp_socket *socket_table;
 static mutex socket_table_lock;
+static int next_ephemeral_port = 1024;
+
+#define SYN_RETRANSMIT_TIMEOUT 1000000
+#define DEFAULT_RX_WINDOW_SIZE (32*1024)
+
+#define SEQUENCE_GTE(a, b) ((int)((a) - (b)) >= 0)
+#define SEQUENCE_LTE(a, b) ((int)((a) - (b)) <= 0)
+#define SEQUENCE_GT(a, b) ((int)((a) - (b)) > 0)
+#define SEQUENCE_LT(a, b) ((int)((a) - (b)) < 0)
 
 // forward decls
 static void tcp_send(ipv4_addr dest_addr, uint16 dest_port, ipv4_addr src_addr, uint16 source_port, cbuf *buf, tcp_flags flags,
 	uint32 ack, const void *options, uint16 options_length, uint32 sequence, uint16 window_size);
+static void tcp_socket_send(tcp_socket *s, cbuf *data, tcp_flags flags, const void *options, uint16 options_length, uint32 sequence);
+static void handle_ack(tcp_socket *s, uint32 sequence, uint32 window_size, bool with_data);
+static void handle_data(tcp_socket *s, cbuf *buf);
 static int destroy_tcp_socket(tcp_socket *s);
 static tcp_socket *create_tcp_socket(void);
 
@@ -200,23 +222,61 @@ static tcp_socket *create_tcp_socket(void)
 	// set up the new socket structure
 	s->next = NULL;
 	s->state = STATE_CLOSED;
-	if(mutex_init(&s->lock, "socket lock") < 0) {
-		kfree(s);
-		return NULL;
-	}
+	if(mutex_init(&s->lock, "socket lock") < 0)
+		goto err;
+	s->read_sem = sem_create(0, "socket read sem");
+	if(s->read_sem < 0)
+		goto err1;
+	s->write_sem = sem_create(0, "socket write sem");
+	if(s->write_sem < 0)
+		goto err2;
 	s->ref_count = 1;
 	s->local_addr = 0;
 	s->local_port = 0;
 	s->remote_addr = 0;
 	s->remote_port = 0;
+	s->rx_win_size = DEFAULT_RX_WINDOW_SIZE;
+	s->rx_win_low = 0;
+	s->tx_win_low = rand();
 
 	return s;
+
+err2:
+	sem_delete(s->read_sem);
+err1:
+	mutex_destroy(&s->lock);
+err:
+	kfree(s);
+	return NULL;
 }
 
 static int destroy_tcp_socket(tcp_socket *s)
 {
+	sem_delete(s->read_sem);
 	mutex_destroy(&s->lock);
 	kfree(s);
+}
+
+static int bind_local_address(tcp_socket *s, netaddr *remote_addr)
+{
+	int err = 0;
+
+	// find the local ip address to bind this socket to
+	if(s->local_addr == 0) {
+		err = ipv4_lookup_srcaddr_for_dest(NETADDR_TO_IPV4(*remote_addr), &s->local_addr);
+		if(err < 0)
+			return err;
+	}
+
+	// find a local port to bind this socket to
+	// XXX hack hack hack
+	if(s->local_port == 0) {
+		s->local_port = atomic_add(&next_ephemeral_port, 1);
+		if(s->local_port >= 0x10000)
+			s->local_port = 0;
+	}
+
+	return err;
 }
 
 int tcp_input(cbuf *buf, ifnet *i, ipv4_addr source_address, ipv4_addr target_address)
@@ -227,12 +287,14 @@ int tcp_input(cbuf *buf, ifnet *i, ipv4_addr source_address, ipv4_addr target_ad
 	int length = cbuf_get_len(buf);
 	tcp_socket *s = NULL;
 	uint8 packet_flags;
+	uint16 header_len;
+	uint16 data_len;
 
 	header = cbuf_get_ptr(buf, 0);
 
 #if NET_CHATTY
-	dprintf("tcp_input: src port %d, dest port %d, buf len %d, checksum 0x%x\n",
-		ntohs(header->source_port), ntohs(header->dest_port), (int)cbuf_get_len(buf), ntohs(header->checksum));
+	dprintf("tcp_input: src port %d, dest port %d, buf len %d, checksum 0x%x, flags 0x%x\n",
+		ntohs(header->source_port), ntohs(header->dest_port), (int)cbuf_get_len(buf), ntohs(header->checksum), ntohs(header->length_flags) & 0x3f);
 #endif
 
 	// deal with the checksum check
@@ -263,6 +325,8 @@ int tcp_input(cbuf *buf, ifnet *i, ipv4_addr source_address, ipv4_addr target_ad
 
 	// get some data from the packet
 	packet_flags = ntohs(header->length_flags) & 0x3f;
+	header_len = ((ntohs(header->length_flags) >> 12) & 0x0f) * 4;
+	data_len = cbuf_get_len(buf) - header_len;
 
 	// see if it matches a socket we have
 	s = lookup_socket(source_address, target_address, ntohs(header->source_port), ntohs(header->dest_port));
@@ -273,6 +337,10 @@ int tcp_input(cbuf *buf, ifnet *i, ipv4_addr source_address, ipv4_addr target_ad
 
 	// lock the socket
 	mutex_lock(&s->lock);
+
+#if NET_CHATTY
+	dprintf("tcp_input: socket %p, state 0x%x\n", s, s->state);
+#endif
 
 	switch(s->state) {
 		case STATE_CLOSED:
@@ -292,8 +360,42 @@ int tcp_input(cbuf *buf, ifnet *i, ipv4_addr source_address, ipv4_addr target_ad
 			break;
 		}
 		case STATE_SYN_SENT:
+			s->tx_win_low++;
+			if(packet_flags & PKT_SYN) {
+				s->rx_win_low = ntohl(header->seq_num) + 1;
+				if(packet_flags & PKT_ACK) {
+					// they're acking our SYN
+					if(ntohl(header->ack_num) != s->tx_win_low)
+						goto send_reset;
+
+					tcp_socket_send(s, NULL, PKT_ACK, NULL, 0, s->tx_win_low);
+					s->state = STATE_ESTABLISHED;
+					sem_release(s->read_sem, 1);
+				} else {
+					// simultaneous open
+					// XXX handle
+					goto send_reset;
+				}
+			} else {
+				s->state = STATE_CLOSED;
+				goto ditch_packet;
+			}
+			break;
+		case STATE_ESTABLISHED: {
+			if(packet_flags & PKT_ACK)
+				handle_ack(s, ntohl(header->seq_num), ntohs(header->win_size), data_len > 0);
+
+			if(data_len > 0) {
+				handle_data(s, buf);
+				buf = NULL; // handle_data will deal with the buffer from now on
+			}
+
+			if(packet_flags & PKT_FIN) {
+				// XXX handle this
+			}
+			break;
+		}
 		case STATE_SYN_RCVD:
-		case STATE_ESTABLISHED:
 		case STATE_CLOSE_WAIT:
 		case STATE_LAST_ACK:
 		case STATE_CLOSING:
@@ -304,6 +406,9 @@ int tcp_input(cbuf *buf, ifnet *i, ipv4_addr source_address, ipv4_addr target_ad
 			dprintf("tcp_receive: incoming packet on socket with unhandled state %d\n", s->state);
 			goto ditch_packet;
 	}
+
+	err = NO_ERROR;
+	goto ditch_packet;
 
 send_reset:
 	if(!(packet_flags & PKT_RST))
@@ -316,11 +421,10 @@ ditch_packet:
 		dec_socket_ref(s);
 	}
 
-
 	return err;
 }
 
-int tcp_open(netaddr *addr, uint16 port, void **prot_data)
+int tcp_open(void **prot_data)
 {
 	tcp_socket *s;
 
@@ -328,9 +432,97 @@ int tcp_open(netaddr *addr, uint16 port, void **prot_data)
 	if(!s)
 		return ERR_NO_MEMORY;
 
+	*prot_data = s;
 
+	return NO_ERROR;
+}
+
+int tcp_bind(void *prot_data, sockaddr *addr)
+{
+	tcp_socket *s = prot_data;
+	int err = 0;
+
+	inc_socket_ref(s);
+	mutex_lock(&s->lock);
+
+	if(s->local_port != 0 || s->local_addr != 0) {
+		err = ERR_NET_SOCKET_ALREADY_BOUND;
+		goto out;
+	}
+
+	mutex_lock(&socket_table_lock);
+	hash_remove(socket_table, s);
+
+	// XXX check to see if this address is used or makes sense
+	s->local_port = addr->port;
+	s->local_addr = NETADDR_TO_IPV4(addr->addr);
+
+	hash_insert(socket_table, s);
+	mutex_unlock(&socket_table_lock);
+
+out:
+	mutex_unlock(&s->lock);
+	dec_socket_ref(s);
 
 	return 0;
+}
+
+int tcp_connect(void *prot_data, sockaddr *addr)
+{
+	tcp_socket *s = prot_data;
+	int err;
+	int i;
+
+	inc_socket_ref(s);
+	mutex_lock(&s->lock);
+
+	// see if the socket can be connected
+	if(s->state > STATE_CLOSED) {
+		err = ERR_NET_ALREADY_CONNECTED;
+		goto out;
+	}
+
+	// pull the socket out of the hash table
+	mutex_lock(&socket_table_lock);
+	hash_remove(socket_table, s);
+	mutex_unlock(&socket_table_lock);
+
+	// allocate a local address, if needed
+	if(s->local_port == 0 || s->local_addr == 0) {
+		err = bind_local_address(s, &addr->addr);
+		if(err < 0)
+			goto out;
+	}
+
+	s->remote_addr = NETADDR_TO_IPV4(addr->addr);
+	s->remote_port = addr->port;
+
+	mutex_lock(&socket_table_lock);
+	hash_insert(socket_table, s);
+	mutex_unlock(&socket_table_lock);
+
+	// welcome to the machine
+	s->state = STATE_SYN_SENT;
+	for(i=0; i < 3 && s->state != STATE_ESTABLISHED && s->state != STATE_CLOSED; i++) {
+		if(s->state == STATE_SYN_SENT)
+			tcp_socket_send(s, NULL, PKT_SYN, NULL, 0, s->tx_win_low);
+		mutex_unlock(&s->lock);
+		sem_acquire_etc(s->read_sem, 1, SEM_FLAG_TIMEOUT, SYN_RETRANSMIT_TIMEOUT, NULL);
+		mutex_lock(&s->lock);
+	}
+
+	if(s->state == STATE_CLOSED) {
+		err = ERR_NET_CONNECTION_REFUSED;
+		goto out;
+	}
+
+	err = NO_ERROR;
+
+out:
+	mutex_unlock(&s->lock);
+	dec_socket_ref(s);
+
+	return err;
 }
 
 int tcp_close(void *prot_data)
@@ -470,6 +662,20 @@ ssize_t udp_sendto(void *prot_data, const void *inbuf, ssize_t len, sockaddr *to
 }
 #endif
 
+static void handle_ack(tcp_socket *s, uint32 sequence, uint32 window_size, bool with_data)
+{
+	// XXX handle
+}
+
+static void handle_data(tcp_socket *s, cbuf *buf)
+{
+	tcp_header *header;
+
+	header = (tcp_header *)cbuf_get_ptr(buf, 0);
+
+
+}
+
 static void tcp_send(ipv4_addr dest_addr, uint16 dest_port, ipv4_addr src_addr, uint16 source_port, cbuf *buf, tcp_flags flags,
 	uint32 ack, const void *options, uint16 options_length, uint32 sequence, uint16 window_size)
 {
@@ -512,6 +718,13 @@ error:
 	cbuf_free_chain(buf);
 }
 
+static void tcp_socket_send(tcp_socket *s, cbuf *data, tcp_flags flags, const void *options, uint16 options_length, uint32 sequence)
+{
+	mutex_unlock(&s->lock);
+	tcp_send(s->remote_addr, s->remote_port, s->local_addr, s->local_port, data, flags, s->rx_win_low,
+			options, options_length, sequence, s->rx_win_size);
+	mutex_lock(&s->lock);
+}
 
 int tcp_init(void)
 {

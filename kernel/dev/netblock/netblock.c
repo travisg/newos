@@ -528,19 +528,20 @@ int netblock_dev_init(kernel_args *ka)
 	saddr.addr.len = 4;
 	saddr.addr.type = ADDR_TYPE_IP;
 	memset(&saddr.addr.addr[0], 0, 4);
-	dev->sockfd = socket_create(SOCK_PROTO_UDP, 0, &saddr);
+	dev->sockfd = socket_create(SOCK_PROTO_UDP, 0);
 	if(dev->sockfd < 0) {
 		dprintf("netblock_dev_init: error creating socket\n");
 		kfree(dev);
 		return -1;
 	}
+	socket_bind(dev->sockfd, &saddr);
 
 	mutex_init(&dev->lock, "netblock_lock");
 	dev->size = -1;
 
 	dev->saddr.port = 9999;
 	dev->saddr.addr.type = ADDR_TYPE_IP;
-	NETADDR_TO_IPV4(&dev->saddr.addr) = IPV4_DOTADDR_TO_ADDR(192, 168, 0, 3);
+	NETADDR_TO_IPV4(dev->saddr.addr) = IPV4_DOTADDR_TO_ADDR(192, 168, 0, 3);
 
 	devfs_publish_device("disk/netblock/0/raw", dev, &netblock_hooks);
 

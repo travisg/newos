@@ -13,6 +13,7 @@
 #include <kernel/net/ipv4.h>
 #include <kernel/net/icmp.h>
 #include <kernel/net/udp.h>
+#include <kernel/net/tcp.h>
 #include <kernel/net/arp.h>
 #include <string.h>
 
@@ -639,10 +640,10 @@ int ipv4_input(cbuf *buf, ifnet *i)
 		for(iaddr = i->addr_list; iaddr; iaddr = iaddr->next) {
 			if(iaddr->addr.type == ADDR_TYPE_IP) {
 				// see if it matches one of this interface's ip addresses
-				if(dest == NETADDR_TO_IPV4(&iaddr->addr))
+				if(dest == NETADDR_TO_IPV4(iaddr->addr))
 					break;
 				// see if it matches the broadcast address
-				if(dest == NETADDR_TO_IPV4(&iaddr->broadcast))
+				if(dest == NETADDR_TO_IPV4(iaddr->broadcast))
 					break;
 			}
 		}

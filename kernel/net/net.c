@@ -37,13 +37,14 @@ static int net_test_thread2(void *unused)
 	addr.addr.len = 4;
 	addr.addr.type = ADDR_TYPE_IP;
 	addr.port = 9998;
-	id = socket_create(SOCK_PROTO_UDP, 9998, &addr);
+	id = socket_create(SOCK_PROTO_UDP, 0);
+	socket_bind(id, &addr);
 	dprintf("net_test_thread: id %d\n", id);
 
 	saddr.port = 9999;
 	saddr.addr.len = 4;
 	saddr.addr.type = ADDR_TYPE_IP;
-	NETADDR_TO_IPV4(&saddr.addr) = 0x7f000001; // loopback
+	NETADDR_TO_IPV4(saddr.addr) = 0x7f000001; // loopback
 
 	strcpy(buf, "loopback test");
 
@@ -67,7 +68,8 @@ static int net_test_thread3(void *unused)
 	addr.addr.len = 4;
 	addr.addr.type = ADDR_TYPE_IP;
 	addr.port = 9999;
-	id = socket_create(SOCK_PROTO_UDP, 9999, &addr);
+	id = socket_create(SOCK_PROTO_UDP, 0);
+	socket_bind(id, &addr);
 	dprintf("net_test_thread: id %d\n", id);
 
 	for(;;) {
@@ -77,8 +79,29 @@ static int net_test_thread3(void *unused)
 
 		bytes_read = socket_recvfrom(id, buf, sizeof(buf), &saddr);
 		dprintf("net_test_thread3: read %Ld bytes from host 0x%x, port %d: '%s'\n",
-			(long long)bytes_read, NETADDR_TO_IPV4(&saddr.addr), saddr.port, buf);
+			(long long)bytes_read, NETADDR_TO_IPV4(saddr.addr), saddr.port, buf);
 	}
+}
+
+static int net_test_thread4(void *unused)
+{
+	sock_id id;
+	sockaddr addr;
+	char buf[64];
+
+	thread_snooze(2000000);
+
+	id = socket_create(SOCK_PROTO_TCP, 0);
+//	socket_bind(id, &addr);
+	dprintf("net_test_thread4: id %d\n", id);
+
+	memset(&addr, 0, sizeof(addr));
+	addr.addr.len = 4;
+	addr.addr.type = ADDR_TYPE_IP;
+	addr.port = 9999;
+	NETADDR_TO_IPV4(addr.addr) = IPV4_DOTADDR_TO_ADDR(192,168,1,1);
+
+	socket_connect(id, &addr);
 }
 
 static int net_test_thread(void *unused)
@@ -92,7 +115,8 @@ static int net_test_thread(void *unused)
 	addr.addr.len = 4;
 	addr.addr.type = ADDR_TYPE_IP;
 	addr.port = 9999;
-	id = socket_create(SOCK_PROTO_UDP, 9999, &addr);
+	id = socket_create(SOCK_PROTO_UDP, 0);
+	socket_bind(id, &addr);
 	dprintf("net_test_thread: id %d\n", id);
 
 	for(;;) {
@@ -103,7 +127,7 @@ static int net_test_thread(void *unused)
 
 		bytes_read = socket_recvfrom(id, buf, sizeof(buf), &saddr);
 		dprintf("net_test_thread: read %Ld bytes from host 0x%x, port %d: '%s'\n",
-			(long long)bytes_read, NETADDR_TO_IPV4(&saddr.addr), saddr.port, buf);
+			(long long)bytes_read, NETADDR_TO_IPV4(saddr.addr), saddr.port, buf);
 
 		// send it back
 		bytes_written = socket_sendto(id, buf, bytes_read, &saddr);
@@ -161,13 +185,13 @@ int net_init_postdev(kernel_args *ka)
 	address = kmalloc(sizeof(ifaddr));
 	address->addr.len = 4;
 	address->addr.type = ADDR_TYPE_IP;
-	NETADDR_TO_IPV4(&address->addr) = IPV4_DOTADDR_TO_ADDR(192,168,1,99); // 192.168.0.99
+	NETADDR_TO_IPV4(address->addr) = IPV4_DOTADDR_TO_ADDR(192,168,1,99); // 192.168.0.99
 	address->netmask.len = 4;
 	address->netmask.type = ADDR_TYPE_IP;
-	NETADDR_TO_IPV4(&address->netmask) = IPV4_DOTADDR_TO_ADDR(255,255,255,0); // 255.255.255.0
+	NETADDR_TO_IPV4(address->netmask) = IPV4_DOTADDR_TO_ADDR(255,255,255,0); // 255.255.255.0
 	address->broadcast.len = 4;
 	address->broadcast.type = ADDR_TYPE_IP;
-	NETADDR_TO_IPV4(&address->broadcast) = IPV4_DOTADDR_TO_ADDR(192,168,1,255); // 192.168.0.255
+	NETADDR_TO_IPV4(address->broadcast) = IPV4_DOTADDR_TO_ADDR(192,168,1,255); // 192.168.0.255
 	if_bind_address(i, address);
 
 	// set up an initial routing table
@@ -179,12 +203,21 @@ int net_init_postdev(kernel_args *ka)
 	if_boot_interface(i);
 
 
-#if 1
+#if 0
 	// start the test thread
 {
 	thread_id id;
 
 	id = thread_create_kernel_thread("net tester", &net_test_thread, NULL);
+	thread_resume_thread(id);
+}
+#endif
+#if 1
+	// start the test thread
+{
+	thread_id id;
+
+	id = thread_create_kernel_thread("net tester 4", &net_test_thread4, NULL);
 	thread_resume_thread(id);
 }
 #endif

@@ -224,7 +224,7 @@ ditch_packet:
 	return err;
 }
 
-int udp_open(netaddr *addr, uint16 port, void **prot_data)
+int udp_open(void **prot_data)
 {
 	udp_endpoint *e;
 
@@ -234,7 +234,7 @@ int udp_open(netaddr *addr, uint16 port, void **prot_data)
 
 	mutex_init(&e->lock, "udp endpoint lock");
 	e->blocking_sem = sem_create(0, "udp endpoint sem");
-	e->port = port;
+	e->port = 0;
 	e->ref_count = 1;
 	udp_init_queue(&e->q);
 
@@ -245,6 +245,31 @@ int udp_open(netaddr *addr, uint16 port, void **prot_data)
 	*prot_data = e;
 
 	return 0;
+}
+
+int udp_bind(void *prot_data, sockaddr *addr)
+{
+	udp_endpoint *e = prot_data;
+	int err;
+
+	mutex_lock(&e->lock);
+
+	if(e->port == 0) {
+		// XXX search to make sure this port isn't used already
+		e->port = addr->port;
+		err = NO_ERROR;
+	} else {
+		err = ERR_NET_SOCKET_ALREADY_BOUND;
+	}
+
+	mutex_unlock(&e->lock);
+
+	return err;
+}
+
+int udp_connect(void *prot_data, sockaddr *addr)
+{
+	return ERR_NOT_ALLOWED;
 }
 
 int udp_close(void *prot_data)
@@ -291,7 +316,7 @@ retry:
 	if(saddr) {
 		saddr->addr.len = 4;
 		saddr->addr.type = ADDR_TYPE_IP;
-		NETADDR_TO_IPV4(&saddr->addr) = qe->src_address;
+		NETADDR_TO_IPV4(saddr->addr) = qe->src_address;
 		saddr->port = qe->src_port;
 	}
 
@@ -328,12 +353,12 @@ ssize_t udp_sendto(void *prot_data, const void *inbuf, ssize_t len, sockaddr *to
 	cbuf_memcpy_to_chain(buf, sizeof(udp_header), inbuf, len);
 
 	// set up the udp pseudo header
-	if(ipv4_lookup_srcaddr_for_dest(NETADDR_TO_IPV4(&toaddr->addr), &srcaddr) < 0) {
+	if(ipv4_lookup_srcaddr_for_dest(NETADDR_TO_IPV4(toaddr->addr), &srcaddr) < 0) {
 		cbuf_free_chain(buf);
 		return ERR_NET_NO_ROUTE;
 	}
 	pheader.source_addr = htonl(srcaddr);
-	pheader.dest_addr = htonl(NETADDR_TO_IPV4(&toaddr->addr));
+	pheader.dest_addr = htonl(NETADDR_TO_IPV4(toaddr->addr));
 	pheader.zero = 0;
 	pheader.protocol = IP_PROT_UDP;
 	pheader.udp_length = htons(total_len);
@@ -349,7 +374,7 @@ ssize_t udp_sendto(void *prot_data, const void *inbuf, ssize_t len, sockaddr *to
 		header->checksum = 0xffff;
 
 	// send it away
-	return ipv4_output(buf, NETADDR_TO_IPV4(&toaddr->addr), IP_PROT_UDP);
+	return ipv4_output(buf, NETADDR_TO_IPV4(toaddr->addr), IP_PROT_UDP);
 }
 
 int udp_init(void)

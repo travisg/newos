@@ -56,7 +56,7 @@ static netsocket *lookup_socket(sock_id id)
 	return s;
 }
 
-sock_id socket_create(int type, int flags, sockaddr *addr)
+sock_id socket_create(int type, int flags)
 {
 	netsocket *s;
 	void *prot_data;
@@ -64,10 +64,10 @@ sock_id socket_create(int type, int flags, sockaddr *addr)
 
 	switch(type) {
 		case SOCK_PROTO_UDP:
-			err = udp_open(&addr->addr, addr->port, &prot_data);
+			err = udp_open(&prot_data);
 			break;
 		case SOCK_PROTO_TCP:
-			err = tcp_open(&addr->addr, addr->port, &prot_data);
+			err = tcp_open(&prot_data);
 			break;
 		default:
 			prot_data = NULL;
@@ -104,6 +104,50 @@ err:
 		case SOCK_PROTO_TCP:
 			tcp_close(prot_data);
 			break;
+	}
+	return err;
+}
+
+int socket_bind(sock_id id, sockaddr *addr)
+{
+	netsocket *s;
+	ssize_t err;
+
+	s = lookup_socket(id);
+	if(!s)
+		return ERR_INVALID_HANDLE;
+
+	switch(s->type) {
+		case SOCK_PROTO_UDP:
+			err = udp_bind(s->prot_data, addr);
+			break;
+		case SOCK_PROTO_TCP:
+			err = tcp_bind(s->prot_data, addr);
+			break;
+		default:
+			err = ERR_INVALID_ARGS;
+	}
+	return err;
+}
+
+int socket_connect(sock_id id, sockaddr *addr)
+{
+	netsocket *s;
+	ssize_t err;
+
+	s = lookup_socket(id);
+	if(!s)
+		return ERR_INVALID_HANDLE;
+
+	switch(s->type) {
+		case SOCK_PROTO_UDP:
+			err = udp_connect(s->prot_data, addr);
+			break;
+		case SOCK_PROTO_TCP:
+			err = tcp_connect(s->prot_data, addr);
+			break;
+		default:
+			err = ERR_INVALID_ARGS;
 	}
 	return err;
 }

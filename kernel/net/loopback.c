@@ -60,13 +60,13 @@ int loopback_init(void)
 	address = kmalloc(sizeof(ifaddr));
 	address->addr.len = 4;
 	address->addr.type = ADDR_TYPE_IP;
-	NETADDR_TO_IPV4(&address->addr) = 0x7f000001; // 127.0.0.1
+	NETADDR_TO_IPV4(address->addr) = 0x7f000001; // 127.0.0.1
 	address->netmask.len = 4;
 	address->netmask.type = ADDR_TYPE_IP;
-	NETADDR_TO_IPV4(&address->netmask) = 0xff000000; // 255.255.255.0
+	NETADDR_TO_IPV4(address->netmask) = 0xff000000; // 255.255.255.0
 	address->broadcast.len = 4;
 	address->broadcast.type = ADDR_TYPE_IP;
-	NETADDR_TO_IPV4(&address->broadcast) = 0x7fffffff; // 127.255.255.255
+	NETADDR_TO_IPV4(address->broadcast) = 0x7fffffff; // 127.255.255.255
 	if_bind_address(i, address);
 
 	// set up an initial routing table
