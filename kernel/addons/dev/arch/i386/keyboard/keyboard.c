@@ -18,26 +18,6 @@
 
 #include <kernel/bus/isa/isa.h>
 
-#define LSHIFT  42
-#define RSHIFT  54
-#define SCRLOCK 70
-#define NUMLOCK 69
-#define CAPS    58
-#define SYSREQ  55
-#define F11     87
-#define F12     88
-
-#define LED_SCROLL 1
-#define LED_NUM    2
-#define LED_CAPS   4
-
-/* state of modifiers */
-static bool shift;
-static bool alt;
-static bool ctrl;
-static bool win;
-static bool menu;
-
 static int  leds;
 static sem_id keyboard_sem;
 static mutex keyboard_read_mutex;
@@ -209,42 +189,6 @@ static int handle_set1_keycode(unsigned char key)
 	if(queue_event) {
 		// do some special checks here
 		switch(event.keycode) {
-			/* check the status of modifier keys */
-			case KEY_LSHIFT:
-			case KEY_RSHIFT:
-				if(event.modifiers & KEY_MODIFIER_UP)
-					shift = false;
-				else
-					shift = true;
-				break;
-			case KEY_LALT:
-			case KEY_RALT:
-				if(event.modifiers & KEY_MODIFIER_UP)
-					alt = false;
-				else
-					alt = true;
-				break;
-			case KEY_LCTRL:
-			case KEY_RCTRL:
-				if(event.modifiers & KEY_MODIFIER_UP)
-					ctrl = false;
-				else
-					ctrl = true;
-				break;
-			case KEY_LWIN:
-			case KEY_RWIN:
-				if(event.modifiers & KEY_MODIFIER_UP)
-					win = false;
-				else
-					win = true;
-				break;
-			case KEY_MENU:
-				if(event.modifiers & KEY_MODIFIER_UP)
-					menu = false;
-				else
-					menu = true;
-				break;
-
 			// special stuff
 			case KEY_PRTSCRN:
 				panic("Keyboard Requested Halt\n");
@@ -257,18 +201,6 @@ static int handle_set1_keycode(unsigned char key)
 					dbg_set_serial_debug(dbg_get_serial_debug()?false:true);
 				break;
 		}
-
-		// apply modifiers
-		if(shift)
-			event.modifiers |= KEY_MODIFIER_SHIFT;
-		if(ctrl)
-			event.modifiers |= KEY_MODIFIER_CTRL;
-		if(alt)
-			event.modifiers |= KEY_MODIFIER_ALT;
-		if(win)
-			event.modifiers |= KEY_MODIFIER_WIN;
-		if(menu)
-			event.modifiers |= KEY_MODIFIER_MENU;
 
 		insert_in_buf(&event);
 		retval = INT_RESCHEDULE;
@@ -355,12 +287,6 @@ static int setup_keyboard(void)
 
 	if(mutex_init(&keyboard_read_mutex, "keyboard_read_mutex") < 0)
 		panic("could not create keyboard read mutex!\n");
-
-	shift = 0;
-	alt = 0;
-	ctrl = 0;
-	win = 0;
-	menu = 0;
 
 	leds = 0;
 	set_leds();

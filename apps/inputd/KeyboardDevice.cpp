@@ -92,18 +92,19 @@ const char shifted_caps_keymap[] = {
 
 int process_key_events(_key_event &kevent, Event &event)
 {
+	static bool shift = false;
 	static bool caps = false;
+	static bool ctrl = false;
+	static bool alt = false;
+	static bool win = false;
+	static bool menu = false;
 	char c;
-
-	// fill out some of the common stuff first
-	event.what = (kevent.modifiers & KEY_MODIFIER_DOWN) ? EVT_KEY_DOWN : EVT_KEY_UP;
-	event.modifiers = kevent.modifiers;
 
 	// deal with the common case first
 	if(kevent.keycode < KEY_NONE) {
 		const char *keymap;
 
-		if(kevent.modifiers & KEY_MODIFIER_SHIFT) {
+		if(shift) {
 			if(caps)
 				keymap = shifted_caps_keymap;
 			else
@@ -123,7 +124,54 @@ int process_key_events(_key_event &kevent, Event &event)
 	} else {
 		/* extended keys */
 		event.key = kevent.keycode; /* let the target figure this out */
+		switch(kevent.keycode) {
+			case KEY_CAPSLOCK:
+				caps = !caps;
+				break;
+			case KEY_LSHIFT:
+			case KEY_RSHIFT:
+				if(kevent.modifiers & KEY_MODIFIER_DOWN)
+					shift = true;
+				else
+					shift = false;
+				break;
+			case KEY_LCTRL:
+			case KEY_RCTRL:
+				if(kevent.modifiers & KEY_MODIFIER_DOWN)
+					ctrl = true;
+				else
+					ctrl = false;
+				break;
+			case KEY_LALT:
+			case KEY_RALT:
+				if(kevent.modifiers & KEY_MODIFIER_DOWN)
+					alt = true;
+				else
+					alt = false;
+				break;
+			case KEY_LWIN:
+			case KEY_RWIN:
+				if(kevent.modifiers & KEY_MODIFIER_DOWN)
+					win = true;
+				else
+					win = false;
+				break;
+			case KEY_MENU:
+				if(kevent.modifiers & KEY_MODIFIER_DOWN)
+					menu = true;
+				else
+					menu = false;
+				break;
+		}
 	}
+
+	event.what = (kevent.modifiers & KEY_MODIFIER_DOWN) ? EVT_KEY_DOWN : EVT_KEY_UP;
+	event.modifiers = (kevent.modifiers & KEY_MODIFIER_DOWN) ? EVT_MOD_KEYDOWN : EVT_MOD_KEYUP;
+	event.modifiers |= shift ? EVT_MOD_SHIFT : 0;
+	event.modifiers |= ctrl ? EVT_MOD_CTRL : 0;
+	event.modifiers |= alt ? EVT_MOD_ALT : 0;
+	event.modifiers |= win ? EVT_MOD_WIN : 0;
+	event.modifiers |= menu ? EVT_MOD_MENU : 0;
 	return 0;
 }
 
