@@ -279,30 +279,51 @@ int dprintf(const char *fmt, ...)
 char dbg_putch(char c)
 {
 	char ret;
-	int flags = int_disable_interrupts();
-	acquire_spinlock(&dbg_spinlock);
 
-	if(serial_debug_on)
+	if(serial_debug_on) {
+		int flags = int_disable_interrupts();
+		acquire_spinlock(&dbg_spinlock);
+
 		ret = arch_dbg_con_putch(c);
-	else
-		ret = c;
 
-	release_spinlock(&dbg_spinlock);
-	int_restore_interrupts(flags);
+		release_spinlock(&dbg_spinlock);
+		int_restore_interrupts(flags);
+	} else {
+		ret = c;
+	}
 
 	return ret;
 }
 
 void dbg_puts(const char *s)
 {
-	int flags = int_disable_interrupts();
-	acquire_spinlock(&dbg_spinlock);
+	if(serial_debug_on) {
+		int flags = int_disable_interrupts();
+		acquire_spinlock(&dbg_spinlock);
 
-	if(serial_debug_on)
 		arch_dbg_con_puts(s);
 
-	release_spinlock(&dbg_spinlock);
-	int_restore_interrupts(flags);
+		release_spinlock(&dbg_spinlock);
+		int_restore_interrupts(flags);
+	}
+}
+
+ssize_t dbg_write(const void *buf, ssize_t len)
+{
+	ssize_t ret;
+
+	if(serial_debug_on) {
+		int flags = int_disable_interrupts();
+		acquire_spinlock(&dbg_spinlock);
+
+		ret = arch_dbg_con_write(buf, len);
+
+		release_spinlock(&dbg_spinlock);
+		int_restore_interrupts(flags);
+	} else {
+		ret = len;
+	}
+	return ret;
 }
 
 int dbg_add_command(void (*func)(int, char **), const char *name, const char *desc)

@@ -11,4 +11,5 @@ include $(addsuffix /makefile, $(addprefix $(KERNEL_DIR)/$(KERNEL_DEV_DIR)/, \
 	arch/$(ARCH) \
 	console \
 	tty \
+	dprint \
 ))

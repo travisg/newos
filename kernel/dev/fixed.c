@@ -44,6 +44,7 @@ int fixed_devs_init(kernel_args *ka)
 #endif
 	console_dev_init(ka);
 	tty_dev_init(ka);
+	dprint_dev_init(ka);
 
 	return 0;
 }

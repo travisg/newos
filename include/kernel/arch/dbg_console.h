@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -10,6 +10,7 @@
 char arch_dbg_con_read(void);
 char arch_dbg_con_putch(char c);
 void arch_dbg_con_puts(const char *s);
+ssize_t arch_dbg_con_write(const void *buf, ssize_t len);
 int arch_dbg_con_init(kernel_args *ka);
 
 #endif

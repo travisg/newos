@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -111,5 +111,18 @@ void arch_dbg_con_puts(const char *s)
 		arch_dbg_con_putch(*s);
 		s++;
 	}
+}
+
+ssize_t arch_dbg_con_write(const void *buf, ssize_t len)
+{
+	const char *cbuf = (const char *)buf;
+	ssize_t ret = len;
+
+	while(len > 0) {
+		arch_dbg_con_putch(*cbuf);
+		cbuf++;
+		len--;
+	}
+	return ret;
 }
 

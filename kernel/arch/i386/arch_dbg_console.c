@@ -91,3 +91,16 @@ void arch_dbg_con_puts(const char *s)
 	}
 }
 
+ssize_t arch_dbg_con_write(const void *buf, ssize_t len)
+{
+	const char *cbuf = (const char *)buf;
+	ssize_t ret = len;
+
+	while(len > 0) {
+		arch_dbg_con_putch(*cbuf);
+		cbuf++;
+		len--;
+	}
+	return ret;
+}
+
