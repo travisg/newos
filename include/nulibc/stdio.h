@@ -18,12 +18,16 @@ extern "C"
 {
 #endif
 
-struct FILE;	/* declare as opaque type */
-typedef struct FILE FILE;
+
+struct __FILE;	/* declare as opaque type */
+typedef struct __FILE FILE;
 
 extern FILE *stdin;
 extern FILE *stdout;
 extern FILE *stderr;
+
+
+#define EOF -1
 
 
 int printf(char const *format, ...) __PRINTFLIKE(1,2);
@@ -39,10 +43,11 @@ int vasprintf(char **ret, char const *format, va_list ap);
 
 FILE *fopen(char const *, char const *);
 int  *fflush(FILE *);
-int  *fclose(FILE *);
+int  fclose(FILE *);
 
 int   feof(FILE *);
 char *fgets(char *, int, FILE *);
+void  clearerr(FILE *);
 
 int scanf(char const *format, ...);
 int fscanf(FILE *stream, char const *format, ...);
