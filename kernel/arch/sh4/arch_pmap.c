@@ -13,7 +13,7 @@
 #include <arch/sh4/sh4.h>
 #include <arch/sh4/vcpu.h>
 
-#include <nulibc/string.h>
+#include <string.h>
 
 #define CHATTY_PMAP 0
 

@@ -1,4 +1,13 @@
 KERNEL_ADDONS += $(addprefix $(KERNEL_ADDONS_BUILD_DIR)/, \
 	console/text/text \
 	console/vmware/vmware \
+	bus_managers/isa/isa \
+	busses/ide/ide_isa/ide_isa \
+	bus_managers/ide/ide \
+	bus_managers/scsi/scsi \
+	generic/locked_pool/locked_pool \
+	generic/scsi_periph/scsi_periph \
+	dev/disk/scsi/scsi_dsk/scsi_dsk \
+	dev/disk/netblock/netblock \
+	generic/blkman/blkman \
 )

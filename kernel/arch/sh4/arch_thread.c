@@ -8,7 +8,7 @@
 #include <kernel/int.h>
 #include <kernel/vm_priv.h>
 #include <kernel/arch/cpu.h>
-#include <nulibc/string.h>
+#include <string.h>
 
 static struct thread *curr_thread = NULL;
 

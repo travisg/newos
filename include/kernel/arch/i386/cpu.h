@@ -98,8 +98,6 @@ struct iframe {
 	unsigned int user_ss;
 };
 
-#define GDB_REGISTER_FILE_COUNT 14
-
 struct arch_cpu_info {
 	// empty
 };

@@ -7,7 +7,7 @@
 #include <kernel/debug.h>
 #include <kernel/heap.h>
 #include <kernel/fs/devfs.h>
-#include <nulibc/string.h>
+#include <string.h>
 #include <newos/errors.h>
 
 #include "rtl8139_dev.h"

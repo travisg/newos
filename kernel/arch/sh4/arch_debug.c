@@ -6,6 +6,11 @@
 #include <kernel/debug.h>
 #include <kernel/arch/debug.h>
 
+int arch_dbg_init(kernel_args *ka)
+{
+	return 0;
+}
+
 void dbg_make_register_file(unsigned int *file, const struct iframe *frame)
 {
 	// XXX gdb stub for SH4 obviously not implemented.

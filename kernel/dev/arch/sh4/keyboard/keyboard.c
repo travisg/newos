@@ -7,8 +7,8 @@
 #include <kernel/heap.h>
 #include <kernel/int.h>
 #include <kernel/sem.h>
-#include <nulibc/string.h>
-#include <nulibc/stdio.h>
+#include <string.h>
+#include <stdio.h>
 #include <kernel/lock.h>
 #include <kernel/fs/devfs.h>
 #include <kernel/arch/cpu.h>

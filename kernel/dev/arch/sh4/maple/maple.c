@@ -11,8 +11,8 @@
 #include <kernel/vm.h>
 #include <kernel/arch/cpu.h>
 #include <kernel/fs/devfs.h>
-#include <nulibc/string.h>
-#include <nulibc/stdio.h>
+#include <string.h>
+#include <stdio.h>
 #include <kernel/dev/arch/sh4/maple/maple_bus.h>
 
 #define MAPLE(x) (*(volatile unsigned int *)((0xa05f6c00)+(x)))

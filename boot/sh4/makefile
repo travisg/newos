@@ -15,10 +15,10 @@ MY_OBJS := \
 	vcpu.o \
 	vcpu_c.o
 
-MY_INCLUDES := -Iinclude -Iinclude/nulibc
+MY_INCLUDES := $(STDINCLUDE)
 MY_CFLAGS := $(KERNEL_CFLAGS)
 MY_LDFLAGS := -dN
-MY_LIBS := $(KLIBS)
+MY_LIBS := $(LIBS_BUILD_DIR)/libc/libc.a
 MY_LIBPATHS :=
 MY_DEPS :=
 MY_LINKSCRIPT := $(MY_SRCDIR)/stage2.ld

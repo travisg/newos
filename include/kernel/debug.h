@@ -8,6 +8,8 @@
 #include <kernel/kernel.h>
 #include <boot/stage2.h>
 #include <sys/cdefs.h>
+#include <kernel/cpu.h>
+#include <kernel/arch/debug.h>
 
 extern int dbg_register_file[GDB_REGISTER_FILE_COUNT];
 

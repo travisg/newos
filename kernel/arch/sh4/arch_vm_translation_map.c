@@ -12,7 +12,7 @@
 #include <kernel/vm_priv.h>
 #include <kernel/arch/cpu.h>
 #include <kernel/debug.h>
-#include <nulibc/string.h>
+#include <string.h>
 #include <boot/stage2.h>
 
 #include <arch/sh4/sh4.h>
