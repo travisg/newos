@@ -18,7 +18,7 @@ include $(LIB_DEPS)
 
 # build prototypes
 $(LIB_DIR)/%.o: $(LIB_DIR)/%.c 
-	$(CC) $(GLOBAL_CFLAGS) -Iinclude -c $< -o $@
+	$(CC) -c $< $(GLOBAL_CFLAGS) -Iinclude -o $@
 
 $(LIB_DIR)/%.d: $(LIB_DIR)/%.c
 	@echo "making deps for $<..."
@@ -29,5 +29,5 @@ $(LIB_DIR)/%.d: $(LIB_DIR)/%.S
 	@(echo -n $(dir $@);$(CC) $(GLOBAL_CFLAGS) -Iinclude -M -MG $<) > $@
 
 $(LIB_DIR)/%.o: $(LIB_DIR)/%.S
-	$(CC) $(GLOBAL_CFLAGS) -Iinclude -c $< -o $@
+	$(CC) -c $< $(GLOBAL_CFLAGS) -Iinclude -o $@
 

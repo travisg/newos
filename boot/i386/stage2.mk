@@ -21,7 +21,7 @@ include $(STAGE2_DEPS)
 
 # 
 $(STAGE2_DIR)/%.o: $(STAGE2_DIR)/%.c 
-	$(CC) $(GLOBAL_CFLAGS) -Iinclude -I$(STAGE2_DIR) -c $< -o $@
+	$(CC) -c $< $(GLOBAL_CFLAGS) -Iinclude -I$(STAGE2_DIR) -o $@
 
 $(STAGE2_DIR)/%.d: $(STAGE2_DIR)/%.c
 	@echo "making deps for $<..."
@@ -32,4 +32,4 @@ $(STAGE2_DIR)/%.d: $(STAGE2_DIR)/%.S
 	@(echo -n $(dir $@);$(CC) $(GLOBAL_CFLAGS) -Iinclude -I$(STAGE2_DIR) -M -MG $<) > $@
 
 $(STAGE2_DIR)/%.o: $(STAGE2_DIR)/%.S
-	$(CC) $(GLOBAL_CFLAGS) -Iinclude -I$(STAGE2_DIR) -c $< -o $@
+	$(CC) -c $< $(GLOBAL_CFLAGS) -Iinclude -I$(STAGE2_DIR) -o $@

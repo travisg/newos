@@ -37,7 +37,7 @@ include $(KERNEL_DEPS)
 KERNEL_INCLUDES = -Iinclude -Iboot/$(ARCH) -I$(KERNEL_DIR) -I$(KERNEL_ARCH_DIR)
 
 $(KERNEL_DIR)/%.o: $(KERNEL_DIR)/%.c
-	$(CC) $(GLOBAL_CFLAGS) $(KERNEL_INCLUDES) -c $< -o $@
+	$(CC) -c $< $(GLOBAL_CFLAGS) $(KERNEL_INCLUDES) -o $@
 
 $(KERNEL_DIR)/%.d: $(KERNEL_DIR)/%.c
 	@echo "making deps for $<..."
@@ -48,4 +48,4 @@ $(KERNEL_DIR)/%.d: $(KERNEL_DIR)/%.S
 	@(echo -n $(dir $@);$(CC) $(GLOBAL_CFLAGS) $(KERNEL_INCLUDES) -M -MG $<) > $@
 
 $(KERNEL_DIR)/%.o: $(KERNEL_DIR)/%.S
-	$(CC) $(GLOBAL_CFLAGS) $(KERNEL_INCLUDES) -c $< -o $@
+	$(CC) -c $< $(GLOBAL_CFLAGS) $(KERNEL_INCLUDES) -o $@
