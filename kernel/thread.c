@@ -371,7 +371,7 @@ static void dump_thread_info(int argc, char **argv)
 	while((t = hash_next(thread_hash, &i)) != NULL) {
 		if(strcmp(argv[1], t->name) == 0 || t->id == id) {
 			_dump_thread_info(t);
-			return;
+			break;
 		}
 	}
 	hash_close(thread_hash, &i, false);
@@ -772,7 +772,7 @@ int thread_test()
 	int i;
 	char temp[64];
 	
-#if 1
+#if 0
 	for(i=0; i<NUM_TEST_THREADS; i++) {
 		sprintf(temp, "test_thread%d", i);
 //		t = create_kernel_thread(NULL, temp, &test_thread, i % THREAD_NUM_PRIORITY_LEVELS);
@@ -787,22 +787,25 @@ int thread_test()
 	t = create_kernel_thread(NULL, "test starter thread", &test_thread_starter_thread, THREAD_MAX_PRIORITY);
 	thread_enqueue_run_q(t);
 #endif
-
+#if 0
 	t = create_kernel_thread(NULL, "test thread 2", &test_thread2, 5);
 	thread_enqueue_run_q(t);
-
+#endif
+#if 0
 	t = create_kernel_thread(NULL, "test thread 3", &test_thread3, 5);
 	thread_enqueue_run_q(t);
-
+#endif
+#if 1
 	t = create_kernel_thread(NULL, "test thread 4", &test_thread4, 5);
 	thread_enqueue_run_q(t);
-
+#endif
+#if 0
 //	t = create_kernel_thread(NULL, "test thread 5", &test_thread5, 5);
 //	thread_enqueue_run_q(t);
 
 //	t = create_kernel_thread(NULL, "panic thread", &panic_thread, THREAD_MAX_PRIORITY);
 //	thread_enqueue_run_q(t);
-
+#endif
 	dprintf("thread_test: done creating test threads\n");
 	
 	return 0;
@@ -940,19 +943,34 @@ static int proc_create_proc2(void)
 	struct proc *p;
 	char *path;
 	addr entry;
+	char ustack_name[128];
+	void *ustack_addr;
 
 	dprintf("proc_create_proc2: entry\n");
 
 	t = thread_get_current_thread();
 	p = t->proc;
 
+	// create an address space for this process
 	p->aspace = vm_create_aspace(p->name, USER_BASE, USER_SIZE);
 	if(p->aspace == NULL) {
 		// XXX clean up proc
+		panic("proc_create_proc2: could not create user address space\n");
 		return NULL;
 	}
 	
-	path = t->args;
+	// create an initial primary stack region
+	ustack_addr = (void *)((USER_STACK_REGION  - STACK_SIZE) + USER_STACK_REGION_SIZE);
+	sprintf(ustack_name, "%s_primary_stack", p->name);
+	vm_create_area(p->aspace, ustack_name, (void **)&ustack_addr,
+		AREA_EXACT_ADDRESS, STACK_SIZE, LOCK_RW);
+	t->user_stack_area = vm_find_area_by_name(p->aspace, ustack_name);
+	if(t->user_stack_area == NULL) {
+		panic("proc_create_proc2: could not create default user stack area\n");
+		return NULL;
+	}
+		
+	path = p->args;
 	dprintf("proc_create_proc2: loading elf binary '%s'\n", path);
 
 	err = elf_load(path, p, 0, &entry);
@@ -962,6 +980,11 @@ static int proc_create_proc2(void)
 	}
 	 
 	dprintf("proc_create_proc2: loaded elf. entry = 0x%x\n", entry);
+
+	// jump to the entry point in user space
+	arch_thread_enter_uspace(entry, (addr)ustack_addr + STACK_SIZE);
+
+	// never gets here
 
 	return 0;
 }
@@ -986,8 +1009,12 @@ struct proc *proc_create_proc(const char *path, const char *name, int priority)
 	}
 	
 	// copy the args over
-	t->args = kmalloc(strlen(path) + 1);
-	strcpy(t->args, path);
+	p->args = kmalloc(strlen(path) + 1);
+	if(p->args == NULL) {
+		// XXX clean up proc
+		return NULL;
+	}
+	strcpy(p->args, path);
 	
 	state = int_disable_interrupts();
 	GRAB_PROC_LOCK();

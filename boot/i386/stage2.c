@@ -163,7 +163,12 @@ void _start(unsigned int mem, char *str)
 		gdt[2] = 0x0000ffff; // seg 0x8
 		gdt[3] = 0x00cf9a00;
 		gdt[4] = 0x0000ffff; // seg 0x10
-		gdt[5] = 0x00cf9300;
+		gdt[5] = 0x00cf9200;
+		gdt[6] = 0x0000ffff; // seg 0x1b
+		gdt[7] = 0x00cffa00;
+		gdt[8] = 0x0000ffff; // seg 0x23
+		gdt[9] = 0x00cff200;
+		// gdt[10] & gdt[11] will be filled later by the kernel
 	
 		gdt_descr.a = GDT_LIMIT - 1;
 		gdt_descr.b = (unsigned int *)next_vpage;
@@ -217,6 +222,7 @@ void _start(unsigned int mem, char *str)
 	ka->arch_args.page_hole = 0xffc00000;
 	ka->cpu_kstack[0].start = new_stack - STACK_SIZE * PAGE_SIZE;
 	ka->cpu_kstack[0].size = STACK_SIZE * PAGE_SIZE;
+	ka->num_cpus = 1;
 #if 0			
 	dprintf("kernel args at 0x%x\n", ka);
 	dprintf("pgdir = 0x%x\n", ka->pgdir);

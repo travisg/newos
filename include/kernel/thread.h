@@ -27,6 +27,7 @@ struct proc {
 	char *name;
 	void *ioctx;
 	void *cwd;
+	void *args;
 	struct aspace *kaspace;
 	struct aspace *aspace;
 	struct thread *thread_list;
@@ -38,7 +39,6 @@ struct thread {
 	struct thread *proc_next;
 	struct thread *q_next;
 	char *name;
-	void *args;
 	thread_id id;
 	int priority;
 	int state;
@@ -55,6 +55,7 @@ struct thread {
 
 struct thread_queue {
 	struct thread *head;
+	
 	struct thread *tail;
 };
 

@@ -81,12 +81,19 @@ int elf_load(const char *path, struct proc *p, int flags, addr *entry)
 		
 		sprintf(area_name, "%s_seg%d", path, i);
 		
-		area_addr = (char *)(addr)pheaders[i].p_vaddr;
+		area_addr = (char *)ROUNDOWN(pheaders[i].p_vaddr, PAGE_SIZE);
 		a = vm_create_area(p->aspace, area_name, (void **)&area_addr, AREA_EXACT_ADDRESS,
-			ROUNDUP(pheaders[i].p_memsz, PAGE_SIZE), LOCK_RW);
+			ROUNDUP(pheaders[i].p_memsz + (pheaders[i].p_vaddr % PAGE_SIZE), PAGE_SIZE), LOCK_RW);
 		if(a < 0) {
 			dprintf("error allocating area!\n");
 			err = -1;
+			goto error;
+		}
+		
+		len = pheaders[i].p_filesz;
+		err = vfs_read(fd, area_addr + (pheaders[i].p_vaddr % PAGE_SIZE), pheaders[i].p_offset, &len);
+		if(err < 0) {
+			dprintf("error reading in seg %d\n", i);
 			goto error;
 		}
 		

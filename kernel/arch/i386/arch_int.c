@@ -6,6 +6,7 @@
 #include <kernel/int.h>
 #include <kernel/thread.h>
 #include <kernel/smp.h>
+#include <kernel/syscalls.h>
 
 #include <kernel/arch/cpu.h>
 #include <kernel/arch/int.h>
@@ -89,7 +90,6 @@ static void set_intr_gate(int n, void *addr)
 	_set_gate(&idt[n], (unsigned int)addr, 14, 0);
 }
 
-/*
 static void set_trap_gate(int n, void *addr)
 {
 	_set_gate(&idt[n], (unsigned int)addr, 15, 0);
@@ -99,7 +99,7 @@ static void set_system_gate(int n, void *addr)
 {
 	_set_gate(&idt[n], (unsigned int)addr, 15, 3);
 }
-*/
+
 void arch_int_enable_interrupts()
 {
 	asm("sti");
@@ -134,7 +134,7 @@ void i386_handle_trap(struct int_frame frame)
 	int ret;
 
 //	if(frame.vector != 0x20)
-//		dprintf("i386_handle_trap: vector 0x%x, cpu %d\n", frame.vector, smp_get_current_cpu());
+//		dprintf("i386_handle_trap: vector 0x%x, ip 0x%x, cpu %d\n", frame.vector, frame.eip, smp_get_current_cpu());
 	switch(frame.vector) {
 		case 8:
 			ret = i386_double_fault(frame.error_code);
@@ -149,9 +149,17 @@ void i386_handle_trap(struct int_frame frame)
 			ret = i386_page_fault(cr2, frame.eip);
 			break;
 		}
+		case 99:
+			ret = syscall_dispatcher(frame.eax, frame.ecx, frame.edx, (unsigned long *)&frame.eax);
+			break;
 		default:
-			interrupt_ack(frame.vector); // ack the 8239 (if applicable)
-			ret = int_io_interrupt_handler(frame.vector);
+			if(frame.vector >= 0x20) {
+				interrupt_ack(frame.vector); // ack the 8239 (if applicable)
+				ret = int_io_interrupt_handler(frame.vector);
+			} else {
+				panic("i386_handle_trap: unhandled cpu trap 0x%x!\n", frame.vector);
+				ret = INT_NO_RESCHEDULE;
+			}
 			break;
 	}
 	
@@ -214,6 +222,8 @@ int arch_int_init(kernel_args *ka)
 	set_intr_gate(45,  &trap45);
 	set_intr_gate(46,  &trap46);
 	set_intr_gate(47,  &trap47);
+
+	set_system_gate(99, &trap99);
 
 	set_intr_gate(251, &trap251);
 	set_intr_gate(252, &trap252);

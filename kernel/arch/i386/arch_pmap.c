@@ -158,7 +158,7 @@ int pmap_map_page(addr paddr, addr vaddr, int lock)
 		e = &curr_pgdir[index];
 		init_pdentry(e);
 		e->addr = ADDR_SHIFT(pgtable);
-		e->supervisor = lock & LOCK_KERNEL;
+		e->supervisor = !(lock & LOCK_KERNEL);
 		e->rw = lock & LOCK_RW;
 		e->present = 1;
 
@@ -173,7 +173,7 @@ int pmap_map_page(addr paddr, addr vaddr, int lock)
 
 	init_ptentry(pentry);
 	pentry->addr = ADDR_SHIFT(paddr);
-	pentry->supervisor = lock & LOCK_KERNEL;
+	pentry->supervisor = !(lock & LOCK_KERNEL);
 	pentry->rw = lock & LOCK_RW;
 	pentry->present = 1;
 

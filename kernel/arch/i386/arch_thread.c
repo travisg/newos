@@ -7,6 +7,7 @@
 #include <kernel/arch/thread.h>
 #include <kernel/arch/cpu.h>
 #include <kernel/arch/i386/pmap.h>
+#include <kernel/int.h>
 
 int arch_proc_init_proc_struct(struct proc *p, bool kernel)
 {
@@ -96,6 +97,8 @@ void arch_thread_context_switch(struct thread *t_from, struct thread *t_to)
 	for(i=0; i<11; i++)
 		dprintf("*esp[%d] (0x%x) = 0x%x\n", i, ((unsigned int *)new_at->esp + i), *((unsigned int *)new_at->esp + i));
 #endif
+	i386_set_kstack(t_to->kernel_stack_area->base + KSTACK_SIZE);
+
 	if(t_from->proc->arch_info.pgdir_phys != t_to->proc->arch_info.pgdir_phys) { 
 		i386_context_switch(&t_from->arch_info.esp, t_to->arch_info.esp, t_to->proc->arch_info.pgdir_phys);
 	} else {
@@ -108,4 +111,16 @@ void arch_thread_dump_info(void *info)
 	struct arch_thread *at = (struct arch_thread *)info;
 
 	dprintf("\tesp: 0x%x\n", at->esp);
+}
+
+void arch_thread_enter_uspace(addr entry, addr ustack_top)
+{
+	dprintf("arch_thread_entry_uspace: entry 0x%x, ustack_top 0x%x\n",
+		entry, ustack_top);
+
+	int_disable_interrupts();
+
+	i386_set_kstack(thread_get_current_thread()->kernel_stack_area->base + KSTACK_SIZE);
+
+	i386_enter_uspace(entry, ustack_top - 4);
 }

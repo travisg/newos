@@ -4,6 +4,8 @@
 #include <string.h>
 #include <printf.h>
 
+#define NO_SMP 0
+
 static unsigned int mp_mem_phys = 0;
 static unsigned int mp_mem_virt = 0;
 static struct mp_flt_struct *mp_flt_ptr = NULL;
@@ -173,7 +175,11 @@ static int smp_find_mp_config(kernel_args *ka)
 		if(mp_flt_ptr != NULL)
 			break;
 	}
+#if NO_SMP
+	if(0) {
+#else
 	if(mp_flt_ptr != NULL) {
+#endif
 		mp_mem_phys = smp_scan_spots[i].start;
 		mp_mem_virt = smp_scan_spots[i].start;
 

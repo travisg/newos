@@ -47,6 +47,8 @@ int _start(kernel_args *oldka, int cpu)
 		smp_init(&ka);
 		timer_init(&ka);
 		
+		arch_cpu_init2(&ka);
+		
 		sem_init(&ka);
 		dprintf("sem up\n");
 

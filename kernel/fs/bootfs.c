@@ -546,7 +546,7 @@ int bootfs_read(void *_fs, void *_vnode, void *_cookie, void *buf, off_t pos, si
 	struct bootfs_cookie *cookie = _cookie;
 	int err = 0;
 
-	dprintf("bootfs_read: vnode 0x%x, cookie 0x%x, pos 0x%x 0x%x, len 0x%x\n", v, cookie, pos, len);
+	dprintf("bootfs_read: vnode 0x%x, cookie 0x%x, pos 0x%x 0x%x, len 0x%x (0x%x)\n", v, cookie, pos, len, *len);
 
 	sem_acquire(fs->sem, 1);
 	

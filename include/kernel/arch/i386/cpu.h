@@ -4,15 +4,56 @@
 #define PAGE_SIZE 4096
 
 #define KERNEL_CODE_SEG 0x8
+#define KERNEL_DATA_SEG 0x10
+#define USER_CODE_SEG 0x1b
+#define USER_DATA_SEG 0x23
+#define TSS 0x28
 
 typedef struct desc_struct {
 	unsigned int a,b;
 } desc_table;
 
+struct tss {
+	uint16 prev_task;
+	uint16 unused0;
+	uint32 sp0;
+	uint32 ss0;
+	uint32 sp1;
+	uint32 ss1;
+	uint32 sp2;
+	uint32 ss2;
+	uint32 sp3;
+	uint32 ss3;
+	uint32 cr3;
+	uint32 eip, eflags, eax, ecx, edx, ebx, esp, ebp, esi, edi;
+	uint32 es, cs, ss, ds, fs, gs;
+	uint32 ldt_seg_selector;
+	uint16 unused1;
+	uint16 io_map_base;
+};
+
+struct tss_descriptor {
+	uint16 limit_00_15;
+	uint16 base_00_15;
+	uint32 base_23_16 : 8;
+	uint32 type : 4;
+	uint32 zero : 1;
+	uint32 dpl : 2;
+	uint32 present : 1;
+	uint32 limit_19_16 : 4;
+	uint32 avail : 1;
+	uint32 zero1 : 1;
+	uint32 zero2 : 1;
+	uint32 granularity : 1;
+	uint32 base_31_24 : 8;
+};
+
 #define nop() __asm__ ("nop"::)
 
 void setup_system_time(unsigned int cv_factor);
 void i386_context_switch(unsigned int **old_esp, unsigned int *new_esp, unsigned int *new_pgdir);
+void i386_enter_uspace(addr entry, addr ustack_top);
+void i386_set_kstack(addr kstack);
 
 #define iret() __asm__ ("iret"::)
 

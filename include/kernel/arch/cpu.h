@@ -23,6 +23,7 @@ int test_and_set(int *val, int set_to);
 
 time_t system_time();
 int arch_cpu_init(kernel_args *ka);
+int arch_cpu_init2(kernel_args *ka);
 void reboot();
 
 #endif

@@ -382,14 +382,49 @@ void vm_dump_areas(struct aspace *aspace)
 	struct area *area;
 
 	dprintf("area dump of address space '%s', base 0x%x, size 0x%x:\n", aspace->name, aspace->base, aspace->size);
-	
-	area = aspace->area_list;
-	while(area != NULL) {
+
+	for(area = aspace->area_list; area != NULL; area = area->next) {
 		dprintf("area 0x%x: ", area->id);
 		dprintf("base_addr = 0x%x ", area->base);
 		dprintf("size = 0x%x ", area->size);
-		dprintf("name = '%s'\n", area->name);
-		area = area->next;
+		dprintf("name = '%s' ", area->name);
+		dprintf("lock = 0x%x\n", area->lock);
+	}
+}
+
+static void dump_aspace_areas(int argc, char **argv)
+{
+	int id = -1;
+	unsigned long num;
+	struct aspace *as;
+
+	if(argc < 2) {
+		dprintf("aspace_areas: not enough arguments\n");
+		return;
+	}
+
+	// if the argument looks like a hex number, treat it as such
+	if(strlen(argv[1]) > 2 && argv[1][0] == '0' && argv[1][1] == 'x') {
+		num = atoul(argv[1]);
+		id = num;
+	}
+
+	for(as = aspace_list; as != NULL; as = as->next) {
+		if(as->id == id || !strcmp(argv[1], as->name)) {
+			vm_dump_areas(as);
+			break;
+		}
+	}
+}
+
+static void dump_aspace_list(int argc, char **argv)
+{
+	struct aspace *as;
+
+	dprintf("id\t%32s\tbase\tsize\t\tarea_count\n", "name");
+	for(as = aspace_list; as != NULL; as = as->next) {
+		dprintf("0x%x\t%32s\t0x%x\t0x%x\t0x%x\n",
+			as->id, as->name, as->base, as->size, as->area_count);
 	}
 }
 
@@ -620,6 +655,8 @@ int vm_init(kernel_args *ka)
 	vm_dump_areas(kernel_aspace);
 
 	// add some debugger commands
+	dbg_add_command(&dump_aspace_areas, "aspace_areas", "Dump areas in an address space");
+	dbg_add_command(&dump_aspace_list, "aspaces", "Dump a list of all address spaces");
 	dbg_add_command(&vm_dump_kspace_areas, "area_dump_kspace", "Dump kernel space areas");
 	dbg_add_command(&dump_free_page_table, "free_pages", "Dump free page table list");	
 //	dbg_add_command(&display_mem, "dl", "dump memory long words (64-bit)");

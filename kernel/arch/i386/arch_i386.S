@@ -123,6 +123,24 @@ skip_pgdir_swap:
 //	popfl
 	ret
 
+// void i386_enter_uspace(addr entry, addr ustack_top);
+.global i386_enter_uspace
+i386_enter_uspace:
+	movl	4(%esp),%eax	// get entry point
+	movl	8(%esp),%ebx	// get user stack
+	movw	$0x23,%cx
+	movw	%cx,%ds
+	movw	%cx,%es
+	movw	%cx,%fs
+	movw	%cx,%gs
+
+	pushl	$0x23			// user data segment
+	pushl	%ebx			// user stack
+	pushl	$(1 << 9) | 2	// user flags
+	pushl	$0x1b			// user code segment
+	pushl	%eax			// user IP
+	iret
+
 null_idt_descr:
 	.word	0
 	.word	0,0

@@ -13,6 +13,7 @@ KERNEL_OBJS = \
         $(KERNEL_OBJ_DIR)/timer.o \
         $(KERNEL_OBJ_DIR)/sem.o \
         $(KERNEL_OBJ_DIR)/smp.o \
+        $(KERNEL_OBJ_DIR)/syscalls.o \
         $(KERNEL_OBJ_DIR)/thread.o \
         $(KERNEL_OBJ_DIR)/vfs.o \
         $(KERNEL_OBJ_DIR)/vm.o

@@ -19,7 +19,7 @@ APPS_CLEAN += testappclean
 
 $(TESTAPP_OBJ_DIR)/%.o: $(TESTAPP_DIR)/%.c
 	@mkdir -p $(TESTAPP_OBJ_DIR)
-	$(CC) -c $< $(GLOBAL_CFLAGS) $(APPS_INCLUDES) -o $@
+	$(CC) -c $< $(GLOBAL_CFLAGS) -O0 $(APPS_INCLUDES) -o $@
 
 $(TESTAPP_OBJ_DIR)/%.d: $(TESTAPP_DIR)/%.c
 	@mkdir -p $(TESTAPP_OBJ_DIR)

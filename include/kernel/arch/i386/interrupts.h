@@ -8,6 +8,8 @@ void trap32();void trap33();void trap34();void trap35();void trap36();void trap3
 void trap38();void trap39();void trap40();void trap41();void trap42();void trap43();
 void trap44();void trap45();void trap46();void trap47();
 
+void trap99();
+
 void trap251();void trap252();void trap253();void trap254();void trap255();
 #endif
 
