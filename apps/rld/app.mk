@@ -12,7 +12,7 @@ DEPS += $(RLDAPP_OBJS:.o=.d)
 RLDAPP = $(RLDAPP_OBJ_DIR)/rld.so
 
 $(RLDAPP): $(RLDAPP_OBJS) $(LIBS) $(GLUE)
-	$(LD) --script=$(RLDAPP_DIR)/arch/$(ARCH)/rld.ld -L $(LIBGCC_PATH) -o $@ $(RLDAPP_OBJS) $(LIBS_SYSCALLS) $(LIBC) $(LIBGCC)
+	$(LD) --script=$(RLDAPP_DIR)/arch/$(ARCH)/rld.ld -L $(LIBGCC_PATH) -o $@ $(RLDAPP_OBJS) $(LIBS_SYSCALLS) $(NULIBC_STATIC) $(LIBGCC)
 
 rldappclean:
 	rm -f $(RLDAPP_OBJS) $(RLDAPP)
