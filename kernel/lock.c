@@ -6,6 +6,7 @@
 #include <kernel/sem.h>
 #include <kernel/lock.h>
 #include <kernel/debug.h>
+#include <kernel/arch/cpu.h>
 
 int recursive_lock_create(recursive_lock *lock)
 {
@@ -52,3 +53,47 @@ void recursive_lock_unlock(recursive_lock *lock)
 		sem_release(lock->sem, 1);
 	}
 }
+
+int mutex_init(mutex *m, const char *in_name)
+{
+	const char *name;
+
+	if(m == NULL)
+		return -1;
+
+	if(in_name == NULL)
+		name = "mutex_sem";
+	else
+		name = in_name;
+
+	m->count = 0;
+
+	m->sem = sem_create(0, name);
+	if(m->sem < 0)
+		return m->sem;
+
+	return 0;
+}
+
+void mutex_destroy(mutex *m)
+{
+	if(m == NULL)
+		return;
+
+	if(m->sem >= 0) {
+		sem_delete(m->sem);
+	}
+}
+
+void mutex_lock(mutex *m)
+{
+	if(atomic_add(&m->count, 1) >= 1)
+		sem_acquire(m->sem, 1);
+}
+
+void mutex_unlock(mutex *m)
+{
+	if(atomic_add(&m->count, -1) > 1)
+		sem_release(m->sem, 1);
+}
+

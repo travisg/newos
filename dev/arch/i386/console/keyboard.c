@@ -28,7 +28,7 @@
 static bool shift;
 static int  leds;
 static sem_id keyboard_sem;
-static sem_id keyboard_read_sem;
+static mutex keyboard_read_mutex;
 static char keyboard_buf[1024];
 static unsigned int head, tail;
 
@@ -81,11 +81,11 @@ retry:
 	sem_acquire(keyboard_sem, 1);
 
 	// critical section
-	sem_acquire(keyboard_read_sem, 1);
+	mutex_lock(&keyboard_read_mutex);
 
 	saved_tail = tail;
 	if(head == saved_tail) {
-		sem_release(keyboard_read_sem, 1);
+		mutex_unlock(&keyboard_read_mutex);
 		goto retry;
 	} else if(head < saved_tail) {
 		// copy out of the buffer
@@ -111,7 +111,7 @@ retry:
 		}
 	}
 
-	sem_release(keyboard_read_sem, 1);
+	mutex_unlock(&keyboard_read_mutex);
 
 	*len = copied_bytes;
 
@@ -198,9 +198,8 @@ int setup_keyboard()
 	if(keyboard_sem < 0)
 		panic("could not create keyboard sem!\n");
 	
-	keyboard_read_sem = sem_create(1, "keyboard_read_sem");
-	if(keyboard_read_sem < 0)
-		panic("could not create keyboard read sem!\n");
+	if(mutex_init(&keyboard_read_mutex, "keyboard_read_mutex") < 0)
+		panic("could not create keyboard read mutex!\n");
 	
 	shift = 0;
 	leds = 0;

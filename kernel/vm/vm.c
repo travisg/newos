@@ -13,6 +13,7 @@
 #include <kernel/int.h>
 #include <kernel/smp.h>
 #include <kernel/sem.h>
+#include <kernel/lock.h>
 
 #include <boot/stage2.h>
 
@@ -266,7 +267,7 @@ static vm_region *_vm_create_anonymous_region(vm_address_space *aspace, char *na
 			vm_page *page;
 			off_t offset = 0;
 
-			sem_acquire(cache_ref->sem, 1);
+			mutex_lock(&cache_ref->lock);
 			(*aspace->translation_map.ops->lock)(&aspace->translation_map);
 			for(va = region->base; va < region->base + region->size; va += PAGE_SIZE, offset += PAGE_SIZE) {
 				err = (*aspace->translation_map.ops->query)(&aspace->translation_map,
@@ -284,7 +285,7 @@ static vm_region *_vm_create_anonymous_region(vm_address_space *aspace, char *na
 				vm_cache_insert_page(cache_ref, page, offset);
 			}
 			(*aspace->translation_map.ops->unlock)(&aspace->translation_map);
-			sem_release(cache_ref->sem, 1);
+			mutex_unlock(&cache_ref->lock);
 			break;
 		}
 		case REGION_WIRING_WIRED_PHYSICAL: {
@@ -294,7 +295,7 @@ static vm_region *_vm_create_anonymous_region(vm_address_space *aspace, char *na
 			vm_page *page;
 			off_t offset = 0;
 
-			sem_acquire(cache_ref->sem, 1);
+			mutex_lock(&cache_ref->lock);
 			(*aspace->translation_map.ops->lock)(&aspace->translation_map);
 			for(va = region->base; va < region->base + region->size; va += PAGE_SIZE, offset += PAGE_SIZE, phys_addr += PAGE_SIZE) {
 				err = (*aspace->translation_map.ops->map)(&aspace->translation_map,
@@ -314,7 +315,7 @@ static vm_region *_vm_create_anonymous_region(vm_address_space *aspace, char *na
 				vm_cache_insert_page(cache_ref, page, offset);
 			}
 			(*aspace->translation_map.ops->unlock)(&aspace->translation_map);
-			sem_release(cache_ref->sem, 1);
+			mutex_unlock(&cache_ref->lock);
 			break;
 		}
 		case REGION_WIRING_WIRED_CONTIG: {
@@ -331,7 +332,7 @@ static vm_region *_vm_create_anonymous_region(vm_address_space *aspace, char *na
 			}
 			phys_addr = page->ppn * PAGE_SIZE;
 
-			sem_acquire(cache_ref->sem, 1);
+			mutex_lock(&cache_ref->lock);
 			(*aspace->translation_map.ops->lock)(&aspace->translation_map);
 			for(va = region->base; va < region->base + region->size; va += PAGE_SIZE, offset += PAGE_SIZE, phys_addr += PAGE_SIZE) {
 				page = vm_lookup_page(phys_addr / PAGE_SIZE);
@@ -346,7 +347,7 @@ static vm_region *_vm_create_anonymous_region(vm_address_space *aspace, char *na
 				vm_cache_insert_page(cache_ref, page, offset);
 			}
 			(*aspace->translation_map.ops->unlock)(&aspace->translation_map);
-			sem_release(cache_ref->sem, 1);
+			mutex_unlock(&cache_ref->lock);
 
 			break;
 		}
@@ -749,8 +750,8 @@ int vm_init_postsem(kernel_args *ka)
 	kernel_aspace->translation_map.lock.sem = sem_create(1, "recursive_lock");
 	
 	for(region = kernel_aspace->virtual_map.region_list; region; region = region->next) {
-		if(region->cache_ref->sem < 0) {
-			region->cache_ref->sem = sem_create(1, "cache_ref_sem");
+		if(region->cache_ref->lock.sem < 0) {
+			region->cache_ref->lock.sem = sem_create(1, "cache_ref_mutex");
 		}
 	}
 
@@ -832,23 +833,23 @@ int vm_soft_fault(addr address, bool is_write, bool is_user)
 	
 	dummy_page.state = PAGE_STATE_INACTIVE;
 	
-	sem_acquire(cache_ref->sem, 1);
+	mutex_lock(&cache_ref->lock);
 
 	for(;;) {
-		 page = vm_cache_lookup_page(cache_ref, cache_offset);
-		 if(page != NULL && page->state != PAGE_STATE_BUSY) {
-		 	vm_page_set_state(page, PAGE_STATE_BUSY);
-		 	sem_release(cache_ref->sem, 1);
-		 	break;
-		 }
+		page = vm_cache_lookup_page(cache_ref, cache_offset);
+		if(page != NULL && page->state != PAGE_STATE_BUSY) {
+			vm_page_set_state(page, PAGE_STATE_BUSY);
+			mutex_unlock(&cache_ref->lock);
+			break;
+		}
 		 
-		 if(page == NULL)
-		 	break;
+		if(page == NULL)
+			break;
 		 
-		 // page must be busy
-		 sem_release(cache_ref->sem, 1);
-		 thread_snooze(20000);
-		 sem_acquire(cache_ref->sem, 1);
+		// page must be busy
+		mutex_unlock(&cache_ref->lock);
+		thread_snooze(20000);
+		mutex_lock(&cache_ref->lock);
 	}
 
 	if(page == NULL) {
@@ -863,17 +864,17 @@ int vm_soft_fault(addr address, bool is_write, bool is_user)
 				panic("not done\n");
 			}
 		}
-		sem_release(cache_ref->sem, 1);
+		mutex_unlock(&cache_ref->lock);
 	}
 
 	if(page == NULL) {
 		// still haven't found a page, so zero out a new one
 		page = vm_page_allocate_page(PAGE_STATE_CLEAR);
 		dprintf("vm_soft_fault: just allocated page 0x%x\n", page->ppn);
-		sem_acquire(cache_ref->sem, 1);
+		mutex_lock(&cache_ref->lock);
 		vm_cache_remove_page(cache_ref, &dummy_page);
 		vm_cache_insert_page(cache_ref, page, cache_offset);
-		sem_release(cache_ref->sem, 1);
+		mutex_unlock(&cache_ref->lock);
 		dummy_page.state = PAGE_STATE_INACTIVE;
 	}
 
@@ -903,9 +904,9 @@ int vm_soft_fault(addr address, bool is_write, bool is_user)
 	sem_release(map->sem, READ_COUNT);
 
 	if(dummy_page.state == PAGE_STATE_BUSY) {
-		sem_acquire(cache_ref->sem, 1);
+		mutex_lock(&cache_ref->lock);
 		vm_cache_remove_page(cache_ref, &dummy_page);
-		sem_release(cache_ref->sem, 1);
+		mutex_unlock(&cache_ref->lock);
 		dummy_page.state = PAGE_STATE_INACTIVE;
 	}
 

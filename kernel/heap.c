@@ -4,7 +4,7 @@
 */
 #include <kernel/kernel.h>
 #include <kernel/vm.h>
-#include <kernel/sem.h>
+#include <kernel/lock.h>
 #include <kernel/heap.h>
 #include <kernel/debug.h>
 
@@ -68,7 +68,7 @@ static struct heap_bin bins[] = {
 };
 
 static const int bin_count = sizeof(bins) / sizeof(struct heap_bin);
-static sem_id heap_sem = -1;
+static mutex heap_lock;
 
 // called from vm_init. The heap should already be mapped in at this point, we just
 // do a little housekeeping to set up the data structure.
@@ -83,14 +83,17 @@ int heap_init(addr new_heap_base, unsigned int new_heap_size)
 	// zero out the heap alloc table at the base of the heap
 	memset((void *)heap_alloc_table, 0, (heap_size / PAGE_SIZE) * sizeof(struct heap_page));
 	
+	// pre-init the mutex to at least fall through any semaphore calls
+	heap_lock.sem = -1;
+	heap_lock.count = 0;
+	
 	return 0;
 }
 
 int heap_init_postsem(kernel_args *ka)
 {
-	heap_sem = sem_create(1, "heap_sem");
-	if(heap_sem < 0) {
-		panic("error creating heap semaphore\n");
+	if(mutex_init(&heap_lock, "heap_mutex") < 0) {
+		panic("error creating heap mutex\n");
 	}
 	return 0;
 }
@@ -131,7 +134,7 @@ void *kmalloc(unsigned int size)
 	unsigned int i;
 	struct heap_page *page;
 
-	sem_acquire(heap_sem, 1);
+	mutex_lock(&heap_lock);
 	
 	for (bin_index = 0; bin_index < bin_count; bin_index++)
 		if (size <= bins[bin_index].element_size)
@@ -164,7 +167,7 @@ void *kmalloc(unsigned int size)
 	}
 
 out:
-	sem_release(heap_sem, 1);
+	mutex_unlock(&heap_lock);
 	
 //	dprintf("kmalloc: asked to allocate size %d, returning ptr = %p\n", size, address);
 
@@ -180,7 +183,7 @@ void kfree(void *address)
 	if (address == NULL)
 		return;
 
-	sem_acquire(heap_sem, 1);
+	mutex_lock(&heap_lock);
 
 //	dprintf("kfree: asked to free at ptr = %p\n", address);
 
@@ -201,5 +204,5 @@ void kfree(void *address)
 	bin->free_count++;
 
 out:
-	sem_release(heap_sem, 1);
+	mutex_unlock(&heap_lock);
 }

@@ -38,7 +38,7 @@ static int first_free_vmapping;
 static int num_virtual_chunks;
 queue mapped_paddr_lru;
 static ptentry *iospace_pgtables = NULL;
-sem_id iospace_sem;
+mutex iospace_mutex;
 sem_id iospace_full_sem;
 
 // vm_translation object stuff
@@ -355,7 +355,8 @@ static int get_physical_page_tmap(addr pa, addr *va, int flags)
 	paddr_chunk_desc *replaced_pchunk;
 	
 restart:
-	sem_acquire(iospace_sem, 1);
+
+	mutex_lock(&iospace_mutex);
 	
 	// see if the page is already mapped
 	index = pa / IOSPACE_CHUNK_SIZE;
@@ -365,7 +366,7 @@ restart:
 			queue_remove_item(&mapped_paddr_lru, &paddr_desc[index]);
 		}
 		*va = paddr_desc[index].va + pa % IOSPACE_CHUNK_SIZE;
-		sem_release(iospace_sem, 1);
+		mutex_unlock(&iospace_mutex);
 		return 0;
 	}
 
@@ -384,7 +385,7 @@ restart:
 		}			
 
 		map_iospace_chunk(paddr_desc[index].va, index * IOSPACE_CHUNK_SIZE);
-		sem_release(iospace_sem, 1);
+		mutex_unlock(&iospace_mutex);
 
 		return 0;
 	}
@@ -395,7 +396,7 @@ restart:
 		if(flags == PHYSICAL_PAGE_NO_WAIT) {
 			panic("get_physical_page_tmap: no more free iospace slots available!\n");
 		} else {
-			sem_release(iospace_sem, 1);
+			mutex_unlock(&iospace_mutex);
 			sem_acquire(iospace_full_sem, 1);
 			goto restart;
 		}
@@ -409,7 +410,7 @@ restart:
 
 	map_iospace_chunk(paddr_desc[index].va, index * IOSPACE_CHUNK_SIZE);
 
-	sem_release(iospace_sem, 1);
+	mutex_unlock(&iospace_mutex);
 	return 0;
 }
 
@@ -417,11 +418,11 @@ static int put_physical_page_tmap(addr va)
 {
 	paddr_chunk_desc *desc;
 
-	sem_acquire(iospace_sem, 1);
+	mutex_lock(&iospace_mutex);
 	
 	desc = virtual_pmappings[va / IOSPACE_CHUNK_SIZE];
 	if(desc == NULL) {
-		sem_release(iospace_sem, 1);
+		mutex_unlock(&iospace_mutex);
 		return -1;
 	}
 	
@@ -434,7 +435,7 @@ static int put_physical_page_tmap(addr va)
 		sem_release_etc(iospace_full_sem, 1, SEM_FLAG_NO_RESCHED); 
 	}
 
-	sem_release(iospace_sem, 1);
+	mutex_unlock(&iospace_mutex);
 	
 	return 0;
 }
@@ -544,7 +545,8 @@ int vm_translation_map_module_init(kernel_args *ka)
 	first_free_vmapping = 0;
 	queue_init(&mapped_paddr_lru);
 	memset(iospace_pgtables, 0, PAGE_SIZE * (IOSPACE_SIZE / (PAGE_SIZE * 1024)));
-	iospace_sem = -1;
+	iospace_mutex.sem = -1;
+	iospace_mutex.count = 0;
 	iospace_full_sem = -1;
 
 	dprintf("mapping iospace_pgtables\n");
@@ -577,7 +579,7 @@ int vm_translation_map_module_init2(kernel_args *ka)
 	
 	dprintf("vm_translation_map_module_init2: entry\n");
 
-	iospace_sem = sem_create(1, "iospace_sem");
+	mutex_init(&iospace_mutex, "iospace_mutex");
 	iospace_full_sem = sem_create(1, "iospace_full_sem");
 
 	// unmap the page hole hack we were using before

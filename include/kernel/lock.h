@@ -18,5 +18,15 @@ void recursive_lock_destroy(recursive_lock *lock);
 void recursive_lock_lock(recursive_lock *lock);
 void recursive_lock_unlock(recursive_lock *lock);
 
+typedef struct mutex {
+	int count;
+	sem_id sem;
+} mutex;
+
+int mutex_init(mutex *m, const char *name);
+void mutex_destroy(mutex *m);
+void mutex_lock(mutex *m);
+void mutex_unlock(mutex *m);
+
 #endif
 

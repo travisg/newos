@@ -47,7 +47,7 @@ enum {
 // vm_cache_ref
 typedef struct vm_cache_ref {
 	struct vm_cache *cache;
-	sem_id sem;
+	mutex lock;
 	
 	struct vm_region *region_list;
 

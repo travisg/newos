@@ -7,7 +7,8 @@
 #include <kernel/debug.h>
 #include <kernel/heap.h>
 #include <kernel/int.h>
-#include <kernel/sem.h>
+#include <kernel/lock.h>
+#include <kernel/vm.h>
 #include <kernel/vfs.h>
 
 #include <kernel/arch/cpu.h>
@@ -50,7 +51,7 @@ struct pci_cfg {
 
 struct pci_fs {
 	fs_id id;
-	sem_id sem;
+	mutex lock;
 	void *covered_vnode;
 	void *redir_vnode;
 	int root_vnode; // just a placeholder to return a pointer to
@@ -65,7 +66,7 @@ static int pci_open(void *_fs, void *_base_vnode, const char *path, const char *
 	
 	dprintf("pci_open: entry on vnode 0x%x, path = '%s'\n", _base_vnode, path);
 
-	sem_acquire(fs->sem, 1);
+	mutex_lock(&fs->lock);
 	if(fs->redir_vnode != NULL) {
 		// we were mounted on top of
 		redir->redir = true;
@@ -87,7 +88,7 @@ static int pci_open(void *_fs, void *_base_vnode, const char *path, const char *
 
 out:
 err:
-	sem_release(fs->sem, 1);
+	mutex_unlock(&fs->lock);
 
 	return err;
 }
@@ -112,17 +113,17 @@ static int pci_create(void *_fs, void *_base_vnode, const char *path, const char
 	
 	dprintf("pci_create: entry\n");
 
-	sem_acquire(fs->sem, 1);
+	mutex_lock(&fs->lock);
 	
 	if(fs->redir_vnode != NULL) {
 		// we were mounted on top of
 		redir->redir = true;
 		redir->vnode = fs->redir_vnode;
 		redir->path = path;
-		sem_release(fs->sem, 1);
+		mutex_unlock(&fs->lock);
 		return 0;
 	}
-	sem_release(fs->sem, 1);
+	mutex_unlock(&fs->lock);
 	
 	return -1;
 }
@@ -259,15 +260,10 @@ static int pci_mount(void **fs_cookie, void *flags, void *covered_vnode, fs_id i
 	fs->redir_vnode = NULL;
 	fs->id = id;
 
-	{
-		char temp[64];
-		sprintf(temp, "pci_sem%d", id);
-		
-		fs->sem = sem_create(1, temp);
-		if(fs->sem < 0) {
-			err = -1;
-			goto err1;
-		}
+	err = mutex_init(&fs->lock, "pci_mutex");
+	if(err < 0) {
+		err = -1;
+		goto err1;
 	}
 
 	*root_vnode = (void *)&fs->root_vnode;
@@ -285,7 +281,7 @@ static int pci_unmount(void *_fs)
 {
 	struct pci_fs *fs = _fs;
 
-	sem_delete(fs->sem);
+	mutex_destroy(&fs->lock);
 	kfree(fs);
 
 	return 0;	

@@ -7,7 +7,7 @@
 #include <kernel/vm_cache.h>
 #include <kernel/vm_page.h>
 #include <kernel/heap.h>
-#include <kernel/sem.h>
+#include <kernel/lock.h>
 #include <kernel/debug.h>
 #include <kernel/arch/cpu.h>
 
@@ -37,11 +37,7 @@ vm_cache_ref *vm_cache_ref_create(vm_cache *cache)
 		return NULL;
 		
 	ref->cache = cache;
-	ref->sem = sem_create(1, "cache_ref_sem");
-//	if(ref->sem < 0) {
-//		kfree(ref);
-//		return NULL;
-//	}
+	mutex_init(&ref->lock, "cache_ref_mutex");
 	ref->region_list = NULL;
 	ref->ref_count = 0;
 
@@ -76,7 +72,7 @@ void vm_cache_release_ref(vm_cache_ref *cache_ref)
 			vm_page_set_state(old_page, PAGE_STATE_FREE);
 		}
 
-		sem_delete(cache_ref->sem);
+		mutex_destroy(&cache_ref->lock);
 		kfree(cache_ref->cache);
 		kfree(cache_ref);
 	}

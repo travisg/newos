@@ -7,7 +7,8 @@
 #include <kernel/debug.h>
 #include <kernel/khash.h>
 #include <kernel/heap.h>
-#include <kernel/sem.h>
+#include <kernel/lock.h>
+#include <kernel/vm.h>
 
 #include <kernel/fs/rootfs.h>
 
@@ -35,7 +36,7 @@ struct rootfs_vnode {
 
 struct rootfs {
 	fs_id id;
-	sem_id sem;
+	mutex lock;
 	int next_vnode_id;
 	void *covered_vnode;
 	void *vnode_list_hash;
@@ -249,15 +250,10 @@ int rootfs_mount(void **fs_cookie, void *flags, void *covered_vnode, fs_id id, v
 	fs->id = id;
 	fs->next_vnode_id = 0;
 
-	{
-		char temp[64];
-		sprintf(temp, "rootfs_sem%d", id);
-		
-		fs->sem = sem_create(1, temp);
-		if(fs->sem < 0) {
-			err = -1;
-			goto err1;
-		}
+	err = mutex_init(&fs->lock, "rootfs_mutex");
+	if(err < 0) {
+		err = -1;
+		goto err1;
 	}
 	
 	fs->vnode_list_hash = hash_init(ROOTFS_HASH_SIZE, (addr)&v->all_next - (addr)v,
@@ -305,7 +301,7 @@ err4:
 err3:
 	hash_uninit(fs->vnode_list_hash);
 err2:
-	sem_delete(fs->sem);
+	mutex_destroy(&fs->lock);
 err1:	
 	kfree(fs);
 err:
@@ -328,7 +324,7 @@ int rootfs_unmount(void *_fs)
 	hash_close(fs->vnode_list_hash, &i, false);
 	
 	hash_uninit(fs->vnode_list_hash);
-	sem_delete(fs->sem);
+	mutex_destroy(&fs->lock);
 	kfree(fs);
 	
 	return 0;
@@ -376,7 +372,7 @@ int rootfs_open(void *_fs, void *_base_vnode, const char *path, const char *stre
 
 	dprintf("rootfs_open: path '%s', stream '%s', stream_type %d, base_vnode 0x%x\n", path, stream, stream_type, base);
 
-	sem_acquire(fs->sem, 1);
+	mutex_lock(&fs->lock);
 
 	v = rootfs_get_vnode_from_path(fs, base, path, &start, &redir->redir);
 	if(v == NULL) {
@@ -385,7 +381,7 @@ int rootfs_open(void *_fs, void *_base_vnode, const char *path, const char *stre
 	}
 	if(redir->redir == true) {
 		// loop back into the vfs because the parse hit a mount point
-		sem_release(fs->sem, 1);
+		mutex_unlock(&fs->lock);
 		redir->vnode = v->redir_vnode;
 		redir->path = &path[start];
 		return 0;
@@ -410,7 +406,7 @@ int rootfs_open(void *_fs, void *_base_vnode, const char *path, const char *stre
 	*_vnode = v;	
 
 err:	
-	sem_release(fs->sem, 1);
+	mutex_unlock(&fs->lock);
 
 	return err;
 }
@@ -424,7 +420,7 @@ int rootfs_seek(void *_fs, void *_vnode, void *_cookie, off_t pos, seek_type see
 
 	dprintf("rootfs_seek: vnode 0x%x, cookie 0x%x, pos 0x%x 0x%x, seek_type %d\n", v, cookie, pos, seek_type);
 	
-	sem_acquire(fs->sem, 1);
+	mutex_lock(&fs->lock);
 	
 	switch(cookie->s->type) {
 		case STREAM_TYPE_DIR:
@@ -448,7 +444,7 @@ int rootfs_seek(void *_fs, void *_vnode, void *_cookie, off_t pos, seek_type see
 			err = -1;
 	}
 
-	sem_release(fs->sem, 1);
+	mutex_unlock(&fs->lock);
 
 	return err;
 }
@@ -462,7 +458,7 @@ int rootfs_read(void *_fs, void *_vnode, void *_cookie, void *buf, off_t pos, si
 
 	dprintf("rootfs_read: vnode 0x%x, cookie 0x%x, pos 0x%x 0x%x, len 0x%x\n", v, cookie, pos, len);
 
-	sem_acquire(fs->sem, 1);
+	mutex_lock(&fs->lock);
 	
 	switch(cookie->s->type) {
 		case STREAM_TYPE_DIR: {
@@ -490,7 +486,7 @@ int rootfs_read(void *_fs, void *_vnode, void *_cookie, void *buf, off_t pos, si
 	}
 
 err:
-	sem_release(fs->sem, 1);
+	mutex_unlock(&fs->lock);
 
 	return err;
 }
@@ -532,7 +528,7 @@ int rootfs_create(void *_fs, void *_base_vnode, const char *path, const char *st
 
 	dprintf("rootfs_create: base 0x%x, path = '%s', stream = '%s', stream_type = %d\n", base, path, stream, stream_type);
 	
-	sem_acquire(fs->sem, 1);
+	mutex_lock(&fs->lock);
 	
 	dir = rootfs_get_container_vnode_from_path(fs, base, path, &start, &redir->redir);
 	if(dir == NULL) {
@@ -540,7 +536,7 @@ int rootfs_create(void *_fs, void *_base_vnode, const char *path, const char *st
 		goto err;
 	}
 	if(redir->redir == true) {
-		sem_release(fs->sem, 1);
+		mutex_unlock(&fs->lock);
 		redir->vnode = dir->redir_vnode;
 		redir->path = &path[start];
 		return 0;
@@ -607,14 +603,14 @@ int rootfs_create(void *_fs, void *_base_vnode, const char *path, const char *st
 			; // not supported
 	}
 	
-	sem_release(fs->sem, 1);
+	mutex_unlock(&fs->lock);
 	return 0;
 
 err1:
 	if(created_vnode)
 		rootfs_delete_vnode(fs, new_vnode, false);
 err:
-	sem_release(fs->sem, 1);
+	mutex_unlock(&fs->lock);
 
 	return err;
 }

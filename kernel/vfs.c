@@ -7,7 +7,8 @@
 #include <kernel/vfs.h>
 #include <kernel/debug.h>
 #include <kernel/khash.h>
-#include <kernel/sem.h>
+#include <kernel/lock.h>
+#include <kernel/thread.h>
 #include <kernel/heap.h>
 #include <kernel/arch/cpu.h>
 
@@ -34,7 +35,7 @@ struct file_descriptor {
 
 struct ioctx {
 	struct vnode *cwd;
-	sem_id io_sem;
+	mutex io_mutex;
 	int table_size;
 	int num_used_fds;
 	struct file_descriptor fds[0];
@@ -59,9 +60,9 @@ struct fs_mount {
 static struct fs_mount *fs_mounts;
 
 static fs_id next_fsid = 0;
-static sem_id vfs_sem;
-static sem_id vfs_mount_sem;
-static sem_id vfs_vnode_sem;
+static mutex vfs_mutex;
+static mutex vfs_mount_mutex;
+static mutex vfs_vnode_mutex;
 
 /* function declarations */
 static int vfs_mount(const char *path, const char *fs_name, bool kernel);
@@ -125,14 +126,14 @@ static int dec_vnode_ref_count(struct vnode *v, bool locked, bool free_mem)
 	int err;
 
 	if(!locked)
-		sem_acquire(vfs_vnode_sem, 1);
+		mutex_lock(&vfs_vnode_mutex);
 
 	v->ref_count--;
 	if(v->ref_count <= 0) {
 		hash_remove(vnode_table, v);			
 		
 		if(!locked)
-			sem_release(vfs_vnode_sem, 1);
+			mutex_unlock(&vfs_vnode_mutex);
 		v->mount->fs->calls->fs_dispose_vnode(v->mount->cookie, v);
 		if(free_mem)
 			kfree(v);
@@ -141,19 +142,19 @@ static int dec_vnode_ref_count(struct vnode *v, bool locked, bool free_mem)
 		err = 0;
 	}
 	if(!locked)
-		sem_release(vfs_vnode_sem, 1);
+		mutex_unlock(&vfs_vnode_mutex);
 	return err;
 }
 
 static int inc_vnode_ref_count(struct vnode *v, bool locked)
 {
 	if(!locked)
-		sem_acquire(vfs_vnode_sem, 1);
+		mutex_lock(&vfs_vnode_mutex);
 		
 	v->ref_count++;		
 	
 	if(!locked)		
-		sem_release(vfs_vnode_sem, 1);
+		mutex_unlock(&vfs_vnode_mutex);
 	return 0;	
 }
 
@@ -164,7 +165,7 @@ static int dec_fd_ref_count(struct ioctx *ioctx, int fd, bool locked)
 	int err = 0;
 
 	if(!locked)
-		sem_acquire(ioctx->io_sem, 1);
+		mutex_lock(&ioctx->io_mutex);
 
 	ioctx->fds[fd].ref_count--;
 	if(ioctx->fds[fd].ref_count == 0) {
@@ -176,7 +177,7 @@ static int dec_fd_ref_count(struct ioctx *ioctx, int fd, bool locked)
 	}
 
 	if(!locked)
-		sem_release(ioctx->io_sem, 1);
+		mutex_unlock(&ioctx->io_mutex);
 		
 	if(cookie != NULL) {
 		// we need to free it
@@ -189,12 +190,12 @@ static int dec_fd_ref_count(struct ioctx *ioctx, int fd, bool locked)
 static int inc_fd_ref_count(struct ioctx *ioctx, int fd, bool locked)
 {
 	if(!locked)
-		sem_acquire(ioctx->io_sem, 1);
+		mutex_lock(&ioctx->io_mutex);
 		
 	ioctx->fds[fd].ref_count++;		
 	
 	if(!locked)
-		sem_release(ioctx->io_sem, 1);
+		mutex_unlock(&ioctx->io_mutex);
 	return 0;	
 }
 
@@ -236,8 +237,7 @@ void *vfs_new_ioctx()
 	if(ioctx == NULL)
 		return NULL;
 	
-	ioctx->io_sem = sem_create(1, "ioctx_sem");
-	if(ioctx->io_sem < 0) {
+	if(mutex_init(&ioctx->io_mutex, "ioctx_mutex") < 0) {
 		kfree(ioctx);
 		return NULL;
 	}
@@ -272,16 +272,13 @@ int vfs_init(kernel_args *ka)
 	fs_mounts = NULL;
 	root_vnode = NULL;
 
-	vfs_sem = sem_create(1, "vfs_lock");
-	if(vfs_sem < 0)
+	if(mutex_init(&vfs_mutex, "vfs_lock") < 0)
 		panic("vfs_init: error allocating vfs lock\n");
 
-	vfs_mount_sem = sem_create(1, "vfs_mount_lock");
-	if(vfs_mount_sem < 0)
+	if(mutex_init(&vfs_mount_mutex, "vfs_mount_lock") < 0)
 		panic("vfs_init: error allocating vfs_mount lock\n");
 
-	vfs_vnode_sem = sem_create(1, "vfs_vnode_lock");
-	if(vfs_vnode_sem < 0)
+	if(mutex_init(&vfs_vnode_mutex, "vfs_vnode_lock") < 0)
 		panic("vfs_init: error allocating vfs_vnode lock\n");
 
 	// bootstrap the root filesystem
@@ -412,13 +409,13 @@ static struct vnode *get_base_vnode(struct ioctx *ioctx, const char *path, bool 
 		if(ioctx == NULL)
 			ioctx = get_current_ioctx(kernel);
 	
-		sem_acquire(ioctx->io_sem, 1);
+		mutex_lock(&ioctx->io_mutex);
 	
 		base_vnode = ioctx->cwd;
 	
 		inc_vnode_ref_count(base_vnode, false);
 	
-		sem_release(ioctx->io_sem, 1);	
+		mutex_unlock(&ioctx->io_mutex);	
 	}
 	return base_vnode;
 }
@@ -430,7 +427,7 @@ static int get_vnode_from_fd(int fd, struct ioctx *ioctx, bool kernel, struct vn
 	if(ioctx == NULL)
 		ioctx = get_current_ioctx(kernel);
 
-	sem_acquire(ioctx->io_sem, 1);
+	mutex_lock(&ioctx->io_mutex);
 
 	if(fd >= ioctx->table_size) {
 		err = -1;
@@ -451,7 +448,7 @@ static int get_vnode_from_fd(int fd, struct ioctx *ioctx, bool kernel, struct vn
 	err = 0;
 
 err:
-	sem_release(ioctx->io_sem, 1);
+	mutex_unlock(&ioctx->io_mutex);
 	return err;
 }
 
@@ -465,7 +462,7 @@ static struct vnode *add_vnode_to_list(struct fs_mount *mount, void *priv_vnode)
 		// it wasn't in the list
 		new_vnode = create_new_vnode();
 		if(new_vnode == NULL) {
-			sem_release(vfs_vnode_sem, 1);
+			mutex_unlock(&vfs_vnode_mutex);
 			return NULL;
 		}
 		new_vnode->priv_vnode = priv_vnode;
@@ -482,11 +479,11 @@ static int add_new_fd(struct ioctx *ioctx, struct vnode *new_vnode, void *cookie
 {
 	int fd;
 	
-	sem_acquire(ioctx->io_sem, 1);
+	mutex_lock(&ioctx->io_mutex);
 
 	fd = get_new_fd(ioctx);
 	if(fd < 0) {
-		sem_release(ioctx->io_sem, 1);
+		mutex_unlock(&ioctx->io_mutex);
 		return -1;
 	}
 
@@ -495,7 +492,7 @@ static int add_new_fd(struct ioctx *ioctx, struct vnode *new_vnode, void *cookie
 	ioctx->fds[fd].ref_count = 0;
 	inc_fd_ref_count(ioctx, fd, true);
 
-	sem_release(ioctx->io_sem, 1);
+	mutex_unlock(&ioctx->io_mutex);
 
 	return fd;
 }
@@ -511,12 +508,12 @@ int vfs_register_filesystem(const char *name, struct fs_calls *calls)
 	container->name = name;
 	container->calls = calls;
 	
-	sem_acquire(vfs_sem, 1);
+	mutex_lock(&vfs_mutex);
 
 	container->next = fs_list;
 	fs_list = container;
 	
-	sem_release(vfs_sem, 1);
+	mutex_unlock(&vfs_mutex);
 
 	return 0;
 }
@@ -531,7 +528,7 @@ static int vfs_mount(const char *path, const char *fs_name, bool kernel)
 	dprintf("vfs_mount: entry. path = '%s', fs_name = '%s'\n", path, fs_name);
 #endif
 
-	sem_acquire(vfs_mount_sem, 1);
+	mutex_lock(&vfs_mount_mutex);
 
 	mount = (struct fs_mount *)kmalloc(sizeof(struct fs_mount));
 	if(mount == NULL)
@@ -597,10 +594,10 @@ static int vfs_mount(const char *path, const char *fs_name, bool kernel)
 	mount->root_vnode.ref_count++;
 	mount->root_vnode.mount = mount;
 
-	sem_acquire(vfs_sem, 1);
+	mutex_lock(&vfs_mutex);
 	// insert root vnode into vnode list
 	hash_insert(vnode_table, &mount->root_vnode);
-	sem_release(vfs_sem, 1);
+	mutex_unlock(&vfs_mutex);
 
 	// insert mount struct into list
 	mount->next = fs_mounts;
@@ -614,7 +611,7 @@ static int vfs_mount(const char *path, const char *fs_name, bool kernel)
 			covered_vnode->priv_vnode, &mount->root_vnode);
 	}
 
-	sem_release(vfs_mount_sem, 1);
+	mutex_unlock(&vfs_mount_mutex);
 
 	return 0;
 
@@ -622,7 +619,7 @@ err1:
 	kfree(mount->mount_point);
 err:
 	kfree(mount);
-	sem_release(vfs_mount_sem, 1);
+	mutex_unlock(&vfs_mount_mutex);
 
 	return err;
 }
@@ -636,7 +633,7 @@ static int vfs_unmount(const char *path)
 #if MAKE_NOIZE
 	dprintf("vfs_unmount: entry. path = '%s'\n", path);
 #endif	
-	sem_acquire(vfs_mount_sem, 1);
+	mutex_lock(&vfs_mount_mutex);
 
 	mount = find_mount(path, &last_mount);
 	if(mount == NULL) {
@@ -657,7 +654,7 @@ static int vfs_unmount(const char *path)
 		fs_mounts = mount->next;
 	}
 
-	sem_release(vfs_mount_sem, 1);
+	mutex_unlock(&vfs_mount_mutex);
 
 	kfree(mount->mount_point);
 	kfree(mount);
@@ -665,7 +662,7 @@ static int vfs_unmount(const char *path)
 	return 0;
 	
 err:
-	sem_release(vfs_mount_sem, 1);
+	mutex_unlock(&vfs_mount_mutex);
 	return err;
 }
 
@@ -698,18 +695,18 @@ static int vfs_open(const char *path, const char *stream, stream_type stream_typ
 			goto err;
 	} while(redir.redir);
 	
-	sem_acquire(vfs_vnode_sem, 1);
+	mutex_lock(&vfs_vnode_mutex);
 
 	new_vnode = add_vnode_to_list(((struct vnode *)redir.vnode)->mount, v);
 	if(new_vnode == NULL) {
-		sem_release(vfs_vnode_sem, 1);
+		mutex_unlock(&vfs_vnode_mutex);
 		err = -1;
 		goto err1;
 	}
 
 	dec_vnode_ref_count(base_vnode, true, true);
 
-	sem_release(vfs_vnode_sem, 1);
+	mutex_unlock(&vfs_vnode_mutex);
 
 	fd = add_new_fd(ioctx, new_vnode, cookie);
 	if(fd < 0) {
