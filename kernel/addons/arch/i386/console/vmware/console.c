@@ -283,15 +283,62 @@ uint32 colors32[16] = {
 	0x00ffff00, 	// e - bright yellow
 	0x00ffffff	 	// f - bright? white
 };
+uint32 colors16[16];
+uint32 *colors;
 
 static void colors_from_attr(uint8 attr, uint32 *fg, uint32 *bg)
 {
 #define FMASK 0x0f
 #define BMASK 0xf0
-	*fg = colors32[attr & FMASK];
-	*bg = colors32[(attr & BMASK) >> 4];
+	*fg = colors[attr & FMASK];
+	*bg = colors[(attr & BMASK) >> 4];
 #undef FMASK
 #undef BMASK
+}
+
+static int log2(uint32 v)
+{
+	static int table[16] = {
+		0xfffffff,
+		0,
+		1, 1,
+		2, 2, 2, 2,
+		3, 3, 3, 3, 3, 3, 3, 3 
+	};
+	int result = 0;
+	dprintf("log2(%8lx)", v);
+	if ((v & 0xffff) == 0) { result += 16; v >>= 16; }
+	if ((v & 0xff) == 0) { result += 8; v >>= 8; }
+	if ((v & 0xf) == 0) { result += 4; v >>= 4; }
+	result += table[v];
+	dprintf(": %d\n", result);
+	return result;
+}
+
+static void setup_color_table(void)
+{
+	if (vcons.bits_per_pixel > 16)
+	{
+		colors = colors32;
+	}
+	else
+	{
+		int index;
+		int red_shift, blue_shift, green_shift;
+		blue_shift = 8 - log2(vcons.blue_mask + (vcons.blue_mask & ~(vcons.blue_mask - 1)));
+		green_shift = 16 - log2(vcons.green_mask + (vcons.green_mask & ~(vcons.green_mask - 1)));
+		red_shift = 24 - log2(vcons.red_mask + (vcons.red_mask & ~(vcons.red_mask - 1)));
+		dprintf("r: %d, g: %d, b: %d\n", red_shift, green_shift, blue_shift);
+		for (index = 0; index < 16; index++)
+		{
+			uint32 base = colors32[index];
+			colors16[index] =
+				((base >> red_shift) & vcons.red_mask) |
+				((base >> green_shift) & vcons.green_mask) |
+				((base >> blue_shift) & vcons.blue_mask) ;
+		}
+		colors = colors16;
+	}
 }
 
 static int vmware_init(void)
@@ -305,6 +352,7 @@ static int vmware_init(void)
 		setup_bit_reversed();
 		init_fifo();
 		set_mode(80 * CHAR_WIDTH + 4, 50 * CHAR_HEIGHT + 4);
+		setup_color_table();
 		clear_screen();
 		dprintf("screen cleared\n");
 		load_font();
