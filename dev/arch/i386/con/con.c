@@ -383,7 +383,7 @@ static void arch_con_puts(const char *s)
 }
 #endif
 
-int console_open(void *_fs, void *_base_vnode, const char *path, const char *stream, stream_type stream_type, void **_vnode, void **_cookie, struct redir_struct *redir)
+static int console_open(void *_fs, void *_base_vnode, const char *path, const char *stream, stream_type stream_type, void **_vnode, void **_cookie, struct redir_struct *redir)
 {
 	struct console_fs *fs = _fs;
 	int err;
@@ -417,21 +417,21 @@ err:
 	return err;
 }
 
-int console_seek(void *_fs, void *_vnode, void *_cookie, off_t pos, seek_type seek_type)
+static int console_seek(void *_fs, void *_vnode, void *_cookie, off_t pos, seek_type seek_type)
 {
 //	dprintf("console_seek: entry\n");
 
 	return -1;
 }
 
-int console_close(void *_fs, void *_vnode, void *_cookie)
+static int console_close(void *_fs, void *_vnode, void *_cookie)
 {
 //	dprintf("console_close: entry\n");
 
 	return 0;
 }
 
-int console_create(void *_fs, void *_base_vnode, const char *path, const char *stream, stream_type stream_type, struct redir_struct *redir)
+static int console_create(void *_fs, void *_base_vnode, const char *path, const char *stream, stream_type stream_type, struct redir_struct *redir)
 {
 	struct console_fs *fs = _fs;
 	
@@ -452,7 +452,7 @@ int console_create(void *_fs, void *_base_vnode, const char *path, const char *s
 	return -1;
 }
 
-int console_read(void *_fs, void *_vnode, void *_cookie, void *buf, off_t pos, size_t *len)
+static int console_read(void *_fs, void *_vnode, void *_cookie, void *buf, off_t pos, size_t *len)
 {
 	char c;
 	int err;
@@ -462,7 +462,7 @@ int console_read(void *_fs, void *_vnode, void *_cookie, void *buf, off_t pos, s
 	return keyboard_read(buf, len);
 }
 
-int _console_write(const void *buf, size_t *len)
+static int _console_write(const void *buf, size_t *len)
 {
 	size_t i;
 	const char *c;
@@ -489,7 +489,7 @@ int _console_write(const void *buf, size_t *len)
 	return 0;
 }
 
-int console_write(void *_fs, void *_vnode, void *_cookie, const void *buf, off_t pos, size_t *len)
+static int console_write(void *_fs, void *_vnode, void *_cookie, const void *buf, off_t pos, size_t *len)
 {
 	struct console_fs *fs = _fs;
 	int err;
@@ -505,7 +505,7 @@ int console_write(void *_fs, void *_vnode, void *_cookie, const void *buf, off_t
 	return err;
 }
 
-int console_ioctl(void *_fs, void *_vnode, void *_cookie, int op, void *buf, size_t len)
+static int console_ioctl(void *_fs, void *_vnode, void *_cookie, int op, void *buf, size_t len)
 {
 	struct console_fs *fs = _fs;
 	int err;
@@ -534,7 +534,7 @@ int console_ioctl(void *_fs, void *_vnode, void *_cookie, int op, void *buf, siz
 	return err;
 }
 
-int console_mount(void **fs_cookie, void *flags, void *covered_vnode, fs_id id, void **root_vnode)
+static int console_mount(void **fs_cookie, void *flags, void *covered_vnode, fs_id id, void **root_vnode)
 {
 	struct console_fs *fs;
 	int err;
@@ -571,7 +571,7 @@ err:
 	return err;
 }
 
-int console_unmount(void *_fs)
+static int console_unmount(void *_fs)
 {
 	struct console_fs *fs = _fs;
 
@@ -581,7 +581,7 @@ int console_unmount(void *_fs)
 	return 0;	
 }
 
-int console_register_mountpoint(void *_fs, void *_v, void *redir_vnode)
+static int console_register_mountpoint(void *_fs, void *_v, void *redir_vnode)
 {
 	struct console_fs *fs = _fs;
 	
@@ -590,7 +590,7 @@ int console_register_mountpoint(void *_fs, void *_v, void *redir_vnode)
 	return 0;
 }
 
-int console_unregister_mountpoint(void *_fs, void *_v)
+static int console_unregister_mountpoint(void *_fs, void *_v)
 {
 	struct console_fs *fs = _fs;
 	
@@ -599,7 +599,7 @@ int console_unregister_mountpoint(void *_fs, void *_v)
 	return 0;
 }
 
-int console_dispose_vnode(void *_fs, void *_v)
+static int console_dispose_vnode(void *_fs, void *_v)
 {
 	return 0;
 }
@@ -644,7 +644,7 @@ int console_dev_init(kernel_args *ka)
 */
 
 	// create device node
-	vfs_register_filesystem("consolefs", &console_hooks);
+	vfs_register_filesystem("console_dev_fs", &console_hooks);
 	vfs_create(NULL, "/dev", "", STREAM_TYPE_DIR);
 	vfs_create(NULL, "/dev/console", "", STREAM_TYPE_DIR);
 	vfs_mount("/dev/console", "consolefs");

@@ -8,6 +8,10 @@ AddFileGroup "dev" "/build/newos/dev" -nomake
 AddFile "dev.mk" "/build/newos/dev/dev.mk"
 AddFile "devs.c" "/build/newos/dev/devs.c"
 AddFile "devs.h" "/build/newos/dev/devs.h"
+AddFile "null.c" "/build/newos/dev/common/null.c"
+AddFile "null.h" "/build/newos/dev/common/null.h"
+AddFile "zero.c" "/build/newos/dev/common/zero.c"
+AddFile "zero.h" "/build/newos/dev/common/zero.h"
 EndFileGroup "dev"
 AddFileGroup "dev-x86" "/build/newos/dev/arch/i386" -nomake
 AddFile "arch_dev.mk" "/build/newos/dev/arch/i386/arch_dev.mk"

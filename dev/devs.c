@@ -6,12 +6,17 @@
 #include <string.h>
 
 #include <con.h>
+#include <null.h>
+#include <zero.h>
 
 int devs_init(kernel_args *ka)
 {
 	TOUCH(ka);
 
 	console_dev_init(ka);
+	
+	null_dev_init(ka);
+	zero_dev_init(ka);
 
 #if 0
 	{
