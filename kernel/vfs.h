@@ -38,6 +38,7 @@ struct fs_calls {
 	int (*fs_seek)(void *fs_cookie, void *vnode, void *cookie, off_t pos, seek_type seek_type);
 	int (*fs_read)(void *fs_cookie, void *vnode, void *cookie, void *buf, off_t pos, size_t *len);
 	int (*fs_write)(void *fs_cookie, void *vnode, void *cookie, const void *buf, off_t pos, size_t *len);
+	int (*fs_ioctl)(void *fs_cookie, void *vnode, void *cookie, int op, void *buf, size_t len);
 	int (*fs_close)(void *fs_cookie, void *vnode, void *cookie);
 	int (*fs_create)(void *fs_cookie, void *base_vnode, const char *path, const char *stream, stream_type stream_type, struct redir_struct *redir);
 };
@@ -53,6 +54,7 @@ int vfs_open(void *_base_vnode, const char *path, const char *stream, stream_typ
 int vfs_seek(int fd, off_t pos, seek_type seek_type);
 int vfs_read(int fd, void *buf, off_t pos, size_t *len);
 int vfs_write(int fd, const void *buf, off_t pos, size_t *len);
+int vfs_ioctl(int fd, int op, void *buf, size_t len);
 int vfs_close(int fd);
 int vfs_create(void *_base_vnode, const char *path, const char *stream, stream_type stream_type);
 

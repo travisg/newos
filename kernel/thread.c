@@ -569,6 +569,9 @@ int test_thread()
 		kprintf_xy(0, tid-1, "thread%d - %d    - %d %d - cpu %d", tid, a, system_time(), smp_get_current_cpu());
 #endif
 #if 0
+		kprintf("thread%d - %d    - %d %d - cpu %d\n", tid, a, system_time(), smp_get_current_cpu());
+#endif
+#if 0
 		kprintf_xy(x, y, "%c", c++);
 		if(c > 'z')
 			c = 'a';

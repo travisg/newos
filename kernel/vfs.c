@@ -10,7 +10,7 @@
 
 #include <fs/rootfs.h>
 
-#define MAKE_NOIZE 1
+#define MAKE_NOIZE 0
 
 struct vnode {
 	struct vnode *next;
@@ -670,6 +670,7 @@ int vfs_open(void *_base_vnode, const char *path, const char *stream, stream_typ
 	do {
 		struct vnode *curr_base = redir.vnode;
 		
+		redir.redir = false;
 		err = curr_base->mount->fs->calls->fs_open(curr_base->mount->cookie, curr_base->priv_vnode, redir.path, stream, stream_type, &v, &cookie, &redir);	
 		if(err < 0)
 			goto err;
@@ -769,12 +770,33 @@ int vfs_write(int fd, const void *buf, off_t pos, size_t *len)
 	if(err < 0)
 		return err;
 	
-	dprintf("here\n");
-	
 	err = vnode->mount->fs->calls->fs_write(vnode->mount->cookie, vnode->priv_vnode,
 		cookie, buf, pos, len);
 
-	dprintf("here2\n");
+	dec_fd_ref_count(ioctx, fd, false);
+	dec_vnode_ref_count(vnode, false, true);
+
+	return err;
+}
+
+int vfs_ioctl(int fd, int op, void *buf, size_t len)
+{
+	struct ioctx *ioctx;
+	struct vnode *vnode;
+	void *cookie;
+	int err;
+
+#if MAKE_NOIZE
+	dprintf("vfs_ioctl: fd = %d, buf = 0x%x, op = %d\n", fd, buf, op);
+#endif
+
+	ioctx = get_current_ioctx();
+	err = get_vnode_from_fd(fd, ioctx, &vnode, &cookie);
+	if(err < 0)
+		return err;
+
+	err = vnode->mount->fs->calls->fs_ioctl(vnode->mount->cookie, vnode->priv_vnode,
+		cookie, op, buf, len);
 
 	dec_fd_ref_count(ioctx, fd, false);
 	dec_vnode_ref_count(vnode, false, true);
@@ -807,6 +829,7 @@ int vfs_create(void *_base_vnode, const char *path, const char *stream, stream_t
 	do {
 		struct vnode *cur_base = redir.vnode;
 	
+		redir.redir = false;
 		err = cur_base->mount->fs->calls->fs_create(cur_base->mount->cookie, cur_base->priv_vnode, redir.path, stream, stream_type, &redir);	
 		if(err < 0)
 			goto err;

@@ -522,6 +522,11 @@ int rootfs_write(void *_fs, void *_vnode, void *_cookie, const void *buf, off_t 
 	return -1;
 }
 
+int rootfs_ioctl(void *_fs, void *_vnode, void *_cookie, int op, void *buf, size_t len)
+{
+	return -1;
+}
+
 int rootfs_close(void *_fs, void *_vnode, void *_cookie)
 {
 	struct rootfs *fs = _fs;
@@ -535,18 +540,6 @@ int rootfs_close(void *_fs, void *_vnode, void *_cookie)
 	if(cookie)
 		kfree(cookie);
 
-	return 0;
-}
-
-int rootfs_freedircookie(void *_fs, void *_vnode, void *_dircookie)
-{
-	struct rootfs_dircookie *cookie = _dircookie;
-	TOUCH(_fs);TOUCH(_vnode);
-	
-	dprintf("rootfs_freedircookie: entry dircookie 0x%x\n", cookie);
-
-	kfree(cookie);
-	
 	return 0;
 }
 
@@ -658,6 +651,7 @@ struct fs_calls rootfs_calls = {
 	&rootfs_seek,
 	&rootfs_read,
 	&rootfs_write,
+	&rootfs_ioctl,
 	&rootfs_close,
 	&rootfs_create,
 };

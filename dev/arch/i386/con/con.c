@@ -4,13 +4,23 @@
 #include <vm.h>
 #include <int.h>
 #include <sem.h>
-
-#include <fs/devfs.h>
+#include <vfs.h>
 
 #include <arch_cpu.h>
 #include <arch_int.h>
 
 #include <string.h>
+#include <printf.h>
+
+#include <con.h>
+
+struct console_fs {
+	fs_id id;
+	sem_id sem;
+	void *covered_vnode;
+	void *redir_vnode;
+	int root_vnode; // just a placeholder to return a pointer to
+};
 
 /* used in keyboard.S */
 #define TTY_BUF_SIZE 1024
@@ -317,11 +327,11 @@ static void csi_M(int nr)
 	while (nr--)
 		delete_line();
 }
+#endif
 static int saved_x=0;
 static int saved_y=0;
-#endif
 
-/*
+
 static void save_cur(void)
 {
 	saved_x=x;
@@ -334,7 +344,7 @@ static void restore_cur(void)
 	y=saved_y;
 	pos=origin+((y*columns+x)<<1);
 }
-*/
+
 static char console_putch(const char c)
 {
 	if(++x>=COLUMNS) {
@@ -386,62 +396,100 @@ static int handle_keyboard_interrupt()
 	return INT_NO_RESCHEDULE;
 }
 
-int console_open(const char *name, int flags, void **cookie)
+int console_open(void *_fs, void *_base_vnode, const char *path, const char *stream, stream_type stream_type, void **_vnode, void **_cookie, struct redir_struct *redir)
 {
-	TOUCH(name);TOUCH(flags);TOUCH(cookie);
-
-	dprintf("console_open: entry\n");
-
-	*cookie = NULL;
-
-	return 0;
-}
-
-int console_close(void *cookie)
-{
-	TOUCH(cookie);
-
-	dprintf("console_close: entry\n");
-
-	return 0;
-}
-
-int console_freecookie(void *cookie)
-{
-	TOUCH(cookie);
+	struct console_fs *fs = _fs;
+	int err;
 	
-	dprintf("console_freecookie: entry\n");
+	TOUCH(_base_vnode);
+
+//	dprintf("console_open: entry on vnode 0x%x, path = '%s'\n", _base_vnode, path);
+
+	sem_acquire(fs->sem, 1);
+	if(fs->redir_vnode != NULL) {
+		// we were mounted on top of
+		redir->redir = true;
+		redir->vnode = fs->redir_vnode;
+		redir->path = path;
+		err = 0;
+		goto out;		
+	}		
+
+	if(path[0] != '\0' || stream[0] != '\0' || stream_type != STREAM_TYPE_DEVICE) {
+		err = -1;
+		goto err;
+	}
+	
+	*_vnode = &fs->root_vnode;	
+	*_cookie = NULL;
+
+	err = 0;
+
+out:
+err:
+	sem_release(fs->sem, 1);
+
+	return err;
+}
+
+int console_seek(void *_fs, void *_vnode, void *_cookie, off_t pos, seek_type seek_type)
+{
+	TOUCH(_fs);TOUCH(_vnode);TOUCH(_cookie);TOUCH(pos);TOUCH(seek_type);
+
+	return -1;
+}
+
+int console_close(void *_fs, void *_vnode, void *_cookie)
+{
+	TOUCH(_fs);TOUCH(_vnode);TOUCH(_cookie);
+
+//	dprintf("console_close: entry\n");
 
 	return 0;
 }
 
-int console_read(void *cookie, void *data, off_t pos, size_t *num_bytes)
+int console_create(void *_fs, void *_base_vnode, const char *path, const char *stream, stream_type stream_type, struct redir_struct *redir)
 {
-	TOUCH(cookie);TOUCH(pos);TOUCH(data);TOUCH(num_bytes);
+	struct console_fs *fs = _fs;
+	
+	TOUCH(_base_vnode);TOUCH(stream);TOUCH(stream_type);
 
+//	dprintf("console_create: entry\n");
+
+	sem_acquire(fs->sem, 1);
+	
+	if(fs->redir_vnode != NULL) {
+		// we were mounted on top of
+		redir->redir = true;
+		redir->vnode = fs->redir_vnode;
+		redir->path = path;
+		sem_release(fs->sem, 1);
+		return 0;
+	}
+	sem_release(fs->sem, 1);
+	
+	return -1;
+}
+
+int console_read(void *_fs, void *_vnode, void *_cookie, void *buf, off_t pos, size_t *len)
+{
 //	sem_acquire(console_sem, 1);
 //	sem_release(console_sem, 1);
 
-	dprintf("console_read: entry\n");
+//	dprintf("console_read: entry\n");
 	
-	*num_bytes = 0;
+	*len = 0;
 	
 	return 0;
 }
 
-int console_write(void *cookie, const void *data, off_t pos, size_t *num_bytes)
+int _console_write(const void *buf, size_t *len)
 {
 	size_t i;
 	const char *c;
 
-	TOUCH(cookie);TOUCH(pos);TOUCH(data);TOUCH(num_bytes);
-
-	dprintf("console_write: entry\n");
-
-	sem_acquire(console_sem, 1);
-
-	for(i=0; i<*num_bytes; i++) {
-		c = &((const char *)data)[i];
+	for(i=0; i<*len; i++) {
+		c = &((const char *)buf)[i];
 		if( *c == '\n') {
 			cr();
 			lf();
@@ -449,18 +497,140 @@ int console_write(void *cookie, const void *data, off_t pos, size_t *num_bytes)
 			console_putch(*c); 
 		}
 	}
+	return 0;
+}
 
-	sem_release(console_sem, 1);
+int console_write(void *_fs, void *_vnode, void *_cookie, const void *buf, off_t pos, size_t *len)
+{
+	struct console_fs *fs = _fs;
+	int err;
+
+//	dprintf("console_write: entry, len = %d\n", *len);
+
+	sem_acquire(fs->sem, 1);
+
+	err = _console_write(buf, len);
+
+	sem_release(fs->sem, 1);
+	
+	return err;
+}
+
+int console_ioctl(void *_fs, void *_vnode, void *_cookie, int op, void *buf, size_t len)
+{
+	struct console_fs *fs = _fs;
+	int err;
+	
+	switch(op) {
+		case CONSOLE_OP_WRITEXY: {
+			int x,y;
+			size_t _len;
+			sem_acquire(fs->sem, 1);
+			
+			x = ((int *)buf)[0];
+			y = ((int *)buf)[1];
+			
+			save_cur();
+			gotoxy(x, y);
+			_len = len - 2*sizeof(int);
+			err = _console_write(((char *)buf) + 2*sizeof(int), &_len);
+			restore_cur();
+			sem_release(fs->sem, 1);	
+			break;
+		}
+		default:
+			err = -1;
+	}
+
+	return err;
+}
+
+int console_mount(void **fs_cookie, void *flags, void *covered_vnode, fs_id id, void **root_vnode)
+{
+	struct console_fs *fs;
+	int err;
+
+	fs = kmalloc(sizeof(struct console_fs));
+	if(fs == NULL) {
+		err = -1;
+		goto err;
+	}
+
+	fs->covered_vnode = covered_vnode;
+	fs->redir_vnode = NULL;
+	fs->id = id;
+
+	{
+		char temp[64];
+		sprintf(temp, "console_sem%d", id);
+		
+		fs->sem = sem_create(1, temp);
+		if(fs->sem < 0) {
+			err = -1;
+			goto err1;
+		}
+	}	
+
+	*root_vnode = (void *)&fs->root_vnode;
+	*fs_cookie = fs;
+
+	return 0;
+
+err1:	
+	kfree(fs);
+err:
+	return err;
+}
+
+int console_unmount(void *_fs)
+{
+	struct console_fs *fs = _fs;
+
+	sem_delete(fs->sem);
+	kfree(fs);
+
+	return 0;	
+}
+
+int console_register_mountpoint(void *_fs, void *_v, void *redir_vnode)
+{
+	struct console_fs *fs = _fs;
+	
+	TOUCH(_fs);TOUCH(_v);
+	
+	fs->redir_vnode = redir_vnode;
 	
 	return 0;
 }
 
-struct device_hooks console_hooks = {
+int console_unregister_mountpoint(void *_fs, void *_v)
+{
+	struct console_fs *fs = _fs;
+	TOUCH(_fs);
+	
+	fs->redir_vnode = NULL;
+	
+	return 0;
+}
+
+int console_dispose_vnode(void *_fs, void *_v)
+{
+	return 0;
+}
+
+struct fs_calls console_hooks = {
+	&console_mount,
+	&console_unmount,
+	&console_register_mountpoint,
+	&console_unregister_mountpoint,
+	&console_dispose_vnode,
 	&console_open,
-	&console_close,
-	&console_freecookie,
+	&console_seek,
 	&console_read,
-	&console_write
+	&console_write,
+	&console_ioctl,
+	&console_close,
+	&console_create,
 };
 
 int console_dev_init(kernel_args *ka)
@@ -471,10 +641,6 @@ int console_dev_init(kernel_args *ka)
 	vm_map_physical_memory(vm_get_kernel_aspace(), "vid_mem", (void *)&origin, AREA_ANY_ADDRESS,
 		SCREEN_END - SCREEN_START, 0, SCREEN_START);
 	dprintf("con_init: mapped vid mem to virtual address 0x%x\n", origin);
-
-	console_sem = sem_create(1, "console_sem");
-	if(console_sem < 0)
-		panic("could not create semaphore for console\n");
 
 	pos = origin;
 
@@ -490,7 +656,10 @@ int console_dev_init(kernel_args *ka)
 */
 
 	// create device node
-	devfs_create_device_node("/console", &console_hooks);
+	vfs_register_filesystem("consolefs", &console_hooks);
+	vfs_create(NULL, "/dev", "", STREAM_TYPE_DIR);
+	vfs_create(NULL, "/dev/console", "", STREAM_TYPE_DIR);
+	vfs_mount("/dev/console", "consolefs");
 
 	return 0;
 }

@@ -54,11 +54,12 @@ int _start(kernel_args *oldka, int cpu)
 		// now we can create and use semaphores
 		vm_init_postsem(&ka);
 		vfs_init(&ka);
-		con_init(&ka); // XXX will move to driver later
 		proc_init(&ka);
 		thread_init(&ka);
 		dev_init(&ka);
 		devs_init(&ka);
+		con_init(&ka);
+		kprintf("durn\n");
 	
 		// XXX remove
 		vfs_test();
