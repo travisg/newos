@@ -32,8 +32,8 @@ struct pcnet32_init
 	uint32 flags;
 	uint8 paddr[8]; // only 6 bytes used.
 	uint64 laddr_mask;
-	addr rxaddr;
-	addr txaddr;
+	addr_t rxaddr;
+	addr_t txaddr;
 };
 
 // Both tx and rx ring_count members must be set such that subtracting one from them
@@ -49,9 +49,9 @@ typedef struct pcnet32
 	uint32 init_mode;
 
 	int irq;
-	addr phys_base;
-	addr phys_size;
-	addr virt_base;
+	addr_t phys_base;
+	addr_t phys_size;
+	addr_t virt_base;
 	uint16 io_port;
 	region_id io_region;
 
@@ -67,7 +67,7 @@ typedef struct pcnet32
 
 	region_id rxring_region;
 	struct pcnet32_rxdesc *rxring;
-	addr rxring_phys;
+	addr_t rxring_phys;
 
 	// transmit ring
 	uint16 txring_count;
@@ -78,12 +78,12 @@ typedef struct pcnet32
 
 	region_id txring_region;
 	struct pcnet32_txdesc *txring;
-	addr txring_phys;
+	addr_t txring_phys;
 
 	// buffers
 	region_id buffers_region;
-	addr buffers;
-	addr buffers_phys;
+	addr_t buffers;
+	addr_t buffers_phys;
 
 	uint16 rx_buffersize;
 	uint8 *rx_buffers;

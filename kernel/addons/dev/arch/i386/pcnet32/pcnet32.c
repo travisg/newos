@@ -10,8 +10,8 @@
 #include <string.h>
 #include <newos/errors.h>
 #include <kernel/net/ethernet.h>
-#include <kernel/dev/arch/i386/pcnet32/pcnet32_dev.h>
 
+#include "pcnet32_dev.h"
 #include "pcnet32_priv.h"
 
 #define debug_level_flow 3
@@ -21,6 +21,8 @@
 #define DEBUG_MSG_PREFIX "PCNET -- "
 
 #include <kernel/debug_ext.h>
+
+int pcnet32_dev_init(kernel_args *ka);
 
 static int pcnet32_open(dev_ident ident, dev_cookie *cookie)
 {
@@ -121,7 +123,7 @@ int pcnet32_dev_init(kernel_args *ka)
 		return 0;
 	}
 
-	if (pcnet32_detect(&nic) > -1)
+	if (pcnet32_detect(nic) > -1)
 	{
 		if (pcnet32_init(nic) < 0)
 		{

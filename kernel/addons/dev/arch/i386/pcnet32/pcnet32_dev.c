@@ -20,7 +20,7 @@
 #include "pcnet32_dev.h"
 #include "pcnet32_priv.h"
 
-//#define _PCNET32_VERBOSE
+#define _PCNET32_VERBOSE
 
 #ifdef _PCNET32_VERBOSE
 # define debug_level_flow 3
@@ -58,7 +58,7 @@ static uint16 gringlens[] = { 1, 2, 4, 8, 16, 32, 64, 128, 256, 512 };
 
 #define RXRING_BUFFER(_nic, _index) ((_nic)->rx_buffers + ((_index) * (_nic)->rx_buffersize))
 #define TXRING_BUFFER(_nic, _index) ((_nic)->tx_buffers + ((_index) * (_nic)->tx_buffersize))
-#define BUFFER_PHYS(_nic, _buffer) (addr)((_nic)->buffers_phys + ((_buffer) - (_nic)->buffers))
+#define BUFFER_PHYS(_nic, _buffer) (addr_t)((_nic)->buffers_phys + ((_buffer) - (_nic)->buffers))
 
 static int pcnet32_int(void*);
 
@@ -122,11 +122,9 @@ pcnet32 *pcnet32_new(uint32 initmode, uint16 rxbuffer_size,	uint16 txbuffer_size
 
 	nic = (pcnet32*)kmalloc(sizeof(pcnet32));
 	if (nic == NULL)
-		return NULL;
+		goto err_none;
 
 	memset(nic, 0, sizeof(pcnet32));
-
-	nic->init_mode = initmode;
 
 	// Make it a 256-descriptor ring. 256*32 bytes long.
 	nic->rxring_count = rxring_count;
@@ -140,15 +138,16 @@ pcnet32 *pcnet32_new(uint32 initmode, uint16 rxbuffer_size,	uint16 txbuffer_size
 		REGION_WIRING_WIRED_CONTIG, LOCK_KERNEL | LOCK_RW);
 
 	if (nic->rxring_region < 0)
-		goto err;
+		goto err_after_kmalloc;
 
 	memset(nic->rxring, 0, nic->rxring_count * sizeof(struct pcnet32_rxdesc));
 	vm_get_page_mapping(vm_get_kernel_aspace_id(), 
-			    (addr)nic->rxring, &nic->rxring_phys);
+			    (addr_t)nic->rxring, &nic->rxring_phys);
 	SHOW_FLOW(3, "rxring physical address: 0x%x", nic->rxring_phys);
 
 	nic->rxring_sem = sem_create(0, "pcnet32_rxring");
-	mutex_init(&nic->rxring_mutex, "pcnet32_rxring");
+	if (mutex_init(&nic->rxring_mutex, "pcnet32_rxring") < 0)
+		goto err_after_rxring_region;
        
 	// setup_transmit_descriptor_ring;
 	nic->txring_count = txring_count;
@@ -160,15 +159,17 @@ pcnet32 *pcnet32_new(uint32 initmode, uint16 rxbuffer_size,	uint16 txbuffer_size
 		vm_get_kernel_aspace_id(), "pcnet32_txring", (void**)&nic->txring,
 		REGION_ADDR_ANY_ADDRESS, nic->txring_count * sizeof(struct pcnet32_txdesc), 
 		REGION_WIRING_WIRED_CONTIG, LOCK_KERNEL | LOCK_RW);
-	memset(nic->txring, 0, nic->txring_count * sizeof(struct pcnet32_txdesc));
-	vm_get_page_mapping(vm_get_kernel_aspace_id(), 
-			    (addr)nic->txring, &nic->txring_phys);
-	SHOW_FLOW(3, "txring physical address: 0x%x", nic->txring_phys);
 
 	if (nic->txring_region < 0)
-		goto err;
+		goto err_after_rxring_mutex;
 
-	mutex_init(&nic->txring_mutex, "pcnet32_txring");
+	memset(nic->txring, 0, nic->txring_count * sizeof(struct pcnet32_txdesc));
+	vm_get_page_mapping(vm_get_kernel_aspace_id(), 
+			    (addr_t)nic->txring, &nic->txring_phys);
+	SHOW_FLOW(3, "txring physical address: 0x%x", nic->txring_phys);
+
+	if (mutex_init(&nic->txring_mutex, "pcnet32_txring") < 0)
+		goto err_after_txring_region;
 
 	// allocate the actual buffers
 	nic->buffers_region = vm_create_anonymous_region(
@@ -178,24 +179,55 @@ pcnet32 *pcnet32_new(uint32 initmode, uint16 rxbuffer_size,	uint16 txbuffer_size
 		(nic->txring_count * nic->tx_buffersize),
 		REGION_WIRING_WIRED_CONTIG, LOCK_KERNEL | LOCK_RW);
 
-	vm_get_page_mapping(vm_get_kernel_aspace_id(), 
-			    (addr)nic->buffers, &nic->buffers_phys);
-
 	if (nic->buffers_region < 0)
-		goto err;
+		goto err_after_txring_mutex;
+
+	vm_get_page_mapping(vm_get_kernel_aspace_id(), 
+			    (addr_t)nic->buffers, &nic->buffers_phys);
 
 	nic->rx_buffers = (uint8*)nic->buffers;
 	nic->tx_buffers = (uint8*)(nic->buffers + nic->rxring_count * nic->rx_buffersize);
 
 	// create the thread
 	nic->interrupt_sem = sem_create(0, "pcnet32_interrupt");
+
+	if (nic->interrupt_sem < 0)
+		goto err_after_buffers_region;
+
 	nic->thread = thread_create_kernel_thread("pcnet32_isr", pcnet32_thread, nic);
+
+	if (nic->thread < 0)
+		goto err_after_interrupt_sem;
+
 	thread_set_priority(nic->thread, THREAD_HIGHEST_PRIORITY);
 
 	return nic;
 
-err:
-	pcnet32_delete(nic);
+err_after_interrupt_sem:
+	sem_delete(nic->interrupt_sem);
+
+err_after_buffers_region:
+	vm_delete_region(vm_get_kernel_aspace_id(), nic->buffers_region);
+
+err_after_txring_mutex:
+	mutex_destroy(&nic->txring_mutex);
+
+err_after_txring_region:
+	vm_delete_region(vm_get_kernel_aspace_id(), nic->txring_region);
+
+err_after_rxring_mutex:
+	mutex_destroy(&nic->rxring_mutex);
+
+err_after_rxring_sem:
+	sem_delete(nic->rxring_sem);
+
+err_after_rxring_region:
+	vm_delete_region(vm_get_kernel_aspace_id(), nic->rxring_region);
+
+err_after_kmalloc:
+	kfree(nic);
+
+err_none:
 	return NULL;
 }
 
@@ -208,7 +240,7 @@ int pcnet32_detect(pcnet32 *dev)
 
 	if (module_get(PCI_BUS_MODULE_NAME, 0, (void**)&pci))
 	{
-		SHOW_FLOW(3, "Could not find PCI Bus.");
+		SHOW_FLOW(3, "Could not find PCI Bus.", 0);
 		return -1;
 	}
 
@@ -225,7 +257,7 @@ int pcnet32_detect(pcnet32 *dev)
 
 	if (!foundit)
 	{
-		SHOW_FLOW(3, "Could not find PCNET32 Compatible Device");
+		SHOW_FLOW(3, "Could not find PCNET32 Compatible Device", 0);
 		return -1;
 	}
 
@@ -303,7 +335,7 @@ void pcnet32_start(pcnet32 *nic)
 {
 	bigtime_t time;
 	int err = -1;
-	addr temp;
+	addr_t temp;
 	int i = 0;
 	struct pcnet32_init *init;
 
@@ -367,21 +399,17 @@ void pcnet32_stop(pcnet32 *nic)
 
 void pcnet32_delete(pcnet32 *nic)
 {
-	if (nic->txring_region > -1)
-		vm_delete_region(vm_get_kernel_aspace_id(), nic->txring_region);
+        sem_delete(nic->interrupt_sem);
+        vm_delete_region(vm_get_kernel_aspace_id(), nic->buffers_region);
 
-       	mutex_destroy(&nic->txring_mutex);
+        mutex_destroy(&nic->txring_mutex);
+        vm_delete_region(vm_get_kernel_aspace_id(), nic->txring_region);
 
-	if (nic->rxring_region > -1)
-		vm_delete_region(vm_get_kernel_aspace_id(), nic->rxring_region);
+        mutex_destroy(&nic->rxring_mutex);
+        sem_delete(nic->rxring_sem);
+        vm_delete_region(vm_get_kernel_aspace_id(), nic->rxring_region);
 
-	if (nic->rxring_sem > -1)
-		sem_delete(nic->rxring_sem);
-
-       	mutex_destroy(&nic->rxring_mutex);
-
-	if (nic->io_region > -1)
-		vm_delete_region(vm_get_kernel_aspace_id(), nic->io_region);
+        kfree(nic);
 }
 
 static void rxdesc_init(pcnet32 *nic, uint16 index)
