@@ -229,7 +229,7 @@ static int probe_channel( uint16 command_block_base, uint16 control_block_base,
 		
 	new_channel->interrupt_gate = 1;
 	res = int_set_io_interrupt_handler( new_channel->intnum + 0x20, 
-		(int (*)(void *))inthand, new_channel );
+		(int (*)(void *))inthand, new_channel, "isa ide" );
 	
 	if( res ) {
 		SHOW_ERROR0( 0, "IDE PCI -- new_isa_device: "

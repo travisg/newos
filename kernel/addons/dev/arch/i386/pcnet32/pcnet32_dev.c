@@ -308,7 +308,7 @@ int pcnet32_init(pcnet32 *nic)
 	write_csr(nic, PCNET_CSR_STATUS, PCNET_STATUS_STOP);
 
 	// set up the interrupt handler
-	int_set_io_interrupt_handler(nic->irq + 0x20, &pcnet32_int, nic);
+	int_set_io_interrupt_handler(nic->irq + 0x20, &pcnet32_int, nic, "pcnet32");
 
 	SHOW_FLOW(3, "device mapped irq 0x%x", nic->irq + 0x20);
 

@@ -376,7 +376,7 @@ int dev_bootstrap(void)
 
 	// register interrupt handler
 	int_set_io_interrupt_handler(INT_BASE + INT_PS2_MOUSE,
-	   &handle_mouse_interrupt, NULL);
+	   &handle_mouse_interrupt, NULL, "ps2mouse");
 
 	// register device file-system like operations
 	devfs_publish_device("ps2mouse", NULL, &ps2_mouse_hooks);

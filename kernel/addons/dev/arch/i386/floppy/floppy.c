@@ -474,7 +474,7 @@ static int floppy_detect(floppy **_flp, int chain, int drive)
 	flp->io_pending = false;
 
 	// set up the interrupt controller
-	int_set_io_interrupt_handler(0x20 + 6, &floppy_irq_handler, flp);
+	int_set_io_interrupt_handler(0x20 + 6, &floppy_irq_handler, flp, "floppy");
 
 	*_flp = flp;
 

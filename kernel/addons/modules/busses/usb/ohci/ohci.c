@@ -684,7 +684,7 @@ static ohci *ohci_init_hc(pci_info *pinfo)
 	}
 
 	// install the interrupt handler
-	int_set_io_interrupt_handler(0x20 + oi->irq, &ohci_interrupt, oi);
+	int_set_io_interrupt_handler(0x20 + oi->irq, &ohci_interrupt, oi, "ohci");
 
 	// save the frame interval from the card
 	saved_interval = oi->regs->frame_interval & 0x3fff;

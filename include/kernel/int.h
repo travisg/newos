@@ -11,7 +11,7 @@
 int int_init(kernel_args *ka);
 int int_init2(kernel_args *ka);
 int int_io_interrupt_handler(int vector);
-int int_set_io_interrupt_handler(int vector, int (*func)(void*), void* data);
+int int_set_io_interrupt_handler(int vector, int (*func)(void*), void* data, const char *name);
 int int_remove_io_interrupt_handler(int vector, int (*func)(void*), void* data);
 
 void int_enable_interrupts(void);

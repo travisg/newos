@@ -95,10 +95,10 @@ int arch_smp_init(kernel_args *ka)
 		// set up the local apic on the boot cpu
 		arch_smp_init_percpu(ka, 1);
 
-		int_set_io_interrupt_handler(0xfb, &i386_timer_interrupt, NULL);
-		int_set_io_interrupt_handler(0xfd, &i386_ici_interrupt, NULL);
-		int_set_io_interrupt_handler(0xfe, &i386_smp_error_interrupt, NULL);
-		int_set_io_interrupt_handler(0xff, &i386_spurious_interrupt, NULL);
+		int_set_io_interrupt_handler(0xfb, &i386_timer_interrupt, NULL, "lapic timer");
+		int_set_io_interrupt_handler(0xfd, &i386_ici_interrupt, NULL, "ici");
+		int_set_io_interrupt_handler(0xfe, &i386_smp_error_interrupt, NULL, "lapic smp error");
+		int_set_io_interrupt_handler(0xff, &i386_spurious_interrupt, NULL, "lapic spurious");
 	} else {
 		num_cpus = 1;
 	}

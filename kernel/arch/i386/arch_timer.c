@@ -83,7 +83,7 @@ int arch_init_timer(kernel_args *ka)
 {
 	dprintf("arch_init_timer: entry\n");
 
-	int_set_io_interrupt_handler(0x20, &isa_timer_interrupt, NULL);
+	int_set_io_interrupt_handler(0x20, &isa_timer_interrupt, NULL, "PIT timer");
 	clear_isa_hardware_timer();
 	// apic timer interrupt set up by smp code
 

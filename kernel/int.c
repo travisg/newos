@@ -20,6 +20,7 @@ struct io_handler {
 	struct io_handler *next;
 	int (*func)(void*);
 	void* data;
+	const char *name;
 };
 
 struct io_vector {
@@ -47,7 +48,7 @@ int int_init2(kernel_args *ka)
 	return arch_int_init2(ka);
 }
 
-int int_set_io_interrupt_handler(int vector, int (*func)(void*), void* data)
+int int_set_io_interrupt_handler(int vector, int (*func)(void*), void* data, const char *name)
 {
 	struct io_handler *io;
 
@@ -60,6 +61,12 @@ int int_set_io_interrupt_handler(int vector, int (*func)(void*), void* data)
 	io = (struct io_handler *)kmalloc(sizeof(struct io_handler));
 	if(io == NULL)
 		return ERR_NO_MEMORY;
+
+	io->name = kstrdup(name);
+	if(io->name == NULL) {
+		kfree(io);
+		return ERR_NO_MEMORY;
+	}
 	io->func = func;
 	io->data = data;
 
@@ -118,6 +125,7 @@ int int_remove_io_interrupt_handler(int vector, int (*func)(void*), void* data)
 		if (prev == NULL && io->next == NULL)
 			arch_int_disable_io_interrupt(vector);
 
+		kfree((char *)io->name);
 		kfree(io);
 	}
 
