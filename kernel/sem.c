@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -9,6 +9,7 @@
 #include <kernel/timer.h>
 #include <kernel/debug.h>
 #include <kernel/heap.h>
+#include <kernel/thread.h>
 
 #include <boot/stage2.h>
 
@@ -31,10 +32,16 @@ static int sem_spinlock = 0;
 // used in functions that may put a bunch of threads in the run q at once
 #define READY_THREAD_CACHE_SIZE 16
 
+struct sem_timeout_args {
+	thread_id blocked_thread;
+	sem_id blocked_sem_id;
+	int sem_count;
+};
+
 void dump_sem_list(int argc, char **argv)
 {
 	int i;
-	
+
 	for(i=0; i<MAX_SEMS; i++) {
 		if(sems[i].id >= 0) {
 			dprintf("0x%x\tid: 0x%x\t\tname: '%s'\n", &sems[i], sems[i].id, sems[i].name);
@@ -62,8 +69,8 @@ static void dump_sem_info(int argc, char **argv)
 	// if the argument looks like a hex number, treat it as such
 	if(strlen(argv[1]) > 2 && argv[1][0] == '0' && argv[1][1] == 'x') {
 		unsigned long num = atoul(argv[1]);
-		
-		if(num > KERNEL_BASE && num <= (KERNEL_BASE + (KERNEL_SIZE - 1))) { 
+
+		if(num > KERNEL_BASE && num <= (KERNEL_BASE + (KERNEL_SIZE - 1))) {
 			// XXX semi-hack
 			_dump_sem_info((struct sem_entry *)num);
 			return;
@@ -77,7 +84,7 @@ static void dump_sem_info(int argc, char **argv)
 			return;
 		}
 	}
-	
+
 	// walk through the sem list, trying to match name
 	for(i=0; i<MAX_SEMS; i++) {
 		if(strcmp(argv[1], sems[i].name) == 0) {
@@ -90,9 +97,9 @@ static void dump_sem_info(int argc, char **argv)
 int sem_init(kernel_args *ka)
 {
 	int i;
-	
+
 	dprintf("sem_init: entry\n");
-	
+
 	// create and initialize semaphore table
 	sem_region = vm_create_anonymous_region(vm_get_kernel_aspace_id(), "sem_table", (void **)&sems,
 		REGION_ADDR_ANY_ADDRESS, sizeof(struct sem_entry) * MAX_SEMS, REGION_WIRING_WIRED, LOCK_RW|LOCK_KERNEL);
@@ -123,18 +130,18 @@ sem_id sem_create(int count, const char *name)
 	int state;
 	sem_id retval = -1;
 	char *temp_name;
-	
+
 	if(sems_active == false)
 		return -1;
 
 	temp_name = (char *)kmalloc(strlen(name)+1);
-	if(temp_name == NULL) 
+	if(temp_name == NULL)
 		return -1;
 	strcpy(temp_name, name);
-	
+
 	state = int_disable_interrupts();
 	GRAB_SEM_LIST_LOCK();
-	
+
 	// find the first empty spot
 	for(i=0; i<MAX_SEMS; i++) {
 		if(sems[i].id == -1) {
@@ -145,17 +152,17 @@ sem_id sem_create(int count, const char *name)
 				next_sem += MAX_SEMS - (next_sem % MAX_SEMS - i);
 			}
 			sems[i].id = next_sem++;
-			
+
 			sems[i].lock = 0;
 			GRAB_SEM_LOCK(sems[i]);
 			RELEASE_SEM_LIST_LOCK();
-			
+
 			sems[i].q.tail = NULL;
 			sems[i].q.head = NULL;
 			sems[i].count = count;
 			sems[i].name = temp_name;
 			retval = sems[i].id;
-						
+
 			RELEASE_SEM_LOCK(sems[i]);
 			break;
 		}
@@ -190,7 +197,7 @@ int sem_delete_etc(sem_id id, int return_code)
 		return -1;
 	if(id < 0)
 		return -1;
-	
+
 	state = int_disable_interrupts();
 	GRAB_SEM_LOCK(sems[slot]);
 
@@ -200,24 +207,23 @@ int sem_delete_etc(sem_id id, int return_code)
 		dprintf("sem_delete: invalid sem_id %d\n", id);
 		return -1;
 	}
-	
+
 	// free any threads waiting for this semaphore
 	// put them in the runq in batches, to keep the amount of time
 	// spent with the thread lock held down to a minimum
 	{
 		struct thread *ready_threads[READY_THREAD_CACHE_SIZE];
 		int ready_threads_count = 0;
-			
+
 		while((t = thread_dequeue(&sems[slot].q)) != NULL) {
 			t->state = THREAD_STATE_READY;
 			t->sem_deleted_retcode = return_code;
-			t->blocked_sem_id = 0;
 			t->sem_count = 0;
 			ready_threads[ready_threads_count++] = t;
 			released_threads++;
-			
+
 			if(ready_threads_count == READY_THREAD_CACHE_SIZE) {
-				// put a batch of em in the runq at once				
+				// put a batch of em in the runq at once
 				GRAB_THREAD_LOCK();
 				for(; ready_threads_count > 0; ready_threads_count--)
 					thread_enqueue_run_q(ready_threads[ready_threads_count - 1]);
@@ -236,7 +242,7 @@ int sem_delete_etc(sem_id id, int return_code)
 	sems[slot].id = -1;
 	old_name = sems[slot].name;
 	sems[slot].name = NULL;
-	
+
 	RELEASE_SEM_LOCK(sems[slot]);
 
 	if(old_name != temp_sem_name)
@@ -249,36 +255,44 @@ int sem_delete_etc(sem_id id, int return_code)
 	}
 
 	int_restore_interrupts(state);
-	
+
 	return err;
 }
 
 // Called from a timer handler. Wakes up a semaphore
 static int sem_timeout(void *data)
 {
-	struct thread *t = (struct thread *)data;
-	int slot = t->blocked_sem_id % MAX_SEMS;
+	struct sem_timeout_args *args = (struct sem_timeout_args *)data;
+	struct thread *t;
+	int slot;
 	int state;
-	
+
+	t = thread_get_thread_struct(args->blocked_thread);
+	if(t == NULL)
+		return INT_NO_RESCHEDULE;
+	slot = args->blocked_sem_id % MAX_SEMS;
+
 	state = int_disable_interrupts();
 	GRAB_SEM_LOCK(sems[slot]);
-	
+
 //	dprintf("sem_timeout: called on 0x%x sem %d, tid %d\n", to, to->sem_id, to->thread_id);
-	
-	if(sems[slot].id != t->blocked_sem_id) {
+
+	if(sems[slot].id != args->blocked_sem_id) {
 		// this thread was not waiting on this semaphore
 		panic("sem_timeout: thid %d was trying to wait on sem %d which doesn't exist!\n",
-			t->id, t->blocked_sem_id);
+			args->blocked_thread, args->blocked_sem_id);
 	}
-	
+
 	t = thread_dequeue_id(&sems[slot].q, t->id);
 	if(t != NULL) {
-		sems[slot].count += t->sem_count;
+		sems[slot].count += args->sem_count;
 		t->state = THREAD_STATE_READY;
 		GRAB_THREAD_LOCK();
 		thread_enqueue_run_q(t);
 		RELEASE_THREAD_LOCK();
 	}
+
+	// XXX handle possibly releasing more threads here
 
 	RELEASE_SEM_LOCK(sems[slot]);
 	int_restore_interrupts(state);
@@ -296,19 +310,19 @@ int sem_acquire_etc(sem_id id, int count, int flags, time_t timeout, int *delete
 	int slot = id % MAX_SEMS;
 	int state;
 	int err = 0;
-	
+
 	if(sems_active == false)
 		return -1;
-	
+
 	if(id < 0)
 		return -1;
 
 	if(count <= 0)
 		return -1;
-	
+
 	state = int_disable_interrupts();
 	GRAB_SEM_LOCK(sems[slot]);
-	
+
 	if(sems[slot].id != id) {
 		dprintf("sem_acquire_etc: invalid sem_id %d\n", id);
 		err = -1;
@@ -320,23 +334,26 @@ int sem_acquire_etc(sem_id id, int count, int flags, time_t timeout, int *delete
 		err = -1;
 		goto err;
 	}
-	
+
 	if((sems[slot].count -= count) < 0) {
 		// we need to block
 		struct thread *t = thread_get_current_thread();
 		struct timer_event timer; // stick it on the heap, since we may be blocking here
-		
+		struct sem_timeout_args args;
+
 		t->next_state = THREAD_STATE_WAITING;
-		t->sem_count = count;
-		t->blocked_sem_id = id;
+		t->sem_count = min(-sems[slot].count, count); // store the count we need to restore upon release
 		t->sem_deleted_retcode = 0;
 		thread_enqueue(t, &sems[slot].q);
-	
+
 		if((flags & SEM_FLAG_TIMEOUT) != 0) {
 //			dprintf("sem_acquire_etc: setting timeout sem for %d %d usecs, semid %d, tid %d\n",
 //				timeout, sem_id, t->id);
 			// set up an event to go off, with the thread struct as the data
-			timer_setup_timer(&sem_timeout, (void *)t, &timer);
+			args.blocked_sem_id = id;
+			args.blocked_thread = t->id;
+			args.sem_count = count;
+			timer_setup_timer(&sem_timeout, &args, &timer);
 			timer_set_event(timeout, TIMER_MODE_ONESHOT, &timer);
 		}
 
@@ -353,7 +370,7 @@ int sem_acquire_etc(sem_id id, int count, int flags, time_t timeout, int *delete
 		int_restore_interrupts(state);
 		if(deleted_retcode != NULL)
 			*deleted_retcode = t->sem_deleted_retcode;
-		return 0;		
+		return 0;
 	}
 
 err:
@@ -376,16 +393,16 @@ int sem_release_etc(sem_id id, int count, int flags)
 	int err = 0;
 	struct thread *ready_threads[READY_THREAD_CACHE_SIZE];
 	int ready_threads_count = 0;
-	
+
 	if(sems_active == false)
 		return -1;
 
 	if(id < 0)
-		return -1;	
-	
+		return -1;
+
 	if(count <= 0)
 		return -1;
-	
+
 	state = int_disable_interrupts();
 	GRAB_SEM_LOCK(sems[slot]);
 
@@ -399,7 +416,7 @@ int sem_release_etc(sem_id id, int count, int flags)
 		int delta = count;
 		if(sems[slot].count < 0) {
 			struct thread *t = thread_lookat_queue(&sems[slot].q);
-			
+
 			delta = min(count, t->sem_count);
 			t->sem_count -= delta;
 			if(t->sem_count <= 0) {
@@ -409,19 +426,18 @@ int sem_release_etc(sem_id id, int count, int flags)
 				ready_threads[ready_threads_count++] = t;
 				released_threads++;
 				t->sem_count = 0;
-				t->blocked_sem_id = -1;
 				t->sem_deleted_retcode = 0;
 			}
 		}
 		if(ready_threads_count == READY_THREAD_CACHE_SIZE) {
-			// put a batch of em in the runq a once				
+			// put a batch of em in the runq a once
 			GRAB_THREAD_LOCK();
 			for(; ready_threads_count > 0; ready_threads_count--)
 				thread_enqueue_run_q(ready_threads[ready_threads_count - 1]);
 			RELEASE_THREAD_LOCK();
 			// ready_threads_count is back to 0
 		}
-					
+
 		sems[slot].count += delta;
 		count -= delta;
 	}
@@ -437,7 +453,7 @@ int sem_release_etc(sem_id id, int count, int flags)
 			thread_resched();
 		}
 		RELEASE_THREAD_LOCK();
-		goto outnolock;			
+		goto outnolock;
 	}
 
 err:

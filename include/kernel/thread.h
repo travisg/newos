@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -67,7 +67,6 @@ struct thread {
 	int pending_signals;
 	bool in_kernel;
 	int sem_count;
-	sem_id blocked_sem_id;
 	int sem_deleted_retcode;
 	void *args;
 	struct proc *proc;
@@ -103,6 +102,7 @@ void thread_snooze(time_t time);
 int thread_init(kernel_args *ka);
 void thread_exit(int retcode);
 struct thread *thread_get_current_thread();
+struct thread *thread_get_thread_struct(thread_id id);
 thread_id thread_get_current_thread_id();
 int thread_wait_on_thread(thread_id id, int *retcode);
 int proc_wait_on_proc(proc_id id, int *retcode);

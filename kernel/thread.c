@@ -75,7 +75,6 @@ static struct thread_queue dead_q;
 
 static int _rand();
 static void thread_entry(void);
-static struct thread *thread_get_thread_struct(thread_id id);
 static struct thread *thread_get_thread_struct_locked(thread_id id);
 static struct proc *proc_get_proc_struct(proc_id id);
 static struct proc *proc_get_proc_struct_locked(proc_id id);
@@ -472,7 +471,6 @@ static void _dump_thread_info(struct thread *t)
 	dprintf("state:       %s\n", state_to_text(t->state));
 	dprintf("next_state:  %s\n", state_to_text(t->next_state));
 	dprintf("sem_count:   0x%x\n", t->sem_count);
-	dprintf("blocked_sem: 0x%x\n", t->blocked_sem_id);
 	dprintf("proc:        0x%x\n", t->proc);
 	dprintf("kernel_stack_region_id: 0x%x\n", t->kernel_stack_region_id);
 	dprintf("kernel_stack_base: 0x%x\n", t->kernel_stack_base);
@@ -999,7 +997,7 @@ struct thread *thread_get_current_thread()
 	return CURR_THREAD;
 }
 
-static struct thread *thread_get_thread_struct(thread_id id)
+struct thread *thread_get_thread_struct(thread_id id)
 {
 	struct thread *t;
 	int state;
