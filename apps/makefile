@@ -34,6 +34,7 @@ include $(addsuffix /makefile, $(addprefix $(APPS_DIR)/, \
 	guiapp \
 	disktest \
 	vmstat \
+	sleep \
 ))
 
 
