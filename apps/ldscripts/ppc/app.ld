@@ -10,16 +10,20 @@ SECTIONS
 	/* text/read-only data */
 	.text :	{ *(.text .gnu.linkonce.t.*) }
 
+	.rodata : { *(.rodata .rodata.*) }
+
+	/* writable data  */
+	. = ALIGN(0x1000) + (. & (0x1000 - 1));
+	__data_start = .;
+	.data : { *(.data .gnu.linkonce.d.*) }
+
 	__ctor_list = .;
 	.ctors : { *(.ctors) }
 	__ctor_end = .;
 
-	.rodata : { *(.rodata) }
-
-	/* writable data  */
-	. = ALIGN(0x1000);
-	__data_start = .;
-	.data : { *(.data .gnu.linkonce.d.*) }
+	__dtor_list = .;
+	.dtors : { *(.dtors) }
+	__dtor_end = .;
 
 	/* unintialized data (in same segment as writable data) */
 	__bss_start = .;

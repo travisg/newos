@@ -1,11 +1,12 @@
 /*
-** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2004, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #include <kernel/kernel.h>
 #include <boot/stage2.h>
 
 #include <kernel/arch/vm.h>
+#include <string.h>
 
 int arch_vm_init(kernel_args *ka)
 {

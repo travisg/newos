@@ -1,5 +1,5 @@
 /*
-** Copyright 2003, Travis Geiselbrecht. All rights reserved.
+** Copyright 2003-2004, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #include <boot/stage2.h>
@@ -24,6 +24,13 @@ void arch_time_tick(void)
 
 bigtime_t arch_get_time_delta(void)
 {
+	// XXX implement
+	return 0;
+}
+
+bigtime_t arch_get_rtc_delta(void)
+{
+	// XXX implement. Return RTC time in usecs since 0AD
 	return 0;
 }
 

@@ -9,6 +9,7 @@
 #include <kernel/vm_priv.h>
 #include <kernel/timer.h>
 #include <kernel/thread.h>
+#include <kernel/time.h>
 
 #include <string.h>
 
