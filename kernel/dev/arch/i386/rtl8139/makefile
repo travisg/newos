@@ -1,0 +1,6 @@
+# dev i386 rtl8139 makefile
+KERNEL_DEV_I386_RTL8139_DIR := dev/arch/i386/rtl8139
+
+MY_OBJS += \
+	$(KERNEL_DEV_I386_RTL8139_DIR)/rtl8139.o \
+	$(KERNEL_DEV_I386_RTL8139_DIR)/rtl8139_dev.o

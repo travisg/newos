@@ -1,5 +1,10 @@
-libs:
-	$(MAKE) -C .. libs
-	
-clean:
-	$(MAKE) -C .. libclean
+
+LIBS_DIR := lib
+
+include $(addsuffix /makefile, $(addprefix $(LIBS_DIR)/, \
+	glue \
+	libm \
+	nulibc \
+))
+
+
