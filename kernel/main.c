@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -26,7 +26,7 @@
 int _start(kernel_args *oldka, int cpu)
 {
 	kernel_args ka;
-	
+
 	memcpy(&ka, oldka, sizeof(kernel_args));
 
 	smp_set_num_cpus(ka.num_cpus);
@@ -35,29 +35,29 @@ int _start(kernel_args *oldka, int cpu)
 	if(smp_trap_non_boot_cpus(&ka, cpu) == 0) {
 		// we're the boot processor, so wait for all of the APs to enter the kernel
 		smp_wait_for_ap_cpus(&ka);
-		
+
 		// setup debug output
 		dbg_init(&ka);
 		dbg_set_serial_debug(true);
 		dprintf("Welcome to kernel debugger output!\n");
-	
+
 		// init modules
 		arch_cpu_init(&ka);
 		int_init(&ka);
 
 		vm_init(&ka);
 		dprintf("vm up\n");
-		
+
 		// now we can use the heap and create areas
 		dbg_init2(&ka);
 		int_init2(&ka);
-		
+
 		faults_init(&ka);
 		smp_init(&ka);
 		timer_init(&ka);
-		
+
 		arch_cpu_init2(&ka);
-		
+
 		sem_init(&ka);
 
 		// now we can create and use semaphores
@@ -70,12 +70,12 @@ int _start(kernel_args *oldka, int cpu)
 		bus_init(&ka);
 		devs_init(&ka);
 		con_init(&ka);
-		
+
 		net_init(&ka);
 #if 0
 		// XXX remove
 		vfs_test();
-#endif	
+#endif
 #if 0
 		// XXX remove
 		thread_test();
@@ -83,14 +83,16 @@ int _start(kernel_args *oldka, int cpu)
 #if 0
 		vm_test();
 #endif
-		
+
 		smp_wake_up_all_non_boot_cpus();
 		smp_enable_ici(); // ici's were previously being ignored
 		thread_start_threading();
 	}
 	int_enable_interrupts();
 
-	vm_test();
+	if(cpu == 0) {
+		vm_test();
+	}
 
 	// start the init process
 	if(cpu == 0) {
@@ -98,14 +100,14 @@ int _start(kernel_args *oldka, int cpu)
 		pid = proc_create_proc("/boot/init", "init", 5);
 		if(pid < 0)
 			kprintf("error starting 'init'\n");
-	}		
+	}
 
 #if 0
-	panic("debugger_test\n");	
+	panic("debugger_test\n");
 #endif
 	dprintf("main: done... spinning forever on cpu %d\n", cpu);
 	for(;;);
-	
+
 	return 0;
 }
 
