@@ -178,7 +178,7 @@ ifeq ($(ARCH),ppc)
 endif
 
 # try to detect if the user has ARCH-newos-gcc installed
-FOO := $(shell $(TOOLCHAIN_ARCH)-newos-gcc --version)
+FOO := $(shell [ -x $(TOOLCHAIN_ARCH)-newos-gcc ] && $(TOOLCHAIN_ARCH)-newos-gcc --version)
 ifneq ($(FOO),)
 $(warning found newos toolchain!)
 	CC = $(TOOLCHAIN_ARCH)-newos-gcc
