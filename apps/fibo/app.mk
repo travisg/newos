@@ -1,28 +1,28 @@
-TRUEAPP_DIR = $(APPS_DIR)/fibo
-TRUEAPP_OBJ_DIR = $(TRUEAPP_DIR)/$(OBJ_DIR)
-TRUEAPP_OBJS = \
-	$(TRUEAPP_OBJ_DIR)/main.o
+FIBOAPP_DIR = $(APPS_DIR)/fibo
+FIBOAPP_OBJ_DIR = $(FIBOAPP_DIR)/$(OBJ_DIR)
+FIBOAPP_OBJS = \
+	$(FIBOAPP_OBJ_DIR)/main.o
 
-DEPS += $(TRUEAPP_OBJS:.o=.d)
+DEPS += $(FIBOAPP_OBJS:.o=.d)
 
-TRUEAPP = $(TRUEAPP_OBJ_DIR)/fibo
+FIBOAPP = $(FIBOAPP_OBJ_DIR)/fibo
 
-$(TRUEAPP): $(TRUEAPP_OBJS) $(LIBS) $(GLUE)
-	$(LD) -dN --script=$(APPS_LDSCRIPT) -L $(LIBGCC_PATH) -o $@ $(GLUE) $(TRUEAPP_OBJS) $(LINK_LIBS) $(LIBGCC)
+$(FIBOAPP): $(FIBOAPP_OBJS) $(LIBS) $(GLUE)
+	$(LD) -dN --script=$(APPS_LDSCRIPT) -L $(LIBGCC_PATH) -o $@ $(GLUE) $(FIBOAPP_OBJS) $(LINK_LIBS) $(LIBGCC)
 
-trueappclean:
-	rm -f $(TRUEAPP_OBJS) $(TRUEAPP)
+fiboappclean:
+	rm -f $(FIBOAPP_OBJS) $(FIBOAPP)
 
-APPS += $(TRUEAPP)
+APPS += $(FIBOAPP)
 
-APPS_CLEAN += trueappclean
+APPS_CLEAN += fiboappclean
 
-$(TRUEAPP_OBJ_DIR)/%.o: $(TRUEAPP_DIR)/%.c
-	@if [ ! -d $(TRUEAPP_OBJ_DIR) ]; then mkdir -p $(TRUEAPP_OBJ_DIR); fi
-	@mkdir -p $(TRUEAPP_OBJ_DIR)
+$(FIBOAPP_OBJ_DIR)/%.o: $(FIBOAPP_DIR)/%.c
+	@if [ ! -d $(FIBOAPP_OBJ_DIR) ]; then mkdir -p $(FIBOAPP_OBJ_DIR); fi
+	@mkdir -p $(FIBOAPP_OBJ_DIR)
 	$(CC) -c $< $(GLOBAL_CFLAGS) $(APPS_INCLUDES) -o $@
 
-$(TRUEAPP_OBJ_DIR)/%.d: $(TRUEAPP_DIR)/%.c
-	@if [ ! -d $(TRUEAPP_OBJ_DIR) ]; then mkdir -p $(TRUEAPP_OBJ_DIR); fi
+$(FIBOAPP_OBJ_DIR)/%.d: $(FIBOAPP_DIR)/%.c
+	@if [ ! -d $(FIBOAPP_OBJ_DIR) ]; then mkdir -p $(FIBOAPP_OBJ_DIR); fi
 	@echo "making deps for $<..."
 	@($(ECHO) -n $(dir $@); $(CC) $(GLOBAL_CFLAGS) $(APPS_INCLUDES) -M -MG $<) > $@
