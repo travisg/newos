@@ -29,11 +29,13 @@ static int anonymous_has_page(struct vm_store *store, off_t offset)
 static int anonymous_read(struct vm_store *store, off_t offset, void *buf, size_t *len)
 {
 	panic("anonymous_store: read called. Invalid!\n");
+	return -1;
 }
 
 static int anonymous_write(struct vm_store *store, off_t offset, const void *buf, size_t *len)
 {
 	panic("anonymous_store: write called. Invalid!\n");
+	return -1;
 }
 
 /*

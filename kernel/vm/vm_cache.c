@@ -133,6 +133,7 @@ int vm_cache_insert_region(vm_cache_ref *cache_ref, vm_region *region)
 	cache_ref->region_list = region;
 
 	mutex_unlock(&cache_ref->lock);
+	return 0;
 }
 
 int vm_cache_remove_region(vm_cache_ref *cache_ref, vm_region *region)
@@ -147,4 +148,5 @@ int vm_cache_remove_region(vm_cache_ref *cache_ref, vm_region *region)
 		cache_ref->region_list = region->cache_next;
 
 	mutex_unlock(&cache_ref->lock);
+	return 0;
 }
