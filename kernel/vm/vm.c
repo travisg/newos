@@ -1628,6 +1628,8 @@ int vm_init(kernel_args *ka)
 			ka->bootdir_addr.size, LOCK_RO|LOCK_KERNEL, ka->bootdir_addr.start);
 	}
 
+	arch_vm_init_endvm(ka);
+
 	// add some debugger commands
 	dbg_add_command(&dump_region_list, "regions", "Dump a list of all regions");
 	dbg_add_command(&dump_region, "region", "Dump info about a particular region");
