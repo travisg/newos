@@ -114,7 +114,7 @@ static mod_console text_mod_console = {
 };
 
 static module_header text_module_header = {
-	"console/text/v1",
+	"console/vga_text/v1",
 	MODULE_CURR_VERSION,
 	0,
 	(void*) &text_mod_console,
