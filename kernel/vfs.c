@@ -163,6 +163,9 @@ static unsigned int vnode_hash(void *_v, const void *_key, unsigned int range)
 
 static int init_vnode(struct vnode *v)
 {
+#if MAKE_NOIZE
+	dprintf("init_vnode: v %p\n", v);
+#endif
 	v->next = NULL;
 	v->mount_prev = NULL;
 	v->mount_next = NULL;
@@ -250,7 +253,7 @@ static int dec_vnode_ref_count(struct vnode *v, bool free_mem, bool r)
 
 	old_ref = atomic_add(&v->ref_count, -1);
 #if MAKE_NOIZE
-	dprintf("dec_vnode_ref_count: vnode 0x%x, ref now %d\n", v, v->ref_count);
+	dprintf("dec_vnode_ref_count: vnode %p, ref now %d, old_ref %d\n", v, v->ref_count, old_ref);
 #endif
 
 	if(old_ref == 1) {
@@ -276,7 +279,7 @@ static int dec_vnode_ref_count(struct vnode *v, bool free_mem, bool r)
 
 		if(free_mem) {
 #if MAKE_NOIZE
-		dprintf("dec_vnode_ref_count: freeing vnode 0x%x\n", v);
+			dprintf("dec_vnode_ref_count: freeing vnode %p\n", v);
 #endif
 			kfree(v);
 		}
@@ -290,9 +293,9 @@ static int dec_vnode_ref_count(struct vnode *v, bool free_mem, bool r)
 
 static int inc_vnode_ref_count(struct vnode *v)
 {
-	atomic_add(&v->ref_count, 1);
+	int old_ref = atomic_add(&v->ref_count, 1);
 #if MAKE_NOIZE
-	dprintf("inc_vnode_ref_count: vnode 0x%x, ref now %d\n", v, v->ref_count);
+	dprintf("inc_vnode_ref_count: vnode %p, ref now %d, old_ref %d\n", v, v->ref_count, old_ref);
 #endif
 	return 0;
 }
@@ -313,7 +316,7 @@ static int get_vnode(fs_id fsid, vnode_id vnid, struct vnode **outv, int r)
 	int err;
 
 #if MAKE_NOIZE
-	dprintf("get_vnode: fsid %d vnid 0x%x 0x%x\n", fsid, vnid);
+	dprintf("get_vnode: fsid %d vnid 0x%Lx\n", fsid, vnid);
 #endif
 
 	mutex_lock(&vfs_vnode_mutex);
@@ -332,7 +335,7 @@ static int get_vnode(fs_id fsid, vnode_id vnid, struct vnode **outv, int r)
 	}
 
 #if MAKE_NOIZE
-	dprintf("get_vnode: tried to lookup vnode, got 0x%x\n", v);
+	dprintf("get_vnode: tried to lookup vnode, got %p\n", v);
 #endif
 	if(v) {
 		inc_vnode_ref_count(v);
@@ -371,7 +374,7 @@ static int get_vnode(fs_id fsid, vnode_id vnid, struct vnode **outv, int r)
 
 	mutex_unlock(&vfs_vnode_mutex);
 #if MAKE_NOIZE
-	dprintf("get_vnode: returning 0x%x\n", v);
+	dprintf("get_vnode: returning %p\n", v);
 #endif
 	*outv = v;
 	return NO_ERROR;
@@ -396,6 +399,10 @@ int vfs_get_vnode(fs_id fsid, vnode_id vnid, fs_vnode *fsv)
 	int err;
 	struct vnode *v;
 
+#if MAKE_NOIZE
+	dprintf("vfs_get_vnode: fsid %d vnid 0x%Lx\n", fsid, vnid);
+#endif
+
 	err = get_vnode(fsid, vnid, &v, true);
 	if(err < 0)
 		return err;
@@ -407,6 +414,10 @@ int vfs_get_vnode(fs_id fsid, vnode_id vnid, fs_vnode *fsv)
 int vfs_put_vnode(fs_id fsid, vnode_id vnid)
 {
 	struct vnode *v;
+
+#if MAKE_NOIZE
+	dprintf("vfs_put_vnode: fsid %d vnid 0x%Lx\n", fsid, vnid);
+#endif
 
 	mutex_lock(&vfs_vnode_mutex);
 
@@ -422,7 +433,7 @@ int vfs_put_vnode(fs_id fsid, vnode_id vnid)
 void vfs_vnode_acquire_ref(void *v)
 {
 #if MAKE_NOIZE
-	dprintf("vfs_vnode_acquire_ref: vnode 0x%x\n", v);
+	dprintf("vfs_vnode_acquire_ref: vnode %p\n", v);
 #endif
 	inc_vnode_ref_count((struct vnode *)v);
 }
@@ -430,7 +441,7 @@ void vfs_vnode_acquire_ref(void *v)
 void vfs_vnode_release_ref(void *v)
 {
 #if MAKE_NOIZE
-	dprintf("vfs_vnode_release_ref: vnode 0x%x\n", v);
+	dprintf("vfs_vnode_release_ref: vnode %p\n", v);
 #endif
 	dec_vnode_ref_count((struct vnode *)v, true, false);
 }
@@ -636,7 +647,7 @@ static int path_to_vnode(char *path, struct vnode **v, bool kernel)
 	}
 
 	for(;;) {
-//		dprintf("path_to_vnode: top of loop. p 0x%x, *p = %c, p = '%s'\n", p, *p, p);
+//		dprintf("path_to_vnode: top of loop. p %p, *p = %c, p = '%s'\n", p, *p, p);
 
 		// done?
 		if(*p == '\0') {
@@ -1170,6 +1181,9 @@ int vfs_unmount(char *path, bool kernel)
 			v->busy = true;
 	mount->unmounting = true;
 
+	/* add 2 back to the root vnode's ref */
+	mount->root_vnode->ref_count += 2;
+
 	mutex_unlock(&vfs_vnode_mutex);
 
 	mount->covers_vnode->covered_by = NULL;
@@ -1336,7 +1350,7 @@ int vfs_readdir(int fd, void *buf, size_t len, bool kernel)
 	int err;
 
 #if MAKE_NOIZE
-	dprintf("vfs_readdir: fd = %d, buf 0x%x, len 0x%x, kernel %d\n", fd, buf, len, kernel);
+	dprintf("vfs_readdir: fd = %d, buf %p, len 0x%lx, kernel %d\n", fd, buf, len, kernel);
 #endif
 
 	f = get_fd(get_current_ioctx(kernel), fd);
@@ -1481,7 +1495,7 @@ ssize_t vfs_read(int fd, void *buf, off_t pos, ssize_t len, bool kernel)
 	int err;
 
 #if MAKE_NOIZE
-	dprintf("vfs_read: fd = %d, buf 0x%x, pos 0x%x 0x%x, len 0x%x, kernel %d\n", fd, buf, pos, len, kernel);
+	dprintf("vfs_read: fd = %d, buf %p, pos 0x%Lx, len 0x%lx, kernel %d\n", fd, buf, pos, len, kernel);
 #endif
 
 	f = get_fd(get_current_ioctx(kernel), fd);
@@ -1506,7 +1520,7 @@ ssize_t vfs_write(int fd, const void *buf, off_t pos, ssize_t len, bool kernel)
 	int err;
 
 #if MAKE_NOIZE
-	dprintf("vfs_write: fd = %d, buf 0x%x, pos 0x%x 0x%x, len 0x%x, kernel %d\n", fd, buf, pos, len, kernel);
+	dprintf("vfs_write: fd = %d, buf %p, pos 0x%Lx, len 0x%lx, kernel %d\n", fd, buf, pos, len, kernel);
 #endif
 
 	f = get_fd(get_current_ioctx(kernel), fd);
@@ -1531,7 +1545,7 @@ int vfs_seek(int fd, off_t pos, seek_type seek_type, bool kernel)
 	int err;
 
 #if MAKE_NOIZE
-	dprintf("vfs_seek: fd = %d, pos 0x%x 0x%x, seek_type %d, kernel %d\n", fd, pos, seek_type, kernel);
+	dprintf("vfs_seek: fd = %d, pos 0x%Lx, seek_type %d, kernel %d\n", fd, pos, seek_type, kernel);
 #endif
 
 	f = get_fd(get_current_ioctx(kernel), fd);
@@ -1556,7 +1570,7 @@ int vfs_ioctl(int fd, int op, void *buf, size_t len, bool kernel)
 	int err;
 
 #if MAKE_NOIZE
-	dprintf("vfs_ioctl: fd = %d, op 0x%x, buf 0x%x, len 0x%x, kernel %d\n", fd, op, buf, len, kernel);
+	dprintf("vfs_ioctl: fd = %d, op 0x%x, buf %p, len 0x%lx, kernel %d\n", fd, op, buf, len, kernel);
 #endif
 
 	f = get_fd(get_current_ioctx(kernel), fd);
@@ -1582,7 +1596,7 @@ int vfs_create(char *path, void *args, bool kernel)
 	vnode_id vnid;
 
 #if MAKE_NOIZE
-	dprintf("vfs_create: path '%s', stream_type %d, args 0x%x, kernel %d\n", path, stream_type, args, kernel);
+	dprintf("vfs_create: path '%s', args %p, kernel %d\n", path, args, kernel);
 #endif
 
 	err = path_to_dir_vnode(path, &v, filename, kernel);
@@ -1695,7 +1709,7 @@ int vfs_rstat(char *path, struct file_stat *stat, bool kernel)
 	struct vnode *v;
 
 #if MAKE_NOIZE
-	dprintf("vfs_rstat: path '%s', stat 0x%x, kernel %d\n", path, stat, kernel);
+	dprintf("vfs_rstat: path '%s', stat %p, kernel %d\n", path, stat, kernel);
 #endif
 
 	err = path_to_vnode(path, &v, kernel);
@@ -1715,7 +1729,7 @@ int vfs_wstat(char *path, struct file_stat *stat, int stat_mask, bool kernel)
 	struct vnode *v;
 
 #if MAKE_NOIZE
-	dprintf("vfs_wstat: path '%s', stat 0x%x, stat_mask %d, kernel %d\n", path, stat, stat_mask, kernel);
+	dprintf("vfs_wstat: path '%s', stat %p, stat_mask %d, kernel %d\n", path, stat, stat_mask, kernel);
 #endif
 
 	err = path_to_vnode(path, &v, kernel);
@@ -1779,7 +1793,7 @@ ssize_t vfs_canpage(void *_v)
 	struct vnode *v = _v;
 
 #if MAKE_NOIZE
-	dprintf("vfs_canpage: vnode 0x%x\n", v);
+	dprintf("vfs_canpage: vnode %p\n", v);
 #endif
 
 	return v->mount->fs->calls->fs_canpage(v->mount->fscookie, v->priv_vnode);
@@ -1790,7 +1804,7 @@ ssize_t vfs_readpage(void *_v, iovecs *vecs, off_t pos)
 	struct vnode *v = _v;
 
 #if MAKE_NOIZE
-	dprintf("vfs_readpage: vnode 0x%x, vecs 0x%x, pos 0x%x 0x%x\n", v, vecs, pos);
+	dprintf("vfs_readpage: vnode %p, vecs %p, pos 0x%Lx\n", v, vecs, pos);
 #endif
 
 	return v->mount->fs->calls->fs_readpage(v->mount->fscookie, v->priv_vnode, vecs, pos);
@@ -1801,7 +1815,7 @@ ssize_t vfs_writepage(void *_v, iovecs *vecs, off_t pos)
 	struct vnode *v = _v;
 
 #if MAKE_NOIZE
-	dprintf("vfs_writepage: vnode 0x%x, vecs 0x%x, pos 0x%x 0x%x\n", v, vecs, pos);
+	dprintf("vfs_writepage: vnode %p, vecs %p, pos 0x%Lx\n", v, vecs, pos);
 #endif
 
 	return v->mount->fs->calls->fs_writepage(v->mount->fscookie, v->priv_vnode, vecs, pos);
@@ -1814,7 +1828,7 @@ static int vfs_get_cwd(char* buf, size_t size, bool kernel)
 	int rc;
 
 #if MAKE_NOIZE
-	dprintf("vfs_get_cwd: buf 0x%x, 0x%x\n", buf, size);
+	dprintf("vfs_get_cwd: buf %p, 0x%lx\n", buf, size);
 #endif
 	//TODO: parse cwd back into a full path
 	if (size >= 2) {
@@ -1839,7 +1853,7 @@ static int vfs_set_cwd(char* path, bool kernel)
 	int rc;
 
 #if MAKE_NOIZE
-	dprintf("vfs_set_cwd: path=\'%s\'\n", path);
+	dprintf("vfs_set_cwd: path='%s'\n", path);
 #endif
 
 	// Get vnode for passed path, and bail if it failed
@@ -2152,7 +2166,7 @@ char* sys_getcwd(char *buf, size_t size)
 	int rc;
 
 #if MAKE_NOIZE
-	dprintf("sys_getcwd: buf 0x%x, 0x%x\n", buf, size);
+	dprintf("sys_getcwd: buf %p, 0x%lx\n", buf, size);
 #endif
 
 	// Call vfs to get current working directory
@@ -2171,7 +2185,7 @@ int sys_setcwd(const char* _path)
 	char path[SYS_MAX_PATH_LEN];
 
 #if MAKE_NOIZE
-	dprintf("sys_setcwd: path=0x%x\n", _path);
+	dprintf("sys_setcwd: path=%p\n", _path);
 #endif
 
 	// Copy new path to kernel space
@@ -2482,7 +2496,7 @@ int user_getcwd(char *buf, size_t size)
 	int rc, rc2;
 
 #if MAKE_NOIZE
-	dprintf("user_getcwd: buf 0x%x, 0x%x\n", buf, size);
+	dprintf("user_getcwd: buf %p, 0x%lx\n", buf, size);
 #endif
 
 	// Check if userspace address is inside "shared" kernel space
@@ -2508,7 +2522,7 @@ int user_setcwd(const char* upath)
 	int rc;
 
 #if MAKE_NOIZE
-	dprintf("user_setcwd: path=0x%x\n", upath);
+	dprintf("user_setcwd: path=%p\n", upath);
 #endif
 
 	// Check if userspace address is inside "shared" kernel space
