@@ -13,6 +13,7 @@
 #include <kernel/vm.h>
 #include <kernel/cpu.h>
 #include <kernel/time.h>
+#include <kernel/signal.h>
 #include <sys/resource.h>
 
 static int syscall_null(void)
@@ -110,6 +111,11 @@ const struct syscall_table_entry syscall_table[] = {
 	SYSCALL_ENTRY(user_mkdir),
 	SYSCALL_ENTRY(user_rmdir),
 	SYSCALL_ENTRY(user_vm_get_vm_info),			/* 80 */
+	SYSCALL_ENTRY(arch_restore_signal_frame),
+	SYSCALL_ENTRY(user_sigaction),
+	SYSCALL_ENTRY(user_send_signal),
+	SYSCALL_ENTRY(user_send_proc_signal),
+	SYSCALL_ENTRY(user_set_alarm),				/* 85 */
 };
 
 int num_syscall_table_entries = sizeof(syscall_table) / sizeof(struct syscall_table_entry);

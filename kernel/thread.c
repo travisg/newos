@@ -21,6 +21,7 @@
 #include <kernel/vfs.h>
 #include <kernel/elf.h>
 #include <kernel/heap.h>
+#include <kernel/signal.h>
 #include <newos/user_runtime.h>
 #include <newos/errors.h>
 #include <boot/stage2.h>
@@ -85,10 +86,8 @@ static struct thread_queue run_q[THREAD_NUM_PRIORITY_LEVELS] = { { NULL, NULL },
 static struct thread_queue dead_q;
 
 static int _rand(void);
-static struct thread *thread_get_thread_struct_locked(thread_id id);
 //static struct proc *proc_get_proc_struct(proc_id id); // unused
 static struct proc *proc_get_proc_struct_locked(proc_id id);
-static void deliver_signal(struct thread *t, int signal);
 
 // insert a thread onto the tail of a queue
 void thread_enqueue(struct thread *t, struct thread_queue *q)
@@ -325,7 +324,10 @@ static struct thread *create_thread_struct(const char *name)
 	t->q_next = NULL;
 	t->priority = -1;
 	t->args = NULL;
-	t->pending_signals = SIG_NONE;
+	t->sig_pending = 0;
+	t->sig_block_mask = 0;
+	memset(t->sig_action, 0, 32 * sizeof(struct sigaction));
+	memset(&t->alarm_event, 0, sizeof(t->alarm_event));
 	t->in_kernel = true;
 	t->int_disable_level = 0;
 	t->user_time = 0;
@@ -539,42 +541,7 @@ static thread_id thread_create_kernel_thread_etc(const char *name, int (*func)(v
 
 int thread_suspend_thread(thread_id id)
 {
-	struct thread *t;
-	int retval;
-	bool global_resched = false;
-
-	int_disable_interrupts();
-	GRAB_THREAD_LOCK();
-
-	t = thread_get_current_thread();
-	if(t->id != id) {
-		t = thread_get_thread_struct_locked(id);
-	}
-
-	if(t != NULL) {
-		if(t->proc == kernel_proc) {
-			// no way
-			retval = ERR_NOT_ALLOWED;
-		} else if(t->in_kernel == true) {
-			t->pending_signals |= SIG_SUSPEND;
-			retval = NO_ERROR;
-		} else {
-			t->next_state = THREAD_STATE_SUSPENDED;
-			global_resched = true;
-			retval = NO_ERROR;
-		}
-	} else {
-		retval = ERR_INVALID_HANDLE;
-	}
-
-	RELEASE_THREAD_LOCK();
-	int_restore_interrupts();
-
-	if(global_resched) {
-		smp_send_broadcast_ici(SMP_MSG_RESCHEDULE, 0, 0, 0, NULL, SMP_MSG_FLAG_SYNC);
-	}
-
-	return retval;
+	return send_signal_etc(id, SIGSTOP, SIG_FLAG_NO_RESCHED);
 }
 
 thread_id thread_get_current_thread_id(void)
@@ -586,27 +553,7 @@ thread_id thread_get_current_thread_id(void)
 
 int thread_resume_thread(thread_id id)
 {
-	struct thread *t;
-	int retval;
-
-	int_disable_interrupts();
-	GRAB_THREAD_LOCK();
-
-	t = thread_get_thread_struct_locked(id);
-	if(t != NULL && t->state == THREAD_STATE_SUSPENDED) {
-		t->state = THREAD_STATE_READY;
-		t->next_state = THREAD_STATE_READY;
-
-		thread_enqueue_run_q(t);
-		retval = NO_ERROR;
-	} else {
-		retval = ERR_INVALID_HANDLE;
-	}
-
-	RELEASE_THREAD_LOCK();
-	int_restore_interrupts();
-
-	return retval;
+	return send_signal_etc(id, SIGCONT, SIG_FLAG_NO_RESCHED);
 }
 
 int thread_set_priority(thread_id id, int priority)
@@ -822,7 +769,6 @@ static void _dump_proc_info(struct proc *p)
 	dprintf("next:        %p\n", p->next);
 	dprintf("num_threads: %d\n", p->num_threads);
 	dprintf("state:       %d\n", p->state);
-	dprintf("pending_signals: 0x%x\n", p->pending_signals);
 	dprintf("ioctx:       %p\n", p->ioctx);
 	dprintf("aspace_id:   0x%x\n", p->aspace_id);
 	dprintf("aspace:      %p\n", p->aspace);
@@ -904,7 +850,7 @@ static void _dump_thread_info(struct thread *t)
 		dprintf("(%d)\n", t->cpu->info.cpu_num);
 	else
 		dprintf("\n");
-	dprintf("pending_signals:  0x%x\n", t->pending_signals);
+	dprintf("sig_pending:  0x%lx\n", t->sig_pending);
 	dprintf("in_kernel:   %d\n", t->in_kernel);
 	dprintf("int_disable_level: %d\n", t->int_disable_level);
 	dprintf("sem_blocking:0x%x\n", t->sem_blocking);
@@ -1272,9 +1218,9 @@ int user_thread_snooze(bigtime_t time)
 	return NO_ERROR;
 }
 
-void thread_snooze(bigtime_t time)
+int thread_snooze(bigtime_t time)
 {
-	sem_acquire_etc(snooze_sem, 1, SEM_FLAG_TIMEOUT, time, NULL);
+	return sem_acquire_etc(snooze_sem, 1, SEM_FLAG_TIMEOUT|SEM_FLAG_INTERRUPTABLE, time, NULL);
 }
 
 int user_thread_yield(void)
@@ -1353,6 +1299,9 @@ void thread_exit(int retcode)
 
 	// boost our priority to get this over with
 	thread_set_priority(t->id, THREAD_HIGH_PRIORITY);
+
+	// cancel any pending alarms
+	timer_cancel_event(&t->alarm_event);
 
 	// delete the user stack region first
 	if(p->aspace_id >= 0 && t->user_stack_region_id >= 0) {
@@ -1447,50 +1396,21 @@ void thread_exit(int retcode)
 	panic("never can get here\n");
 }
 
-static int _thread_kill_thread(thread_id id, bool wait_on)
-{
-	struct thread *t;
-	int rc;
-
-//	dprintf("_thread_kill_thread: id %d, wait_on %d\n", id, wait_on);
-
-	int_disable_interrupts();
-	GRAB_THREAD_LOCK();
-
-	t = thread_get_thread_struct_locked(id);
-	if(t != NULL) {
-		if(t->proc == kernel_proc) {
-			// can't touch this
-			rc = ERR_NOT_ALLOWED;
-		} else {
-			deliver_signal(t, SIG_KILL);
-			rc = NO_ERROR;
-			if(t->id == thread_get_current_thread()->id)
-				wait_on = false; // can't wait on ourself
-		}
-	} else {
-		rc = ERR_INVALID_HANDLE;
-	}
-
-	RELEASE_THREAD_LOCK();
-	int_restore_interrupts();
-	if(rc < 0)
-		return rc;
-
-	if(wait_on)
-		thread_wait_on_thread(id, NULL);
-
-	return rc;
-}
-
 int thread_kill_thread(thread_id id)
 {
-	return _thread_kill_thread(id, true);
+	int status = send_signal_etc(id, SIGKILLTHR, SIG_FLAG_NO_RESCHED);
+	if (status < 0)
+		return status;
+
+	if (id != thread_get_current_thread()->id)
+		thread_wait_on_thread(id, NULL);
+
+	return status;
 }
 
 int thread_kill_thread_nowait(thread_id id)
 {
-	return _thread_kill_thread(id, false);
+	return send_signal_etc(id, SIGKILLTHR, SIG_FLAG_NO_RESCHED);
 }
 
 int user_thread_wait_on_thread(thread_id id, int *uretcode)
@@ -1515,6 +1435,10 @@ int thread_wait_on_thread(thread_id id, int *retcode)
 	sem_id sem;
 	struct thread *t;
 	int rc;
+
+	rc = send_signal_etc(id, SIGCONT, 0);
+	if (rc < NO_ERROR)
+		return rc;
 
 	int_disable_interrupts();
 	GRAB_THREAD_LOCK();
@@ -1594,7 +1518,7 @@ struct thread *thread_get_thread_struct(thread_id id)
 	return t;
 }
 
-static struct thread *thread_get_thread_struct_locked(thread_id id)
+struct thread *thread_get_thread_struct_locked(thread_id id)
 {
 	struct thread_key key;
 
@@ -1812,7 +1736,6 @@ static struct proc *create_proc_struct(const char *name, bool kernel)
 	p->thread_list = NULL;
 	p->main_thread = NULL;
 	p->state = PROC_STATE_BIRTH;
-	p->pending_signals = SIG_NONE;
 
 	if(arch_proc_init_proc_struct(p, kernel) < 0)
 		goto error1;
@@ -2199,53 +2122,25 @@ int proc_kill_proc(proc_id id)
 	return thread_kill_thread(tid);
 }
 
-// sets the pending signal flag on a thread and possibly does some work to wake it up, etc.
-// expects the thread lock to be held
-static void deliver_signal(struct thread *t, int signal)
+thread_id proc_get_main_thread(proc_id id)
 {
-//	dprintf("deliver_signal: thread %p (%d), signal %d\n", t, t->id, signal);
-	switch(signal) {
-		case SIG_KILL:
-			t->pending_signals |= SIG_KILL;
-			switch(t->state) {
-				case THREAD_STATE_SUSPENDED:
-					t->state = THREAD_STATE_READY;
-					t->next_state = THREAD_STATE_READY;
+	struct proc *p;
+	thread_id tid;
+	
+	int_disable_interrupts();
+	GRAB_PROC_LOCK();
 
-					thread_enqueue_run_q(t);
-					break;
-				case THREAD_STATE_WAITING:
-					sem_interrupt_thread(t);
-					break;
-				default:
-					;
-			}
-			break;
-		default:
-			t->pending_signals |= signal;
+	p = proc_get_proc_struct_locked(id);
+	if(p != NULL) {
+		tid = p->main_thread->id;
+	} else {
+		tid = ERR_INVALID_HANDLE;
 	}
-}
 
-// expects the thread lock to be held
-static void _check_for_thread_sigs(struct thread *t)
-{
-	if(t->pending_signals == SIG_NONE)
-		return;
+	RELEASE_PROC_LOCK();
+	int_restore_interrupts();
 
-	if(t->pending_signals & SIG_KILL) {
-		t->pending_signals &= ~SIG_KILL;
-
-		RELEASE_THREAD_LOCK();
-		int_restore_interrupts();
-		thread_exit(0);
-		// never gets to here
-	}
-	if(t->pending_signals & SIG_SUSPEND) {
-		t->pending_signals &= ~SIG_SUSPEND;
-		t->next_state = THREAD_STATE_SUSPENDED;
-		// XXX will probably want to delay this
-		thread_resched();
-	}
+	return tid;
 }
 
 // called in the int handler code when a thread enters the kernel for any reason
@@ -2270,8 +2165,6 @@ void thread_atkernel_entry(void)
 
 	t->in_kernel = true;
 
-	_check_for_thread_sigs(t);
-
 	RELEASE_THREAD_LOCK();
 	int_restore_interrupts();
 }
@@ -2280,6 +2173,7 @@ void thread_atkernel_entry(void)
 void thread_atkernel_exit(void)
 {
 	struct thread *t;
+	int global_resched;
 	bigtime_t now;
 
 //	dprintf("thread_atkernel_exit: entry\n");
@@ -2289,7 +2183,7 @@ void thread_atkernel_exit(void)
 	int_disable_interrupts();
 	GRAB_THREAD_LOCK();
 
-	_check_for_thread_sigs(t);
+	global_resched = handle_signals(t);
 
 	t->in_kernel = false;
 
@@ -2302,6 +2196,9 @@ void thread_atkernel_exit(void)
 	t->last_time_type = USER_TIME;
 
 	int_restore_interrupts();
+
+	if (global_resched)
+		smp_send_broadcast_ici(SMP_MSG_RESCHEDULE, 0, 0, 0, NULL, SMP_MSG_FLAG_SYNC);
 }
 
 int user_getrlimit(int resource, struct rlimit * urlp)

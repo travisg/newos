@@ -15,6 +15,7 @@ MY_OBJS += \
 	$(LIBC_UNISTD_DIR)/pread.o \
 	$(LIBC_UNISTD_DIR)/pwrite.o \
 	$(LIBC_UNISTD_DIR)/read.o \
+	$(LIBC_UNISTD_DIR)/signal.o \
 	$(LIBC_UNISTD_DIR)/sleep.o \
 	$(LIBC_UNISTD_DIR)/sync.o \
 	$(LIBC_UNISTD_DIR)/unlink.o \

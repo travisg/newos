@@ -73,7 +73,7 @@ static int _keyboard_read(_key_event *buf, size_t len)
 retry:
 	// block here until data is ready
 	rc = sem_acquire_etc(keyboard_sem, 1, SEM_FLAG_INTERRUPTABLE, 0, NULL);
-	if(rc == ERR_SEM_INTERRUPTED) {
+	if(rc == ERR_INTERRUPTED) {
 		return 0;
 	}
 

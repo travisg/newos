@@ -358,9 +358,9 @@ int sem_acquire_etc(sem_id id, int count, int flags, bigtime_t timeout, int *del
 
 		// do a quick check to see if the thread has any pending kill signals
 		// this should catch most of the cases where the thread had a signal
-		if((flags & SEM_FLAG_INTERRUPTABLE) && (t->pending_signals & SIG_KILL)) {
+		if((flags & SEM_FLAG_INTERRUPTABLE) && t->sig_pending) {
 			sems[slot].count += count;
-			err = ERR_SEM_INTERRUPTED;
+			err = ERR_INTERRUPTED;
 			goto err;
 		}
 
@@ -388,7 +388,7 @@ int sem_acquire_etc(sem_id id, int count, int flags, bigtime_t timeout, int *del
 		GRAB_THREAD_LOCK();
 		// check again to see if a kill signal is pending.
 		// it may have been delivered while setting up the sem, though it's pretty unlikely
-		if((flags & SEM_FLAG_INTERRUPTABLE) && (t->pending_signals & SIG_KILL)) {
+		if((flags & SEM_FLAG_INTERRUPTABLE) && t->sig_pending) {
 			struct thread_queue wakeup_queue;
 			// ok, so a tiny race happened where a signal was delivered to this thread while
 			// it was setting up the sem. We can only be sure a signal wasn't delivered
@@ -397,7 +397,7 @@ int sem_acquire_etc(sem_id id, int count, int flags, bigtime_t timeout, int *del
 			wakeup_queue.head = wakeup_queue.tail = NULL;
 			GRAB_SEM_LOCK(sems[slot]);
 			if(sems[slot].id == id) {
-				remove_thread_from_sem(t, &sems[slot], &wakeup_queue, ERR_SEM_INTERRUPTED);
+				remove_thread_from_sem(t, &sems[slot], &wakeup_queue, ERR_INTERRUPTED);
 			}
 			RELEASE_SEM_LOCK(sems[slot]);
 			while((t = thread_dequeue(&wakeup_queue)) != NULL) {
@@ -688,7 +688,7 @@ int sem_interrupt_thread(struct thread *t)
 	}
 
 	wakeup_queue.head = wakeup_queue.tail = NULL;
-	if(remove_thread_from_sem(t, &sems[slot], &wakeup_queue, ERR_SEM_INTERRUPTED) == ERR_NOT_FOUND)
+	if(remove_thread_from_sem(t, &sems[slot], &wakeup_queue, ERR_INTERRUPTED) == ERR_NOT_FOUND)
 		panic("sem_interrupt_thread: thread 0x%x not found in sem 0x%x's wait queue\n", t->id, t->sem_blocking);
 
 	RELEASE_SEM_LOCK(sems[slot]);

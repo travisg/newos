@@ -755,7 +755,7 @@ static ssize_t pipefs_read(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, void
 
 	// wait for data in the buffer
 	err = sem_acquire_etc(v->stream.u.pipe.read_sem, 1, SEM_FLAG_INTERRUPTABLE, 0, NULL);
-	if(err == ERR_SEM_INTERRUPTED)
+	if(err == ERR_INTERRUPTED)
 		goto err;
 
 	mutex_lock(&v->stream.u.pipe.lock);
@@ -850,7 +850,7 @@ static ssize_t pipefs_write(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, con
 
 	// wait on space in the circular buffer
 	err = sem_acquire_etc(v->stream.u.pipe.write_sem, 1, SEM_FLAG_INTERRUPTABLE, 0, NULL);
-	if(err == ERR_SEM_INTERRUPTED)
+	if(err == ERR_INTERRUPTED)
 		goto err;
 
 	mutex_lock(&v->stream.u.pipe.lock);

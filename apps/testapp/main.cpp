@@ -39,6 +39,7 @@ static test_option opts[] = {
 	{ "2", "spawn threads, kill them", &thread_spawn_test, 1 },
 	{ "3", "spawn threads, self terminating", &thread_spawn_test, 2 },
 	{ "4", "syscall benchmark", &syscall_bench, 0 },
+	{ "5", "test signals", &sig_test, 0 },
 	{ 0, 0, 0, 0 }
 };
 

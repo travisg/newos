@@ -1,17 +1,11 @@
 # app makefile
-MY_TARGETDIR := $(APPS_BUILD_DIR)/testapp
-MY_SRCDIR := $(APPS_DIR)/testapp
-MY_TARGET :=  $(MY_TARGETDIR)/testapp
+MY_TARGETDIR := $(APPS_BUILD_DIR)/kill
+MY_SRCDIR := $(APPS_DIR)/kill
+MY_TARGET :=  $(MY_TARGETDIR)/kill
 ifeq ($(call FINDINLIST,$(MY_TARGET),$(ALL)),1)
 
 MY_OBJS := \
-	main.o \
-	misctests.o \
-	pipetests.o \
-	porttests.o \
-	sigtests.o \
-	threadtests.o \
-	vmtests.o
+	main.o
 
 MY_INCLUDES := $(STDINCLUDE)
 MY_CFLAGS := $(USER_CFLAGS)

@@ -9,6 +9,7 @@
 int sleep_test(int arg);
 int thread_spawn_test(int arg);
 int syscall_bench(int arg);
+int sig_test(int arg);
 
 #endif
 

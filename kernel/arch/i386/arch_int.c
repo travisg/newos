@@ -132,7 +132,7 @@ void i386_handle_trap(struct iframe frame)
 	struct thread *t = thread_get_current_thread();
 
 	if(t) {
-		i386_push_iframe(t, &frame);
+		i386_push_iframe(&frame);
 		adjust_int_disable_count = true;
 		t->int_disable_level++; // make it look like the ints were disabled
 	}
@@ -198,7 +198,7 @@ void i386_handle_trap(struct iframe frame)
 //	dprintf("0x%x cpu %d!\n", thread_get_current_thread_id(), smp_get_current_cpu());
 
 	if(t) {
-		i386_pop_iframe(t);
+		i386_pop_iframe();
 		if(adjust_int_disable_count)
 			t->int_disable_level--; // keep the count in sync
 	}

@@ -92,10 +92,6 @@ strerror(int errnum)
 			return "Semaphore not active";
 		;
 
-		case ERR_SEM_INTERRUPTED:
-			return "Semaphore interrupted";
-		;
-
 		case ERR_SEM_NOT_INTERRUPTABLE:
 			return "Semaphore not interruptable";
 		;
@@ -247,14 +243,6 @@ strerror(int errnum)
 
 		case ERR_PORT_TIMED_OUT:
 			return "Port timed out";
-		;
-
-		case ERR_PORT_INTERRUPTED:
-			return "Port interrupted";
-		;
-
-		case ERR_PORT_NOT_FOUND:
-			return "Port not found";
 		;
 
 		default:

@@ -9,6 +9,7 @@
 #include <newos/types.h>
 #include <newos/defines.h>
 #include <sys/resource.h>
+#include <signal.h>
 
 typedef enum {
 	STREAM_TYPE_ANY = 0,
@@ -131,16 +132,21 @@ typedef struct {
 	int page_faults;
 } vm_info_t;
 
+typedef enum {
+	TIMER_MODE_ONESHOT = 0,
+	TIMER_MODE_PERIODIC
+} timer_mode;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-int _kern_null();
+int _kern_null(void);
 
 /* fs api */
 int _kern_mount(const char *path, const char *device, const char *fs_name, void *args);
 int _kern_unmount(const char *path);
-int _kern_sync();
+int _kern_sync(void);
 int _kern_opendir(const char *path);
 int _kern_closedir(int fd);
 int _kern_rewinddir(int fd);
@@ -164,7 +170,7 @@ int _kern_setcwd(const char* path);
 int _kern_dup(int fd);
 int _kern_dup2(int ofd, int nfd);
 
-bigtime_t _kern_system_time();
+bigtime_t _kern_system_time(void);
 int _kern_snooze(bigtime_t time);
 int _kern_getrlimit(int resource, struct rlimit * rlp);
 int _kern_setrlimit(int resource, const struct rlimit * rlp);
@@ -181,7 +187,7 @@ int _kern_sem_get_sem_info(sem_id id, struct sem_info *info);
 int _kern_sem_get_next_sem_info(proc_id proc, uint32 *cookie, struct sem_info *info);
 int _kern_set_sem_owner(sem_id id, proc_id proc);
 
-thread_id _kern_get_current_thread_id();
+thread_id _kern_get_current_thread_id(void);
 void _kern_exit(int retcode);
 proc_id _kern_proc_create_proc(const char *path, const char *name, char **args, int argc, int priority);
 thread_id _kern_thread_create_thread(const char *name, int (*func)(void *args), void *args);
@@ -193,7 +199,7 @@ int _kern_thread_kill_thread(thread_id tid);
 int _kern_thread_get_thread_info(thread_id id, struct thread_info *info);
 int _kern_thread_get_next_thread_info(uint32 *cookie, proc_id pid, struct thread_info *info);
 int _kern_proc_kill_proc(proc_id pid);
-proc_id _kern_get_current_proc_id();
+proc_id _kern_get_current_proc_id(void);
 int _kern_proc_wait_on_proc(proc_id pid, int *retcode);
 int _kern_proc_get_proc_info(proc_id id, struct proc_info *info);
 int _kern_proc_get_next_proc_info(uint32 *cookie, struct proc_info *info);
@@ -229,6 +235,12 @@ int _kern_atomic_and(int *val, int incr);
 int _kern_atomic_or(int *val, int incr);
 int _kern_atomic_set(int *val, int set_to);
 int _kern_test_and_set(int *val, int set_to, int test_val);
+
+/* signals */
+int _kern_sigaction(int sig, const struct sigaction *action, struct sigaction *old_action);
+int _kern_send_signal(thread_id tid, uint signal);
+int _kern_send_proc_signal(proc_id pid, uint signal);
+bigtime_t _kern_set_alarm(bigtime_t time, timer_mode mode);
 
 #ifdef __cplusplus
 }

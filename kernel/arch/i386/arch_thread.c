@@ -12,24 +12,38 @@
 #include <kernel/int.h>
 #include <string.h>
 
+// from arch_interrupts.S
+extern void	i386_stack_init( struct farcall *interrupt_stack_offset );
+extern void i386_return_from_signal(void);
+extern void i386_end_return_from_signal(void);
+
 int arch_proc_init_proc_struct(struct proc *p, bool kernel)
 {
 	return 0;
 }
 
-// from arch_interrupts.S
-extern void	i386_stack_init( struct farcall *interrupt_stack_offset );
-
-void i386_push_iframe(struct thread *t, struct iframe *frame)
+void i386_push_iframe(struct iframe *frame)
 {
+	struct thread *t = thread_get_current_thread();
 	ASSERT(t->arch_info.iframe_ptr < IFRAME_TRACE_DEPTH);
+
+//	dprintf("i386_push_iframe: frame %p, depth %d\n", frame, t->arch_info.iframe_ptr);
+	
 	t->arch_info.iframes[t->arch_info.iframe_ptr++] = frame;
 }
 
-void i386_pop_iframe(struct thread *t)
+void i386_pop_iframe(void)
 {
+	struct thread *t = thread_get_current_thread();
 	ASSERT(t->arch_info.iframe_ptr > 0);
 	t->arch_info.iframe_ptr--;
+}
+
+struct iframe *i386_get_curr_iframe(void)
+{
+	struct thread *t = thread_get_current_thread();
+	ASSERT(t->arch_info.iframe_ptr >= 0);
+	return t->arch_info.iframes[t->arch_info.iframe_ptr-1];
 }
 
 int arch_thread_init_thread_struct(struct thread *t)
@@ -169,4 +183,137 @@ void arch_thread_enter_uspace(struct thread *t, addr_t entry, void *args, addr_t
 
 	i386_enter_uspace(entry, args, ustack_top - 4);
 }
+
+int
+arch_setup_signal_frame(struct thread *t, struct sigaction *sa, int sig, int sig_mask)
+{
+	struct iframe *frame = i386_get_curr_iframe();
+	uint32 *stack_ptr;
+	uint32 *code_ptr;
+	uint32 *regs_ptr;
+	struct vregs regs;
+	uint32 stack_buf[6];
+	int err;
+
+	/* do some quick sanity checks */
+	ASSERT(frame);
+	ASSERT(is_user_address(frame->user_esp));
+
+//	dprintf("arch_setup_signal_frame: thread 0x%x, frame %p, user_esp 0x%x, sig %d\n",
+//		t->id, frame, frame->user_esp, sig);
+
+	if ((int)frame->orig_eax >= 0) {
+		// we're coming from a syscall
+		if (((int)frame->eax == ERR_INTERRUPTED) && (sa->sa_flags & SA_RESTART)) {
+			dprintf("### restarting syscall %d after signal %d\n", frame->orig_eax, sig);
+			frame->eax = frame->orig_eax;
+			frame->edx = frame->orig_edx;
+			frame->eip -= 2;
+		}
+	}
+
+	// start stuffing stuff on the user stack
+	stack_ptr = (uint32 *)frame->user_esp;
+
+	// store the saved regs onto the user stack
+	stack_ptr -= ROUNDUP(sizeof(struct vregs)/4, 4);
+	regs_ptr = stack_ptr;
+	regs.eip = frame->eip;
+	regs.eflags = frame->flags;
+	regs.eax = frame->eax;
+	regs.ecx = frame->ecx;
+	regs.edx = frame->edx;
+	regs.esp = frame->esp;
+	regs._reserved_1 = frame->user_esp;
+	regs._reserved_2[0] = frame->edi;
+	regs._reserved_2[1] = frame->esi;
+	regs._reserved_2[2] = frame->ebp;
+	i386_fsave((void *)(&regs.xregs));
+	
+	err = user_memcpy(stack_ptr, &regs, sizeof(regs));
+	if(err < 0)
+		return err;
+
+	// now store a code snippet on the stack
+	stack_ptr -= ((uint32)i386_end_return_from_signal - (uint32)i386_return_from_signal)/4;
+	code_ptr = stack_ptr;
+	err = user_memcpy(code_ptr, i386_return_from_signal,
+		((uint32)i386_end_return_from_signal - (uint32)i386_return_from_signal));
+	if(err < 0)
+		return err;
+
+	// now set up the final part
+	stack_buf[0] = (uint32)code_ptr;	// return address when sa_handler done
+	stack_buf[1] = sig;					// first argument to sa_handler
+	stack_buf[2] = (uint32)sa->sa_userdata;// second argument to sa_handler
+	stack_buf[3] = (uint32)regs_ptr;	// third argument to sa_handler
+
+	stack_buf[4] = sig_mask;			// Old signal mask to restore
+	stack_buf[5] = (uint32)regs_ptr;	// Int frame + extra regs to restore
+
+	stack_ptr -= sizeof(stack_buf)/4;
+
+	err = user_memcpy(stack_ptr, stack_buf, sizeof(stack_buf));
+	if(err < 0)
+		return err;
+	
+	frame->user_esp = (uint32)stack_ptr;
+	frame->eip = (uint32)sa->sa_handler;
+
+	return NO_ERROR;
+}
+
+
+int64
+arch_restore_signal_frame(void)
+{
+	struct thread *t = thread_get_current_thread();
+	struct iframe *frame;
+	uint32 *stack;
+	struct vregs *regs;
+	
+//	dprintf("### arch_restore_signal_frame: entry\n");
+	
+	frame = i386_get_curr_iframe();
+	
+	stack = (uint32 *)frame->user_esp;
+	t->sig_block_mask = stack[0];
+	regs = (struct vregs *)stack[1];
+
+	frame->eip = regs->eip;
+	frame->flags = regs->eflags;
+	frame->eax = regs->eax;
+	frame->ecx = regs->ecx;
+	frame->edx = regs->edx;
+	frame->esp = regs->esp;
+	frame->user_esp = regs->_reserved_1;
+	frame->edi = regs->_reserved_2[0];
+	frame->esi = regs->_reserved_2[1];
+	frame->ebp = regs->_reserved_2[2];
+	
+	i386_frstor((void *)(&regs->xregs));
+	
+//	dprintf("### arch_restore_signal_frame: exit\n");
+	
+	frame->orig_eax = -1;	/* disable syscall checks */
+	
+	return (int64)frame->eax | ((int64)frame->edx << 32);
+}
+
+
+void
+arch_check_syscall_restart(struct thread *t)
+{
+	struct iframe *frame = i386_get_curr_iframe();
+
+	if(!frame)
+		return;
+
+	if (((int)frame->orig_eax >= 0) && ((int)frame->eax == ERR_INTERRUPTED)) {
+		frame->eax = frame->orig_eax;
+		frame->edx = frame->orig_edx;
+		frame->eip -= 2;
+	}
+}
+
 

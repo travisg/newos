@@ -74,6 +74,8 @@ TRAP(trap255, 255)
 .align 16
 .globl int_bottom
 int_bottom:
+	pushl	%edx
+	pushl	%eax
 	pusha
 	push	%ds
 	push	%es
@@ -94,7 +96,7 @@ int_bottom:
 	pop		%es
 	pop		%ds
 	popa
-	addl	$8,%esp
+	addl	$16,%esp
 	iret
 
 	// custom stack -> copy registers to kernel stack and switch there
@@ -119,7 +121,7 @@ int_bottom:
 	pop		%es
 	pop		%ds
 	popa
-	addl	$8,%esp
+	addl	$16,%esp
 	iret
 
 _interrupt_stack_offset:
@@ -135,11 +137,12 @@ _interrupt_stack_offset:
  */ 
 .align 8
 FUNCTION(i386_syscall_vector):
-	/* save all non-trashed integer regs and load kernel data segments */
-	push	%ebx
-	push	%ebp
-	push	%esi
-	push	%edi
+	/* push a standard iframe to the stack */
+	pushl	$0		// error code 0
+	pushl	$99		// vector 99 (syscall)
+	pushl	%edx
+	pushl	%eax
+	pusha
 	push	%ds
 	push	%es
 	push	%fs
@@ -153,6 +156,7 @@ FUNCTION(i386_syscall_vector):
 	mov		%esp,%ebp
 
 #if 0
+	/* print the syscall */
 	push	num_syscall_table_entries
 	push	%edx
 	push	%ecx
@@ -186,16 +190,15 @@ FUNCTION(i386_syscall_vector):
 	/* if the syscall has no args, fast path over the arg copy code */
 	test	%ecx,%ecx
 	jz		skip_arg_copy
- 
-	/* copy the appropriate number of args to the stack */
-	mov		fault_handler_offset,%esi	// get the offset into the thread structure that fault_handler is
-	mov		%dr3,%ebx					// get the current thread structure
 
+ 	/* set the fault handler in case we get an error copying data from the user stack */
+	movl	%dr3,%ebx					// get the current thread structure
+	mov		fault_handler_offset,%esi	// get the offset into the thread structure that fault_handler is
  	lea		(%ebx,%esi),%ebx
 	mov		$syscall_vector_error,%esi
 	mov		%esi,(%ebx)					// stick the error handler into t->fault_handler
 
-
+	/* copy the appropriate number of args to the stack */
 	shl		$2,%ecx
 	sub		%ecx,%esp				// move the stack pointer down by the amount we are about to dump on it
 	shr		$2,%ecx
@@ -210,6 +213,11 @@ FUNCTION(i386_syscall_vector):
 skip_arg_copy:
 	movl	%eax,%esi				// move the vector number over to %esi
 
+	/* push the current iframe into the iframe stack */
+	pushl	%ebp
+	call	i386_push_iframe
+	addl	$4,%esp
+
 	/* do kernel work upon entry */
 	call	thread_atkernel_entry
 
@@ -217,15 +225,14 @@ skip_arg_copy:
 	movl	$syscall_table,%ebx
 	call	*(%ebx,%esi,4)
 
-	mov		%eax,%ebx
-	mov		%edx,%esi
+	/* save the return code into the iframe */
+	movl	%edx,0x24(%ebp)
+	movl	%eax,0x2c(%ebp)
 
 	/* do any cleanup work when leaving the kernel */
 	call	thread_atkernel_exit
 
-	/* restore the return code from the syscall */
-	mov		%esi,%edx
-	mov		%ebx,%eax
+	call	i386_pop_iframe
 
 syscall_vector_exit:
 	/* put the kernel stack back where it was before we pushed the args */
@@ -236,15 +243,16 @@ syscall_vector_exit:
 	pop		%fs
 	pop		%es
 	pop		%ds
-	pop		%edi
-	pop		%esi
-	pop		%ebp
-	pop		%ebx
+
+	/* reverse the pusha from above */
+	popa
+	addl	$16,%esp // no need to pop orig_eax,orig_edx,vector,error_code
 	iret
 
 syscall_vector_error:
-	movl	$-4,%eax
 	xorl	$0xffffffff,%edx
+	movl	%edx,0x24(%ebp)
+	movl	$-4,0x2c(%ebp)
 	jmp		syscall_vector_exit
 
 syscall_entry_msg:
@@ -282,3 +290,12 @@ FUNCTION(i386_stack_switch):
 	pushl	%ecx
 	popf
 	jmp		*%edx
+
+FUNCTION(i386_return_from_signal):
+	addl	$12, %esp	// Flushes the 3 arguments to sa_handler
+	movl	$81, %eax	// This syscall will restore the cpu context to the
+	movl	$0, %ecx	// one existing before calling the signal handler
+	lea		4(%esp), %edx
+	int		$99
+	ret
+FUNCTION(i386_end_return_from_signal):

@@ -21,6 +21,7 @@ include $(addsuffix /makefile, $(addprefix $(APPS_DIR)/, \
 	vtcolors \
 	rm \
 	ps \
+	kill \
 	top \
 	netcfg \
 	nettest \

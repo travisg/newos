@@ -21,6 +21,7 @@ MY_OBJS := \
 	time.o \
 	port.o \
 	sem.o \
+	signal.o \
 	smp.o \
 	syscalls.o \
 	thread.o \

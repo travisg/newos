@@ -81,21 +81,23 @@ struct iframe {
 	unsigned int fs;
 	unsigned int es;
 	unsigned int ds;
-	unsigned int edi;
+	unsigned int edi;		/* 0x10 */
 	unsigned int esi;
 	unsigned int ebp;
 	unsigned int esp;
-	unsigned int ebx;
+	unsigned int ebx;		/* 0x20 */
 	unsigned int edx;
 	unsigned int ecx;
 	unsigned int eax;
+	unsigned int orig_eax;	/* 0x30 */
+	unsigned int orig_edx;
 	unsigned int vector;
 	unsigned int error_code;
-	unsigned int eip;
+	unsigned int eip;		/* 0x40 */
 	unsigned int cs;
 	unsigned int flags;
 	unsigned int user_esp;
-	unsigned int user_ss;
+	unsigned int user_ss;	/* 0x50 */
 };
 
 struct arch_cpu_info {
@@ -111,6 +113,10 @@ void i386_enter_uspace(addr_t entry, void *args, addr_t ustack_top);
 void i386_set_kstack(addr_t kstack);
 void i386_switch_stack_and_call(addr_t stack, void (*func)(void *), void *arg);
 void i386_swap_pgdir(addr_t new_pgdir);
+void i386_fsave(void *fpu_state);
+void i386_fxsave(void *fpu_state);
+void i386_frstor(void *fpu_state);
+void i386_fxrstor(void *fpu_state);
 void i386_fsave_swap(void *old_fpu_state, void *new_fpu_state);
 void i386_fxsave_swap(void *old_fpu_state, void *new_fpu_state);
 desc_table *i386_get_gdt(void);

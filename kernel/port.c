@@ -659,9 +659,9 @@ port_read_etc(port_id id,
 		return ERR_PORT_DELETED;
 	}
 
-	if (res == ERR_SEM_INTERRUPTED) {
+	if (res == ERR_INTERRUPTED) {
 		// XXX: somebody signaled the process the port belonged to, deleting the sem ?
-		return ERR_PORT_INTERRUPTED;
+		return ERR_INTERRUPTED;
 	}
 
 	if (res == ERR_SEM_TIMED_OUT) {
@@ -830,11 +830,6 @@ port_write_etc(port_id id,
 	if (res == ERR_SEM_DELETED) {
 		// somebody deleted the port
 		return ERR_PORT_DELETED;
-	}
-
-	if (res == ERR_SEM_INTERRUPTED) {
-		// XXX: somebody signaled the process the port belonged to, deleting the sem ?
-		return ERR_PORT_INTERRUPTED;
 	}
 
 	if (res == ERR_SEM_TIMED_OUT) {

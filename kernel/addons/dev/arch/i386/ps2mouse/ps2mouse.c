@@ -206,7 +206,7 @@ static ssize_t mouse_read(dev_cookie cookie, void* buf, off_t pos,
 
    // wait until there is data to read
 	if(sem_acquire_etc(mouse_sem, 1, SEM_FLAG_INTERRUPTABLE, 0, NULL) ==
-	   ERR_SEM_INTERRUPTED) {
+	   ERR_INTERRUPTED) {
 		return 0;
 	} // if
 

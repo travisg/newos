@@ -241,7 +241,7 @@ static ssize_t _keyboard_read(struct maple_keyboard *k, void *_buf, size_t len)
 retry:
 	// block here until data is ready
 	rc = sem_acquire_etc(k->sem, 1, SEM_FLAG_INTERRUPTABLE, 0, NULL);
-	if(rc == ERR_SEM_INTERRUPTED) {
+	if(rc == ERR_INTERRUPTED) {
 		return 0;
 	}
 

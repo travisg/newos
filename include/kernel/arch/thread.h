@@ -6,6 +6,7 @@
 #define _NEWOS_KERNEL_ARCH_THREAD_H
 
 #include <kernel/thread.h>
+#include <signal.h>
 
 int arch_proc_init_proc_struct(struct proc *p, bool kernel);
 int arch_thread_init_thread_struct(struct thread *t);
@@ -17,6 +18,10 @@ void arch_thread_switch_kstack_and_call(addr_t new_kstack, void (*func)(void *),
 
 struct thread *arch_thread_get_current_thread(void);
 void arch_thread_set_current_thread(struct thread *t);
+
+int arch_setup_signal_frame(struct thread *t, struct sigaction *sa, int sig, int sig_mask);
+int64 arch_restore_signal_frame(void);
+void arch_check_syscall_restart(struct thread *t);
 
 // for any inline overrides
 #include INC_ARCH(kernel/arch,thread.h)

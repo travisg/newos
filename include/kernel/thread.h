@@ -7,8 +7,10 @@
 
 #include <boot/stage2.h>
 #include <kernel/smp.h>
+#include <kernel/timer.h>
 #include <kernel/arch/thread_struct.h>
 #include <sys/resource.h>
+#include <signal.h>
 
 #define THREAD_IDLE_PRIORITY 0
 #define THREAD_NUM_PRIORITY_LEVELS 64
@@ -51,17 +53,12 @@ enum {
 	USER_TIME
 };
 
-#define SIG_NONE 0
-#define SIG_SUSPEND	1
-#define SIG_KILL 2
-
 struct proc {
 	struct proc *next;
 	proc_id id;
 	char name[SYS_MAX_OS_NAME_LEN];
 	int num_threads;
 	int state;
-	int pending_signals;
 	void *ioctx;
 	aspace_id aspace_id;
 	struct vm_address_space *aspace;
@@ -81,7 +78,6 @@ struct thread {
 	int state;
 	int next_state;
 	union cpu_ent *cpu;
-	int pending_signals;
 	bool in_kernel;
 
 	int int_disable_level;
@@ -107,6 +103,11 @@ struct thread {
 	bigtime_t kernel_time;
 	bigtime_t last_time;
 	int last_time_type; // KERNEL_TIME or USER_TIME
+
+	sigset_t		sig_pending;
+	sigset_t		sig_block_mask;
+	struct sigaction sig_action[32];
+	struct timer_event alarm_event;
 
 	// architecture dependant section
 	struct arch_thread arch_info;
@@ -155,7 +156,7 @@ int thread_resume_thread(thread_id id);
 int thread_set_priority(thread_id id, int priority);
 void thread_resched(void);
 void thread_start_threading(void);
-void thread_snooze(bigtime_t time);
+int thread_snooze(bigtime_t time);
 void thread_yield(void);
 int thread_init(kernel_args *ka);
 int thread_init_percpu(int cpu_num);
@@ -164,6 +165,7 @@ int thread_kill_thread(thread_id id);
 int thread_kill_thread_nowait(thread_id id);
 #define thread_get_current_thread arch_thread_get_current_thread
 struct thread *thread_get_thread_struct(thread_id id);
+struct thread *thread_get_thread_struct_locked(thread_id id);
 thread_id thread_get_current_thread_id(void);
 extern inline thread_id thread_get_current_thread_id(void) {
 	struct thread *t = thread_get_current_thread(); return t ? t->id : 0;
@@ -182,6 +184,7 @@ struct proc *proc_get_kernel_proc(void);
 proc_id proc_create_proc(const char *path, const char *name, char **args, int argc, int priority);
 int proc_kill_proc(proc_id);
 int proc_wait_on_proc(proc_id id, int *retcode);
+thread_id proc_get_main_thread(proc_id id);
 proc_id proc_get_kernel_proc_id(void);
 proc_id proc_get_current_proc_id(void);
 char **user_proc_get_arguments(void);

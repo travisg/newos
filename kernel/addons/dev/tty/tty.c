@@ -158,7 +158,7 @@ ssize_t tty_read(tty_desc *tty, void *buf, ssize_t len, int endpoint)
 
 	// wait for data in the buffer
 	err = sem_acquire_etc(lbuf->read_sem, 1, SEM_FLAG_INTERRUPTABLE, 0, NULL);
-	if(err == ERR_SEM_INTERRUPTED)
+	if(err == ERR_INTERRUPTED)
 		return err;
 
 	mutex_lock(&tty->lock);
@@ -267,13 +267,13 @@ restart_loop:
 
     // wait on space in the circular buffer
     err = sem_acquire_etc(lbuf_array[0]->write_sem, 1, SEM_FLAG_INTERRUPTABLE, 0, NULL);
-    if(err == ERR_SEM_INTERRUPTED)
+    if(err == ERR_INTERRUPTED)
         return err;
 
     if(lbuf_array[0]->flags & TTY_FLAG_ECHO) {
         err = sem_acquire_etc(lbuf_array[1]->write_sem, 1, SEM_FLAG_INTERRUPTABLE, 0, NULL);
         acquired_sem_other_lbuf = true;
-        if(err == ERR_SEM_INTERRUPTED) {
+        if(err == ERR_INTERRUPTED) {
             sem_release(lbuf_array[0]->write_sem, 1);
             return err;
         }

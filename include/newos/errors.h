@@ -24,6 +24,7 @@
 #define ERR_NOT_IMPLEMENTED      (ERR_GENERAL-13)
 #define ERR_OUT_OF_RANGE         (ERR_GENERAL-14)
 #define ERR_BAD_SYSCALL          (ERR_GENERAL-15)
+#define ERR_INTERRUPTED          (ERR_GENERAL-16)
 
 /* Semaphore errors */
 #define ERR_SEM_GENERAL          (-1024)
@@ -31,14 +32,13 @@
 #define ERR_SEM_TIMED_OUT        (ERR_SEM_GENERAL-2)
 #define ERR_SEM_OUT_OF_SLOTS     (ERR_SEM_GENERAL-3)
 #define ERR_SEM_NOT_ACTIVE       (ERR_SEM_GENERAL-4)
-#define ERR_SEM_INTERRUPTED      (ERR_SEM_GENERAL-5)
-#define ERR_SEM_NOT_INTERRUPTABLE (ERR_SEM_GENERAL-6)
-#define ERR_SEM_NOT_FOUND        (ERR_SEM_GENERAL-7)
-
+#define ERR_SEM_NOT_INTERRUPTABLE (ERR_SEM_GENERAL-5)
+#define ERR_SEM_NOT_FOUND        (ERR_SEM_GENERAL-6)
 
 /* Tasker errors */
 #define ERR_TASK_GENERAL         (-2048)
 #define ERR_TASK_PROC_DELETED    (ERR_TASK_GENERAL-1)
+#define ERR_TASK_THREAD_KILLED   (ERR_TASK_GENERAL-2)
 
 /* VFS errors */
 #define ERR_VFS_GENERAL          (-3072)
@@ -81,8 +81,7 @@
 #define ERR_PORT_NOT_ACTIVE       (ERR_PORT_GENERAL-3)
 #define ERR_PORT_CLOSED	          (ERR_PORT_GENERAL-4)
 #define ERR_PORT_TIMED_OUT        (ERR_PORT_GENERAL-5)
-#define ERR_PORT_INTERRUPTED      (ERR_PORT_GENERAL-6)
-#define ERR_PORT_NOT_FOUND        (ERR_PORT_GENERAL-7)
+#define ERR_PORT_NOT_FOUND        (ERR_PORT_GENERAL-6)
 
 /* Net errors */
 #define ERR_NET_GENERAL           (-7168)

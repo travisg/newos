@@ -258,7 +258,7 @@ static int beos2newos_err(int err)
 		case B_PERMISSION_DENIED: return ERR_PERMISSION_DENIED;
 		case B_NAME_NOT_FOUND: return ERR_NOT_FOUND;
 		case B_TIMED_OUT: return ERR_SEM_TIMED_OUT;
-		case B_INTERRUPTED: return ERR_SEM_INTERRUPTED;
+		case B_INTERRUPTED: return ERR_INTERRUPTED;
 		case B_NOT_ALLOWED: return ERR_NOT_ALLOWED;
 		case B_ERROR: return ERR_GENERAL;
 		case B_BAD_SEM_ID: return ERR_INVALID_HANDLE;
@@ -291,7 +291,7 @@ static int newos2beos_err(int err)
 		case ERR_SEM_DELETED: return B_CANCELED;
 		case ERR_SEM_TIMED_OUT: return B_TIMED_OUT;
 		case ERR_SEM_OUT_OF_SLOTS: return B_NO_MORE_SEMS;
-		case ERR_SEM_INTERRUPTED: return B_INTERRUPTED;
+		case ERR_INTERRUPTED: return B_INTERRUPTED;
 		default: return B_ERROR;
 	}
 }
