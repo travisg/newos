@@ -14,7 +14,12 @@
 
 #include <string.h>
 
+#if DEBUG > 1
 #define PARANOID_KFREE 1
+#endif
+#if DEBUG > 2
+#define WIPE_KFREE 1
+#endif
 #define MAKE_NOIZE 0
 
 // heap stuff
@@ -248,8 +253,8 @@ void kfree(void *address)
 
 	bin = &bins[page[0].bin_index];
 
-//	if((addr)address % bin->element_size != 0)
-//		panic("kfree: passed invalid pointer 0x%x! Supposed to be in bin for esize 0x%x\n", address, bin->element_size);
+	if((addr)address % bin->element_size != 0)
+		panic("kfree: passed invalid pointer 0x%x! Supposed to be in bin for esize 0x%x\n", address, bin->element_size);
 
 	for(i = 0; i < bin->element_size / PAGE_SIZE; i++) {
 		if(page[i].bin_index != page[0].bin_index)
@@ -267,6 +272,9 @@ void kfree(void *address)
 			}
 		}
 	}
+#endif
+#if WIPE_KFREE
+	memset(address, 0x99, bin->element_size);
 #endif
 
 	*(unsigned int *)address = (unsigned int)bin->free_list;
