@@ -28,6 +28,9 @@
 /* NOTE: a setting of 0xe9 enables the Bochs E9 hack */
 #define _SERIAL_DBG_PORT 1 // com1 
 
+/* set the size of the bootup kprintf buffer */
+#define _BOOT_KPRINTF_BUF_SIZE 4096
+
 /* compile in support for SMP or not */
 #define _WITH_SMP 1
 
