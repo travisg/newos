@@ -31,13 +31,13 @@ void _start(unsigned int mem, char *str)
 	unsigned int *pgdir;
 	unsigned int *new_pgtable;
 	unsigned int bootdir_pages = 0;
-	int i;
 	unsigned int new_stack;
 	unsigned int *idt;
 	unsigned int *gdt;
 	unsigned int next_vpage;
 	unsigned int nextAllocPage;
 	unsigned int kernelSize;
+	unsigned int i;
 	
 	// Important.  Make sure supervisor threads can fault on read only pages...
 	asm("movl %%eax, %%cr0" : : "a" ((1 << 31) | (1 << 16) | (1 << 5) | 1));

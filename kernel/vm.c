@@ -39,13 +39,13 @@ struct heap_page {
 static struct heap_page *heap_alloc_table = (struct heap_page *)HEAP_BASE;
 static int heap_base = PAGE_ALIGN(HEAP_BASE + (HEAP_SIZE / PAGE_SIZE) * sizeof(struct heap_page));
 struct heap_bin {
-	int element_size;
-	int grow_size;
-	int alloc_count;
+	unsigned int element_size;
+	unsigned int grow_size;
+	unsigned int alloc_count;
 	void *free_list;
-	int free_count;
+	unsigned int free_count;
 	char *raw_list;
-	int raw_count;
+	unsigned int raw_count;
 };
 static struct heap_bin bins[] = {
 	{16, PAGE_SIZE, 0, 0, 0, 0, 0},
@@ -103,6 +103,7 @@ struct area *_vm_create_area_struct(struct aspace *aspace, char *name, unsigned 
 {
 	struct area *area;
 	struct area *t, *last = NULL;
+	TOUCH(lock);
 	
 	// allocate an area struct to represent this area
 	area = (struct area *)kmalloc(sizeof(struct area));	
@@ -220,7 +221,7 @@ static int _vm_create_area(struct aspace *aspace, char *name, void **addr, int a
 	// lets find the pages
 	switch(src_addr_type) {
 		case SRC_ADDR_ANY: {
-			int i;
+			unsigned int i;
 			unsigned int page;
 
 			for(i=0; i < PAGE_ALIGN(size) / PAGE_SIZE; i++) {
@@ -230,7 +231,7 @@ static int _vm_create_area(struct aspace *aspace, char *name, void **addr, int a
 			break;
 		}
 		case SRC_ADDR_PHYSICAL: {
-			int i;
+			unsigned int i;
 			
 			vm_mark_page_range_inuse(src_addr / PAGE_SIZE, PAGE_ALIGN(size) / PAGE_SIZE);
 			for(i=0; i < PAGE_ALIGN(size) / PAGE_SIZE; i++) {
@@ -378,7 +379,7 @@ int vm_init(struct kernel_args *ka)
 	return err;
 }
 
-static char *raw_alloc(int size, int bin_index)
+static char *raw_alloc(unsigned int size, int bin_index)
 {
 	unsigned int new_heap_ptr;
 	char *retval;
@@ -407,7 +408,7 @@ static char *raw_alloc(int size, int bin_index)
 	return retval;
 }
 
-void *kmalloc(int size)
+void *kmalloc(unsigned int size)
 {
 	void *address = NULL;
 	int bin_index;
@@ -545,7 +546,7 @@ int vm_mark_page_inuse(unsigned int page)
 
 int vm_get_free_page(unsigned int *page)
 {
-	int index = first_free_page_index;
+	unsigned int index = first_free_page_index;
 	
 //	dprintf("vm_get_free_page entry\n");
 		

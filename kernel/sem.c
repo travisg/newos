@@ -18,6 +18,7 @@ struct sem_timeout {
 int sem_init(struct kernel_args *ka)
 {
 	int i;
+	TOUCH(ka);
 	
 	// create and initialize semaphore table
 	sems = (struct sem_entry *)kmalloc(sizeof(struct sem_entry *) * MAX_SEMS);

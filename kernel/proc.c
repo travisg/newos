@@ -1,4 +1,5 @@
 #include <string.h>
+#include "kernel.h"
 #include "stage2.h"
 #include "debug.h"
 #include "proc.h"
@@ -32,6 +33,7 @@ static int proc_struct_hash(void *_p, void *_key, int range)
 int proc_init(struct kernel_args *ka)
 {
 	dprintf("proc_init: entry\n");
+	TOUCH(ka);
 	
 	// create the process hash table
 	proc_hash = hash_init(15, (unsigned int)&kernel_proc->next - (unsigned int)kernel_proc,

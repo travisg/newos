@@ -154,6 +154,8 @@ void smp_send_broadcast_ici(int message, unsigned int data, void *data_ptr)
 
 int smp_trap_non_boot_cpus(struct kernel_args *ka, int cpu)
 {
+	TOUCH(ka);
+
 	if(cpu > 0) {
 		boot_cpu_spin[cpu] = 1;
 		acquire_spinlock(&boot_cpu_spin[cpu]);
@@ -173,7 +175,7 @@ void smp_wake_up_all_non_boot_cpus()
 
 void smp_wait_for_ap_cpus(struct kernel_args *ka)
 {
-	int i;
+	unsigned int i;
 	int retry;
 	do {
 		retry = 0;

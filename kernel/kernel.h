@@ -11,5 +11,7 @@
 #define SET_BIT(a, b) ((a) | (1 << (b)))
 #define CLEAR_BIT(a, b) ((a) & (~(1 << (b))))
 
+#define TOUCH(a) ((a) = (a))
+
 #endif
 

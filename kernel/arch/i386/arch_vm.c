@@ -1,3 +1,4 @@
+#include "kernel.h"
 #include "console.h"
 #include "vm.h"
 #include "debug.h"
@@ -12,6 +13,7 @@ unsigned int *gdt = 0;
 
 int arch_vm_init(struct kernel_args *ka)
 {
+	TOUCH(ka);
 	dprintf("arch_vm_init: entry\n");	
 	return 0;
 }

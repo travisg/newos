@@ -297,7 +297,7 @@ static int smp_boot_all_cpus(struct kernel_args *ka)
 {
 	unsigned int trampoline_code;
 	unsigned int trampoline_stack;
-	int i;
+	unsigned int i;
 	
 	// XXX assume low 1 meg is identity mapped by the 1st stage bootloader
 	// and nothing important is in 0x9e000 & 0x9f000
@@ -319,8 +319,8 @@ static int smp_boot_all_cpus(struct kernel_args *ka)
 		unsigned int *final_stack_ptr;
 		unsigned int *tramp_stack_ptr;
 		unsigned int config;
-		int num_startups;
-		int j;
+		unsigned int num_startups;
+		unsigned int j;
 
 		// create a final stack the trampoline code will put the ap processor on
 		ka->cpu_kstack[i] = ka->virt_alloc_range_high;

@@ -1,4 +1,5 @@
 #include "stage2.h"
+#include "kernel.h"
 
 #include "arch_int.h"
 #include "arch_interrupts.h"
@@ -45,6 +46,7 @@ int arch_timer_set_hardware_timer(long long timeout)
 
 int arch_init_timer(struct kernel_args *ka)
 {
+	TOUCH(ka);
 	dprintf("arch_init_timer: entry\n");
 	
 	int_set_io_interrupt_handler(0x20, &isa_timer_interrupt);

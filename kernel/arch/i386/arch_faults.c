@@ -1,3 +1,4 @@
+#include "kernel.h"
 #include "string.h"
 #include "faults.h"
 #include "vm.h"
@@ -13,6 +14,7 @@
 
 int arch_faults_init(struct kernel_args *ka)
 {
+	TOUCH(ka);
 /* now hardcoded in arch_int.c
 	set_intr_gate(8, &_double_fault_int);
 	set_intr_gate(13, &_general_protection_fault_int);

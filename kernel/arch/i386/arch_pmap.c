@@ -1,4 +1,5 @@
 #include "string.h"
+#include "kernel.h"
 
 #include "vm.h"
 #include "debug.h"
@@ -35,6 +36,7 @@ int arch_pmap_init2(struct kernel_args *ka)
 	// now that the vm is initialized, create an area that represents
 	// the page hole
 	void *temp = (void *)page_hole;
+	TOUCH(ka);
 	
 	dprintf("arch_pmap_init2: entry\n");
 

@@ -229,7 +229,7 @@ retry:
 int thread_init(struct kernel_args *ka)
 {
 	struct thread *t;
-	int i;
+	unsigned int i;
 	
 	dprintf("thread_init: entry\n");
 
@@ -303,6 +303,7 @@ int thread_kthread_exit()
 	// never make it here
 //	RELEASE_THREAD_LOCK();
 //	int_restore_interrupts(state);
+	return 0;
 }
 
 int thread_get_current_thread_id()
@@ -328,7 +329,7 @@ int test_thread()
 	int a = 0;
 	int tid = thread_get_current_thread_id();
 	int x, y;
-	char c = 'a';
+//	char c = 'a';
 	
 	x = tid % 80;
 	y = (tid / 80) * 2 ;

@@ -41,7 +41,7 @@ int vm_create_area(struct aspace *aspace, char *name, void **addr, int addr_type
 struct area *vm_find_area_by_name(struct aspace *aspace, const char *name);
 int vm_map_physical_memory(struct aspace *aspace, char *name, void **addr, int addr_type,
 	unsigned int size, unsigned int lock, unsigned int phys_addr);
-void *kmalloc(int size);
+void *kmalloc(unsigned int size);
 void kfree(void *address);
 
 // semi-private. Should only be used by vm internals

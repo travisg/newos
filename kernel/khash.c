@@ -2,6 +2,8 @@
 #include "vm.h"
 #include "khash.h"
 
+#define TOUCH(a) ((a) = (a))
+
 #define malloc kmalloc
 #define free kfree
 
@@ -134,6 +136,7 @@ void *hash_open(void *_hash_table)
 void hash_close(void *_hash_table, void *_iterator)
 {
 	struct hash_iterator *i = _iterator;
+	TOUCH(_hash_table);
 	
 	free(i);
 }
