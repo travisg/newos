@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -31,9 +31,13 @@
 #define NULL 0
 #endif
 
+#ifndef __cplusplus
+
 #define false 0
 #define true 1
 typedef int bool;
+
+#endif
 
 typedef uint32              size_t;
 typedef int32               ssize_t;

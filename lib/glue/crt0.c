@@ -4,14 +4,23 @@
 */
 extern int __stdio_init();
 extern int __stdio_deinit();
+extern int __heap_init();
 extern void sys_exit(int retcode);
 
+extern unsigned long __ctor_list;
+extern unsigned long __ctor_end;
+
 extern int main();
+
+void _call_ctors();
 
 int _start()
 {
 	int retcode;
-	
+
+	_call_ctors();
+
+	__heap_init();
 	__stdio_init();
 	
 	retcode = main();
@@ -20,3 +29,13 @@ int _start()
 	sys_exit(retcode);
 	return 0;	
 }
+
+void _call_ctors()
+{
+	void (*f)();
+
+	for(f = __ctor_list; f <= __ctor_end; f ++) {
+		f();
+	}
+}
+

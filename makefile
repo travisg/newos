@@ -50,7 +50,7 @@ ifeq ($(ARCH),i386)
 		AR = i386-linux-ar
 		OBJCOPY = i386-linux-objcopy
 	endif
-	GLOBAL_CFLAGS = -O
+	GLOBAL_CFLAGS = -O -DNEWOS=1
 	KERNEL_CFLAGS = -fno-pic
 	USER_CFLAGS = -fpic
 	GLOBAL_LDFLAGS =

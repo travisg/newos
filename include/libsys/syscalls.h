@@ -66,6 +66,10 @@ enum {
 #define LOCK_KERNEL    0x2
 #define LOCK_MASK      0x3
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 int sys_null();
 
 /* fs api */
@@ -117,6 +121,10 @@ region_id sys_vm_map_file(char *name, void **address, int addr_type,
 	addr size, int lock, int mapping, const char *path, off_t offset);
 int sys_vm_delete_region(region_id id);
 int sys_vm_get_region_info(region_id id, vm_region_info *info);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
 
