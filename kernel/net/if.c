@@ -107,7 +107,7 @@ int if_register_interface(const char *path, ifnet **_i)
 		/* find the device's type */
 		err = sys_ioctl(i->fd, IOCTL_NET_IF_GET_TYPE, &type, sizeof(type));
 		if(err < 0) {
-			goto err1;
+			goto err2;
 		}
 	}
 
@@ -130,7 +130,7 @@ int if_register_interface(const char *path, ifnet **_i)
 			err = sys_ioctl(i->fd, IOCTL_NET_IF_GET_ADDR, &address->addr.addr[0], 6);
 			if(err < 0) {
 				kfree(address);
-				goto err1;
+				goto err2;
 			}
 			address->broadcast.len = 6;
 			address->broadcast.type = ADDR_TYPE_ETHERNET;
@@ -157,12 +157,16 @@ int if_register_interface(const char *path, ifnet **_i)
 	mutex_unlock(&ifhash_lock);
 
 	/* start the rx and tx threads on this interface */
-	if_boot_interface(i);
+	err = if_boot_interface(i);
+	if(err < 0)
+		goto err2;
 
 	*_i = i;
 
 	return NO_ERROR;
 
+err2:
+	sys_close(i->fd);
 err1:
 	kfree(i);
 err:
@@ -326,7 +330,6 @@ int if_boot_interface(ifnet *i)
 err2:
 	thread_kill_thread_nowait(i->rx_thread);
 err1:
-	sys_close(i->fd);
 	return err;
 }
 
