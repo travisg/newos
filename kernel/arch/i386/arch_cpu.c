@@ -9,6 +9,7 @@
 #include <kernel/vm.h>
 #include <kernel/debug.h>
 #include <kernel/smp.h>
+#include <kernel/debug.h>
 #include <kernel/arch/i386/selector.h>
 #include <kernel/arch/int.h>
 #include <kernel/arch/i386/interrupts.h>
@@ -18,6 +19,10 @@
 
 #include <string.h>
 #include <stdio.h>
+
+/* a few debug functions that get added to the kernel debugger menu */
+static void dbg_in(int argc, char **argv);
+static void dbg_out(int argc, char **argv);
 
 static struct tss **tss;
 static int *tss_loaded;
@@ -129,6 +134,10 @@ int arch_cpu_init2(kernel_args *ka)
 	tss_d->granularity = 1;
 
 	i386_set_task_gate(8, DOUBLE_FAULT_TSS);
+
+	// set up a few debug commands (in, out)
+	dbg_add_command(&dbg_in, "in", "read I/O port");
+	dbg_add_command(&dbg_out, "out", "write I/O port");
 
 	return 0;
 }
@@ -245,3 +254,69 @@ void arch_cpu_idle(void)
 			break;
 	}
 }
+
+static void dbg_in(int argc, char **argv)
+{
+	int value;
+	int port;
+
+	if(argc < 2) {
+		dprintf("not enough args\nusage: %s (1|2|4) port\n", argv[0]);
+		return;
+	}
+
+	port = atoul(argv[2]);
+
+	switch(argv[1][0]) {
+		case '1':
+		case 'b':
+			value = in8(port);
+			break;
+		case '2':
+		case 'h':
+			value = in16(port);
+			break;
+		case '4':
+		case 'w':
+			value = in32(port);
+			break;
+		default:
+			dprintf("invalid width argument\n");
+			return;
+	}
+	dprintf("I/O port 0x%x = 0x%x\n", port, value);
+}
+
+static void dbg_out(int argc, char **argv)
+{
+	int value;
+	int port;
+
+	if(argc < 3) {
+		dprintf("not enough args\nusage: %s (1|2|4) port value\n", argv[0]);
+		return;
+	}
+
+	port = atoul(argv[2]);
+	value = atoul(argv[3]);
+
+	switch(argv[1][0]) {
+		case '1':
+		case 'b':
+			out8(value, port);
+			break;
+		case '2':
+		case 'h':
+			out16(value, port);
+			break;
+		case '4':
+		case 'w':
+			out32(value, port);
+			break;
+		default:
+			dprintf("invalid width argument\n");
+			return;
+	}
+	dprintf("writing 0x%x to I/O port 0x%x\n", value, port);
+}
+
