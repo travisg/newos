@@ -1098,11 +1098,15 @@ int vm_delete_aspace(aspace_id aid)
 
 int vm_thread_dump_max_commit()
 {
+	int oldmax = -1;
+
 	for(;;) {
 		thread_snooze(1000000);
-		dprintf("max_commit 0x%x\n", max_commit);
+		if(oldmax != max_commit)
+			dprintf("max_commit 0x%x\n", max_commit);
+		oldmax = max_commit;
 	}
-}	
+}
 
 int vm_init(kernel_args *ka)
 {
