@@ -22,6 +22,7 @@
 #define NUMLOCK 69
 #define CAPS    58
 #define SYSREQ  55
+#define F11     87
 #define F12     88
 
 #define LED_SCROLL 1
@@ -185,6 +186,9 @@ static int handle_keyboard_interrupt(void* data)
 				break;
 			case SYSREQ:
 				panic("Keyboard Requested Halt\n");
+				break;
+			case F11:
+				dbg_set_serial_debug(dbg_get_serial_debug()?false:true);
 				break;
 			case F12:
 				reboot();
