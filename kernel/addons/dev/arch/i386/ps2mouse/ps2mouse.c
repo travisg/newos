@@ -52,7 +52,9 @@
 #include <kernel/fs/devfs.h>
 #include <kernel/arch/int.h>
 #include <kernel/sem.h>
+#include <kernel/module.h>
 #include <string.h>
+#include <kernel/bus/isa/isa.h>
 
 /////////////////////////////////////////////////////////////////////////
 // definitions
@@ -95,6 +97,7 @@ static mouse_data md_int;
 static mouse_data md_read;
 static sem_id mouse_sem;
 static bool in_read;
+static isa_bus_manager *isa;
 
 /////////////////////////////////////////////////////////////////////////
 // interrupt
@@ -117,7 +120,7 @@ static int handle_mouse_interrupt(void* data)
 	static int next_input = 0;
 
 	// read port
-   c = in8(PS2_PORT_DATA);
+   c = isa->read_io_8(PS2_PORT_DATA);
 
 	// put port contents in the appropriate data member, according to
 	// current cycle
@@ -265,7 +268,7 @@ struct dev_calls ps2_mouse_hooks = {
  */
 static void wait_write_ctrl()
 {
-	while(in8(PS2_PORT_CTRL) & 0x3);
+	while(isa->read_io_8(PS2_PORT_CTRL) & 0x3);
 } // wait_for_ctrl_output
 
 /*
@@ -275,7 +278,7 @@ static void wait_write_ctrl()
  */
 static void wait_write_data()
 {
-	while(in8(PS2_PORT_CTRL) & 0x2);
+	while(isa->read_io_8(PS2_PORT_CTRL) & 0x2);
 } // wait_write_data
 
 /*
@@ -285,7 +288,7 @@ static void wait_write_data()
  */
 static void wait_read_data()
 {
-	while((in8(PS2_PORT_CTRL) & 0x1) == 0);
+	while((isa->read_io_8(PS2_PORT_CTRL) & 0x1) == 0);
 } // wait_read_data
 
 /*
@@ -297,9 +300,9 @@ static void wait_read_data()
 static void write_command_byte(unsigned char b)
 {
 	wait_write_ctrl();
-	out8(PS2_CTRL_WRITE_CMD, PS2_PORT_CTRL);
+	isa->write_io_8(PS2_PORT_CTRL, PS2_CTRL_WRITE_CMD);
 	wait_write_data();
-	out8(b, PS2_PORT_DATA);
+	isa->write_io_8(PS2_PORT_DATA, b);
 } // write_command_byte
 
 /*
@@ -313,9 +316,9 @@ static void write_command_byte(unsigned char b)
 static void write_aux_byte(unsigned char b)
 {
    wait_write_ctrl();
-	out8(PS2_CTRL_WRITE_AUX, PS2_PORT_CTRL);
+	isa->write_io_8(PS2_PORT_CTRL, PS2_CTRL_WRITE_AUX);
 	wait_write_data();
-	out8(b, PS2_PORT_DATA);
+	isa->write_io_8(PS2_PORT_DATA, b);
 } // write_aux_byte
 
 /*
@@ -327,7 +330,7 @@ static void write_aux_byte(unsigned char b)
 static unsigned char read_data_byte()
 {
    wait_read_data();
-	return in8(PS2_PORT_DATA);
+	return isa->read_io_8(PS2_PORT_DATA);
 } // read_data_byte
 
 int dev_bootstrap(void);
@@ -343,6 +346,11 @@ int dev_bootstrap(void);
 int dev_bootstrap(void)
 {
    dprintf("Initializing PS/2 mouse\n");
+
+   if(module_get(ISA_MODULE_NAME, 0, (void **)&isa) < 0) {
+	   dprintf("ps2mouse dev_bootstrap: no isa bus found..\n");
+	   return -1;
+   }
 
    // init device driver
 	memset(&md_int, 0, sizeof(mouse_data));
@@ -361,6 +369,7 @@ int dev_bootstrap(void)
 	// controller should send ACK if mouse was detected
 	if(read_data_byte() != PS2_RES_ACK) {
 	   dprintf("No PS/2 mouse found\n");
+	   module_put(ISA_MODULE_NAME);
 		return -1;
 	} // if
 

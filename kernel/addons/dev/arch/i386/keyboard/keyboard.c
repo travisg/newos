@@ -7,6 +7,7 @@
 #include <kernel/heap.h>
 #include <kernel/int.h>
 #include <kernel/sem.h>
+#include <kernel/module.h>
 #include <string.h>
 #include <kernel/lock.h>
 #include <kernel/fs/devfs.h>
@@ -14,6 +15,8 @@
 #include <newos/errors.h>
 
 #include <newos/key_event.h>
+
+#include <kernel/bus/isa/isa.h>
 
 #define LSHIFT  42
 #define RSHIFT  54
@@ -42,6 +45,7 @@ static mutex keyboard_read_mutex;
 const int keyboard_buf_len = BUF_LEN;
 static _key_event keyboard_buf[BUF_LEN];
 static unsigned int head, tail;
+static isa_bus_manager *isa;
 
 const uint16 pc_keymap_set1[128] = {
 	/* 0x00 */ 0, KEY_ESC, '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', KEY_BACKSPACE, KEY_TAB,
@@ -63,16 +67,16 @@ const uint16 pc_keymap_set1_e0[128] = {
 
 static void wait_for_output(void)
 {
-	while(in8(0x64) & 0x2)
+	while(isa->read_io_8(0x64) & 0x2)
 		;
 }
 
 static void set_leds(void)
 {
 	wait_for_output();
-	out8(0xed, 0x60);
+	isa->write_io_8(0x60, 0xed);
 	wait_for_output();
-	out8(leds, 0x60);
+	isa->write_io_8(0x60, leds);
 }
 
 static int _keyboard_read(_key_event *buf, size_t len)
@@ -277,7 +281,7 @@ static int handle_keyboard_interrupt(void* data)
 {
 	unsigned char key;
 
-	key = in8(0x60);
+	key = isa->read_io_8(0x60);
 //	dprintf("handle_keyboard_interrupt: key = 0x%x\n", key);
 
 	return handle_set1_keycode(key);
@@ -370,6 +374,11 @@ int	dev_bootstrap(void);
 
 int	dev_bootstrap(void)
 {
+	if(module_get(ISA_MODULE_NAME, 0, (void **)&isa) < 0) {
+		dprintf("keyboard dev_bootstrap: no isa bus found..\n");
+		return -1;
+	}
+
 	setup_keyboard();
 	int_set_io_interrupt_handler(0x21,&handle_keyboard_interrupt, NULL);
 

@@ -1,6 +1,7 @@
 #include <kernel/mod_console.h>
 #include <kernel/vm.h>
 #include <string.h>
+#include <kernel/bus/isa/isa.h>
 
 #define SCREEN_START 0xb8000
 #define SCREEN_END   0xc0000
@@ -14,9 +15,15 @@
 #define TEXT_CURSOR_HI 0x0e
 
 static uint16 *gOrigin;
+static isa_bus_manager *isa;
 
 static int text_init(void)
 {
+	if(module_get(ISA_MODULE_NAME, 0, (void **)&isa) < 0) {
+		dprintf("text module_init: no isa bus found..\n");
+		return -1;
+	}
+
 	/* we always succeede, so init our stuff */
 	dprintf("console/text: mapping vid mem\n");
 	vm_map_physical_memory(vm_get_kernel_aspace_id(), "vid_mem", (void *)&gOrigin, REGION_ADDR_ANY_ADDRESS,
@@ -27,6 +34,8 @@ static int text_init(void)
 
 static int text_uninit(void)
 {
+	module_put(ISA_MODULE_NAME);
+
 	// unmap video memory (someday)
 	return 0;
 }
@@ -41,14 +50,14 @@ static int get_size(int *width, int *height)
 static int move_cursor(int x, int y)
 {
 	short int pos;
-   
+
 	if ((x < 0) || (y < 0)) pos = LINES * COLUMNS + 1;
 	else pos = y * COLUMNS + x;
 
-	out8(TEXT_CURSOR_LO, TEXT_INDEX);
-	out8((char)pos, TEXT_DATA);
-	out8(TEXT_CURSOR_HI, TEXT_INDEX);
-	out8((char)(pos >> 8), TEXT_DATA);
+	isa->write_io_8(TEXT_INDEX, TEXT_CURSOR_LO);
+	isa->write_io_8(TEXT_DATA, (char)pos);
+	isa->write_io_8(TEXT_INDEX, TEXT_CURSOR_HI);
+	isa->write_io_8(TEXT_DATA, (char)(pos >> 8));
 	return 0;
 }
 
@@ -105,7 +114,7 @@ static module_header text_module_header = {
 	text_uninit
 };
 
-module_header *modules[] = { 
+module_header *modules[] = {
 	&text_module_header,
 	0
 };

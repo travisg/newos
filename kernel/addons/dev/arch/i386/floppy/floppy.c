@@ -340,7 +340,7 @@ out:
 
 static int floppy_ioctl(dev_cookie _cookie, int op, void *buf, size_t len)
 {
-	floppy_cookie *cookie = (floppy_cookie *)_cookie;
+//	floppy_cookie *cookie = (floppy_cookie *)_cookie;
 	int err;
 
 	dprintf("floppy_ioctl: op %d, buf %p, len %ld\n", op, buf, len);
@@ -501,14 +501,14 @@ static void write_reg(floppy *flp, floppy_reg_selector selector, uint8 data)
 {
 //	TRACE("write to 0x%x, data 0x%x\n", flp->iobase + selector, data);
 
-	out8(data, flp->iobase + selector);
+	flp->isa->write_io_8(flp->iobase + selector, data);
 }
 
 static uint8 read_reg(floppy *flp, floppy_reg_selector selector)
 {
 	uint8 data;
 
-	data = in8(flp->iobase + selector);
+	data = flp->isa->read_io_8(flp->iobase + selector);
 //	TRACE("read from 0x%x = 0x%x\n", flp->iobase + selector, data);
 	return data;
 }
