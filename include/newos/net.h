@@ -21,7 +21,7 @@ enum {
 	SOCK_PROTO_NULL = 0,
 	SOCK_PROTO_UDP,
 	SOCK_PROTO_TCP
-} sock_proto;
+};
 
 enum {
 	ADDR_TYPE_NULL = 0,
