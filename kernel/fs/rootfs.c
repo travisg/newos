@@ -615,7 +615,7 @@ err:
 	return err;
 }
 
-struct fs_calls rootfs_calls = {
+static struct fs_calls rootfs_calls = {
 	&rootfs_mount,
 	&rootfs_unmount,
 	&rootfs_register_mountpoint,

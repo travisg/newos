@@ -112,7 +112,7 @@ struct Elf32_Sym {
 	unsigned char	st_info;
 	unsigned char 	st_other;
 	Elf32_Half		st_shndx;
-} ;
+};
 
 #define ELF32_ST_BIND(i) ((i) >> 4)
 #define ELF32_ST_TYPE(i) ((i) & 0xf)
@@ -126,16 +126,16 @@ struct Elf32_Sym {
 #define STT_LOPROC 13
 #define STT_HIPROC 15
 
-struct {
+struct Elf32_Rel {
 	Elf32_Addr r_offset;
 	Elf32_Word r_info;
-}   Elf32_Rel;
+};
 
-struct {
+struct Elf32_Rela {
 	Elf32_Addr r_offset;
 	Elf32_Word r_info;
 	Elf32_Sword r_addend;
-}   Elf32_Rela;
+};
 
 #define ELF32_R_SYM(i) ((i) >> 8)
 #define ELF32_R_TYPE(i) ((unsigned char)(i))

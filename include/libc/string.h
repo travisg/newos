@@ -24,7 +24,6 @@ size_t 	strlen(const char * s);
 size_t 	strnlen(const char * s, size_t count);
 size_t 	strspn(const char *s, const char *accept);
 char* 	strpbrk(const char * cs,const char * ct);
-char* 	___strtok;
 char* 	strtok(char * s,const char * ct);
 void* 	memset(void * s, char c,size_t count);
 char* 	bcopy(const char * src, char * dest, int count);

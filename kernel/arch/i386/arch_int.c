@@ -47,7 +47,7 @@ struct int_frame {
 	unsigned int user_ss;
 };
 
-desc_table *idt = NULL;
+static desc_table *idt = NULL;
 
 
 void interrupt_ack(int n)

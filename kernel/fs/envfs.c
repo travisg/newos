@@ -780,7 +780,7 @@ err:
 	return err;	
 }
 
-struct fs_calls envfs_calls = {
+static struct fs_calls envfs_calls = {
 	&envfs_mount,
 	&envfs_unmount,
 	&envfs_register_mountpoint,

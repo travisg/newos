@@ -5,7 +5,7 @@
 #include <libc/string.h>
 #include <libc/ctype.h>
 
-char *___strtok = NULL;
+static char *___strtok = NULL;
 
 char *strtok(char *s, const char *ct)
 {

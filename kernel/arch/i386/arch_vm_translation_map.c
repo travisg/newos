@@ -36,10 +36,10 @@ static paddr_chunk_desc *paddr_desc;         // will be one per physical chunk
 static paddr_chunk_desc **virtual_pmappings; // will be one ptr per virtual chunk in iospace
 static int first_free_vmapping;
 static int num_virtual_chunks;
-queue mapped_paddr_lru;
+static queue mapped_paddr_lru;
 static ptentry *iospace_pgtables = NULL;
-mutex iospace_mutex;
-sem_id iospace_full_sem;
+static mutex iospace_mutex;
+static sem_id iospace_full_sem;
 
 #define PAGE_INVALIDATE_CACHE_SIZE 64
 

@@ -45,15 +45,15 @@ static void *aspace_table;
 static sem_id aspace_hash_sem;
 
 // function declarations
-vm_region *_vm_create_region_struct(vm_address_space *aspace, char *name, addr base,
+static vm_region *_vm_create_region_struct(vm_address_space *aspace, char *name, addr base,
 	addr size, int wiring, int lock);
-vm_region *_vm_create_region(vm_address_space *aspace, char *name, void **address,
+static vm_region *_vm_create_region(vm_address_space *aspace, char *name, void **address,
 	int addr_type, addr size, int wiring, int lock);
-int vm_soft_fault(addr address, bool is_write, bool is_user);
-vm_region *vm_virtual_map_lookup(vm_virtual_map *map, addr address);
-int vm_region_acquire_ref(vm_region *region);
-void vm_region_release_ref(vm_region *region);
-void vm_region_release_ref2(vm_region *region);
+static int vm_soft_fault(addr address, bool is_write, bool is_user);
+static vm_region *vm_virtual_map_lookup(vm_virtual_map *map, addr address);
+static int vm_region_acquire_ref(vm_region *region);
+static void vm_region_release_ref(vm_region *region);
+static void vm_region_release_ref2(vm_region *region);
 
 static int region_compare(void *_r, void *key)
 {
@@ -133,7 +133,7 @@ region_id vm_find_region_by_name(aspace_id aid, const char *name)
 }
 
 // creates semi-initialized region struct and adds to aspace's region list
-vm_region *_vm_create_region_struct(vm_address_space *aspace, char *name, addr base,
+static vm_region *_vm_create_region_struct(vm_address_space *aspace, char *name, addr base,
 	addr size, int wiring, int lock)
 {
 	vm_region *region = NULL;
@@ -212,7 +212,7 @@ error:
 }
 
 // finds a place for a region in the address space and creates the initial structure
-vm_region *_vm_create_region(vm_address_space *aspace, char *name, void **address,
+static vm_region *_vm_create_region(vm_address_space *aspace, char *name, void **address,
 	int addr_type, addr size, int wiring, int lock)
 {
 	vm_region *region;
@@ -545,7 +545,7 @@ int vm_delete_region(aspace_id aid, region_id rid)
 	return 0;
 }
 
-int vm_region_acquire_ref(vm_region *region)
+static int vm_region_acquire_ref(vm_region *region)
 {
 	if(region == NULL)
 		panic("vm_region_acquire_ref: passed NULL\n");
@@ -600,7 +600,7 @@ static void vm_remove_region_struct(vm_region *region)
 	kfree(region);
 }
 
-void vm_region_release_ref(vm_region *region)
+static void vm_region_release_ref(vm_region *region)
 {
 	if(region == NULL)
 		panic("vm_region_release_ref: passed NULL\n");
@@ -609,7 +609,7 @@ void vm_region_release_ref(vm_region *region)
 	}
 }
 
-void vm_region_release_ref2(vm_region *region)
+static void vm_region_release_ref2(vm_region *region)
 {
 	if(region == NULL)
 		panic("vm_region_release_ref2: passed NULL\n");
@@ -1175,7 +1175,7 @@ int vm_page_fault(addr address, addr fault_address, bool is_write, bool is_user)
 	return INT_NO_RESCHEDULE;
 }
 
-int vm_soft_fault(addr address, bool is_write, bool is_user)
+static int vm_soft_fault(addr address, bool is_write, bool is_user)
 {
 	vm_address_space *aspace;
 	vm_virtual_map *map;
@@ -1327,7 +1327,7 @@ int vm_soft_fault(addr address, bool is_write, bool is_user)
 	return err;
 }
 
-vm_region *vm_virtual_map_lookup(vm_virtual_map *map, addr address)
+static vm_region *vm_virtual_map_lookup(vm_virtual_map *map, addr address)
 {
 	vm_region *region;
 

@@ -632,7 +632,7 @@ int bootfs_create(void *_fs, void *_base_vnode, const char *path, const char *st
 	return -1;
 }
 
-struct fs_calls bootfs_calls = {
+static struct fs_calls bootfs_calls = {
 	&bootfs_mount,
 	&bootfs_unmount,
 	&bootfs_register_mountpoint,
