@@ -28,6 +28,11 @@ void * calloc(size_t, size_t);
 void * memalign(size_t, size_t);
 void * valloc(size_t);
 
+char *getenv(char const *);
+int   setenv(char const *, char const *, int);
+int   putenv(char const *);
+void  unsetenv(char const *);
+
 
 #ifdef __cplusplus
 } /* extern "C" */
