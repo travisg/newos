@@ -10,6 +10,7 @@
 #include <dev/arch/i386/console/console_dev.h>
 #endif
 #ifdef ARCH_sh4
+#include <dev/arch/sh4/maple/maple_bus.h>
 #include <dev/arch/sh4/console/console_dev.h>
 #include <dev/arch/sh4/rtl8139/rtl8139_dev.h>
 #endif
@@ -27,6 +28,7 @@ int devs_init(kernel_args *ka)
 #endif	
 
 #ifdef ARCH_sh4
+	maple_bus_init(ka);
 	console_dev_init(ka);
 	rtl8139_dev_init(ka);
 #endif

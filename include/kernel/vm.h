@@ -32,6 +32,10 @@ enum {
 	AREA_ALREADY_MAPPED
 };
 
+// flags for vm_create_area
+#define AREA_NO_FLAGS  0
+#define AREA_FLAGS_CONTIG    1
+
 #define LOCK_RO        0
 #define LOCK_RW        1
 #define LOCK_KERNEL    2
@@ -43,7 +47,7 @@ int vm_init_postsem(kernel_args *ka);
 struct aspace *vm_create_aspace(const char *name, unsigned int base, unsigned int size);
 struct aspace *vm_get_kernel_aspace();
 area_id vm_create_area(struct aspace *aspace, char *name, void **addr, int addr_type,
-	unsigned int size, unsigned int lock);
+	unsigned int size, unsigned int lock, int flags);
 struct area *vm_find_area_by_name(struct aspace *aspace, const char *name);
 int vm_map_physical_memory(struct aspace *aspace, char *name, void **addr, int addr_type,
 	unsigned int size, unsigned int lock, unsigned int phys_addr);

@@ -209,13 +209,13 @@ struct thread *thread_create_user_thread(char *name, struct proc *p, int priorit
 
 	sprintf(stack_name, "%s_kstack", name);
 	vm_create_area(t->proc->kaspace, stack_name, (void **)&stack_addr,
-		AREA_ANY_ADDRESS, KSTACK_SIZE, LOCK_RW|LOCK_KERNEL);
+		AREA_ANY_ADDRESS, KSTACK_SIZE, LOCK_RW|LOCK_KERNEL, AREA_NO_FLAGS);
 	t->kernel_stack_area = vm_find_area_by_name(t->proc->kaspace, stack_name);
 	//arch_thread_initialize_kthread_stack(t, func, &thread_entry);
 
 	sprintf(stack_name, "%s_stack", name);
 	vm_create_area(t->proc->aspace, stack_name, (void **)&stack_addr,
-		AREA_ANY_ADDRESS, STACK_SIZE, LOCK_RW);
+		AREA_ANY_ADDRESS, STACK_SIZE, LOCK_RW, AREA_NO_FLAGS);
 	t->kernel_stack_area = vm_find_area_by_name(t->proc->aspace, stack_name);
 
 	state = int_disable_interrupts();
@@ -251,7 +251,7 @@ static struct thread *create_kernel_thread(struct proc *p, const char *name, int
 
 	sprintf(stack_name, "%s_kstack", name);
 	vm_create_area(t->proc->kaspace, stack_name, (void **)&kstack_addr,
-		AREA_ANY_ADDRESS, KSTACK_SIZE, LOCK_RW|LOCK_KERNEL);
+		AREA_ANY_ADDRESS, KSTACK_SIZE, LOCK_RW|LOCK_KERNEL, AREA_NO_FLAGS);
 	t->kernel_stack_area = vm_find_area_by_name(t->proc->kaspace, stack_name);
 	arch_thread_initialize_kthread_stack(t, func, &thread_entry);
 	
@@ -973,7 +973,7 @@ static int proc_create_proc2(void)
 	ustack_addr = (void *)((USER_STACK_REGION  - STACK_SIZE) + USER_STACK_REGION_SIZE);
 	sprintf(ustack_name, "%s_primary_stack", p->name);
 	vm_create_area(p->aspace, ustack_name, (void **)&ustack_addr,
-		AREA_EXACT_ADDRESS, STACK_SIZE, LOCK_RW);
+		AREA_EXACT_ADDRESS, STACK_SIZE, LOCK_RW, AREA_NO_FLAGS);
 	t->user_stack_area = vm_find_area_by_name(p->aspace, ustack_name);
 	if(t->user_stack_area == NULL) {
 		panic("proc_create_proc2: could not create default user stack area\n");

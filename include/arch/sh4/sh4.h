@@ -22,6 +22,7 @@
 #define P1_PHYS_MEM_END   (P1_PHYS_MEM_START + P1_PHYS_MEM_LEN)
 
 #define PHYS_ADDR_TO_P1(x) (((unsigned int)(x)) + P1_AREA)
+#define PHYS_ADDR_TO_P2(x) (((unsigned int)(x)) + P2_AREA)
 #define P1_TO_PHYS_ADDR(x) (((unsigned int)(x)) - P1_AREA)
 
 #define PAGE_SIZE	4096

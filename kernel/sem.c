@@ -95,7 +95,7 @@ int sem_init(kernel_args *ka)
 	
 	// create and initialize semaphore table
 	sem_area = vm_create_area(vm_get_kernel_aspace(), "sem_table", (void **)&sems,
-		AREA_ANY_ADDRESS, sizeof(struct sem_entry) * MAX_SEMS, LOCK_RW|LOCK_KERNEL);
+		AREA_ANY_ADDRESS, sizeof(struct sem_entry) * MAX_SEMS, LOCK_RW|LOCK_KERNEL, AREA_NO_FLAGS);
 	if(sems == NULL) {
 		panic("unable to allocate semaphore table!\n");
 	}

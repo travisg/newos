@@ -101,7 +101,8 @@ struct area *_vm_create_area_struct(struct aspace *aspace, char *name, unsigned 
 enum {
 	SRC_ADDR_ANY = 0,
 	SRC_ADDR_PHYSICAL,
-	SRC_ADDR_MAPPED_ALREADY
+	SRC_ADDR_MAPPED_ALREADY,
+	SRC_ADDR_CONTIGUOUS
 };
 
 static area_id _vm_create_area(struct aspace *aspace, char *name, void **addr, int addr_type,
@@ -201,6 +202,19 @@ static area_id _vm_create_area(struct aspace *aspace, char *name, void **addr, i
 			}
 			break;
 		}
+		case SRC_ADDR_CONTIGUOUS: {
+			unsigned int i;
+			unsigned int page;
+
+			if(vm_get_free_page_run(&page, PAGE_ALIGN(size) / PAGE_SIZE) < 0) {
+				panic("_vm_create_area: asked for contiguous area of len %d, could not find it\n", size);
+			}
+
+			for(i=0; i < PAGE_ALIGN(size) / PAGE_SIZE; i++) {
+				pmap_map_page((page + i) * PAGE_SIZE, base + i * PAGE_SIZE, lock);
+			}
+			break;
+		}
 		case SRC_ADDR_PHYSICAL: {
 			unsigned int i;
 			
@@ -221,12 +235,17 @@ static area_id _vm_create_area(struct aspace *aspace, char *name, void **addr, i
 }
 
 area_id vm_create_area(struct aspace *aspace, char *name, void **addr, int addr_type,
-	unsigned int size, unsigned int lock)
+	unsigned int size, unsigned int lock, int flags)
 {
-	if(addr_type == AREA_ALREADY_MAPPED) 
+	if(addr_type == AREA_ALREADY_MAPPED) {
 		return _vm_create_area(aspace, name, addr, AREA_EXACT_ADDRESS, size, lock, 0, SRC_ADDR_MAPPED_ALREADY);
-	else
-		return _vm_create_area(aspace, name, addr, addr_type, size, lock, 0, 0);
+	} else {
+		if(flags == AREA_FLAGS_CONTIG)
+			return _vm_create_area(aspace, name, addr, addr_type, size, lock, 0, SRC_ADDR_CONTIGUOUS);
+		else
+			return _vm_create_area(aspace, name, addr, addr_type, size, lock, 0, 0);
+	}
+
 }
 
 int vm_map_physical_memory(struct aspace *aspace, char *name, void **addr, int addr_type,
@@ -658,6 +677,45 @@ int vm_mark_page_range_inuse(unsigned int start_page, unsigned int len)
 int vm_mark_page_inuse(unsigned int page)
 {
 	return vm_mark_page_range_inuse(page, 1);
+}
+
+int vm_get_free_page_run(unsigned int *page, unsigned int len)
+{
+	unsigned int start;
+	unsigned int i;
+	int err = 0;
+	
+	start = first_free_page_index;
+	if(start == END_OF_LIST)
+		return -1;
+
+	for(;;) {
+		bool foundit = true;
+		if(start + len >= free_page_table_size) {
+			err = -1;
+			break;
+		}
+		for(i=0; i<len; i++) {
+			if(free_page_table[start + i] != start + i + 1) {
+				foundit = false;
+				break;
+			}
+		}
+		if(foundit) {
+			vm_mark_page_range_inuse(start, len);
+			*page = start + free_page_table_base;
+			err = 0;
+			break;
+		} else {
+			start = free_page_table[start + i];
+			if(start == END_OF_LIST) {
+				err = -1;
+				break;
+			}
+		}
+	}
+
+	return err;
 }
 
 int vm_get_free_page(unsigned int *page)
