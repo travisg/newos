@@ -22,6 +22,7 @@ int test_and_set(int *val, int set_to);
 long long system_time();
 void setup_system_time(unsigned int cv_factor);
 int arch_cpu_init(struct kernel_args *ka);
+void i386_context_switch(unsigned int **old_esp, unsigned int *new_esp);
 
 #define iret() __asm__ ("iret"::)
 

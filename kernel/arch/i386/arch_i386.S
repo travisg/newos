@@ -104,3 +104,16 @@ system_time:
 	popl	%ecx
 	popl	%ebx
 	ret
+
+// void i386_context_switch(unsigned int **old_esp, unsigned int *new_esp);
+.global i386_context_switch
+i386_context_switch:
+	pushfl
+	pusha
+	movl	40(%esp),%eax
+	movl	%esp,(%eax)
+	movl	44(%esp),%eax
+	movl	%eax,%esp
+	popa
+	popfl
+	ret

@@ -91,7 +91,7 @@ void arch_smp_send_broadcast_ici()
 	int config;
 	
 	config = apic_read(APIC_ICR1) & APIC_ICR1_WRITE_MASK;
-	apic_write(APIC_ICR1, config | 0xfd | APIC_ICR1_DELMODE_FIXED | APIC_ICR1_DESTMODE_LOG | APIC_ICR1_DEST_ALL_BUT_SELF);
+	apic_write(APIC_ICR1, config | 0xfd | APIC_ICR1_DELMODE_FIXED | APIC_ICR1_DESTMODE_PHYS | APIC_ICR1_DEST_ALL_BUT_SELF);
 }
 
 void arch_smp_send_ici(int target_cpu)

@@ -167,8 +167,8 @@ static struct thread *create_kernel_thread(char *name, int (*func)(void), int pr
 		return NULL;
 	t->proc = proc_get_kernel_proc();
 	t->priority = priority;
-	t->state = THREAD_STATE_NEW;
-	t->next_state = THREAD_STATE_NEW;
+	t->state = THREAD_STATE_READY;
+	t->next_state = THREAD_STATE_READY;
 
 	sprintf(stack_name, "%s_kstack", name);
 	vm_create_area(t->proc->aspace, stack_name, (void **)&kstack_addr,
@@ -250,8 +250,8 @@ int thread_init(struct kernel_args *ka)
 		t = create_thread_struct(temp);
 		t->proc = proc_get_kernel_proc();
 		t->priority = THREAD_IDLE_PRIORITY;
-		t->state = THREAD_STATE_NEW;
-		t->next_state = THREAD_STATE_NEW;
+		t->state = THREAD_STATE_READY;
+		t->next_state = THREAD_STATE_READY;
 		sprintf(temp, "idle_thread%d_kstack", i);
 		t->kernel_stack_area = vm_find_area_by_name(t->proc->aspace, temp);		
 		t->all_next = thread_list;
@@ -280,9 +280,8 @@ static void thread_entry(void)
 {
 	// simulates the thread spinlock release that would occur if the thread had been
 	// rescheded from. The resched didn't happen because the thread is new.
-//	dprintf("thread_entry: on thread %d\n", thread_get_current_thread_id());
-	dprintf("thread_entry: entry\n");
 	RELEASE_THREAD_LOCK();
+	int_enable_interrupts();
 }
 
 int thread_kthread_exit()
@@ -337,11 +336,13 @@ int test_thread()
 	while(1) {
 //		a += tid;
 		a++;
-//		kprintf_xy(0, tid-1, "thread%d - %d    - %d %d - cpu %d", tid, a, system_time(), smp_get_current_cpu());
+		kprintf_xy(0, tid-1, "thread%d - %d    - %d %d - cpu %d", tid, a, system_time(), smp_get_current_cpu());
+#if 0
 		kprintf_xy(x, y, "%c", c++);
 		if(c > 'z')
 			c = 'a';
 		kprintf_xy(x, y+1, "%d", smp_get_current_cpu());
+#endif
 #if 0
 		thread_snooze(10000 * tid);
 #endif
@@ -371,7 +372,7 @@ int thread_test()
 	int i;
 	char temp[64];
 	
-	for(i=0; i<64; i++) {
+	for(i=0; i<21; i++) {
 		sprintf(temp, "test_thread%d", i);
 //		t = create_kernel_thread(temp, &test_thread, i % THREAD_NUM_PRIORITY_LEVELS);
 		t = create_kernel_thread(temp, &test_thread, 5);
@@ -401,11 +402,9 @@ void thread_resched()
 	int last_thread_pri = -1;
 	struct thread *old_thread = CURR_THREAD;
 	int i;
-	int oldstate;
 	
 	switch(old_thread->next_state) {
 		case THREAD_STATE_RUNNING:
-		case THREAD_STATE_NEW:
 		case THREAD_STATE_READY:
 			thread_enqueue_run_q(old_thread);
 			break;
@@ -433,26 +432,14 @@ void thread_resched()
 		}
 	}
 
-	oldstate = next_thread->state;
 	next_thread->state = THREAD_STATE_RUNNING;
 	next_thread->next_state = THREAD_STATE_READY;
 
 	if(next_thread != old_thread) {
-		dprintf("thread_resched: switching from thread %d to %d\n",
-			old_thread->id, next_thread->id);
+//		dprintf("thread_resched: switching from thread %d to %d\n",
+//			old_thread->id, next_thread->id);
 
 		CURR_THREAD = next_thread;
 		thread_context_switch(old_thread, next_thread);
-#if 0
-		if(oldstate == THREAD_STATE_NEW) {
-			// this thread was not previously thread_resched()ed,
-			// so it will not have the thread lock released after it is
-			// started. Have the context switch code release the thread spinlock
-			// after the switch is done.
-			thread_context_switch(old_thread, next_thread, 1);
-		} else {
-			thread_context_switch(old_thread, next_thread, 0);
-		}
-#endif
 	}
 }

@@ -153,8 +153,8 @@ void i386_handle_trap(struct int_frame frame)
 	
 	if(ret == INT_RESCHEDULE) {
 		// XXX remove -- tell the other processor to reschedule too
-		if(smp_get_num_cpus() > 1)
-			smp_send_ici(smp_get_current_cpu() == 0 ? 1 : 0, SMP_MSG_RESCHEDULE, 0, NULL);
+		if(smp_get_num_cpus() > 1 && smp_get_current_cpu() == 0)
+			smp_send_broadcast_ici(SMP_MSG_RESCHEDULE, 0, NULL);
 		GRAB_THREAD_LOCK();
 		thread_resched();
 		RELEASE_THREAD_LOCK();

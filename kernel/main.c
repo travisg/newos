@@ -42,7 +42,7 @@ int _start(struct kernel_args *oldka, int cpu)
 		proc_init(&ka);
 		thread_init(&ka);
 	
-	#if 0
+	#if 1
 		// XXX remove
 		thread_test();
 	#endif

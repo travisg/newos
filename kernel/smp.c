@@ -32,7 +32,7 @@ int smp_intercpu_int_handler()
 	int curr_cpu = smp_get_current_cpu();
 	struct smp_msg *msg;
 	int retval = INT_NO_RESCHEDULE;
-	
+
 	acquire_spinlock(&msg_spinlock);
 	
 	msg = smp_msgs[curr_cpu];
@@ -41,10 +41,13 @@ int smp_intercpu_int_handler()
 		msg->ref_count--;
 	} else {
 		// try getting one from the broadcast mailbox
+		struct smp_msg *last_msg = NULL;
+
 		msg = smp_broadcast_msgs;
 		while(msg != NULL) {
-			if(CHECK_BIT(msg->proc_bitmap, curr_cpu)) {
+			if(CHECK_BIT(msg->proc_bitmap, curr_cpu) != 0) {
 				// we have handled this one already
+				last_msg = msg;
 				msg = msg->next;
 				continue;
 			}
@@ -54,8 +57,13 @@ int smp_intercpu_int_handler()
 			msg->ref_count--;
 			if(msg->ref_count == 0) {
 				// pull it out of the linked list
-				smp_broadcast_msgs = msg->next;
+				if(last_msg == NULL) {
+					smp_broadcast_msgs = msg->next;
+				} else {
+					last_msg = msg->next;
+				}
 			}
+			break;
 		}
 	}
 	
@@ -78,7 +86,7 @@ int smp_intercpu_int_handler()
 			break;
 		case SMP_MSG_1:
 		default:
-			kprintf("smp_intercpu_int_handler: got message %d\n", msg->message);
+			kprintf("smp_intercpu_int_handler: got unknown message %d\n", msg->message);
 	}
 
 	if(msg->ref_count == 0) {

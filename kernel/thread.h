@@ -15,8 +15,7 @@ extern int thread_spinlock;
 #define RELEASE_THREAD_LOCK() release_spinlock(&thread_spinlock)
 
 enum {
-	THREAD_STATE_NEW = 0, // thread was just created, hasn't been previously rescheded from
-	THREAD_STATE_READY,   // ready to run
+	THREAD_STATE_READY = 0,   // ready to run
 	THREAD_STATE_RUNNING, // running right now somewhere
 	THREAD_STATE_WAITING, // blocked on something
 	THREAD_STATE_MARKED_FOR_DEATH, // ready for manny to kill it
