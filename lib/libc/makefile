@@ -20,8 +20,6 @@ include $(addsuffix /makefile, $(addprefix $(MY_SRCDIR)/, \
 	stdio \
 	stdlib \
 	string \
-	system \
-	system/arch/$(ARCH) \
 	unistd \
 ))
 
