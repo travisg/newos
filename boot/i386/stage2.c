@@ -237,7 +237,7 @@ void _start(unsigned int mem, char *str)
 
 	asm("movl	%0, %%eax;	"			// move stack out of way
 		"movl	%%eax, %%esp; "
-		: : "m" (ka->cpu_kstack[0].start - 4));
+		: : "m" (ka->cpu_kstack[0].start + ka->cpu_kstack[0].size));
 	asm("pushl  $0x0; "					// we're the BSP cpu (0)
 		"pushl 	%0;	"					// kernel args
 		"pushl 	$0x0;"					// dummy retval for call to main
