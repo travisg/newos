@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -33,9 +33,7 @@ int smp_disable_ici(void);
 
 int smp_get_num_cpus(void);
 void smp_set_num_cpus(int num_cpus);
-
-#include <kernel/arch/smp.h>
-#define smp_get_current_cpu() arch_smp_get_current_cpu()
+int smp_get_current_cpu(void);
 
 // spinlock functions
 typedef volatile int spinlock_t;

@@ -5,7 +5,7 @@
 #ifndef _NEWOS_KERNEL_ARCH_I386_KERNEL_H
 #define _NEWOS_KERNEL_ARCH_I386_KERNEL_H
 
-#include <kernel/arch/i386/cpu.h>
+#include <kernel/arch/cpu.h>
 
 // memory layout
 #define KERNEL_BASE 0x80000000

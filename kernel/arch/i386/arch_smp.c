@@ -1,5 +1,5 @@
-/* 
-** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+/*
+** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #include <boot/stage2.h>
@@ -27,13 +27,13 @@ static unsigned int *apic = NULL;
 static unsigned int cpu_apic_id[SMP_MAX_CPUS] = { 0, 0};
 static unsigned int cpu_os_id[SMP_MAX_CPUS] = { 0, 0};
 static unsigned int cpu_apic_version[SMP_MAX_CPUS] = { 0, 0};
-static unsigned int *ioapic = NULL; 
+static unsigned int *ioapic = NULL;
 static unsigned int apic_timer_tics_per_sec = 0;
 
 static int i386_timer_interrupt(void* data)
 {
 	arch_smp_ack_interrupt();
-	
+
 	return apic_timer_interrupt();
 }
 
@@ -85,7 +85,7 @@ int arch_smp_init(kernel_args *ka)
 		memcpy(cpu_os_id, ka->arch_args.cpu_os_id, sizeof(ka->arch_args.cpu_os_id));
 		memcpy(cpu_apic_version, ka->arch_args.cpu_apic_version, sizeof(ka->arch_args.cpu_apic_version));
 		apic_timer_tics_per_sec = ka->arch_args.apic_time_cv_factor;
-	
+
 		// setup regions that represent the apic & ioapic
 		vm_create_anonymous_region(vm_get_kernel_aspace_id(), "local_apic", (void *)&apic,
 			REGION_ADDR_EXACT_ADDRESS, PAGE_SIZE, REGION_WIRING_WIRED_ALREADY, LOCK_RW|LOCK_KERNEL);
@@ -106,9 +106,9 @@ void arch_smp_send_broadcast_ici(void)
 {
 	int config;
 	int state;
-	
+
 	state = int_disable_interrupts();
-	
+
 	config = apic_read(APIC_ICR1) & APIC_ICR1_WRITE_MASK;
 	apic_write(APIC_ICR1, config | 0xfd | APIC_ICR1_DELMODE_FIXED | APIC_ICR1_DESTMODE_PHYS | APIC_ICR1_DEST_ALL_BUT_SELF);
 
@@ -119,9 +119,9 @@ void arch_smp_send_ici(int target_cpu)
 {
 	int config;
 	int state;
-	
+
 	state = int_disable_interrupts();
-	
+
 	config = apic_read(APIC_ICR2) & APIC_ICR2_MASK;
 	apic_write(APIC_ICR2, config | cpu_apic_id[target_cpu] << 24);
 
@@ -129,14 +129,6 @@ void arch_smp_send_ici(int target_cpu)
 	apic_write(APIC_ICR1, config | 0xfd | APIC_ICR1_DELMODE_FIXED | APIC_ICR1_DESTMODE_PHYS | APIC_ICR1_DEST_FIELD);
 
 	int_restore_interrupts(state);
-}
-
-int arch_smp_get_current_cpu(void)
-{
-	if(apic == NULL)
-		return 0;
-	else
-		return cpu_os_id[(apic_read(APIC_ID) & 0xffffffff) >> 24];
 }
 
 void arch_smp_ack_interrupt(void)
@@ -165,9 +157,9 @@ int arch_smp_set_apic_timer(bigtime_t relative_timeout)
 
 	config = apic_read(APIC_LVTT) | APIC_LVTT_M; // mask the timer
 	apic_write(APIC_LVTT, config);
-	
+
 	apic_write(APIC_ICRT, 0); // zero out the timer
-	
+
 	config = apic_read(APIC_LVTT) & ~APIC_LVTT_M; // unmask the timer
 	apic_write(APIC_LVTT, config);
 
@@ -182,7 +174,7 @@ int arch_smp_clear_apic_timer(void)
 {
 	unsigned int config;
 	int state;
-	
+
 	if(apic == NULL)
 		return -1;
 
@@ -190,7 +182,7 @@ int arch_smp_clear_apic_timer(void)
 
 	config = apic_read(APIC_LVTT) | APIC_LVTT_M; // mask the timer
 	apic_write(APIC_LVTT, config);
-	
+
 	apic_write(APIC_ICRT, 0); // zero out the timer
 
 	int_restore_interrupts(state);

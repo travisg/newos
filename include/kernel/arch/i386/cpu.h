@@ -89,7 +89,11 @@ void i386_set_kstack(addr kstack);
 void i386_switch_stack_and_call(addr stack, void (*func)(void *), void *arg);
 void i386_swap_pgdir(addr new_pgdir);
 
-#define iret() __asm__ ("iret"::)
+#define read_dr3(value) \
+	__asm__("movl	%%dr3,%0" : "=r" (value))
+
+#define write_dr3(value) \
+	__asm__("movl	%0,%%dr3" :: "r" (value))
 
 #define invalidate_TLB(va) \
 	__asm__("invlpg (%0)" : : "r" (va))

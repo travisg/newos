@@ -3,6 +3,7 @@
 ** Distributed under the terms of the NewOS License.
 */
 #include <kernel/kernel.h>
+#include <kernel/thread.h>
 #include <kernel/console.h>
 #include <kernel/debug.h>
 #include <kernel/int.h>
@@ -11,6 +12,7 @@
 #include <kernel/heap.h>
 #include <newos/errors.h>
 
+#include <kernel/cpu.h>
 #include <kernel/arch/cpu.h>
 #include <kernel/arch/smp.h>
 //#include <kernel/arch/pmap.h>
@@ -470,6 +472,15 @@ void smp_set_num_cpus(int num_cpus)
 int smp_get_num_cpus()
 {
 	return smp_num_cpus;
+}
+
+int smp_get_current_cpu(void)
+{
+	struct thread *t = thread_get_current_thread();
+	if(t)
+		return t->cpu->cpu_num;
+	else
+		return 0;
 }
 
 int smp_enable_ici()

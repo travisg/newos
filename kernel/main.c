@@ -1,5 +1,5 @@
 /*
-** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #include <boot/stage2.h>
@@ -19,6 +19,7 @@
 #include <kernel/net/net.h>
 #include <kernel/cbuf.h>
 #include <kernel/elf.h>
+#include <kernel/cpu.h>
 #include <kernel/dev/beos.h>
 #include <kernel/dev/devs.h>
 #include <kernel/bus/bus.h>
@@ -33,14 +34,17 @@ static int main2(void *);
 
 
 int _start(kernel_args *oldka, int cpu);	/* keep compiler happy */
-int _start(kernel_args *oldka, int cpu)
+int _start(kernel_args *oldka, int cpu_num)
 {
 	memcpy(&ka, oldka, sizeof(kernel_args));
 
 	smp_set_num_cpus(ka.num_cpus);
 
+	// do any pre-booting cpu config
+	cpu_preboot_init(&ka);
+
 	// if we're not a boot cpu, spin here until someone wakes us up
-	if(smp_trap_non_boot_cpus(&ka, cpu) == NO_ERROR) {
+	if(smp_trap_non_boot_cpus(&ka, cpu_num) == NO_ERROR) {
 		// we're the boot processor, so wait for all of the APs to enter the kernel
 		smp_wait_for_ap_cpus(&ka);
 
@@ -50,7 +54,7 @@ int _start(kernel_args *oldka, int cpu)
 		dprintf("Welcome to kernel debugger output!\n");
 
 		// init modules
-		arch_cpu_init(&ka);
+		cpu_init(&ka);
 		int_init(&ka);
 
 		vm_init(&ka);
@@ -88,10 +92,13 @@ int _start(kernel_args *oldka, int cpu)
 		smp_wake_up_all_non_boot_cpus();
 		smp_enable_ici(); // ici's were previously being ignored
 		thread_start_threading();
+	} else {
+		// this is run per cpu for each AP processor after they've been set loose
+		thread_init_percpu(cpu_num);
 	}
 	int_enable_interrupts();
 
-	dprintf("main: done... begin idle loop on cpu %d\n", cpu);
+	dprintf("main: done... begin idle loop on cpu %d\n", cpu_num);
 	for(;;);
 
 	return 0;

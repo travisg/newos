@@ -171,7 +171,7 @@ endif
 
 OBJ_DIR = obj.$(ARCH)
 
-GLOBAL_CFLAGS += -Wall -W -Wno-multichar -Wno-unused -Wmissing-prototypes -nostdinc -fno-builtin -DARCH_$(ARCH) -DNEWOS=1
+GLOBAL_CFLAGS += -Wall -W -Wno-multichar -Wno-unused -Wmissing-prototypes -finline -nostdinc -fno-builtin -DARCH_$(ARCH) -DNEWOS=1
 
 # sub makefiles are responsible for adding to these
 DEPS =
@@ -199,7 +199,7 @@ $(BOOTMAKER): $(BOOTMAKER).c tools/sparcbootblock.h
 
 NETBOOT_LINK_ARGS =
 ifeq ($(OSTYPE),beos)
-	NETBOOT_LINK_ARGS = -lsocket -lnet
+	NETBOOT_LINK_ARGS = -lnet
 endif
 ifeq ($(shell uname),SunOS)
 	NETBOOT_LINK_ARGS = -lsocket -lnsl

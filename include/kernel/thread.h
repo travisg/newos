@@ -75,6 +75,7 @@ struct thread {
 	int priority;
 	int state;
 	int next_state;
+	struct cpu_ent *cpu;
 	int pending_signals;
 	bool in_kernel;
 	sem_id sem_blocking;
@@ -108,6 +109,8 @@ struct proc_info {
 	int num_threads;
 };
 
+#include <kernel/arch/thread.h>
+
 void thread_enqueue(struct thread *t, struct thread_queue *q);
 struct thread *thread_lookat_queue(struct thread_queue *q);
 struct thread *thread_dequeue(struct thread_queue *q);
@@ -125,12 +128,16 @@ void thread_resched(void);
 void thread_start_threading(void);
 void thread_snooze(bigtime_t time);
 int thread_init(kernel_args *ka);
+int thread_init_percpu(int cpu_num);
 void thread_exit(int retcode);
 int thread_kill_thread(thread_id id);
 int thread_kill_thread_nowait(thread_id id);
-struct thread *thread_get_current_thread(void);
+#define thread_get_current_thread arch_thread_get_current_thread
 struct thread *thread_get_thread_struct(thread_id id);
 thread_id thread_get_current_thread_id(void);
+extern inline thread_id thread_get_current_thread_id(void) {
+	struct thread *t = thread_get_current_thread(); return t ? t->id : 0;
+}
 int thread_wait_on_thread(thread_id id, int *retcode);
 
 thread_id thread_create_user_thread(char *name, proc_id pid, addr entry, void *args);

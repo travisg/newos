@@ -29,6 +29,7 @@ KERNEL_OBJS = \
         $(KERNEL_OBJ_DIR)/syscalls.o \
         $(KERNEL_OBJ_DIR)/thread.o \
         $(KERNEL_OBJ_DIR)/cbuf.o \
+        $(KERNEL_OBJ_DIR)/cpu.o \
         $(KERNEL_OBJ_DIR)/vfs.o
 
 KERNEL_INCLUDES = -Iinclude

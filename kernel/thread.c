@@ -11,6 +11,7 @@
 #include <kernel/int.h>
 #include <kernel/smp.h>
 #include <kernel/timer.h>
+#include <kernel/cpu.h>
 #include <kernel/arch/cpu.h>
 #include <kernel/arch/int.h>
 #include <kernel/arch/vm.h>
@@ -35,7 +36,6 @@ struct thread_key {
 	thread_id id;
 };
 
-
 struct proc_arg {
 	char *path;
 	char **args;
@@ -59,13 +59,8 @@ static spinlock_t proc_spinlock = 0;
 #define GRAB_PROC_LOCK() acquire_spinlock(&proc_spinlock)
 #define RELEASE_PROC_LOCK() release_spinlock(&proc_spinlock)
 
-// scheduling timer
-#define LOCAL_CPU_TIMER timers[smp_get_current_cpu()]
-static struct timer_event *timers = NULL;
-
 // thread list
-#define CURR_THREAD cur_thread[smp_get_current_cpu()]
-static struct thread **cur_thread = NULL;
+static struct thread *idle_threads[MAX_BOOT_CPUS];
 static void *thread_hash = NULL;
 static thread_id next_thread_id = 0;
 
@@ -320,6 +315,7 @@ static struct thread *create_thread_struct(const char *name)
 
 	t->id = atomic_add(&next_thread_id, 1);
 	t->proc = NULL;
+	t->cpu = NULL;
 	t->sem_blocking = -1;
 	t->fault_handler = 0;
 	t->kernel_stack_region_id = -1;
@@ -520,9 +516,8 @@ int thread_suspend_thread(thread_id id)
 	state = int_disable_interrupts();
 	GRAB_THREAD_LOCK();
 
-	if(CURR_THREAD->id == id) {
-		t = CURR_THREAD;
-	} else {
+	t = thread_get_current_thread();
+	if(t->id != id) {
 		t = thread_get_thread_struct_locked(id);
 	}
 
@@ -705,6 +700,11 @@ static void _dump_thread_info(struct thread *t)
 	dprintf("priority:    0x%x\n", t->priority);
 	dprintf("state:       %s\n", state_to_text(t->state));
 	dprintf("next_state:  %s\n", state_to_text(t->next_state));
+	dprintf("cpu:         %p ", t->cpu);
+	if(t->cpu)
+		dprintf("(%d)\n", t->cpu->cpu_num);
+	else
+		dprintf("\n");
 	dprintf("pending_signals:  0x%x\n", t->pending_signals);
 	dprintf("in_kernel:   %d\n", t->in_kernel);
 	dprintf("sem_blocking:0x%x\n", t->sem_blocking);
@@ -776,6 +776,10 @@ static void dump_thread_list(int argc, char **argv)
 			dprintf("\t%32s", "<NULL>");
 		dprintf("\t0x%x", t->id);
 		dprintf("\t%16s", state_to_text(t->state));
+		if(t->cpu)
+			dprintf("\t%d", t->cpu->cpu_num);
+		else
+			dprintf("\tNOCPU");
 		dprintf("\t0x%lx\n", t->kernel_stack_base);
 	}
 	hash_close(thread_hash, &i, false);
@@ -924,22 +928,6 @@ int thread_init(kernel_args *ka)
 	// zero out the dead thread structure q
 	memset(&dead_q, 0, sizeof(dead_q));
 
-	// allocate as many CUR_THREAD slots as there are cpus
-	cur_thread = (struct thread **)kmalloc(sizeof(struct thread *) * smp_get_num_cpus());
-	if(cur_thread == NULL) {
-		panic("error allocating cur_thread slots\n");
-		return ERR_NO_MEMORY;
-	}
-	memset(cur_thread, 0, sizeof(struct thread *) * smp_get_num_cpus());
-
-	// allocate a timer structure per cpu
-	timers = (struct timer_event *)kmalloc(sizeof(struct timer_event) * smp_get_num_cpus());
-	if(timers == NULL) {
-		panic("error allocating scheduling timers\n");
-		return ERR_NO_MEMORY;
-	}
-	memset(timers, 0, sizeof(struct timer_event) * smp_get_num_cpus());
-
 	// allocate a snooze sem
 	snooze_sem = sem_create(0, "snooze sem");
 	if(snooze_sem < 0) {
@@ -972,7 +960,10 @@ int thread_init(kernel_args *ka)
 		vm_put_region(region);
 		hash_insert(thread_hash, t);
 		insert_thread_into_proc(t->proc, t);
-		cur_thread[i] = t;
+		idle_threads[i] = t;
+		if(i == 0)
+			arch_thread_set_current_thread(t);
+		t->cpu = &cpu[i];
 	}
 
 	// create a set of death stacks
@@ -1014,6 +1005,12 @@ int thread_init(kernel_args *ka)
 	dbg_add_command(dump_next_thread_in_proc, "next_proc", "dump the next thread in the process of the last thread viewed");
 	dbg_add_command(dump_proc_info, "proc", "list info about a particular process");
 
+	return 0;
+}
+
+int thread_init_percpu(int cpu_num)
+{
+	arch_thread_set_current_thread(idle_threads[cpu_num]);
 	return 0;
 }
 
@@ -1236,7 +1233,7 @@ static int _thread_kill_thread(thread_id id, bool wait_on)
 		} else {
 			deliver_signal(t, SIG_KILL);
 			rc = NO_ERROR;
-			if(t->id == CURR_THREAD->id)
+			if(t->id == thread_get_current_thread()->id)
 				wait_on = false; // can't wait on ourself
 		}
 	} else {
@@ -1357,32 +1354,6 @@ int proc_wait_on_proc(proc_id id, int *retcode)
 	return thread_wait_on_thread(tid, retcode);
 }
 
-thread_id thread_get_current_thread_id(void)
-{
-	struct thread *t;
-	int state;
-
-	if(cur_thread == NULL)
-		return 0;
-	state = int_disable_interrupts();
-	t = CURR_THREAD;
-	int_restore_interrupts(state);
-	return t->id;
-}
-
-struct thread *thread_get_current_thread(void)
-{
-	struct thread *t;
-	int state;
-
-	if(cur_thread == NULL)
-		return 0;
-	state = int_disable_interrupts();
-	t = CURR_THREAD;
-	int_restore_interrupts(state);
-	return t;
-}
-
 struct thread *thread_get_thread_struct(thread_id id)
 {
 	struct thread *t;
@@ -1435,6 +1406,9 @@ static struct proc *proc_get_proc_struct_locked(proc_id id)
 
 static void thread_context_switch(struct thread *t_from, struct thread *t_to)
 {
+	t_to->cpu = t_from->cpu;
+	arch_thread_set_current_thread(t_to);
+	t_from->cpu = NULL;
 	arch_thread_context_switch(t_from, t_to);
 }
 
@@ -1461,11 +1435,12 @@ void thread_resched(void)
 {
 	struct thread *next_thread = NULL;
 	int last_thread_pri = -1;
-	struct thread *old_thread = CURR_THREAD;
+	struct thread *old_thread = thread_get_current_thread();
 	int i;
 	bigtime_t quantum;
+	struct timer_event *quantum_timer;
 
-//	dprintf("top of thread_resched: cpu %d, cur_thread = 0x%x\n", smp_get_current_cpu(), CURR_THREAD);
+//	dprintf("top of thread_resched: cpu %d, cur_thread = 0x%x\n", smp_get_current_cpu(), thread_get_current_thread());
 
 	switch(old_thread->next_state) {
 		case THREAD_STATE_RUNNING:
@@ -1521,17 +1496,21 @@ found_thread:
 	next_thread->state = THREAD_STATE_RUNNING;
 	next_thread->next_state = THREAD_STATE_READY;
 
+	// XXX should only reset the quantum timer if we are switching to a new thread,
+	// or we got here as a result of a quantum expire.
+
 	// XXX calculate quantum
 	quantum = 10000;
 
-	timer_cancel_event(&LOCAL_CPU_TIMER);
-	timer_setup_timer(&reschedule_event, NULL, &LOCAL_CPU_TIMER);
-	timer_set_event(quantum, TIMER_MODE_ONESHOT, &LOCAL_CPU_TIMER);
+	// get the quantum timer for this cpu
+	quantum_timer = &old_thread->cpu->quantum_timer;
+	timer_cancel_event(quantum_timer);
+	timer_setup_timer(&reschedule_event, NULL, quantum_timer);
+	timer_set_event(quantum, TIMER_MODE_ONESHOT, quantum_timer);
 
 	if(next_thread != old_thread) {
 //		dprintf("thread_resched: cpu %d switching from thread %d to %d\n",
 //			smp_get_current_cpu(), old_thread->id, next_thread->id);
-		CURR_THREAD = next_thread;
 		thread_context_switch(old_thread, next_thread);
 	}
 }
@@ -1946,10 +1925,11 @@ void thread_atkernel_entry(void)
 
 //	dprintf("thread_atkernel_entry: entry thread 0x%x\n", t->id);
 
+	t = thread_get_current_thread();
+
 	state = int_disable_interrupts();
 	GRAB_THREAD_LOCK();
 
-	t = CURR_THREAD;
 	t->in_kernel = true;
 
 	_check_for_thread_sigs(t, state);
@@ -1966,10 +1946,10 @@ void thread_atkernel_exit(void)
 
 //	dprintf("thread_atkernel_exit: entry\n");
 
+	t = thread_get_current_thread();
+
 	state = int_disable_interrupts();
 	GRAB_THREAD_LOCK();
-
-	t = CURR_THREAD;
 
 	_check_for_thread_sigs(t, state);
 

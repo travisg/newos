@@ -20,6 +20,12 @@ static int *tss_loaded;
 
 static unsigned int *gdt = 0;
 
+int arch_cpu_preboot_init(kernel_args *ka)
+{
+	write_dr3(0);
+	return 0;
+}
+
 int arch_cpu_init(kernel_args *ka)
 {
 	setup_system_time(ka->arch_args.system_time_cv_factor);
