@@ -11,15 +11,12 @@ MY_OBJS := \
 	main.o \
 	elf.o \
 	faults.o \
-	khash.o \
-	lock.o \
 	heap.o \
 	int.o \
 	console.o \
 	debug.o \
 	gdb.o \
 	dev.o \
-	queue.o \
 	timer.o \
 	port.o \
 	sem.o \
@@ -44,6 +41,7 @@ include $(addsuffix /makefile, $(addprefix $(KERNEL_DIR)/, \
 	arch \
 	dev \
 	bus \
+	util \
 ))
 
 include templates/kernel.mk
