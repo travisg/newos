@@ -123,7 +123,7 @@ int dev_bootstrap(void)
 	rtl8139_init(rtl);
 
 	// create device node
-	devfs_publish_device("net/rtl8139/0", rtl, &rtl8139_hooks);
+	devfs_publish_indexed_device("net/rtl8139", rtl, &rtl8139_hooks);
 
 	return 0;
 }

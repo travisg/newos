@@ -393,7 +393,7 @@ int dev_bootstrap(void)
 	floppy_init(flp);
 
 	// create device node
-	devfs_publish_device("disk/floppy/0", flp, &floppy_hooks);
+	devfs_publish_indexed_device("disk/floppy", flp, &floppy_hooks);
 
 #if 0
 	{

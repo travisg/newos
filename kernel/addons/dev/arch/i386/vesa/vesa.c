@@ -154,8 +154,8 @@ int dev_bootstrap(void)
 		vesa.phys_memory.start = global_kernel_args.fb.mapping.start;
 		vesa.phys_memory.size = global_kernel_args.fb.mapping.size;
 
-		devfs_publish_device("graphics/fb/0", NULL, &vesa_hooks);
-		devfs_publish_device("graphics/vesa/fb/0", NULL, &vesa_hooks);
+		devfs_publish_indexed_device("graphics/fb", NULL, &vesa_hooks);
+		devfs_publish_indexed_device("graphics/vesa/fb", NULL, &vesa_hooks);
 
 		return NO_ERROR;
 	}

@@ -152,7 +152,7 @@ int dev_bootstrap(void)
 
 		pcnet32_start(nic);
 
-		if (devfs_publish_device("net/pcnet32/0", nic, &pcnet32_hooks) < 0)
+		if (devfs_publish_indexed_device("net/pcnet32", nic, &pcnet32_hooks) < 0)
 		{
 			SHOW_FLOW0(3, "failed to register device /dev/net/pcnet32/0");
 			return ERR_GENERAL;
