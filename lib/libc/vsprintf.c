@@ -6,6 +6,7 @@
 #include <libc/stdarg.h>
 #include <libc/string.h>
 #include <libc/ctype.h>
+#include <libc/printf.h>
 
 #if 0
 static unsigned long simple_strtoul(const char *cp,char **endp,unsigned int base)
