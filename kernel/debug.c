@@ -299,16 +299,12 @@ int dbg_add_command(void (*func)(int, char **), const char *name, const char *de
 
 static void cmd_reboot(int argc, char **argv)
 {
-	TOUCH(argc);TOUCH(argv);
-
 	reboot();
 }
 
 static void cmd_help(int argc, char **argv)
 {
 	struct debugger_command *cmd;
-	TOUCH(argc);TOUCH(argv);
-
 
 	dprintf("debugger commands:\n");
 	cmd = commands;
@@ -327,8 +323,6 @@ int dbg_init(kernel_args *ka)
 
 int dbg_init2(kernel_args *ka)
 {
-	TOUCH(ka);
-
 	dbg_add_command(&cmd_help, "help", "List all debugger commands");
 	dbg_add_command(&cmd_reboot, "reboot", "Reboot");
 	

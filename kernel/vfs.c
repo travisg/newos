@@ -241,7 +241,6 @@ void *vfs_new_ioctx()
 int vfs_init(kernel_args *ka)
 {
 	int err;
-	TOUCH(ka);
 
 	dprintf("vfs_init: entry\n");
 

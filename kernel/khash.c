@@ -3,8 +3,6 @@
 #include <khash.h>
 #include <debug.h>
 
-#define TOUCH(a) ((a) = (a))
-
 #define malloc kmalloc
 #define free kfree
 
@@ -16,11 +14,6 @@ struct hash_table {
 	int flags;
 	int (*compare_func)(void *e, void *key);
 	unsigned int (*hash_func)(void *e, void *key, int range);
-};
-
-struct hash_iterator {
-	int bucket;
-	void *ptr;
 };	
 
 // XXX gross hack
@@ -144,32 +137,30 @@ void *hash_lookup(void *_hash_table, void *key)
 	return NULL;
 }
 
-void *hash_open(void *_hash_table)
+struct hash_iterator *hash_open(void *_hash_table, struct hash_iterator *i)
 {
 	struct hash_table *t = _hash_table;
-	struct hash_iterator *i;
 
-	i = (struct hash_iterator *)malloc(sizeof(struct hash_iterator));
-	if(i == NULL)
-		return NULL;
+	if(i == NULL) {
+		i = (struct hash_iterator *)malloc(sizeof(struct hash_iterator));
+		if(i == NULL)
+			return NULL;
+	}
 
 	hash_rewind(t, i);
 
 	return i;
 }
 
-void hash_close(void *_hash_table, void *_iterator)
+void hash_close(void *_hash_table, struct hash_iterator *i, bool free_iterator)
 {
-	struct hash_iterator *i = _iterator;
-	TOUCH(_hash_table);
-	
-	free(i);
+	if(free_iterator)
+		free(i);
 }
 
-void hash_rewind(void *_hash_table, void *_iterator)
+void hash_rewind(void *_hash_table, struct hash_iterator *i)
 {
 	struct hash_table *t = _hash_table;
-	struct hash_iterator *i = _iterator;
 	int index;
 
 	for(index = 0; index < t->table_size; index++) {
@@ -184,10 +175,9 @@ void hash_rewind(void *_hash_table, void *_iterator)
 	i->ptr = NULL;
 }
 
-void *hash_next(void *_hash_table, void *_iterator)
+void *hash_next(void *_hash_table, struct hash_iterator *i)
 {
 	struct hash_table *t = _hash_table;
-	struct hash_iterator *i = _iterator;
 	void *e;
 
 	e = NULL;

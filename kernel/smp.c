@@ -336,8 +336,6 @@ void smp_send_broadcast_ici(int message, unsigned int data, void *data_ptr, int 
 
 int smp_trap_non_boot_cpus(kernel_args *ka, int cpu)
 {
-	TOUCH(ka);
-
 	if(cpu > 0) {
 		boot_cpu_spin[cpu] = 1;
 		acquire_spinlock(&boot_cpu_spin[cpu]);
@@ -372,7 +370,6 @@ int smp_init(kernel_args *ka)
 {
 	struct smp_msg *msg;
 	int i;
-	TOUCH(ka);
 
 	dprintf("smp_init: entry\n");
 

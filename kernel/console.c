@@ -60,8 +60,6 @@ int con_init(kernel_args *ka)
 {
 	dprintf("con_init: entry\n");
 
-	TOUCH(ka);
-	
 	console_fd = vfs_open(NULL, "/dev/console", "", STREAM_TYPE_DEVICE);
 	dprintf("console_fd = %d\n", console_fd);
 	

@@ -11,7 +11,6 @@ static const int dbg_baud_rate = 115200;
 int arch_dbg_con_init(kernel_args *ka)
 {
 	short divisor = 115200 / dbg_baud_rate;
-	TOUCH(ka);
 
 	outb(0x80, 0x3fb);	/* set up to load divisor latch	*/
 	outb(divisor & 0xf, 0x3f8);		/* LSB */

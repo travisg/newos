@@ -2,10 +2,8 @@
 #define _THREAD_H
 
 #include <stage2.h>
-#include <proc.h>
 #include <vm.h>
 #include <smp.h>
-#include <timer.h>
 
 #define THREAD_IDLE_PRIORITY 0
 #define THREAD_NUM_PRIORITY_LEVELS 64
@@ -20,6 +18,17 @@ enum {
 	THREAD_STATE_RUNNING, // running right now somewhere
 	THREAD_STATE_WAITING, // blocked on something
 	THREAD_STATE_MARKED_FOR_DEATH, // ready for manny to kill it
+};
+
+struct proc {
+	struct proc *next;
+	proc_id id;
+	char *name;
+	void *ioctx;
+	void *cwd;
+	struct aspace *kaspace;
+	struct aspace *aspace;
+	struct thread *thread_list;
 };
 
 struct thread {
@@ -64,6 +73,9 @@ struct thread *thread_get_thread_struct(thread_id id);
 struct thread *thread_get_thread_struct_locked(thread_id id);
 
 struct thread *thread_create_user_thread(char *name, struct proc *p, int priority);
+
+struct proc *proc_get_kernel_proc();
+struct proc *proc_create_user_proc(const char *name, struct proc *parent, int priority);
 
 #if 1
 // XXX remove later

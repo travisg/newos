@@ -62,7 +62,6 @@ void arch_timer_clear_hardware_timer()
 
 int arch_init_timer(kernel_args *ka)
 {
-	TOUCH(ka);
 	dprintf("arch_init_timer: entry\n");
 	
 	int_set_io_interrupt_handler(0x20, &isa_timer_interrupt);

@@ -17,8 +17,6 @@ static int timer_spinlock[SMP_MAX_CPUS] = { 0, };
 
 int timer_init(kernel_args *ka)
 {
-	TOUCH(ka);
-	
 	dprintf("init_timer: entry\n");
 	
 	return arch_init_timer(ka);

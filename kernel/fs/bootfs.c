@@ -366,16 +366,16 @@ int bootfs_unmount(void *_fs)
 {
 	struct bootfs *fs = _fs;
 	struct bootfs_vnode *v;
-	void *hash_iterator;
+	struct hash_iterator i;
 	
 	dprintf("bootfs_unmount: entry fs = 0x%x\n", fs);
 	
 	// delete all of the vnodes
-	hash_iterator = hash_open(fs->vnode_list_hash);
-	while((v = (struct bootfs_vnode *)hash_next(fs->vnode_list_hash, hash_iterator)) != NULL) {
+	hash_open(fs->vnode_list_hash, &i);
+	while((v = (struct bootfs_vnode *)hash_next(fs->vnode_list_hash, &i)) != NULL) {
 		bootfs_delete_vnode(fs, v, true);
 	}
-	hash_close(fs->vnode_list_hash, hash_iterator);
+	hash_close(fs->vnode_list_hash, &i, false);
 	
 	hash_uninit(fs->vnode_list_hash);
 	sem_delete(fs->sem);

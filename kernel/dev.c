@@ -9,7 +9,6 @@
 int dev_init(kernel_args *ka)
 {
 	int err;
-	TOUCH(ka);
 
 	dprintf("dev_init: entry\n");
 

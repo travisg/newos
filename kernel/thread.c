@@ -4,7 +4,6 @@
 #include <stage2.h>
 #include <debug.h>
 #include <console.h>
-#include <proc.h>
 #include <thread.h>
 #include <arch_thread.h>
 #include <khash.h>
@@ -14,11 +13,28 @@
 #include <arch_cpu.h>
 #include <arch_int.h>
 #include <sem.h>
+#include <vfs.h>
+
+struct proc_key {
+	proc_id id;
+};
+
+struct thread_key {
+	thread_id id;
+};
+
+static struct proc *create_proc_struct(const char *name);
+static int proc_struct_compare(void *_p, void *_key);
+static unsigned int proc_struct_hash(void *_p, void *_key, int range);
 
 // global
 int thread_spinlock = 0;
-
 static thread_id next_thread_id = 0;
+
+// proc list
+static void *proc_hash = NULL;
+static struct proc *kernel_proc = NULL;
+static proc_id next_proc_id = 0;
 
 // scheduling timer
 #define LOCAL_CPU_TIMER timers[smp_get_current_cpu()]
@@ -27,7 +43,7 @@ static struct timer_event *timers = NULL;
 // thread list
 #define CURR_THREAD cur_thread[smp_get_current_cpu()]
 static struct thread **cur_thread = NULL;
-static struct thread *thread_list = NULL;
+static void *thread_hash = NULL;
 
 static sem_id snooze_sem = -1;
 
@@ -119,6 +135,26 @@ static void insert_thread_into_proc(struct proc *p, struct thread *t)
 	p->thread_list = t;
 }
 
+static int thread_struct_compare(void *_t, void *_key)
+{
+	struct thread *t = _t;
+	struct thread_key *key = _key;
+	
+	if(t->id == key->id) return 0;
+	else return 1;
+}
+
+static unsigned int thread_struct_hash(void *_t, void *_key, int range)
+{
+	struct proc *t = _t;
+	struct proc_key *key = _key;
+	
+	if(t != NULL) 
+		return (t->id % range);
+	else
+		return (key->id % range);
+}
+
 static struct thread *create_thread_struct(char *name)
 {
 	struct thread *t;
@@ -179,8 +215,7 @@ struct thread *thread_create_user_thread(char *name, struct proc *p, int priorit
 	GRAB_THREAD_LOCK();
 
 	// insert into global list
-	t->all_next = thread_list;
-	thread_list = t;
+	hash_insert(thread_hash, t);
 
 	insert_thread_into_proc(t->proc, t);
 
@@ -215,8 +250,7 @@ static struct thread *create_kernel_thread(char *name, int (*func)(void), int pr
 	GRAB_THREAD_LOCK();
 
 	// insert into global list
-	t->all_next = thread_list;
-	thread_list = t;
+	hash_insert(thread_hash, t);
 
 	insert_thread_into_proc(t->proc, t);
 
@@ -305,6 +339,7 @@ static void dump_thread_info(int argc, char **argv)
 	struct thread *t;
 	int id = -1;
 	unsigned long num;
+	struct hash_iterator i;
 
 	if(argc < 2) {
 		dprintf("thread: not enough arguments\n");
@@ -324,34 +359,32 @@ static void dump_thread_info(int argc, char **argv)
 	}
 	
 	// walk through the thread list, trying to match name or id
-	t = thread_list;
-	while(t != NULL) {
+	hash_open(thread_hash, &i);
+	while((t = hash_next(thread_hash, &i)) != NULL) {
 		if(strcmp(argv[1], t->name) == 0 || t->id == id) {
 			_dump_thread_info(t);
 			return;
 		}
-		t = t->all_next;
 	}
+	hash_close(thread_hash, &i, false);
 }
 
 static void dump_thread_list(int argc, char **argv)
 {
 	struct thread *t;
-	TOUCH(argc);TOUCH(argv);
+	struct hash_iterator i;
 
-	dprintf("thread list head: 0x%x\n", thread_list);
-	t = thread_list;
-	while(t != NULL) {
+	hash_open(thread_hash, &i);
+	while((t = hash_next(thread_hash, &i)) != NULL) {
 		dprintf("0x%x\t%32s\t0x%x\t%16s\t0x%x\n",
 			t, t->name, t->id, state_to_text(t->state), t->kernel_stack_area->base);
-		t = t->all_next;
 	}
+	hash_close(thread_hash, &i, false);
 }
 
 static void dump_next_thread_in_q(int argc, char **argv)
 {
 	struct thread *t = last_thread_dumped;
-	TOUCH(argc);TOUCH(argv);
 
 	if(t == NULL) {
 		dprintf("no thread previously dumped. Examine a thread first.\n");
@@ -369,7 +402,6 @@ static void dump_next_thread_in_q(int argc, char **argv)
 static void dump_next_thread_in_all_list(int argc, char **argv)
 {
 	struct thread *t = last_thread_dumped;
-	TOUCH(argc);TOUCH(argv);
 
 	if(t == NULL) {
 		dprintf("no thread previously dumped. Examine a thread first.\n");
@@ -387,7 +419,6 @@ static void dump_next_thread_in_all_list(int argc, char **argv)
 static void dump_next_thread_in_proc(int argc, char **argv)
 {
 	struct thread *t = last_thread_dumped;
-	TOUCH(argc);TOUCH(argv);
 
 	if(t == NULL) {
 		dprintf("no thread previously dumped. Examine a thread first.\n");
@@ -408,6 +439,22 @@ int thread_init(kernel_args *ka)
 	unsigned int i;
 	
 	dprintf("thread_init: entry\n");
+	
+	// create the process hash table
+	proc_hash = hash_init(15, (addr)&kernel_proc->next - (addr)kernel_proc,
+		&proc_struct_compare, &proc_struct_hash);
+
+	// create the kernel process
+	kernel_proc = create_proc_struct("kernel_proc");
+	if(kernel_proc == NULL)
+		panic("could not create kernel proc!\n");
+
+	// stick it in the process hash
+	hash_insert(proc_hash, kernel_proc);
+
+	// create the thread hash table
+	thread_hash = hash_init(15, (addr)&t->all_next - (addr)t,
+		&thread_struct_compare, &thread_struct_hash);
 
 	// zero out the run queues
 	memset(run_q, 0, sizeof(run_q));
@@ -451,8 +498,7 @@ int thread_init(kernel_args *ka)
 		t->next_state = THREAD_STATE_READY;
 		sprintf(temp, "idle_thread%d_kstack", i);
 		t->kernel_stack_area = vm_find_area_by_name(t->proc->kaspace, temp);		
-		t->all_next = thread_list;
-		thread_list = t;
+		hash_insert(thread_hash, t);
 		insert_thread_into_proc(t->proc, t);
 		cur_thread[i] = t;
 	}
@@ -554,17 +600,11 @@ struct thread *thread_get_thread_struct(thread_id id)
 		
 struct thread *thread_get_thread_struct_locked(thread_id id)
 {
-	struct thread *t;
+	struct thread_key key;
 	
-	// XXX use hashtable
-	t = thread_list;
-	while(t != NULL) {
-		if(t->id == id) {
-			return t;
-		}
-		t = t->all_next;
-	}
-	return NULL;
+	key.id = id;
+	
+	return hash_lookup(thread_hash, &key);
 }
 
 static void thread_context_switch(struct thread *t_from, struct thread *t_to)
@@ -797,3 +837,69 @@ void thread_resched()
 		thread_context_switch(old_thread, next_thread);
 	}
 }
+
+static int proc_struct_compare(void *_p, void *_key)
+{
+	struct proc *p = _p;
+	struct proc_key *key = _key;
+	
+	if(p->id == key->id) return 0;
+	else return 1;
+}
+
+static unsigned int proc_struct_hash(void *_p, void *_key, int range)
+{
+	struct proc *p = _p;
+	struct proc_key *key = _key;
+	
+	if(p != NULL) 
+		return (p->id % range);
+	else
+		return (key->id % range);
+}
+
+struct proc *proc_get_kernel_proc()
+{
+	return kernel_proc;
+}
+
+static struct proc *create_proc_struct(const char *name)
+{
+	struct proc *p;
+	
+	p = (struct proc *)kmalloc(sizeof(struct proc));
+	if(p == NULL)
+		return NULL;
+	p->id = atomic_add(&next_proc_id, 1);
+	p->name = (char *)kmalloc(strlen(name)+1);
+	strcpy(p->name, name);
+	p->ioctx = vfs_new_ioctx();
+	p->cwd = NULL;
+	p->kaspace = vm_get_kernel_aspace();
+	p->aspace = NULL;
+	p->thread_list = NULL;
+	return p;
+}
+
+struct proc *proc_create_user_proc(const char *name, struct proc *parent, int priority)
+{
+	struct proc *p;
+	struct thread *t;
+	
+	p = create_proc_struct(name);
+	if(p == NULL)
+		return NULL;
+	p->aspace = vm_create_aspace(name, USER_BASE, USER_SIZE);
+	if(p->aspace == NULL) {
+		// XXX clean up proc
+		return NULL;
+	}
+	
+	hash_insert(proc_hash, p);
+	
+	// create an initial thread
+	t = thread_create_user_thread("main thread", p, priority);
+	
+	return p;
+}
+

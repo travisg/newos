@@ -9,7 +9,6 @@ KERNEL_OBJS = \
         $(KERNEL_DIR)/debug.o \
         $(KERNEL_DIR)/dev.o \
         $(KERNEL_DIR)/timer.o \
-        $(KERNEL_DIR)/proc.o \
         $(KERNEL_DIR)/sem.o \
         $(KERNEL_DIR)/smp.o \
         $(KERNEL_DIR)/thread.o \

@@ -13,7 +13,6 @@ unsigned int *gdt = 0;
 
 int arch_vm_init(kernel_args *ka)
 {
-	TOUCH(ka);
 	dprintf("arch_vm_init: entry\n");	
 	return 0;
 }

@@ -35,8 +35,6 @@ void dump_sem_list(int argc, char **argv)
 {
 	int i;
 	
-	TOUCH(argc);TOUCH(argv);
-
 	for(i=0; i<MAX_SEMS; i++) {
 		if(sems[i].id >= 0) {
 			dprintf("0x%x\tid: 0x%x\t\tname: '%s'\n", &sems[i], sems[i].id, sems[i].name);
@@ -92,7 +90,6 @@ static void dump_sem_info(int argc, char **argv)
 int sem_init(kernel_args *ka)
 {
 	int i;
-	TOUCH(ka);
 	
 	dprintf("sem_init: entry\n");
 	

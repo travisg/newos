@@ -11,8 +11,6 @@
 
 int devs_init(kernel_args *ka)
 {
-	TOUCH(ka);
-
 	console_dev_init(ka);
 	
 	null_dev_init(ka);
