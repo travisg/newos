@@ -15,7 +15,7 @@ typedef struct {
 	net_timer_event *next;
 	net_timer_event *prev;
 
-	recursive_lock lock;
+	mutex  lock;
 	sem_id wait_sem;
 
 	thread_id runner_thread;
@@ -63,7 +63,7 @@ int set_net_timer(net_timer_event *e, unsigned int delay_ms, net_timer_callback 
 {
 	int err = NO_ERROR;
 
-	recursive_lock_lock(&net_q.lock);
+	mutex_lock(&net_q.lock);
 
 	if(e->pending) {
 		if(flags & NET_TIMER_PENDING_IGNORE) {
@@ -82,7 +82,7 @@ int set_net_timer(net_timer_event *e, unsigned int delay_ms, net_timer_callback 
 	add_to_queue(e);
 
 out:
-	recursive_lock_unlock(&net_q.lock);
+	mutex_unlock(&net_q.lock);
 
 	return err;
 }
@@ -91,7 +91,7 @@ int cancel_net_timer(net_timer_event *e)
 {
 	int err = NO_ERROR;
 
-	recursive_lock_lock(&net_q.lock);
+	mutex_lock(&net_q.lock);
 
 	if(!e->pending) {
 		err = ERR_GENERAL;
@@ -102,7 +102,7 @@ int cancel_net_timer(net_timer_event *e)
 	e->pending = false;
 
 out:
-	recursive_lock_unlock(&net_q.lock);
+	mutex_unlock(&net_q.lock);
 
 	return err;
 }
@@ -114,22 +114,30 @@ static int net_timer_runner(void *arg)
 
 	for(;;) {
 		sem_acquire_etc(net_q.wait_sem, 1, SEM_FLAG_TIMEOUT, NET_TIMER_INTERVAL, NULL);
-		recursive_lock_lock(&net_q.lock);
 
 		now = system_time();
 
-		// pull off the head of the list
-		while((e = peek_queue_head()) != NULL) {
-			if(e->sched_time > now)
-				break;
+retry:
+		mutex_lock(&net_q.lock);
+
+		// pull off the head of the list and run it, if it timed out
+		if((e = peek_queue_head()) != NULL && e->sched_time <= now) {
 
 			remove_from_queue(e);
 			e->pending = false;
 
-			e->func(e->args);
-		}
+			mutex_unlock(&net_q.lock);
 
-		recursive_lock_unlock(&net_q.lock);
+			e->func(e->args);
+
+			// Since we ran an event, loop back and check the head of 
+			// the list again, because the list may have changed while
+			// inside the callback.
+			goto retry;
+			
+		} else {
+			mutex_unlock(&net_q.lock);
+		}
 	}
 
 	return 0;
@@ -141,20 +149,20 @@ int net_timer_init(void)
 
 	net_q.next = net_q.prev = (net_timer_event *)&net_q;
 
-	err = recursive_lock_create(&net_q.lock);
+	err = mutex_init(&net_q.lock, "net timer mutex");
 	if(err < 0)
 		return err;
 
 	net_q.wait_sem = sem_create(0, "net timer wait sem");
 	if(net_q.wait_sem < 0) {
-		recursive_lock_destroy(&net_q.lock);
+		mutex_destroy(&net_q.lock);
 		return net_q.wait_sem;
 	}
 
 	net_q.runner_thread = thread_create_kernel_thread("net timer runner", &net_timer_runner, NULL);
 	if(net_q.runner_thread < 0) {
 		sem_delete(net_q.wait_sem);
-		recursive_lock_destroy(&net_q.lock);
+		mutex_destroy(&net_q.lock);
 		return net_q.runner_thread;
 	}
 	thread_resume_thread(net_q.runner_thread);
