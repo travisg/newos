@@ -287,7 +287,7 @@ uint32 colors32[16] = {
 static void colors_from_attr(uint8 attr, uint32 *fg, uint32 *bg)
 {
 #define FMASK 0x0f
-#define BMASK 0x70
+#define BMASK 0xf0
 	*fg = colors32[attr & FMASK];
 	*bg = colors32[(attr & BMASK) >> 4];
 #undef FMASK
