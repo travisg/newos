@@ -137,12 +137,16 @@ tools: $(NETBOOT) $(BOOTMAKER)
 $(BOOTMAKER): $(BOOTMAKER).c tools/sh4bootblock.h tools/sparcbootblock.h
 	$(HOST_CC) -O3 -o $@ $(BOOTMAKER).c
 	
-$(NETBOOT): $(NETBOOT).c
+NETBOOT_LINK_ARGS =
 ifeq ($(OSTYPE),beos)
-	$(HOST_CC) -O3 -o $@ $(NETBOOT).c -lsocket -lnet
-else
-	$(HOST_CC) -O3 -o $@ $(NETBOOT).c
+	NETBOOT_LINK_ARGS = -lsocket -lnet
 endif
+ifeq ($(shell uname),SunOS)
+	NETBOOT_LINK_ARGS = -lsocket -lnsl
+endif
+
+$(NETBOOT): $(NETBOOT).c
+	$(HOST_CC) -O3 -o $@ $(NETBOOT).c $(NETBOOT_LINK_ARGS)
 
 toolsclean:
 	rm -f $(BOOTMAKER) $(NETBOOT) $(NETBOOT_DC)

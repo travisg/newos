@@ -24,12 +24,12 @@ $(STAGE2_OBJ_DIR)/%.o: $(STAGE2_DIR)/%.c
 $(STAGE2_OBJ_DIR)/%.d: $(STAGE2_DIR)/%.c
 	@mkdir -p $(STAGE2_OBJ_DIR)
 	@echo "making deps for $<..."
-	@(echo -n $(dir $@);$(CC) $(GLOBAL_CFLAGS) -Iinclude -I$(STAGE2_DIR) -M -MG $<) > $@
+	@($(ECHO) -n $(dir $@);$(CC) $(GLOBAL_CFLAGS) -Iinclude -I$(STAGE2_DIR) -M -MG $<) > $@
 
 $(STAGE2_OBJ_DIR)/%.d: $(STAGE2_DIR)/%.S
 	@mkdir -p $(STAGE2_OBJ_DIR)
 	@echo "making deps for $<..."
-	@(echo -n $(dir $@);$(CC) $(GLOBAL_CFLAGS) -Iinclude -I$(STAGE2_DIR) -M -MG $<) > $@
+	@($(ECHO) -n $(dir $@);$(CC) $(GLOBAL_CFLAGS) -Iinclude -I$(STAGE2_DIR) -M -MG $<) > $@
 
 $(STAGE2_OBJ_DIR)/%.o: $(STAGE2_DIR)/%.S
 	@mkdir -p $(STAGE2_OBJ_DIR)

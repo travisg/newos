@@ -13,12 +13,12 @@ $(PCI_DEV_OBJ_DIR)/%.o: $(PCI_DEV_DIR)/%.c
 $(PCI_DEV_OBJ_DIR)/%.d: $(PCI_DEV_DIR)/%.c
 	@mkdir -p $(PCI_DEV_OBJ_DIR)
 	@echo "making deps for $<..."
-	@(echo -n $(dir $@); $(CC) $(GLOBAL_CFLAGS) $(DEV_INCLUDES) -M -MG $<) > $@
+	@($(ECHO) -n $(dir $@); $(CC) $(GLOBAL_CFLAGS) $(DEV_INCLUDES) -M -MG $<) > $@
 
 $(PCI_DEV_OBJ_DIR)/%.d: $(PCI_DEV_DIR)/%.S
 	@mkdir -p $(PCI_DEV_OBJ_DIR)
 	@echo "making deps for $<..."
-	@(echo -n $(dir $@);$(CC) $(GLOBAL_CFLAGS) $(DEV_INCLUDES) -M -MG $<) > $@
+	@($(ECHO) -n $(dir $@);$(CC) $(GLOBAL_CFLAGS) $(DEV_INCLUDES) -M -MG $<) > $@
 
 $(PCI_DEV_OBJ_DIR)/%.o: $(PCI_DEV_DIR)/%.S
 	@mkdir -p $(PCI_DEV_OBJ_DIR)
