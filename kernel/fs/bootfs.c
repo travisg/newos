@@ -20,16 +20,24 @@
 #include <libc/string.h>
 #include <libc/printf.h>
 
+#define BOOTFS_TRACE 0
+
+#if BOOTFS_TRACE
+#define TRACE(x) dprintf x
+#else
+#define TRACE(x)
+#endif
+
 static char *bootdir = NULL;
 static off_t bootdir_len = 0;
 static region_id bootdir_region = -1;
 
 struct bootfs_stream {
-	char *name;
 	stream_type type;
 	union {
 		struct stream_dir {
 			struct bootfs_vnode *dir_head;
+			struct bootfs_cookie *jar_head;
 		} dir;
 		struct stream_file {
 			void *start;
@@ -40,7 +48,7 @@ struct bootfs_stream {
 
 struct bootfs_vnode {
 	struct bootfs_vnode *all_next;
-	int id;
+	vnode_id id;
 	char *name;
 	void *redir_vnode;
 	struct bootfs_vnode *parent;
@@ -52,15 +60,17 @@ struct bootfs {
 	fs_id id;
 	mutex lock;
 	int next_vnode_id;
-	void *covered_vnode;
 	void *vnode_list_hash;
 	struct bootfs_vnode *root_vnode;
 };
 
 struct bootfs_cookie {
 	struct bootfs_stream *s;
+	int oflags;
 	union {
 		struct cookie_dir {
+			struct bootfs_cookie *next;
+			struct bootfs_cookie *prev;
 			struct bootfs_vnode *ptr;
 		} dir;
 		struct cookie_file {
@@ -73,12 +83,23 @@ struct bootfs_cookie {
 static unsigned int bootfs_vnode_hash_func(void *_v, void *_key, int range)
 {
 	struct bootfs_vnode *v = _v;
-	struct bootfs_vnode *key = _key;
+	vnode_id *key = _key;
 
 	if(v != NULL)
 		return v->id % range;
 	else
-		return key->id % range;
+		return (*key) % range;
+}
+
+static int bootfs_vnode_compare_func(void *_v, void *_key)
+{
+	struct bootfs_vnode *v = _v;
+	vnode_id *key = _key;
+
+	if(v->id == *key)
+		return 0;
+	else
+		return -1;
 }
 
 static struct bootfs_vnode *bootfs_create_vnode(struct bootfs *fs, const char *name)
@@ -113,8 +134,6 @@ static int bootfs_delete_vnode(struct bootfs *fs, struct bootfs_vnode *v, bool f
 	// remove it from the global hash table
 	hash_remove(fs->vnode_list_hash, v);
 
-	if(v->stream.name != NULL)
-		kfree(v->stream.name);
 	if(v->name != NULL)
 		kfree(v->name);
 	kfree(v);
@@ -122,21 +141,56 @@ static int bootfs_delete_vnode(struct bootfs *fs, struct bootfs_vnode *v, bool f
 	return 0;
 }
 
-static struct bootfs_vnode *bootfs_find_in_dir(struct bootfs_vnode *dir, const char *path, int start, int end)
+static void insert_cookie_in_jar(struct bootfs_vnode *dir, struct bootfs_cookie *cookie)
+{
+	cookie->u.dir.next = dir->stream.u.dir.jar_head;
+	dir->stream.u.dir.jar_head = cookie;
+	cookie->u.dir.prev = NULL;
+}
+
+static void remove_cookie_from_jar(struct bootfs_vnode *dir, struct bootfs_cookie *cookie)
+{
+	if(cookie->u.dir.next)
+		cookie->u.dir.next->u.dir.prev = cookie->u.dir.prev;
+	if(cookie->u.dir.prev)
+		cookie->u.dir.prev->u.dir.next = cookie->u.dir.next;
+	if(dir->stream.u.dir.jar_head == cookie)
+		dir->stream.u.dir.jar_head = cookie->u.dir.next;
+
+	cookie->u.dir.prev = cookie->u.dir.next = NULL;
+}
+
+/* makes sure none of the dircookies point to the vnode passed in */
+static void update_dircookies(struct bootfs_vnode *dir, struct bootfs_vnode *v)
+{
+	struct bootfs_cookie *cookie;
+	
+	for(cookie = dir->stream.u.dir.jar_head; cookie; cookie = cookie->u.dir.next) {
+		if(cookie->u.dir.ptr == v) {
+			cookie->u.dir.ptr = v->dir_next;
+		}
+	}
+}
+
+
+static struct bootfs_vnode *bootfs_find_in_dir(struct bootfs_vnode *dir, const char *path)
 {
 	struct bootfs_vnode *v;
 
 	if(dir->stream.type != STREAM_TYPE_DIR)
 		return NULL;
+	
+	if(!strcmp(path, "."))
+		return dir;
+	if(!strcmp(path, ".."))
+		return dir->parent;
 
-	v = dir->stream.u.dir.dir_head;
-	while(v != NULL) {
+	for(v = dir->stream.u.dir.dir_head; v; v = v->dir_next) {
 //		dprintf("bootfs_find_in_dir: looking at entry '%s'\n", v->name);
-		if(strncmp(v->name, &path[start], end - start) == 0) {
+		if(strcmp(v->name, path) == 0) {
 //			dprintf("bootfs_find_in_dir: found it at 0x%x\n", v);
 			return v;
 		}
-		v = v->dir_next;
 	}
 	return NULL;
 }
@@ -153,98 +207,32 @@ static int bootfs_insert_in_dir(struct bootfs_vnode *dir, struct bootfs_vnode *v
 	return 0;
 }
 
-static struct bootfs_stream *
-bootfs_get_stream_from_vnode(struct bootfs_vnode *v, const char *stream, stream_type stream_type)
+static int bootfs_remove_from_dir(struct bootfs_vnode *dir, struct bootfs_vnode *findit)
 {
-	if(v->stream.type != stream_type)
-		return NULL;
-	
-	if(strcmp(stream, v->stream.name) != 0)
-		return NULL;
-		
-	return &v->stream;
+	struct bootfs_vnode *v;
+	struct bootfs_vnode *last_v;
+
+	for(v = dir->stream.u.dir.dir_head, last_v = NULL; v; last_v = v, v = v->dir_next) {
+		if(v == findit) {
+			/* make sure all dircookies dont point to this vnode */
+			update_dircookies(dir, v);
+
+			if(last_v)
+				last_v->dir_next = v->dir_next;
+			else
+				dir->stream.u.dir.dir_head = v->dir_next;
+			v->dir_next = NULL;
+			return 0;
+		}
+	}
+	return -1;
 }
 
-// get the vnode this path represents, or sets the redir boolean to true if it hits a registered mountpoint
-// and returns the vnode containing the mountpoint
-static struct bootfs_vnode *
-bootfs_get_vnode_from_path(struct bootfs *fs, struct bootfs_vnode *base, const char *path, int *start, bool *redir)
+static int bootfs_is_dir_empty(struct bootfs_vnode *dir)
 {
-	int end = 0;
-	struct bootfs_vnode *cur_vnode;
-	struct bootfs_stream *s;
-	
-	*redir = false;
-
-	cur_vnode = base;
-	while(vfs_helper_getnext_in_path(path, start, &end) > 0) {
-		s = bootfs_get_stream_from_vnode(cur_vnode, "", STREAM_TYPE_DIR);
-		if(s == NULL)
-			return NULL;
-
-		if(cur_vnode->redir_vnode != NULL) {
-			// we are at a mountpoint, redirect here
-			*redir = true;
-			return cur_vnode;
-		}	
-	
-		if(*start == end) {
-			// zero length path component, assume this means '.'
-			return cur_vnode;
-		}
-		
-		cur_vnode = bootfs_find_in_dir(cur_vnode, path, *start, end);
-		if(cur_vnode == NULL)
-			return NULL;
-		*start = end;
-	}
-
-	if(cur_vnode->redir_vnode != NULL)
-		*redir = true;
-	return cur_vnode;
-}
-
-// get the vnode that would hold the last path entry. Same as above, but returns one path entry from the end
-static struct bootfs_vnode *
-bootfs_get_container_vnode_from_path(struct bootfs *fs, struct bootfs_vnode *base, const char *path, int *start, bool *redir)
-{
-	int last_start = 0;
-	int end = 0;
-	struct bootfs_vnode *cur_vnode;
-	struct bootfs_vnode *last_vnode = NULL;
-	
-	*redir = false;
-
-	cur_vnode = base;
-	while(vfs_helper_getnext_in_path(path, start, &end) > 0) {
-//		dprintf("start = %d, end = %d\n", *start, end);
-//		dprintf("cur = 0x%x, last = 0x%x\n", cur_vnode, last_vnode);
-
-		if(last_vnode != NULL && last_vnode->redir_vnode != NULL) {
-			// we are at a mountpoint, redirect here
-			*redir = true;
-			*start = last_start;
-			return last_vnode;
-		}	
-	
-		last_start = *start;
-
-		if(*start == end) {
-			// zero length path component, assume this means '.'
-			return last_vnode;
-		}
-		
-		last_vnode = cur_vnode;
-		if(cur_vnode == NULL || bootfs_get_stream_from_vnode(cur_vnode, "", STREAM_TYPE_DIR) == NULL)
-			return NULL;
-		cur_vnode = bootfs_find_in_dir(cur_vnode, path, *start, end);
-		*start = end;
-	}
-
-	if(last_vnode != NULL && last_vnode->redir_vnode != NULL)
-		*redir = true;
-	*start = last_start;
-	return last_vnode;
+	if(dir->stream.type != STREAM_TYPE_DIR)
+		return false;
+	return !dir->stream.u.dir.dir_head;
 }
 
 int bootfs_create_vnode_tree(struct bootfs *fs, struct bootfs_vnode *v)
@@ -252,7 +240,6 @@ int bootfs_create_vnode_tree(struct bootfs *fs, struct bootfs_vnode *v)
 	int i;
 	boot_entry *entry;
 	int err;
-	struct redir_struct redir;
 	struct bootfs_vnode *new_vnode;
 	
 	entry = (boot_entry *)bootdir;
@@ -263,12 +250,6 @@ int bootfs_create_vnode_tree(struct bootfs *fs, struct bootfs_vnode *v)
 				return ERR_NO_MEMORY;
 			
 			// set up the new node
-			new_vnode->stream.name = kmalloc(strlen("") + 1);
-			if(new_vnode->stream.name == NULL) {
-				bootfs_delete_vnode(fs, new_vnode, true);
-				return ERR_NO_MEMORY;
-			}
-			strcpy(new_vnode->stream.name, "");
 			new_vnode->stream.type = STREAM_TYPE_FILE;
 			new_vnode->stream.u.file.start = bootdir + entry[i].be_offset * PAGE_SIZE;
 			new_vnode->stream.u.file.len = entry[i].be_size * PAGE_SIZE;
@@ -286,13 +267,13 @@ int bootfs_create_vnode_tree(struct bootfs *fs, struct bootfs_vnode *v)
 	return 0;
 }
 
-int bootfs_mount(void **fs_cookie, void *flags, void *covered_vnode, fs_id id, void **root_vnode)
+static int bootfs_mount(fs_cookie *_fs, fs_id id, void *flags, vnode_id *root_vnid)
 {
 	struct bootfs *fs;
 	struct bootfs_vnode *v;
 	int err;
 
-	dprintf("bootfs_mount: entry\n");
+	TRACE(("bootfs_mount: entry\n"));
 
 	fs = kmalloc(sizeof(struct bootfs));
 	if(fs == NULL) {
@@ -300,7 +281,6 @@ int bootfs_mount(void **fs_cookie, void *flags, void *covered_vnode, fs_id id, v
 		goto err;
 	}
 	
-	fs->covered_vnode = covered_vnode;
 	fs->id = id;
 	fs->next_vnode_id = 0;
 
@@ -310,7 +290,7 @@ int bootfs_mount(void **fs_cookie, void *flags, void *covered_vnode, fs_id id, v
 	}
 	
 	fs->vnode_list_hash = hash_init(BOOTFS_HASH_SIZE, (addr)&v->all_next - (addr)v,
-		NULL, &bootfs_vnode_hash_func);
+		&bootfs_vnode_compare_func, &bootfs_vnode_hash_func);
 	if(fs->vnode_list_hash == NULL) {
 		err = ERR_NO_MEMORY;
 		goto err2;
@@ -327,12 +307,6 @@ int bootfs_mount(void **fs_cookie, void *flags, void *covered_vnode, fs_id id, v
 	v->parent = v;
 	
 	// create a dir stream for it to hold
-	v->stream.name = kmalloc(strlen("") + 1);
-	if(v->stream.name == NULL) {
-		err = ERR_NO_MEMORY;
-		goto err4;
-	}
-	strcpy(v->stream.name, "");
 	v->stream.type = STREAM_TYPE_DIR;
 	v->stream.u.dir.dir_head = NULL;
 	fs->root_vnode = v;
@@ -344,8 +318,8 @@ int bootfs_mount(void **fs_cookie, void *flags, void *covered_vnode, fs_id id, v
 		goto err4;
 	}
 
-	*root_vnode = v;
-	*fs_cookie = fs;
+	*root_vnid = v->id;
+	*_fs = fs;
 	
 	return 0;
 	
@@ -361,13 +335,13 @@ err:
 	return err;
 }
 
-int bootfs_unmount(void *_fs)
+int bootfs_unmount(fs_cookie _fs)
 {
 	struct bootfs *fs = _fs;
 	struct bootfs_vnode *v;
 	struct hash_iterator i;
 	
-	dprintf("bootfs_unmount: entry fs = 0x%x\n", fs);
+	TRACE(("bootfs_unmount: entry fs = 0x%x\n", fs));
 	
 	// delete all of the vnodes
 	hash_open(fs->vnode_list_hash, &i);
@@ -383,79 +357,132 @@ int bootfs_unmount(void *_fs)
 	return 0;
 }
 
-int bootfs_register_mountpoint(void *_fs, void *_v, void *redir_vnode)
+static int bootfs_sync(fs_cookie fs)
 {
-	struct bootfs_vnode *v = _v;
-	
-	dprintf("bootfs_register_mountpoint: vnode 0x%x covered by 0x%x\n", v, redir_vnode);
-	
-	v->redir_vnode = redir_vnode;
+	TRACE(("bootfs_sync: entry\n"));
 	
 	return 0;
 }
 
-int bootfs_unregister_mountpoint(void *_fs, void *_v)
+static int bootfs_lookup(fs_cookie _fs, fs_vnode _dir, const char *name, vnode_id *id)
 {
-	struct bootfs_vnode *v = _v;
-	
-	dprintf("bootfs_unregister_mountpoint: removing coverage at vnode 0x%x\n", v);
-
-	v->redir_vnode = NULL;
-	
-	return 0;
-}
-
-int bootfs_dispose_vnode(void *_fs, void *_v)
-{
-	dprintf("bootfs_dispose_vnode: entry\n");
-
-	// since vfs vnode == bootfs vnode, we can't dispose of it
-	return 0;
-}
-
-int bootfs_open(void *_fs, void *_base_vnode, const char *path, const char *stream, stream_type stream_type, void **_vnode, void **_cookie, struct redir_struct *redir)
-{
-	struct bootfs *fs = _fs;
-	struct bootfs_vnode *base = _base_vnode;
+	struct bootfs *fs = (struct bootfs *)_fs;
+	struct bootfs_vnode *dir = (struct bootfs_vnode *)_dir;
 	struct bootfs_vnode *v;
-	struct bootfs_cookie *cookie;
-	struct bootfs_stream *s;
-	int err = 0;
-	int start = 0;
+	struct bootfs_vnode *v1;
+	int err;
 
-	dprintf("bootfs_open: path '%s', stream '%s', stream_type %d, base_vnode 0x%x\n", path, stream, stream_type, base);
+	TRACE(("bootfs_lookup: entry dir 0x%x, name '%s'\n", dir, name));
+
+	if(dir->stream.type != STREAM_TYPE_DIR)
+		return ERR_VFS_NOT_DIR;
 
 	mutex_lock(&fs->lock);
 
-	v = bootfs_get_vnode_from_path(fs, base, path, &start, &redir->redir);
-	if(v == NULL) {
-		err = ERR_VFS_PATH_NOT_FOUND;
+	// look it up
+	v = bootfs_find_in_dir(dir, name);
+	if(!v) {
+		err = ERR_NOT_FOUND;
 		goto err;
 	}
-	if(redir->redir == true) {
-		// loop back into the vfs because the parse hit a mount point
+
+	err = vfs_get_vnode(fs->id, v->id, (fs_vnode *)&v1);
+	if(err < 0) {
+		goto err;
+	}
+
+	*id = v->id;
+
+	err = NO_ERROR;
+
+err:
+	mutex_unlock(&fs->lock);
+
+	return err;
+}
+
+static int bootfs_getvnode(fs_cookie _fs, vnode_id id, fs_vnode *v, bool r)
+{
+	struct bootfs *fs = (struct bootfs *)_fs;
+	int err;
+
+	TRACE(("bootfs_getvnode: asking for vnode 0x%x 0x%x, r %d\n", id, r));
+
+	if(!r)
+		mutex_lock(&fs->lock);
+
+	*v = hash_lookup(fs->vnode_list_hash, &id);
+
+	if(!r)
 		mutex_unlock(&fs->lock);
-		redir->vnode = v->redir_vnode;
-		redir->path = &path[start];
+
+	TRACE(("bootfs_getnvnode: looked it up at 0x%x\n", *v));
+
+	if(*v)
 		return 0;
-	}
+	else
+		return ERR_NOT_FOUND;
+}
+
+static int bootfs_putvnode(fs_cookie _fs, fs_vnode _v, bool r)
+{
+	struct bootfs_vnode *v = (struct bootfs_vnode *)_v;
+
+	TRACE(("bootfs_putvnode: entry on vnode 0x%x 0x%x, r %d\n", v->id, r));
 	
-	s = bootfs_get_stream_from_vnode(v, stream, stream_type);
-	if(s == NULL) {
-		err = ERR_VFS_PATH_NOT_FOUND;
-		goto err;
+	return 0; // whatever
+}
+
+static int bootfs_removevnode(fs_cookie _fs, fs_vnode _v, bool r)
+{
+	struct bootfs *fs = (struct bootfs *)_fs;
+	struct bootfs_vnode *v = (struct bootfs_vnode *)_v;
+	struct bootfs_vnode dummy;
+	int err;
+
+	TRACE(("bootfs_removevnode: remove 0x%x (0x%x 0x%x), r %d\n", v, v->id, r));
+
+	if(!r)
+		mutex_lock(&fs->lock);
+
+	if(v->dir_next) {
+		// can't remove node if it's linked to the dir
+		panic("bootfs_removevnode: vnode 0x%x asked to be removed is present in dir\n");
 	}
-	
+
+	bootfs_delete_vnode(fs, v, false);
+
+	err = 0;
+
+err:
+	if(!r)
+		mutex_unlock(&fs->lock);
+
+	return err;
+}
+
+static int bootfs_open(fs_cookie _fs, fs_vnode _v, file_cookie *_cookie, int oflags)
+{
+	struct bootfs *fs = _fs;
+	struct bootfs_vnode *v = _v;
+	struct bootfs_cookie *cookie;
+	int err = 0;
+	int start = 0;
+
+	TRACE(("bootfs_open: vnode 0x%x, oflags 0x%x\n", v, oflags));
+
 	cookie = kmalloc(sizeof(struct bootfs_cookie));
 	if(cookie == NULL) {
 		err = ERR_NO_MEMORY;
 		goto err;
 	}
 
-	cookie->s = s;
-	switch(stream_type) {
+	mutex_lock(&fs->lock);	
+
+	cookie->s = &v->stream;
+	switch(v->stream.type) {
 		case STREAM_TYPE_DIR:
-			cookie->u.dir.ptr = s->u.dir.dir_head;
+			cookie->u.dir.ptr = v->stream.u.dir.dir_head;
 			break;
 		case STREAM_TYPE_FILE:
 			cookie->u.file.pos = 0;
@@ -465,28 +492,133 @@ int bootfs_open(void *_fs, void *_base_vnode, const char *path, const char *stre
 	}
 
 	*_cookie = cookie;
-	*_vnode = v;	
 
+err1:
+	mutex_unlock(&fs->lock);
 err:	
+	return err;
+}
+
+static int bootfs_close(fs_cookie _fs, fs_vnode _v, file_cookie _cookie)
+{
+	struct bootfs *fs = _fs;
+	struct bootfs_vnode *v = _v;
+	struct bootfs_cookie *cookie = _cookie;
+
+	TRACE(("bootfs_close: entry vnode 0x%x, cookie 0x%x\n", v, cookie));
+
+	return 0;
+}
+
+static int bootfs_freecookie(fs_cookie _fs, fs_vnode _v, file_cookie _cookie)
+{
+	struct bootfs *fs = _fs;
+	struct bootfs_vnode *v = _v;
+	struct bootfs_cookie *cookie = _cookie;
+
+	TRACE(("bootfs_freecookie: entry vnode 0x%x, cookie 0x%x\n", v, cookie));
+
+	if(cookie)
+		kfree(cookie);
+
+	return 0;
+}
+
+static int bootfs_fsync(fs_cookie _fs, fs_vnode _v)
+{
+	return 0;
+}
+
+static ssize_t bootfs_read(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, void *buf, off_t pos, ssize_t len)
+{
+	struct bootfs *fs = _fs;
+	struct bootfs_vnode *v = _v;
+	struct bootfs_cookie *cookie = _cookie;
+	ssize_t err = 0;
+
+	TRACE(("bootfs_read: vnode 0x%x, cookie 0x%x, pos 0x%x 0x%x, len 0x%x\n", v, cookie, pos, len));
+
+	mutex_lock(&fs->lock);
+	
+	switch(cookie->s->type) {
+		case STREAM_TYPE_DIR: {
+			dprintf("bootfs_read: cookie is type DIR\n");
+
+			if(cookie->u.dir.ptr == NULL) {
+				err = 0;
+				break;
+			}
+
+			if((ssize_t)strlen(cookie->u.dir.ptr->name) + 1 > len) {
+				err = ERR_VFS_INSUFFICIENT_BUF;
+				goto err;
+			}
+			
+			err = user_strcpy(buf, cookie->u.dir.ptr->name);
+			if(err < 0)
+				goto err;
+
+			err = strlen(cookie->u.dir.ptr->name) + 1;
+			
+			cookie->u.dir.ptr = cookie->u.dir.ptr->dir_next;
+			break;
+		}
+		case STREAM_TYPE_FILE:
+			dprintf("bootfs_read: cookie is type FILE\n");
+
+			if(len <= 0) {
+				err = 0;
+				break;
+			}
+			if(pos < 0) {
+				// we'll read where the cookie is at
+				pos = cookie->u.file.pos;
+			}
+			if(pos >= cookie->s->u.file.len) {
+				err = 0;
+				break;
+			}
+			if(pos + len > cookie->s->u.file.len) {
+				// trim the read
+				len = cookie->s->u.file.len - pos;
+			}
+			err = user_memcpy(buf, cookie->s->u.file.start + pos, len);
+			if(err < 0) {
+				goto err;
+			}
+			cookie->u.file.pos = pos + len;
+			err = len;
+			break;
+		default:
+			err = ERR_INVALID_ARGS;
+	}
+err:
 	mutex_unlock(&fs->lock);
 
 	return err;
 }
 
-int bootfs_seek(void *_fs, void *_vnode, void *_cookie, off_t pos, seek_type seek_type)
+static ssize_t bootfs_write(fs_cookie fs, fs_vnode v, file_cookie cookie, const void *buf, off_t pos, ssize_t len)
+{
+	TRACE(("bootfs_write: vnode 0x%x, cookie 0x%x, pos 0x%x 0x%x, len 0x%x\n", v, cookie, pos, len));
+	
+	return ERR_VFS_READONLY_FS;
+}
+
+static int bootfs_seek(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, off_t pos, seek_type st)
 {
 	struct bootfs *fs = _fs;
-	struct bootfs_vnode *v = _vnode;
+	struct bootfs_vnode *v = _v;
 	struct bootfs_cookie *cookie = _cookie;
 	int err = 0;
 
-	dprintf("bootfs_seek: vnode 0x%x, cookie 0x%x, pos 0x%x 0x%x, seek_type %d\n", v, cookie, pos, seek_type);
+	TRACE(("bootfs_seek: vnode 0x%x, cookie 0x%x, pos 0x%x 0x%x, seek_type %d\n", v, cookie, pos, st));
 	
 	mutex_lock(&fs->lock);
-	
+
 	switch(cookie->s->type) {
 		case STREAM_TYPE_DIR:
-			switch(seek_type) {
+			switch(st) {
 				// only valid args are seek_type SEEK_SET, pos 0.
 				// this rewinds to beginning of directory
 				case SEEK_SET:
@@ -503,7 +635,7 @@ int bootfs_seek(void *_fs, void *_vnode, void *_cookie, off_t pos, seek_type see
 			}
 			break;
 		case STREAM_TYPE_FILE:
-			switch(seek_type) {
+			switch(st) {
 				case SEEK_SET:
 					if(pos < 0)
 						pos = 0;
@@ -541,143 +673,62 @@ int bootfs_seek(void *_fs, void *_vnode, void *_cookie, off_t pos, seek_type see
 	return err;
 }
 
-int bootfs_read(void *_fs, void *_vnode, void *_cookie, void *buf, off_t pos, size_t *len)
+static int bootfs_ioctl(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, int op, void *buf, size_t len)
+{
+	TRACE(("bootfs_ioctl: vnode 0x%x, cookie 0x%x, op %d, buf 0x%x, len 0x%x\n", _v, _cookie, op, buf, len));
+
+	return ERR_INVALID_ARGS;
+}
+
+static int bootfs_canpage(fs_cookie _fs, fs_vnode _v, file_cookie _cookie)
+{
+	return -1;
+}
+
+static ssize_t bootfs_readpage(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, iovecs *vecs, off_t pos)
+{
+	return ERR_NOT_ALLOWED;
+}
+
+static ssize_t bootfs_writepage(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, iovecs *vecs, off_t pos)
+{
+	return ERR_NOT_ALLOWED;
+}
+
+static int bootfs_create(fs_cookie _fs, fs_vnode _dir, const char *name, stream_type st, void *create_args, vnode_id *new_vnid)
+{
+	return ERR_VFS_READONLY_FS;
+}
+
+static int bootfs_unlink(fs_cookie _fs, fs_vnode _dir, const char *name)
+{
+	return ERR_VFS_READONLY_FS;
+}
+
+static int bootfs_rename(fs_cookie _fs, fs_vnode _olddir, const char *oldname, fs_vnode _newdir, const char *newname)
+{
+	return ERR_VFS_READONLY_FS;
+}
+
+static int bootfs_rstat(fs_cookie _fs, fs_vnode _v, struct file_stat *stat)
 {
 	struct bootfs *fs = _fs;
-	struct bootfs_vnode *v = _vnode;
-	struct bootfs_cookie *cookie = _cookie;
+	struct bootfs_vnode *v = _v;
 	int err = 0;
 
-	dprintf("bootfs_read: vnode 0x%x, cookie 0x%x, pos 0x%x 0x%x, len 0x%x (0x%x)\n", v, cookie, pos, len, *len);
-
-	mutex_lock(&fs->lock);
-	
-	switch(cookie->s->type) {
-		case STREAM_TYPE_DIR: {
-			dprintf("bootfs_read: cookie is type DIR\n");
-
-			if(cookie->u.dir.ptr == NULL) {
-				*len = 0;
-				goto err;
-			}
-			if(strlen(cookie->u.dir.ptr->name) + 1 > *len) {
-				*len = 0;
-				err = ERR_VFS_INSUFFICIENT_BUF;
-				goto err;
-			}
-			
-			err = user_strcpy(buf, cookie->u.dir.ptr->name);
-			if(err < 0) {
-				*len = 0;
-				goto err;
-			}
-			*len = strlen(cookie->u.dir.ptr->name) + 1;
-			
-			cookie->u.dir.ptr = cookie->u.dir.ptr->dir_next;
-			break;
-		}
-		case STREAM_TYPE_FILE:
-			dprintf("bootfs_read: cookie is type FILE\n");
-
-			if(*len <= 0) {
-				*len = 0;
-				break;
-			}
-			if(pos < 0) {
-				// we'll read where the cookie is at
-				pos = cookie->u.file.pos;
-			}
-			if(pos >= cookie->s->u.file.len) {
-				*len = 0;
-				break;
-			}
-			if(pos + *len > cookie->s->u.file.len) {
-				// trim the read
-				*len = cookie->s->u.file.len - pos;
-			}
-			err = user_memcpy(buf, cookie->s->u.file.start + pos, *len);
-			if(err < 0) {
-				*len = 0;
-				goto err;
-			}
-			cookie->u.file.pos = pos + *len;
-			break;
-		default:
-			err = ERR_INVALID_ARGS;
-	}
-err:
-	mutex_unlock(&fs->lock);
-
-	return err;
-}
-
-int bootfs_write(void *_fs, void *_vnode, void *_cookie, const void *buf, off_t pos, size_t *len)
-{
-	return ERR_VFS_READONLY_FS;
-}
-
-int bootfs_ioctl(void *_fs, void *_vnode, void *_cookie, int op, void *buf, size_t len)
-{
-	return ERR_VFS_READONLY_FS;
-}
-
-int bootfs_close(void *_fs, void *_vnode, void *_cookie)
-{
-	struct bootfs *fs = _fs;
-	struct bootfs_vnode *v = _vnode;
-	struct bootfs_cookie *cookie = _cookie;
-
-	dprintf("bootfs_close: entry vnode 0x%x, cookie 0x%x\n", v, cookie);
-
-	if(cookie)
-		kfree(cookie);
-
-	return 0;
-}
-
-int bootfs_create(void *_fs, void *_base_vnode, const char *path, const char *stream, stream_type stream_type, struct redir_struct *redir)
-{
-	return ERR_VFS_READONLY_FS;
-}
-
-int bootfs_stat(void *_fs, void *_base_vnode, const char *path, const char *stream, stream_type stream_type, struct vnode_stat *stat, struct redir_struct *redir)
-{
-	struct bootfs *fs = _fs;
-	struct bootfs_vnode *base = _base_vnode;
-	struct bootfs_vnode *v;
-	struct bootfs_stream *s;
-	int err = 0;
-	int start = 0;
-
-	dprintf("bootfs_stat: path '%s', stream '%s', stream_type %d, base_vnode 0x%x, stat 0x%x\n", path, stream, stream_type, base, stat);
+	TRACE(("bootfs_rstat: vnode 0x%x (0x%x 0x%x), stat 0x%x\n", v, v->id, stat));
 
 	mutex_lock(&fs->lock);
 
-	v = bootfs_get_vnode_from_path(fs, base, path, &start, &redir->redir);
-	if(v == NULL) {
-		err = ERR_VFS_PATH_NOT_FOUND;
-		goto err;
-	}
-	if(redir->redir == true) {
-		// loop back into the vfs because the parse hit a mount point
-		mutex_unlock(&fs->lock);
-		redir->vnode = v->redir_vnode;
-		redir->path = &path[start];
-		return 0;
-	}
-	
-	s = bootfs_get_stream_from_vnode(v, stream, stream_type);
-	if(s == NULL) {
-		err = ERR_VFS_PATH_NOT_FOUND;
-		goto err;
-	}
+	stat->vnid = v->id;
+	stat->type = v->stream.type;
 
-	switch(stream_type) {
+	switch(v->stream.type) {
 		case STREAM_TYPE_DIR:
 			stat->size = 0;
 			break;
 		case STREAM_TYPE_FILE:
-			stat->size = s->u.file.len;
+			stat->size = v->stream.u.file.len;
 			break;
 		default:
 			err = ERR_INVALID_ARGS;
@@ -690,20 +741,49 @@ err:
 	return err;
 }
 
+
+static int bootfs_wstat(fs_cookie _fs, fs_vnode _v, struct file_stat *stat, int stat_mask)
+{
+	struct bootfs *fs = _fs;
+	struct bootfs_vnode *v = _v;
+
+	TRACE(("bootfs_wstat: vnode 0x%x (0x%x 0x%x), stat 0x%x\n", v, v->id, stat));
+
+	// cannot change anything
+	return ERR_VFS_READONLY_FS;
+}
+
 static struct fs_calls bootfs_calls = {
 	&bootfs_mount,
 	&bootfs_unmount,
-	&bootfs_register_mountpoint,
-	&bootfs_unregister_mountpoint,
-	&bootfs_dispose_vnode,
+	&bootfs_sync,
+
+	&bootfs_lookup,
+
+	&bootfs_getvnode,
+	&bootfs_putvnode,
+	&bootfs_removevnode,
+	
 	&bootfs_open,
-	&bootfs_seek,
+	&bootfs_close,
+	&bootfs_freecookie,
+	&bootfs_fsync,
+
 	&bootfs_read,
 	&bootfs_write,
+	&bootfs_seek,
 	&bootfs_ioctl,
-	&bootfs_close,
+
+	&bootfs_canpage,
+	&bootfs_readpage,
+	&bootfs_writepage,
+
 	&bootfs_create,
-	&bootfs_stat
+	&bootfs_unlink,
+	&bootfs_rename,
+
+	&bootfs_rstat,
+	&bootfs_wstat,
 };
 
 int bootstrap_bootfs()
@@ -726,3 +806,4 @@ int bootstrap_bootfs()
 	
 	return vfs_register_filesystem("bootfs", &bootfs_calls);
 }
+

@@ -1186,6 +1186,8 @@ thread_id thread_get_current_thread_id()
 
 struct thread *thread_get_current_thread()
 {
+	if(cur_thread == NULL)
+		return 0;
 	return CURR_THREAD;
 }
 
@@ -1263,7 +1265,7 @@ int test_thread5()
 {
 	int fd;
 	
-	fd = sys_open("/bus/pci", "", STREAM_TYPE_DEVICE);
+	fd = sys_open("/bus/pci", STREAM_TYPE_DEVICE);
 	if(fd < 0) {
 		dprintf("test_thread5: error opening /bus/pci\n");
 		return 1;
@@ -1296,15 +1298,14 @@ int test_thread3()
 {
 	int fd;
 	char buf[1024];
-	size_t len;
+	ssize_t len;
 
 	kprintf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
-	fd = sys_open("/boot/testfile", "", STREAM_TYPE_FILE);
+	fd = sys_open("/boot/testfile", STREAM_TYPE_FILE);
 	if(fd < 0)
 		panic("could not open /boot/testfile\n");
-	len = sizeof(buf);
-	sys_read(fd, buf, 0, &len);
-	sys_write(0, buf, 0, &len);
+	len = sys_read(fd, buf, 0, sizeof(buf));
+	sys_write(0, buf, 0, len);
 	sys_close(fd);
 
 	return 0;
@@ -1314,9 +1315,10 @@ int test_thread2()
 {
 	while(1) {
 		char str[65];
-		size_t len = sizeof(str) - 1;
-		
-		if(sys_read(0, str, 0, &len) < 0) {
+		ssize_t len;
+
+		len = sys_read(0, str, 0, sizeof(str) - 1);
+		if(len < 0) {
 			dprintf("error reading from console!\n");
 			break;
 		}

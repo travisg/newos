@@ -12,8 +12,7 @@ typedef enum {
 	STREAM_TYPE_NULL = 0,
 	STREAM_TYPE_FILE,
 	STREAM_TYPE_DIR,
-	STREAM_TYPE_DEVICE,
-	STREAM_TYPE_STRING
+	STREAM_TYPE_DEVICE
 } stream_type;
 
 typedef enum {
@@ -22,16 +21,28 @@ typedef enum {
 	SEEK_END
 } seek_type;
 
-struct redir_struct {
-	bool redir;
-	void *vnode;
-	const char *path;
+typedef void * fs_cookie;
+typedef void * file_cookie;
+typedef void * fs_vnode;
+
+typedef struct iovec {
+	void *start;
+	size_t len;
+} iovec;
+
+typedef struct iovecs {
+	size_t num;
+	size_t total_len;
+	iovec vec[0];
+} iovecs;	
+
+struct file_stat {
+	vnode_id 	vnid;
+	stream_type	type;
+	off_t		size;
 };
 
-struct vnode_stat {
-	off_t size;
-};
-
+#if 0
 struct fs_calls {
 	int (*fs_mount)(void **fs_cookie, void *flags, void *covered_vnode, fs_id id, void **priv_vnode_root);
 	int (*fs_unmount)(void *fs_cookie);
@@ -47,34 +58,87 @@ struct fs_calls {
 	int (*fs_create)(void *fs_cookie, void *base_vnode, const char *path, const char *stream, stream_type stream_type, struct redir_struct *redir);
 	int (*fs_stat)(void *fs_cookie, void *base_vnode, const char *path, const char *stream, stream_type stream_type, struct vnode_stat *stat, struct redir_struct *redir);
 };
+#endif
+
+struct fs_calls {
+	int (*fs_mount)(fs_cookie *fs, fs_id id, void *flags, vnode_id *root_vnid);
+	int (*fs_unmount)(fs_cookie fs);
+	int (*fs_sync)(fs_cookie fs);
+
+	int (*fs_lookup)(fs_cookie fs, fs_vnode dir, const char *name, vnode_id *id);
+
+	int (*fs_getvnode)(fs_cookie fs, vnode_id id, fs_vnode *v, bool r);
+	int (*fs_putvnode)(fs_cookie fs, fs_vnode v, bool r);
+	int (*fs_removevnode)(fs_cookie fs, fs_vnode v, bool r);
+
+	int (*fs_open)(fs_cookie fs, fs_vnode v, file_cookie *cookie, int oflags);
+	int (*fs_close)(fs_cookie fs, fs_vnode v, file_cookie cookie);
+	int (*fs_freecookie)(fs_cookie fs, fs_vnode v, file_cookie cookie);
+	int (*fs_fsync)(fs_cookie fs, fs_vnode v);
+
+	ssize_t (*fs_read)(fs_cookie fs, fs_vnode v, file_cookie cookie, void *buf, off_t pos, ssize_t len);
+	ssize_t (*fs_write)(fs_cookie fs, fs_vnode v, file_cookie cookie, const void *buf, off_t pos, ssize_t len);
+	int (*fs_seek)(fs_cookie fs, fs_vnode v, file_cookie cookie, off_t pos, seek_type st);
+	int (*fs_ioctl)(fs_cookie fs, fs_vnode v, file_cookie cookie, int op, void *buf, size_t len);
+
+	int (*fs_canpage)(fs_cookie fs, fs_vnode v, file_cookie cookie);
+	ssize_t (*fs_readpage)(fs_cookie fs, fs_vnode v, file_cookie cookie, iovecs *vecs, off_t pos);
+	ssize_t (*fs_writepage)(fs_cookie fs, fs_vnode v, file_cookie cookie, iovecs *vecs, off_t pos);
+
+	int (*fs_create)(fs_cookie fs, fs_vnode dir, const char *name, stream_type st, void *create_args, vnode_id *new_vnid);
+	int (*fs_unlink)(fs_cookie fs, fs_vnode dir, const char *name);
+	int (*fs_rename)(fs_cookie fs, fs_vnode olddir, const char *oldname, fs_vnode newdir, const char *newname);
+
+	int (*fs_rstat)(fs_cookie fs, fs_vnode v, struct file_stat *stat);
+	int (*fs_wstat)(fs_cookie fs, fs_vnode v, struct file_stat *stat, int stat_mask);
+};
 
 int vfs_init(kernel_args *ka);
 int vfs_register_filesystem(const char *name, struct fs_calls *calls);
 void *vfs_new_ioctx();
 int vfs_free_ioctx(void *ioctx);
-int vfs_helper_getnext_in_path(const char *path, int *start_pos, int *end_pos);
 int vfs_test();
 
+/* calls needed by fs internals */
+int vfs_get_vnode(fs_id fsid, vnode_id vnid, fs_vnode *v);
+int vfs_put_vnode(fs_id fsid, vnode_id vnid);
+int vfs_remove_vnode(fs_id fsid, vnode_id vnid);
+
+/* calls kernel code should make for file I/O */
 int sys_mount(const char *path, const char *fs_name);
 int sys_unmount(const char *path);
-
-int sys_open(const char *path, const char *stream, stream_type stream_type);
-int sys_seek(int fd, off_t pos, seek_type seek_type);
-int sys_read(int fd, void *buf, off_t pos, size_t *len);
-int sys_write(int fd, const void *buf, off_t pos, size_t *len);
-int sys_ioctl(int fd, int op, void *buf, size_t len);
+int sys_sync();
+int sys_open(const char *path, int omode);
 int sys_close(int fd);
-int sys_create(const char *path, const char *stream, stream_type stream_type);
-int sys_stat(const char *path, const char *stream, stream_type stream_type, struct vnode_stat *stat);
+int sys_fsync(int fd);
+ssize_t sys_read(int fd, void *buf, off_t pos, ssize_t len);
+ssize_t sys_write(int fd, const void *buf, off_t pos, ssize_t len);
+int sys_seek(int fd, off_t pos, seek_type seek_type);
+int sys_ioctl(int fd, int op, void *buf, size_t len);
+ssize_t sys_readpage(int fd, iovecs *vecs, off_t pos);
+ssize_t sys_writepage(int fd, iovecs *vecs, off_t pos);
+int sys_create(const char *path, stream_type stream_type);
+int sys_unlink(const char *path);
+int sys_rename(const char *oldpath, const char *newpath);
+int sys_rstat(const char *path, struct file_stat *stat);
+int sys_wstat(const char *path, struct file_stat *stat, int stat_mask);
 
-int user_open(const char *path, const char *stream, stream_type stream_type);
-int user_seek(int fd, off_t pos, seek_type seek_type);
-int user_read(int fd, void *buf, off_t pos, size_t *len);
-int user_write(int fd, const void *buf, off_t pos, size_t *len);
-int user_ioctl(int fd, int op, void *buf, size_t len);
+/* calls the syscall dispatcher should use for user file I/O */
+int user_mount(const char *path, const char *fs_name);
+int user_unmount(const char *path);
+int user_sync();
+int user_open(const char *path, int omode);
 int user_close(int fd);
-int user_create(const char *path, const char *stream, stream_type stream_type);
-int user_stat(const char *path, const char *stream, stream_type stream_type, struct vnode_stat *stat);
+int user_fsync(int fd);
+ssize_t user_read(int fd, void *buf, off_t pos, ssize_t len);
+ssize_t user_write(int fd, const void *buf, off_t pos, ssize_t len);
+int user_seek(int fd, off_t pos, seek_type seek_type);
+int user_ioctl(int fd, int op, void *buf, size_t len);
+int user_create(const char *path, stream_type stream_type);
+int user_unlink(const char *path);
+int user_rename(const char *oldpath, const char *newpath);
+int user_rstat(const char *path, struct file_stat *stat);
+int user_wstat(const char *path, struct file_stat *stat, int stat_mask);
 
 #endif
 

@@ -9,6 +9,7 @@
 #include <kernel/int.h>
 #include <kernel/lock.h>
 #include <kernel/sem.h>
+#include <kernel/arch/cpu.h>
 #include <kernel/arch/i386/cpu.h>
 
 #include <bus/bus.h>
@@ -230,7 +231,7 @@ err:
 	return err;
 }
 
-void rtl8139_xmit(rtl8139 *rtl, const char *ptr, int len)
+void rtl8139_xmit(rtl8139 *rtl, const char *ptr, ssize_t len)
 {
 	int i;
 	int txbn;
@@ -276,7 +277,7 @@ typedef struct rx_entry {
 #define TAIL_TO_TAILREG(in) \
 	(uint16)((uint16)(in) - (uint16)16)
 
-int rtl8139_rx(rtl8139 *rtl, char *buf, int buf_len)
+ssize_t rtl8139_rx(rtl8139 *rtl, char *buf, ssize_t buf_len)
 {
 	rx_entry *entry;
 	uint32 tail;

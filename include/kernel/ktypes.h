@@ -14,8 +14,8 @@ typedef int aspace_id;
 typedef int proc_id;
 typedef int sem_id;
 
-typedef int vnode_id;
-typedef int fs_id;
+typedef uint64 vnode_id;
+typedef uint32 fs_id;
 
 typedef int64 time_t;
 

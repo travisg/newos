@@ -14,6 +14,9 @@
 #include <kernel/smp.h>
 #include <kernel/sem.h>
 #include <kernel/vfs.h>
+#include <kernel/fs/rootfs.h>
+#include <kernel/fs/bootfs.h>
+#include <kernel/fs/devfs.h>
 #include <kernel/dev.h>
 #include <kernel/net/net.h>
 #include <kernel/cbuf.h>
@@ -91,7 +94,34 @@ int _start(kernel_args *oldka, int cpu)
 
 static int main2()
 {
+	int err;
+
 	dprintf("start of main2: initializing devices\n");
+
+	// bootstrap the root filesystem
+	bootstrap_rootfs();	
+
+	err = sys_mount("/", "rootfs");
+	if(err < 0)
+		panic("error mounting rootfs!\n");
+
+	// bootstrap the bootfs
+	bootstrap_bootfs();
+	
+	sys_create("/boot", STREAM_TYPE_DIR);
+	err = sys_mount("/boot", "bootfs");
+	if(err < 0)
+		panic("error mounting bootfs\n");
+
+	// bootstrap the devfs
+	bootstrap_devfs();
+
+	sys_create("/dev", STREAM_TYPE_DIR);
+	err = sys_mount("/dev", "devfs");
+	if(err < 0)
+		panic("error mounting devfs\n");
+	
+//	vfs_test();
 
 	dev_init(&ka);
 	bus_init(&ka);

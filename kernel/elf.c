@@ -44,14 +44,15 @@ int elf_load(const char *path, struct proc *p, int flags, addr *entry)
 	
 	dprintf("elf_load: entry path '%s', proc 0x%x\n", path, p);
 	
-	fd = sys_open(path, "", STREAM_TYPE_FILE);
+	fd = sys_open(path, 0);
 	if(fd < 0)
 		return fd;
 
-	len = sizeof(eheader);
-	err = sys_read(fd, &eheader, 0, &len);
-	if(err < 0)
+	len = sys_read(fd, &eheader, 0, sizeof(eheader));
+	if(len < 0) {
+		err = len;
 		goto error;
+	}
 	if(len != sizeof(eheader)) {
 		// short read
 		err = ERR_INVALID_BINARY;
@@ -68,10 +69,10 @@ int elf_load(const char *path, struct proc *p, int flags, addr *entry)
 		goto error;
 	}
 	
-	len = eheader.e_phnum * eheader.e_phentsize;
-	dprintf("reading in program headers at 0x%x, len 0x%x\n", eheader.e_phoff, len);
-	err = sys_read(fd, pheaders, eheader.e_phoff, &len);
-	if(err < 0) {
+	dprintf("reading in program headers at 0x%x, len 0x%x\n", eheader.e_phoff, eheader.e_phnum * eheader.e_phentsize);
+	len = sys_read(fd, pheaders, eheader.e_phoff, eheader.e_phnum * eheader.e_phentsize);
+	if(len < 0) {
+		err = len;
 		dprintf("error reading in program headers\n");
 		goto error;
 	}
@@ -97,9 +98,9 @@ int elf_load(const char *path, struct proc *p, int flags, addr *entry)
 			goto error;
 		}
 		
-		len = pheaders[i].p_filesz;
-		err = sys_read(fd, region_addr + (pheaders[i].p_vaddr % PAGE_SIZE), pheaders[i].p_offset, &len);
-		if(err < 0) {
+		len = sys_read(fd, region_addr + (pheaders[i].p_vaddr % PAGE_SIZE), pheaders[i].p_offset, pheaders[i].p_filesz);
+		if(len < 0) {
+			err = len;
 			dprintf("error reading in seg %d\n", i);
 			goto error;
 		}

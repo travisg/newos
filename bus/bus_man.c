@@ -81,31 +81,34 @@ static int bus_find_device_recurse(int *n, char *base_path, int base_fd, id_list
 {
 	char leaf[256];
 	int base_path_len = strlen(base_path);
-	int len;
+	ssize_t len;
 	int fd;
 	int err;
+	struct file_stat stat;
 	
-	len = sizeof(leaf);
-	for(len = sizeof(leaf); sys_read(base_fd, &leaf, -1, &len) == 0 && len > 0; len = sizeof(leaf)) {
+	while((len = sys_read(base_fd, &leaf, -1, sizeof(leaf))) > 0) {
 		// reset the base_path to the original string passed in
 		base_path[base_path_len] = 0;
 
 		strcat(base_path, leaf);
-		fd = sys_open(base_path, "", STREAM_TYPE_DEVICE);
-		if(fd < 0) {
-			fd = sys_open(base_path, "", STREAM_TYPE_DIR);
-			if(fd < 0)
-				continue;
+		fd = sys_open(base_path, 0);
+		if(fd < 0)
+			continue;
+		err = sys_rstat(base_path, &stat);
+		if(err < 0) {
+			sys_close(fd);
+			continue;
+		}
+		if(stat.type == STREAM_TYPE_DIR) {
 			strcat(base_path, "/");
 			err = bus_find_device_recurse(n, base_path, fd, vendor_ids, device_ids);
 			sys_close(fd);
 			if(err >= 0)
 				return err;
-		}
-
-		// we opened the device
-		// XXX assumes PCI
-		{
+			continue;
+		} else if(stat.type == STREAM_TYPE_DEVICE) {
+			// we opened the device
+			// XXX assumes PCI
 			struct pci_cfg cfg;
 			uint32 i, j;
 			
@@ -138,9 +141,13 @@ int bus_find_device(int n, id_list *vendor_ids, id_list *device_ids, device *dev
 	char path[256];
 	bus *b;
 	int err = -1;
+	struct file_stat stat;
 
 	for(b = bus_list; b != NULL && err < 0; b = b->next) {	
-		base_fd = sys_open(b->path, "", STREAM_TYPE_DIR);
+		err = sys_rstat(b->path, &stat);
+		if(err < 0 || stat.type != STREAM_TYPE_DIR)
+			continue;
+		base_fd = sys_open(b->path, 0);
 		if(base_fd < 0)
 			continue;
 

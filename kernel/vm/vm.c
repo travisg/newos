@@ -1601,3 +1601,8 @@ int user_strncpy(char *to, const char *from, size_t size)
 	return arch_cpu_user_strncpy(to, from, size, &thread_get_current_thread()->fault_handler);
 }
 
+void *user_memset(void *s, char c, size_t count)
+{
+	return arch_cpu_user_memset(s, c, count, &thread_get_current_thread()->fault_handler);
+}
+

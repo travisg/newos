@@ -22,8 +22,10 @@ typedef enum {
 	SEEK_END
 } seek_type;
 
-struct vnode_stat {
-	off_t size;
+struct file_stat {
+	vnode_id 	vnid;
+	stream_type	type;
+	off_t		size;
 };
 
 #define SEM_FLAG_NO_RESCHED 1
@@ -65,22 +67,35 @@ enum {
 #define LOCK_MASK      0x3
 
 int sys_null();
-int sys_open(const char *path, const char *stream, stream_type stream_type);
-int sys_seek(int fd, off_t pos, seek_type seek_type);
-int sys_read(int fd, void *buf, off_t pos, size_t *len);
-int sys_write(int fd, const void *buf, off_t pos, size_t *len);
-int sys_ioctl(int fd, int op, void *buf, size_t len);
+
+/* fs api */
+int sys_mount(const char *path, const char *fs_name);
+int sys_unmount(const char *path);
+int sys_sync();
+int sys_open(const char *path, int omode);
 int sys_close(int fd);
-int sys_create(const char *path, const char *stream, stream_type stream_type);
-int sys_stat(const char *path, const char *stream, stream_type stream_type, struct vnode_stat *stat);
+int sys_fsync(int fd);
+ssize_t sys_read(int fd, void *buf, off_t pos, ssize_t len);
+ssize_t sys_write(int fd, const void *buf, off_t pos, ssize_t len);
+int sys_seek(int fd, off_t pos, seek_type seek_type);
+int sys_ioctl(int fd, int op, void *buf, size_t len);
+int sys_create(const char *path, stream_type stream_type);
+int sys_unlink(const char *path);
+int sys_rename(const char *oldpath, const char *newpath);
+int sys_rstat(const char *path, struct file_stat *stat);
+int sys_wstat(const char *path, struct file_stat *stat, int stat_mask);
+
 time_t sys_system_time();
 int sys_snooze(time_t time);
+
+/* sem functions */
 sem_id sys_sem_create(int count, const char *name);
 int sys_sem_delete(sem_id id);
 int sys_sem_acquire(sem_id id, int count);
 int sys_sem_acquire_etc(sem_id id, int count, int flags, time_t timeout);
 int sys_sem_release(sem_id id, int count);
 int sys_sem_release_etc(sem_id id, int count, int flags);
+
 thread_id sys_get_current_thread_id();
 void sys_exit(int retcode);
 proc_id sys_proc_create_proc(const char *path, const char *name, int priority);

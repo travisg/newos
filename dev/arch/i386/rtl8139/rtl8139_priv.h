@@ -29,7 +29,7 @@ typedef struct rtl8139 {
 
 int rtl8139_detect(rtl8139 **rtl);
 int rtl8139_init(rtl8139 *rtl);
-void rtl8139_xmit(rtl8139 *rtl, const char *ptr, int len);
-int rtl8139_rx(rtl8139 *rtl, char *buf, int buf_len);
+void rtl8139_xmit(rtl8139 *rtl, const char *ptr, ssize_t len);
+ssize_t rtl8139_rx(rtl8139 *rtl, char *buf, ssize_t buf_len);
 
 #endif

@@ -37,7 +37,7 @@ int kprintf(const char *fmt, ...)
 		ret = vsprintf(temp,fmt,args);
 		va_end(args);
 	
-		sys_write(console_fd, temp, 0, &ret);
+		sys_write(console_fd, temp, 0, ret);
 	}
 	return ret;
 }
@@ -64,7 +64,7 @@ int con_init(kernel_args *ka)
 {
 	dprintf("con_init: entry\n");
 
-	console_fd = sys_open("/dev/console", "", STREAM_TYPE_DEVICE);
+	console_fd = sys_open("/dev/console", 0);
 	dprintf("console_fd = %d\n", console_fd);
 
 	return 0;

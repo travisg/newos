@@ -16,19 +16,5 @@ int dev_init(kernel_args *ka)
 
 	dprintf("dev_init: entry\n");
 
-	err = sys_create("/dev", "", STREAM_TYPE_DIR);
-	if(err < 0)
-		panic("dev_init: error making /dev!\n");
-
-	// bootstrap the bootfs
-	bootstrap_bootfs();
-	
-	err = sys_create("/boot", "", STREAM_TYPE_DIR);
-	if(err < 0)
-		panic("error creating /boot\n");
-	err = sys_mount("/boot", "bootfs");
-	if(err < 0)
-		panic("error mounting bootfs\n");
-	
 	return 0;
 }

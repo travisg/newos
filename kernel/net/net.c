@@ -24,10 +24,10 @@ int rx_thread()
 		return -1;
 
 	for(;;) {
-		size_t len = sizeof(buf);
+		ssize_t len;
 
-		err = sys_read(net_fd, buf, 0, &len);
-		if(err < 0) {
+		len = sys_read(net_fd, buf, 0, sizeof(buf));
+		if(len < 0) {
 			thread_snooze(10000);
 			continue;
 		}
@@ -47,7 +47,7 @@ int net_init(kernel_args *ka)
 	dprintf("net_init: entry\n");
 
 	// open the network device
-	net_fd = sys_open("/dev/net/rtl8139/0", "", STREAM_TYPE_DEVICE);
+	net_fd = sys_open("/dev/net/rtl8139/0", 0);
 	if(net_fd < 0) {
 		dprintf("net_init: no net devices\n");
 		return -1;

@@ -11,11 +11,11 @@ static int outfd = -1;
 
 int __stdio_init()
 {
-	infd = sys_open("/dev/console", "", STREAM_TYPE_DEVICE);
+	infd = sys_open("/dev/console", 0);
 	if(infd < 0)
 		return infd;
 
-	outfd = sys_open("/dev/console", "", STREAM_TYPE_DEVICE);
+	outfd = sys_open("/dev/console", 0);
 	if(outfd < 0)
 		return outfd;
 		
@@ -34,14 +34,12 @@ int printf(const char *fmt, ...)
 	va_list args;
 	char buf[1024];
 	int i;
-	size_t len;
 	
 	va_start(args, fmt);
 	i = vsprintf(buf, fmt, args);
 	va_end(args);
 	
-	len = strlen(buf);
-	sys_write(outfd, buf, 0, &len);
+	sys_write(outfd, buf, 0, strlen(buf));
 	
 	return i;
 }

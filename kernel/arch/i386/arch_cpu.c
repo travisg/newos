@@ -163,3 +163,20 @@ error:
 	return ERR_VM_BAD_USER_MEMORY;
 }
 
+void *arch_cpu_user_memset(void *s, char c, size_t count, addr *fault_handler)
+{
+	char *xs = (char *) s;
+
+	*fault_handler = (addr)&&error;
+
+	while (count--)
+		*xs++ = c;
+
+	*fault_handler = 0;
+
+	return s;
+error:
+	*fault_handler = 0;
+	return ERR_VM_BAD_USER_MEMORY;
+}
+

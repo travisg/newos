@@ -31,15 +31,13 @@ int cmd_exec(char *args)
 int cmd_stat(char *args)
 {
 	int rc;
-	struct vnode_stat stat;
+	struct file_stat stat;
 
-	rc = sys_stat(args, "", STREAM_TYPE_FILE, &stat);
-	if(rc < 0)
-		rc = sys_stat(args, "", STREAM_TYPE_DEVICE, &stat);
-	if(rc < 0)
-		rc = sys_stat(args, "", STREAM_TYPE_DIR, &stat);
+	rc = sys_rstat(args, &stat);
 	if(rc >= 0) {
 		printf("stat of file '%s': \n", args);
+		printf("vnid 0x%x 0x%x\n", stat.vnid);
+		printf("type %d\n", stat.type);
 		printf("size %d\n", stat.size);
 	} else {
 		printf("stat failed for file '%s'\n", args);
@@ -51,39 +49,42 @@ int cmd_ls(char *args)
 {
 	int rc;
 	int count = 0;
-	struct vnode_stat stat;
+	struct file_stat stat;
 
-	rc = sys_stat(args, "", STREAM_TYPE_FILE, &stat);
+	rc = sys_rstat(args, &stat);
 	if(rc < 0)
-		rc = sys_stat(args, "", STREAM_TYPE_DEVICE, &stat);
-	if(rc >= 0) {
-		printf("%s    %d bytes\n", args, stat.size);
-		count++;
 		goto done_ls;
-	}
 
-	rc = sys_stat(args, "", STREAM_TYPE_DIR, &stat);
-	if(rc >= 0) {
-		int fd;
-		char buf[1024];
-		int len;
-
-		fd = sys_open(args, "", STREAM_TYPE_DIR);
-		if(fd < 0)
-			goto done_ls;
-
-		for(;;) {
-			len = sizeof(buf);
-			rc = sys_read(fd, buf, -1, &len);
-			if(rc < 0)
-				break;
-			if(len <= 0)
-				break;
-			printf("%s\n", buf);
+	switch(stat.type) {
+		case STREAM_TYPE_FILE:
+		case STREAM_TYPE_DEVICE:
+			printf("%s    %d bytes\n", args, stat.size);
 			count++;
+			break;
+		case STREAM_TYPE_DIR: {
+			int fd;
+			char buf[1024];
+			int len;
+
+			fd = sys_open(args, 0);
+			if(fd < 0)
+				goto done_ls;
+
+			for(;;) {
+				rc = sys_read(fd, buf, -1, sizeof(buf));
+				if(rc <= 0)
+					break;
+				printf("%s\n", buf);
+				count++;
+			}
+			sys_close(fd);
+			break;
 		}
-		sys_close(fd);
+		default:
+			printf("%s    unknown file type\n", args);
+			break;
 	}
+
 done_ls:
 	printf("%d files found\n", count);
 	return 0;

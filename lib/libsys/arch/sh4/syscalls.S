@@ -2,6 +2,9 @@
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
+
+/* XXX renumber syscalls */
+
 #define FUNC(name) .align 2 ; .globl _##name ; _##name:
 
 FUNC(sys_null)

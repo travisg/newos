@@ -23,29 +23,50 @@ int syscall_dispatcher(unsigned long call_num, unsigned long arg0, unsigned long
 		case SYSCALL_NULL:
 			*call_ret = 0;
 			break;
+		case SYSCALL_MOUNT:
+			*call_ret = user_mount((const char *)arg0, (const char *)arg1);
+			break;
+		case SYSCALL_UNMOUNT:
+			*call_ret = user_unmount((const char *)arg0);
+			break;
+		case SYSCALL_SYNC:
+			*call_ret = user_sync();
+			break;
 		case SYSCALL_OPEN:
-			*call_ret = user_open((const char *)arg0, (const char *)arg1, (stream_type)arg2);
-			break;
-		case SYSCALL_SEEK:
-			*call_ret = user_seek((int)arg0, (off_t)INT32TOINT64(arg1, arg2), (seek_type)arg3);
-			break;
-		case SYSCALL_READ:
-			*call_ret = user_read((int)arg0, (void *)arg1, (off_t)INT32TOINT64(arg2, arg3), (size_t *)arg4);
-			break;
-		case SYSCALL_WRITE:
-			*call_ret = user_write((int)arg0, (const void *)arg1, (off_t)INT32TOINT64(arg2, arg3), (size_t *)arg4);
-			break;
-		case SYSCALL_IOCTL:
-			*call_ret = user_ioctl((int)arg0, (int)arg1, (void *)arg2, (size_t)arg3);
+			*call_ret = user_open((const char *)arg0, (int)arg1);
 			break;
 		case SYSCALL_CLOSE:
 			*call_ret = user_close((int)arg0);
 			break;
-		case SYSCALL_CREATE:
-			*call_ret = user_create((const char *)arg0, (const char *)arg1, (stream_type)arg2);
+		case SYSCALL_FSYNC:
+			*call_ret = user_fsync((int)arg0);
 			break;
-		case SYSCALL_STAT:
-			*call_ret = user_stat((const char *)arg0, (const char *)arg1, (stream_type)arg2, (struct vnode_stat *)arg3);
+		case SYSCALL_READ:
+			*call_ret = user_read((int)arg0, (void *)arg1, (off_t)INT32TOINT64(arg2, arg3), (ssize_t)arg4);
+			break;
+		case SYSCALL_WRITE:
+			*call_ret = user_write((int)arg0, (const void *)arg1, (off_t)INT32TOINT64(arg2, arg3), (ssize_t)arg4);
+			break;
+		case SYSCALL_SEEK:
+			*call_ret = user_seek((int)arg0, (off_t)INT32TOINT64(arg1, arg2), (seek_type)arg3);
+			break;
+		case SYSCALL_IOCTL:
+			*call_ret = user_ioctl((int)arg0, (int)arg1, (void *)arg2, (size_t)arg3);
+			break;
+		case SYSCALL_CREATE:
+			*call_ret = user_create((const char *)arg0, (stream_type)arg1);
+			break;
+		case SYSCALL_UNLINK:
+			*call_ret = user_unlink((const char *)arg0);
+			break;
+		case SYSCALL_RENAME:
+			*call_ret = user_rename((const char *)arg0, (const char *)arg1);
+			break;
+		case SYSCALL_RSTAT:
+			*call_ret = user_rstat((const char *)arg0, (struct file_stat *)arg1);
+			break;
+		case SYSCALL_WSTAT:
+			*call_ret = user_wstat((const char *)arg0, (struct file_stat *)arg1, (int)arg2);
 			break;
 		case SYSCALL_SYSTEM_TIME:
 			*call_ret = system_time();
