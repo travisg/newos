@@ -1,0 +1,11 @@
+This driver is by default in the build, but not actually used. It is not very
+much tested yet, and there are discussions about rewriting it from scratch,
+using other IDE specs/sources to get a stable driver.
+
+So, if you're doing filesystem drivers, it may be interesting to enable this on your
+_test_ system, just to see if you can mount your filesystem. But please be aware
+that this could scramble up the contents of that harddisk, so please don't use
+it if you've got any critical data on a disk in the system you're going to test on.
+
+This driver may be completely rewritten in the future, so don't spent to much
+time on testing it, or fixing it.... use it to test _your_ fs driver!

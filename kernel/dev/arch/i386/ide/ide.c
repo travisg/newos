@@ -1,7 +1,9 @@
 /*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Modified Sep 2001 by Rob Judd <judd@ob-wan.com>
 ** Distributed under the terms of the NewOS License.
 */
+
 #include <kernel/kernel.h>
 #include <kernel/console.h>
 #include <kernel/debug.h>
@@ -17,545 +19,367 @@
 #include <libc/string.h>
 #include <libc/printf.h>
 
-#include <dev/arch/i386/ide/ide_bus.h>
+//#include <dev/arch/i386/ide/ide_bus.h>
+
+#include <kernel/fs/devfs.h>
+
 #include "ide_private.h"
 #include "ide_raw.h"
 
-ide_device		devices[MAX_DEVICES];
-
-
-#define IDE_INTERRUPT	14
-struct ide_fs 
-{
-  fs_id		id;
-  sem_id	sem;
-  void		*covered_vnode;
-  void		*redir_vnode;
-  int		root_vnode; // just a placeholder to return a pointer to
-};
-
+ide_device   devices[MAX_DEVICES];
 sem_id ide_sem;
-sem_id rw_sem;
-typedef	struct	
-{
-  int		bus;
-  int		device;
-  uint32	block_start;
-  uint32	partition_size;
-  uint16	bytes_per_sector;
-}ide_cookie;
 
-static int ide_open(void *_fs, void *_base_vnode, const char *path, const char *stream, stream_type stream_type, void **_vnode, void **_cookie, struct redir_struct *redir)
-{
-  struct ide_fs *fs = _fs;
-  int 		err;
-  int		bus;
-  int		device;
-  int		partition;
-  ide_cookie	*cookie = NULL;
-  dprintf("ide_open: entry on vnode 0x%x, path = '%s'\n", _base_vnode, path);
-  
-  sem_acquire(fs->sem, 1);
-  if(fs->redir_vnode != NULL)
-    {
-      // we were mounted on top of
-      redir->redir = true;
-      redir->vnode = fs->redir_vnode;
-      redir->path = path;
-      err = 0;
-      goto out;		
-    }		
-  if(stream[0] != '\0' || stream_type != STREAM_TYPE_DEVICE) 
-    {
-      err = ERR_VFS_PATH_NOT_FOUND;
-      goto err;
-    }
-  bus = (path[0] - '0');
-  if( bus< 0 || bus> 2)
-    {
-      err = ERR_VFS_PATH_NOT_FOUND;
-      goto err;
-    }
-  device = (path[2] - '0');
-  if( device<0 || device> 2)
-    {
-      err = ERR_VFS_PATH_NOT_FOUND;
-      goto err;
-    }
-  if(devices[(bus*2) + device].magic!=IDE_MAGIC_COOKIE)
-    {
-      err = ERR_VFS_PATH_NOT_FOUND;
-      goto err;
-    }
-  cookie = kmalloc(sizeof(ide_cookie));
-  if(cookie==NULL)
-    {
-      err = ERR_NO_MEMORY;
-      goto err;
-    }
-  cookie->bus = bus;
-  cookie->device = device;
-  cookie->bytes_per_sector = devices[(bus*2) + device].bytes_per_sector;
-  partition = (path[4] - '0');  
-  if(partition>='0' && partition<='9')
-    {
-      cookie->block_start = devices[(bus*2) + device].partitions[partition].starting_block;
-      cookie->partition_size = devices[(bus*2) + device].partitions[partition].sector_count;
-    }
-  else
-    {
-      cookie->block_start = 0;
-      cookie->partition_size = devices[(bus*2) + device].sector_count;
-    }
-  *_vnode = &fs->root_vnode;	
-  *_cookie = cookie;
-  err = 0;
-  goto out;
- err:
-  if(cookie!=NULL)
-    kfree(cookie);
- out:
-  sem_release(fs->sem, 1);
-  return err;
-}
+#define IDE_0_INTERRUPT  14
+#define IDE_1_INTERRUPT  15
+#define MAX_PARTITIONS   8
 
-static int ide_seek(void *_fs, void *_vnode, void *_cookie, off_t pos, seek_type seek_type)
+typedef struct
 {
-  dprintf("ide_seek: entry\n");
-  return ERR_NOT_ALLOWED;
-}
+	ide_device*	dev;			// Pointer to entry in 'devices' table
 
-static int ide_close(void *_fs, void *_vnode, void *_cookie)
-{
-  dprintf("ide_close: entry\n");
-  if(_cookie!=NULL)
-    kfree(_cookie);
-  return 0;
-}
+	// Specs for whole disk or partition
+	uint32		block_start;	// Number of first block
+	uint32		block_count;	// Number of blocks used
+	uint16		block_size;		// Bytes per block
+} ide_ident;
 
-static int ide_create(void *_fs, void *_base_vnode, const char *path, const char *stream, stream_type stream_type, struct redir_struct *redir)
+//--------------------------------------------------------------------------------
+int ide_open(dev_ident _ident, dev_cookie *cookie)
 {
-  struct ide_fs *fs = _fs;
-  int		ret = ERR_NOT_ALLOWED;
-  dprintf("ide_create: entry %X\n",fs);
-  if(fs->redir_vnode != NULL) {
-    // we were mounted on top of
-    redir->redir = true;
-    redir->vnode = fs->redir_vnode;
-    redir->path = path;
-    ret = 0;
-    goto out;
-  }
+	ide_ident* ident = (ide_ident*)_ident;
+	// We hold our 'ident' structure as cookie, as it contains all we need
+	*cookie = ident;
 	
- out:
-  dprintf("ide_create: exit %X\n",fs);	
-  return ret;
+	return NO_ERROR;
 }
 
-static int ide_stat(void *_fs, void *_base_vnode, const char *path, const char *stream, stream_type stream_type, struct vnode_stat *stat, struct redir_struct *redir)
+//--------------------------------------------------------------------------------
+int ide_close(dev_cookie _cookie)
 {
-  struct ide_fs *fs = _fs;
-  int		ret;
-  dprintf("ide_stat: entry %X\n",fs);
-  if(fs->redir_vnode != NULL) {
-    // we were mounted on top of
-    redir->redir = true;
-    redir->vnode = fs->redir_vnode;
-    redir->path = path;
-    ret = 0;
-    goto out;
-  }
+	return NO_ERROR;
+}
 
-  stat->size = 0;
-  ret = 0;
+//--------------------------------------------------------------------------------
+int ide_freecookie(dev_cookie cookie)
+{
+	// We do not have anything to free here, as our cookie is our
+	//  dev_ident as well :)
+	return NO_ERROR;
+}
+
+//--------------------------------------------------------------------------------
+int ide_seek(dev_cookie cookie, off_t pos, seek_type st)
+{
+	return ERR_UNIMPLEMENTED;
+}
+
+//--------------------------------------------------------------------------------
+static int ide_get_geometry(ide_device* device, void *buf, size_t len)
+{
+	drive_geometry* drive_geometry = buf;
 	
- out:
-  dprintf("ide_stat: exit %X\n",fs);	
-  return ret;
+	if (len < sizeof(drive_geometry))
+		return ERR_VFS_INSUFFICIENT_BUF;
+	
+	drive_geometry->blocks = device->end_block - device->start_block;
+	drive_geometry->heads = device->hardware_device.heads;
+	drive_geometry->cylinders = device->hardware_device.cyls;
+	drive_geometry->sectors = device->hardware_device.sectors;
+	drive_geometry->removable = false;
+	drive_geometry->bytes_per_sector = device->bytes_per_sector;
+	drive_geometry->read_only = false;
+	strcpy(drive_geometry->model, device->hardware_device.model);
+	strcpy(drive_geometry->serial, device->hardware_device.serial);
+	strcpy(drive_geometry->firmware, device->hardware_device.firmware);
+	
+	return NO_ERROR;
 }
 
-static int ide_read(void *_fs, void *_vnode, void *_cookie, void *buf, off_t pos, size_t *len)
+
+//--------------------------------------------------------------------------------
+int ide_ioctl(dev_cookie _cookie, int op, void *buf, size_t len)
 {
-  int			block;
-  int			err = 0;
-  struct ide_fs 	*fs = _fs;
-  ide_cookie		*cookie = _cookie;
-  int			sectors;
-  int			currentSector;
-  int			sectorsToRead;
-  dprintf("ide_read: entry buf 0x%x, pos 0x%x 0x%x, *len 0x%x\n", buf, pos, *len);
-  sem_acquire(fs->sem, 1);
-  if(cookie==NULL)
-    {
-      *len = 0;
-      err = ERR_INVALID_ARGS;
-      goto err;
-    }
-  block = pos / cookie->bytes_per_sector;
-  block += cookie->block_start;
-  sectors = *len / cookie->bytes_per_sector;
+	ide_ident* cookie = (ide_ident*)_cookie;
+	int err = 0;
+	
+	sem_acquire(ide_sem, 1);
+	
+	switch(op) {
+		case DISK_GET_GEOMETRY:
+			err = ide_get_geometry(cookie->dev,buf,len);
+			break;
 
-  if(block + sectors>cookie->block_start + cookie->partition_size)
-    {
-      *len = 0;
-      err = 0;
-      goto err;
-    }
-  currentSector = 0;
-  while(currentSector < sectors)
-    {
+		case DISK_USE_DMA:
+		case DISK_USE_BUS_MASTERING:
+			err = ERR_UNIMPLEMENTED;
+			break;
 
-      sectorsToRead = (sectors - currentSector) > 255 ? 255 : sectors;
-//   	dprintf("block 0x%x, sectorsToRead 0x%x\n", block, sectorsToRead);
-      if(ide_read_block(&devices[(2*cookie->bus) + cookie->device] ,buf,block,sectorsToRead)!=0)
-	{
-	  *len = currentSector * cookie->bytes_per_sector;
-	  err = ERR_IO_ERROR;
-	  goto err;
+		case DISK_USE_PIO:
+			err = NO_ERROR;
+			break;
+
+		case DISK_GET_ACCOUSTIC_LEVEL:
+			if (len != sizeof(int8)) {
+				err = ERR_INVALID_ARGS;
+			} else {
+				err = ide_get_accoustic(cookie->dev, (int8*)buf);
+			}
+			break;
+			
+		case DISK_SET_ACCOUSTIC_LEVEL:
+			if (len != sizeof(int8)) {
+				err = ERR_INVALID_ARGS;
+			} else {
+				err = ide_set_accoustic(cookie->dev,*(int8*)buf);
+			}
+			break;
+
+		default:
+			err = ERR_INVALID_ARGS;
 	}
-      block += sectorsToRead *  cookie->bytes_per_sector;
-      currentSector += sectorsToRead;
-    }
- out:
- err:
-  sem_release(fs->sem, 1);
+	
+	sem_release(ide_sem, 1);
 
-  return err;
+	return err;
 }
 
-static int ide_write(void *_fs, void *_vnode, void *_cookie, const void *buf, off_t pos, size_t *len)
+//--------------------------------------------------------------------------------
+ssize_t ide_read(dev_cookie _cookie, void *buf, off_t pos, ssize_t len)
 {
-  int		block;
-  int		err = 0;
-  struct ide_fs *fs = _fs;
-  ide_cookie	*cookie = _cookie;
-  int		sectors;
-  int		currentSector;
-  int		sectorsToWrite;
-  int       rc;
+	ide_ident*	cookie = (ide_ident*)_cookie;
+	uint32		sectors;
+	uint32		currentSector;
+	uint32		sectorsToRead;
+	uint32		block;
 
-  dprintf("ide_write: entry buf 0x%x, pos 0x%x 0x%x, *len 0x%x\n", buf, pos, *len);
-  sem_acquire(fs->sem, 1);
-  if(cookie==NULL)
-    {
-      *len = 0;
-      err = ERR_INVALID_ARGS;
-      goto err;
-    }
-  block = pos / cookie->bytes_per_sector;
-  block+= cookie->block_start;
-  sectors = *len / cookie->bytes_per_sector;
-  if(block + sectors>cookie->block_start + cookie->partition_size)
-    {
-      *len = 0;
-      err = 0;
-      goto err;
-    }
-  currentSector = 0;
-  while(currentSector < sectors)
-    {
-      sectorsToWrite = (sectors - currentSector) > 255 ? 255 : sectors;
-//   	dprintf("block 0x%x, sectorsToWrite 0x%x\n", block, sectorsToWrite); 
-      rc = ide_write_block(&devices[(2*cookie->bus) + cookie->device],buf,block,sectorsToWrite);
-      if(rc!=0)
-	{
-//	  dprintf("ide_write: ide_write_block returned %d\n", rc);
-	  *len = currentSector * cookie->bytes_per_sector;
-	  err = ERR_IO_ERROR;
-	  goto err;
+	if (cookie == NULL) {
+		return ERR_INVALID_ARGS;
 	}
-      block += sectorsToWrite *  cookie->bytes_per_sector;
-      currentSector += sectorsToWrite;
-    }
- out:
- err:
-  sem_release(fs->sem, 1);
 
-  return err;
+	// Make sure noone else is doing IDE
+	sem_acquire(ide_sem, 1);
+
+	// Calculate start block and number of blocks to read
+	block = pos / cookie->block_size;
+	block += cookie->block_start;
+	sectors = len / cookie->block_size;
+	
+	// correct len to be the actual # of bytes to read
+	len -= len % cookie->block_size;
+	
+	// If it goes beyond the disk/partition, exit
+	if (block + sectors > cookie->block_start + cookie->block_count) {
+		sem_release(ide_sem, 1);
+		return 0;
+	}
+
+	// Start reading the sectors
+	currentSector = 0;
+	while(currentSector < sectors) {
+		// Read max. of 255 sectors at a time
+		sectorsToRead = (sectors - currentSector) > 255 ? 255 : sectors;
+
+		// If the read fails, exit with I/O error
+		if (ide_read_block(cookie->dev, buf, block, sectorsToRead) != 0) {
+			sem_release(ide_sem, 1);
+			return ERR_IO_ERROR;
+		}
+		
+		// Move to next block to read
+		block += sectorsToRead * cookie->block_size;
+		currentSector += sectorsToRead;
+	}
+
+	// Give up 
+	sem_release(ide_sem, 1);
+	
+	return len;
 }
-static int ide_get_geometry(void *_cookie,void *buf,size_t len)
+
+//--------------------------------------------------------------------------------
+ssize_t ide_write(dev_cookie _cookie, const void *buf, off_t pos, ssize_t len)
 {
-  ide_cookie		*cookie = _cookie;
-  ide_device		*device = &devices[(2*cookie->bus) + cookie->device];
-  drive_geometry	*drive_geometry = buf;
-  if(len<sizeof(drive_geometry))
-    return ERR_VFS_INSUFFICIENT_BUF;
+	int			block;
+	ide_ident*	cookie = _cookie;
+	uint32		sectors;
+	uint32		currentSector;
+	uint32		sectorsToWrite;
 
-  drive_geometry->blocks = device->end_block - device->start_block;
-  drive_geometry->heads = device->hardware_device.heads;
-  drive_geometry->cylinders = device->hardware_device.cyls;
-  drive_geometry->sectors = device->hardware_device.sectors;
-  drive_geometry->removable = false;
-  drive_geometry->bytes_per_sector = 512;
-  drive_geometry->read_only = false;
-  strcpy((char*)&drive_geometry->model,(char*)&device->hardware_device.model);
-  strcpy((char*)&drive_geometry->serial,(char*)&device->hardware_device.serial);
-  strcpy((char*)&drive_geometry->firmware,(char*)&device->hardware_device.firmware);
+	dprintf("ide_write: entry buf 0x%x, pos 0x%x 0x%x, *len 0x%x\n", buf, pos, len);
+	if(cookie == NULL) {
+		return ERR_INVALID_ARGS;
+	}
 
-  return 0;
+	// Make sure no other I/O is done
+	sem_acquire(ide_sem, 1);
+	
+	// Get the start pos and block count to write
+	block = pos / cookie->block_size + cookie->block_start;
+	sectors = len / cookie->block_size;
+
+	// If we're writing more than the disk/partition size
+	if (block + sectors > cookie->block_start + cookie->block_count) {
+		// exit without writing
+		sem_release(ide_sem, 1);
+		return 0;
+	}
+	
+	// Loop over sectors to write
+	currentSector = 0;
+	while(currentSector < sectors) {
+		// Write a max of 255 sectors at a time
+		sectorsToWrite = (sectors - currentSector) > 255 ? 255 : sectors;
+		
+		// Write them
+		if (ide_write_block(cookie->dev, buf, block, sectorsToWrite) != 0) {
+			//	  dprintf("ide_write: ide_block returned %d\n", rc);
+			len = currentSector * cookie->block_size;
+			sem_release(ide_sem, 1);
+			return ERR_IO_ERROR;
+		}
+		
+		block += sectorsToWrite * cookie->block_size;
+		currentSector += sectorsToWrite;
+	}
+	
+	sem_release(ide_sem, 1);
+	
+	return len;
 }
-static int ide_ioctl(void *_fs, void *_vnode, void *_cookie, int op, void *buf, size_t len)
+
+//--------------------------------------------------------------------------------
+int ide_canpage(dev_ident ident)
 {
-  int err = 0;
-  struct ide_fs *fs = _fs;
-  sem_acquire(fs->sem,1);
-  switch(op) 
-    {
-    case DISK_GET_GEOMETRY:
-      {
-	err = ide_get_geometry(_cookie,buf,len);
-	break;
-      }
-    case DISK_USE_DMA:
-      {
-	err = 0;
-	break;
-      }
-    case DISK_USE_BUS_MASTERING:
-      {
-	err = 0;
-	break;
-      }
-    case DISK_USE_PIO:
-      {
-	err = 0;
-	break;
-      }
-
-      break;
-    default:
-      err = ERR_INVALID_ARGS;
-    } 
-  sem_release(fs->sem, 1);
-  return err;
+	return false;
 }
 
-static int ide_mount(void **fs_cookie, void *flags, void *covered_vnode, fs_id id, void **root_vnode)
+//--------------------------------------------------------------------------------
+ssize_t ide_readpage(dev_ident ident, iovecs *vecs, off_t pos)
 {
-  struct ide_fs 		*fs;
-  int err;
-  
-  fs = kmalloc(sizeof(struct ide_fs));
-  if(fs == NULL)
-    {
-      err = ERR_NO_MEMORY;
-      goto err;
-    }
-  
-  fs->covered_vnode = covered_vnode;
-  fs->redir_vnode = NULL;
-  fs->id = id;
-  
-  {
-    char temp[64];
-    sprintf(temp, "ide_sem%d", id);
-    
-    fs->sem = sem_create(1, temp);
-    if(fs->sem < 0)
-      {
-	err = ERR_NO_MEMORY;
-	goto err1;
-      }
-  }
-  
-  *root_vnode = (void *)&fs->root_vnode;
-  *fs_cookie = fs;
-  
-  return 0;
-  
- err1:	
-  kfree(fs);
-err:
-  return err;
+	return ERR_UNIMPLEMENTED;
 }
 
-static int ide_unmount(void *_fs)
+//--------------------------------------------------------------------------------
+ssize_t ide_writepage(dev_ident ident, iovecs *vecs, off_t pos)
 {
-  struct ide_fs *fs = _fs;
-
-  sem_delete(fs->sem);
-  kfree(fs);
-  
-  return 0;	
+	return ERR_UNIMPLEMENTED;
 }
 
-static int ide_register_mountpoint(void *_fs, void *_v, void *redir_vnode)
-{
-  struct ide_fs *fs = _fs;
-  
-  fs->redir_vnode = redir_vnode;
-  
-  return 0;
-}
-
-static int ide_unregister_mountpoint(void *_fs, void *_v)
-{
-  struct ide_fs *fs = _fs;
-  
-  fs->redir_vnode = NULL;
-  
-  return 0;
-}
-
-static int ide_dispose_vnode(void *_fs, void *_v)
-{
-  return 0;
-}
-
-struct fs_calls ide_hooks = {
-	&ide_mount,
-	&ide_unmount,
-	&ide_register_mountpoint,
-	&ide_unregister_mountpoint,
-	&ide_dispose_vnode,
-	&ide_open,
-	&ide_seek,
-	&ide_read,
-	&ide_write,
-	&ide_ioctl,
-	&ide_close,
-	&ide_create,
-	&ide_stat,
+//--------------------------------------------------------------------------------
+struct dev_calls ide_hooks = {
+	ide_open,
+	ide_close,
+	ide_freecookie,
+	
+	ide_seek,
+	ide_ioctl,
+	
+	ide_read,
+	ide_write,
+	
+	ide_canpage,
+	ide_readpage,
+	ide_writepage
 };
 
-static	int	ide_interrupt_handler()
+//--------------------------------------------------------------------------------
+static int ide_interrupt_handler(void* data)
 {
-  dprintf("in ide interrupt Handler\n");
-  //  sem_release(rw_sem,1);
-  //sem_acquire(rw_sem,1);
+  dprintf("in ide interrupt handler\n");
   return  INT_RESCHEDULE;
 }
-static	int	ide_attach_device(int bus,int device)
+
+//--------------------------------------------------------------------------------
+ide_ident* ide_create_device_ident(ide_device* dev, int16 partition)
 {
-  char		sTmp[256];
-  int		i;
-  devices[(bus*2) + device].bus = bus;
-  devices[(bus*2) + device].device = device;
-  if(!ide_identify_device(bus,device))
-    {
-      devices[(bus*2) + device].magic = IDE_MAGIC_COOKIE;
-      devices[(bus*2) + device].magic2 = IDE_MAGIC_COOKIE2;
-      sprintf((char *)&sTmp,"/dev/bus/ide/%d/%d/raw",bus,device);
-      sys_create((char *)&sTmp, "", STREAM_TYPE_DEVICE);
-      if(!ide_get_partitions(&devices[(bus*2) + device]))
-	{
-	  for(i=0;i<PARTITION_TBL_SIZE*2;i++)
-	    {
-	      if(devices[(bus*2) + device].partitions[i].partition_type!=0)
-		{
-		  sprintf((char *)&sTmp,"/dev/bus/ide/%d/%d/%d",bus,device,i);
-		  sys_create((char *)&sTmp, "", STREAM_TYPE_DEVICE);
+	ide_ident* ident = kmalloc(sizeof(ide_ident));
+	if (ident != NULL) {
+		ident->dev = dev;
+		ident->block_size = dev->bytes_per_sector;
+		
+		if (partition >= 0 && partition < MAX_PARTITIONS) {
+			ident->block_start = dev->partitions[partition].starting_block;
+			ident->block_count = dev->partitions[partition].sector_count;
 		}
-	    }
-	  return 0;
+		else
+		{
+			ident->block_start = 0;
+			ident->block_count = dev->sector_count;
+		}
 	}
-      else
-	return -1;
-    }
-  return -1;
+	
+	return ident;
 }
-static	char	getHexChar(uint8 value)
+
+//--------------------------------------------------------------------------------
+static bool ide_attach_device(int bus, int device)
 {
-  if(value<10)
-    return value + '0';
-  return 'A' + (value - 10);
+	ide_device*	ide = &devices[(bus*2) + device];
+	ide_ident*	ident = NULL;
+	char		devpath[256];
+	int			part;
+	
+	ide->bus = bus;
+	ide->device = device;
+	
+	if (ide_identify_device(bus, device)) {
+		ide->magic = IDE_MAGIC_COOKIE;
+		ide->magic2 = IDE_MAGIC_COOKIE2;
+
+		if (ide_get_partitions(ide)) {
+			for (part=0; part < NUM_PARTITIONS*2; part++) {
+				if (ide->partitions[part].partition_type != 0 &&
+					(ident=ide_create_device_ident(ide, part)) != NULL) {
+					sprintf(devpath, "disk/ide/ata/%d/%d/%d", bus, device, part);
+					devfs_publish_device(devpath, ident, &ide_hooks);
+				}
+			}
+
+			dprintf("ide_attach_device(bus=%d,dev=%d) rc=true\n", bus, device);
+			
+			return true;
+		}
+	}
+
+	dprintf("ide_attach_device(bus=%d,dev=%d) rc=false\n", bus, device);
+	
+	return false;
 }
-static	void	dumpHexLine(uint8 *buffer,int numberPerLine)
+
+//--------------------------------------------------------------------------------
+static bool ide_attach_buses(unsigned int bus)
 {
-  uint8	*copy = buffer;
-  int	i;
-  for(i=0;i<numberPerLine;i++)
-    {
-      uint8	value1 = getHexChar(((*copy) >> 4));
-      uint8	value2 = getHexChar(((*copy) & 0xF));
-      
-      dprintf("%c%c ",value1,value2);
-      copy++;
-    }
-  copy = buffer;
-  for(i=0;i<numberPerLine;i++)
-    {
-      if(*copy>=' ' && *copy<='Z')
-	  dprintf("%c",*copy);
-      else
-	dprintf(".");
-      copy++;
-    }
-  dprintf("\n");
+	char devpath[256];
+	int found = 0;
+	int dev;
+	
+	for(dev=0; dev < 2; dev++)
+		if (ide_attach_device(bus, dev))
+			found++;
+
+	return(found > 0 ? true : false);
 }
-void	dumpHexBuffer(uint8 *buffer,int size)
-{
-  int	numberPerLine = 8;
-  int	numberOfLines = size / numberPerLine;
-  int	i,j;
-  for(i=0;i<numberOfLines;i++)
-    {
-      dprintf("%d ",i*numberPerLine);
-      dumpHexLine(buffer,numberPerLine);
-      buffer += numberPerLine;
-    }
-  
-}
-static	int	ide_attach_buses()
-{
-  int			i,j;
-  int			found = 0;
-  char		sTmp[256];
-  for(i=0;i<1;i++)
-    {
-      sprintf((char *)&sTmp,"/dev/bus/ide/%d",i);
-      sys_create((char *)&sTmp, "", STREAM_TYPE_DIR);
-      for(j=0;j<2;j++)
-  	{
-	  sprintf((char *)&sTmp,"/dev/bus/ide/%d/%d",i,j);
-	  sys_create((char *)&sTmp, "", STREAM_TYPE_DIR);
-	  if(!ide_attach_device(i,j))
-	    {
-	      sprintf((char *)&sTmp,"/dev/bus/ide/%d/%d/raw",i,j);
-	      sys_create((char *)&sTmp, "", STREAM_TYPE_DEVICE);
-	      found++;
-	    }
-  	}
-    }
-  if(found>0)
-    return 0;
-  return -1;
-}
+
+//--------------------------------------------------------------------------------
+// WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING
+//--------------------------------------------------------------------------------
+// Don't try and attach more then one bus to the driver, as ide_raw_init
+// overwrites globals and you end up writing blocks which were meant
+// for bus #1 to bus #2 :(
+//
+// !!!!!! So, only use the one or the other, _never_ both !!!!!!
+//--------------------------------------------------------------------------------
 int ide_bus_init(kernel_args *ka)
 {
-  int		i;
-  int_set_io_interrupt_handler(0x20 + IDE_INTERRUPT,&ide_interrupt_handler);
-  ide_raw_init(0x1f0,0x3f0);
-  // create device node
-  rw_sem = sem_create(1,"ide-rw");
-  //sem_acquire(rw_sem,1);
-  vfs_register_filesystem("ide_bus_fs", &ide_hooks);
-  sys_create("/dev/bus", "", STREAM_TYPE_DIR);
-  sys_create("/dev/bus/ide", "", STREAM_TYPE_DIR);
-  sys_mount("/dev/bus/ide", "ide_bus_fs");
-  ide_attach_buses();
-  #if 0
-  {
-    int		len = 128*512;
-    int		fd = sys_open("/dev/bus/ide/0/0/raw","",STREAM_TYPE_DEVICE);
-    char	*block = (char*)kmalloc(len);
-    if(block==NULL)
-      panic("unable to allocate test buffer");
+	// attach ide bus #1
+	int_set_io_interrupt_handler(0x20 + IDE_0_INTERRUPT, &ide_interrupt_handler, NULL);
+	ide_raw_init(0x1f0, 0x3f0);
+	ide_attach_buses(0);
 
-    for(i=0;i<len;i++)
-      block[i] = i % 256;
-    dprintf("IDE FD is %d\n",fd);
-    if(fd!=-1)
-      {
-	if(sys_read(fd,block,0,&len)!=0)
-	  dprintf("error while writing \n");
-	sys_close(fd);
-	dprintf("read 1 sector done\n");
-      }
-    kfree(block);
-  }
-  #endif
-  return 0;
+	// attach ide bus #2
+//	int_set_io_interrupt_handler(0x20 + IDE_1_INTERRUPT, &ide_interrupt_handler, NULL);
+//	ide_raw_init(0x170, 0x370);
+//	ide_attach_buses(1);
+	
+	return 0;
 }
-
-

@@ -1,10 +1,16 @@
+/*
+** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Distributed under the terms of the NewOS License.
+*/
+
 #ifndef __PARTITION_H
 #define __PARTITION_H
 
-#define  PARTITION_MAGIC    0xaa55
-#define  PART_MAGIC_OFFSET  0x01fe
-#define  PARTITION_OFFSET   0x01be
-#define  PARTITION_TBL_SIZE 4
+#define  PARTITION_MAGIC1	0x55
+#define  PARTITION_MAGIC2	0xaa
+#define  PART_MAGIC_OFFSET	0x01fe
+#define  PARTITION_OFFSET	0x01be
+#define  NUM_PARTITIONS		4
 
 #define  PTCHSToLBA(c, h, s, scnt, hcnt) ((s) & 0x3f) + \
     (scnt) * ( (h) + (hcnt) * ((c) | (((s) & 0xc0) << 2)))
@@ -58,8 +64,7 @@ typedef enum PartitionTypes
   PTBBT =           0xff
 } partitionTypes;
 
-#define PartitionIsExtended(P)  \
-    ((P)->PartitionType == PTDosExtended)
+#define PartitionIsExtended(P) ((P)->PartitionType == PTDosExtended)
 
 typedef struct sPartition 
 {
@@ -71,11 +76,9 @@ typedef struct sPartition
   unsigned char   ending_head;
   unsigned char   ending_sector;
   unsigned char   ending_cylinder;
-  unsigned int  starting_block;
-  unsigned int  sector_count;
+  unsigned int    starting_block;
+  unsigned int    sector_count;
 
 } tPartition;
 
 #endif
-
-
