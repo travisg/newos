@@ -1,29 +1,32 @@
 OUTPUT_FORMAT("elf32-shl", "elf32-shl", "elf32-shl")
 OUTPUT_ARCH(sh)
 
-ENTRY(_start)
+ENTRY(__start)
 SEARCH_DIR("libgcc");
 SECTIONS
 {
-/*	. = 0x00100000 + SIZEOF_HEADERS; */
-	. = 0x00100000 + 0x80;
+	. = 0x00100000 + SIZEOF_HEADERS;
 
 	/* text/read-only data */
 	.text :	{ *(.text .gnu.linkonce.t.*) }
 
-	__ctor_list = .;
+	___ctor_list = .;
 	.ctors : { *(.ctors) }
-	__ctor_end = .;
+	___ctor_end = .;
 
-	.rodata : { *(.rodata) }
+  	.rodata :
+	{ 
+ 		*(.rodata)
+ 		. = ALIGN(0x1000);
+ 	} =0x9000
 
 	/* writable data  */
 	. = ALIGN(0x1000);
-	__data_start = .;
+	___data_start = .;
 	.data : { *(.data .gnu.linkonce.d.*) }
 
 	/* unintialized data (in same segment as writable data) */
-	__bss_start = .;
+	___bss_start = .;
 	.bss : { *(.bss) }
 
 	. = ALIGN(0x1000);

@@ -12,6 +12,8 @@
 #include <libc/string.h>
 #include <libc/printf.h>
 
+#ifdef ARCH_i386
+
 // contains a bunch of beos defines
 #include "beos_p.h"
 
@@ -519,5 +521,17 @@ image_id beos_load_beos_driver(const char *name)
 
 	return id;
 }
+#else
 
+int beos_layer_init()
+{
+	return 0;
+}
+
+image_id beos_load_beos_driver(const char *name)
+{
+	return ERR_GENERAL;
+}
+
+#endif
 

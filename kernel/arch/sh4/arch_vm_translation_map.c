@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -26,14 +26,9 @@ typedef struct vm_translation_map_arch_info_struct {
 
 static vcpu_struct *vcpu;
 
-#define CHATTY_TMAP 1
+#define CHATTY_TMAP 0
 
 #define PHYS_TO_P1(x) ((x) + P1_AREA)
-
-static void invl_page(addr vaddr)
-{
-	// XXX implement
-}
 
 static void destroy_tmap(vm_translation_map *map)
 {
@@ -52,15 +47,21 @@ static void destroy_tmap(vm_translation_map *map)
 
 static int lock_tmap(vm_translation_map *map)
 {
-	acquire_spinlock(&map->lock);	
+//	dprintf("lock_tmap: map 0x%x\n", map);
+	if(recursive_lock_lock(&map->lock) == true) {
+		// we were the first one to grab the lock
+//		dprintf("clearing invalidated page count\n");
+//		map->arch_data->num_invalidate_pages = 0;
+	}
 
-	return -1;
-}
+	return 0;}
 
 static int unlock_tmap(vm_translation_map *map)
 {
-	release_spinlock(&map->lock);
-
+	if(recursive_lock_get_recursion(&map->lock) == 1) {
+		// XXX flush any TLB ents we wanted to
+	}
+	recursive_lock_unlock(&map->lock);
 	return -1;
 }
 
@@ -95,10 +96,10 @@ static int map_tmap(vm_translation_map *map, addr va, addr pa, unsigned int lock
 
 		page = vm_page_allocate_page(PAGE_STATE_CLEAR);
 		pgtable = page->ppn * PAGE_SIZE;
-		
+
 		// XXX remove when real clear pages support is there
 		memset((void *)PHYS_TO_P1(pgtable), 0, PAGE_SIZE);
-		
+
 		pd[index].ppn = pgtable >> 12;
 		pd[index].v = 1;
 	}
@@ -117,8 +118,8 @@ static int map_tmap(vm_translation_map *map, addr va, addr pa, unsigned int lock
 	pt[index].sh = 0;
 	pt[index].d = 0;
 	pt[index].v = 1;
-		
-	invl_page(va);
+
+	sh4_invl_page(va);
 
 	return 0;
 }
@@ -129,40 +130,47 @@ static int unmap_tmap(vm_translation_map *map, addr start, addr end)
 	struct ptent *pt;
 	unsigned int index;
 
-	if(end - start > PAGE_SIZE)
-		panic("unmap_tmap: asked to unmap more than one page, not implemented\n");
-	
-	if(map->arch_data->is_user) {
-		if(start >= P1_AREA) {
-			// invalid
-			panic("map_tmap: asked to map va 0x%x in user space aspace\n", start);
+	start = ROUNDOWN(start, PAGE_SIZE);
+	end = ROUNDUP(end, PAGE_SIZE);
+
+#if CHATTY_TMAP
+		dprintf("unmap_tmap: asked to free pages 0x%x to 0x%x\n", start, end);
+#endif
+
+restart:
+	while(start >= end) {
+		if(map->arch_data->is_user) {
+			if(start >= P1_AREA) {
+				// invalid
+				panic("unmap_tmap: asked to unmap va 0x%x in user space aspace\n", start);
+			}
+			pd = (struct pdent *)map->arch_data->pgdir_phys;
+			index = start >> 22;
+		} else {
+			if(start < P3_AREA && start >= P4_AREA) {
+				panic("unmap_tmap: asked to unmap va 0x%x in kernel space aspace\n", start);
+			}
+			pd = (struct pdent *)vcpu->kernel_pgdir;
+			index = (start & 0x7fffffff) >> 22;
 		}
-		pd = (struct pdent *)map->arch_data->pgdir_phys;
-		index = start >> 22;
-	} else {
-		if(start < P3_AREA && start >= P4_AREA) {
-			panic("map_tmap: asked to map va 0x%x in kernel space aspace\n", start);
-		}
-		pd = (struct pdent *)vcpu->kernel_pgdir;
-		index = (start & 0x7fffffff) >> 22;
+
+		if(pd[index].v == 0)
+			continue;
+
+		// get the pagetable
+		pt = (struct ptent *)PHYS_TO_P1(pd[index].ppn << 12);
+		index = (start >> 12) & 0x000003ff;
+
+		if(pt[index].v == 0)
+			return -1;
+
+		pt[index].v = 0;
+
+		start += PAGE_SIZE;
+
+		sh4_invl_page(start);
 	}
-
-	if(pd[index].v == 0)
-		return -1;
-	
-	// get the pagetable
-	pt = (struct ptent *)PHYS_TO_P1(pd[index].ppn << 12);
-	index = (start >> 12) & 0x000003ff;
-
-	if(pt[index].v == 0)
-		return -1;
-
-	pt[index].v = 0;
-
-	invl_page(start);
-	
 	return 0;
-
 }
 
 // XXX currently assumes this translation map is active
@@ -186,24 +194,24 @@ static int query_tmap(vm_translation_map *map, addr va, addr *out_physical, unsi
 		pd = (struct pdent *)vcpu->kernel_pgdir;
 		index = (va & 0x7fffffff) >> 22;
 	}
-	
+
 	if(pd[index].v == 0) {
 		return -1;
 	}
-	
+
 	// get the pagetable
 	pt = (struct ptent *)PHYS_TO_P1(pd[index].ppn << 12);
 	index = (va >> 12) & 0x000003ff;
-	
+
 	if(pt[index].v == 0) {
 		return -1;
 	}
-	*out_physical = pt[index].ppn  << 12;	
-	
+	*out_physical = pt[index].ppn  << 12;
+
 	// XXX fill this
 	*out_flags = 0;
 
-	return 0;	
+	return 0;
 }
 
 static addr get_mapped_size_tmap(vm_translation_map *map)
@@ -217,6 +225,21 @@ static int protect_tmap(vm_translation_map *map, addr base, addr top, unsigned i
 	return -1;
 }
 
+static int get_physical_page_tmap(addr pa, addr *va, int flags)
+{
+	if(pa >= PHYS_ADDR_SIZE)
+		panic("get_physical_page_tmap: passed invalid address 0x%x\n", pa);
+	*va = PHYS_ADDR_TO_P1(pa);
+	return NO_ERROR;
+}
+
+static int put_physical_page_tmap(addr va)
+{
+	if(va < P1_AREA && va >= P2_AREA)
+		panic("put_physical_page_tmap: bad address passed 0x%x\n", va);
+	return NO_ERROR;
+}
+
 static vm_translation_map_ops tmap_ops = {
 	destroy_tmap,
 	lock_tmap,
@@ -225,18 +248,21 @@ static vm_translation_map_ops tmap_ops = {
 	unmap_tmap,
 	query_tmap,
 	get_mapped_size_tmap,
-	protect_tmap
+	protect_tmap,
+	get_physical_page_tmap,
+	put_physical_page_tmap
 };
 
 int vm_translation_map_create(vm_translation_map *new_map, bool kernel)
 {
 	if(new_map == NULL)
 		return -1;
-	
+
 	// initialize the new object
 	new_map->ops = &tmap_ops;
-	new_map->lock = 0;
 	new_map->map_count = 0;
+	if(recursive_lock_create(&new_map->lock) < 0)
+		return ERR_NO_MEMORY;
 
 	new_map->arch_data = kmalloc(sizeof(vm_translation_map_arch_info));
 	if(new_map == NULL)
@@ -264,14 +290,14 @@ int vm_translation_map_create(vm_translation_map *new_map, bool kernel)
 		(addr)new_map->arch_data->pgdir_phys = vcpu->kernel_pgdir;
 		new_map->arch_data->is_user = false;
 	}
-	
+
 	return 0;
 }
 
 int vm_translation_map_module_init(kernel_args *ka)
 {
 	vcpu = ka->arch_args.vcpu;
-	
+
 	return 0;
 }
 
@@ -303,9 +329,9 @@ int vm_translation_map_quick_map(kernel_args *ka, addr va, addr pa, unsigned int
 		unsigned int pgtable;
 
 		pgtable = (*get_free_page)(ka) * PAGE_SIZE;
-		
+
 		memset((void *)PHYS_TO_P1(pgtable), 0, PAGE_SIZE);
-		
+
 		pd[index].ppn = pgtable >> 12;
 		pd[index].v = 1;
 	}
@@ -324,8 +350,8 @@ int vm_translation_map_quick_map(kernel_args *ka, addr va, addr pa, unsigned int
 	pt[index].sh = 0;
 	pt[index].d = 0;
 	pt[index].v = 1;
-		
-	invl_page(va);
+
+	sh4_invl_page(va);
 
 	return 0;
 }

@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -12,7 +12,7 @@
 
 int arch_proc_init_proc_struct(struct proc *p, bool kernel)
 {
-#if 0	
+#if 0
 	if(!kernel) {
 		unsigned int page;
 		if(vm_get_free_page(&page) < 0) {
@@ -34,10 +34,10 @@ int arch_thread_init_thread_struct(struct thread *t)
 	return 0;
 }
 
-int arch_thread_initialize_kthread_stack(struct thread *t, int (*start_func)(void), void (*entry_func)(void))
+int arch_thread_initialize_kthread_stack(struct thread *t, int (*start_func)(void), void (*entry_func)(void), void (*exit_func)(void))
 {
-	unsigned int *kstack = (unsigned int *)t->kernel_stack_region->base;
-	unsigned int kstack_size = t->kernel_stack_region->size;
+	unsigned int *kstack = (unsigned int *)t->kernel_stack_base;
+	unsigned int kstack_size = KSTACK_SIZE;
 	unsigned int *kstack_top = kstack + kstack_size / sizeof(unsigned int);
 	int i;
 
@@ -46,7 +46,7 @@ int arch_thread_initialize_kthread_stack(struct thread *t, int (*start_func)(voi
 
 	// set the final return address to be thread_kthread_exit
 	kstack_top--;
-	*kstack_top = (unsigned int)&thread_kthread_exit;
+	*kstack_top = (unsigned int)exit_func;
 
 	// set the return address to be the start of the first function
 	kstack_top--;
@@ -78,7 +78,7 @@ void arch_thread_context_switch(struct thread *t_from, struct thread *t_to)
 {
 #if 0
 	int i;
-	dprintf("arch_thread_context_switch: 0x%x->0x%x to sp 0x%x\n", 
+	dprintf("arch_thread_context_switch: 0x%x->0x%x to sp 0x%x\n",
 		t_from->id, t_to->id, t_to->arch_info.sp);
 #endif
 #if 0
@@ -86,8 +86,8 @@ void arch_thread_context_switch(struct thread *t_from, struct thread *t_to)
 		dprintf("sp[%d] = 0x%x\n", i, t_to->arch_info.sp[i]);
 	}
 #endif
-	sh4_set_kstack(t_to->kernel_stack_region->base + KSTACK_SIZE);
-	
+	sh4_set_kstack(t_to->kernel_stack_base + KSTACK_SIZE);
+
 	if(t_to->proc->aspace != NULL) {
 		sh4_set_user_pgdir(vm_translation_map_get_pgdir(&t_to->proc->aspace->translation_map));
 	}
@@ -107,9 +107,14 @@ void arch_thread_enter_uspace(addr entry, addr ustack_top)
 
     int_disable_interrupts();
 
-    sh4_set_kstack(thread_get_current_thread()->kernel_stack_region->base + KSTACK_SIZE);
+    sh4_set_kstack(thread_get_current_thread()->kernel_stack_base + KSTACK_SIZE);
 
     sh4_enter_uspace(entry, ustack_top - 4);
 	// never get to here
+}
+
+void arch_thread_switch_kstack_and_call(struct thread *t, addr new_kstack, void (*func)(void *), void *arg)
+{
+	sh4_switch_stack_and_call(new_kstack, func, arg);
 }
 

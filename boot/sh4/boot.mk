@@ -30,7 +30,7 @@ CLEAN += stage2clean
 
 SEMIFINAL = $(BOOT_DIR)/final.bootdir
 
-$(SEMIFINAL): $(STAGE2) $(KERNEL) $(APPS) tools
+$(SEMIFINAL): $(STAGE2) $(KERNEL) $(KERNEL_ADDONS) $(APPS) tools
 	$(BOOTMAKER) $(BOOT_DIR)/config.ini -o $(SEMIFINAL)
 
 STAGE1_OBJS = \

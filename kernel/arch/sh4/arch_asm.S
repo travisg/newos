@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -7,7 +7,7 @@
 .text
 FUNC(reboot)
 	mov.l	disable_exceptions_addr,r1
-	jsr	@r1	
+	jsr	@r1
 	nop
 	mov	#0,r0
 	mov.l	r1,@r0
@@ -37,7 +37,7 @@ FUNC(atomic_add)
 	mov.l	restore_interrupts_addr,r1
 	jsr	@r1
 	mov	r0,r4
-	
+
 	/* return value will be old value */
 	mov	r8,r0
 
@@ -65,7 +65,7 @@ FUNC(atomic_and)
 	mov.l	restore_interrupts_addr,r1
 	jsr	@r1
 	mov	r0,r4
-	
+
 	/* return value will be old value */
 	mov	r8,r0
 
@@ -93,7 +93,7 @@ FUNC(atomic_or)
 	mov.l	restore_interrupts_addr,r1
 	jsr	@r1
 	mov	r0,r4
-	
+
 	/* return value will be old value */
 	mov	r8,r0
 
@@ -102,10 +102,62 @@ FUNC(atomic_or)
 	rts
 	mov.l	@r15+,r8
 
-/* XXX finish */
-FUNC(test_and_set)
-	rts
+FUNC(atomic_set)
+	mov.l	r8,@-r15
+	sts.l	pr,@-r15
+
+	/* disable interrupts */
+	mov.l	disable_interrupts_addr,r1
+	jsr	@r1
 	nop
+
+	/* load the value, save it, and store the new value */
+	mov.l	@r4,r8
+	mov.l	r5,@r4
+
+	/* restore interrupts */
+	mov.l	restore_interrupts_addr,r1
+	jsr	@r1
+	mov	r0,r4
+
+	/* return value will be old value */
+	mov	r8,r0
+
+	/* restore the stack */
+	lds.l	@r15+,pr
+	rts
+	mov.l	@r15+,r8
+
+/* int test_and_set(int *val, int set_to, int test_val) */
+FUNC(test_and_set)
+	mov.l	r8,@-r15
+	sts.l	pr,@-r15
+
+	/* disable interrupts */
+	mov.l	disable_interrupts_addr,r1
+	jsr	@r1
+	nop
+
+	/* load the value, save it, and store the new value */
+	mov.l	@r4,r8         /* load the dest, it will be the return value */
+	cmp/eq	r8,r6          /* compare against the test_val */
+	bf	_not_equal
+
+	mov.l	r5,@r4         /* put the set_to value into the target */
+
+_not_equal:
+	/* restore interrupts */
+	mov.l	restore_interrupts_addr,r1
+	jsr	@r1
+	mov	r0,r4
+
+	/* return value will be old value */
+	mov	r8,r0
+
+	/* restore the stack */
+	lds.l	@r15+,pr
+	rts
+	mov.l	@r15+,r8
 
 .align 2
 disable_interrupts_addr:	.long	_arch_int_disable_interrupts
@@ -115,10 +167,10 @@ FUNC(disable_exceptions)
 	mov.l	bl_bit_mask,r0
 	stc	sr,r1
 	or	r0,r1
-	ldc	r1,sr			/* turn off interrupts/exceptions */		
+	ldc	r1,sr			/* turn off interrupts/exceptions */
 	rts
 	nop
-	
+
 FUNC(enable_exceptions)
 	mov.l	bl_bit_mask,r0
 	not	r0,r0
@@ -129,7 +181,7 @@ FUNC(enable_exceptions)
 	nop
 
 .align 2
-bl_bit_mask:	.long	0x10000000
+bl_bit_mask:	.long	0x000000f0
 
 FUNC(arch_int_restore_interrupts)
 	mov.l	inverse_imask_bit_mask,r0
@@ -139,7 +191,7 @@ FUNC(arch_int_restore_interrupts)
 	ldc	r1,sr			/* put the new status into the sr register */
 	rts
 	nop
-	
+
 FUNC(arch_int_enable_interrupts)
 	mov.l	inverse_imask_bit_mask,r0
 	stc	sr,r1			/* load the sr register */
@@ -155,7 +207,7 @@ FUNC(arch_int_disable_interrupts)
 	mov.l	imask_bit_mask,r2
 	stc	sr,r1			/* load the sr register */
 	mov	r1,r0			/* save the old sr register */
-	or	r2,r1			/* or in 0xf for the imask */	
+	or	r2,r1			/* or in 0xf for the imask */
 	ldc	r1,sr			/* set the new sr register with the interrupts masked */
 	rts
 	and	r2,r0			/* make sure the return value contains only the imask part */
@@ -216,6 +268,12 @@ _fc_loop:
 	nop
 	bra	_fc_loop
 	nop
+
+// void sh4_switch_stack_and_call(addr stack, void (*func)(void *), void *arg);
+FUNC(sh4_switch_stack_and_call)
+	mov		r4,r15
+	jsr		@r5
+	mov		r6,r4
 
 // void sh4_enter_uspace(addr entry, addr ustack_top);
 FUNC(sh4_enter_uspace)

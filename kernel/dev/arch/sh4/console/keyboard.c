@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -6,9 +6,9 @@
 
 #include "keyboard.h"
 
-int keyboard_read(void *_buf, size_t *len)
+ssize_t keyboard_read(void *_buf, size_t len)
 {
-	return -1;	
+	return -1;
 }
 
 int handle_keyboard_interrupt()

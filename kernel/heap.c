@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -27,7 +27,7 @@ struct heap_page {
 	unsigned short in_use : 1;
 } PACKED;
 
-static struct heap_page *heap_alloc_table; 
+static struct heap_page *heap_alloc_table;
 static addr heap_base_ptr;
 static addr heap_base;
 static addr heap_size;
@@ -88,9 +88,9 @@ static void dump_bin(int bin_index)
 static void dump_bin_list(int argc, char **argv)
 {
 	int i;
-	
+
 	dprintf("%d heap bins at 0x%x:\n", bin_count, bins);
-	
+
 	for(i=0; i<bin_count; i++) {
 		dump_bin(i);
 	}
@@ -134,7 +134,7 @@ static char *raw_alloc(unsigned int size, int bin_index)
 	char *retval;
 	struct heap_page *page;
 	unsigned int addr;
-	
+
 	new_heap_ptr = heap_base_ptr + PAGE_ALIGN(size);
 	if(new_heap_ptr > heap_base + heap_size) {
 		panic("heap overgrew itself!\n");
@@ -150,7 +150,7 @@ static char *raw_alloc(unsigned int size, int bin_index)
 		else
 			page->free_count = 1;
 	}
-	
+
 	retval = (char *)heap_base_ptr;
 	heap_base_ptr = new_heap_ptr;
 	return retval;
@@ -168,7 +168,7 @@ void *kmalloc(unsigned int size)
 #endif
 
 	mutex_lock(&heap_lock);
-	
+
 	for (bin_index = 0; bin_index < bin_count; bin_index++)
 		if (size <= bins[bin_index].element_size)
 			break;
@@ -193,7 +193,7 @@ void *kmalloc(unsigned int size)
 			address = bins[bin_index].raw_list;
 			bins[bin_index].raw_list += bins[bin_index].element_size;
 		}
-		
+
 		bins[bin_index].alloc_count++;
 		page = &heap_alloc_table[((unsigned int)address - heap_base) / PAGE_SIZE];
 		page[0].free_count--;
@@ -210,7 +210,7 @@ void *kmalloc(unsigned int size)
 
 out:
 	mutex_unlock(&heap_lock);
-	
+
 #if MAKE_NOIZE
 	dprintf("kmalloc: asked to allocate size %d, returning ptr = %p\n", size, address);
 #endif
@@ -237,7 +237,7 @@ void kfree(void *address)
 
 	page = &heap_alloc_table[((unsigned)address - heap_base) / PAGE_SIZE];
 
-#if MAKE_NOIZE	
+#if MAKE_NOIZE
 	dprintf("kfree: page 0x%x: bin_index %d, free_count %d\n", page, page->bin_index, page->free_count);
 #endif
 

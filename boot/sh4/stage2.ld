@@ -1,6 +1,11 @@
 OUTPUT_FORMAT("elf32-shl", "elf32-shl", "elf32-shl")
 OUTPUT_ARCH(sh)
-
+  PHDRS 
+  {
+  	text PT_LOAD;
+  	data PT_LOAD;
+  }
+  
 ENTRY(__start)
 SECTIONS
 {

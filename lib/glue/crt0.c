@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -22,12 +22,12 @@ int _start()
 
 	__heap_init();
 	__stdio_init();
-	
+
 	retcode = main();
-	
+
 	__stdio_deinit();
 	sys_exit(retcode);
-	return 0;	
+	return 0;
 }
 
 void _call_ctors()

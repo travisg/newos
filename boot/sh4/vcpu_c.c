@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -86,7 +86,7 @@ int vcpu_init(kernel_args *ka)
 	int i;
 	unsigned int sr;
 	unsigned int vbr;
-	
+
 	dprintf("vcpu_init: entry\n");
 
 	memset(&kernel_struct, 0, sizeof(kernel_struct));
@@ -118,7 +118,7 @@ int vcpu_init(kernel_args *ka)
 	sr = get_sr();
 	sr &= 0xefffffff;
 	set_sr(sr);
-	
+
 	ka->arch_args.vcpu = &kernel_struct;
 
 	// enable the mmu
@@ -164,13 +164,13 @@ static void tlb_map(unsigned int vpn, struct ptent *ptent, unsigned int tlb_ent,
 	} u;
 
 	ptent->tlb_ent = tlb_ent;
-	
+
 	u.n[0] = 0;
 	u.data.a.asid = asid;
 	u.data.a.vpn = vpn << 2;
 	u.data.a.dirty = ptent->d;
 	u.data.a.valid = 1;
-	
+
 	u.n[1] = 0;
 	u.data.da1.ppn = ptent->ppn << 2;
 	u.data.da1.valid = 1;
@@ -181,7 +181,7 @@ static void tlb_map(unsigned int vpn, struct ptent *ptent, unsigned int tlb_ent,
 	u.data.da1.dirty = ptent->d;
 	u.data.da1.sh = ptent->sh;
 	u.data.da1.wt = ptent->wt;
-	
+
 	u.n[2] = 0;
 
 	*((unsigned int *)(UTLB | (next_utlb_ent << UTLB_ADDR_SHIFT))) = u.n[0];
@@ -193,14 +193,14 @@ unsigned int tlb_miss(unsigned int excode, unsigned int pc)
 {
 	struct pdent *pd;
 	struct ptent *ent;
-	unsigned int fault_addr = *(unsigned int *)TEA; 
+	unsigned int fault_addr = *(unsigned int *)TEA;
 	unsigned int shifted_fault_addr;
 	unsigned int asid;
 
 #if CHATTY_TLB
 	dprintf("tlb_miss: excode 0x%x, pc 0x%x, sgr 0x%x, fault_address 0x%x\n", excode, pc, get_sgr(), fault_addr);
 #endif
-	
+
 	if(fault_addr >= P1_AREA) {
 		pd = (struct pdent *)kernel_struct.kernel_pgdir;
 		asid = kernel_struct.kernel_asid;
@@ -209,7 +209,7 @@ unsigned int tlb_miss(unsigned int excode, unsigned int pc)
 		pd = (struct pdent *)kernel_struct.user_pgdir;
 		asid = kernel_struct.user_asid;
 		shifted_fault_addr = fault_addr;
-	}	
+	}
 
 	ent = get_ptent(pd, shifted_fault_addr);
 	if(ent == NULL || ent->v == 0) {
@@ -217,7 +217,7 @@ unsigned int tlb_miss(unsigned int excode, unsigned int pc)
 			return EXCEPTION_PAGE_FAULT_READ;
 		else
 			return EXCEPTION_PAGE_FAULT_WRITE;
-	}	
+	}
 
 #if CHATTY_TLB
 	dprintf("found entry. vaddr 0x%x maps to paddr 0x%x\n",
@@ -226,7 +226,7 @@ unsigned int tlb_miss(unsigned int excode, unsigned int pc)
 
 
 	if(excode == 0x3) {
-		// this is a tlb miss because of a write, so 
+		// this is a tlb miss because of a write, so
 		// go ahead and mark it dirty
 		ent->d = 1;
 	}
@@ -246,11 +246,11 @@ unsigned int tlb_miss(unsigned int excode, unsigned int pc)
 		static int clear_all = 0;
 		if(fault_addr == 0x7ffffff8)
 			clear_all = 1;
-		if(clear_all) 
+		if(clear_all)
 			vcpu_clear_all_utlb_entries();
 	}
 #endif
-	
+
 	tlb_map(fault_addr >> 12, ent, next_utlb_ent, asid);
 #if CHATTY_TLB
 	vcpu_dump_utlb_entry(next_utlb_ent);
@@ -266,12 +266,12 @@ unsigned int tlb_initial_page_write(unsigned int excode, unsigned int pc)
 {
 	struct pdent *pd;
 	struct ptent *ent;
-	unsigned int fault_addr = *(unsigned int *)TEA; 
+	unsigned int fault_addr = *(unsigned int *)TEA;
 	unsigned int shifted_fault_addr;
 	unsigned int asid;
 
 #if CHATTY_TLB
-	dprintf("tlb_initial_page_write: excode 0x%x, pc 0x%x, fault_address 0x%x\n", 
+	dprintf("tlb_initial_page_write: excode 0x%x, pc 0x%x, fault_address 0x%x\n",
 		excode, pc, fault_addr);
 #endif
 
@@ -283,16 +283,16 @@ unsigned int tlb_initial_page_write(unsigned int excode, unsigned int pc)
 		pd = (struct pdent *)kernel_struct.user_pgdir;
 		asid = kernel_struct.user_asid;
 		shifted_fault_addr = fault_addr;
-	}	
+	}
 
 	ent = get_ptent(pd, shifted_fault_addr);
 	if(ent == NULL || ent->v == 0) {
 		// if we're here, the page table is
-		// out of sync with the tlb cache. 
+		// out of sync with the tlb cache.
 		// time to die.
 		dprintf("tlb_ipw exception called but no page table ent exists!\n");
 		for(;;);
-	}	
+	}
 
 	{
 		struct utlb_addr_array   *a;
@@ -322,7 +322,7 @@ void vcpu_dump_itlb_entry(int ent)
 	*(int *)&data.a = *((int *)(ITLB | (ent << ITLB_ADDR_SHIFT)));
 	*(int *)&data.da1 = *((int *)(ITLB1 | (ent << ITLB_ADDR_SHIFT)));
 	*(int *)&data.da2 = *((int *)(ITLB2 | (ent << ITLB_ADDR_SHIFT)));
-	
+
 	dprintf("itlb[%d] = \n", ent);
 	dprintf(" asid = %d\n", data.a.asid);
 	dprintf(" valid = %d\n", data.a.valid);
@@ -331,7 +331,7 @@ void vcpu_dump_itlb_entry(int ent)
 }
 
 void vcpu_clear_all_itlb_entries()
-{	
+{
 	int i;
 	for(i=0; i<4; i++) {
 		*((int *)(ITLB | (i << ITLB_ADDR_SHIFT))) = 0;
@@ -356,7 +356,7 @@ void vcpu_dump_utlb_entry(int ent)
 	*(int *)&data.a = *((int *)(UTLB | (ent << UTLB_ADDR_SHIFT)));
 	*(int *)&data.da1 = *((int *)(UTLB1 | (ent << UTLB_ADDR_SHIFT)));
 	*(int *)&data.da2 = *((int *)(UTLB2 | (ent << UTLB_ADDR_SHIFT)));
-	
+
 	dprintf("utlb[%d] = \n", ent);
 	dprintf(" asid = %d\n", data.a.asid);
 	dprintf(" valid = %d\n", data.a.valid);
@@ -366,7 +366,7 @@ void vcpu_dump_utlb_entry(int ent)
 }
 
 void vcpu_clear_all_utlb_entries()
-{	
+{
 	int i;
 	for(i=0; i<64; i++) {
 		*((int *)(UTLB | (i << UTLB_ADDR_SHIFT))) = 0;
@@ -374,7 +374,7 @@ void vcpu_clear_all_utlb_entries()
 		*((int *)(UTLB2 | (i << UTLB_ADDR_SHIFT))) = 0;
 	}
 }
-		
+
 void vcpu_dump_all_utlb_entries()
 {
 	int i;

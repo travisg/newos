@@ -17,7 +17,7 @@ BUS = $(BUS_OBJ_DIR)/bus.o
 include $(BUS_DIR)/bus_$(ARCH).mk
 
 $(BUS): $(BUS_OBJS)
-	$(LD) -r -o $@ $(BUS_OBJS)
+	$(LD) $(GLOBAL_LDFLAGS) -r -o $@ $(BUS_OBJS)
 
 busses: $(BUS)
 

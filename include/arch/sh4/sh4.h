@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -28,6 +28,8 @@
 #define PHYS_ADDR_TO_P1(x) (((unsigned int)(x)) + P1_AREA)
 #define PHYS_ADDR_TO_P2(x) (((unsigned int)(x)) + P2_AREA)
 #define P1_TO_PHYS_ADDR(x) (((unsigned int)(x)) - P1_AREA)
+
+#define PHYS_ADDR_SIZE     (0x1fffffff+1)
 
 #define PAGE_SIZE	4096
 #define PAGE_SIZE_1K	0

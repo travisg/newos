@@ -53,7 +53,7 @@ ifeq ($(ARCH),i386)
 		AR = i386-linux-ar
 		OBJCOPY = i386-linux-objcopy
 	endif
-	GLOBAL_CFLAGS = -O -DNEWOS=1
+	GLOBAL_CFLAGS = -O
 	KERNEL_CFLAGS = -fno-pic
 	USER_CFLAGS = -fpic
 	GLOBAL_LDFLAGS =
@@ -68,6 +68,8 @@ ifeq ($(ARCH),sh4)
 	AR = sh-elf-ar
 	OBJCOPY = sh-elf-objcopy
 	GLOBAL_CFLAGS = -ml -m4 -mhitachi -O
+	KERNEL_CFLAGS = -fno-pic
+	USER_CFLAGS = -fpic
 	GLOBAL_LDFLAGS = -EL
 	LIBGCC = -lgcc
 	LIBGCC_PATH = lib/libgcc/$(ARCH)/ml/m4-single-only
@@ -143,7 +145,7 @@ endif
 
 OBJ_DIR = obj.$(ARCH)
 
-GLOBAL_CFLAGS += -Wall -W -Wno-multichar -Wno-unused -nostdinc -fno-builtin -DARCH_$(ARCH)
+GLOBAL_CFLAGS += -Wall -W -Wno-multichar -Wno-unused -nostdinc -fno-builtin -DARCH_$(ARCH) -DNEWOS=1
 
 # sub makefiles are responsible for adding to these
 DEPS =

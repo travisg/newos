@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -14,6 +14,8 @@
 #include <kernel/syscalls.h>
 
 #include <kernel/arch/sh4/cpu.h>
+
+#define MAX_ARGS 16
 
 struct vector *vector_table;
 
@@ -34,11 +36,11 @@ static int sh4_handle_exception(void *_frame)
 	struct iframe *frame = (struct iframe *)_frame;
 	int ret;
 
-	// NOTE: not safe to do anything that may involve the FPU before 
+	// NOTE: not safe to do anything that may involve the FPU before
 	// it is certain it is not an fpu exception
 
-//	dprintf("sh4_handle_exception: frame 0x%x code 0x%x, pc 0x%x, ssr 0x%x\n", 
-//		frame, frame->excode, frame->spc, frame->ssr);
+	dprintf("sh4_handle_exception: frame 0x%x code 0x%x, pc 0x%x, ssr 0x%x, sr 0x%x\n",
+		frame, frame->excode, frame->spc, frame->ssr, get_sr());
 	switch(frame->excode) {
 		case 0:  // reset
 		case 1:  // manual reset
@@ -54,8 +56,20 @@ static int sh4_handle_exception(void *_frame)
 		case 11:  { // TRAPA
 			unsigned int *trap = (unsigned int *)0xff000020;
 			uint64 retcode;
-			
-			ret = syscall_dispatcher(*trap >> 2, frame->r4, frame->r5, frame->r6, frame->r7, frame->r0, &retcode);
+			unsigned int args[MAX_ARGS];
+
+			// XXX redo this to be stack-based
+			args[0] = frame->r4;
+			args[1] = frame->r5;
+			args[2] = frame->r6;
+			args[3] = frame->r7;
+			args[4] = frame->r0;
+			args[5] = frame->r1;
+			args[6] = frame->r2;
+			args[7] = frame->r3;
+			args[8] = frame->r8;
+
+			ret = syscall_dispatcher(*trap >> 2, args, &retcode);
 			frame->r0 = retcode & 0xffffffff;
 			frame->r1 = retcode >> 32;
 			break;
@@ -64,7 +78,7 @@ static int sh4_handle_exception(void *_frame)
 			int fpu_fault_code;
 			switch(frame->fpscr & 0x0003f000) {
 				case 0x1000:
-					fpu_fault_code = FPU_FAULT_CODE_INEXACT;	
+					fpu_fault_code = FPU_FAULT_CODE_INEXACT;
 					break;
 				case 0x2000:
 					fpu_fault_code = FPU_FAULT_CODE_UNDERFLOW;
@@ -93,11 +107,15 @@ static int sh4_handle_exception(void *_frame)
 			ret = fpu_disable_fault();
 			break;
 		case EXCEPTION_PAGE_FAULT_READ:
-		case EXCEPTION_PAGE_FAULT_WRITE:
+		case EXCEPTION_PAGE_FAULT_WRITE: {
+			addr newip;
 			int_enable_interrupts();
-			ret = vm_page_fault(frame->page_fault_addr, frame->spc, 
-				frame->excode == EXCEPTION_PAGE_FAULT_WRITE, (frame->ssr & 0x40000000) == 0);
+			ret = vm_page_fault(frame->page_fault_addr, frame->spc,
+				frame->excode == EXCEPTION_PAGE_FAULT_WRITE, (frame->ssr & 0x40000000) == 0, &newip);
+			if(newip != 0)
+				frame->spc = newip;
 			break;
+		}
 		default:
 			ret = int_io_interrupt_handler(frame->excode);
 	}
@@ -107,7 +125,7 @@ static int sh4_handle_exception(void *_frame)
 		thread_resched();
 		RELEASE_THREAD_LOCK();
 		int_restore_interrupts(state);
-	} 
+	}
 
 	return 0;
 }
@@ -125,7 +143,7 @@ int arch_int_init(kernel_args *ka)
 	// handle all of them
 	for(i=0; i<256; i++)
 		vector_table[i].func = &sh4_handle_exception;
-	
+
 	return 0;
 }
 

@@ -47,17 +47,17 @@ LINKHACK = $(KERNEL_OBJ_DIR)/linkhack.so
 kernel:	$(KERNEL) $(LIBKERNEL)
 
 $(KERNEL): $(KERNEL_OBJS) $(KLIBS) $(DEV) $(BUS) $(LINKHACK)
-	$(LD) -Bdynamic -export-dynamic -dynamic-linker /foo/bar -T $(KERNEL_ARCH_DIR)/kernel.ld -L $(LIBGCC_PATH) -o $@ $(KERNEL_OBJS) $(DEV) $(BUS) $(LINKHACK) $(LINK_KLIBS) $(LIBGCC)
+	$(LD) $(GLOBAL_LDFLAGS) -Bdynamic -export-dynamic -dynamic-linker /foo/bar -T $(KERNEL_ARCH_DIR)/kernel.ld -L $(LIBGCC_PATH) -o $@ $(KERNEL_OBJS) $(DEV) $(BUS) $(LINKHACK) $(LINK_KLIBS) $(LIBGCC)
 
 $(LIBKERNEL): $(KERNEL_OBJS) $(KLIBS) $(DEV) $(BUS) $(LINKHACK)
-	$(LD) -Bdynamic -shared -export-dynamic -dynamic-linker /foo/bar -T $(KERNEL_ARCH_DIR)/kernel.ld -L $(LIBGCC_PATH) -o $@ $(KERNEL_OBJS) $(DEV) $(BUS) $(LINKHACK) $(LINK_KLIBS) $(LIBGCC)
+	$(LD) $(GLOBAL_LDFLAGS) -Bdynamic -shared -export-dynamic -dynamic-linker /foo/bar -T $(KERNEL_ARCH_DIR)/kernel.ld -L $(LIBGCC_PATH) -o $@ $(KERNEL_OBJS) $(DEV) $(BUS) $(LINKHACK) $(LINK_KLIBS) $(LIBGCC)
 
 # Build a shared object with nothing in it to link against the kernel.
 # Otherwise the linker optimizes and removes the dynamic section.
 # This allows us to build a kernel with a dynamic section but not relocatable.
 # Ttolen from the FreeBSD sys makefile.
 $(LINKHACK): $(KERNEL_DIR)/linkhack.c
-	$(CC) -shared -nostdlib $< -o $@
+	$(CC) $(GLOBAL_CFLAGS) $(KERNEL_CFLAGS) -shared -nostdlib $< -o $@
 
 DEPS += $(KERNEL_OBJ_DIR)/linkhack.d
 

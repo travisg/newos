@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -20,7 +20,7 @@ exception_ent_1:
 
 	/* not a inital page write exception */
 	/* just enter the kernel and let it deal with it */
-	bra switch_banks_and_enter_kernel	
+	bra switch_banks_and_enter_kernel
 	nop
 
 _tlb_ipw:
@@ -73,7 +73,7 @@ _tlb_ipw:
 	stc	sgr,r15
 	rte
 	nop
-	
+
 _soft_fault:
 	/* the tlb ipw handler returned another exception code */
 	/* we now need to enter the kernel with the soft fault */
@@ -97,7 +97,7 @@ TLB_miss_ent:
 	shlr2	r4
 	shlr2	r4
 	shlr	r4			/* shift the exception code over 5 bits */
-	
+
 	/* we can stay on reg bank 1, switch to a tlb stack */
 	mov.l	tlb_stack_addr2,r15
 
@@ -126,7 +126,7 @@ TLB_miss_ent:
 	/* if so, the tlb miss just elevated to a page fault or other such */
 	/* 'soft' faults. */
 	lds.l	@r15+,pr		/* restore pr */
-	mov.l	@r15+,r1		/* restore the original exception code */	
+	mov.l	@r15+,r1		/* restore the original exception code */
 
 	/* restore the saved floating point registers */
 	lds.l	@r15+,fpscr
@@ -146,7 +146,7 @@ TLB_miss_ent:
 	stc	sgr,r15
 	rte
 	nop
-	
+
 _soft_fault1:
 	/* the tlb miss handler returned another exception code */
 	/* we now need to enter the kernel with the soft fault */
@@ -154,7 +154,7 @@ _soft_fault1:
 	shll2	r0
 	mov.l	tea_addr2,r1
 	mov.l	@r1,r1		/* load the faulted address */
-	bra switch_banks_and_enter_kernel	
+	bra switch_banks_and_enter_kernel
 	nop
 
 .align 2
@@ -163,7 +163,7 @@ expevt_addr2:	.long	0xff000024
 tlb_miss_handler:	.long	_tlb_miss
 tlb_stack_addr2:	.long	tlb_stack_end-4
 
-TLB_miss_ent_end:	
+TLB_miss_ent_end:
 	.skip 0x200-(TLB_miss_ent_end-TLB_miss_ent)
 interrupt_ent:
 	mov.l	intevt_addr,r0
@@ -171,21 +171,21 @@ interrupt_ent:
 	shlr2	r0
 	shlr	r0			/* shift the exception code over 3 bits */
 
+switch_banks_and_enter_kernel:
 	/* disable interrupts */
 	mov.l	imask,r1
 	stc	sr,r2
 	or	r1,r2
-	ldc	r2,sr	
+	ldc	r2,sr
 
-switch_banks_and_enter_kernel:
 	/* save the saved registers into memory */
-	mov.l	save_stack,r2	
+	mov.l	save_stack,r2
 	stc.l	spc,@-r2
 	stc.l	ssr,@-r2
 	stc.l	sgr,@-r2
 	mov.l	r0,@-r2			/* put the modified exception code there too */
 	mov.l	r1,@-r2			/* put the saved page fault address on the stack */
-	
+
 	/* see if we need to load the kernel stack or stay on the current one */
 	stc	ssr,r0
 	mov.l	md_bit_mask,r1
@@ -208,7 +208,7 @@ _have_set_stack:
 	stc	sr,r1
 	and	r0,r1
 	ldc	r1,sr
-	
+
 	/* at this point, we may take a TLB exception */
 
 	/* start pushing registers */
@@ -219,7 +219,7 @@ _have_set_stack:
 	mov.l	r12,@-r15
 	mov.l	r13,@-r15
 	mov.l	r14,@-r15
-	
+
 	/* push r0-r7 */
 	mov.l	r0,@-r15
 	mov.l	r1,@-r15
@@ -312,7 +312,7 @@ _after_r0r7_save:
 	lds.l	@r15+,pr
 	lds.l	@r15+,macl
 	lds.l	@r15+,mach
-	ldc.l	@r15+,gbr	
+	ldc.l	@r15+,gbr
 
 
 	/* restore the floating point registers */
@@ -352,7 +352,7 @@ _after_r0r7_save:
 	fmov.s	@r15+,fr2
 	fmov.s	@r15+,fr1
 	fmov.s	@r15+,fr0
-	
+
 	mov.l	@r15+,r7
 	mov.l	@r15+,r6
 	mov.l	@r15+,r5
@@ -368,7 +368,7 @@ _after_r0r7_restore:
 	not	r8,r8
 	stc	sr,r9
 	or	r9,r8
-	mov.l	modified_sr_addr,r9	
+	mov.l	modified_sr_addr,r9
 	mov.l	r8,@r9
 
 	/* pop the last few registers */
@@ -383,14 +383,14 @@ _after_r0r7_restore:
 	/* now we only have r15 to use */
 	mov.l	modified_sr,r15
 	ldc	r15,sr
-	
+
 	/* restore the ssr & spc registers */
 	mov.l	saved_spc,r15
 	ldc	r15,spc
 	mov.l	saved_ssr,r15
 	ldc	r15,ssr
 	mov.l	saved_sgr,r15
-	
+
 	/* get out of here */
 	rte
 	nop
@@ -422,7 +422,7 @@ saved_sgr:	.long	0
 saved_ssr:	.long	0
 saved_spc:	.long	0		/* these four addresses are used to
 					save the saved registers while we switch to another
-					stack and register set */	
+					stack and register set */
 modified_sr:	.long	0
 /* These memory locations are written to by the kernel */
 .globl _kernel_struct

@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -27,7 +27,7 @@ void mmu_map_page(unsigned int vaddr, unsigned int paddr)
 		dprintf("mmu_map_page: cannot map user space now!\n");
 		for(;;);
 	}
-	
+
 	vaddr &= 0x7fffffff;
 
 	index = vaddr >> 22;
@@ -37,7 +37,7 @@ void mmu_map_page(unsigned int vaddr, unsigned int paddr)
 	}
 
 	pt = (struct ptent *)PHYS_ADDR_TO_P1(pd[index].ppn << 12);
-	
+
 	index = (vaddr >> 12) & 0x00000fff;
 	pt[index].wt = 0;
 	pt[index].pr = 1;	// rw, supervisor only
@@ -45,7 +45,7 @@ void mmu_map_page(unsigned int vaddr, unsigned int paddr)
 	pt[index].tlb_ent = 0;
 	pt[index].c = 1;
 	pt[index].sz = 1;	// 4k page
-	pt[index].sh = 0;	
+	pt[index].sh = 0;
 	pt[index].d = 0;
 	pt[index].v = 1;
 }
@@ -68,7 +68,8 @@ void mmu_init(kernel_args *ka, unsigned int *next_paddr)
 
 	// allocate an initial page table
 	pt = (struct ptent *)PHYS_ADDR_TO_P1(*next_paddr);
-	(*next_paddr) += PAGE_SIZE;		
+	memset(pt, 0, sizeof(struct ptent) * 1024);
+	(*next_paddr) += PAGE_SIZE;
 
 	dprintf("intial page table = 0x%x\n", pt);
 

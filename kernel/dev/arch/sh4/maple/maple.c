@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -11,9 +11,11 @@
 #include <kernel/arch/cpu.h>
 #include <libc/string.h>
 #include <libc/printf.h>
-#include <dev/arch/sh4/maple/maple_bus.h>
+#include <kernel/dev/arch/sh4/maple/maple_bus.h>
 
 #include "maple.h"
+
+#if 0
 
 #define MAPLE(x) (*(volatile unsigned int *)((0xa05f6c00)+(x)))
 #define DMA_BUF_SIZE (32*1024)
@@ -49,7 +51,7 @@ static int maple_open(void *_fs, void *_base_vnode, const char *path, const char
 	int err;
 	uint8 port, unit;
 	struct maple_cookie *cookie;
-	
+
 	dprintf("maple_open: entry on vnode 0x%x, path = '%s'\n", _base_vnode, path);
 
 	sem_acquire(fs->sem, 1);
@@ -59,8 +61,8 @@ static int maple_open(void *_fs, void *_base_vnode, const char *path, const char
 		redir->vnode = fs->redir_vnode;
 		redir->path = path;
 		err = 0;
-		goto out;		
-	}		
+		goto out;
+	}
 
 	if(path[0] != '\0' || strlen(stream) != 2 || stream_type != STREAM_TYPE_DEVICE) {
 		err = -1;
@@ -77,11 +79,11 @@ static int maple_open(void *_fs, void *_base_vnode, const char *path, const char
 		err = -1;
 		goto err;
 	}
-	
+
 	cookie->port = stream[0] - 'a';
 	cookie->unit = stream[1] - '0';
-	
-	*_vnode = &fs->root_vnode;	
+
+	*_vnode = &fs->root_vnode;
 	*_cookie = cookie;
 
 	err = 0;
@@ -106,18 +108,18 @@ static int maple_close(void *_fs, void *_vnode, void *_cookie)
 
 	if(_cookie != NULL)
 		kfree(_cookie);
-	
+
 	return 0;
 }
 
 static int maple_create(void *_fs, void *_base_vnode, const char *path, const char *stream, stream_type stream_type, struct redir_struct *redir)
 {
 	struct maple_fs *fs = _fs;
-	
+
 	dprintf("maple_create: entry\n");
 
 	sem_acquire(fs->sem, 1);
-	
+
 	if(fs->redir_vnode != NULL) {
 		// we were mounted on top of
 		redir->redir = true;
@@ -127,7 +129,7 @@ static int maple_create(void *_fs, void *_base_vnode, const char *path, const ch
 		return 0;
 	}
 	sem_release(fs->sem, 1);
-	
+
 	return -1;
 }
 
@@ -136,7 +138,7 @@ static int maple_read(void *_fs, void *_vnode, void *_cookie, void *buf, off_t p
 	dprintf("maple_read: entry\n");
 
 	*len = 0;
-	return 0;	
+	return 0;
 }
 
 static int maple_write(void *_fs, void *_vnode, void *_cookie, const void *buf, off_t pos, size_t *len)
@@ -152,7 +154,7 @@ static int maple_ioctl(void *_fs, void *_vnode, void *_cookie, int op, void *buf
 	int err = 0;
 	struct maple_fs *fs = (struct maple_fs *)_fs;
 	struct maple_cookie *cookie = (struct maple_cookie *)_cookie;
-	
+
 	switch(op) {
 		case MAPLE_IOCTL_GET_FUNC:
 			*(uint32 *)buf = fs->bus.func_codes[cookie->port][cookie->unit];
@@ -187,7 +189,7 @@ static int maple_mount(void **fs_cookie, void *flags, void *covered_vnode, fs_id
 	{
 		char temp[64];
 		sprintf(temp, "maple_sem%d", id);
-		
+
 		fs->sem = sem_create(1, temp);
 		if(fs->sem < 0) {
 			err = -1;
@@ -201,12 +203,12 @@ static int maple_mount(void **fs_cookie, void *flags, void *covered_vnode, fs_id
 	err = maple_init(fs);
 	if(err < 0)
 		goto err2;
-	
+
 	return 0;
 
 err2:
 	sem_delete(fs->sem);
-err1:	
+err1:
 	kfree(fs);
 err:
 	atomic_add(&maple_mount_count, -1);
@@ -220,24 +222,24 @@ static int maple_unmount(void *_fs)
 	sem_delete(fs->sem);
 	kfree(fs);
 
-	return 0;	
+	return 0;
 }
 
 static int maple_register_mountpoint(void *_fs, void *_v, void *redir_vnode)
 {
 	struct maple_fs *fs = _fs;
-	
+
 	fs->redir_vnode = redir_vnode;
-	
+
 	return 0;
 }
 
 static int maple_unregister_mountpoint(void *_fs, void *_v)
 {
 	struct maple_fs *fs = _fs;
-	
+
 	fs->redir_vnode = NULL;
-	
+
 	return 0;
 }
 
@@ -266,7 +268,7 @@ static uint8 maple_create_addr(uint8 port, uint8 unit)
 static uint32 *maple_add_trans(struct maple_fs *fs, maple_tdesc_t *tdesc, uint32 *buf)
 {
 	int i;
-	
+
 	// build the transfer descriptor's two words
 	*buf++ = tdesc->length | (tdesc->port << 16) | (tdesc->lastdesc << 31);
 	*buf++ = ((uint32)tdesc->recvaddr) & 0xfffffff;
@@ -341,7 +343,7 @@ static int maple_docmd(struct maple_fs *fs, int8 cmd, uint8 addr, uint8 datalen,
 	if(maple_dodma(fs) == 0) {
 		maple_read_frame(recvbuf, retframe);
 		return 0;
-	} 
+	}
 
 	return -1;
 }
@@ -390,9 +392,9 @@ static int maple_init(struct maple_fs *fs)
 	vm_get_page_mapping(vm_get_kernel_aspace(), (addr)foo, (addr *)&fs->bus.dma_buffer);
 	fs->bus.dma_buffer = (void *)PHYS_ADDR_TO_P2(fs->bus.dma_buffer);
 	memset(fs->bus.dma_buffer, 0, DMA_BUF_SIZE);
-	
+
 	dprintf("maple_init: created dma area at P2 addr 0x%x\n", fs->bus.dma_buffer);
-	
+
 	/* reset hardware */
 	MAPLE(0x8c) = 0x6155404f;
 	MAPLE(0x10) = 0;
@@ -436,4 +438,5 @@ int maple_bus_init(kernel_args *ka)
 
 	return 0;
 }
+#endif
 

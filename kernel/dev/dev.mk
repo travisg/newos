@@ -20,7 +20,7 @@ DEPS += $(DEV_OBJS:.o=.d)
 DEV = $(DEV_OBJ_DIR)/dev.o
 
 $(DEV): $(DEV_OBJS)
-	$(LD) -r -o $@ $(DEV_OBJS)
+	$(LD) $(GLOBAL_LDFLAGS) -r -o $@ $(DEV_OBJS)
 
 devs: $(DEV)
 

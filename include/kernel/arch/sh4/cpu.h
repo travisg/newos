@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -14,6 +14,7 @@ void sh4_function_caller();
 void sh4_set_kstack(addr kstack);
 void sh4_enter_uspace(addr entry, addr ustack_top);
 void sh4_set_user_pgdir(addr pgdir);
+void sh4_invl_page(addr va);
 
 #endif
 
