@@ -9,6 +9,8 @@ KLIBS =
 LINK_KLIBS = 
 LIBS_CLEAN =
 
+LIBS_LDSCRIPT = $(LIB_DIR)/ldscripts/$(ARCH)/library.ld
+
 include $(LIB_DIR)/glue/glue.mk
 include $(LIB_DIR)/glue/libglue.mk
 include $(LIB_DIR)/libsys/libsys.mk

@@ -28,7 +28,7 @@ $(LIBM_STATIC): $(LIBM_OBJS)
 
 $(LIBM_DYNAMIC): $(LIBGLUE) $(LIBM_OBJS)
 	@mkdir -p $(LIBM_OBJ_DIR)
-	$(LD) -shared -soname libm.so --script=$(LIBM_DIR)/library.ld -o$@ $^
+	$(LD) -shared -soname libm.so --script=$(LIBS_LDSCRIPT) -o$@ $^
 
 LIBS += $(LIBM_DYNAMIC) 
 LINK_LIBS += -Bdynamic $(LIBM_DYNAMIC)

@@ -34,7 +34,7 @@ $(NULIBC_STATIC): $(NULIBC_OBJS)
 
 $(NULIBC_DYNAMIC): $(LIBGLUE) $(NULIBC_OBJS)
 	@mkdir -p $(NULIBC_OBJ_DIR)
-	$(LD) -shared -soname libc.so --script=$(NULIBC_DIR)/library.ld -o$@ $^
+	$(LD) -shared -soname libc.so --script=$(LIBS_LDSCRIPT) -o$@ $^
 
 LIBS += $(NULIBC_DYNAMIC) 
 LINK_LIBS += -Bdynamic $(NULIBC_DYNAMIC)
