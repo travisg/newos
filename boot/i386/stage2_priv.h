@@ -20,9 +20,10 @@ void execute_n_instructions(int count);
 #define KERNEL_BASE 0x80000000
 #define KERNEL_ENTRY 0x80000080
 #define STACK_SIZE 2
-#define DEFAULT_PAGE_FLAGS (1 | 2 | 256) // present/rw/global
+#define DEFAULT_PAGE_FLAGS (1 | 2) // present/rw
 #define SCREEN_WIDTH 80
 #define SCREEN_HEIGHT 24
+#define ADDR_MASK 0xfffff000
 
 #define NULL ((void *)0)
 

@@ -13,9 +13,6 @@ void smp_trampoline();
 void smp_trampoline_end();
 int smp_get_current_cpu(kernel_args *ka);
 
-#define DEFAULT_PAGE_FLAGS (1 | 2 | 256) // present/rw/global
-#define ADDR_MASK 0xfffff000
-
 static unsigned int map_page(kernel_args *ka, unsigned int paddr, unsigned int vaddr)
 {
 	unsigned int *pentry;
