@@ -329,7 +329,7 @@ static int bootfs_create_vnode_tree(struct bootfs *fs, struct bootfs_vnode *root
 			// set up the new node
 			new_vnode->stream.type = STREAM_TYPE_FILE;
 			new_vnode->stream.u.file.start = bootdir + entry[i].be_offset * PAGE_SIZE;
-			new_vnode->stream.u.file.len = entry[i].be_size * PAGE_SIZE;
+			new_vnode->stream.u.file.len = entry[i].be_vsize;
 
 			dprintf("bootfs_create_vnode_tree: added entry '%s', start %p, len 0x%Lx\n", new_vnode->name,
 				new_vnode->stream.u.file.start, new_vnode->stream.u.file.len);
