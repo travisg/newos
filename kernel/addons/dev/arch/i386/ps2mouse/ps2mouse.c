@@ -355,13 +355,6 @@ int dev_bootstrap(void)
    // init device driver
 	memset(&md_int, 0, sizeof(mouse_data));
 
-	// register interrupt handler
-	int_set_io_interrupt_handler(INT_BASE + INT_PS2_MOUSE,
-	   &handle_mouse_interrupt, NULL);
-
-	// must enable the cascade interrupt
-	arch_int_enable_io_interrupt(INT_BASE + INT_CASCADE);
-
 	// enable auxilary device, IRQs and PS/2 mouse
    write_command_byte(PS2_CMD_DEV_INIT);
 	write_aux_byte(PS2_CMD_ENABLE_MOUSE);
@@ -380,6 +373,13 @@ int dev_bootstrap(void)
 	mouse_sem = sem_create(0, "ps2_mouse_sem");
 	if(mouse_sem < 0)
 	   panic("failed to create PS/2 mouse semaphore!\n");
+
+	// register interrupt handler
+	int_set_io_interrupt_handler(INT_BASE + INT_PS2_MOUSE,
+	   &handle_mouse_interrupt, NULL);
+
+	// must enable the cascade interrupt
+	arch_int_enable_io_interrupt(INT_BASE + INT_CASCADE);
 
 	// register device file-system like operations
 	devfs_publish_device("ps2mouse", NULL, &ps2_mouse_hooks);
