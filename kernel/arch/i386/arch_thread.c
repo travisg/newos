@@ -46,8 +46,8 @@ int arch_thread_initialize_kthread_stack(struct thread *t, int (*start_func)(voi
 	*kstack_top = (unsigned int)entry_func;
 
 	// simulate pushfl
-	kstack_top--;
-	*kstack_top = 0x00; // interrupts still disabled after the switch
+//	kstack_top--;
+//	*kstack_top = 0x00; // interrupts still disabled after the switch
 
 	// simulate initial popad
 	for(i=0; i<8; i++) {

@@ -143,6 +143,9 @@ static struct thread *create_thread_struct(char *name)
 	if(t->arch_info == NULL)
 		goto err2;
 	
+	// XXX remove
+	dprintf("create_thread_struct: returning struct @ 0x%x\n", t);
+	
 	return t;
 
 err2:
@@ -408,7 +411,7 @@ int thread_init(kernel_args *ka)
 		}
 		t->proc = proc_get_kernel_proc();
 		t->priority = THREAD_IDLE_PRIORITY;
-		t->state = THREAD_STATE_READY;
+		t->state = THREAD_STATE_RUNNING;
 		t->next_state = THREAD_STATE_READY;
 		sprintf(temp, "idle_thread%d_kstack", i);
 		t->kernel_stack_area = vm_find_area_by_name(t->proc->aspace, temp);		
@@ -451,7 +454,7 @@ static void thread_entry(void)
 	// simulates the thread spinlock release that would occur if the thread had been
 	// rescheded from. The resched didn't happen because the thread is new.
 	RELEASE_THREAD_LOCK();
-	int_enable_interrupts();
+	int_enable_interrupts(); // this essentially simulates a return-from-interrupt
 }
 
 void thread_kthread_exit()
@@ -571,7 +574,7 @@ int panic_thread()
 {
 	dprintf("panic thread starting\n");
 	
-	thread_snooze(1000000);
+	thread_snooze(5000000);
 	panic("gotcha!\n");
 	return 0;
 }
@@ -616,12 +619,16 @@ void thread_resched()
 	struct thread *old_thread = CURR_THREAD;
 	int i;
 	
+//	dprintf("top of thread_resched: cpu %d, cur_thread = 0x%x\n", smp_get_current_cpu(), CURR_THREAD);
+	
 	switch(old_thread->next_state) {
 		case THREAD_STATE_RUNNING:
 		case THREAD_STATE_READY:
+//			dprintf("enqueueing thread 0x%x into run q. pri = %d\n", old_thread, old_thread->priority);
 			thread_enqueue_run_q(old_thread);
 			break;
 		default:
+//			dprintf("not enqueueing thread 0x%x into run q. next_state = %d\n", old_thread, old_thread->next_state);
 	}
 	old_thread->state = old_thread->next_state;
 
@@ -640,10 +647,15 @@ void thread_resched()
 	if(next_thread == NULL) {
 		if(last_thread_pri != -1) {
 			next_thread = thread_dequeue_run_q(last_thread_pri);
+			if(next_thread == NULL)
+				panic("next_thread == NULL! last_thread_pri = %d\n", last_thread_pri);
 		} else {
 			next_thread = thread_dequeue_run_q(THREAD_IDLE_PRIORITY);
+			if(next_thread == NULL)
+				panic("next_thread == NULL! no idle priorities!\n", last_thread_pri);
 		}
 	}
+
 
 	next_thread->state = THREAD_STATE_RUNNING;
 	next_thread->next_state = THREAD_STATE_READY;

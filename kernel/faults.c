@@ -16,10 +16,8 @@ int faults_init(kernel_args *ka)
 
 int general_protection_fault(int errorcode)
 {
-	dprintf("GENERAL PROTECTION FAULT: errcode 0x%x. Killing system.\n", errorcode);
-	
-//	cli();
-	for(;;);
+	panic("GENERAL PROTECTION FAULT: errcode 0x%x. Killing system.\n", errorcode);
+
 	return INT_NO_RESCHEDULE;
 }
 

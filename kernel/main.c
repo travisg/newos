@@ -33,14 +33,24 @@ int _start(kernel_args *oldka, int cpu)
 		// init modules
 		arch_cpu_init(&ka);
 		int_init(&ka);
+
 		vm_init(&ka);
+		dprintf("vm up\n");
+		
+		// now we can use the heap and create areas
 		dbg_init2(&ka);
 		int_init2(&ka);
+		
 		faults_init(&ka);
-		con_init(&ka);
 		smp_init(&ka);
 		timer_init(&ka);
+		
 		sem_init(&ka);
+		dprintf("sem up\n");
+
+		// now we can create and use semaphores
+		vm_init_postsem(&ka);
+		con_init(&ka);		
 		proc_init(&ka);
 		thread_init(&ka);
 	
@@ -53,6 +63,7 @@ int _start(kernel_args *oldka, int cpu)
 		vm_dump_areas(vm_get_kernel_aspace());
 		
 		smp_wake_up_all_non_boot_cpus();
+		smp_enable_ici(); // ici's were previously being ignored
 	}
 	int_enable_interrupts();
 
@@ -105,11 +116,11 @@ int _start(kernel_args *oldka, int cpu)
 	}
 #endif
 
-#if 1
+#if 0
 	panic("debugger_test\n");	
 #endif
-	kprintf("main: done... spinning forever on cpu %d\n", cpu);
 	dprintf("main: done... spinning forever on cpu %d\n", cpu);
+/*
 	{
 		static char c[] = "a";
 		
@@ -120,6 +131,8 @@ int _start(kernel_args *oldka, int cpu)
 			con_puts_xy(c, 79-cpu, 23);
 		}
 	}
+*/
+	for(;;);
 	
 	return 0;
 }

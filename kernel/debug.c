@@ -203,22 +203,28 @@ int panic(const char *fmt, ...)
 	int ret = 0; 
 	va_list args;
 	char temp[128];
+	int state;
+
+	state = int_disable_interrupts();
 
 	if(serial_debug_on) {
 		va_start(args, fmt);
 		ret = vsprintf(temp, fmt, args);
 		va_end(args);
 
-		dbg_puts("PANIC: ");
-		dbg_puts(temp);
+		dprintf("PANIC%d: %s", smp_get_current_cpu(), temp);
 		
 		if(debugger_on_cpu != smp_get_current_cpu()) {
 			// halt all of the other cpus
-			smp_send_broadcast_ici(SMP_MSG_CPU_HALT, 0, NULL);
+
+			// XXX need to flush current smp mailbox to make sure this goes
+			// through. Otherwise it'll hang
+			smp_send_broadcast_ici(SMP_MSG_CPU_HALT, 0, NULL, SMP_MSG_FLAG_SYNC);
 		}
 		
 		kernel_debugger();
 	}
+	int_restore_interrupts(state);
 	return ret;
 }
 

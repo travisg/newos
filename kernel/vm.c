@@ -8,6 +8,7 @@
 #include <stage2.h>
 #include <int.h>
 #include <spinlock.h>
+#include <sem.h>
 
 #include <arch_cpu.h>
 #include <arch_pmap.h>
@@ -79,7 +80,7 @@ static struct heap_bin bins[] = {
 };
 
 static const int bin_count = sizeof(bins) / sizeof(struct heap_bin);
-static int heap_spinlock = 0;
+static sem_id heap_sem = -1;
 
 static struct aspace *aspace_list = NULL;
 static struct aspace *kernel_aspace = NULL;
@@ -470,6 +471,16 @@ int vm_init(kernel_args *ka)
 	return err;
 }
 
+int vm_init_postsem(kernel_args *ka)
+{
+	TOUCH(ka);
+	
+	heap_sem = sem_create(1, "heap_sem");
+	if(heap_sem < 0) {
+		panic("error creating heap semaphore\n");
+	}
+}
+
 static char *raw_alloc(unsigned int size, int bin_index)
 {
 	unsigned int new_heap_ptr;
@@ -505,10 +516,8 @@ void *kmalloc(unsigned int size)
 	int bin_index;
 	unsigned int i;
 	struct heap_page *page;
-	int state;
 
-	state = int_disable_interrupts();
-	acquire_spinlock(&heap_spinlock);
+	sem_acquire(heap_sem, 1);
 	
 	for (bin_index = 0; bin_index < bin_count; bin_index++)
 		if (size <= bins[bin_index].element_size)
@@ -541,9 +550,8 @@ void *kmalloc(unsigned int size)
 	}
 
 out:
-	release_spinlock(&heap_spinlock);
-	int_restore_interrupts(state);
-
+	sem_release(heap_sem, 1);
+	
 //	dprintf("kmalloc: asked to allocate size %d, returning ptr = %p\n", size, address);
 
 	return address;
@@ -554,13 +562,11 @@ void kfree(void *address)
 	struct heap_page *page;
 	struct heap_bin *bin;
 	unsigned int i;
-	int state;
 
-	if (address == 0)
+	if (address == NULL)
 		return;
 
-	state = int_disable_interrupts();
-	acquire_spinlock(&heap_spinlock);
+	sem_acquire(heap_sem, 1);
 
 //	dprintf("kfree: asked to free at ptr = %p\n", address);
 
@@ -568,7 +574,7 @@ void kfree(void *address)
 	
 	// XXX fix later
 	if(page[0].bin_index == bin_count)
-		return;
+		goto out;
 
 	bin = &bins[page[0].bin_index];
 
@@ -580,8 +586,8 @@ void kfree(void *address)
 	bin->alloc_count--;
 	bin->free_count++;
 
-	release_spinlock(&heap_spinlock);
-	int_restore_interrupts(state);
+out:
+	sem_release(heap_sem, 1);
 }
 
 int vm_mark_page_range_inuse(unsigned int start_page, unsigned int len)
@@ -702,7 +708,6 @@ static void dump_free_page_table(int argc, char **argv)
 int vm_page_fault(int address, unsigned int fault_address)
 {
 	dprintf("PAGE FAULT: faulted on address 0x%x. ip = 0x%x. Killing system.\n", address, fault_address);
-	kprintf("PAGE FAULT: faulted on address 0x%x. ip = 0x%x. Killing system.\n", address, fault_address);
 	
 	panic("page fault\n");
 //	cli();

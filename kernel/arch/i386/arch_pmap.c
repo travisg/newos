@@ -76,7 +76,7 @@ int pmap_map_page(addr paddr, addr vaddr)
 	*pentry = (paddr & ADDR_MASK) | DEFAULT_PAGE_FLAGS;
 
 	arch_pmap_invl_page(vaddr);
-	smp_send_broadcast_ici(SMP_MSG_INVL_PAGE, vaddr, NULL);
+	smp_send_broadcast_ici(SMP_MSG_INVL_PAGE, vaddr, NULL, SMP_MSG_FLAG_ASYNC);
 	
 	return 0;
 }

@@ -90,19 +90,25 @@ int sem_init(kernel_args *ka)
 	int i;
 	TOUCH(ka);
 	
+	dprintf("sem_init: entry\n");
+	
 	// create and initialize semaphore table
 	sem_area = vm_create_area(vm_get_kernel_aspace(), "sem_table", (void **)&sems,
 		AREA_ANY_ADDRESS, sizeof(struct sem_entry) * MAX_SEMS, 0);
 	if(sems == NULL) {
 		panic("unable to allocate semaphore table!\n");
 	}
+	dprintf("memsetting len %d @ 0x%x\n", sizeof(struct sem_entry) * MAX_SEMS, sems);
 	memset(sems, 0, sizeof(struct sem_entry) * MAX_SEMS);
+	dprintf("done\n");
 	for(i=0; i<MAX_SEMS; i++)
 		sems[i].id = -1;
 
 	// add debugger commands
 	dbg_add_command(&dump_sem_list, "sems", "Dump a list of all active semaphores");
 	dbg_add_command(&dump_sem_info, "sem", "Dump info about a particular semaphore");
+
+	dprintf("sem_init: exit\n");
 
 	return 0;
 }
@@ -175,6 +181,9 @@ int sem_delete(sem_id id)
 	struct thread *t;
 	int released_threads = 0;
 	char *old_name;
+
+	if(id < 0)
+		return -1;
 	
 	state = int_disable_interrupts();
 	GRAB_SEM_LOCK(sems[slot]);
@@ -271,6 +280,9 @@ int sem_acquire_etc(sem_id id, int count, int flags, long long timeout)
 	int state;
 	int err = 0;
 	
+	if(id < 0)
+		return -1;
+
 	state = int_disable_interrupts();
 	GRAB_SEM_LOCK(sems[slot]);
 	
@@ -297,8 +309,8 @@ int sem_acquire_etc(sem_id id, int count, int flags, long long timeout)
 			timer_set_event(timeout, TIMER_MODE_ONESHOT, &t->timer);
 		}
 
-		GRAB_THREAD_LOCK();
 		RELEASE_SEM_LOCK(sems[slot]);
+		GRAB_THREAD_LOCK();
 		thread_resched();
 		RELEASE_THREAD_LOCK();
 		int_restore_interrupts(state);
@@ -325,6 +337,9 @@ int sem_release_etc(sem_id id, int count, int flags)
 	int err = 0;
 	struct thread *ready_threads[READY_THREAD_CACHE_SIZE];
 	int ready_threads_count = 0;
+	
+	if(id < 0)
+		return -1;	
 	
 	state = int_disable_interrupts();
 	GRAB_SEM_LOCK(sems[slot]);
@@ -362,6 +377,7 @@ int sem_release_etc(sem_id id, int count, int flags)
 		sems[slot].count += delta;
 		count -= delta;
 	}
+	RELEASE_SEM_LOCK(sems[slot]);
 	if(released_threads > 0) {
 		GRAB_THREAD_LOCK();
 		// put any leftovers in the runq
@@ -370,7 +386,6 @@ int sem_release_etc(sem_id id, int count, int flags)
 				thread_enqueue_run_q(ready_threads[ready_threads_count - 1]);
 		}
 		if((flags & SEM_FLAG_NO_RESCHED) == 0) {
-			RELEASE_SEM_LOCK(sems[slot]);
 			thread_resched();
 		}
 		RELEASE_THREAD_LOCK();

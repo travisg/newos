@@ -4,10 +4,10 @@
 // int atomic_add(int *val, int incr)
 .global atomic_add
 atomic_add:
-	movl	8(%esp),%edx
+	movl	4(%esp),%edx
 	
 _atomic_add1:
-	movl	12(%esp),%ecx
+	movl	8(%esp),%ecx
 	movl	(%edx),%eax
 	addl	%eax,%ecx
 	
@@ -21,10 +21,10 @@ _atomic_add1:
 // int atomic_and(int *val, int incr)
 .global atomic_and
 atomic_and:
-	movl	8(%esp),%edx
+	movl	4(%esp),%edx
 	
 _atomic_and1:
-	movl	12(%esp),%ecx
+	movl	8(%esp),%ecx
 	movl	(%edx),%eax
 	andl	%eax,%ecx
 	
@@ -38,10 +38,10 @@ _atomic_and1:
 // int atomic_or(int *val, int incr)
 .global atomic_or
 atomic_or:
-	movl	8(%esp),%edx
+	movl	4(%esp),%edx
 	
 _atomic_or1:
-	movl	12(%esp),%ecx
+	movl	8(%esp),%ecx
 	movl	(%edx),%eax
 	orl		%eax,%ecx
 	
@@ -108,14 +108,14 @@ system_time:
 // void i386_context_switch(unsigned int **old_esp, unsigned int *new_esp);
 .global i386_context_switch
 i386_context_switch:
-	pushfl
+//	pushfl
 	pusha
-	movl	40(%esp),%eax
+	movl	36(%esp),%eax
 	movl	%esp,(%eax)
-	movl	44(%esp),%eax
+	movl	40(%esp),%eax
 	movl	%eax,%esp
 	popa
-	popfl
+//	popfl
 	ret
 
 null_idt_descr:
