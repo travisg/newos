@@ -10,6 +10,9 @@
 #ifdef ARCH_alpha
 #include <kernel/arch/alpha/kernel.h>
 #endif
+#ifdef ARCH_sparc64
+#include <kernel/arch/sparc64/kernel.h>
+#endif
 
 #define KSTACK_SIZE (PAGE_SIZE*2)
 #define STACK_SIZE  (PAGE_SIZE*16)

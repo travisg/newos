@@ -10,6 +10,9 @@
 #ifdef ARCH_alpha
 #include <kernel/arch/alpha/thread_struct.h>
 #endif
+#ifdef ARCH_sparc64
+#include <kernel/arch/sparc64/thread_struct.h>
+#endif
 
 #endif
 

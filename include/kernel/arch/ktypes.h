@@ -10,6 +10,9 @@
 #ifdef ARCH_alpha
 #include <kernel/arch/alpha/ktypes.h>
 #endif
+#ifdef ARCH_sparc64
+#include <kernel/arch/sparc64/ktypes.h>
+#endif
 
 #endif
 

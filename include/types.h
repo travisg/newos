@@ -13,6 +13,9 @@
 #ifdef ARCH_sparc
 #include <arch/sparc/types.h>
 #endif
+#ifdef ARCH_sparc64
+#include <arch/sparc64/types.h>
+#endif
 
 #ifndef NULL
 #define NULL 0

@@ -7,5 +7,8 @@
 #ifdef ARCH_sh4
 #include <boot/arch/sh4/stage2.h>
 #endif
+#ifdef ARCH_sparc64
+#include <boot/arch/sparc64/stage2.h>
+#endif
 
 #endif
