@@ -192,6 +192,7 @@ $(warning found newos toolchain!)
 	AR = $(TOOLCHAIN_ARCH)-newos-ar
 	OBJCOPY = $(TOOLCHAIN_ARCH)-newos-objcopy
 	STRIP = $(TOOLCHAIN_ARCH)-newos-strip
+	SIZE = $(TOOLCHAIN_ARCH)-newos-size
 endif
 
 GLOBAL_CFLAGS += -Wall -W -Wno-multichar -Wno-unused -Wmissing-prototypes -finline -nostdinc -fno-builtin -DARCH_$(ARCH) -DNEWOS=1

@@ -13,7 +13,7 @@ int probe_memory(kernel_args *ka);
 
 void putc(int c);
 void puts(const char *str);
-int getc(void);
+int getchar(void);
 int dprintf(const char *fmt, ...);
 
 /* asm stubs */
