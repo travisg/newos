@@ -1,5 +1,11 @@
-#ifndef __newos__errno__hh__
-#define __newos__errno_hh__
+/*
+** Copyright 2002, Travis Geiselbrecht. All rights reserved.
+** Copyright 2002, Manuel J. Petit. All rights reserved.
+** Distributed under the terms of the NewOS License.
+*/
+
+#ifndef _newos__errno__hh_
+#define _newos__errno__hh_
 
 
 #ifdef __cplusplus
