@@ -20,6 +20,9 @@
 #ifdef ARCH_mips
 #include <kernel/arch/mips/thread_struct.h>
 #endif
+#ifdef ARCH_ppc
+#include <kernel/arch/ppc/thread_struct.h>
+#endif
 
 #endif
 

@@ -23,6 +23,9 @@
 #ifdef ARCH_mips
 #include <kernel/arch/mips/cpu.h>
 #endif
+#ifdef ARCH_ppc
+#include <kernel/arch/ppc/cpu.h>
+#endif
 
 #define PAGE_ALIGN(x) (((x) + (PAGE_SIZE-1)) & ~(PAGE_SIZE-1))
 

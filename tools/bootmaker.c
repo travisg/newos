@@ -40,6 +40,33 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#ifdef sparc
+#define xBIG_ENDIAN 1
+#endif
+#ifdef i386
+#define xLITTLE_ENDIAN 1
+#endif
+
+#define SWAP32(x) \
+	((((x) & 0xff) << 24) | (((x) & 0xff00) << 8) | (((x) & 0xff0000) >> 8) | (((x) & 0xff000000) >> 24))
+
+#if xBIG_ENDIAN
+#define HOST_TO_BENDIAN32(x) (x)
+#define BENDIAN_TO_HOST32(x) (x)
+#define HOST_TO_LENDIAN32(x) SWAP32(x)
+#define LENDIAN_TO_HOST32(x) SWAP32(x)
+#endif
+#if xLITTLE_ENDIAN
+#define HOST_TO_BENDIAN32(x) SWAP32(x)
+#define BENDIAN_TO_HOST32(x) SWAP32(x)
+#define HOST_TO_LENDIAN32(x) (x)
+#define LENDIAN_TO_HOST32(x) (x)
+#endif
+
+#if !xBIG_ENDIAN && !xLITTLE_ENDIAN
+#error not sure which endian the host processor is, please edit bootmaker.c
+#endif
+
 // ELF stuff
 #define ELF_MAGIC "\x7f""ELF"
 #define EI_MAG0	0
@@ -95,6 +122,13 @@ struct Elf32_Phdr {
 #ifndef O_BINARY
 #define O_BINARY 0
 #endif
+
+#define LE 0
+#define BE 1
+
+static int target_endian = LE;
+
+#define fix(x) ((target_endian == BE) ? HOST_TO_BENDIAN32(x) : HOST_TO_LENDIAN32(x))
 
 static int make_sparcboot = 0;
 
@@ -172,30 +206,6 @@ void print_sections(section *first)
         first = first->next;
     }
 }
-
-#ifdef sparc
-#define xBIG_ENDIAN
-#endif
-
-#ifdef xBIG_ENDIAN
-unsigned int fix(unsigned int x)
-{
-    int r;
-    unsigned char *a = (unsigned char *) &x;
-    unsigned char b[4];
-
-    b[0] = a[3];
-    b[1] = a[2];
-    b[2] = a[1];
-    b[3] = a[0];
-
-    r = *((unsigned int *)b);
-    return r;
-    
-}
-#else
-#define fix(x) (x)
-#endif
 
 #define stNEWLINE 0
 #define stSKIPLINE 1
@@ -322,7 +332,7 @@ Elf32_Addr elf_find_entry(void *buf, int size)
 	int byte_swap;
 	int index;
 
-#define SWAPIT(x) ((byte_swap) ? fix(x) : (x))
+#define SWAPIT(x) ((byte_swap) ? SWAP32(x) : (x))
 
 	if(memcmp(cbuf, ELF_MAGIC, sizeof(ELF_MAGIC)-1) != 0)
 		return 0;
@@ -331,7 +341,7 @@ Elf32_Addr elf_find_entry(void *buf, int size)
 		return 0;
 
 	byte_swap = 0;
-#ifdef xBIG_ENDIAN		
+#if xBIG_ENDIAN		
 	if(cbuf[EI_DATA] == ELFDATA2LSB) {
 		byte_swap = 1;
 	}
@@ -340,12 +350,14 @@ Elf32_Addr elf_find_entry(void *buf, int size)
 		byte_swap = 1;
 	}
 #endif
+	
 	header = (struct Elf32_Ehdr *)cbuf;
 	pheader = (struct Elf32_Phdr *)&cbuf[SWAPIT(header->e_phoff)];
 
 	// XXX only looking at the first program header. Should be ok
 	return SWAPIT(pheader->p_offset);
 }
+#undef SWAPIT
 
 #define centry bdir.bd_entry[c]
 void makeboot(section *s, char *outfile)
@@ -459,7 +471,7 @@ int main(int argc, char **argv)
     
     if(argc < 2){
 usage:
-        fprintf(stderr,"usage: %s [ --floppy | -f ] [ --sparc | -s ] [ --sh4 | -4 ] [ <inifile> ... ] -o <bootfile>\n",argv[0]);
+        fprintf(stderr,"usage: %s [--littleendian (default)] [--bigendian ] [ --sparc | -s ] [ <inifile> ... ] -o <bootfile>\n",argv[0]);
         return 1;
     }
 
@@ -469,6 +481,8 @@ usage:
 	while(argc){
 		if(!strcmp(*argv,"--sparc")) {
 			make_sparcboot = 1;
+		} else if(!strcmp(*argv, "--bigendian")) {
+			target_endian = BE;
 		} else if(!strcmp(*argv,"-o")){
 			argc--;
 			argv++;

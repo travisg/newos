@@ -5,6 +5,7 @@
 #include <kernel/kernel.h>
 #include <kernel/vm.h>
 #include <kernel/debug.h>
+#include <kernel/arch/cpu.h>
 
 #include <libc/string.h>
 #include <libc/ctype.h>

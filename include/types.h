@@ -23,6 +23,9 @@
 #ifdef ARCH_mips
 #include <arch/mips/types.h>
 #endif
+#ifdef ARCH_ppc
+#include <arch/ppc/types.h>
+#endif
 
 #ifndef NULL
 #define NULL 0

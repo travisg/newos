@@ -20,6 +20,9 @@
 #ifdef ARCH_mips
 #include <kernel/arch/mips/kernel.h>
 #endif
+#ifdef ARCH_ppc
+#include <kernel/arch/ppc/kernel.h>
+#endif
 
 #define KSTACK_SIZE (PAGE_SIZE*2)
 #define STACK_SIZE  (PAGE_SIZE*16)

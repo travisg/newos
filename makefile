@@ -41,12 +41,14 @@ ifeq ($(ARCH),i386)
 		LD = i386-elf-ld
 		AS = i386-elf-as
 		AR = i386-elf-ar
+		OBJCOPY = i386-elf-objcopy
 	endif
 	ifeq ($(OSTYPE),cygwin)
 		CC = i386-linux-gcc
 		LD = i386-linux-ld
 		AS = i386-linux-as
 		AR = i386-linux-ar
+		OBJCOPY = i386-linux-objcopy
 	endif
 	GLOBAL_CFLAGS = -fno-pic -O
 	GLOBAL_LDFLAGS = 
@@ -71,6 +73,7 @@ ifeq ($(ARCH),sparc64)
 	LD = sparc64-elf-ld
 	AS = sparc64-elf-as
 	AR = sparc64-elf-ar
+	OBJCOPY = sparc64-elf-objcopy
 	GLOBAL_CFLAGS =
 	GLOBAL_LDFLAGS =
 	LIBGCC = -lgcc
@@ -83,6 +86,7 @@ ifeq ($(ARCH),sparc)
 		LD = sparc-elf-ld
 		AS = sparc-elf-as
 		AR = sparc-elf-ar
+		OBJCOPY = sparc-elf-objcopy
 	endif
 	GLOBAL_CFLAGS =
 	GLOBAL_LDFLAGS =
@@ -96,6 +100,7 @@ ifeq ($(ARCH),alpha)
 		LD = alpha-elf-ld
 		AS = alpha-elf-as
 		AR = alpha-elf-ar
+		OBJCOPY = alpha-elf-objcopy
 	endif
 	GLOBAL_CFLAGS =
 	GLOBAL_LDFLAGS =
@@ -109,8 +114,23 @@ ifeq ($(ARCH),mips)
 		LD = mips-elf-ld
 		AS = mips-elf-as
 		AR = mips-elf-ar
+		OBJCOPY = mips-elf-objcopy
 	endif
 	GLOBAL_CFLAGS = -fno-pic -mips4 -meb -G 0
+	GLOBAL_LDFLAGS =
+	LIBGCC = -lgcc
+	LIBGCC_PATH = lib/libgcc/$(ARCH)
+endif
+
+ifeq ($(ARCH),ppc)
+	ifneq ($(HOSTTYPE),ppc)
+		CC = ppc-elf-gcc
+		LD = ppc-elf-ld
+		AS = ppc-elf-as
+		AR = ppc-elf-ar
+		OBJCOPY = ppc-elf-objcopy
+	endif
+	GLOBAL_CFLAGS = -fno-pic
 	GLOBAL_LDFLAGS =
 	LIBGCC = -lgcc
 	LIBGCC_PATH = lib/libgcc/$(ARCH)
@@ -142,7 +162,7 @@ final1: $(FINAL)
 tools: $(NETBOOT) $(BOOTMAKER) $(BIN2H) $(BIN2ASM)
 
 $(BOOTMAKER): $(BOOTMAKER).c tools/sparcbootblock.h
-	$(HOST_CC) -O3 -o $@ $(BOOTMAKER).c
+	$(HOST_CC) -O0 -g -o $@ $(BOOTMAKER).c
 	
 NETBOOT_LINK_ARGS =
 ifeq ($(OSTYPE),beos)

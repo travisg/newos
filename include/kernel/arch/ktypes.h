@@ -20,6 +20,9 @@
 #ifdef ARCH_mips
 #include <kernel/arch/mips/ktypes.h>
 #endif
+#ifdef ARCH_ppc
+#include <kernel/arch/ppc/ktypes.h>
+#endif
 
 #endif
 
