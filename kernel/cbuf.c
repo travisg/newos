@@ -151,38 +151,35 @@ static void *_cbuf_alloc(size_t *size)
 
 static cbuf *allocate_cbuf_mem(size_t size)
 {
-	void *_buf;
 	cbuf *buf = NULL;
 	cbuf *last_buf = NULL;
 	cbuf *head_buf = NULL;
-	int i;
-	int count;
 	size_t found_size;
 
 	size = PAGE_ALIGN(size);
 
 	while(size > 0) {
 		found_size = size;
-		_buf = _cbuf_alloc(&found_size);
-		if(!_buf) {
+		buf = (cbuf *)_cbuf_alloc(&found_size);
+		if(!buf) {
 			// couldn't allocate, lets bail with what we have
 			break;
 		}
+		if(!head_buf) {
+			head_buf = last_buf = buf;
+			head_buf->total_len = 0;
+			head_buf->flags |= CBUF_FLAG_CHAIN_HEAD;
+		}
+		
 		size -= found_size;
-		count = found_size / CBUF_LEN;
 //		dprintf("allocate_cbuf_mem: returned %d of memory, %d left\n", found_size, size);
 
-		buf = (cbuf *)_buf;
-		if(!head_buf)
-			head_buf = buf;
-		for(i=0; i<count; i++) {
+		ASSERT(found_size % CBUF_LEN == 0);
+		for (; found_size > 0; found_size -= CBUF_LEN) {
 			initialize_cbuf(buf);
-			if(last_buf)
-				last_buf->next = buf;
-			if(buf == head_buf) {
-				buf->flags |= CBUF_FLAG_CHAIN_HEAD;
-				buf->total_len = (size / CBUF_LEN) * sizeof(buf->dat);
-			}
+			head_buf->total_len += buf->len;
+			last_buf->next = buf;
+			
 			last_buf = buf;
 			buf++;
 		}
@@ -689,8 +686,6 @@ void *cbuf_get_ptr(cbuf *buf, size_t offset)
 	while(buf) {
 		if(buf->len > offset)
 			return (void *)((int)buf->data + offset);
-		if(buf->len > offset)
-			return NULL;
 		offset -= buf->len;
 		buf = buf->next;
 	}
@@ -773,11 +768,12 @@ uint16 cbuf_ones_cksum16_2(cbuf *chain, size_t offset, size_t len, void *buf, si
 cbuf *cbuf_truncate_head(cbuf *buf, size_t trunc_bytes, bool free_unused)
 {
 	cbuf *head = buf;
-	cbuf *free_chain = NULL;
+	cbuf *tail = NULL;
 
 	if(!buf)
 		return head;
 
+	//dprintf("cbuf_truncate_head - buf: total_len: %d, len: %d\n", buf->total_len, buf->len);
 	validate_cbuf(buf);
 
 	while(buf && trunc_bytes > 0) {
@@ -791,32 +787,36 @@ cbuf *cbuf_truncate_head(cbuf *buf, size_t trunc_bytes, bool free_unused)
 		trunc_bytes -= to_trunc;
 		head->total_len -= to_trunc;
 
-		buf = buf->next;
-		if(free_unused && buf && head->len == 0) {
-			// the head cbuf is now zero length
-			buf->total_len = head->total_len;
-			buf->flags |= CBUF_FLAG_CHAIN_HEAD;
-			buf->packet_next = head->packet_next;
-
-			head->next = free_chain;
-			free_chain = head;
-
-			head = buf;
-  		}
+		if(free_unused && buf->len == 0)
+			tail = buf;
+			
+  		buf = buf->next;
 	}
 
-	if(free_chain)
-		cbuf_free_chain(free_chain);
+	if(!tail) {
+		validate_cbuf(head);
+		return head;
+	}
+	
+	tail->next = NULL;
+	tail->flags |= CBUF_FLAG_CHAIN_TAIL;
+	
+	if (buf) {
+		buf->total_len = head->total_len;
+		buf->flags |= CBUF_FLAG_CHAIN_HEAD;
+		buf->packet_next = head->packet_next;
+		//dprintf("cbuf_truncate_head - new buf: total_len: %d, len: %d\n", buf->total_len, buf->len);
+	}
+	
+	cbuf_free_chain(head);
 
-	validate_cbuf(head);
-
-	return head;
+	validate_cbuf(buf);
+	return buf;
 }
 
 int cbuf_truncate_tail(cbuf *buf, size_t trunc_bytes, bool free_unused)
 {
 	size_t offset;
-	size_t buf_offset;
 	cbuf *head = buf;
 	cbuf *free_chain = NULL;
 
@@ -826,21 +826,20 @@ int cbuf_truncate_tail(cbuf *buf, size_t trunc_bytes, bool free_unused)
 		trunc_bytes = buf->total_len;
 
 	offset = buf->total_len - trunc_bytes;
-	buf_offset = 0;
-	while(buf && offset > 0) {
-		if(offset < buf->len) {
-			// this is the one
-			buf_offset = offset;
+	while (buf) {
+		if (offset <= buf->len)
 			break;
-		}
 		offset -= buf->len;
 		buf = buf->next;
 	}
 	if(!buf)
 		return ERR_GENERAL;
 
-	head->total_len -= buf->len - buf_offset;
-	buf->len -= buf->len - buf_offset;
+	head->total_len -= buf->len - offset;
+	buf->len = offset;
+
+	if (free_unused)
+		buf->flags |= CBUF_FLAG_CHAIN_TAIL;
 
 	// clear out the rest of the buffers in this chain
 	buf = buf->next;

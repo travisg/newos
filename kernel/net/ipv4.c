@@ -768,7 +768,7 @@ int ipv4_input(cbuf *buf, ifnet *i)
 	dest = ntohl(header->dest);
 
 	// strip off the ip header
-	cbuf_truncate_head(buf, (header->version_length & 0xf) * 4, true);
+	buf = cbuf_truncate_head(buf, (header->version_length & 0xf) * 4, true);
 
 	// demultiplex and hand to the proper module
 	switch(protocol) {
