@@ -4,6 +4,9 @@
 #ifdef ARCH_i386
 #include <kernel/arch/i386/ktypes.h>
 #endif
+#ifdef ARCH_sh4
+#include <kernel/arch/sh4/ktypes.h>
+#endif
 
 #endif
 
