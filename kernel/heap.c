@@ -275,3 +275,13 @@ void kfree(void *address)
 out:
 	mutex_unlock(&heap_lock);
 }
+
+char *kstrdup(const char *text)
+{
+	char *buf = (char *)kmalloc(strlen(text) + 1);
+
+	if(buf != NULL)
+		strcpy(buf,text);
+	return buf;
+}
+

@@ -110,12 +110,11 @@ static struct devfs_vnode *devfs_create_vnode(struct devfs *fs, const char *name
 	memset(v, 0, sizeof(struct devfs_vnode));
 	v->id = fs->next_vnode_id++;
 
-	v->name = kmalloc(strlen(name) + 1);
+	v->name = kstrdup(name);
 	if(v->name == NULL) {
 		kfree(v);
 		return NULL;
 	}
-	strcpy(v->name, name);
 
 	return v;
 }

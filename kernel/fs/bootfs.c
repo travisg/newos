@@ -113,12 +113,11 @@ static struct bootfs_vnode *bootfs_create_vnode(struct bootfs *fs, const char *n
 	memset(v, 0, sizeof(struct bootfs_vnode));
 	v->id = fs->next_vnode_id++;
 
-	v->name = kmalloc(strlen(name) + 1);
+	v->name = kstrdup(name);
 	if(v->name == NULL) {
 		kfree(v);
 		return NULL;
 	}
-	strcpy(v->name, name);
 
 	return v;
 }

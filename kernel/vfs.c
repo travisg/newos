@@ -948,12 +948,11 @@ static int vfs_mount(char *path, const char *device, const char *fs_name, void *
 		goto err;
 	}
 
-	mount->mount_point = (char *)kmalloc(strlen(path)+1);
+	mount->mount_point = kstrdup(path);
 	if(mount->mount_point == NULL) {
 		err = ERR_NO_MEMORY;
 		goto err1;
 	}
-	strcpy(mount->mount_point, path);
 
 	mount->fs = find_fs(fs_name);
 	if(mount->fs == NULL) {
