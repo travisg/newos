@@ -26,7 +26,8 @@ typedef struct usb_hc_transfer {
 	int status;
 
 	// callback or completion sem (make sure the sem is <0 if you dont want to release it)
-	void (*callback)(struct usb_hc_transfer *);
+	void (*callback)(struct usb_hc_transfer *transfer, void *cookie);
+	void *cookie;
 	sem_id completion_sem;
 } usb_hc_transfer;
 
@@ -42,7 +43,7 @@ struct usb_hc_module_hooks {
 
 	// create an endpoint
 	int (*create_endpoint)(hc_cookie *cookie, hc_endpoint **endpoint,
-		usb_endpoint_descriptor *usb_endpoint, int address, int lowspeed);
+		usb_endpoint_descriptor *usb_endpoint, int address, bool lowspeed);
 
 	// delete an endpoint
 	int (*destroy_endpoint)(hc_cookie *cookie, hc_endpoint *endpoint);

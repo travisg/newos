@@ -97,7 +97,7 @@ static void enqueue_ed(ohci_ed *ed)
 	mutex_unlock(&oi->hc_list_lock);
 }
 
-static ohci_ed *create_endpoint(ohci *oi, usb_endpoint_descriptor *endpoint, int address, int lowspeed)
+static ohci_ed *create_endpoint(ohci *oi, usb_endpoint_descriptor *endpoint, int address, bool lowspeed)
 {
 	ohci_ed *ed;
 	ohci_td *td;
@@ -122,7 +122,7 @@ static ohci_ed *create_endpoint(ohci *oi, usb_endpoint_descriptor *endpoint, int
 			ed->queue = &oi->bulk_queue;
 			break;
 		case USB_ENDPOINT_ATTR_INT:
-			ed->queue = &oi->interrupt_queue;
+			ed->queue = &oi->interrupt_queue[INT_Q_32MS]; // XXX find the correct queue and rotate through them
 			break;
 	}
 
@@ -226,7 +226,7 @@ static int ohci_done_list_processor(void *_oi)
 
 			if(transfer_complete) {
 				if(td->usb_transfer->callback != NULL)
-					td->usb_transfer->callback(td->usb_transfer);
+					td->usb_transfer->callback(td->usb_transfer, td->usb_transfer->cookie);
 				if(td->usb_transfer->completion_sem >= 0)
 					sem_release(td->usb_transfer->completion_sem, 1);
 			}
@@ -300,7 +300,7 @@ static int ohci_interrupt(void *arg)
 }
 
 static int ohci_create_endpoint(hc_cookie *cookie, hc_endpoint **hc_endpoint,
-			usb_endpoint_descriptor *usb_endpoint, int address, int lowspeed)
+			usb_endpoint_descriptor *usb_endpoint, int address, bool lowspeed)
 {
 	ohci *oi = (ohci *)cookie;
 
@@ -330,7 +330,7 @@ static int ohci_enqueue_transfer(hc_cookie *cookie, hc_endpoint *endpoint, usb_h
 			int dir;
 
 			// the direction of the transfer is based off of the first byte in the setup data
-			dir = *((char *)transfer->setup_buf) & 0x80 ? 1 : 0;
+			dir = *((uint8 *)transfer->setup_buf) & 0x80 ? 1 : 0;
 
 			mutex_lock(&oi->hc_list_lock);
 
@@ -362,7 +362,7 @@ static int ohci_enqueue_transfer(hc_cookie *cookie, hc_endpoint *endpoint, usb_h
 			if(transfer->data_buf != NULL) {
 				// data descriptor
 				td1->flags = OHCI_TD_FLAGS_CC_NOT | OHCI_TD_FLAGS_TOGGLE_1| OHCI_TD_FLAGS_IRQ_NONE | OHCI_TD_FLAGS_ROUNDING |
-					dir ? OHCI_TD_FLAGS_DIR_IN : OHCI_TD_FLAGS_DIR_OUT;
+					(dir ? OHCI_TD_FLAGS_DIR_IN : OHCI_TD_FLAGS_DIR_OUT);
 				vm_get_page_mapping(vm_get_kernel_aspace_id(), (addr_t)transfer->data_buf, (addr_t *)&td1->curr_buf_ptr);
 				td1->buf_end = td1->curr_buf_ptr + transfer->data_len - 1;
 				td1->next_td = td2->phys_addr;
@@ -378,7 +378,7 @@ static int ohci_enqueue_transfer(hc_cookie *cookie, hc_endpoint *endpoint, usb_h
 
 			// ack descriptor
 			td2->flags = OHCI_TD_FLAGS_CC_NOT | OHCI_TD_FLAGS_TOGGLE_1 |
-				dir ? OHCI_TD_FLAGS_DIR_OUT : OHCI_TD_FLAGS_DIR_IN;
+				(dir ? OHCI_TD_FLAGS_DIR_OUT : OHCI_TD_FLAGS_DIR_IN);
 			td2->curr_buf_ptr = 0;
 			td2->buf_end = 0;
 			td2->next_td = td3->phys_addr;
@@ -403,6 +403,44 @@ static int ohci_enqueue_transfer(hc_cookie *cookie, hc_endpoint *endpoint, usb_h
 			ed->tail = td3->phys_addr;
 
 			oi->regs->command_status = COMMAND_CLF;
+
+			mutex_unlock(&oi->hc_list_lock);
+			break;
+		}
+		case USB_ENDPOINT_ATTR_INT: {
+			ohci_td *td0, *td1;
+
+			mutex_lock(&oi->hc_list_lock);
+
+			td0 = ed->tail_td;
+			td1 = allocate_td(oi);
+
+			// XXX only deals with non page boundary data transfers
+			td0->flags = OHCI_TD_FLAGS_CC_NOT | OHCI_TD_FLAGS_ROUNDING;
+			vm_get_page_mapping(vm_get_kernel_aspace_id(), (addr_t)transfer->data_buf, (addr_t *)&td0->curr_buf_ptr);
+			td0->buf_end = td0->curr_buf_ptr + transfer->data_len - 1;
+			td0->next_td = td1->phys_addr;
+			td0->transfer_head = td0;
+			td0->transfer_next = td1;
+			td0->usb_transfer = transfer;
+			td0->ed = ed;
+			td0->last_in_transfer = true;
+
+			SHOW_FLOW(6, "td0 %p (0x%lx) flags 0x%x, curr_buf_ptr 0x%x, buf_end 0x%x, next_td 0x%x",
+				td0, td0->phys_addr, td0->flags, td0->curr_buf_ptr, td0->buf_end, td0->next_td);
+
+			// new tail
+			td1->ed = NULL;
+			td1->usb_transfer = NULL;
+			td1->transfer_head = td1->transfer_next = NULL;
+
+			SHOW_FLOW(6, "td1 %p (0x%lx) flags 0x%x, curr_buf_ptr 0x%x, buf_end 0x%x, next_td 0x%x",
+				td1, td1->phys_addr, td1->flags, td1->curr_buf_ptr, td1->buf_end, td1->next_td);
+
+			ed->tail_td = td1;
+			ed->tail = td1->phys_addr;
+
+			oi->regs->command_status = COMMAND_BLF;
 
 			mutex_unlock(&oi->hc_list_lock);
 			break;
@@ -585,8 +623,6 @@ static ohci *ohci_init_hc(pci_info *pinfo)
 	oi->control_queue.head_phys = &oi->regs->control_head_ed;
 	oi->bulk_queue.head = NULL;
 	oi->bulk_queue.head_phys = &oi->regs->bulk_head_ed;
-	oi->interrupt_queue.head = NULL;
-	oi->interrupt_queue.head_phys = &oi->hcca->interrupt_table[0];
 	mutex_init(&oi->hc_list_lock, "ohci list lock");
 
 	// create a pool of transfer descriptors out of the remainder of the hcca region
@@ -608,19 +644,43 @@ static ohci *ohci_init_hc(pci_info *pinfo)
 		}
 	}
 
-	// allocate a null transfer descriptor
-	null_td = allocate_td(oi);
+	// allocate a null endpoint and transfer descriptor for the 63 interrupt queues we'll have
+	for(i = 0; i < 63; i++) {
+		// allocate a null transfer descriptor
+		null_td = allocate_td(oi);
 
-	// create a null endpoint descriptor
-	null_ed = create_ed();
-	null_ed->flags = 0;
-	null_ed->head = null_ed->tail = null_td->phys_addr;
-	null_ed->next = 0;
-	null_ed->next_ed = NULL;
+		// create a null endpoint descriptor
+		null_ed = create_ed();
+		null_ed->flags = 0;
+		null_ed->head = null_ed->tail = null_td->phys_addr;
+		null_ed->next = 0;
+		null_ed->next_ed = NULL;
 
-	// fill in all of the interrupt transfer fields
+		oi->interrupt_queue[i].head = null_ed;
+		oi->interrupt_queue[i].head_phys = &null_ed->next;
+	}
+
+	// set up the interrupt 'tree' shown on page 10 of the OHCI spec 1.0a
+	for(i=0; i < 2; i++) {
+		oi->interrupt_queue[INT_Q_2MS + i].head->next_ed = oi->interrupt_queue[INT_Q_1MS].head;
+		oi->interrupt_queue[INT_Q_2MS + i].head->next = *oi->interrupt_queue[INT_Q_1MS].head_phys;
+	}
+	for(i=0; i < 4; i++) {
+		oi->interrupt_queue[INT_Q_4MS + i].head->next_ed = oi->interrupt_queue[INT_Q_2MS + i/2].head;
+		oi->interrupt_queue[INT_Q_4MS + i].head->next = *oi->interrupt_queue[INT_Q_2MS + i/2].head_phys;
+	}
+	for(i=0; i < 8; i++) {
+		oi->interrupt_queue[INT_Q_8MS + i].head->next_ed = oi->interrupt_queue[INT_Q_4MS + i/4].head;
+		oi->interrupt_queue[INT_Q_8MS + i].head->next = *oi->interrupt_queue[INT_Q_4MS + i/4].head_phys;
+	}
+	for(i=0; i < 16; i++) {
+		oi->interrupt_queue[INT_Q_16MS + i].head->next_ed = oi->interrupt_queue[INT_Q_8MS + i/8].head;
+		oi->interrupt_queue[INT_Q_16MS + i].head->next = *oi->interrupt_queue[INT_Q_8MS + i/8].head_phys;
+	}
 	for(i=0; i < 32; i++) {
-		oi->hcca->interrupt_table[i] = null_ed->phys_addr;
+		oi->interrupt_queue[INT_Q_32MS + i].head->next_ed = oi->interrupt_queue[INT_Q_16MS + i/16].head;
+		oi->interrupt_queue[INT_Q_32MS + i].head->next = *oi->interrupt_queue[INT_Q_16MS + i/16].head_phys;
+		oi->hcca->interrupt_table[i] = oi->interrupt_queue[INT_Q_32MS + i].head->phys_addr;
 	}
 
 	// install the interrupt handler

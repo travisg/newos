@@ -206,7 +206,7 @@ typedef struct ohci {
 	// queues of endpoints
 	ohci_queue control_queue;
 	ohci_queue bulk_queue;
-	ohci_queue interrupt_queue;
+	ohci_queue interrupt_queue[1 + 2 + 4 + 8 + 16 + 32];
 	mutex hc_list_lock; 			// lock around any endpoint/transfer descriptor list manipulation
 
 	// a free pool of transfer descriptors
@@ -220,5 +220,13 @@ typedef struct ohci {
 	thread_id done_list_processor;
 	sem_id done_list_sem;
 } ohci;
+
+// interrupt queues
+#define INT_Q_1MS    0
+#define INT_Q_2MS    1
+#define INT_Q_4MS    3
+#define INT_Q_8MS    7
+#define INT_Q_16MS   15
+#define INT_Q_32MS   31
 
 #endif

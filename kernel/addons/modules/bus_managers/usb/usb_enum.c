@@ -31,14 +31,27 @@ static usb_endpoint_descriptor null_endpoint = {
 int usb_enumerator_thread(void *hc_struct)
 {
 	usb_hc *hc = (usb_hc *)hc_struct;
-	hc_endpoint *null_hc_endpoint_lowspeed;
-	hc_endpoint *null_hc_endpoint;
+	int err;
 
 	SHOW_FLOW(1, "starting up on hc %p, cookie %p", hc, hc->hc_cookie);
 
 	// create the null endpoint for address 0 so we can talk to unconfigured devices
-	hc->hooks->create_endpoint(hc->hc_cookie, &null_hc_endpoint_lowspeed, &null_endpoint, 0, 1);
-	hc->hooks->create_endpoint(hc->hc_cookie, &null_hc_endpoint, &null_endpoint, 0, 0);
+	create_usb_pipe(hc, NULL, &hc->default_lowspeed_pipe, &null_endpoint, 0, true);
+	create_usb_pipe(hc, NULL, &hc->default_fullspeed_pipe, &null_endpoint, 0, false);
+
+	// create a root hub device
+	err = create_usb_device(hc, &hc->roothub, NULL, 0, false);
+	if(err < 0) {
+		SHOW_ERROR0(1, "error creating root hub device, bailing...");
+		return -1;
+	}
+
+	// set up the hub
+	err = setup_usb_hub(hc->roothub);
+	if(err < 0) {
+		SHOW_ERROR0(1, "error setting up root hub, bailing...");
+		return -1;
+	}
 
 	for(;;) {
 		thread_snooze(1000000);

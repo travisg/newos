@@ -134,5 +134,48 @@ typedef union {
 	usb_string_descriptor string;
 } usb_descriptor;
 
+typedef struct {
+	uint8 length;
+	uint8 descriptor_type;
+	uint8 num_ports;
+	uint16 characteristics;
+	uint8 power_delay;
+	uint8 control_current;
+	uint8 removable[8];
+} _PACKED usb_hub_descriptor;
+
+#define USB_HUB_REQUEST_GET_STATE	2
+
+#define USB_HUB_PORTSTAT_CONNECTION    0x0001
+#define USB_HUB_PORTSTAT_ENABLED       0x0002
+#define USB_HUB_PORTSTAT_SUSPEND       0x0004
+#define USB_HUB_PORTSTAT_OVER_CURRENT  0x0008
+#define USB_HUB_PORTSTAT_RESET         0x0010
+#define USB_HUB_PORTSTAT_POWER_ON      0x0100
+#define USB_HUB_PORTSTAT_LOW_SPEED     0x0200
+
+#define USB_HUB_CX_PORT_CONNECTION     0x0001
+#define USB_HUB_CX_PORT_ENABLE         0x0002
+#define USB_HUB_CX_PORT_SUSPEND        0x0004
+#define USB_HUB_CX_PORT_OVER_CURRENT   0x0008
+#define USB_HUB_CX_PORT_RESET          0x0010
+
+#define USB_HUB_C_HUB_LOCAL_POWER		0
+#define USB_HUB_C_HUB_OVER_CURRENTR		1
+
+#define USB_HUB_PORT_CONNECTION			0
+#define USB_HUB_PORT_ENABLE				1
+#define USB_HUB_PORT_SUSPEND			2
+#define USB_HUB_PORT_OVER_CURRENT		3
+#define	USB_HUB_PORT_RESET				4
+#define	USB_HUB_PORT_POWER				8
+#define USB_HUB_PORT_LOW_SPEED			9
+
+#define USB_HUB_C_PORT_CONNECTION		16
+#define USB_HUB_C_PORT_ENABLE			17
+#define USB_HUB_C_PORT_SUSPEND			18
+#define USB_HUB_C_PORT_OVER_CURRENT		19
+#define USB_HUB_C_PORT_RESET			20
+
 #endif
 

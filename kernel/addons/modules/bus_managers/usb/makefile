@@ -6,7 +6,10 @@ ifeq ($(call FINDINLIST,$(MY_TARGET),$(ALL)),1)
 
 MY_OBJS := \
 	usb.o \
-	usb_enum.o
+	usb_device.o \
+	usb_enum.o \
+	usb_hub.o \
+	usb_pipe.o
 
 MY_INCLUDES := -Iinclude
 MY_CFLAGS := $(KERNEL_CFLAGS)
