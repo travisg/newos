@@ -127,7 +127,9 @@ static int main2()
 #if 0
 	panic("debugger_test\n");
 #endif
-
+#if 0
+	cbuf_test();
+#endif
 	// start the init process
 	{
 		proc_id pid;
