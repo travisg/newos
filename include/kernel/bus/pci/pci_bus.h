@@ -35,7 +35,8 @@ struct pci_cfg {
 
 typedef enum {
 	PCI_GET_CFG = 10099,
-	PCI_DUMP_CFG
+	PCI_DUMP_CFG,
+	PCI_SET_BUSMASTER
 } pci_ioctl_cmd;
 
 int pci_bus_init(kernel_args *ka);

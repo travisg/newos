@@ -72,6 +72,7 @@ static ssize_t pci_write(dev_cookie cookie, const void *buf, off_t pos, ssize_t 
 static int pci_ioctl(dev_cookie _cookie, int op, void *buf, size_t len)
 {
 	struct pci_config *cookie = _cookie;
+	uint16 cmd = 0;
 	int err = 0;
 
 	switch(op) {
@@ -85,6 +86,23 @@ static int pci_ioctl(dev_cookie _cookie, int op, void *buf, size_t len)
 			break;
 		case PCI_DUMP_CFG:
 			dump_pci_config(cookie->cfg);
+			break;
+	        case PCI_SET_BUSMASTER:
+			dprintf("pci_ioctl: Setting device %d,%d,%d as a busmaster.",
+				cookie->cfg->bus,
+				cookie->cfg->unit,
+				cookie->cfg->func);
+
+			cmd = pci_read_data(
+				cookie->cfg->bus,
+				cookie->cfg->unit,
+				cookie->cfg->func,
+				4, 2);
+			pci_write_data(
+				cookie->cfg->bus,
+				cookie->cfg->unit,
+				cookie->cfg->func,
+				4, cmd | 0x4, 2);
 			break;
 		default:
 			err = ERR_INVALID_ARGS;

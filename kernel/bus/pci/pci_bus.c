@@ -19,7 +19,7 @@ struct pci_fs {
 	int root_vnode; // just a placeholder to return a pointer to
 };
 
-static unsigned int pci_read_data(uint8 bus, uint8 unit, uint8 function, int reg, int bytes)
+unsigned int pci_read_data(uint8 bus, uint8 unit, uint8 function, int reg, int bytes)
 {
 	struct pci_config_address addr;
 	addr.enable = 1;
@@ -42,7 +42,7 @@ static unsigned int pci_read_data(uint8 bus, uint8 unit, uint8 function, int reg
 	}
 }
 
-static void pci_write_data(uint8 bus, uint8 unit, uint8 function, int reg, uint32 data, int bytes)
+void pci_write_data(uint8 bus, uint8 unit, uint8 function, int reg, uint32 data, int bytes)
 {
 	struct pci_config_address addr;
 	addr.enable = 1;

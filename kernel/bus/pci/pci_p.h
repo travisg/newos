@@ -16,6 +16,9 @@ struct pci_config_address {
 void dump_pci_config(struct pci_cfg *cfg);
 int pci_probe(uint8 bus, uint8 unit, uint8 function, struct pci_cfg *cfg);
 
+unsigned int pci_read_data(uint8 bus, uint8 unit, uint8 function, int reg, int bytes);
+void pci_write_data(uint8 bus, uint8 unit, uint8 function, int reg, uint32 data, int bytes);
+
 #endif
 
 
