@@ -38,6 +38,7 @@ static test_option opts[] = {
 	{ "1", "spawn threads, run forever", &thread_spawn_test, 0 },
 	{ "2", "spawn threads, kill them", &thread_spawn_test, 1 },
 	{ "3", "spawn threads, self terminating", &thread_spawn_test, 2 },
+	{ "4", "syscall benchmark", &syscall_bench, 0 },
 	{ 0, 0, 0, 0 }
 };
 
@@ -78,7 +79,7 @@ retry:
 	for(test_option *opt = opts; opt->command; opt++) {
 		printf("%s\t%s\n", opt->command, opt->name);
 	}
-	printf("> ");
+	printf("test# ");
 
 retry_line:
 	get_line(command, sizeof(command));
@@ -470,7 +471,7 @@ int foo(int argc, char **argv)
 		}
 	}
 #endif
-#if 1
+#if 0
 	{
 		int err;
 
