@@ -60,7 +60,7 @@ struct image_t {
 	dynmodule_id imageid;
 
 	struct   image_t *next;
-	struct   image_t **prev;
+	struct   image_t *prev;
 	int      refcount;
 	unsigned flags;
 
@@ -126,10 +126,11 @@ static struct uspace_prog_args_t const *uspa;
 
 static
 void
-enqueue(image_queue_t *queue, image_t *img)
+enqueue_image(image_queue_t *queue, image_t *img)
 {
 	img->next= 0;
 
+	img->prev= queue->tail;
 	if(queue->tail) {
 		queue->tail->next= img;
 	}
@@ -137,6 +138,26 @@ enqueue(image_queue_t *queue, image_t *img)
 	if(!queue->head) {
 		queue->head= img;
 	}
+}
+
+static
+void
+dequeue_image(image_queue_t *queue, image_t *img)
+{
+	if(img->next) {
+		img->next->prev= img->prev;
+	} else {
+		queue->tail= img->prev;
+	}
+
+	if(img->prev) {
+		img->prev->next= img->next;
+	} else {
+		queue->head= img->next;
+	}
+
+	img->prev= 0;
+	img->next= 0;
 }
 
 static
@@ -254,12 +275,20 @@ count_regions(char const *buff, int phnum, int phentsize)
 	return retval;
 }
 
+
+
+/*
+ * create_image() & destroy_image()
+ *
+ * 	Create and destroy image_t structures. The destroyer makes sure that the
+ * 	memory buffers are full of garbage before freeing.
+ */
 static
 image_t *
 create_image(char const *name, int num_regions)
 {
 	image_t *retval;
-	int      alloc_size;
+	size_t   alloc_size;
 
 	alloc_size= sizeof(image_t)+(num_regions-1)*sizeof(elf_region_t);
 
@@ -276,6 +305,23 @@ create_image(char const *name, int num_regions)
 
 	return retval;
 }
+
+static
+void
+destroy_image(image_t *image)
+{
+	size_t alloc_size;
+
+	alloc_size= sizeof(image_t)+(image->num_regions-1)*sizeof(elf_region_t);
+
+	memset(image->needed, 0xa5, sizeof(image->needed[0])*image->num_needed);
+	rldfree(image->needed);
+
+	memset(image, 0xa5, alloc_size);
+	rldfree(image);
+}
+
+
 
 static
 void
@@ -500,6 +546,19 @@ map_image(int fd, char const *path, image_t *image, bool fixed)
 
 error:
 	return false;
+}
+
+static
+void
+unmap_image(image_t *image)
+{
+	unsigned i;
+
+	for(i= 0; i< image->num_regions; i++) {
+		sys_vm_delete_region(image->regions[i].id);
+
+		image->regions[i].id= -1;
+	}
 }
 
 static
@@ -846,7 +905,7 @@ load_container(char const *path, char const *name, bool fixed)
 
 	sys_close(fd);
 
-	enqueue(&loaded_images, image);
+	enqueue_image(&loaded_images, image);
 
 	return image;
 }
@@ -949,6 +1008,24 @@ init_dependencies(image_t *img, bool init_head)
 }
 
 
+static
+void
+put_image(image_t *img)
+{
+	img->refcount-= 1;
+	if(img->refcount== 0) {
+		size_t i;
+
+		dequeue_image(&loaded_images, img);
+		enqueue_image(&disposable_images, img);
+
+		for(i= 0; i< img->num_needed; i++) {
+			put_image(img->needed[i]);
+		}
+	}
+}
+
+
 /*
  * exported functions:
  *
@@ -1032,6 +1109,7 @@ load_library(char const *path)
 dynmodule_id
 unload_library(dynmodule_id imid)
 {
+	int retval;
 	image_t *iter;
 
 	/*
@@ -1043,12 +1121,33 @@ unload_library(dynmodule_id imid)
 			/*
 			 * do the unloading
 			 */
+			put_image(iter);
+
+			break;
 		}
 
 		iter= iter->next;
 	}
 
-	return 0;
+	if(iter) {
+		retval= 0;
+	} else {
+		retval= -1;
+	}
+
+	iter= disposable_images.head;
+	while(iter) {
+		// call image fini here...
+
+		dequeue_image(&disposable_images, iter);
+		unmap_image(iter);
+
+		destroy_image(iter);
+		iter= disposable_images.head;
+	}
+
+
+	return retval;
 }
 
 void *

@@ -17,10 +17,9 @@ export_dl_open(char const *name, unsigned flags)
 int
 export_dl_close(int lib, unsigned flags)
 {
-	(void)(lib);
 	(void)(flags);
 
-	return -1;
+	return unload_library(lib);
 }
 
 void *
