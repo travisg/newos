@@ -19,9 +19,9 @@ int rldmain(void *arg);
 dynmodule_id load_program(char const *path, void **entry);
 dynmodule_id load_library(char const *path);
 dynmodule_id load_addon(char const *path);
-dynmodule_id unload_program(char const *path);
-dynmodule_id unload_library(char const *path);
-dynmodule_id unload_addon(char const *path);
+dynmodule_id unload_program(dynmodule_id imid);
+dynmodule_id unload_library(dynmodule_id imid);
+dynmodule_id unload_addon(dynmodule_id imid);
 
 void *dynamic_symbol(dynmodule_id imid, char const *symbol);
 

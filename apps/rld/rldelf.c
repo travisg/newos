@@ -61,7 +61,7 @@ struct image_t {
 
 	struct   image_t *next;
 	struct   image_t **prev;
-	int      ref_count;
+	int      refcount;
 	unsigned flags;
 
 	addr entry_point;
@@ -96,9 +96,12 @@ struct image_queue_t {
 
 
 static image_queue_t loaded_images= { 0, 0 };
+static image_queue_t loading_images= { 0, 0 };
+static image_queue_t disposable_images= { 0, 0 };
 static unsigned      loaded_image_count= 0;
 static unsigned      imageid_count= 0;
 
+static sem_id rld_sem;
 static struct uspace_prog_args_t const *uspa;
 
 
@@ -123,16 +126,16 @@ static struct uspace_prog_args_t const *uspa;
 
 static
 void
-enqueue(image_t *img)
+enqueue(image_queue_t *queue, image_t *img)
 {
 	img->next= 0;
 
-	if(loaded_images.tail) {
-		loaded_images.tail->next= img;
+	if(queue->tail) {
+		queue->tail->next= img;
 	}
-	loaded_images.tail= img;
-	if(!loaded_images.head) {
-		loaded_images.head= img;
+	queue->tail= img;
+	if(!queue->head) {
+		queue->head= img;
 	}
 }
 
@@ -160,6 +163,14 @@ find_image(char const *name)
 	image_t *iter;
 
 	iter= loaded_images.head;
+	while(iter) {
+		if(strncmp(iter->name, name, sizeof(iter->name)) == 0) {
+			return iter;
+		}
+		iter= iter->next;
+	}
+
+	iter= loading_images.head;
 	while(iter) {
 		if(strncmp(iter->name, name, sizeof(iter->name)) == 0) {
 			return iter;
@@ -258,6 +269,7 @@ create_image(char const *name, int num_regions)
 
 	strlcpy(retval->name, name, sizeof(retval->name));
 	retval->imageid= atomic_add(&imageid_count, 1);
+	retval->refcount= 1;
 	retval->num_regions= num_regions;
 
 	return retval;
@@ -796,6 +808,7 @@ load_container(char const *path, char const *name, bool fixed)
 
 	found= find_image(name);
 	if(found) {
+		found->refcount+= 1;
 		return found;
 	}
 
@@ -831,7 +844,7 @@ load_container(char const *path, char const *name, bool fixed)
 
 	sys_close(fd);
 
-	enqueue(image);
+	enqueue(&loaded_images, image);
 
 	return image;
 }
@@ -986,6 +999,7 @@ load_library(char const *path)
 
 	image = find_image(path);
 	if(image) {
+		image->refcount+= 1;
 		return image->imageid;
 	}
 
@@ -1013,11 +1027,36 @@ load_library(char const *path)
 	return image->imageid;
 }
 
+dynmodule_id
+unload_library(dynmodule_id imid)
+{
+	image_t *iter;
+
+	/*
+	 * we only check images that have been already initialized
+	 */
+	iter= loaded_images.head;
+	while(iter) {
+		if(iter->imageid== imid) {
+			/*
+			 * do the unloading
+			 */
+		}
+
+		iter= iter->next;
+	}
+
+	return 0;
+}
+
 void *
 dynamic_symbol(dynmodule_id imid, char const *symname)
 {
 	image_t *iter;
 
+	/*
+	 * we only check images that have been already initialized
+	 */
 	iter= loaded_images.head;
 	while(iter) {
 		if(iter->imageid== imid) {
@@ -1041,4 +1080,6 @@ void
 rldelf_init(struct uspace_prog_args_t const *_uspa)
 {
 	uspa= _uspa;
+
+	rld_sem= sys_sem_create(1, "rld_lock\n");
 }

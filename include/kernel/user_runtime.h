@@ -37,5 +37,8 @@ struct uspace_prog_args_t
 
 typedef void (libinit_f)(unsigned, struct uspace_prog_args_t const *);
 
+void INIT_BEFORE_CTORS(unsigned, struct uspace_prog_args_t const *);
+void INIT_AFTER_CTORS(unsigned, struct uspace_prog_args_t const *);
+
 
 #endif
