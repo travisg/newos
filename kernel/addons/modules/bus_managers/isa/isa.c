@@ -12,15 +12,22 @@
 #include <kernel/module.h>
 #include <kernel/bus/isa/isa.h>
 #include <kernel/arch/cpu.h>
+#include <kernel/debug.h>
 
+//#define _ISA_VERBOSE
+
+#ifdef _ISA_VERBOSE
 #define debug_level_flow 3
 #define debug_level_error 3
 #define debug_level_info 3
 
 #define DEBUG_MSG_PREFIX "ISA -- "
 
-#include <kernel/debug.h>
 #include <kernel/debug_ext.h>
+#else
+# define SHOW_FLOW(a,b,...)
+# define SHOW_FLOW0(a,b)
+#endif
 
 struct isa_info {
 	region_id dma_region_id;
