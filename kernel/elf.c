@@ -234,17 +234,16 @@ int elf_reverse_lookup_symbol(addr address, addr *base_address, char *text, int 
 	return rv;
 }
 
-
 static struct Elf32_Sym *elf_find_symbol(struct elf_image_info *image, const char *name)
 {
 	unsigned int hash;
 	unsigned int i;
 
-        if(!image->dynamic_ptr)
-                return NULL;
+	if(!image->dynamic_ptr)
+		return NULL;
 
 	hash = elf_hash(name) % HASHTABSIZE(image);
-//	dprintf("elf_find_symbol: hash %d\n", hash);
+//	dprintf("elf_find_symbol: hash %d on '%s'\n", hash, name);
 	for(i = HASHBUCKETS(image)[hash]; i != STN_UNDEF; i = HASHCHAINS(image)[i]) {
 		if(!strcmp(SYMNAME(image, &image->syms[i]), name)) {
 			return &image->syms[i];
@@ -254,10 +253,23 @@ static struct Elf32_Sym *elf_find_symbol(struct elf_image_info *image, const cha
 	return NULL;
 }
 
-addr elf_lookup_symbol(image_id id, const char *symbol)
+addr elf_lookup_symbol(image_id id, const char *_symbol)
 {
 	struct elf_image_info *image;
 	struct Elf32_Sym *sym;
+	const char *symbol;
+
+	/* some architectures prepend a '_' to symbols, so lets do it here for lookups */
+#if ELF_PREPEND_UNDERSCORE
+	char new_symbol[SYS_MAX_NAME_LEN];
+
+	new_symbol[0] = '_';
+	new_symbol[1] = 0;
+	strlcat(new_symbol, _symbol, SYS_MAX_NAME_LEN);
+	symbol = new_symbol;
+#else
+	symbol = _symbol;
+#endif
 
 //	dprintf( "elf_lookup_symbol: %s\n", symbol );
 
@@ -265,13 +277,9 @@ addr elf_lookup_symbol(image_id id, const char *symbol)
 	if(!image)
 		return 0;
 
-//	dprintf(" image %p\n", image);
-
 	sym = elf_find_symbol(image, symbol);
 	if(!sym)
 		return 0;
-
-//	dprintf(" sym %p\n", sym);
 
 	if(sym->st_shndx == SHN_UNDEF) {
 		return 0;
@@ -403,8 +411,9 @@ static int elf_relocate(struct elf_image_info *image, const char *sym_prepend)
 {
 	int res = NO_ERROR;
 	int i;
-	dprintf("top of elf_relocate\n");
-	dump_image_info(image);
+
+//	dprintf("top of elf_relocate\n");
+//	dump_image_info(image);
 
 	// deal with the rels first
 	if(image->rel) {
@@ -460,7 +469,7 @@ int elf_load_uspace(const char *path, struct proc *p, int flags, addr *entry)
 	int i;
 	ssize_t len;
 
-	dprintf("elf_load: entry path '%s', proc %p\n", path, p);
+	dprintf("elf_load_uspace: entry path '%s', proc %p\n", path, p);
 
 	fd = sys_open(path, STREAM_TYPE_FILE, 0);
 	if(fd < 0)
