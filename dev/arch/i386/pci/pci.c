@@ -188,7 +188,7 @@ static void dump_pci_config(struct pci_cfg *cfg)
 	dprintf("\tcommand: %d\n", cfg->command);
 	dprintf("\tstatus: %d\n", cfg->status);
 
-	dprintf("\revision id: %d\n", cfg->revision_id);
+	dprintf("\trevision id: %d\n", cfg->revision_id);
 	dprintf("\tinterface: %d\n", cfg->interface);
 	dprintf("\tsub class: %d\n", cfg->sub_class);
 	dprintf("\tbase class: %d\n", cfg->base_class);
