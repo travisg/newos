@@ -1,20 +1,18 @@
-#include "ktypes.h"
-#include "kernel.h"
-#include "console.h"
-#include "debug.h"
-#include "string.h"
-#include "faults.h"
-#include "int.h"
-#include "vm.h"
-#include "timer.h"
-#include "proc.h"
-#include "smp.h"
-#include "sem.h"
+#include <kernel.h>
+#include <console.h>
+#include <debug.h>
+#include <string.h>
+#include <faults.h>
+#include <int.h>
+#include <vm.h>
+#include <timer.h>
+#include <proc.h>
+#include <smp.h>
+#include <sem.h>
 
-#include "arch_cpu.h"
+#include <arch_cpu.h>
 
-
-#include "stage2.h"
+#include <stage2.h>
 
 int _start(kernel_args *oldka, int cpu)
 {

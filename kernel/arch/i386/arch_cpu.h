@@ -1,8 +1,8 @@
 #ifndef _I386_H
 #define _I386_H
 
-#include "kernel.h"
-#include "stage2.h"
+#include <kernel.h>
+#include <stage2.h>
 
 #define PAGE_SIZE 4096
 #define PAGE_ALIGN(x) (((x) + (PAGE_SIZE-1)) & ~(PAGE_SIZE-1))

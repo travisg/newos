@@ -1,16 +1,16 @@
 #include <string.h>
 #include <printf.h>
-#include "vm.h"
-#include "kernel.h"
-#include "debug.h"
-#include "console.h"
-#include "stage2.h"
-#include "int.h"
-#include "spinlock.h"
+#include <kernel.h>
+#include <vm.h>
+#include <debug.h>
+#include <console.h>
+#include <stage2.h>
+#include <int.h>
+#include <spinlock.h>
 
-#include "arch_cpu.h"
-#include "arch_pmap.h"
-#include "arch_vm.h"
+#include <arch_cpu.h>
+#include <arch_pmap.h>
+#include <arch_vm.h>
 
 #define KERNEL_BASE 0x80000000
 #define KERNEL_SIZE 0x80000000

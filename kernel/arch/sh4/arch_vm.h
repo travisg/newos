@@ -1,7 +1,7 @@
 #ifndef _ARCH_VM_H
 #define _ARCH_VM_H
 
-#include "stage2.h"
+#include <stage2.h>
 
 int arch_vm_init(struct kernel_args *ka);
 int arch_vm_init2(struct kernel_args *ka);

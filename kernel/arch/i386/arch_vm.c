@@ -1,13 +1,13 @@
-#include "kernel.h"
-#include "console.h"
-#include "vm.h"
-#include "debug.h"
+#include <kernel.h>
+#include <console.h>
+#include <vm.h>
+#include <debug.h>
 
-#include "arch_vm.h"
-#include "arch_interrupts.h"
-#include "arch_int.h"
-#include "arch_pmap.h"
-#include "arch_cpu.h"
+#include <arch_vm.h>
+#include <arch_interrupts.h>
+#include <arch_int.h>
+#include <arch_pmap.h>
+#include <arch_cpu.h>
 
 unsigned int *gdt = 0;
 

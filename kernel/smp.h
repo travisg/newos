@@ -1,7 +1,7 @@
 #ifndef _SMP_H
 #define _SMP_H
 
-#include "stage2.h"
+#include <stage2.h>
 
 // intercpu messages
 enum {
@@ -20,7 +20,7 @@ void smp_send_broadcast_ici(int message, unsigned int data, void *data_ptr);
 
 int smp_intercpu_int_handler();
 
-#include "arch_smp.h"
+#include <arch_smp.h>
 #define smp_get_num_cpus() arch_smp_get_num_cpus()
 #define smp_get_current_cpu() arch_smp_get_current_cpu()
 

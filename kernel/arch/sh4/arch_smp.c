@@ -1,2 +1,2 @@
-#include "arch_smp.h"
+#include <arch_smp.h>
 

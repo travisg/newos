@@ -1,9 +1,11 @@
 #include <string.h>
-#include "debug.h"
-#include "vm.h"
-#include "thread.h"
-#include "arch_thread.h"
-#include "arch_cpu.h"
+#include <kernel.h>
+#include <stage2.h>
+#include <debug.h>
+#include <vm.h>
+#include <thread.h>
+#include <arch_thread.h>
+#include <arch_cpu.h>
 
 struct arch_thread *arch_thread_create_thread_struct()
 {

@@ -1,20 +1,20 @@
 #include <string.h>
 #include <printf.h>
-#include "kernel.h"
-#include "stage2.h"
-#include "debug.h"
-#include "console.h"
-#include "proc.h"
-#include "thread.h"
-#include "arch_thread.h"
-#include "khash.h"
-#include "int.h"
-#include "smp.h"
-#include "timer.h"
-#include "arch_cpu.h"
-#include "arch_int.h"
-#include "spinlock.h"
-#include "sem.h"
+#include <kernel.h>
+#include <stage2.h>
+#include <debug.h>
+#include <console.h>
+#include <proc.h>
+#include <thread.h>
+#include <arch_thread.h>
+#include <khash.h>
+#include <int.h>
+#include <smp.h>
+#include <timer.h>
+#include <arch_cpu.h>
+#include <arch_int.h>
+#include <spinlock.h>
+#include <sem.h>
 
 // global
 int thread_spinlock = 0;

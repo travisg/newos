@@ -1,10 +1,10 @@
-#include "boot.h"
-#include "stage2.h"
-#include "stage2_priv.h"
+#include <boot.h>
+#include <stage2.h>
+#include <stage2_priv.h>
 
-#include "string.h"
-#include "stdarg.h"
-#include "printf.h"
+#include <string.h>
+#include <stdarg.h>
+#include <printf.h>
 
 const unsigned kBSSSize = 0x9000;
 #define BOOTDIR_ADDR 0x100000

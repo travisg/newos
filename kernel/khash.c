@@ -1,6 +1,6 @@
 #include <string.h>
-#include "vm.h"
-#include "khash.h"
+#include <vm.h>
+#include <khash.h>
 
 #define TOUCH(a) ((a) = (a))
 

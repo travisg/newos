@@ -1,12 +1,12 @@
 #include <string.h>
 #include <printf.h>
-#include "kernel.h"
-#include "int.h"
-#include "debug.h"
-#include "stage2.h"
-#include "vm.h"
-#include "spinlock.h"
-#include "arch_int.h"
+#include <kernel.h>
+#include <int.h>
+#include <debug.h>
+#include <stage2.h>
+#include <vm.h>
+#include <spinlock.h>
+#include <arch_int.h>
 
 #define NUM_IO_HANDLERS 256
 

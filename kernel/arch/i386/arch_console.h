@@ -1,7 +1,7 @@
 #ifndef _ARCH_CONSOLE
 #define _ARCH_CONSOLE
 
-#include "stage2.h"
+#include <stage2.h>
 
 int arch_con_init(kernel_args *ka);
 char arch_con_putch(char c);

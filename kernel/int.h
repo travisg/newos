@@ -1,7 +1,7 @@
 #ifndef _INT_H
 #define _INT_H
 
-#include "stage2.h"
+#include <stage2.h>
 
 int int_init(kernel_args *ka);
 int int_init2(kernel_args *ka);
@@ -10,7 +10,7 @@ int int_set_io_interrupt_handler(int vector, int (*func)(void));
 
 #define _INT_ARCH_INLINE_CODE 1
 #if _INT_ARCH_INLINE_CODE
-#include "arch_int.h"
+#include <arch_int.h>
 #define int_enable_interrupts	arch_int_enable_interrupts
 #define int_disable_interrupts	arch_int_disable_interrupts
 #define int_restore_interrupts	arch_int_restore_interrupts

@@ -1,14 +1,14 @@
 #include <string.h>
 
-#include "kernel.h"
-#include "sem.h"
-#include "spinlock.h"
-#include "int.h"
-#include "timer.h"
-#include "debug.h"
-#include "vm.h"
+#include <kernel.h>
+#include <sem.h>
+#include <spinlock.h>
+#include <int.h>
+#include <timer.h>
+#include <debug.h>
+#include <vm.h>
 
-#include "stage2.h"
+#include <stage2.h>
 
 static struct sem_entry *sems = NULL;
 static area_id sem_area = 0;

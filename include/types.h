@@ -4,19 +4,27 @@
 #ifdef ARCH_i386
 #include <i386/types.h>
 #endif
-
-#ifndef NULL
-#define NULL ((void *)0)
+#ifdef ARCH_alpha
+#include <alpha/types.h>
+#endif
+#ifdef ARCH_sh4
+#include <sh4/types.h>
+#endif
+#ifdef ARCH_sparc
+#include <sparc/types.h>
 #endif
 
-/*
+#ifndef NULL
+#define NULL 0
+#endif
+
 #define false 0
 #define true 1
 typedef int bool;
-*/
 
-typedef unsigned int	size_t;
-typedef int				ssize_t;
+typedef uint32              size_t;
+typedef int32               ssize_t;
+typedef uint64              off_t;
 
 typedef unsigned char		u_char;
 typedef unsigned short		u_short;

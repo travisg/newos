@@ -1,10 +1,10 @@
 #ifndef _THREAD_H
 #define _THREAD_H
 
-#include "stage2.h"
-#include "proc.h"
-#include "vm.h"
-#include "spinlock.h"
+#include <stage2.h>
+#include <proc.h>
+#include <vm.h>
+#include <spinlock.h>
 
 #define THREAD_IDLE_PRIORITY 0
 #define THREAD_NUM_PRIORITY_LEVELS 64

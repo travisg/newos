@@ -1,10 +1,10 @@
 #include <string.h>
-#include "kernel.h"
-#include "stage2.h"
-#include "debug.h"
-#include "proc.h"
-#include "thread.h"
-#include "khash.h"
+#include <kernel.h>
+#include <stage2.h>
+#include <debug.h>
+#include <proc.h>
+#include <thread.h>
+#include <khash.h>
 
 static void *proc_hash = NULL;
 static struct proc *kernel_proc = NULL;

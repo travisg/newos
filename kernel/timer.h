@@ -1,7 +1,7 @@
 #ifndef _TIMER_H
 #define _TIMER_H
 
-#include "stage2.h"
+#include <stage2.h>
 
 int timer_init(kernel_args *ka);
 int timer_interrupt();

@@ -1,11 +1,11 @@
 #include <string.h>
 #include <printf.h>
-#include "kernel.h"
-#include "faults.h"
-#include "debug.h"
-#include "stage2.h"
-#include "int.h"
-#include "arch_faults.h"
+#include <kernel.h>
+#include <faults.h>
+#include <debug.h>
+#include <stage2.h>
+#include <int.h>
+#include <arch_faults.h>
 
 int faults_init(kernel_args *ka)
 {

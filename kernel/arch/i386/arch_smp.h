@@ -1,7 +1,7 @@
 #ifndef _ARCH_SMP_H
 #define _ARCH_SMP_H
 
-#include "stage2.h"
+#include <stage2.h>
 
 // must match MAX_BOOT_CPUS in stage2.h
 #define SMP_MAX_CPUS 2

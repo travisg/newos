@@ -1,10 +1,10 @@
-#include "kernel.h"
-#include "console.h"
-#include "debug.h"
-#include "int.h"
-#include "spinlock.h"
+#include <kernel.h>
+#include <console.h>
+#include <debug.h>
+#include <int.h>
+#include <spinlock.h>
 
-#include "arch_console.h"
+#include <arch_console.h>
 
 #include <stdarg.h>
 #include <printf.h>

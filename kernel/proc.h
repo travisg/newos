@@ -1,9 +1,9 @@
 #ifndef _PROC_H
 #define _PROC_H
 
-#include "stage2.h"
-#include "vm.h"
-#include "thread.h"
+#include <stage2.h>
+#include <vm.h>
+#include <thread.h>
 
 struct proc {
 	struct proc *next;

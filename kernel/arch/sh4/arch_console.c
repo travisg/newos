@@ -1,5 +1,5 @@
-#include "arch_cpu.h"
-#include "stage2.h"
+#include <arch_cpu.h>
+#include <stage2.h>
 
 char arch_con_putch(char c)
 {

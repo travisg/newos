@@ -1,16 +1,16 @@
-#include "kernel.h"
-#include "string.h"
-#include "faults.h"
-#include "vm.h"
-#include "debug.h"
-#include "console.h"
-#include "int.h"
+#include <kernel.h>
+#include <string.h>
+#include <faults.h>
+#include <vm.h>
+#include <debug.h>
+#include <console.h>
+#include <int.h>
 
-#include "arch_cpu.h"
-#include "arch_interrupts.h"
-#include "arch_int.h"
+#include <arch_cpu.h>
+#include <arch_interrupts.h>
+#include <arch_int.h>
 
-#include "stage2.h"
+#include <stage2.h>
 
 int arch_faults_init(kernel_args *ka)
 {

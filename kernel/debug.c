@@ -1,17 +1,17 @@
 #include <string.h>
 #include <ctype.h>
 
-#include "kernel.h"
-#include "debug.h"
-#include "int.h"
-#include "spinlock.h"
-#include "smp.h"
-#include "console.h"
-#include "vm.h"
+#include <kernel.h>
+#include <debug.h>
+#include <int.h>
+#include <spinlock.h>
+#include <smp.h>
+#include <console.h>
+#include <vm.h>
 
-#include "arch_dbg_console.h"
-#include "arch_debug.h"
-#include "arch_cpu.h"
+#include <arch_dbg_console.h>
+#include <arch_debug.h>
+#include <arch_cpu.h>
 
 #include <stdarg.h>
 #include <printf.h>

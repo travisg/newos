@@ -1,5 +1,5 @@
-#include "arch_cpu.h"
-#include "stage2.h"
+#include <arch_cpu.h>
+#include <stage2.h>
 
 int arch_pmap_init(struct kernel_args *ka)
 {

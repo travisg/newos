@@ -1,7 +1,7 @@
 #ifndef _ARCH_THREAD_H
 #define _ARCH_THREAD_H
 
-#include "thread.h"
+#include <thread.h>
 
 // architecture specific thread info
 struct arch_thread {

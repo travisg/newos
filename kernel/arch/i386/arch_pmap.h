@@ -1,7 +1,7 @@
 #ifndef _I386_PMAP_H
 #define _I386_PMAP_H
 
-#include "stage2.h"
+#include <stage2.h>
 
 int arch_pmap_init(kernel_args *ka);
 int arch_pmap_init2(kernel_args *ka);

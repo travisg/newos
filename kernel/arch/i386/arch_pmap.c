@@ -1,13 +1,13 @@
-#include "string.h"
-#include "kernel.h"
+#include <string.h>
+#include <kernel.h>
 
-#include "vm.h"
-#include "debug.h"
-#include "smp.h"
+#include <vm.h>
+#include <debug.h>
+#include <smp.h>
 
-#include "arch_cpu.h"
-#include "arch_pmap.h"
-#include "arch_int.h"
+#include <arch_cpu.h>
+#include <arch_pmap.h>
+#include <arch_int.h>
 
 #define DEFAULT_PAGE_FLAGS (1 | 2 | 256) // present/rw/global
 #define ADDR_MASK 0xfffff000

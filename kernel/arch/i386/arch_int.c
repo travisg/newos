@@ -1,19 +1,20 @@
-#include "string.h"
-#include "vm.h"
-#include "debug.h"
-#include "console.h"
-#include "int.h"
-#include "thread.h"
-#include "smp.h"
+#include <kernel.h>
+#include <string.h>
+#include <vm.h>
+#include <debug.h>
+#include <console.h>
+#include <int.h>
+#include <thread.h>
+#include <smp.h>
 
-#include "arch_cpu.h"
-#include "arch_interrupts.h"
-#include "arch_int.h"
-#include "arch_faults.h"
-#include "arch_vm.h"
-#include "arch_smp.h"
+#include <arch_cpu.h>
+#include <arch_interrupts.h>
+#include <arch_int.h>
+#include <arch_faults.h>
+#include <arch_vm.h>
+#include <arch_smp.h>
 
-#include "stage2.h"
+#include <stage2.h>
 
 struct int_frame {
 	unsigned int edi;

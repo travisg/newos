@@ -1,12 +1,13 @@
-#include "console.h"
-#include "debug.h"
-#include "vm.h"
-#include "int.h"
+#include <kernel.h>
+#include <console.h>
+#include <debug.h>
+#include <vm.h>
+#include <int.h>
 
-#include "arch_cpu.h"
-#include "arch_int.h"
+#include <arch_cpu.h>
+#include <arch_int.h>
 
-#include "string.h"
+#include <string.h>
 
 /* used in keyboard.S */
 #define TTY_BUF_SIZE 1024

@@ -1,5 +1,5 @@
-#include "arch_cpu.h"
-#include "stage2.h"
+#include <arch_cpu.h>
+#include <stage2.h>
 
 int arch_init_fault_handlers(struct kernel_args *ka)
 {

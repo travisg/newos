@@ -1,7 +1,7 @@
 #ifndef _STAGE2_H
 #define _STAGE2_H
 
-#include "boot.h"
+#include <boot.h>
 
 // kernel args
 struct kernel_args {

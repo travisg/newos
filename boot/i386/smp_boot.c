@@ -1,8 +1,8 @@
-#include "stage2.h"
-#include "stage2_priv.h"
+#include <stage2.h>
+#include <stage2_priv.h>
 
-#include "string.h"
-#include "printf.h"
+#include <string.h>
+#include <printf.h>
 
 static unsigned int mp_mem_phys = 0;
 static unsigned int mp_mem_virt = 0;

@@ -2,7 +2,7 @@
 #define _DEBUG_H
 
 #include <kernel.h>
-#include "stage2.h"
+#include <stage2.h>
 
 // architecture independant
 int dbg_init(kernel_args *ka);

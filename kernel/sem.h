@@ -1,8 +1,8 @@
 #ifndef _SEM_H
 #define _SEM_H
 
-#include "thread.h"
-#include "stage2.h"
+#include <thread.h>
+#include <stage2.h>
 
 struct sem_entry {
 	sem_id    id;

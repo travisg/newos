@@ -1,14 +1,15 @@
-#include "stage2.h"
-#include "console.h"
-#include "debug.h"
-#include "thread.h"
-#include "int.h"
-#include "smp.h"
-#include "vm.h"
-#include "timer.h"
+#include <kernel.h>
+#include <stage2.h>
+#include <console.h>
+#include <debug.h>
+#include <thread.h>
+#include <int.h>
+#include <smp.h>
+#include <vm.h>
+#include <timer.h>
 
-#include "arch_cpu.h"
-#include "arch_timer.h"
+#include <arch_cpu.h>
+#include <arch_timer.h>
 
 struct timer_event {
 	struct timer_event *next;

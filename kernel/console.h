@@ -1,7 +1,7 @@
 #ifndef _CONSOLE_H
 #define _CONSOLE_H
 
-#include "stage2.h"
+#include <stage2.h>
 
 // architecture independant
 int con_init(kernel_args *ka);

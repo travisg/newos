@@ -1,5 +1,6 @@
-#include "arch_cpu.h"
-#include "spinlock.h"
+#include <kernel.h>
+#include <arch_cpu.h>
+#include <spinlock.h>
 
 void acquire_spinlock(int *lock)
 {

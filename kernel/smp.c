@@ -1,16 +1,16 @@
 #include <string.h>
 
-#include "console.h"
-#include "debug.h"
-#include "int.h"
-#include "smp.h"
-#include "spinlock.h"
-#include "vm.h"
-#include "kernel.h"
+#include <kernel.h>
+#include <console.h>
+#include <debug.h>
+#include <int.h>
+#include <smp.h>
+#include <spinlock.h>
+#include <vm.h>
 
-#include "arch_cpu.h"
-#include "arch_smp.h"
-#include "arch_pmap.h"
+#include <arch_cpu.h>
+#include <arch_smp.h>
+#include <arch_pmap.h>
 
 struct smp_msg {
 	struct smp_msg *next;

@@ -1,7 +1,7 @@
-#include "arch_cpu.h"
-#include "stage2.h"
-#include "vm.h"
-#include "arch_pmap.h"
+#include <arch_cpu.h>
+#include <stage2.h>
+#include <vm.h>
+#include <arch_pmap.h>
 
 int arch_vm_init(struct kernel_args *ka)
 {

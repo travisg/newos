@@ -1,21 +1,22 @@
 // Huge sections stolen from OpenBLT
 // Will be redone later
 
-#include "stage2.h"
-#include "console.h"
-#include "debug.h"
-#include "vm.h"
-#include "kernel.h"
-#include "printf.h"
-#include "string.h"
-#include "int.h"
-#include "spinlock.h"
-#include "smp.h"
+#include <stage2.h>
+#include <kernel.h>
+#include <console.h>
+#include <debug.h>
+#include <vm.h>
+#include <kernel.h>
+#include <printf.h>
+#include <string.h>
+#include <int.h>
+#include <spinlock.h>
+#include <smp.h>
 
-#include "arch_cpu.h"
-#include "arch_vm.h"
-#include "arch_smp.h"
-#include "arch_smp_priv.h"
+#include <arch_cpu.h>
+#include <arch_vm.h>
+#include <arch_smp.h>
+#include <arch_smp_priv.h>
 
 static int num_cpus = 1;
 static unsigned int *apic = NULL;

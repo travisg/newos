@@ -1,7 +1,7 @@
 #ifndef _STAGE2_PRIV_H
 #define _STAGE2_PRIV_H
 
-#include "stage2.h"
+#include <stage2.h>
 
 void clearscreen();
 int dprintf(const char *fmt, ...);
