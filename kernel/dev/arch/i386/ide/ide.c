@@ -371,6 +371,13 @@ static bool ide_attach_buses(unsigned int bus)
 //--------------------------------------------------------------------------------
 int ide_bus_init(kernel_args *ka)
 {
+	// Create our top-level semaphore
+	ide_sem = sem_create(1, "ide_sem");
+	if (ide_sem < 0) {
+		// We failed, so tell caller
+		return ide_sem;
+	}
+
 	// attach ide bus #1
 	int_set_io_interrupt_handler(0x20 + IDE_0_INTERRUPT, &ide_interrupt_handler, NULL);
 	ide_raw_init(0x1f0, 0x3f0);
