@@ -94,7 +94,7 @@ int load_module( const char *name, const char *prefix, module_info **module )
 	int pos;
 	int res = ERR_NOT_FOUND;
 	
-	strcpy( full_name, prefix );
+	strlcpy( full_name, prefix, sizeof(full_name) );
 	
 	pos = 0;
 

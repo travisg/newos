@@ -8,7 +8,7 @@
 #include <kernel/heap.h>
 #include <kernel/vfs.h>
 #include <kernel/bus/bus.h>
-#include <libc/string.h>
+#include <nulibc/string.h>
 #include <sys/errors.h>
 
 #include <kernel/bus/pci/pci_bus.h>
@@ -90,7 +90,7 @@ static int bus_find_device_recurse(int *n, char *base_path, int base_fd, id_list
 		// reset the base_path to the original string passed in
 		base_path[base_path_len] = 0;
 
-		strcat(base_path, leaf);
+		strlcat(base_path, leaf, sizeof(leaf));
 		fd = sys_open(base_path, STREAM_TYPE_ANY, 0);
 		if(fd < 0)
 			continue;
@@ -100,7 +100,7 @@ static int bus_find_device_recurse(int *n, char *base_path, int base_fd, id_list
 			continue;
 		}
 		if(stat.type == STREAM_TYPE_DIR) {
-			strcat(base_path, "/");
+			strcat(base_path, "/");	/* XXXfreston... this is unsafe!!!! */
 			err = bus_find_device_recurse(n, base_path, fd, vendor_ids, device_ids);
 			sys_close(fd);
 			if(err >= 0)
@@ -147,8 +147,8 @@ int bus_find_device(int n, id_list *vendor_ids, id_list *device_ids, device *dev
 		if(base_fd < 0)
 			continue;
 
-		strcpy(path, b->path);
-		strcat(path, "/");
+		strlcpy(path, b->path, sizeof(path));
+		strlcat(path, "/", sizeof(path));
 		fd = bus_find_device_recurse(&n, path, base_fd, vendor_ids, device_ids);
 		if(fd >= 0) {
 			// we have a device!

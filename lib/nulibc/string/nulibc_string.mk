@@ -14,6 +14,8 @@ NULIBC_STRING_OBJS = \
 	$(NULIBC_STRING_OBJ_DIR)/strcmp.o \
 	$(NULIBC_STRING_OBJ_DIR)/strcpy.o \
 	$(NULIBC_STRING_OBJ_DIR)/strerror.o \
+	$(NULIBC_STRING_OBJ_DIR)/strlcat.o \
+	$(NULIBC_STRING_OBJ_DIR)/strlcpy.o \
 	$(NULIBC_STRING_OBJ_DIR)/strlen.o \
 	$(NULIBC_STRING_OBJ_DIR)/strncat.o \
 	$(NULIBC_STRING_OBJ_DIR)/strncmp.o \

@@ -15,7 +15,7 @@
 
 #include <sys/elf32.h>
 
-#include <libc/string.h>
+#include <nulibc/string.h>
 #include <libc/printf.h>
 
 struct elf_region {
@@ -312,8 +312,8 @@ static int  elf_resolve_symbol(struct elf_image_info *image, struct Elf32_Sym *s
 	switch(sym->st_shndx) {
 		case SHN_UNDEF:
 			// patch the symbol name
-			strcpy(new_symname, sym_prepend);
-			strcat(new_symname, SYMNAME(image, sym));
+			strlcpy(new_symname, sym_prepend, sizeof(new_symname));
+			strlcat(new_symname, SYMNAME(image, sym), sizeof(new_symname));
 
 			// it's undefined, must be outside this image, try the other image
 			sym2 = elf_find_symbol(shared_image, new_symname);
