@@ -33,6 +33,9 @@
 #define WRITE_COUNT 1024
 #define READ_COUNT 1
 
+#define DEFAULT_KERNEL_WORKING_SET  1024
+#define DEFAULT_WORKING_SET         256
+
 static vm_address_space *kernel_aspace;
 
 #define REGION_HASH_TABLE_SIZE 1024
@@ -1152,6 +1155,8 @@ aspace_id vm_create_aspace(const char *name, addr base, addr size, bool kernel)
 	strcpy(aspace->name, name);
 
 	aspace->id = next_aspace_id++;
+	aspace->fault_count = 0;
+	aspace->working_set_size = kernel ? DEFAULT_KERNEL_WORKING_SET : DEFAULT_WORKING_SET;
 
 	// initialize the corresponding translation map
 	err = vm_translation_map_create(&aspace->translation_map, kernel);
@@ -1426,7 +1431,8 @@ static int vm_soft_fault(addr address, bool is_write, bool is_user)
 		return ERR_VM_PF_FATAL;
 	}
 	map = &aspace->virtual_map;
-	
+	atomic_add(&aspace->fault_count, 1);
+
 	sem_acquire(map->sem, READ_COUNT);
 	region = vm_virtual_map_lookup(map, address);
 	if(region == NULL) {

@@ -112,6 +112,8 @@ typedef struct vm_address_space {
 	vm_translation_map translation_map;
 	char *name;
 	aspace_id id;
+	int fault_count;
+	int working_set_size;
 	struct vm_address_space *hash_next;
 } vm_address_space;	
 
