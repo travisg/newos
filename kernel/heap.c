@@ -100,10 +100,12 @@ static void dump_bin_list(int argc, char **argv)
 // do a little housekeeping to set up the data structure.
 int heap_init(addr new_heap_base, unsigned int new_heap_size)
 {
+	const unsigned int page_entries = PAGE_SIZE / sizeof(struct heap_page);
 	// set some global pointers
 	heap_alloc_table = (struct heap_page *)new_heap_base;
-	heap_size = new_heap_size;
-	heap_base = PAGE_ALIGN((unsigned int)heap_alloc_table + (heap_size / PAGE_SIZE) * sizeof(struct heap_page));
+	//heap_size = ((uint64)new_heap_size * page_entries / (page_entries + 1)) & ~(PAGE_SIZE-1);
+	heap_size = new_heap_size - PAGE_SIZE;  // use above line instead if new_heap_size > sqr(PAGE_SIZE)/2
+	heap_base = (unsigned int)heap_alloc_table + PAGE_ALIGN(heap_size / page_entries);
 	heap_base_ptr = heap_base;
 	dprintf("heap_alloc_table = %p, heap_base = 0x%lx, heap_size = 0x%lx\n", heap_alloc_table, heap_base, heap_size);
 
