@@ -6,6 +6,7 @@ KERNEL_OBJS += \
 		$(KERNEL_NET_OBJ_DIR)/icmp.o \
 		$(KERNEL_NET_OBJ_DIR)/if.o \
 		$(KERNEL_NET_OBJ_DIR)/ipv4.o \
+		$(KERNEL_NET_OBJ_DIR)/loopback.o \
 		$(KERNEL_NET_OBJ_DIR)/misc.o \
 		$(KERNEL_NET_OBJ_DIR)/net.o \
 		$(KERNEL_NET_OBJ_DIR)/socket.o \

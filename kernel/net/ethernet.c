@@ -19,8 +19,6 @@ typedef struct ethernet2_header {
 	uint16 type;
 } ethernet2_header;
 
-static ethernet_addr broadcast_ethernet;
-
 void dump_ethernet_addr(ethernet_addr addr)
 {
 	dprintf("%x:%x:%x:%x:%x:%x",
@@ -68,15 +66,15 @@ int ethernet_input(cbuf *buf, ifnet *i)
 	return err;
 }
 
-int ethernet_broadcast_output(cbuf *buf, ifnet *i, int protocol_type)
-{
-	return ethernet_output(buf, i, broadcast_ethernet, protocol_type);
-}
-
-int ethernet_output(cbuf *buf, ifnet *i, ethernet_addr target, int protocol_type)
+int ethernet_output(cbuf *buf, ifnet *i, netaddr *target, int protocol_type)
 {
 	cbuf *eheader_buf;
 	ethernet2_header *eheader;
+
+	if(target->type != ADDR_TYPE_ETHERNET) {
+		cbuf_free_chain(buf);
+		return ERR_INVALID_ARGS;
+	}
 
 	eheader_buf = cbuf_get_chain(sizeof(ethernet2_header));
 	if(!eheader_buf) {
@@ -87,7 +85,7 @@ int ethernet_output(cbuf *buf, ifnet *i, ethernet_addr target, int protocol_type
 
 	// put together an ethernet header
 	eheader = (ethernet2_header *)cbuf_get_ptr(eheader_buf, 0);
-	memcpy(&eheader->dest, target, 6);
+	memcpy(&eheader->dest, &target->addr[0], 6);
 	memcpy(&eheader->src, &i->link_addr->addr.addr[0], 6);
 	eheader->type = htons(protocol_type);
 
@@ -99,8 +97,6 @@ int ethernet_output(cbuf *buf, ifnet *i, ethernet_addr target, int protocol_type
 
 int ethernet_init(void)
 {
-	memset(broadcast_ethernet, 0xff, 6);
-
 	return 0;
 }
 

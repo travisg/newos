@@ -13,6 +13,7 @@
 #include <kernel/thread.h>
 #include <kernel/queue.h>
 #include <kernel/arch/cpu.h>
+#include <kernel/net/loopback.h>
 #include <kernel/net/ethernet.h>
 #include <kernel/net/if.h>
 #include <libc/string.h>
@@ -55,6 +56,20 @@ ifnet *if_register_interface(const char *path, int type)
 	if(!i)
 		return NULL;
 
+	// find the appropriate function calls to the link layer drivers
+	switch(type) {
+		case IF_TYPE_LOOPBACK:
+			i->link_input = &loopback_input;
+			i->link_output = &loopback_output;
+			break;
+		case IF_TYPE_ETHERNET:
+			i->link_input = &ethernet_input;
+			i->link_output = &ethernet_output;
+			break;
+		default:
+			kfree(i);
+			return NULL;
+	}
 	i->id = atomic_add(&next_id, 1);
 	strcpy(i->path, path);
 	i->type = type;
@@ -164,7 +179,7 @@ static int if_rx_thread(void *args)
 		}
 		cbuf_memcpy_to_chain(b, 0, i->rx_buf, len);
 
-		ethernet_input(b, i);
+		i->link_input(b, i);
 	}
 
 	return 0;

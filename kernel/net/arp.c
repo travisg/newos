@@ -173,8 +173,13 @@ int arp_input(cbuf *buf, ifnet *i)
 				dprintf("arp_receive: arp was for us, responding...\n");
 
 				// send it out
-				ethernet_output(buf, i, arp->target_ethernet, PROT_TYPE_ARP);
-
+				{
+					netaddr naddr;
+					naddr.len = 6;
+					naddr.type = ADDR_TYPE_ETHERNET;
+					memcpy(&naddr.addr[0], arp->target_ethernet, 6);
+					i->link_output(buf, i, &naddr, PROT_TYPE_ARP);
+				}
 				// the chain gets deleted in the output, so we can return here
 				return 0;
 			}
@@ -211,21 +216,25 @@ static int arp_send_request(ifnet *i, ipv4_addr sender_ipaddr, ipv4_addr ip_addr
 	memset(&arp->target_ethernet, 0, 6);
 	arp->target_ipv4 = htonl(ip_addr);
 
-	return ethernet_broadcast_output(buf, i, PROT_TYPE_ARP);
+	return i->link_output(buf, i, &i->link_addr->broadcast, PROT_TYPE_ARP);
 }
 
-int arp_lookup(ifnet *i, ipv4_addr sender_ipaddr, ipv4_addr ip_addr, ethernet_addr e_addr, void (*arp_callback)(int, void *args, ifnet *, netaddr *), void *callback_args)
+int arp_lookup(ifnet *i, ipv4_addr sender_ipaddr, ipv4_addr ip_addr, netaddr *link_addr, void (*arp_callback)(int, void *args, ifnet *, netaddr *), void *callback_args)
 {
 	arp_cache_entry *e;
 	arp_wait_request *wait;
 	int err;
 	bool wakeup_retransmit_thread;
 
+	// if it's a loopback interface, just return, the address wont matter anyway
+	if(i->type == IF_TYPE_LOOPBACK)
+		return NO_ERROR;
+
 	// look in the arp table first
 	mutex_lock(&arp_table_mutex);
 	e = hash_lookup(arp_table, &ip_addr);
 	if(e) {
-		memcpy(e_addr, &e->link_addr.addr[0], 6);
+		memcpy(link_addr, &e->link_addr, sizeof(netaddr));
 		e->last_used_time = system_time();
 	}
 	mutex_unlock(&arp_table_mutex);

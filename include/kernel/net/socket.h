@@ -21,7 +21,8 @@ typedef struct sockaddr {
 
 int socket_init(void);
 sock_id socket_create(int type, int flags, sockaddr *addr);
-ssize_t socket_read(sock_id id, void *buf, ssize_t len);
+ssize_t socket_recvfrom(sock_id id, void *buf, ssize_t len, sockaddr *addr);
+ssize_t socket_sendto(sock_id id, const void *buf, ssize_t len, sockaddr *addr);
 
 #endif
 

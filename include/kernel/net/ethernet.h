@@ -13,11 +13,11 @@
 
 typedef uint8 ethernet_addr[6];
 
+// not to be called directly, use the ifnet.link_output and link_input
 int ethernet_input(cbuf *buf, ifnet *i);
-int ethernet_output(cbuf *buf, ifnet *i, ethernet_addr target, int protocol_type);
-int ethernet_broadcast_output(cbuf *buf, ifnet *i, int protocol_type);
-int ethernet_init(void);
+int ethernet_output(cbuf *buf, ifnet *i, netaddr *target, int protocol_type);
 
+int ethernet_init(void);
 
 void dump_ethernet_addr(ethernet_addr addr);
 

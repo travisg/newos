@@ -17,7 +17,7 @@ enum {
 int arp_input(cbuf *buf, ifnet *i);
 int arp_init(void);
 int arp_insert(ipv4_addr ip_addr, netaddr *link_addr);
-int arp_lookup(ifnet *i, ipv4_addr sender_ipaddr, ipv4_addr ip_addr, ethernet_addr e_addr, void (*arp_callback)(int, void *args, ifnet *, netaddr *), void *callback_args);
+int arp_lookup(ifnet *i, ipv4_addr sender_ipaddr, ipv4_addr ip_addr, netaddr *link_addr, void (*arp_callback)(int, void *args, ifnet *, netaddr *), void *callback_args);
 
 #endif
 

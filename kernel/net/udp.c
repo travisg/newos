@@ -35,7 +35,7 @@ typedef struct udp_queue_elem {
 	ipv4_addr src_address;
 	ipv4_addr target_address;
 	uint16 src_port;
-	uint16 port;
+	uint16 target_port;
 	int len;
 	cbuf *buf;
 } udp_queue_elem;
@@ -132,7 +132,7 @@ static void udp_endpoint_release_ref(udp_endpoint *e)
 	}
 }
 
-int udp_receive(cbuf *buf, ifnet *i, ipv4_addr source_address, ipv4_addr target_address)
+int udp_input(cbuf *buf, ifnet *i, ipv4_addr source_address, ipv4_addr target_address)
 {
 	udp_header *header;
 	udp_endpoint *e;
@@ -143,7 +143,7 @@ int udp_receive(cbuf *buf, ifnet *i, ipv4_addr source_address, ipv4_addr target_
 	header = cbuf_get_ptr(buf, 0);
 
 	dprintf("udp_receive: src port %d, dest port %d, len %d, buf len %d, checksum 0x%x\n",
-		ntohs(header->source_port), ntohs(header->dest_port), ntohs(header->length), cbuf_get_len(buf), header->checksum);
+		ntohs(header->source_port), ntohs(header->dest_port), ntohs(header->length), (int)cbuf_get_len(buf), header->checksum);
 
 	if(ntohs(header->length) > (uint16)cbuf_get_len(buf)) {
 		err = ERR_NET_BAD_PACKET;
@@ -194,8 +194,8 @@ int udp_receive(cbuf *buf, ifnet *i, ipv4_addr source_address, ipv4_addr target_
 		err = ERR_NO_MEMORY;
 		goto ditch_packet;
 	}
-	qe->port = ntohs(header->source_port);
-	qe->port = port;
+	qe->src_port = ntohs(header->source_port);
+	qe->target_port = port;
 	qe->src_address = source_address;
 	qe->target_address = target_address;
 	qe->len = ntohs(header->length) - sizeof(udp_header);
@@ -257,7 +257,7 @@ int udp_close(void *prot_data)
 	return 0;
 }
 
-ssize_t udp_read(void *prot_data, void *buf, ssize_t len)
+ssize_t udp_recvfrom(void *prot_data, void *buf, ssize_t len, sockaddr *saddr)
 {
 	udp_endpoint *e = prot_data;
 	udp_queue_elem *qe;
@@ -281,11 +281,53 @@ retry:
 	cbuf_memcpy_from_chain(buf, qe->buf, 0, min(qe->len, len));
 	ret = qe->len;
 
+	// copy the address out
+	if(saddr) {
+		saddr->addr.len = 4;
+		saddr->addr.type = ADDR_TYPE_IP;
+		NETADDR_TO_IPV4(&saddr->addr) = qe->src_address;
+		saddr->port = qe->src_port;
+	}
+
 	// free this queue entry
 	cbuf_free_chain(qe->buf);
 	kfree(qe);
 
 	return ret;
+}
+
+ssize_t udp_sendto(void *prot_data, const void *inbuf, ssize_t len, sockaddr *toaddr)
+{
+	udp_endpoint *e = prot_data;
+	udp_header *header;
+	int total_len;
+	cbuf *buf;
+
+	// make sure the args make sense
+	if(len < 0 || len + sizeof(udp_header) > 0xffff)
+		return ERR_INVALID_ARGS;
+	if(toaddr->port < 0 || toaddr->port > 0xffff)
+		return ERR_INVALID_ARGS;
+
+	// allocate a buffer to hold the data + header
+	total_len = len + sizeof(udp_header);
+	if(total_len % 2 != 0) total_len++;
+	buf = cbuf_get_chain(total_len);
+	if(!buf)
+		return ERR_NO_MEMORY;
+
+	// copy the data to this new buffer
+	cbuf_memcpy_to_chain(buf, sizeof(udp_header), inbuf, len);
+
+	// start setting up the header
+	header = cbuf_get_ptr(buf, 0);
+	header->source_port = htons(e->port);
+	header->dest_port = htons(toaddr->port);
+	header->length = htons(len + sizeof(udp_header));
+	header->checksum = 0; // XXX calc checksum later
+
+	// send it away
+	return ipv4_output(buf, NETADDR_TO_IPV4(&toaddr->addr), IP_PROT_UDP);
 }
 
 int udp_init(void)

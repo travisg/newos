@@ -161,11 +161,7 @@ static void ipv4_arp_callback(int arp_code, void *args, ifnet *i, netaddr *link_
 
 	if(arp_code == ARP_CALLBACK_CODE_OK) {
 		// arp found us an address and called us back with it
-		ethernet_addr eaddr;
-
-		memcpy(eaddr, &link_addr->addr[0], 6);
-
-		ethernet_output(buf, i, eaddr, PROT_TYPE_IPV4);
+		i->link_output(buf, i, link_addr, PROT_TYPE_IPV4);
 	} else if(arp_code == ARP_CALLBACK_CODE_FAILED) {
 		// arp retransmitted and failed, so we're screwed
 		cbuf_free_chain(buf);
@@ -179,14 +175,16 @@ int ipv4_output(cbuf *buf, ipv4_addr target_addr, int protocol)
 {
 	cbuf *header_buf;
 	ipv4_header *header;
-	ethernet_addr eaddr;
+	netaddr link_addr;
 	if_id iid;
 	ifnet *i;
 	ipv4_addr transmit_addr;
 	ipv4_addr if_addr;
 	int err;
 
-	dprintf("ipv4_output: buf %p, target_addr 0x%x, protocol %d\n", buf, target_addr, protocol);
+	dprintf("ipv4_output: buf %p, target_addr ", buf);
+	dump_ipv4_addr(target_addr);
+	dprintf(", protocol %d\n", protocol);
 
 	// figure out what interface we will send this over
 	err = ipv4_route_match(target_addr, &iid, &transmit_addr, &if_addr);
@@ -226,7 +224,7 @@ int ipv4_output(cbuf *buf, ipv4_addr target_addr, int protocol)
 	buf = cbuf_merge_chains(header_buf, buf);
 
 	// do the arp thang
-	err = arp_lookup(i, if_addr, transmit_addr, eaddr, &ipv4_arp_callback, buf);
+	err = arp_lookup(i, if_addr, transmit_addr, &link_addr, &ipv4_arp_callback, buf);
 	if(err == ERR_NET_ARP_QUEUED) {
 		// the arp request is queued up so we can just exit here
 		// and the rest of the work will be done via the arp callback
@@ -237,7 +235,7 @@ int ipv4_output(cbuf *buf, ipv4_addr target_addr, int protocol)
 		return ERR_NET_FAILED_ARP;
 	} else {
 		// we got the link later address, send the packet
-		return ethernet_output(buf, i, eaddr, PROT_TYPE_IPV4);
+		return i->link_output(buf, i, &link_addr, PROT_TYPE_IPV4);
 	}
 }
 
@@ -298,9 +296,9 @@ int ipv4_input(cbuf *buf, ifnet *i)
 	// demultiplex and hand to the proper module
 	switch(header->protocol) {
 		case IP_PROT_ICMP:
-			return icmp_receive(buf, i, ntohl(header->src));
+			return icmp_input(buf, i, ntohl(header->src));
 		case IP_PROT_UDP:
-			return udp_receive(buf, i, ntohl(header->src), ntohl(header->dest));
+			return udp_input(buf, i, ntohl(header->src), ntohl(header->dest));
 		default:
 			dprintf("ipv4_receive: packet with unknown protocol (%d)\n", header->protocol);
 			err = ERR_NET_BAD_PACKET;

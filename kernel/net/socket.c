@@ -43,6 +43,18 @@ static unsigned int sock_hash_func(void *_s, void *_key, int range)
 		return *id % range;
 }
 
+static netsocket *lookup_socket(sock_id id)
+{
+	netsocket *s;
+
+	// pull it from in the socket list
+	mutex_lock(&sock_mutex);
+	s = hash_lookup(sock_table, &id);
+	mutex_unlock(&sock_mutex);
+
+	return s;
+}
+
 sock_id socket_create(int type, int flags, sockaddr *addr)
 {
 	netsocket *s;
@@ -89,19 +101,18 @@ err:
 	return err;
 }
 
-ssize_t socket_read(sock_id id, void *buf, ssize_t len)
+ssize_t socket_recvfrom(sock_id id, void *buf, ssize_t len, sockaddr *addr)
 {
 	netsocket *s;
 	ssize_t err;
 
-	// insert it in the socket list
-	mutex_lock(&sock_mutex);
-	s = hash_lookup(sock_table, &id);
-	mutex_unlock(&sock_mutex);
+	s = lookup_socket(id);
+	if(!s)
+		return ERR_INVALID_HANDLE;
 
 	switch(s->type) {
 		case SOCK_PROTO_UDP:
-			err = udp_read(s->prot_data, buf, len);
+			err = udp_recvfrom(s->prot_data, buf, len, addr);
 			break;
 		default:
 			err = ERR_INVALID_ARGS;
@@ -109,6 +120,24 @@ ssize_t socket_read(sock_id id, void *buf, ssize_t len)
 	return err;
 }
 
+ssize_t socket_sendto(sock_id id, const void *buf, ssize_t len, sockaddr *addr)
+{
+	netsocket *s;
+	ssize_t err;
+
+	s = lookup_socket(id);
+	if(!s)
+		return ERR_INVALID_HANDLE;
+
+	switch(s->type) {
+		case SOCK_PROTO_UDP:
+			err = udp_sendto(s->prot_data, buf, len, addr);
+			break;
+		default:
+			err = ERR_INVALID_ARGS;
+	}
+	return err;
+}
 
 int socket_init(void)
 {

@@ -20,7 +20,7 @@ typedef struct icmp_echo_header {
 	uint16 sequence;
 } _PACKED icmp_echo_header;
 
-int icmp_receive(cbuf *buf, ifnet *i, ipv4_addr source_ipaddr)
+int icmp_input(cbuf *buf, ifnet *i, ipv4_addr source_ipaddr)
 {
 	icmp_header *header;
 	int err;
