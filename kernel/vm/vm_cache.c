@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -15,7 +15,7 @@
 vm_cache *vm_cache_create(vm_store *store)
 {
 	vm_cache *cache;
-	
+
 	cache = kmalloc(sizeof(vm_cache));
 	if(cache == NULL)
 		return NULL;
@@ -32,11 +32,11 @@ vm_cache *vm_cache_create(vm_store *store)
 vm_cache_ref *vm_cache_ref_create(vm_cache *cache)
 {
 	vm_cache_ref *ref;
-	
+
 	ref = kmalloc(sizeof(vm_cache_ref));
 	if(ref == NULL)
 		return NULL;
-		
+
 	ref->cache = cache;
 	mutex_init(&ref->lock, "cache_ref_mutex");
 	ref->region_list = NULL;
@@ -56,7 +56,7 @@ void vm_cache_acquire_ref(vm_cache_ref *cache_ref)
 void vm_cache_release_ref(vm_cache_ref *cache_ref)
 {
 	vm_page *page;
-	
+
 	if(cache_ref == NULL)
 		panic("vm_cache_release_ref: passed NULL\n");
 	if(atomic_add(&cache_ref->ref_count, -1) == 1) {
@@ -64,7 +64,7 @@ void vm_cache_release_ref(vm_cache_ref *cache_ref)
 		// delete the cache's backing store, if it has one
 		if(cache_ref->cache->store)
 			(*cache_ref->cache->store->ops->destroy)(cache_ref->cache->store);
-		
+
 		// free all of the pages in the cache
 		page = cache_ref->cache->page_list;
 		while(page) {
@@ -83,7 +83,7 @@ void vm_cache_release_ref(vm_cache_ref *cache_ref)
 vm_page *vm_cache_lookup_page(vm_cache_ref *cache_ref, off_t offset)
 {
 	vm_page *page;
-	
+
 	for(page = cache_ref->cache->page_list; page != NULL; page = page->cache_next) {
 		if(page->offset == offset) {
 			return page;
@@ -96,14 +96,14 @@ vm_page *vm_cache_lookup_page(vm_cache_ref *cache_ref, off_t offset)
 void vm_cache_insert_page(vm_cache_ref *cache_ref, vm_page *page, off_t offset)
 {
 	page->offset = offset;
-	
+
 	if(cache_ref->cache->page_list != NULL) {
 		cache_ref->cache->page_list->cache_prev = page;
 	}
 	page->cache_next = cache_ref->cache->page_list;
 	page->cache_prev = NULL;
 	cache_ref->cache->page_list = page;
-	
+
 	page->cache_ref = cache_ref;
 }
 
@@ -117,7 +117,7 @@ void vm_cache_remove_page(vm_cache_ref *cache_ref, vm_page *page)
 		if(page->cache_prev != NULL)
 			page->cache_prev->cache_next = page->cache_next;
 		if(page->cache_next != NULL)
-			page->cache_next->cache_prev = page->cache_next;		
+			page->cache_next->cache_prev = page->cache_prev;
 	}
 	page->cache_ref = NULL;
 }
