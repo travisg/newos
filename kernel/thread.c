@@ -904,7 +904,7 @@ static void dump_next_thread_in_q(int argc, char **argv)
 
 	dprintf("next thread in queue after thread @ %p\n", t);
 	if(t->q_node.next != NULL) {
-		_dump_thread_info(container_of(t->q_node.next, struct thread, q_node)); // XXX fixme
+		_dump_thread_info(containerof(t->q_node.next, struct thread, q_node)); // XXX fixme
 	} else {
 		dprintf("NULL\n");
 	}

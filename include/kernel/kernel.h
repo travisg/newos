@@ -1,5 +1,5 @@
 /*
-** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2004, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #ifndef _KERNEL_H
@@ -24,6 +24,9 @@
 #define _PACKED __attribute__((packed))
 
 #define TOUCH(x) ((void)(x))
+
+#define containerof(ptr, type, member) \
+	((type *)((addr_t)(ptr) - offsetof(type, member)))
 
 extern bool kernel_startup;
 extern kernel_args global_kernel_args;

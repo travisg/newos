@@ -28,10 +28,7 @@ typedef union cpu_ent {
 		// arch-specific stuff
 		struct arch_cpu_info arch;
 	} info;
-
-	// make sure the structure uses up at least a cache line or two and is aligned
-	uint32 _align[16]; // 64 bytes
-} cpu_ent;
+} cpu_ent __attribute__((aligned(64)));
 
 extern cpu_ent cpu[_MAX_CPUS];
 

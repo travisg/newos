@@ -12,9 +12,6 @@ struct list_node {
 	struct list_node *next;
 };
 
-#define container_of(ptr, type, member) \
-	((type *)((addr_t)(ptr) - ((addr_t)&(((type *)0)->member))))
-
 static inline void list_initialize(struct list_node *list)
 {
 	list->prev = list->next = list;
@@ -63,7 +60,7 @@ static inline struct list_node* list_remove_head(struct list_node *list)
     struct list_node *__nod = list_remove_head(list);\
     type *__t;\
     if(__nod)\
-        __t = container_of(__nod, type, element);\
+        __t = containerof(__nod, type, element);\
     else\
         __t = (type *)0;\
     __t;\
@@ -84,7 +81,7 @@ static inline struct list_node* list_remove_tail(struct list_node *list)
     struct list_node *__nod = list_remove_tail(list);\
     type *__t;\
     if(__nod)\
-        __t = container_of(__nod, type, element);\
+        __t = containerof(__nod, type, element);\
     else\
         __t = (type *)0;\
     __t;\
@@ -103,7 +100,7 @@ static inline struct list_node* list_peek_head(struct list_node *list)
     struct list_node *__nod = list_peek_head(list);\
     type *__t;\
     if(__nod)\
-        __t = container_of(__nod, type, element);\
+        __t = containerof(__nod, type, element);\
     else\
         __t = (type *)0;\
     __t;\
@@ -122,7 +119,7 @@ static inline struct list_node* list_peek_tail(struct list_node *list)
     struct list_node *__nod = list_peek_tail(list);\
     type *__t;\
     if(__nod)\
-        __t = container_of(__nod, type, element);\
+        __t = containerof(__nod, type, element);\
     else\
         __t = (type *)0;\
     __t;\
@@ -140,7 +137,7 @@ static inline struct list_node* list_next(struct list_node *list, struct list_no
     struct list_node *__nod = list_next(list, item);\
     type *__t;\
     if(__nod)\
-        __t = container_of(__nod, type, element);\
+        __t = containerof(__nod, type, element);\
     else\
         __t = (type *)0;\
     __t;\
@@ -160,7 +157,7 @@ static inline struct list_node* list_next_wrap(struct list_node *list, struct li
     struct list_node *__nod = list_next_wrap(list, item);\
     type *__t;\
     if(__nod)\
-        __t = container_of(__nod, type, element);\
+        __t = containerof(__nod, type, element);\
     else\
         __t = (type *)0;\
     __t;\
@@ -179,17 +176,17 @@ static inline struct list_node* list_next_wrap(struct list_node *list, struct li
 
 // iterates over the list, entry should be the container structure type *
 #define list_for_every_entry(list, entry, type, member) \
-	for((entry) = container_of((list)->next, type, member);\
+	for((entry) = containerof((list)->next, type, member);\
 		&(entry)->member != (list);\
-		(entry) = container_of((entry)->member.next, type, member))
+		(entry) = containerof((entry)->member.next, type, member))
 
 // iterates over the list in a safe way for deletion of current node
 // entry and temp_entry should be the container structure type *
 #define list_for_every_entry_safe(list, entry, temp_entry, type, member) \
-	for(entry = container_of((list)->next, type, member),\
-		temp_entry = container_of((entry)->member.next, type, member);\
+	for(entry = containerof((list)->next, type, member),\
+		temp_entry = containerof((entry)->member.next, type, member);\
 		&(entry)->member != (list);\
-		entry = temp_entry, temp_entry = container_of((temp_entry)->member.next, type, member))
+		entry = temp_entry, temp_entry = containerof((temp_entry)->member.next, type, member))
 
 static inline bool list_is_empty(struct list_node *list)
 {
