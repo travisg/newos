@@ -25,6 +25,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <ctype.h>
+#include <fcntl.h>
 #include <sys/resource.h>
 
 #define MAKE_NOIZE 0
@@ -52,6 +53,7 @@ struct file_descriptor {
 	struct vnode *vnode;
 	file_cookie cookie;
 	int ref_count;
+	bool coe;
 };
 
 struct ioctx {
@@ -315,7 +317,7 @@ static int get_vnode(fs_id fsid, vnode_id vnid, struct vnode **outv, int r)
 
 	mutex_lock(&vfs_vnode_mutex);
 
-	do {
+	for(;;) {
 		v = lookup_vnode(fsid, vnid);
 		if(v) {
 			if(v->busy) {
@@ -325,7 +327,8 @@ static int get_vnode(fs_id fsid, vnode_id vnid, struct vnode **outv, int r)
 				continue;
 			}
 		}
-	} while(0);
+		break;
+	}
 
 #if MAKE_NOIZE
 	dprintf("get_vnode: tried to lookup vnode, got 0x%x\n", v);
@@ -467,6 +470,7 @@ static struct file_descriptor *alloc_fd(void)
 		f->vnode = NULL;
 		f->cookie = NULL;
 		f->ref_count = 1;
+		f->coe = false;
 	}
 	return f;
 }
@@ -758,7 +762,7 @@ void *vfs_new_ioctx(void *_parent_ioctx)
 	}
 
 	/*
-	 * copy parent files
+	 * copy parent files if they dont have the close-on-exec flag set
 	 */
 	if(parent_ioctx) {
 		size_t i;
@@ -772,7 +776,7 @@ void *vfs_new_ioctx(void *_parent_ioctx)
 
 
 		for(i = 0; i< table_size; i++) {
-			if(parent_ioctx->fds[i]) {
+			if(parent_ioctx->fds[i] && !parent_ioctx->fds[i]->coe) {
 				ioctx->fds[i]= parent_ioctx->fds[i];
 				atomic_add(&ioctx->fds[i]->ref_count, 1);
 			}
@@ -855,6 +859,7 @@ int vfs_init(kernel_args *ka)
 	return 0;
 }
 
+#if 0
 int vfs_test(void)
 {
 	int fd;
@@ -966,7 +971,7 @@ int vfs_test(void)
 	panic("foo\n");
 	return 0;
 }
-
+#endif
 
 int vfs_register_filesystem(const char *name, struct fs_calls *calls)
 {
@@ -1240,6 +1245,7 @@ static int _vfs_open(struct vnode *v, stream_type st, int omode, bool kernel)
 	}
 	f->vnode = v;
 	f->cookie = cookie;
+	f->coe = omode & O_CLOEXEC ? true : false;
 
 	fd = new_fd(get_current_ioctx(kernel), f);
 	if(fd < 0) {
