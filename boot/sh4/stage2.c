@@ -61,7 +61,7 @@ int _start()
 	}
 
 	dprintf("diffing the mapped memory\n");
-	dprintf("memcmp = %d\n", memcmp((void *)KERNEL_LOAD_ADDR, (void *)BOOTDIR + bootdir[2].be_offset * PAGE_SIZE, PAGE_SIZE)); 
+	dprintf("memcmp = %d\n", memcmp((void *)KERNEL_LOAD_ADDR, (void *)BOOTDIR + bootdir[2].be_offset * PAGE_SIZE, PAGE_SIZE * kernel_size)); 
 	dprintf("done diffing the memory\n");
 
 	// map in kernel bss

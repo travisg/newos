@@ -12,7 +12,6 @@ STAGE2 = boot/stage2
 STAGE2_ARCH = $(STAGE2_OBJ_DIR)/stage2
 
 $(STAGE2): $(STAGE2_ARCH)
-	ln -sf ../$< $@  
 
 $(STAGE2_ARCH): $(STAGE2_OBJS) $(LIBC)
 	$(LD) $(GLOBAL_LDFLAGS) -dN --script=$(STAGE2_DIR)/stage2.ld -L $(LIBGCC_PATH) $(STAGE2_OBJS) $(LIBC) $(LIBGCC) -o $@ 
