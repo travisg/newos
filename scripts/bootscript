@@ -11,6 +11,4 @@ exec /boot/bin/socketd 23 /boot/bin/telnetd /boot/bin/shell -s /boot/loginscript
 exec /boot/bin/socketd 1900 /boot/bin/telnetd /boot/bin/shell -s /boot/loginscript &
 
 # start the console daemon
-console:
-exec /boot/bin/consoled > /dev/null
-goto console
+exec /boot/bin/consoled > /dev/null &
