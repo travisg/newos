@@ -13,6 +13,8 @@
 #include <kernel/arch/cpu.h>
 #include <sys/errors.h>
 
+#include <kernel/dev/arch/i386/keyboard/keyboard.h>
+
 
 #define LSHIFT  42
 #define RSHIFT  54
@@ -56,13 +58,13 @@ const char shifted_keymap[128] = {
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 };
 
-static void wait_for_output()
+static void wait_for_output(void)
 {
 	while(in8(0x64) & 0x2)
 		;
 }
 
-static void set_leds()
+static void set_leds(void)
 {
 	wait_for_output();
 	out8(0xed, 0x60);
@@ -139,7 +141,7 @@ static void insert_in_buf(char c)
 	sem_release_etc(keyboard_sem, 1, SEM_FLAG_NO_RESCHED);
 }
 
-int handle_keyboard_interrupt(void* data)
+static int handle_keyboard_interrupt(void* data)
 {
 	unsigned char key;
 	int retval = INT_NO_RESCHEDULE;
@@ -259,7 +261,7 @@ struct dev_calls keyboard_hooks = {
 	NULL
 };
 
-int setup_keyboard()
+static int setup_keyboard(void)
 {
 	keyboard_sem = sem_create(0, "keyboard_sem");
 	if(keyboard_sem < 0)
