@@ -15,6 +15,7 @@ KERNEL_ADDONS += $(addprefix $(KERNEL_ADDONS_BUILD_DIR)/, \
 	dev/arch/i386/ps2mouse/ps2mouse \
 	dev/arch/i386/rtl8139/rtl8139 \
 	dev/arch/i386/vesa/vesa \
+	dev/arch/i386/floppy/floppy \
 )
 
 # unused
