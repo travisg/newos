@@ -83,13 +83,18 @@ static int _keyboard_read(void *_buf, size_t *len)
 	char *buf = _buf;
 	size_t copied_bytes = 0;
 	size_t copy_len;
+	int rc;
 
 	if(*len > sizeof(keyboard_buf) - 1)
 		*len = sizeof(keyboard_buf) - 1;
 	
 retry:
 	// block here until data is ready
-	sem_acquire(keyboard_sem, 1);
+	rc = sem_acquire_etc(keyboard_sem, 1, SEM_FLAG_INTERRUPTABLE, 0, NULL);
+	if(rc == ERR_SEM_INTERRUPTED) {
+		*len = 0;
+		return 0;
+	}
 
 	// critical section
 	mutex_lock(&keyboard_read_mutex);

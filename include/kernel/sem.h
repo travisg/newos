@@ -10,6 +10,7 @@
 
 #define SEM_FLAG_NO_RESCHED 1
 #define SEM_FLAG_TIMEOUT 2
+#define SEM_FLAG_INTERRUPTABLE 4
 
 int sem_init(kernel_args *ka);
 sem_id sem_create(int count, const char *name);

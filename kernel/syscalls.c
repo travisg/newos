@@ -61,11 +61,11 @@ int syscall_dispatcher(unsigned long call_num, unsigned long arg0, unsigned long
 			*call_ret = sem_delete((sem_id)arg0);
 			break;
 		case SYSCALL_SEM_ACQUIRE:
-			*call_ret = sem_acquire((sem_id)arg0, (int)arg1);
+			*call_ret = sem_acquire_etc((sem_id)arg0, (int)arg1, SEM_FLAG_INTERRUPTABLE, 0, NULL);
 			break;
 		case SYSCALL_SEM_ACQUIRE_ETC: {
 			int retcode;
-			*call_ret = sem_acquire_etc((sem_id)arg0, (int)arg1, (int)arg2, (time_t)INT32TOINT64(arg3, arg4), &retcode);
+			*call_ret = sem_acquire_etc((sem_id)arg0, (int)arg1, (int)arg2 | SEM_FLAG_INTERRUPTABLE, (time_t)INT32TOINT64(arg3, arg4), &retcode);
 			if(arg5 != 0) {
 				// XXX protect the copy
 				*(int *)arg5 = retcode;

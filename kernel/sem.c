@@ -41,6 +41,8 @@ static int sem_spinlock = 0;
 // used in functions that may put a bunch of threads in the run q at once
 #define READY_THREAD_CACHE_SIZE 16
 
+static int remove_thread_from_sem(struct thread *t, struct sem_entry *sem, struct thread_queue *queue, int sem_errcode);
+
 struct sem_timeout_args {
 	thread_id blocked_thread;
 	sem_id blocked_sem_id;
@@ -171,16 +173,15 @@ sem_id sem_create(int count, const char *name)
 			retval = sems[i].id;
 
 			RELEASE_SEM_LOCK(sems[i]);
-			break;
+			goto out;
 		}
 	}
-	if(i >= MAX_SEMS)
-		RELEASE_SEM_LIST_LOCK();
 
-	if(retval < 0) {
-		kfree(temp_name);
-	}
+err:
+	RELEASE_SEM_LIST_LOCK();
+	kfree(temp_name);
 
+out:
 	int_restore_interrupts(state);
 
 	return retval;
@@ -260,6 +261,7 @@ static int sem_timeout(void *data)
 	struct thread *t;
 	int slot;
 	int state;
+	struct thread_queue wakeup_queue;
 
 	t = thread_get_thread_struct(args->blocked_thread);
 	if(t == NULL)
@@ -277,23 +279,17 @@ static int sem_timeout(void *data)
 			args->blocked_thread, args->blocked_sem_id);
 	}
 
-	t = thread_dequeue_id(&sems[slot].q, t->id);
-	if(t != NULL) {
-		sems[slot].count += args->sem_count;
-		t->state = THREAD_STATE_READY;
-		t->sem_errcode = ERR_SEM_TIMED_OUT;
-	}
-
-	// XXX handle possibly releasing more threads here
+	wakeup_queue.head = wakeup_queue.tail = NULL;
+	remove_thread_from_sem(t, &sems[slot], &wakeup_queue, ERR_SEM_TIMED_OUT);
 
 	RELEASE_SEM_LOCK(sems[slot]);
 
-	if(t != NULL) {
-		// put the thread in the run q here to make sure we dont deadlock in sem_interrupt_thread
-		GRAB_THREAD_LOCK();
+	GRAB_THREAD_LOCK();
+	// put the threads in the run q here to make sure we dont deadlock in sem_interrupt_thread
+	while((t = thread_dequeue(&wakeup_queue)) != NULL) {
 		thread_enqueue_run_q(t);
-		RELEASE_THREAD_LOCK();
 	}
+	RELEASE_THREAD_LOCK();
 
 	int_restore_interrupts(state);
 
@@ -341,9 +337,18 @@ int sem_acquire_etc(sem_id id, int count, int flags, time_t timeout, int *delete
 		struct timer_event timer; // stick it on the heap, since we may be blocking here
 		struct sem_timeout_args args;
 
+		// do a quick check to see if the thread has any pending kill signals
+		// this should catch most of the cases where the thread had a signal
+		if((flags & SEM_FLAG_INTERRUPTABLE) && (t->pending_signals & SIG_KILL)) {
+			sems[slot].count += count;
+			err = ERR_SEM_INTERRUPTED;
+			goto err;
+		}
+
 		t->next_state = THREAD_STATE_WAITING;
+		t->sem_flags = flags;
 		t->sem_blocking = id;
-		t->sem_total_count = count;
+		t->sem_acquire_count = count;
 		t->sem_count = min(-sems[slot].count, count); // store the count we need to restore upon release
 		t->sem_deleted_retcode = 0;
 		t->sem_errcode = NO_ERROR;
@@ -352,7 +357,7 @@ int sem_acquire_etc(sem_id id, int count, int flags, time_t timeout, int *delete
 		if((flags & SEM_FLAG_TIMEOUT) != 0) {
 //			dprintf("sem_acquire_etc: setting timeout sem for %d %d usecs, semid %d, tid %d\n",
 //				timeout, sem_id, t->id);
-			// set up an event to go off, with the thread struct as the data
+			// set up an event to go off with the thread struct as the data
 			args.blocked_sem_id = id;
 			args.blocked_thread = t->id;
 			args.sem_count = count;
@@ -362,12 +367,32 @@ int sem_acquire_etc(sem_id id, int count, int flags, time_t timeout, int *delete
 
 		RELEASE_SEM_LOCK(sems[slot]);
 		GRAB_THREAD_LOCK();
+		// check again to see if a kill signal is pending.
+		// it may have been delivered while setting up the sem, though it's pretty unlikely
+		if((flags & SEM_FLAG_INTERRUPTABLE) && (t->pending_signals & SIG_KILL)) {
+			struct thread_queue wakeup_queue;
+			// ok, so a tiny race happened where a signal was delivered to this thread while
+			// it was setting up the sem. We can only be sure a signal wasn't delivered
+			// here, since the threadlock is held. The previous check would have found most
+			// instances, but there was a race, so we have to handle it. It'll be more messy...
+			wakeup_queue.head = wakeup_queue.tail = NULL;
+			GRAB_SEM_LOCK(sems[slot]);
+			if(sems[slot].id == id) {
+				remove_thread_from_sem(t, &sems[slot], &wakeup_queue, ERR_SEM_INTERRUPTED);
+			}
+			RELEASE_SEM_LOCK(sems[slot]);
+			while((t = thread_dequeue(&wakeup_queue)) != NULL) {
+				thread_enqueue_run_q(t);
+			}
+			// fall through and reschedule since another thread with a higher priority may have been woken up
+		}
 		thread_resched();
 		RELEASE_THREAD_LOCK();
 
 		if((flags & SEM_FLAG_TIMEOUT) != 0) {
-			if(t->sem_errcode == ERR_SEM_DELETED) {
-				// cancel the timer event, the sem may have been deleted with the timer still active
+			if(t->sem_errcode < 0 && t->sem_errcode != ERR_SEM_TIMED_OUT) {
+				// cancel the timer event, the sem may have been deleted or interrupted 
+				// with the timer still active
 				timer_cancel_event(&timer);
 			}
 		}
@@ -474,6 +499,7 @@ int sem_interrupt_thread(struct thread *t)
 	struct thread *t1;
 	int slot;
 	int state;
+	struct thread_queue wakeup_queue;
 
 	dprintf("sem_interrupt_thread: called on thread 0x%x (%d), blocked on sem 0x%x\n", t, t->id, t->sem_blocking);
 
@@ -481,6 +507,8 @@ int sem_interrupt_thread(struct thread *t)
 		return ERR_INVALID_ARGS;
 	if(t->sem_blocking < 0)
 		return ERR_INVALID_ARGS;
+	if((t->sem_flags & SEM_FLAG_INTERRUPTABLE) == 0)
+		return ERR_SEM_NOT_INTERRUPTABLE;
 
 	slot = t->sem_blocking % MAX_SEMS;
 
@@ -490,20 +518,47 @@ int sem_interrupt_thread(struct thread *t)
 		panic("sem_interrupt_thread: thread 0x%x sez it's blocking on sem 0x%x, but that sem doesn't exist!\n", t->id, t->sem_blocking);
 	}
 
-	t1 = thread_dequeue_id(&sems[slot].q, t->id);
-	if(t != t1)
-		panic("sem_interrupt_thread: thread 0x%x was not on sem 0x%x's queue\n", t->id, t->sem_blocking);
-	sems[slot].count += t->sem_total_count;
-	t->state = THREAD_STATE_READY;
-	t->sem_errcode = ERR_SEM_INTERRUPTED;
-
-	// XXX handle possibly releasing more threads here
+	wakeup_queue.head = wakeup_queue.tail = NULL;
+	if(remove_thread_from_sem(t, &sems[slot], &wakeup_queue, ERR_SEM_INTERRUPTED) == ERR_NOT_FOUND)
+		panic("sem_interrupt_thread: thread 0x%x not found in sem 0x%x's wait queue\n", t->id, t->sem_blocking);
 
 	RELEASE_SEM_LOCK(sems[slot]);
 
-	thread_enqueue_run_q(t);
+	while((t = thread_dequeue(&wakeup_queue)) != NULL) {
+		thread_enqueue_run_q(t);
+	}
 
 	return NO_ERROR;
 }
 
+// forcibly removes a thread from a semaphores wait q. May have to wake up other threads in the
+// process. All threads that need to be woken up are added to the passed in thread_queue.
+// must be called with sem lock held
+static int remove_thread_from_sem(struct thread *t, struct sem_entry *sem, struct thread_queue *queue, int sem_errcode)
+{
+	struct thread *t1;
+
+	// remove the thread from the queue and place it in the supplied queue
+	t1 = thread_dequeue_id(&sem->q, t->id);
+	if(t != t1)
+		return ERR_NOT_FOUND;
+	sem->count += t->sem_acquire_count;
+	t->state = THREAD_STATE_READY;
+	t->sem_errcode = sem_errcode;
+	thread_enqueue(t, queue);
+
+	// now see if more threads need to be woken up
+	while(sem->count > 0 && (t1 = thread_lookat_queue(&sem->q))) {
+		int delta = min(t->sem_count, sem->count);
+
+		t->sem_count -= delta;
+		if(t->sem_count <= 0) {
+			t = thread_dequeue(&sem->q);
+			t->state = THREAD_STATE_READY;
+			thread_enqueue(t, queue);
+		}
+		sem->count -= delta;
+	}
+	return NO_ERROR;
+}
 

@@ -27,6 +27,7 @@ struct vnode_stat {
 
 #define SEM_FLAG_NO_RESCHED 1
 #define SEM_FLAG_TIMEOUT 2
+#define SEM_FLAG_INTERRUPTABLE 4
 
 // info about a region that external entities may want to know
 typedef struct vm_region_info {

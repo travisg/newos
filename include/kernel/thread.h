@@ -68,9 +68,10 @@ struct thread {
 	bool in_kernel;
 	sem_id sem_blocking;
 	int sem_count;
-	int sem_total_count;
+	int sem_acquire_count;
 	int sem_deleted_retcode;
 	int sem_errcode;
+	int sem_flags;
 	void *args;
 	struct proc *proc;
 	sem_id return_code_sem;
