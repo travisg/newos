@@ -749,8 +749,8 @@ int parse_info(scan_info *info)
 
 		if(err == SHE_SCAN_ERROR) err = info->scan_error;
 		ste_error_to_str(err,err_txt);
-		printf("error :%d:%d,  %d-%s \n",info->line_no,
-		                                 info->scanner - info->input_line - strlen(info->token),
+		printf("error :%d:%ld,  %d-%s \n",info->line_no,
+		                                 (long)(info->scanner - info->input_line - strlen(info->token)),
 		                                 err,
 		                                 err_txt);
 

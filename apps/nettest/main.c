@@ -11,7 +11,7 @@
 
 int fd;
 
-int read_thread(void *args)
+static int read_thread(void *args)
 {
 	char buf[1024];
 	ssize_t len;
@@ -20,7 +20,7 @@ int read_thread(void *args)
 	for(;;) {
 		len = socket_read(fd, buf, sizeof(buf));
 		if(len < 0) {
-			printf("\nsocket_read returns %d\n", len);
+			printf("\nsocket_read returns %ld\n", (long)len);
 			break;
 		}
 
@@ -31,7 +31,7 @@ int read_thread(void *args)
 	return 0;
 }
 
-int write_thread(void *args)
+static int write_thread(void *args)
 {
 	char c;
 

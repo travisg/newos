@@ -208,7 +208,7 @@ int shell_value_do_operation(shell_value *out,const shell_value *other,int oper_
 
 		i1 = out->value.val_number;
 		i2 = other->value.val_number;
-      printf("%dl %dl %d",i1,i2,oper_type);
+		printf("%ld %ld %d",i1,i2,oper_type);
 		switch(oper_type){
 			case SVO_ADD       : i3 = i1+i2    ;break;
 			case SVO_SUB       : i3 = i1-i2    ;break;
