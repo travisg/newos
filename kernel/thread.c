@@ -429,10 +429,6 @@ int thread_init(kernel_args *ka)
 	}
 	thread_enqueue_run_q(t);
 
-	// set up a periodic timer (10ms)
-	timer_setup_timer(NULL, NULL, &LOCAL_CPU_TIMER);
-	timer_set_event(10000, TIMER_MODE_PERIODIC, &LOCAL_CPU_TIMER);
-
 	// set up some debugger commands
 	dbg_add_command(dump_thread_list, "threads", "list all threads");
 	dbg_add_command(dump_thread_info, "thread", "list info about a particular thread");
@@ -441,6 +437,24 @@ int thread_init(kernel_args *ka)
 	dbg_add_command(dump_next_thread_in_proc, "next_proc", "dump the next thread in the process of the last thread viewed");
 
 	return 0;
+}
+
+// this starts the scheduler. Must be run under the context of
+// the initial idle thread.
+void thread_start_threading()
+{
+	int state;
+	
+	// start the other processors
+	smp_send_broadcast_ici(SMP_MSG_RESCHEDULE, 0, NULL, SMP_MSG_FLAG_ASYNC);
+
+	state = int_disable_interrupts();
+	GRAB_THREAD_LOCK();
+	
+	thread_resched();
+	
+	RELEASE_THREAD_LOCK();
+	int_restore_interrupts(state);	
 }
 
 void thread_snooze(time_t time)
@@ -618,6 +632,7 @@ void thread_resched()
 	int last_thread_pri = -1;
 	struct thread *old_thread = CURR_THREAD;
 	int i;
+	time_t quantum;
 	
 //	dprintf("top of thread_resched: cpu %d, cur_thread = 0x%x\n", smp_get_current_cpu(), CURR_THREAD);
 	
@@ -656,14 +671,19 @@ void thread_resched()
 		}
 	}
 
-
 	next_thread->state = THREAD_STATE_RUNNING;
 	next_thread->next_state = THREAD_STATE_READY;
 
-	if(next_thread != old_thread) {
-//		dprintf("thread_resched: switching from thread %d to %d\n",
-//			old_thread->id, next_thread->id);
+	// XXX calculate quantum
+	quantum = 10000;
 
+	timer_cancel_event(&LOCAL_CPU_TIMER);
+	timer_setup_timer(NULL, NULL, &LOCAL_CPU_TIMER);
+	timer_set_event(quantum, TIMER_MODE_ONESHOT, &LOCAL_CPU_TIMER);
+
+	if(next_thread != old_thread) {
+//		dprintf("thread_resched: cpu %d switching from thread %d to %d\n",
+//			smp_get_current_cpu(), old_thread->id, next_thread->id);
 		CURR_THREAD = next_thread;
 		thread_context_switch(old_thread, next_thread);
 	}

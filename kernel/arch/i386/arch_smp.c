@@ -15,6 +15,7 @@
 
 #include <arch_cpu.h>
 #include <arch_vm.h>
+#include <arch_timer.h>
 #include <arch_smp.h>
 #include <arch_smp_priv.h>
 
@@ -24,6 +25,14 @@ static unsigned int cpu_apic_id[SMP_MAX_CPUS] = { 0, 0};
 static unsigned int cpu_os_id[SMP_MAX_CPUS] = { 0, 0};
 static unsigned int cpu_apic_version[SMP_MAX_CPUS] = { 0, 0};
 static unsigned int *ioapic = NULL; 
+static unsigned int apic_timer_tics_per_sec = 0;
+
+static int i386_timer_interrupt()
+{
+	arch_smp_ack_interrupt();
+	
+	return apic_timer_interrupt();
+}
 
 static int i386_ici_interrupt()
 {
@@ -72,15 +81,16 @@ int arch_smp_init(kernel_args *ka)
 		memcpy(cpu_apic_id, ka->cpu_apic_id, sizeof(ka->cpu_apic_id));
 		memcpy(cpu_os_id, ka->cpu_os_id, sizeof(ka->cpu_os_id));
 		memcpy(cpu_apic_version, ka->cpu_apic_version, sizeof(ka->cpu_apic_version));
+		apic_timer_tics_per_sec = ka->apic_time_cv_factor;
 	
 		// setup areas that represent the apic & ioapic
 		vm_create_area(vm_get_kernel_aspace(), "local_apic", (void *)&apic, AREA_ALREADY_MAPPED, PAGE_SIZE, 0);
 		vm_create_area(vm_get_kernel_aspace(), "ioapic", (void *)&ioapic, AREA_ALREADY_MAPPED, PAGE_SIZE, 0);
 
+		int_set_io_interrupt_handler(0xfb, &i386_timer_interrupt);
 		int_set_io_interrupt_handler(0xfd, &i386_ici_interrupt);
 		int_set_io_interrupt_handler(0xfe, &i386_smp_error_interrupt);
 		int_set_io_interrupt_handler(0xff, &i386_spurious_interrupt);
-
 	} else {
 		num_cpus = 1;
 	}
@@ -90,20 +100,30 @@ int arch_smp_init(kernel_args *ka)
 void arch_smp_send_broadcast_ici()
 {
 	int config;
+	int state;
+	
+	state = int_disable_interrupts();
 	
 	config = apic_read(APIC_ICR1) & APIC_ICR1_WRITE_MASK;
 	apic_write(APIC_ICR1, config | 0xfd | APIC_ICR1_DELMODE_FIXED | APIC_ICR1_DESTMODE_PHYS | APIC_ICR1_DEST_ALL_BUT_SELF);
+
+	int_restore_interrupts(state);
 }
 
 void arch_smp_send_ici(int target_cpu)
 {
 	int config;
+	int state;
+	
+	state = int_disable_interrupts();
 	
 	config = apic_read(APIC_ICR2) & APIC_ICR2_MASK;
 	apic_write(APIC_ICR2, config | cpu_apic_id[target_cpu] << 24);
 
 	config = apic_read(APIC_ICR1) & APIC_ICR1_WRITE_MASK;
 	apic_write(APIC_ICR1, config | 0xfd | APIC_ICR1_DELMODE_FIXED | APIC_ICR1_DESTMODE_PHYS | APIC_ICR1_DEST_FIELD);
+
+	int_restore_interrupts(state);
 }
 
 int arch_smp_get_num_cpus()
@@ -124,4 +144,56 @@ void arch_smp_ack_interrupt()
 	apic_write(APIC_EOI, 0);
 }
 
+#define MIN_TIMEOUT 1000
 
+int arch_smp_set_apic_timer(time_t relative_timeout)
+{
+	unsigned int config;
+	int state;
+	unsigned int ticks;
+
+	if(apic == NULL)
+		return -1;
+
+	if(relative_timeout < MIN_TIMEOUT)
+		relative_timeout = MIN_TIMEOUT;
+
+	// calculation should be ok, since it's going to be 64-bit
+	ticks = ((relative_timeout * apic_timer_tics_per_sec) / 1000000);
+
+	state = int_disable_interrupts();
+
+	config = apic_read(APIC_LVTT) | APIC_LVTT_M; // mask the timer
+	apic_write(APIC_LVTT, config);
+	
+	apic_write(APIC_ICRT, 0); // zero out the timer
+	
+	config = apic_read(APIC_LVTT) & ~APIC_LVTT_M; // unmask the timer
+	apic_write(APIC_LVTT, config);
+
+	apic_write(APIC_ICRT, ticks); // start it up
+
+	int_restore_interrupts(state);
+
+	return 0;
+}
+
+int arch_smp_clear_apic_timer()
+{
+	unsigned int config;
+	int state;
+	
+	if(apic == NULL)
+		return -1;
+
+	state = int_disable_interrupts();
+
+	config = apic_read(APIC_LVTT) | APIC_LVTT_M; // mask the timer
+	apic_write(APIC_LVTT, config);
+	
+	apic_write(APIC_ICRT, 0); // zero out the timer
+
+	int_restore_interrupts(state);
+
+	return 0;
+}

@@ -21,6 +21,7 @@ int timer_init(kernel_args *ka);
 int timer_interrupt();
 void timer_setup_timer(void (*func)(void *), void *data, struct timer_event *event);
 int timer_set_event(time_t relative_time, int mode, struct timer_event *event);
+int timer_cancel_event(struct timer_event *event);
 
 #endif
 

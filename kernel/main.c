@@ -64,6 +64,7 @@ int _start(kernel_args *oldka, int cpu)
 		
 		smp_wake_up_all_non_boot_cpus();
 		smp_enable_ici(); // ici's were previously being ignored
+		thread_start_threading();
 	}
 	int_enable_interrupts();
 

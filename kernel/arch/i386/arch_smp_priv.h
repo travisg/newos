@@ -57,6 +57,7 @@
 #define APIC_TDCR_128      0x0a
 #define APIC_TDCR_1        0x0b
 
+#define APIC_LVTT_MASK     0x000310ff
 #define APIC_LVTT_VECTOR   0x000000ff
 #define APIC_LVTT_DS       0x00001000
 #define APIC_LVTT_M        0x00010000

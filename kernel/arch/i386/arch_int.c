@@ -153,9 +153,6 @@ void i386_handle_trap(struct int_frame frame)
 	}
 	
 	if(ret == INT_RESCHEDULE) {
-		// XXX remove -- tell the other processor to reschedule too
-		if(smp_get_num_cpus() > 1 && smp_get_current_cpu() == 0)
-			smp_send_broadcast_ici(SMP_MSG_RESCHEDULE, 0, NULL, SMP_MSG_FLAG_ASYNC);
 		GRAB_THREAD_LOCK();
 		thread_resched();
 		RELEASE_THREAD_LOCK();
@@ -215,6 +212,8 @@ int arch_int_init(kernel_args *ka)
 	set_intr_gate(46,  &trap46);
 	set_intr_gate(47,  &trap47);
 
+	set_intr_gate(251, &trap251);
+	set_intr_gate(252, &trap252);
 	set_intr_gate(253, &trap253);
 	set_intr_gate(254, &trap254);
 	set_intr_gate(255, &trap255);
