@@ -83,24 +83,10 @@ int_bottom:
 	movl	%eax,%ds
 	movl	%ss,%ebx
 	movl	%esp,%esi
-	cmpl	%eax,%ebx
-	je		kernel_stack
-		movl	%dr3,%edx  // get_current_thread
-		movl	%eax,%es
-		addl	interrupt_stack_offset,%edx
-		lss		(%edx),%esp
-		movl	%ebx,%ds
-		subl	$76,%esp
-		movl	%esp,%edi
-		movl	$19,%ecx
-		rep		movsl
-		movl	%eax,%ds
-		subl	$76,%esi
+	cmpl	%eax,%ebx  // check if we changed the stack
+	jne		custom_stack
   kernel_stack:
-	pushl	%ebx
-	pushl	%esi
 	call	i386_handle_trap
-	lss		(%esp),%esp
 	pop		%gs
 	pop		%fs
 	pop		%es
@@ -109,14 +95,39 @@ int_bottom:
 	addl	$8,%esp
 	iret
 
-interrupt_stack_offset:
+	// custom stack -> copy registers to kernel stack and switch there
+  custom_stack:
+	movl	%dr3,%edx  // get_current_thread
+	movl	%eax,%es
+	addl	_interrupt_stack_offset,%edx
+	lss		(%edx),%esp
+	movl	%ebx,%ds
+	subl	$84,%esp
+	movl	%esp,%edi
+	movl	$19,%ecx
+	rep		movsl
+	movl	%eax,%ds
+	subl	$76,%esi
+	movl	%esi,(%edi)  // save custom stack address
+	movl	%ebx,4(%edi)
+	call	i386_handle_trap
+	lss		76(%esp),%esp  // reload custom stack address
+	pop		%gs
+	pop		%fs
+	pop		%es
+	pop		%ds
+	popa
+	addl	$8,%esp
+	iret
+
+_interrupt_stack_offset:
 .long	0
 
 // void	i386_stack_init(struct farcall *interrupt_stack_offset)
 	/* setup in arch_thread.c: arch_thread_init_thread_struct() */
 FUNCTION(i386_stack_init):
 	movl	4(%esp),%eax
-	movl	%eax,interrupt_stack_offset
+	movl	%eax,_interrupt_stack_offset
 	ret
 
 // void i386_stack_switch(struct farcall new_stack)
@@ -125,7 +136,7 @@ FUNCTION(i386_stack_switch):
 	movl	(%esp),%edx
 	pushf
 	popl	%ecx
-	addl	interrupt_stack_offset,%eax
+	addl	_interrupt_stack_offset,%eax
 	cli
 	pushl	%ss
 	cmpl	$KERNEL_DATA_SEG,(%esp)

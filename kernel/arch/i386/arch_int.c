@@ -28,8 +28,6 @@
 #define MAX_ARGS 16
 
 struct int_frame {
-	unsigned int custom_esp;
-	unsigned int custom_ss;
 	unsigned int gs;
 	unsigned int fs;
 	unsigned int es;
