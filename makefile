@@ -166,7 +166,7 @@ final1: $(FINAL)
 	rm -f final.$(ARCH);ln -sf $(FINAL) final.$(ARCH)
 	rm -f system.$(ARCH);ln -sf $(KERNEL) system.$(ARCH)
 
-tools: $(NETBOOT) $(BOOTMAKER) $(BIN2H) $(BIN2ASM)
+tools: $(BOOTMAKER) $(BIN2H) $(BIN2ASM)
 
 $(BOOTMAKER): $(BOOTMAKER).c tools/sparcbootblock.h
 	$(HOST_CC) -O0 -g -o $@ $(BOOTMAKER).c
