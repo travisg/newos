@@ -235,6 +235,8 @@ static const char *state_to_text(int state)
 	}
 }
 
+static struct thread *last_thread_dumped = NULL;
+
 static void _dump_thread_info(struct thread *t)
 {
 	dprintf("THREAD: 0x%x\n", t);
@@ -250,6 +252,8 @@ static void _dump_thread_info(struct thread *t)
 	dprintf("user_stack_area:   0x%x\n", t->user_stack_area);
 	dprintf("architecture dependant section:\n");
 	arch_thread_dump_info(t->arch_info);
+
+	last_thread_dumped = t;
 }
 
 static void dump_thread_info(int argc, char **argv)
@@ -297,6 +301,60 @@ static void dump_thread_list(int argc, char **argv)
 		dprintf("0x%x\t%32s\t0x%x\t%16s\t0x%x\n",
 			t, t->name, t->id, state_to_text(t->state), t->kernel_stack_area->base);
 		t = t->all_next;
+	}
+}
+
+static void dump_next_thread_in_q(int argc, char **argv)
+{
+	struct thread *t = last_thread_dumped;
+	TOUCH(argc);TOUCH(argv);
+
+	if(t == NULL) {
+		dprintf("no thread previously dumped. Examine a thread first.\n");
+		return;
+	}
+	
+	dprintf("next thread in queue after thread @ 0x%x\n", t);
+	if(t->q_next != NULL) {
+		_dump_thread_info(t->q_next);
+	} else {
+		dprintf("NULL\n");
+	}
+}
+
+static void dump_next_thread_in_all_list(int argc, char **argv)
+{
+	struct thread *t = last_thread_dumped;
+	TOUCH(argc);TOUCH(argv);
+
+	if(t == NULL) {
+		dprintf("no thread previously dumped. Examine a thread first.\n");
+		return;
+	}
+	
+	dprintf("next thread in global list after thread @ 0x%x\n", t);
+	if(t->all_next != NULL) {
+		_dump_thread_info(t->all_next);
+	} else {
+		dprintf("NULL\n");
+	}
+}
+
+static void dump_next_thread_in_proc(int argc, char **argv)
+{
+	struct thread *t = last_thread_dumped;
+	TOUCH(argc);TOUCH(argv);
+
+	if(t == NULL) {
+		dprintf("no thread previously dumped. Examine a thread first.\n");
+		return;
+	}
+	
+	dprintf("next thread in proc after thread @ 0x%x\n", t);
+	if(t->proc_next != NULL) {
+		_dump_thread_info(t->proc_next);
+	} else {
+		dprintf("NULL\n");
 	}
 }
 
@@ -361,6 +419,9 @@ int thread_init(kernel_args *ka)
 	// set up some debugger commands
 	dbg_add_command(dump_thread_list, "threads", "list all threads");
 	dbg_add_command(dump_thread_info, "thread", "list info about a particular thread");
+	dbg_add_command(dump_next_thread_in_q, "next_q", "dump the next thread in the queue of last thread viewed");
+	dbg_add_command(dump_next_thread_in_all_list, "next_all", "dump the next thread in the global list of the last thread viewed");
+	dbg_add_command(dump_next_thread_in_proc, "next_proc", "dump the next thread in the process of the last thread viewed");
 
 	return 0;
 }
@@ -472,7 +533,7 @@ int test_thread()
 #if 0
 		thread_snooze(10000 * tid);
 #endif
-#if 0
+#if 1
 		switch(tid) {
 			case 3: case 6:
 				if((a % 2048) == 0)
@@ -496,7 +557,7 @@ int panic_thread()
 {
 	dprintf("panic thread starting\n");
 	
-	thread_snooze(5000000);
+	thread_snooze(1000000);
 	panic("gotcha!\n");
 	return 0;
 }

@@ -49,8 +49,7 @@ static void _dump_sem_info(struct sem_entry *sem)
 	dprintf("SEM:   0x%x\n", sem);
 	dprintf("name:  '%s'\n", sem->name);
 	dprintf("count: 0x%x\n", sem->count);
-	dprintf("queue: 0x%x\n", sem->q);
-	dprintf("holder thread: 0x%x\n", sem->holder_thread);
+	dprintf("queue: head 0x%x tail 0x%x\n", sem->q.head, sem->q.tail);
 }
 
 static void dump_sem_info(int argc, char **argv)

@@ -8,7 +8,6 @@ struct sem_entry {
 	sem_id    id;
 	int       count;
 	struct thread_queue q;
-	thread_id holder_thread;
 	char      *name;
 	int       lock;
 };

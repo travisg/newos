@@ -32,24 +32,103 @@ static struct debugger_command *commands;
 
 #define LINE_BUF_SIZE 1024
 #define MAX_ARGS 16
+#define HISTORY_SIZE 16
 
-static char line_buf[LINE_BUF_SIZE] = "";
+static char line_buf[HISTORY_SIZE][LINE_BUF_SIZE] = { "", };
+static char parse_line[LINE_BUF_SIZE] = "";
+static int cur_line = 0;
 static char *args[MAX_ARGS] = { NULL, };
+
+#define distance(a, b) ((a) < (b) ? (b) - (a) : (a) - (b)) 
 
 static int debug_read_line(char *buf, int max_len)
 {
 	char c;
 	int ptr = 0;
+	bool done = false;
+	int cur_history_spot = cur_line;
 	
-	while(1) {
+	while(!done) {
 		c = arch_dbg_con_read();
-		if(c == '\n' || c == '\r' || ptr >= max_len - 1) {
+		switch(c) {
+			case '\n':
+			case '\r':
+				buf[ptr++] = '\0';
+				dbg_puts("\n");
+				done = true;
+				break;
+			case 8: // backspace
+				if(ptr > 0) {
+					dbg_puts("\x1b[1D"); // move to the left one
+					dbg_putch(' ');
+					dbg_puts("\x1b[1D"); // move to the left one
+					ptr--;
+				}
+				break;
+			case 27: // escape sequence
+				c = arch_dbg_con_read(); // should be '['
+				c = arch_dbg_con_read();
+				switch(c) {
+					case 67: // right arrow acts like space
+						buf[ptr++] = ' ';
+						dbg_putch(' ');
+						break;
+					case 68: // left arrow acts like backspace
+						if(ptr > 0) {
+							dbg_puts("\x1b[1D"); // move to the left one
+							dbg_putch(' ');
+							dbg_puts("\x1b[1D"); // move to the left one
+							ptr--;
+						}
+						break;
+					case 65: // up arrow
+					case 66: // down arrow
+					{
+						int history_line = 0;
+						
+//						dprintf("1c %d h %d ch %d\n", cur_line, history_line, cur_history_spot);
+
+						if(c == 65) {
+							// up arrow
+							history_line = cur_history_spot - 1;
+							if(history_line < 0)
+								history_line = HISTORY_SIZE - 1;
+						} else {
+							// down arrow
+							if(cur_history_spot != cur_line) {
+								history_line = cur_history_spot + 1;
+								if(history_line >= HISTORY_SIZE)
+									history_line = 0;
+							} else {
+								break; // nothing to do here
+							}
+						}
+	
+//						dprintf("2c %d h %d ch %d\n", cur_line, history_line, cur_history_spot);
+	
+						// swap the current line with something from the history
+						if(ptr > 0)
+							dprintf("\x1b[%dD", ptr); // move to beginning of line
+						
+						strcpy(buf, line_buf[history_line]);
+						ptr = strlen(buf);
+						dprintf("%s\x1b[K", buf); // print the line and clear the rest
+						cur_history_spot = history_line;
+						break;
+					}
+					default:	
+						break;
+				}
+				break;
+			default:
+				buf[ptr++] = c;
+				dbg_putch(c);
+		}				
+		if(ptr >= max_len - 2) {
 			buf[ptr++] = '\0';
 			dbg_puts("\n");
+			done = true;
 			break;
-		} else {
-			buf[ptr++] = c;
-			dbg_putch(c);
 		}
 	}
 	return ptr;
@@ -59,22 +138,24 @@ static int debug_parse_line(char *buf, char **argv, int *argc, int max_args)
 {
 	int pos = 0;
 
-	if(!isspace(buf[0])) {
-		argv[0] = buf;
+	strcpy(parse_line, buf);
+
+	if(!isspace(parse_line[0])) {
+		argv[0] = parse_line;
 		*argc = 1;
 	} else {
 		*argc = 0;
 	}
 
-	while(buf[pos] != '\0') {
-		if(isspace(buf[pos])) {
-			buf[pos] = '\0';
+	while(parse_line[pos] != '\0') {
+		if(isspace(parse_line[pos])) {
+			parse_line[pos] = '\0';
 			// scan all of the whitespace out of this
-			while(isspace(buf[++pos])) 
+			while(isspace(parse_line[++pos])) 
 				;
-			if(buf[pos] == '\0')
+			if(parse_line[pos] == '\0')
 				break;
-			argv[*argc] = &buf[pos];
+			argv[*argc] = &parse_line[pos];
 			(*argc)++;
 			
 			if(*argc >= max_args - 1)
@@ -97,9 +178,9 @@ void kernel_debugger()
 	debugger_on_cpu = smp_get_current_cpu();
 
 	while(1) {
-		dprintf(": ");
-		debug_read_line(line_buf, LINE_BUF_SIZE);		
-		debug_parse_line(line_buf, args, &argc, MAX_ARGS);
+		dprintf("> ");
+		debug_read_line(line_buf[cur_line], LINE_BUF_SIZE);		
+		debug_parse_line(line_buf[cur_line], args, &argc, MAX_ARGS);
 		if(argc <= 0) continue;
 
 		debugger_on_cpu = smp_get_current_cpu();
@@ -111,6 +192,9 @@ void kernel_debugger()
 			}
 			cmd = cmd->next;
 		}
+		cur_line++;
+		if(cur_line >= HISTORY_SIZE)
+			cur_line = 0;
 	}
 }
 
