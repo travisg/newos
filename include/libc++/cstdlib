@@ -3,12 +3,6 @@
 ** Distributed under the terms of the NewOS License
 */
 
-#ifndef __newos__libcxx_cstdlib__
-# define __newos__libcxx_cstdlib__
-
-namespace std
-{
+#define _NEWOS_NO_LIBC_COMPAT
 # include <stdlib.h>
-}
-
-#endif
+#undef _NEWOS_NO_LIBC_COMPAT

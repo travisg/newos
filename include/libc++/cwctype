@@ -3,12 +3,7 @@
 ** Distributed under the terms of the NewOS License
 */
 
-#ifndef __newos__libcxx_cwctype__
-# define __newos__libcxx_cwctype__
-
-namespace std
-{
+#define _NEWOS_NO_LIBC_COMPAT
 # include <wctype.h>
-}
+#undef _NEWOS_NO_LIBC_COMPAT
 
-#endif

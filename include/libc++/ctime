@@ -3,12 +3,6 @@
 ** Distributed under the terms of the NewOS License
 */
 
-#ifndef __newos__libcxx_ctime__
-# define __newos__libcxx_ctime__
-
-namespace std
-{
+#define _NEWOS_NO_LIBC_COMPAT
 # include <time.h>
-}
-
-#endif
+#undef _NEWOS_NO_LIBC_COMPAT

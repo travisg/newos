@@ -4,5 +4,5 @@
 */
 
 #define _NEWOS_NO_LIBC_COMPAT
-# include <assert.h>
+# include <errno.h>
 #undef _NEWOS_NO_LIBC_COMPAT
