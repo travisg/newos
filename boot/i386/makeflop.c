@@ -29,7 +29,7 @@ int main(int argc, char *argv[])
 	int padding;
 	int infd;
 	int outfd;
-	char opt;
+	signed char opt;
 	char const *progname;
 
 	padding = 0;
