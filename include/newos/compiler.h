@@ -16,6 +16,7 @@
 #endif
 
 #define _PACKED __attribute__((packed))
+#define _ALIGNED(x) __attribute__((aligned(x)))
 
 #endif // #ifndef __ASSEMBLY__
 

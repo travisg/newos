@@ -5,6 +5,7 @@
 #ifndef _CPU_H
 #define _CPU_H
 
+#include <newos/compiler.h>
 #include <boot/stage2.h>
 #include <kernel/thread.h>
 #include <kernel/smp.h>
@@ -28,18 +29,26 @@ typedef union cpu_ent {
 		// arch-specific stuff
 		struct arch_cpu_info arch;
 	} info;
-} cpu_ent __attribute__((aligned(64)));
+} cpu_ent _ALIGNED(64);
 
 extern cpu_ent cpu[_MAX_CPUS];
 
 int cpu_preboot_init(kernel_args *ka);
 int cpu_init(kernel_args *ka);
-
-cpu_ent *get_curr_cpu_struct(void);
-extern inline cpu_ent *get_curr_cpu_struct(void) { return thread_get_current_thread()->cpu; }
+int cpu_init_percpu(kernel_args *ka, int curr_cpu);
 
 cpu_ent *get_cpu_struct(int cpu_num);
 extern inline cpu_ent *get_cpu_struct(int cpu_num) { return &cpu[cpu_num]; }
+
+cpu_ent *get_curr_cpu_struct(void);
+extern inline cpu_ent *get_curr_cpu_struct(void) { 
+	struct thread *t = thread_get_current_thread();
+	if(t)
+		return t->cpu;
+	else {
+		return get_cpu_struct(smp_get_current_cpu());
+	}
+}
 
 void cpu_spin(bigtime_t interval);
 

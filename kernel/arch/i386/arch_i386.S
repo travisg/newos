@@ -149,6 +149,21 @@ FUNCTION(i386_fxsave_swap):
 	fxrstor	(%eax)
 	ret
 
+/* void i386_cpuid(unsigned int selector, unsigned int *data); */
+FUNCTION(i386_cpuid):
+ 	pushl	%ebx
+ 	pushl	%edi
+ 	movl	12(%esp),%eax
+ 	movl	16(%esp),%edi
+ 	cpuid
+ 	movl	%eax,0(%edi)
+ 	movl	%ebx,4(%edi)
+ 	movl	%ecx,8(%edi)
+ 	movl	%edx,12(%edi)
+ 	popl	%edi
+ 	popl	%ebx
+ 	ret
+
 /* void i386_context_switch(struct arch_thread *old, struct arch_thread *new); */
 FUNCTION(i386_context_switch):
 	pusha					/* pushes 8 words onto the stack */

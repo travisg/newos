@@ -19,6 +19,7 @@ int test_and_set(int *val, int set_to, int test_val);
 
 int arch_cpu_preboot_init(kernel_args *ka);
 int arch_cpu_init(kernel_args *ka);
+int arch_cpu_init_percpu(kernel_args *ka, int curr_cpu);
 int arch_cpu_init2(kernel_args *ka);
 void reboot(void);
 

@@ -1170,6 +1170,9 @@ int thread_init(kernel_args *ka)
 	dbg_add_command(dump_next_thread_in_proc, "next_proc", "dump the next thread in the process of the last thread viewed");
 	dbg_add_command(dump_proc_info, "proc", "list info about a particular process");
 
+	// initialize the architectural specific thread routines
+	arch_thread_init(ka);
+
 	return 0;
 }
 

@@ -5,6 +5,8 @@
 #ifndef _NEWOS_KERNEL_ARCH_I386_THREAD_STRUCT_H
 #define _NEWOS_KERNEL_ARCH_I386_THREAD_STRUCT_H
 
+#include <newos/compiler.h>
+
 struct farcall {
 	unsigned int *esp;
 	unsigned int *ss;
@@ -22,7 +24,7 @@ struct arch_thread {
 	int iframe_ptr;
 
 	// 512 byte floating point save point
-	uint8 fpu_state[512];
+	uint8 fpu_state[512] _ALIGNED(16);
 };
 
 struct arch_proc {

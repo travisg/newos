@@ -17,6 +17,19 @@ extern void	i386_stack_init( struct farcall *interrupt_stack_offset );
 extern void i386_return_from_signal(void);
 extern void i386_end_return_from_signal(void);
 
+// fsave vs fxsave function pointers
+static void (*fsave_swap_func)(void *old_fpu_state, void *new_fpu_state);
+
+int arch_thread_init(kernel_args *ka)
+{
+	if(i386_check_feature(X86_FXSR, FEATURE_COMMON))
+		fsave_swap_func = &i386_fxsave_swap;
+	else
+		fsave_swap_func = &i386_fsave_swap;
+
+	return 0;
+}
+
 int arch_proc_init_proc_struct(struct proc *p, bool kernel)
 {
 	return 0;
@@ -146,7 +159,7 @@ void arch_thread_context_switch(struct thread *t_from, struct thread *t_to)
 	if(new_pgdir)
 		i386_swap_pgdir(new_pgdir);
 	i386_set_kstack(t_to->kernel_stack_base + KSTACK_SIZE);
-	i386_fsave_swap(t_from->arch_info.fpu_state, t_to->arch_info.fpu_state);
+	fsave_swap_func(t_from->arch_info.fpu_state, t_to->arch_info.fpu_state);
 	i386_context_switch(&t_from->arch_info, &t_to->arch_info);
 }
 

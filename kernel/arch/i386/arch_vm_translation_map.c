@@ -246,6 +246,8 @@ static int map_tmap(vm_translation_map *map, addr_t va, addr_t pa, unsigned int 
 	pt[index].user = !(attributes & LOCK_KERNEL);
 	pt[index].rw = attributes & LOCK_RW;
 	pt[index].present = 1;
+	if(is_kernel_address(va))
+		pt[index].global = 1; // global bit set for all kernel addresses
 
 	put_physical_page_tmap((addr_t)pt);
 
@@ -684,6 +686,14 @@ int vm_translation_map_module_init(kernel_args *ka)
 		}
 	}
 
+	// turn on the global bit if the cpu supports it
+	if(i386_check_feature(X86_PGE, FEATURE_COMMON)) {
+		dprintf("enabing global bit\n");
+		uint32 cr4; 
+		read_cr4(cr4);
+		write_cr4(cr4 | (1<<7)); // PGE bit in cr4
+	}
+
 	dprintf("vm_translation_map_module_init: done\n");
 
 	return 0;
@@ -780,6 +790,8 @@ int vm_translation_map_quick_map(kernel_args *ka, addr_t va, addr_t pa, unsigned
 	pentry->user = !(attributes & LOCK_KERNEL);
 	pentry->rw = attributes & LOCK_RW;
 	pentry->present = 1;
+	if(is_kernel_address(va))
+		pentry->global = 1; // global bit set for all kernel addresses
 
 	arch_cpu_invalidate_TLB_range(va, va+1);
 

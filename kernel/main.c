@@ -65,6 +65,7 @@ int _start(kernel_args *oldka, int cpu_num)
 
 		// init modules
 		cpu_init(&global_kernel_args);
+		cpu_init_percpu(&global_kernel_args, cpu_num);
 		int_init(&global_kernel_args);
 
 		srand((uint)system_time());
@@ -113,6 +114,8 @@ int _start(kernel_args *oldka, int cpu_num)
 		smp_enable_ici(); // ici's were previously being ignored
 		thread_start_threading();
 	} else {
+		cpu_init_percpu(&global_kernel_args, cpu_num);
+
 		smp_init_percpu(&global_kernel_args, cpu_num);
 
 		timer_init_percpu(&global_kernel_args, cpu_num);
