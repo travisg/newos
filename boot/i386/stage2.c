@@ -130,19 +130,20 @@ void _start(unsigned int mem, char *str)
 		for(i=0; i<IDT_LIMIT/4; i++) {
 			idt[i] = 0;
 		}
-	
-		idt_descr.a = IDT_LIMIT - 1;
-		idt_descr.b = (unsigned int *)next_vaddr;
-		
-		asm("lidt	%0;"
-			: : "m" (idt_descr));
-
-//		nmessage("idt at virtual address ", next_vpage, "\n");
 
 		// map the idt into virtual space
 		mmu_map_page(next_vaddr, (unsigned int)idt);
 		ka->arch_args.vir_idt = (unsigned int)next_vaddr;
 		next_vaddr += PAGE_SIZE;
+	
+		// load the idt
+		idt_descr.a = IDT_LIMIT - 1;
+		idt_descr.b = (unsigned int *)ka->arch_args.vir_idt;
+		
+		asm("lidt	%0;"
+			: : "m" (idt_descr));
+
+//		nmessage("idt at virtual address ", next_vpage, "\n");
 	}
 
 	// set up a new gdt
@@ -168,19 +169,20 @@ void _start(unsigned int mem, char *str)
 		gdt[8] = 0x0000ffff; // seg 0x23 -- ring 3 4GB data
 		gdt[9] = 0x00cff200;
 		// gdt[10] & gdt[11] will be filled later by the kernel
-	
-		gdt_descr.a = GDT_LIMIT - 1;
-		gdt_descr.b = (unsigned int *)next_vaddr;
-		
-		asm("lgdt	%0;"
-			: : "m" (gdt_descr));
-
-//		nmessage("gdt at virtual address ", next_vpage, "\n");
 
 		// map the gdt into virtual space
 		mmu_map_page(next_vaddr, (unsigned int)gdt);
 		ka->arch_args.vir_gdt = (unsigned int)next_vaddr;
 		next_vaddr += PAGE_SIZE;
+
+		// load the GDT	
+		gdt_descr.a = GDT_LIMIT - 1;
+		gdt_descr.b = (unsigned int *)ka->arch_args.vir_gdt;
+		
+		asm("lgdt	%0;"
+			: : "m" (gdt_descr));
+
+//		nmessage("gdt at virtual address ", next_vpage, "\n");
 	}
 
 	// Map the pg_dir into kernel space at 0xffc00000-0xffffffff

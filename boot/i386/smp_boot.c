@@ -155,6 +155,11 @@ static void smp_do_config(kernel_args *ka)
 	}
 	dprintf("smp: apic @ 0x%x, i/o apic @ 0x%x, total %d processors detected\n",
 		(unsigned int)ka->arch_args.apic_phys, (unsigned int)ka->arch_args.ioapic_phys, ka->num_cpus);
+	
+	// this BIOS looks broken, because it didn't report any cpus (VMWare)
+	if(ka->num_cpus == 0) {
+		ka->num_cpus = 1;
+	}
 }
 
 struct smp_scan_spots_struct {
