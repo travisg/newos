@@ -1,5 +1,5 @@
 /*
-** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2004, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #include <kernel/kernel.h>
@@ -27,8 +27,14 @@ static void scan_pages(vm_address_space *aspace, addr_t free_target)
 	addr_t pa;
 	unsigned int flags, flags2;
 	int quantum = PAGE_SCAN_QUANTUM;
+	int regions_examined = 0;
+	int pages_examined = 0;
+	int pages_present = 0;
+	int pages_unmapped = 0;
 
-//	dprintf("scan_pages called on aspace 0x%x, id 0x%x, free_target %d\n", aspace, aspace->id, free_target);
+	bigtime_t start_time = system_time();
+
+	dprintf("  scan_pages called on aspace %p, id 0x%x, free_target %ld\n", aspace, aspace->id, free_target);
 
 	sem_acquire(aspace->virtual_map.sem, READ_COUNT);
 
@@ -61,31 +67,37 @@ static void scan_pages(vm_address_space *aspace, addr_t free_target)
 		// scan the pages in this region
 		mutex_lock(&region->cache_ref->lock);
 		if(!region->cache_ref->cache->scan_skip) {
+			regions_examined++;
 			for(va = region->base; va < (region->base + region->size); va += PAGE_SIZE) {
-				aspace->translation_map.ops->lock(&aspace->translation_map);
+				pages_examined++;
 				aspace->translation_map.ops->query(&aspace->translation_map, va, &pa, &flags);
 				if((flags & PAGE_PRESENT) == 0) {
-					aspace->translation_map.ops->unlock(&aspace->translation_map);
 					continue;
 				}
 
-				page = vm_lookup_page(pa);
+				pages_present++;
+
+				page = vm_lookup_page(pa / PAGE_SIZE);
 				if(!page) {
-					aspace->translation_map.ops->unlock(&aspace->translation_map);
 					continue;
 				}
 				VERIFY_VM_PAGE(page);
 
 				// see if this page is busy, if it is lets forget it and move on
 				if(page->state == PAGE_STATE_BUSY || page->state == PAGE_STATE_WIRED) {
-					aspace->translation_map.ops->unlock(&aspace->translation_map);
 					continue;
 				}
+
+//				dprintf("**va 0x%x pa 0x%x fl 0x%x, st %d\n", va, pa, flags, page->state);
 
 				flags2 = 0;
 				if(free_target > 0) {
 					// look for a page we can steal
 					if(!(flags & PAGE_ACCESSED) && page->state == PAGE_STATE_ACTIVE) {
+						pages_unmapped++;
+
+						aspace->translation_map.ops->lock(&aspace->translation_map);
+
 						// unmap the page
 						aspace->translation_map.ops->unmap(&aspace->translation_map, va, va + PAGE_SIZE);
 
@@ -104,16 +116,24 @@ static void scan_pages(vm_address_space *aspace, addr_t free_target)
 							vm_page_set_state(page, PAGE_STATE_INACTIVE);
 							free_target--;
 						}
+						aspace->translation_map.ops->unlock(&aspace->translation_map);
+					} else if(flags & PAGE_ACCESSED) {
+						// clear the accessed bits of this page
+						aspace->translation_map.ops->lock(&aspace->translation_map);
+						aspace->translation_map.ops->clear_flags(&aspace->translation_map, va, PAGE_ACCESSED);
+						aspace->translation_map.ops->unlock(&aspace->translation_map);
 					}
 				}
 
 				// if the page is modified, but the state is active or inactive, put it on the modified list
 				if(((flags & PAGE_MODIFIED) || (flags2 & PAGE_MODIFIED))
 					&& (page->state == PAGE_STATE_ACTIVE || page->state == PAGE_STATE_INACTIVE)) {
-					vm_page_set_state(page, PAGE_STATE_MODIFIED);
+					if(page->cache_ref->cache->temporary)
+						vm_page_set_state(page, PAGE_STATE_MODIFIED_TEMPORARY);
+					else
+						vm_page_set_state(page, PAGE_STATE_MODIFIED);
 				}
 
-				aspace->translation_map.ops->unlock(&aspace->translation_map);
 				if(--quantum == 0)
 					break;
 			}
@@ -131,7 +151,8 @@ static void scan_pages(vm_address_space *aspace, addr_t free_target)
 	aspace->scan_va = region ? (first_region->base + first_region->size) : aspace->virtual_map.base;
 	sem_release(aspace->virtual_map.sem, READ_COUNT);
 
-//	dprintf("exiting scan_pages\n");
+	dprintf("  exiting scan_pages, took %Ld usecs (re %d pe %d pp %d pu %d)\n", system_time() - start_time,
+		regions_examined, pages_examined, pages_present, pages_unmapped);
 }
 
 static int page_daemon()
@@ -157,12 +178,12 @@ static int page_daemon()
 
 			mapped_size = aspace->translation_map.ops->get_mapped_size(&aspace->translation_map);
 
-//			dprintf("page_daemon: looking at aspace 0x%x, id 0x%x, mapped size %d\n", aspace, aspace->id, mapped_size);
+			dprintf("page_daemon: looking at aspace %p, id 0x%x, mapped size %ld\n", aspace, aspace->id, mapped_size);
 
 			now = system_time();
 			if(now - aspace->last_working_set_adjust > WORKING_SET_ADJUST_INTERVAL) {
 				faults_per_second = (aspace->fault_count * 1000000) / (now - aspace->last_working_set_adjust);
-//				dprintf("  faults_per_second = %d\n", faults_per_second);
+				dprintf("  faults_per_second = %d\n", faults_per_second);
 				aspace->last_working_set_adjust = now;
 				aspace->fault_count = 0;
 
@@ -171,13 +192,13 @@ static int page_daemon()
 					&& aspace->working_set_size < aspace->max_working_set) {
 
 					aspace->working_set_size += WORKING_SET_INCREMENT;
-//					dprintf("  new working set size = %d\n", aspace->working_set_size);
+					dprintf("  new working set size = %ld\n", aspace->working_set_size);
 				} else if(faults_per_second < MIN_FAULTS_PER_SECOND
 					&& mapped_size <= aspace->working_set_size
 					&& aspace->working_set_size > aspace->min_working_set) {
 
 					aspace->working_set_size -= WORKING_SET_DECREMENT;
-//					dprintf("  new working set size = %d\n", aspace->working_set_size);
+					dprintf("  new working set size = %ld\n", aspace->working_set_size);
 				}
 			}
 
@@ -193,6 +214,7 @@ static int page_daemon()
 				free_memory_target = mapped_size - aspace->working_set_size;
 
 			scan_pages(aspace, free_memory_target);
+//			scan_pages(aspace, 0x7fffffff);
 
 			// must hold a ref to the old aspace while we grab the next one,
 			// otherwise the iterator becomes out of date.

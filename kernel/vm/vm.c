@@ -1,5 +1,5 @@
 /*
-** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2004, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #include <kernel/kernel.h>
@@ -33,7 +33,7 @@
 #include <stdio.h>
 
 
-/* global data about the vm, used for informational purposes */
+/* global data about the vm */
 vm_info_t vm_info;
 
 static vm_address_space *kernel_aspace;
@@ -48,7 +48,6 @@ static aspace_id next_aspace_id;
 static void *aspace_table;
 static sem_id aspace_hash_sem;
 
-static int max_commit;
 static spinlock_t max_commit_lock;
 
 // function declarations
@@ -386,7 +385,7 @@ static int map_backing_store(vm_address_space *aspace, vm_store *store, void **v
 				int_disable_interrupts();
 				acquire_spinlock(&max_commit_lock);
 
-				if(max_commit - old_store_commitment + commitment < offset + size) {
+				if(vm_info.max_commit - old_store_commitment + commitment < offset + size) {
 					release_spinlock(&max_commit_lock);
 					int_restore_interrupts();
 					mutex_unlock(&cache_ref->lock);
@@ -397,7 +396,7 @@ static int map_backing_store(vm_address_space *aspace, vm_store *store, void **v
 //				dprintf("map_backing_store: adding %d to max_commit\n",
 //					(commitment - old_store_commitment) - (offset + size - cache->committed_size));
 
-				max_commit += (commitment - old_store_commitment) - (offset + size - cache->virtual_size);
+				vm_info.max_commit += (commitment - old_store_commitment) - (offset + size - cache->virtual_size);
 				cache->virtual_size = offset + size;
 				release_spinlock(&max_commit_lock);
 				int_restore_interrupts();
@@ -1240,6 +1239,8 @@ static const char *page_state_to_text(int state)
 			return "busy";
 		case PAGE_STATE_MODIFIED:
 			return "modified";
+		case PAGE_STATE_MODIFIED_TEMPORARY:
+			return "modified_temporary";
 		case PAGE_STATE_FREE:
 			return "free";
 		case PAGE_STATE_CLEAR:
@@ -1643,20 +1644,6 @@ vm_address_space *vm_aspace_walk_next(struct hash_iterator *i)
 	return aspace;
 }
 
-static int vm_thread_dump_max_commit(void *unused)
-{
-	int oldmax = -1;
-
-	(void)(unused);
-
-	for(;;) {
-		thread_snooze(1000000);
-		if(oldmax != max_commit)
-			dprintf("max_commit 0x%x\n", max_commit);
-		oldmax = max_commit;
-	}
-}
-
 int vm_init(kernel_args *ka)
 {
 	int err = 0;
@@ -1677,7 +1664,7 @@ int vm_init(kernel_args *ka)
 	region_hash_sem = -1;
 	next_aspace_id = 0;
 	aspace_hash_sem = -1;
-	max_commit = 0; // will be increased in vm_page_init
+	vm_info.max_commit = 0; // will be increased in vm_page_init
 	max_commit_lock = 0;
 	memset(&vm_info, 0, sizeof(vm_info));
 
@@ -1808,11 +1795,6 @@ int vm_init_postsem(kernel_args *ka)
 int vm_init_postthread(kernel_args *ka)
 {
 	vm_page_init_postthread(ka);
-
-	{
-		thread_id tid = thread_create_kernel_thread("max_commit_thread", &vm_thread_dump_max_commit, NULL);
-		thread_resume_thread(tid);
-	}
 
 	vm_daemon_init();
 
@@ -2209,8 +2191,7 @@ void vm_increase_max_commit(addr_t delta)
 
 	int_disable_interrupts();
 	acquire_spinlock(&max_commit_lock);
-	max_commit += delta;
-	vm_info.committed_mem += delta;
+	vm_info.max_commit += delta;
 	release_spinlock(&max_commit_lock);
 	int_restore_interrupts();
 }

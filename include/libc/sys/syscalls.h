@@ -1,5 +1,5 @@
 /*
-** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2004, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #ifndef _LIBSYS_SYSCALLS_H
@@ -113,8 +113,8 @@ typedef struct {
 	int physical_page_size;
 	int physical_pages;
 
-	// amount of committed mem in the system
-	int committed_mem;
+	// amount of virtual memory left to commit
+	int max_commit;
 
 	// info about the page queues
 	int active_pages;
@@ -122,6 +122,7 @@ typedef struct {
 	int busy_pages;
 	int unused_pages;
 	int modified_pages;
+	int modified_temporary_pages;
 	int free_pages;
 	int clear_pages;
 	int wired_pages;

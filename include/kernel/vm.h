@@ -1,5 +1,5 @@
 /*
-** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2004, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #ifndef _KERNEL_VM_H
@@ -29,7 +29,7 @@ typedef struct vm_page {
 	unsigned int ref_count;
 
 	unsigned int type : 2;
-	unsigned int state : 3;
+	unsigned int state : 4;
 } vm_page;
 
 #define VM_PAGE_MAGIC 'vmpg'
@@ -45,6 +45,7 @@ enum {
 	PAGE_STATE_INACTIVE,
 	PAGE_STATE_BUSY,
 	PAGE_STATE_MODIFIED,
+	PAGE_STATE_MODIFIED_TEMPORARY,
 	PAGE_STATE_FREE,
 	PAGE_STATE_CLEAR,
 	PAGE_STATE_WIRED,
@@ -253,8 +254,8 @@ typedef struct {
 	int physical_page_size;
 	int physical_pages;
 
-	// amount of committed mem in the system
-	int committed_mem;
+	// amount of virtual memory left to commit
+	int max_commit;
 
 	// info about the page queues
 	int active_pages;
@@ -262,6 +263,7 @@ typedef struct {
 	int busy_pages;
 	int unused_pages;
 	int modified_pages;
+	int modified_temporary_pages;
 	int free_pages;
 	int clear_pages;
 	int wired_pages;

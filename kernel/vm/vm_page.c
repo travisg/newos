@@ -1,5 +1,5 @@
 /*
-** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2004, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #include <kernel/kernel.h>
@@ -30,8 +30,9 @@ extern bool trimming_cycle;
 
 static page_queue page_free_queue;
 static page_queue page_clear_queue;
-static page_queue page_modified_queue;
 static page_queue page_active_queue;
+static page_queue page_modified_queue;
+static page_queue page_modified_temporary_queue;
 
 static vm_page *all_pages;
 static addr_t physical_page_offset;
@@ -83,7 +84,7 @@ static void enqueue_page(page_queue *q, vm_page *page)
 	if(q->tail == NULL)
 		q->tail = page;
 	q->count++;
-	if(q == &page_modified_queue) {
+	if(q == &page_modified_queue || q == &page_modified_temporary_queue) {
 		if(q->count == 1)
 			sem_release_etc(modified_pages_available, 1, SEM_FLAG_NO_RESCHED);
 	}
@@ -219,26 +220,29 @@ int vm_page_init(kernel_args *ka)
 	page_clear_queue.head = NULL;
 	page_clear_queue.tail = NULL;
 	page_clear_queue.count = 0;
-	page_modified_queue.head = NULL;
-	page_modified_queue.tail = NULL;
-	page_modified_queue.count = 0;
 	page_active_queue.head = NULL;
 	page_active_queue.tail = NULL;
 	page_active_queue.count = 0;
+	page_modified_queue.head = NULL;
+	page_modified_queue.tail = NULL;
+	page_modified_queue.count = 0;
+	page_modified_temporary_queue.head = NULL;
+	page_modified_temporary_queue.tail = NULL;
+	page_modified_temporary_queue.count = 0;
 
 	// calculate the size of memory by looking at the phys_mem_range array
 	{
 		unsigned int last_phys_page = 0;
 
-		kprintf("physical memory ranges:\n");
+		dprintf("physical memory ranges:\n");
 
 		physical_page_offset = ka->phys_mem_range[0].start / PAGE_SIZE;
 		for(i=0; i<ka->num_phys_mem_ranges; i++) {
-			kprintf("\tbase 0x%08lx size 0x%08lx\n", ka->phys_mem_range[i].start, ka->phys_mem_range[i].size);
+			dprintf("\tbase 0x%08lx size 0x%08lx\n", ka->phys_mem_range[i].start, ka->phys_mem_range[i].size);
 			last_phys_page = (ka->phys_mem_range[i].start + ka->phys_mem_range[i].size) / PAGE_SIZE - 1;
 		}
 		dprintf("first phys page = 0x%lx, last 0x%x\n", physical_page_offset, last_phys_page);
-		num_pages = last_phys_page - physical_page_offset;
+		num_pages = last_phys_page - physical_page_offset + 1;
 	}
 
 	// set up the global info structure about physical memory
@@ -261,7 +265,7 @@ int vm_page_init_postheap(kernel_args *ka)
 		all_pages, num_pages, (unsigned int)(num_pages * sizeof(vm_page)));
 
 	// initialize the free page table
-	for(i=0; i < num_pages - 1; i++) {
+	for(i=0; i < num_pages; i++) {
 		all_pages[i].magic = VM_PAGE_MAGIC;
 		all_pages[i].ppn = physical_page_offset + i;
 		all_pages[i].type = PAGE_TYPE_PHYSICAL;
@@ -374,8 +378,6 @@ static void clear_page(addr_t pa)
 {
 	addr_t va;
 
-//	dprintf("clear_page: clearing page 0x%x\n", pa);
-
 	vm_get_physical_page(pa, &va, PHYSICAL_PAGE_CAN_WAIT);
 
 	memset((void *)va, 0, PAGE_SIZE);
@@ -392,9 +394,6 @@ int vm_mark_page_range_inuse(addr_t start_page, addr_t len)
 {
 	vm_page *page;
 	addr_t i;
-
-	// XXX remove
-	dprintf("vm_mark_page_range_inuse: start 0x%lx, len 0x%lx\n", start_page, len);
 
 	if(physical_page_offset > start_page) {
 		dprintf("vm_mark_page_range_inuse: start page %ld is before free list\n", start_page);
@@ -422,6 +421,7 @@ int vm_mark_page_range_inuse(addr_t start_page, addr_t len)
 			case PAGE_STATE_INACTIVE:
 			case PAGE_STATE_BUSY:
 			case PAGE_STATE_MODIFIED:
+			case PAGE_STATE_MODIFIED_TEMPORARY:
 			case PAGE_STATE_UNUSED:
 			default:
 				// uh
@@ -627,6 +627,10 @@ removefromactive:
 			vm_info.modified_pages--;
 			from_q = &page_modified_queue;
 			break;
+		case PAGE_STATE_MODIFIED_TEMPORARY:
+			vm_info.modified_temporary_pages--;
+			from_q = &page_modified_temporary_queue;
+			break;
 		case PAGE_STATE_FREE:
 			vm_info.free_pages--;
 			from_q = &page_free_queue;
@@ -660,6 +664,10 @@ addtoactive:
 		case PAGE_STATE_MODIFIED:
 			vm_info.modified_pages++;
 			to_q = &page_modified_queue;
+			break;
+		case PAGE_STATE_MODIFIED_TEMPORARY:
+			vm_info.modified_temporary_pages++;
+			to_q = &page_modified_temporary_queue;
 			break;
 		case PAGE_STATE_FREE:
 			vm_info.free_pages++;
@@ -707,12 +715,13 @@ addr_t vm_page_num_free_pages()
 
 void dump_free_page_table(int argc, char **argv)
 {
+	// XXX finish
 	dprintf("not finished\n");
 }
 
 void dump_page_stats(int argc, char **argv)
 {
-	unsigned int page_types[8];
+	unsigned int page_types[9];
 	addr_t i;
 
 	memset(page_types, 0, sizeof(page_types));
@@ -724,8 +733,8 @@ void dump_page_stats(int argc, char **argv)
 	dprintf("page stats:\n");
 	dprintf("active: %d\ninactive: %d\nbusy: %d\nunused: %d\n",
 		page_types[PAGE_STATE_ACTIVE], page_types[PAGE_STATE_INACTIVE], page_types[PAGE_STATE_BUSY], page_types[PAGE_STATE_UNUSED]);
-	dprintf("modified: %d\nfree: %d\nclear: %d\nwired: %d\n",
-		page_types[PAGE_STATE_MODIFIED], page_types[PAGE_STATE_FREE], page_types[PAGE_STATE_CLEAR], page_types[PAGE_STATE_WIRED]);
+	dprintf("modified: %d\nmodified_temporary %d\nfree: %d\nclear: %d\nwired: %d\n",
+		page_types[PAGE_STATE_MODIFIED], page_types[PAGE_STATE_MODIFIED_TEMPORARY], page_types[PAGE_STATE_FREE], page_types[PAGE_STATE_CLEAR], page_types[PAGE_STATE_WIRED]);
 }
 
 

@@ -1,5 +1,5 @@
 /*
-** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2004, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #ifndef _KERNEL_VM_PRIV_H
@@ -17,7 +17,7 @@
 #define WORKING_SET_INCREMENT       32
 #define WORKING_SET_DECREMENT       32
 
-#define PAGE_DAEMON_INTERVAL 500000
+#define PAGE_DAEMON_INTERVAL 5000000
 #define PAGE_SCAN_QUANTUM 500
 #define WORKING_SET_ADJUST_INTERVAL 5000000
 #define MAX_FAULTS_PER_SECOND 100
