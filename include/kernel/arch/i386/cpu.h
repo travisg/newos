@@ -112,6 +112,11 @@ void i386_switch_stack_and_call(addr stack, void (*func)(void *), void *arg);
 void i386_swap_pgdir(addr new_pgdir);
 void i386_fsave_swap(void *old_fpu_state, void *new_fpu_state);
 void i386_fxsave_swap(void *old_fpu_state, void *new_fpu_state);
+desc_table *i386_get_gdt(void);
+void i386_set_task_gate(int n, uint32 seg);
+
+#define read_cr3(value) \
+	__asm__("movl	%%cr3,%0" : "=r" (value))
 
 #define read_ebp(value) \
 	__asm__("movl	%%ebp,%0" : "=r" (value))

@@ -9,7 +9,8 @@
 #define KERNEL_DATA_SEG 0x10
 #define USER_CODE_SEG 0x1b
 #define USER_DATA_SEG 0x23
-#define TSS 0x28
+#define DOUBLE_FAULT_TSS 0x28
+#define TSS 0x30
 
 #endif
 

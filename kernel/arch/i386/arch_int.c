@@ -73,6 +73,12 @@ void arch_int_disable_io_interrupt(int irq)
 		out8(in8(0xa1) | (1 << (irq - 8)), 0xa1);
 }
 
+void i386_set_task_gate(int n, uint32 seg)
+{
+	idt[n].a = (seg << 16); // tss segment in 31:16
+	idt[n].b = 0x8000 | (0 << 13) | (0x5 << 8); // present, dpl 0, type 5
+}
+
 static void set_intr_gate(int n, void *addr)
 {
 	_set_gate(&idt[n], (unsigned int)addr, 14, 0);
@@ -263,7 +269,7 @@ int arch_int_init(kernel_args *ka)
 	set_intr_gate(5,  &trap5);
 	set_intr_gate(6,  &trap6);
 	set_intr_gate(7,  &trap7);
-	set_intr_gate(8,  &trap8);
+//	set_intr_gate(8,  &trap8);	/* handled below by pointing the idt entry to a tss segment */
 	set_intr_gate(9,  &trap9);
 	set_intr_gate(10,  &trap10);
 	set_intr_gate(11,  &trap11);
@@ -308,5 +314,6 @@ int arch_int_init2(kernel_args *ka)
 	idt = (desc_table *)ka->arch_args.vir_idt;
 	vm_create_anonymous_region(vm_get_kernel_aspace_id(), "idt", (void *)&idt,
 		REGION_ADDR_EXACT_ADDRESS, PAGE_SIZE, REGION_WIRING_WIRED_ALREADY, LOCK_RW|LOCK_KERNEL);
+
 	return 0;
 }
