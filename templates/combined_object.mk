@@ -15,8 +15,9 @@ ALL_OBJS := $(ALL_OBJS) $(_TEMP_OBJS)
 ALL_DEPS := $(ALL_DEPS) $(_TEMP_OBJS:.o=.d)
 
 $(MY_TARGET_IN): $(_TEMP_OBJS)
-	@mkdir -p $(MY_TARGETDIR_IN)
-	$(LD) $(GLOBAL_LDFLAGS) -r -o $@ $^
+	@$(MKDIR)
+	@echo linking $@
+	@$(LD) $(GLOBAL_LDFLAGS) -r -o $@ $^
 
 include templates/compile.mk
 

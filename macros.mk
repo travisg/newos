@@ -5,3 +5,6 @@ TOBUILDDIR = $(addprefix $(BUILD_DIR)/,$(1))
 # sees if the target is in the list
 FINDINLIST = $(if $(findstring $(1),$(2)),1,0)
 
+# used in template files to build a directory in the build rules
+MKDIR = if [ ! -d $(dir $@) ]; then mkdir -p $(dir $@); fi
+

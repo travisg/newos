@@ -21,15 +21,17 @@ $(MY_TARGET_IN): MY_LIBS_IN:=$(MY_LIBS_IN)
 $(MY_TARGET_IN): MY_LINKSCRIPT_IN:=$(MY_LINKSCRIPT_IN)
 $(MY_TARGET_IN): _TEMP_OBJS:=$(_TEMP_OBJS)
 $(MY_TARGET_IN): $(_TEMP_OBJS) $(MY_LIBS_IN)
-	@mkdir -p $(MY_TARGETDIR_IN)
-	$(LD) $(GLOBAL_LDFLAGS) -Bdynamic -export-dynamic -dynamic-linker /foo/bar -T $(MY_LINKSCRIPT_IN) -L $(LIBGCC_PATH) -o $@ $(_TEMP_OBJS) $(MY_LIBS_IN) $(LIBGCC)
+	@$(MKDIR)
+	@echo linking $@
+	@$(LD) $(GLOBAL_LDFLAGS) -Bdynamic -export-dynamic -dynamic-linker /foo/bar -T $(MY_LINKSCRIPT_IN) -L $(LIBGCC_PATH) -o $@ $(_TEMP_OBJS) $(MY_LIBS_IN) $(LIBGCC)
 
 $(MY_TARGETLIB_IN): MY_LIBS_IN:=$(MY_LIBS_IN)
 $(MY_TARGETLIB_IN): MY_LINKSCRIPT_IN:=$(MY_LINKSCRIPT_IN)
 $(MY_TARGETLIB_IN): _TEMP_OBJS:=$(_TEMP_OBJS)
 $(MY_TARGETLIB_IN): $(_TEMP_OBJS) $(MY_LIBS_IN)
-	@mkdir -p $(MY_TARGETDIR_IN)
-	$(LD) $(GLOBAL_LDFLAGS) -Bdynamic -shared -export-dynamic -dynamic-linker /foo/bar -T $(MY_LINKSCRIPT_IN) -L $(LIBGCC_PATH) -o $@ $(_TEMP_OBJS) $(MY_LIBS_IN) $(LIBGCC)
+	@$(MKDIR)
+	@echo linking $@
+	@$(LD) $(GLOBAL_LDFLAGS) -Bdynamic -shared -export-dynamic -dynamic-linker /foo/bar -T $(MY_LINKSCRIPT_IN) -L $(LIBGCC_PATH) -o $@ $(_TEMP_OBJS) $(MY_LIBS_IN) $(LIBGCC)
 
 include templates/compile.mk
 

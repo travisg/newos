@@ -21,14 +21,17 @@ $(MY_TARGET_IN): MY_TARGET_IN:=$(MY_TARGET_IN)
 $(MY_TARGET_IN): MY_LINKSCRIPT_IN:=$(MY_LINKSCRIPT_IN)
 $(MY_TARGET_IN): MY_TARGETDIR_IN:=$(MY_TARGETDIR_IN) 
 $(MY_TARGET_IN): $(LIBGLUE) $(_TEMP_OBJS)
+	@$(MKDIR)
 	@mkdir -p $(MY_TARGETDIR_IN)
-	$(LD) $(GLOBAL_LDFLAGS) -shared -soname $(notdir $(MY_TARGET_IN)) --script=$(MY_LINKSCRIPT_IN) -o $@ $^
+	@echo linking library $@
+	@$(LD) $(GLOBAL_LDFLAGS) -shared -soname $(notdir $(MY_TARGET_IN)) --script=$(MY_LINKSCRIPT_IN) -o $@ $^
 endif
 ifneq ($(MY_STATIC_TARGET_IN), ) 
 $(MY_STATIC_TARGET_IN): MY_TARGETDIR_IN:=$(MY_TARGETDIR_IN) 
 $(MY_STATIC_TARGET_IN): $(_TEMP_OBJS)
-	@mkdir -p $(MY_TARGETDIR_IN)
-	$(AR) r $@ $^
+	@$(MKDIR)
+	@echo creating static lib $@
+	@$(AR) r $@ $^
 endif
 
 include templates/compile.mk

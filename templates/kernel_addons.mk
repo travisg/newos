@@ -20,8 +20,9 @@ $(MY_TARGET_IN): MY_LIBS_IN:=$(MY_LIBS_IN)
 $(MY_TARGET_IN): MY_LINKSCRIPT_IN:=$(MY_LINKSCRIPT_IN)
 $(MY_TARGET_IN): _TEMP_OBJS:=$(_TEMP_OBJS)
 $(MY_TARGET_IN): $(_TEMP_OBJS) $(MY_LIBS_IN)
-	@mkdir -p $(MY_TARGETDIR_IN)
-	$(LD) $(GLOBAL_LDFLAGS) -Bdynamic -shared -Bsymbolic -T $(MY_LINKSCRIPT_IN) -L $(LIBGCC_PATH) -o $@ $(_TEMP_OBJS) $(MY_LIBS_IN) $(LIBGCC)
+	@$(MKDIR)
+	@echo linking $@
+	@$(LD) $(GLOBAL_LDFLAGS) -Bdynamic -shared -Bsymbolic -T $(MY_LINKSCRIPT_IN) -L $(LIBGCC_PATH) -o $@ $(_TEMP_OBJS) $(MY_LIBS_IN) $(LIBGCC)
 
 include templates/compile.mk
 
