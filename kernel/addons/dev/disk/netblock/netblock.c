@@ -16,6 +16,7 @@
 #include <kernel/net/ipv4.h>
 #include <newos/errors.h>
 #include <string.h>
+#include <stdio.h>
 
 #define NB_TRACE 1
 #if NB_TRACE
@@ -522,6 +523,9 @@ int dev_bootstrap(void)
 	struct netblock_dev *dev;
 	sockaddr saddr;
 
+	int index = 0;
+	char path[SYS_MAX_PATH_LEN];
+
 	// create a device structure
 	dev = kmalloc(sizeof(struct netblock_dev));
 	if(!dev)
@@ -547,7 +551,11 @@ int dev_bootstrap(void)
 	dev->saddr.addr.type = ADDR_TYPE_IP;
 	NETADDR_TO_IPV4(dev->saddr.addr) = IPV4_DOTADDR_TO_ADDR(192, 168, 0, 3);
 
-	devfs_publish_device("disk/netblock/0/raw", dev, &netblock_hooks);
+	index = devfs_publish_indexed_directory("disk/netblock");
+	if (index >= 0) {
+		sprintf(path, "disk/netblock/%d/raw", index);
+		devfs_publish_device(path, dev, &netblock_hooks);
+	}
 
 	return 0;
 }
