@@ -877,8 +877,10 @@ static struct fs_calls isofs_calls = {
 	&isofs_wstat		// wstat
 };
 
+int fs_bootstrap(void);
+
 //--------------------------------------------------------------------------------
-int fs_bootstrap()
+int fs_bootstrap(void)
 {
 	dprintf("bootstrap_isofs: entry\n");
 	return vfs_register_filesystem("isofs", &isofs_calls);

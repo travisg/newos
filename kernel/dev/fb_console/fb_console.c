@@ -20,6 +20,7 @@
 
 #include "font.h"
 
+int fb_console_dev_init(kernel_args *ka);
 
 #if 0
 // this version makes the sh4 compiler throw up
