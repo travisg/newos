@@ -2347,7 +2347,7 @@ static int vfs_resize_fd_table(struct ioctx * ioctx, const int new_size)
 		}
 
 		memcpy(new_fds, ioctx->fds, sizeof(struct file_descriptor *) * ioctx->table_size);
-		memset(new_fds + (sizeof(struct file_descriptor *) * ioctx->table_size), 0,
+		memset(((char *)new_fds) + (sizeof(struct file_descriptor *) * ioctx->table_size), 0,
 				(sizeof(struct file_descriptor *) * new_size) - (sizeof(struct file_descriptor *) * ioctx->table_size));
 	}
 
