@@ -62,8 +62,7 @@ module_info *add_module( module_header *header, const char *file_name )
 		return module;
 		
 	module->header = header;
-	module->image_name = kmalloc( strlen( file_name ));
-	strcpy( module->image_name, file_name );
+	module->image_name = kstrdup( strlen( file_name ));
 	module->ref_count = 1;
 	module->ready = false;
 	
