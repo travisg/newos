@@ -2157,7 +2157,7 @@ static vm_region *vm_virtual_map_lookup(vm_virtual_map *map, addr address)
 {
 	vm_region *region;
 
-	// check the region_list region first
+	// check the region_hint region first
 	region = map->region_hint;
 	if(region)
 		VERIFY_VM_REGION(region);
@@ -2170,9 +2170,10 @@ static vm_region *vm_virtual_map_lookup(vm_virtual_map *map, addr address)
 			break;
 	}
 
-	if(region)
+	if(region) {
 		map->region_hint = region;
-	VERIFY_VM_REGION(region);
+		VERIFY_VM_REGION(region);
+	}
 	return region;
 }
 
