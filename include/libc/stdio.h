@@ -74,6 +74,7 @@ int   ferror(FILE *);
 void  clearerr(FILE *);
 
 
+FILE *freopen(const char *filename, const char *mode, FILE *stream);
 char*  fgets(char *, int, FILE *);
 size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream);
 int    getchar(void);
@@ -126,7 +127,7 @@ using ::std::fprintf;
 using ::std::fputc;
 //using ::std::fputs;
 using ::std::fread;
-//using ::std::freopen;
+using ::std::freopen;
 using ::std::fscanf;
 //using ::std::fseek;
 //using ::std::fsetpos;

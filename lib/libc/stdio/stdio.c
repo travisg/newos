@@ -2,6 +2,7 @@
 /*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
+** Justin Smith 2003/09/13
 */
 #include <sys/syscalls.h>
 #include <stdio.h>
@@ -25,6 +26,13 @@ int __stdio_deinit(void);/* to be called by anyone except crt0, and crt0 will ch
 FILE* __open_file_stack_top;
 /* Semaphore used when adjusting the stack*/
 sem_id __open_file_stack_sem_id;
+
+static int _flush(FILE* stream);
+static int _set_open_flags(const char* mode, int* sys_flags, int* flags);
+static long _ftell(FILE* stream);
+static int _flush(FILE* stream);
+static int _fputc(int ch, FILE *stream);
+static int _fgetc(FILE* stream);
 
 static FILE *__create_FILE_struct(int fd, int flags)
 {
@@ -170,48 +178,10 @@ FILE *fopen(const char *filename, const char *mode)
     int flags;
     int fd;
 
-    sys_flags = 0;
-
-    if(!strcmp(mode, "r") || !strcmp(mode, "rb"))
-    {
-        sys_flags = O_RDONLY;
-        flags = _STDIO_READ;
-    }
-    else if(!strcmp(mode, "w") || !strcmp(mode, "wb"))
-    {
-        sys_flags = O_WRONLY | O_CREAT | O_TRUNC;
-        flags = _STDIO_WRITE;
-    }
-    else if(!strcmp(mode, "a") || !strcmp(mode, "ab"))
-    {
-        sys_flags = O_WRONLY | O_CREAT | O_APPEND;
-        flags = _STDIO_WRITE;
-    }
-    else if(!strcmp(mode, "r+") || !strcmp(mode, "rb+") || !strcmp(mode, "r+b"))
-    {
-        sys_flags = O_RDWR;
-        flags = _STDIO_READ | _STDIO_WRITE;
-    }
-    else if(!strcmp(mode, "w+") || !strcmp(mode, "wb+") || !strcmp(mode, "w+b"))
-    {
-        sys_flags = O_RDWR | O_CREAT | O_TRUNC;
-        flags = _STDIO_READ | _STDIO_WRITE;
-    }
-    else if(!strcmp(mode, "a+") || !strcmp(mode, "ab+") || !strcmp(mode, "a+b"))
-    {
-        sys_flags = O_RDWR | O_CREAT | O_APPEND;
-        flags = _STDIO_READ | _STDIO_WRITE;
-    }
-    else
-    {
-        return (FILE*)0;
-    }
-
-    fd = _kern_open(filename, 0, sys_flags);
-    if(fd < 0)
-    {
-        return (FILE*)0;
-    }
+	if(_set_open_flags(mode, &sys_flags, &flags) || (fd = _kern_open(filename, 0, sys_flags)) < 0)
+	{
+		return (FILE*)0;
+	}
 
     f = __create_FILE_struct(fd, flags);
     if(f == (FILE*)0)
@@ -222,28 +192,92 @@ FILE *fopen(const char *filename, const char *mode)
     return f;
 }
 
+FILE *freopen(const char *filename, const char *mode, FILE *stream)
+{
+    int sys_flags;
+    int flags;
+    int fd;
+
+	if(_set_open_flags(mode, &sys_flags, &flags) || (fd = _kern_open(filename, 0, sys_flags)) < 0)
+	{
+		return (FILE*)0;
+	}
+ 
+	_kern_sem_acquire(stream->sid, 1);	
+	_flush(stream);
+	close(stream->fd);
+	stream->fd = fd;
+	stream->rpos = stream->buf_pos = 0;
+    stream->flags = flags;
+	_kern_sem_release(stream->sid, 1);
+
+    return stream;
+
+}
+
+static int _set_open_flags(const char* mode, int* sys_flags, int* flags)
+{
+	if(!strcmp(mode, "r") || !strcmp(mode, "rb"))
+    {
+        *sys_flags = O_RDONLY;
+        *flags = _STDIO_READ;
+    }
+    else if(!strcmp(mode, "w") || !strcmp(mode, "wb"))
+    {
+        *sys_flags = O_WRONLY | O_CREAT | O_TRUNC;
+        *flags = _STDIO_WRITE;
+    }
+    else if(!strcmp(mode, "a") || !strcmp(mode, "ab"))
+    {
+        *sys_flags = O_WRONLY | O_CREAT | O_APPEND;
+        *flags = _STDIO_WRITE;
+    }
+    else if(!strcmp(mode, "r+") || !strcmp(mode, "rb+") || !strcmp(mode, "r+b"))
+    {
+        *sys_flags = O_RDWR;
+        *flags = _STDIO_READ | _STDIO_WRITE;
+    }
+    else if(!strcmp(mode, "w+") || !strcmp(mode, "wb+") || !strcmp(mode, "w+b"))
+    {
+        *sys_flags = O_RDWR | O_CREAT | O_TRUNC;
+        *flags = _STDIO_READ | _STDIO_WRITE;
+    }
+    else if(!strcmp(mode, "a+") || !strcmp(mode, "ab+") || !strcmp(mode, "a+b"))
+    {
+        *sys_flags = O_RDWR | O_CREAT | O_APPEND;
+        *flags = _STDIO_READ | _STDIO_WRITE;
+    }
+    else
+    {
+        return -1;
+    }
+	return 0;
+}
+
+
 
 long ftell(FILE* stream)
 {
 	fpos_t p;
 	_kern_sem_acquire(stream->sid, 1);
-	if(stream->flags & _STDIO_WRITE)
-	{
-		int err = write(stream->fd, stream->buf, stream->buf_pos);
-		stream->buf_pos = 0;
-		if(err < 0)
-		{
-			errno = EIO;
-			stream->flags |= _STDIO_ERROR;
-		}
-	}
+	p = _ftell(stream);
+	_kern_sem_release(stream->sid, 1);
+	
+	return p;
+}
+
+static long _ftell(FILE* stream)
+{
+	fpos_t p;
+	
+	_flush(stream);
+
 	p = lseek(stream->fd, 0, _SEEK_CUR) - ((stream->flags & _STDIO_UNGET) ? 1 : 0);
+	
 	if(p < 0)
 	{
 		errno = EIO;
 	}
-	_kern_sem_release(stream->sid, 1);
-	
 	return p;
 }
 
@@ -263,7 +297,6 @@ int fclose(FILE *stream)
 {
     int err;
     err = fflush(stream);
-
     __delete_FILE_struct(stream->fd);
     return err;
 }
@@ -284,42 +317,48 @@ int fflush(FILE *stream)
     }
     else
     {
+		int err;
         _kern_sem_acquire(stream->sid, 1);
-		if(stream->buf_pos)
+		err = _flush(stream);
+        _kern_sem_release(stream->sid, 1);
+		return err;
+    }
+}
+
+static int _flush(FILE* stream)
+{
+	if(stream->buf_pos)
+	{
+		if(stream->flags & _STDIO_WRITE)
 		{
-			if(stream->flags & _STDIO_WRITE)
+			int err = write(stream->fd, stream->buf, stream->buf_pos);
+			stream->buf_pos = 0;
+			if(err < 0)
 			{
-				int err = write(stream->fd, stream->buf, stream->buf_pos);
-				stream->buf_pos = 0;
-				if(err < 0)
+				errno = EIO;
+				stream->flags |= _STDIO_ERROR;
+				return EOF;
+			}
+
+		}
+		else if(stream->flags & _STDIO_READ)
+		{
+			off_t dif = stream->rpos - stream->buf_pos;
+			if(dif < 0)
+			{
+				dif = lseek(stream->fd, dif, SEEK_CUR);
+				stream->rpos = stream->buf_pos = 0;
+				if(dif < 0)
 				{
 					errno = EIO;
 					stream->flags |= _STDIO_ERROR;
-					_kern_sem_release(stream->sid, 1);
 					return EOF;
-				}
-
-			}
-			else if(stream->flags & _STDIO_READ)
-			{
-				off_t dif = stream->rpos - stream->buf_pos;
-				if(dif < 0)
-				{
-					dif = lseek(stream->fd, dif, SEEK_CUR);
-					stream->rpos = stream->buf_pos = 0;
-					if(dif < 0)
-					{
-						errno = EIO;
-						stream->flags |= _STDIO_ERROR;
-						_kern_sem_release(stream->sid, 1);
-						return EOF;
-					}
 				}
 			}
 		}
-        _kern_sem_release(stream->sid, 1);
-		return 0;
-    }
+	}
+	return 0;
+
 }
 
 
@@ -398,22 +437,28 @@ int putc(int ch, FILE *stream)
 
 int fputc(int ch, FILE *stream)
 {
+	int ret_ch;
 	_kern_sem_acquire(stream->sid, 1);
-    if(stream->buf_pos  >= stream->buf_size)
+	ret_ch = _fputc(ch, stream);
+	_kern_sem_release(stream->sid, 1);
+    return ret_ch;
+}
+
+static int _fputc(int ch, FILE *stream)
+{
+    if(stream->buf_pos >= stream->buf_size)
     {
         int err = write(stream->fd, stream->buf, stream->buf_pos);
         if(err < 0)
         {
             errno = EIO;
             stream->flags |= _STDIO_ERROR;
-			_kern_sem_release(stream->sid, 1);
 			return EOF;
         }
         stream->buf_pos = 0;
     }
-	stream->buf[stream->buf_pos++] = (unsigned char)ch;
-	_kern_sem_release(stream->sid, 1);
-    return ch;
+	return (stream->buf[stream->buf_pos++] = (unsigned char)ch);
+
 }
 
 size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream)
@@ -428,19 +473,13 @@ size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream)
     {
 		for(; j > 0; j--)
 		{
-			if(stream->buf_pos >= stream->buf_size)
+			int ch = _fputc(*tmp++, stream);
+			
+			if(ch < 0)
 			{
-				int err = write(stream->fd, stream->buf, stream->buf_pos);
-				if(err < 0)
-				{
-					errno = EIO;
-					stream->flags |= _STDIO_ERROR;
-					_kern_sem_release(stream->sid, 1);
-					return nmemb - i;
-				}
-				stream->buf_pos = 0;
+				_kern_sem_release(stream->sid, 1);
+				return nmemb - i;
 			}
-			stream->buf[stream->buf_pos++] = *tmp++;
 		}
 		j = size;
     }
@@ -461,37 +500,19 @@ size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream)
 	{
 		return 0;
 	}
-	if(stream->flags & _STDIO_UNGET)
-	{
-		*tmp++ = stream->unget;
-		stream->flags &= !_STDIO_UNGET;
-		j--;
-	}
     
 	for(;i > 0; i--)
     {
 		for(; j > 0; j--)
 		{
-			if (stream->rpos >= stream->buf_pos)
+			int c = _fgetc(stream);
+			if(c < 0)
 			{
-
-				int len = read(stream->fd, stream->buf, stream->buf_size);
-				if (len==0)
-				{
-					stream->flags |= _STDIO_EOF;
-					_kern_sem_release(stream->sid, 1);
-					return nmemb - i;
-				}
-				else if (len < 0)
-				{
-					stream->flags |= _STDIO_ERROR;
-					_kern_sem_release(stream->sid, 1);
-					return nmemb - i;
-				}
-				stream->rpos=0;
-				stream->buf_pos=len;
+				_kern_sem_release(stream->sid, 1);
+				return nmemb - i;
 			}
-			*tmp++ = stream->buf[stream->rpos++];
+			
+			*tmp++ = c;
 		}
 		j = size;
     }
@@ -517,41 +538,21 @@ char* fgets(char* str, int n, FILE * stream)
         {
             break;
         }
-        if(stream->flags & _STDIO_UNGET)
+		
+		c = _fgetc(stream);
+
+		if(c < 0)
 		{
-			c = stream->unget;
-			stream->flags &= !_STDIO_UNGET;
+		    _kern_sem_release(stream->sid, 1);
+			*tmp = '\0';
+			return (char*)0;
 		}
-		else
-		{
-			if (stream->rpos >= stream->buf_pos)
-			{
-
-				int len = read(stream->fd, stream->buf, stream->buf_size);
-
-				if (len==0)
-				{
-					stream->flags |= _STDIO_EOF;
-					break;
-				}
-				else if (len < 0)
-				{
-					stream->flags |= _STDIO_ERROR;
-					break;
-				}
-				stream->rpos=0;
-				stream->buf_pos=len;
-			}
-			c = stream->buf[stream->rpos++];
-		}
-
         *tmp++ = c;
         if(c == '\n')
             break;
     }
 
     _kern_sem_release(stream->sid, 1);
-
 
     *tmp = '\0';
     return str;
@@ -571,8 +572,15 @@ int fgetc(FILE *stream)
 {
     int c;
     _kern_sem_acquire(stream->sid, 1);
+	c = _fgetc(stream);
+    _kern_sem_release(stream->sid, 1);
+    return c;
+}
 
-    if(stream->flags & _STDIO_UNGET)
+static int _fgetc(FILE* stream)
+{
+    int c;
+	if(stream->flags & _STDIO_UNGET)
 	{
 		c = stream->unget;
 		stream->flags &= !_STDIO_UNGET;
@@ -586,13 +594,11 @@ int fgetc(FILE *stream)
 			if (len==0)
 			{
 				stream->flags |= _STDIO_EOF;
-				_kern_sem_release(stream->sid, 1);
 				return EOF;
 			}
 			else if (len < 0)
 			{
 				stream->flags |= _STDIO_ERROR;
-				_kern_sem_release(stream->sid, 1);
 				return EOF;
 			}
 			stream->rpos=0;
@@ -600,8 +606,7 @@ int fgetc(FILE *stream)
 		}
 		c = stream->buf[stream->rpos++];
 	}
-    _kern_sem_release(stream->sid, 1);
-    return c;
+	return c;
 }
 
 
@@ -648,4 +653,3 @@ int fscanf(FILE *stream, char const *fmt, ...)
 
 
 #endif
-

@@ -17,7 +17,7 @@ void testFormatting(FILE* f);
 void testLongLine(FILE* f);
 void test(FILE* f);
 
-static void testScanf( FILE* f, int standardFile)
+static void testScanf(int standardFile)
 {
 	char u_buf[BUF_SIZE];
 	char i_buf[BUF_SIZE];
@@ -35,31 +35,31 @@ static void testScanf( FILE* f, int standardFile)
 	int x;
 	
 	printf("\nReading an unsigned int:");
-	fgets(u_buf, BUF_SIZE-1, f);
+	fgets(u_buf, BUF_SIZE-1, stdin);
 	sscanf(u_buf, "%u", &u);
 	
 	printf("\nReading an integer(undetermined base):");
-	fgets(i_buf, BUF_SIZE-1, f);
+	fgets(i_buf, BUF_SIZE-1, stdin);
 	sscanf(i_buf, "%i", &i);
 
 	printf("\nReading an integer (base 10):");
-	fgets(d_buf, BUF_SIZE-1, f);
+	fgets(d_buf, BUF_SIZE-1, stdin);
 	sscanf(d_buf, "%d", &d);
 
 	printf("\nReading an integer (base 8):");
-	fgets(o_buf, BUF_SIZE-1, f);
+	fgets(o_buf, BUF_SIZE-1, stdin);
 	sscanf(o_buf, "%o", &o);
 
 	printf("\nReading an integer (base 16):");
-	fgets(x_buf, BUF_SIZE-1, f);
+	fgets(x_buf, BUF_SIZE-1, stdin);
 	sscanf(x_buf, "%x", &x);
 
 	printf("\nReading a char array (10):");
-	fscanf(f,"%9c", c);
+	scanf("%9c", c);
 	c[10] = '\0';
 	
 	printf("\nRead a string (10):");
-	fscanf(f, "%10s", s);
+	scanf( "%10s", s);
 
 	printf("\n Hex Integer value: %x\n", u);
 	printf(" Hex Integer value: %x\n", i);
@@ -98,39 +98,41 @@ int main(int argc, char** argv)
 {
     int standardText = 0;
 	char* path;
-    FILE* f;
+	const char* defaultFile = "/boot/etc/test_input.txt";
 
 	
 	if(argc > 1)
     {
 		if(strstr(argv[1], "stdin") != NULL)
 		{
-			f = stdin;
 			path = "stdin";
 		}
 		else
 		{
-			f = fopen(argv[1], "r");
+			if(!freopen(argv[1], "r", stdin))
+			{
+				printf("File: \"%s\" could not be opened.\r\n", argv[1]);
+				return -1;
+			}
+
 			path = argv[1];
 		}
     }
     else
     {
 		standardText = 1;
-        f = fopen("/boot/etc/test_input.txt", "r");
+
+        if(!freopen(defaultFile, "r", stdin))
+		{
+			printf("File: \"%s\" could not be opened.\r\n",  defaultFile);
+			return -1;
+		}
         path = "/boot/etc/test_input.txt";
     }
 
     printf("A test of \"fscanf\" from file: \"%s\".\r\n\n", path);
 
-    if(f != (FILE*)0)
-    {
-        testScanf(f, standardText);
-    }
-    else
-    {
-        printf("File could not be opened.\r\n" );
-    }
+	testScanf( standardText);
 
     return 0;
 }
