@@ -88,11 +88,11 @@ static ssize_t ttym_read(dev_cookie _cookie, void *buf, off_t pos, ssize_t len)
 	tty_master_cookie *cookie = (tty_master_cookie *)_cookie;
 	ssize_t ret;
 
-	TRACE(("ttym_read: cookie %p, buf %p, len %d\n", cookie, buf, len));
+	TRACE(("ttym_read: tty %d cookie %p, buf %p, len %d\n", cookie->tty->index, cookie, buf, len));
 
 	ret = tty_read(cookie->tty, buf, len, ENDPOINT_MASTER_READ);
 
-	TRACE(("ttym_read: returns %d\n", ret));
+	TRACE(("ttym_read: tty %d returns %d\n", cookie->tty->index, ret));
 
 	return ret;
 }
@@ -102,11 +102,11 @@ static ssize_t ttym_write(dev_cookie _cookie, const void *buf, off_t pos, ssize_
 	tty_master_cookie *cookie = (tty_master_cookie *)_cookie;
 	ssize_t ret;
 
-	TRACE(("ttym_write: cookie %p, buf %p, len %d\n", cookie, buf, len));
+	TRACE(("ttym_write: tty %d cookie %p, buf %p, len %d\n", cookie->tty->index, cookie, buf, len));
 
 	ret = tty_write(cookie->tty, buf, len, ENDPOINT_MASTER_WRITE);
 
-	TRACE(("ttym_write: returns %d\n", ret));
+	TRACE(("ttym_write: tty %d returns %d\n", cookie->tty->index, ret));
 
 	return ret;
 }

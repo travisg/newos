@@ -1,7 +1,8 @@
 # main newos boot script
 
-# start the network
-exec /boot/bin/nettest > /dev/null &
+# start network daemons
+exec /boot/bin/socketd 23 /boot/bin/telnetd /boot/bin/shell -s /boot/loginscript &
+exec /boot/bin/socketd 1900 /boot/bin/telnetd /boot/bin/shell -s /boot/loginscript &
 
 # start the console daemon
 console:

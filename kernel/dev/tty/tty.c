@@ -163,7 +163,7 @@ ssize_t tty_read(tty_desc *tty, void *buf, ssize_t len, int endpoint)
 
 	// figure out how much data is ready to be read
 	data_len = AVAILABLE_READ(lbuf);
-	len = min(data_len, len);	
+	len = min(data_len, len);
 
 	ASSERT(len > 0);
 
@@ -227,7 +227,7 @@ restart:
 		return err;
 
 	mutex_lock(&tty->lock);
-	
+
 	// quick sanity check
 	ASSERT(lbuf->len > 0);
 	ASSERT(lbuf->head < lbuf->len);
@@ -261,7 +261,7 @@ tty_write_special_state:
 				c = '\n';
 				tty_insert_char(lbuf, c, true); // move the line ptr up, since we are done with the line
 				wrote_char = true;
-				
+
 				lbuf->state = TTY_STATE_NORMAL;
 				break;
 			default:
@@ -270,21 +270,21 @@ tty_write_special_state:
 		if(wrote_char) {
 			if(lbuf->flags & TTY_FLAG_ECHO) {
 				if(AVAILABLE_WRITE(other_lbuf) == 0) {
-					// XXX deal with this case					
+					// XXX deal with this case
 				}
 				tty_insert_char(other_lbuf, c, true);
 			}
-		}				
-		if(AVAILABLE_WRITE(lbuf) == 0) 
+		}
+		if(AVAILABLE_WRITE(lbuf) == 0)
 			goto exit_loop;
 
-	}	
+	}
 
 	while(buf_pos < len) {
 		bool wrote_char = false;
 
 		TRACE(("tty_write: regular loop: tty %p, lbuf %p, buf_pos %d, len %d\n", tty, lbuf, buf_pos, len));
-		TRACE(("\tlbuf %p, head %d, tail %d, line_start %d\n", lbuf, lbuf->head, lbuf->tail, lbuf->line_start));
+		TRACE(("\tlbuf %p, flags 0x%x, head %d, tail %d, line_start %d\n", lbuf, lbuf->flags, lbuf->head, lbuf->tail, lbuf->line_start));
 		if(AVAILABLE_WRITE(lbuf) == 0)
 			goto exit_loop;
 		// process this data one at a time
@@ -295,6 +295,8 @@ tty_write_special_state:
 		}
 		buf_pos++; // advance to next character
 		bytes_written++;
+
+		TRACE(("tty_write: char 0x%x\n", c));
 
 		if(lbuf->flags & TTY_FLAG_CANON) {
 			// do line editing
@@ -318,6 +320,11 @@ tty_write_special_state:
 					}
 					break;
 				case '\r': // CR
+					if(lbuf->flags & TTY_FLAG_CRNL) {
+						lbuf->state = TTY_STATE_WRITE_CR;
+						goto tty_write_special_state;
+					}
+					// eat it otherwise
 				case 0:
 					// eat it
 					break;
@@ -329,19 +336,23 @@ tty_write_special_state:
 					if(lbuf->flags & TTY_FLAG_NLCR) {
 						lbuf->state = TTY_STATE_WRITE_CR;
 						goto tty_write_special_state;
-					}					
-					// fall through and write it normally
-				default:
-					tty_insert_char(lbuf, c, true);
-					wrote_char = true;
+					}
 					break;
+				case '\r':
+					if(lbuf->flags & TTY_FLAG_CRNL) {
+						lbuf->state = TTY_STATE_WRITE_CR;
+						goto tty_write_special_state;
+					}
+					break;
+				default:
 			}
-					
+			tty_insert_char(lbuf, c, true);
+			wrote_char = true;
 		}
 		if(wrote_char) {
 			if(lbuf->flags & TTY_FLAG_ECHO) {
 				if(AVAILABLE_WRITE(other_lbuf) == 0) {
-					// XXX deal with this case					
+					// XXX deal with this case
 				}
 				tty_insert_char(other_lbuf, c, true);
 			}
@@ -356,12 +367,12 @@ exit_loop:
 	// did we process everything for the request?
 	if(buf_pos < len) {
 		mutex_unlock(&tty->lock);
-		goto restart;	
+		goto restart;
 	}
 
 err:
 	mutex_unlock(&tty->lock);
-	
+
 	return bytes_written;
 }
 
@@ -399,9 +410,9 @@ int tty_dev_init(kernel_args *ka)
 			thetty.ttys[i].buf[j].len = TTY_BUFFER_SIZE;
 			thetty.ttys[i].buf[j].state = TTY_STATE_NORMAL;
 			if(j == ENDPOINT_SLAVE_WRITE)
-				thetty.ttys[i].buf[j].flags = TTY_FLAG_NLCR; // slave writes to this one, translate LR to CRLF
+				thetty.ttys[i].buf[j].flags = TTY_FLAG_DEFAULT_OUTPUT; // slave writes to this one, translate LR to CRLF
 			else if(j == ENDPOINT_MASTER_WRITE)
-				thetty.ttys[i].buf[j].flags = TTY_FLAG_CANON | TTY_FLAG_ECHO | TTY_FLAG_NLCR; // master writes into this one. do line editing and echo back
+				thetty.ttys[i].buf[j].flags = TTY_FLAG_DEFAULT_INPUT; // master writes into this one. do line editing and echo back
 		}
 	}
 

@@ -86,9 +86,13 @@ int IRCEngine::Run()
 			break;
 
 		if(err > 0) {
-			ReceivedKeyboardData(&c, err);
+			err = ReceivedKeyboardData(&c, err);
+			if(err < 0)
+				break;
 		}
 	}
+
+	Disconnect();
 
 	return 0;
 }
@@ -108,6 +112,7 @@ int IRCEngine::SignOn()
 	saddr.addr.type = ADDR_TYPE_IP;
 	saddr.port = 6667;
 	NETADDR_TO_IPV4(saddr.addr) = IPV4_DOTADDR_TO_ADDR(216,218,240,132); // card.freenode.net
+//	NETADDR_TO_IPV4(saddr.addr) = IPV4_DOTADDR_TO_ADDR(63,203,215,73); // newos.org
 
 	err = socket_connect(mSocket, &saddr);
 	printf("socket_connect returns %d\n", err);
@@ -130,6 +135,8 @@ int IRCEngine::SignOn()
 
 int IRCEngine::Disconnect()
 {
+	socket_close(mSocket);
+	mSocket = -1;
 	return 0;
 }
 
@@ -150,15 +157,102 @@ ssize_t IRCEngine::WriteData(const char *data)
 	return write(mSocket, data, strlen(data));
 }
 
-int IRCEngine::ReceivedSocketData(const char *data, int len)
+int IRCEngine::ReceivedSocketData(char *line, int len)
 {
+	int i;
+
 	if(len <= 0)
 		return 0;
 
 	Lock();
 
-	// Display the new line
-	mTextWindow->Write(data, true);
+	// parse this line
+
+	// trim the leading spaces
+	int pos = 0;
+	while(isspace(line[pos]))
+		pos++;
+
+	// trim the trailing \n
+	for(i = pos; line[i] != 0; i++) {
+		if(line[i] == '\n') {
+			line[i] = 0;
+			break;
+		}
+	}
+
+	if(line[pos] != ':') {
+		Unlock();
+		return 0;
+	}
+	pos++; // eat the ':'
+	int start = pos;
+
+	// find the end of the address field
+	while(!isspace(line[pos])) {
+		if(line[pos] == 0) {
+			Unlock();
+			return 0;
+		}
+		pos++;
+	}
+
+	// copy out the address field
+	char address[256];
+	strlcpy(address, &line[start], pos - start + 1);
+
+	// trim some spaces
+	while(isspace(line[pos]))
+		pos++;
+
+	// look for the command field
+	if(strncasecmp(&line[pos], "PRIVMSG ", strlen("PRIVMSG ")) == 0) {
+		pos += strlen("PRIVMSG ");
+
+		// eat any spaces leading up to the target field
+		while(isspace(line[pos]))
+			pos++;
+		int target_start = pos;
+
+		// eat the target field
+		while(!isspace(line[pos])) {
+			if(line[pos] == 0) {
+				Unlock();
+				return 0;
+			}
+			pos++;
+		}
+
+		char target[256];
+		strlcpy(target, &line[target_start], pos - target_start + 1);
+
+		// now each chars up to and including ':'
+		while(line[pos] != ':') {
+			if(line[pos] == 0) {
+				Unlock();
+				return 0;
+			}
+			pos++;
+		}
+		pos++; // eat the ':'
+
+		// go back and find just the nick in the address field
+		for(i = 0; address[i] != 0; i++) {
+			if(address[i] == '!') {
+				address[i] = 0;
+				break;
+			}
+		}
+
+		// rest of the line is the string
+		char outbuf[4096];
+
+		sprintf(outbuf, "%s (%s): %s\n", target, address, &line[pos]);
+		mTextWindow->Write(outbuf, true);
+	} else {
+		// Display the raw line
+		mTextWindow->Write(line, true);
+	}
 
 	Unlock();
 	return 0;
@@ -180,7 +274,8 @@ int IRCEngine::ReceivedKeyboardData(const char *data, int len)
 			mInputLine[mInputLinePtr++] = data[i];
 			mInputLine[mInputLinePtr] = 0;
 			if(mInputLinePtr == sizeof(mInputLine) - 1 || data[i] == '\n') {
-				ProcessKeyboardInput(mInputLine);
+				if(ProcessKeyboardInput(mInputLine) < 0)
+					return -1;
 				mInputLine[0] = 0;
 				mInputLinePtr = 0;
 			}
@@ -252,8 +347,21 @@ int IRCEngine::ProcessKeyboardInput(char *line)
 				sprintf(outbuf, "NICK %s\n", &line[pos]);
 				WriteData(outbuf);
 			}
+		} else if(strncasecmp(&line[pos], "ME ", strlen("ME ")) == 0) {
+			pos += strlen("ME ");
+			if(strlen(&line[pos]) > 0) {
+				sprintf(outbuf, "PRIVMSG %s :%cACTION %s%c\n", mCurrentChannel, 0x01, &line[pos], 0x01);
+				WriteData(outbuf);
+			}
+		} else if(strncasecmp(&line[pos], "RAW ", strlen("RAW ")) == 0) {
+			pos += strlen("RAW ");
+			if(strlen(&line[pos]) > 0) {
+				sprintf(outbuf, "%s\n", &line[pos]);
+				WriteData(outbuf);
+			}
 		} else if(strncasecmp(&line[pos], "QUIT", strlen("QUIT")) == 0) {
 			WriteData("QUIT\n");
+			return -1;
 		} else if(strncasecmp(&line[pos], "CLEAR", strlen("CLEAR")) == 0) {
 			mTextWindow->Clear();
 		}

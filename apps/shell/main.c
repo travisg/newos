@@ -58,8 +58,6 @@ int main(int argc,char *argv[])
 		if(af_exit_after_script) sys_exit(0);
 	}
 
-	printf("Welcome to the NewOS shell\n");
-
 	for(;;) {
 		int chars_read;
 
@@ -70,8 +68,6 @@ int main(int argc,char *argv[])
 			parse_string(buf);
 		}
 	}
-
-	printf("shell exiting\n");
 
 	return 0;
 }

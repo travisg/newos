@@ -15,7 +15,7 @@ public:
 
 	int SocketError(int error);
 	ssize_t WriteData(const char *data);
-	int ReceivedSocketData(const char *data, int len);
+	int ReceivedSocketData(char *data, int len);
 	int ReceivedKeyboardData(const char *data, int len);
 	int ProcessKeyboardInput(char *line);
 
