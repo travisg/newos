@@ -1,6 +1,6 @@
 # bus manager makefile
-MY_TARGETDIR := $(KERNEL_ADDONS_MODULES_BUILD_DIR)/bus_managers/usb
-MY_SRCDIR := $(KERNEL_ADDONS_MODULES_DIR)/bus_managers/usb
+MY_SRCDIR := $(GET_LOCAL_DIR)
+MY_TARGETDIR := $(call TOBUILDDIR, $(MY_SRCDIR))
 MY_TARGET :=  $(MY_TARGETDIR)/usb
 ifeq ($(call FINDINLIST,$(MY_TARGET),$(ALL)),1)
 

@@ -782,9 +782,9 @@ int dev_bootstrap(void)
 	while (!found && (read_next_module_name(mc, buffer, &bufsize) == 0))
 	{
 		char *special = buffer;
-#if ARCH == ARCH_I386
-		dprintf("ARCH_I386: using \"/text\" as the fallback driver\n");
-		special = strstr(buffer, "/text");
+#if ARCH_i386
+		dprintf("ARCH_I386: using \"/vga_text\" as the fallback driver\n");
+		special = strstr(buffer, "/vga_text");
 #else
 #endif
 		if (special && (special != buffer))

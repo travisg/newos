@@ -1,6 +1,6 @@
 # bus manager makefile
-MY_TARGETDIR := $(KERNEL_ADDONS_MODULES_BUILD_DIR)/busses/usb/ohci
-MY_SRCDIR := $(KERNEL_ADDONS_MODULES_DIR)/busses/usb/ohci
+MY_SRCDIR := $(GET_LOCAL_DIR)
+MY_TARGETDIR := $(call TOBUILDDIR, $(MY_SRCDIR))
 MY_TARGET :=  $(MY_TARGETDIR)/ohci
 ifeq ($(call FINDINLIST,$(MY_TARGET),$(ALL)),1)
 

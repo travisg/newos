@@ -1,5 +1,5 @@
-MY_TARGETDIR := $(KERNEL_ADDONS_MODULES_BUILD_DIR)/generic/locked_pool
-MY_SRCDIR := $(KERNEL_ADDONS_MODULES_DIR)/generic/locked_pool
+MY_SRCDIR := $(GET_LOCAL_DIR)
+MY_TARGETDIR := $(call TOBUILDDIR, $(MY_SRCDIR))
 MY_TARGET :=  $(MY_TARGETDIR)/locked_pool
 ifeq ($(call FINDINLIST,$(MY_TARGET),$(ALL)),1)
 

@@ -12,5 +12,6 @@ include $(addsuffix /makefile, $(addprefix $(GET_LOCAL_DIR)/, \
 	busses/usb/ohci \
 	console/vga_text \
 	console/vmware \
+	console/fb_console \
 	arch/$(ARCH) \
 ))

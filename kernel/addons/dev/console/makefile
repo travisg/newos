@@ -1,6 +1,6 @@
 # dev console makefile
-MY_TARGETDIR := $(KERNEL_DEV_ADDONS_BUILD_DIR)/console
-MY_SRCDIR := $(KERNEL_DEV_ADDONS_DIR)/console
+MY_SRCDIR := $(GET_LOCAL_DIR)
+MY_TARGETDIR := $(call TOBUILDDIR, $(MY_SRCDIR))
 MY_TARGET :=  $(MY_TARGETDIR)/console
 ifeq ($(call FINDINLIST,$(MY_TARGET),$(ALL)),1)
 

@@ -1,6 +1,7 @@
 KERNEL_ADDONS += $(addprefix $(KERNEL_ADDONS_BUILD_DIR)/, \
-	modules/console/text/text \
+	modules/console/vga_text/vga_text \
 	modules/console/vmware/vmware \
+	modules/console/fb_console/fb_console \
 	modules/bus_managers/isa/isa \
 	modules/busses/ide/ide_isa/ide_isa \
 	modules/bus_managers/ide/ide \

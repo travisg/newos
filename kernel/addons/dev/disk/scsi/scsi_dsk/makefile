@@ -1,5 +1,5 @@
-MY_TARGETDIR := $(KERNEL_DEV_ADDONS_BUILD_DIR)/disk/scsi/scsi_dsk
-MY_SRCDIR := $(KERNEL_DEV_ADDONS_DIR)/disk/scsi/scsi_dsk
+MY_SRCDIR := $(GET_LOCAL_DIR)
+MY_TARGETDIR := $(call TOBUILDDIR, $(MY_SRCDIR))
 MY_TARGET :=  $(MY_TARGETDIR)/scsi_dsk
 ifeq ($(call FINDINLIST,$(MY_TARGET),$(ALL)),1)
 
