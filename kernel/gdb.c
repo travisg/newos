@@ -407,9 +407,9 @@ static
 int
 gdb_cksum1_handler(int input, unsigned int *regfile)
 {
-	(void)(regfile);
-
 	int nibble= parse_nibble(input);
+
+	(void)(regfile);
 
 	if(nibble== 0xff) {
 #if 0
@@ -433,7 +433,7 @@ gdb_cksum1_handler(int input, unsigned int *regfile)
 static
 int
 gdb_cksum2_handler(int input, unsigned int *regfile)
-{      
+{
 	int nibble= parse_nibble(input);
 
 	if(nibble== 0xff) {
@@ -537,7 +537,7 @@ cmd_gdb(int argc, char **argv)
 	if (argc > 1)
 	{
 		// we want to work under a particular iframe.
-		if(strlen(argv[1]) > 2 && argv[1][0] == '0' && argv[1][1] == 'x') 
+		if(strlen(argv[1]) > 2 && argv[1][0] == '0' && argv[1][1] == 'x')
 			interrupt_frame = (struct iframe*)atoul(argv[1]);
 		else
 			dprintf("warning: iframe used is not valid, using local stack.\n");
