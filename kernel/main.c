@@ -35,6 +35,14 @@ int _start(struct kernel_args *oldka)
 	// XXX remove
 	thread_test();
 #endif
+#if 0	
+	/* page fault test */
+	{ int *a = (int *)0xc0000000; *a = 1; }
+#endif
+#if 0
+	/* general protection fault test */
+	asm("int $13");
+#endif
 	kprintf("Welcome to the kernel!\n");
 
 //	int_enable_interrupts();

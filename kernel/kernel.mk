@@ -43,7 +43,7 @@ $(KERNEL_DIR)/%.d: $(KERNEL_DIR)/%.c
 
 $(KERNEL_DIR)/%.d: $(KERNEL_DIR)/%.S
 	@echo "making deps for $<..."
-	@(echo -n $(dir $@);$(CC) $(GLOBAL_CFLAGS)  $(KERNEL_INCLUDES) -M -MG $<) > $@
+	@(echo -n $(dir $@);$(CC) $(GLOBAL_CFLAGS) $(KERNEL_INCLUDES) -M -MG $<) > $@
 
 $(KERNEL_DIR)/%.o: $(KERNEL_DIR)/%.S
-	$(CC) $(GLOBAL_CFLAGS)  $(KERNEL_INCLUDES) -c $< -o $@
+	$(CC) $(GLOBAL_CFLAGS) $(KERNEL_INCLUDES) -c $< -o $@
