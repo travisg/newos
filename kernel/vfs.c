@@ -297,7 +297,7 @@ static int inc_vnode_ref_count(struct vnode *v)
 #if MAKE_NOIZE
 	dprintf("inc_vnode_ref_count: vnode %p, ref now %d, old_ref %d\n", v, v->ref_count, old_ref);
 #endif
-	return 0;
+	return old_ref;
 }
 
 static struct vnode *lookup_vnode(fs_id fsid, vnode_id vnid)
