@@ -1,0 +1,7 @@
+Directory maintained by Rob Judd <judd@ob-wan.com>
+
+Known limitations 2002/03/03
+
+Won't detect second CD drive on same bus (easy fix but low priority)
+Won't detect BeOS partitions hidden by windoze. Then again, BeOS has the same problem.
+

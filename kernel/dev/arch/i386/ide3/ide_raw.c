@@ -1,9 +1,9 @@
 /*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2002, Rob Judd <judd@ob-wan.com>
 ** Distributed under the terms of the NewOS License.
 **
-** Modified Sep 2001 by Rob Judd <judd@ob-wan.com>
-** with acknowledgements to Hale Landis <hlandis@ibm.net>
+** With acknowledgements to Hale Landis <hlandis@ibm.net>
 ** who wrote the reference implementation.
 */
 
@@ -14,168 +14,6 @@
 
 #include "ide_private.h"
 #include "ide_raw.h"
-#include "partition.h"
-
-
-// ATA register bits
-
-// command block
-#define CB_DATA           0   // data reg              in/out pio_base_addr1+0
-#define CB_ERR            1   // error reg             in     pio_base_addr1+1
-#define CB_FR             1   // feature reg              out pio_base_addr1+1
-#define CB_SC             2   // sector count reg      in/out pio_base_addr1+2
-#define CB_SN             3   // sector number reg     in/out pio_base_addr1+3
-                              // or block address 0-7
-#define CB_CL             4   // cylinder low reg      in/out pio_base_addr1+4
-                              // or block address 8-15
-#define CB_CH             5   // cylinder high reg     in/out pio_base_addr1+5
-                              // or block address 16-23
-#define CB_DH             6   // drive/head reg        in/out pio_base_addr1+6
-#define CB_STAT           7   // primary status reg    in     pio_base_addr1+7
-#define CB_CMD            7   // command reg              out pio_base_addr1+7
-
-// control block
-#define CB_ASTAT          8   // alternate status reg  in     pio_base_addr2+6
-#define CB_DC             8   // device control reg       out pio_base_addr2+6
-#define CB_DA             9   // device address reg    in     pio_base_addr2+7
-
-// error register (1)
-#define CB_ER_NDAM     0x01   // ATA address mark not found
-#define CB_ER_NTK0     0x02   // ATA track 0 not found
-#define CB_ER_ABRT     0x04   // ATA command aborted
-#define CB_ER_MCR      0x08   // ATA media change request
-#define CB_ER_IDNF     0x10   // ATA id not found
-#define CB_ER_MC       0x20   // ATA media change
-#define CB_ER_UNC      0x40   // ATA uncorrected error
-#define CB_ER_BBK      0x80   // ATA bad block
-#define CB_ER_ICRC     0x80   // ATA Ultra DMA bad CRC
-
-// drive/head register (6) bits 7-4
-#define CB_DH_LBA      0x40   // LBA bit mask
-#define CB_DH_DEV0     0xa0   // select device 0
-#define CB_DH_DEV1     0xb0   // select device 1
-
-#define DRIVE_SUPPORT_DMA  0x0100 // test mask for DMA support
-#define DRIVE_SUPPORT_LBA  0x0200 // test mask for LBA support
-
-// status register (7) bits
-#define CB_STAT_ERR    0x01   // error (ATA)
-#define CB_STAT_CHK    0x01   // check (ATAPI)
-#define CB_STAT_IDX    0x02   // index
-#define CB_STAT_CORR   0x04   // corrected
-#define CB_STAT_DRQ    0x08   // data request
-#define CB_STAT_SKC    0x10   // seek complete
-#define CB_STAT_SERV   0x10   // service
-#define CB_STAT_DF     0x20   // device fault
-#define CB_STAT_WFT    0x20   // write fault (old name)
-#define CB_STAT_RDY    0x40   // ready
-#define CB_STAT_BSY    0x80   // busy
-
-// device control register (8) bits
-#define CB_DC_NIEN     0x02   // disable interrupts
-#define CB_DC_SRST     0x04   // soft reset
-#define CB_DC_HD15     0x08   // bit should always be set to one
-
-
-// ATAPI register bits
-
-// error register
-#define CB_ER_P_ILI    0x01   // ATAPI illegal length indication
-#define CB_ER_P_EOM    0x02   // ATAPI end of media
-#define CB_ER_P_ABRT   0x04   // ATAPI command abort
-#define CB_ER_P_MCR    0x08   // ATAPI media change request
-#define CB_ER_P_SNSKEY 0xf0   // ATAPI sense key mask
-
-// sector count register interrupt reason bits
-#define CB_SC_P_CD     0x01   // ATAPI C/D
-#define CB_SC_P_IO     0x02   // ATAPI I/O
-#define CB_SC_P_REL    0x04   // ATAPI release
-#define CB_SC_P_TAG    0xf8   // ATAPI tag (mask)
-
-//**************************************************************
-
-// The ATA/ATAPI command set
-
-// Mandatory commands
-#define CMD_EXECUTE_DRIVE_DIAGNOSTIC     0x90
-#define CMD_FORMAT_TRACK                 0x50
-#define CMD_INITIALIZE_DRIVE_PARAMETERS  0x91
-#define CMD_READ_LONG                    0x22 // One sector inc. ECC, with retry
-#define CMD_READ_LONG_ONCE               0x23 // One sector inc. ECC, sans retry
-#define CMD_READ_SECTORS                 0x20
-#define CMD_READ_SECTORS_ONCE            0x21
-#define CMD_READ_VERIFY_SECTORS          0x40
-#define CMD_READ_VERIFY_SECTORS_ONCE     0x41
-#define CMD_RECALIBRATE                  0x10 // Actually 0x10 to 0x1F
-#define CMD_SEEK                         0x70 // Actually 0x70 to 0x7F
-#define CMD_WRITE_LONG                   0x32
-#define CMD_WRITE_LONG_ONCE              0x33
-#define CMD_WRITE_SECTORS                0x30
-#define CMD_WRITE_SECTORS_ONCE           0x31
-
-// Error codes for CMD_EXECUTE_DRIVE_DIAGNOSTICS
-#define DIAG_NO_ERROR                    0x01
-#define DIAG_FORMATTER                   0x02
-#define DIAG_DATA_BUFFER                 0x03
-#define DIAG_ECC_CIRCUITRY               0x04
-#define DIAG_MICROPROCESSOR              0x05
-#define DIAG_SLAVE_DRIVE_MASK            0x80
-
-// Command codes for CMD_FORMAT_TRACK
-#define FMT_GOOD_SECTOR                  0x00
-#define FMT_SUSPEND_REALLOC              0x20
-#define FMT_REALLOC_SECTOR               0x40
-#define FMT_MARK_SECTOR_DEFECTIVE        0x80
-
-// Optional commands
-#define CMD_ACK_MEDIA_CHANGE             0xDB
-#define CMD_BOOT_POSTBOOT                0xDC
-#define CMD_BOOT_PREBOOT                 0xDD
-#define CMD_CFA_ERASE_SECTORS            0xC0
-#define CMD_CFA_REQUEST_EXT_ERR_CODE     0x03
-#define CMD_CFA_TRANSLATE_SECTOR         0x87
-#define CMD_CFA_WRITE_MULTIPLE_WO_ERASE  0xCD
-#define CMD_CFA_WRITE_SECTORS_WO_ERASE   0x38
-#define CMD_CHECK_POWER_MODE             0x98
-#define CMD_DEVICE_RESET                 0x08
-#define CMD_DOOR_LOCK                    0xDE
-#define CMD_DOOR_UNLOCK                  0xDF
-#define CMD_FLUSH_CACHE                  0xE7 // CMD_REST
-#define CMD_GET_ACOUSTIC_LEVEL           0xAB // proposed for ATA-6
-#define CMD_IDENTIFY_DEVICE              0xEC
-#define CMD_IDENTIFY_DEVICE_PACKET       0xA1
-#define CMD_IDLE                         0x97
-#define CMD_IDLE_IMMEDIATE               0x95
-#define CMD_NOP                          0x00
-#define CMD_PACKET                       0xA0
-#define CMD_READ_BUFFER                  0xE4
-#define CMD_READ_DMA                     0xC8
-#define CMD_READ_DMA_QUEUED              0xC7
-#define CMD_READ_MULTIPLE                0xC4
-#define CMD_RESTORE_DRIVE_STATE          0xEA
-#define CMD_SET_ACOUSTIC_LEVEL           0x2A // proposed for ATA-6
-#define CMD_SET_FEATURES                 0xEF
-#define CMD_SET_MULTIPLE_MODE            0xC6
-#define CMD_SLEEP                        0x99
-#define CMD_STANDBY                      0x96
-#define CMD_STANDBY_IMMEDIATE            0x94
-#define CMD_WRITE_BUFFER                 0xE8
-#define CMD_WRITE_DMA                    0xCA
-#define CMD_WRITE_DMA_ONCE               0xCB
-#define CMD_WRITE_DMA_QUEUED             0xCC
-#define CMD_WRITE_MULTIPLE               0xC5
-#define CMD_WRITE_SAME                   0xE9
-#define CMD_WRITE_VERIFY                 0x3C
-
-// Connor Peripherals' variations
-#define CONNOR_CHECK_POWER_MODE          0xE5
-#define CONNOR_IDLE                      0xE3
-#define CONNOR_IDLE_IMMEDIATE            0xE1
-#define CONNOR_SLEEP                     0xE6
-#define CONNOR_STANDBY                   0xE2
-#define CONNOR_STANDBY_IMMEDIATE         0xE0
-
-//**************************************************************
 
 
 // Waste some time by reading the alternate status a few times.
@@ -239,7 +77,7 @@ static void	ide_reg_poll()
 {
 	while(1)
 	{
-	  if ((pio_inbyte(CB_ASTAT) & CB_STAT_BSY) == 0)  // If not busy
+	  if ((pio_inbyte(CB_ASTAT) & CB_STAT_BSY) == 0)
         break;
 	}
 }
@@ -262,10 +100,10 @@ static int ide_select_device(int bus, int device)
 	int			i;
 	ide_device	ide = devices[(bus*2) + device];
 
-	// Test for a known, valid device
+	// test for a known, valid device
 	if(ide.device_type == (NO_DEVICE | UNKNOWN_DEVICE))
       return NO_ERROR;
-	// See if we can get its attention
+	// See if we can get it's attention
 	if(ide_wait_busy() == false)
 	  return ERR_TIMEOUT;
 	// Select required device
@@ -273,7 +111,7 @@ static int ide_select_device(int bus, int device)
 	DELAY400NS;
 	for(i=0; i<10000; i++)
       {
-		// Read the device status
+		// read the device status
 		status = pio_inbyte(CB_STAT);
 		if (ide.device_type == ATA_DEVICE) {
 		    if ((status & (CB_STAT_BSY | CB_STAT_RDY | CB_STAT_SKC))
@@ -299,7 +137,7 @@ static void ide_delay(int bus, int device)
 
 static uint8 reg_pio_data_in(int bus, int dev, int cmd, int fr, int sc,
 					unsigned int cyl, int head, int sect, uint8 *output,
-					unsigned int numSect, unsigned int multiCnt)
+					uint16 numSect, unsigned int multiCnt)
 {
     unsigned char devHead;
     unsigned char devCtrl;
@@ -309,8 +147,8 @@ static uint8 reg_pio_data_in(int bus, int dev, int cmd, int fr, int sc,
     uint16        *buffer = (uint16*)output;
     int           i;
 
-  dprintf("reg_pio_data_in: bus %d dev %d cmd %d fr %d sc %d cyl %d head %d sect %d numSect %d multiCnt %d\n",
-  	bus, dev, cmd, fr, sc, cyl, head, sect, numSect, multiCnt);
+//  dprintf("reg_pio_data_in: bus %d dev %d cmd %d fr %d sc %d cyl %d head %d sect %d numSect %d multiCnt %d\n",
+//  	bus, dev, cmd, fr, sc, cyl, head, sect, numSect, multiCnt);
 
     devCtrl = CB_DC_HD15 | CB_DC_NIEN;
     devHead = dev ? CB_DH_DEV1 : CB_DH_DEV0;
@@ -370,9 +208,9 @@ static uint8 reg_pio_data_in(int bus, int dev, int cmd, int fr, int sc,
     return NO_ERROR;
 }
 
-static uint8 reg_pio_data_out( int bus, int dev, int cmd, int fr, int sc,
+static uint8 reg_pio_data_out(int bus, int dev, int cmd, int fr, int sc,
 			     unsigned int cyl, int head, int sect, const uint8 *output,
-			     unsigned int numSect, unsigned int multiCnt )
+			     uint16 numSect, unsigned int multiCnt)
 {
     unsigned char devHead;
     unsigned char devCtrl;
@@ -391,7 +229,7 @@ static uint8 reg_pio_data_out( int bus, int dev, int cmd, int fr, int sc,
     // only Write Multiple and CFA Write Multiple W/O Erase uses multCnt
     if ((cmd != CMD_WRITE_MULTIPLE) && (cmd != CMD_CFA_WRITE_MULTIPLE_WO_ERASE))
       multiCnt = 1;
-    // select the drive
+   // select the drive
     if (ide_select_device(bus, dev) != NO_ERROR)
       return ERR_TIMEOUT;
     // set up the registers
@@ -433,52 +271,52 @@ static uint8 reg_pio_data_out( int bus, int dev, int cmd, int fr, int sc,
       ide_reg_poll();
       if(numSect < 1 && status & (CB_STAT_BSY | CB_STAT_DF | CB_STAT_ERR))
         {
-          dprintf("status = 0x%x\n", status);
+          dprintf("reg_pio_data_out(): status = 0x%x\n", status);
           return ERR_BUFFER_NOT_EMPTY;
         }
     }
     return NO_ERROR;
 }
 
-static void ide_btochs(uint32 block, ide_device *device, int *cylinder, int *head, int *sect)
+static void ata_block_to_chs(uint32 block, ide_device *device, int *cylinder, int *head, int *sect)
 {
   *sect = (block % device->hardware_device.sectors) + 1;
   block /= device->hardware_device.sectors;
   *head = (block % device->hardware_device.heads);
   block /= device->hardware_device.heads;
   *cylinder = block & 0xFFFF;
-//  dprintf("ide_btochs: block %d -> cyl %d head %d sect %d\n", block, *cylinder, *head, *sect);
+//  dprintf("ata_block_to_chs(): block %d -> cyl %d head %d sect %d\n", block, *cylinder, *head, *sect);
 }
 
-static void ide_btolba(uint32 block, ide_device *device, int *cylinder, int *head, int *sect)
+static void ata_block_to_lba(uint32 block, ide_device *device, int *cylinder, int *head, int *sect)
 {
   *sect = block & 0xFF;
   *cylinder = (block >> 8) & 0xFFFF;
   *head = ((block >> 24) & 0xF) | CB_DH_LBA;
-//  dprintf("ide_btolba: block %d -> cyl %d head %d sect %d\n", block, *cylinder, *head, *sect);
+//  dprintf("ata_block_to_lba(): block %d -> cyl %d head %d sect %d\n", block, *cylinder, *head, *sect);
 }
 
-uint8 ide_read_block(ide_device *device, char *data, uint32 block, uint8 numSectors)
+uint8 ata_read_block(ide_device *device, char *data, uint32 block, uint16 numSectors)
 {
   int cyl, head, sect;
 
   if(device->lba_supported)
-    ide_btolba(block, device, &cyl, &head, &sect);
+    ata_block_to_lba(block, device, &cyl, &head, &sect);
   else
-    ide_btochs(block, device, &cyl, &head, &sect);
+    ata_block_to_chs(block, device, &cyl, &head, &sect);
 
   return reg_pio_data_in(device->bus, device->device, CMD_READ_SECTORS,
 			          0, numSectors, cyl, head, sect, data, numSectors, 2);
 }
 
-uint8 ide_write_block(ide_device *device, const char *data, uint32 block, uint8 numSectors)
+uint8 ata_write_block(ide_device *device, const char *data, uint32 block, uint16 numSectors)
 {
   int cyl, head, sect;
 
   if(device->lba_supported)
-    ide_btolba(block, device, &cyl, &head, &sect);
+    ata_block_to_lba(block, device, &cyl, &head, &sect);
   else
-    ide_btochs(block, device, &cyl, &head, &sect);
+    ata_block_to_chs(block, device, &cyl, &head, &sect);
 
   return reg_pio_data_out(device->bus, device->device, CMD_WRITE_SECTORS,
 			          0, numSectors, cyl, head, sect, data, numSectors, 2);
@@ -561,10 +399,15 @@ static uint8 ide_drive_present(int bus, int device)
         ret = ATA_DEVICE;
     }
 
-  dprintf("ide_drive_present: sector count = %d, sector number = %d,
-    cl = %x, ch = %x, st = %x, return = %d\n", sc, sn, cl, ch, st, ret);
+//  dprintf("ide_drive_present: sector count = %d, sector number = %d,
+//    cl = %x, ch = %x, st = %x, return = %d\n", sc, sn, cl, ch, st, ret);
 
   return (ret ? ret : NO_DEVICE);
+}
+
+uint8 ata_cmd(int bus, int device, int cmd, uint8* buffer)
+{
+return reg_pio_data_in(bus, device, cmd, 1, 0, 0, 0, 0, buffer, 1, 0);
 }
 
 uint8 ide_identify_device(int bus, int device)
@@ -576,8 +419,8 @@ uint8 ide_identify_device(int bus, int device)
   ide->bus         = bus;
   ide->device      = device;
 
-  dprintf("ide_identify_device: type %d, bus %d, device %d\n",
-	  ide->device_type, bus, device);
+//  dprintf("ide_identify_device: type %d, bus %d, device %d\n",
+//	  ide->device_type, bus, device);
 
   switch (ide->device_type) {
 
@@ -586,10 +429,9 @@ uint8 ide_identify_device(int bus, int device)
       break;
 
     case ATAPI_DEVICE:
-      // try for more data with the optional `identify' command
+      // try for more debug data with optional `identify' command
       buffer = (uint8*)&ide->hardware_device;
-      if(reg_pio_data_in(bus, device, CMD_IDENTIFY_DEVICE_PACKET,
-        1, 0, 0, 0, 0, buffer, 1, 0) == NO_ERROR)
+      if(ata_cmd(bus, device, CMD_IDENTIFY_DEVICE_PACKET, buffer) == NO_ERROR)
       {
       ide_string_conv(ide->hardware_device.model, 40);
       ide_string_conv(ide->hardware_device.serial, 20);
@@ -604,17 +446,17 @@ uint8 ide_identify_device(int bus, int device)
       break;
 
     case ATA_DEVICE:
-      // try for more data with the optional `identify' command
+      // try for more debug data with optional `identify' command
       buffer = (uint8*)&ide->hardware_device;
-      if(reg_pio_data_in(bus, device, CMD_IDENTIFY_DEVICE,
-        1, 0, 0, 0, 0, buffer, 1, 0) == NO_ERROR)
+      if(ata_cmd(bus, device, CMD_IDENTIFY_DEVICE, buffer) == NO_ERROR)
       {
       ide->device_type = ATA_DEVICE;
       ide_string_conv(ide->hardware_device.model, 40);
       ide_string_conv(ide->hardware_device.serial, 20);
       ide_string_conv(ide->hardware_device.firmware, 8);
-      ide->sector_count = ide->hardware_device.cyls * ide->hardware_device.heads
-                        * ide->hardware_device.sectors;
+      ide->sector_count = ide->hardware_device.curr_cyls
+                        * ide->hardware_device.curr_heads
+                        * ide->hardware_device.curr_sectors;
       ide->bytes_per_sector = 512;
       ide->lba_supported = ide->hardware_device.capabilities & DRIVE_SUPPORT_LBA;
       ide->start_block = 0;
@@ -626,8 +468,8 @@ uint8 ide_identify_device(int bus, int device)
     ide->hardware_device.serial, ide->hardware_device.firmware);
   dprintf("ide/%d/%d: %dMB; %d cyl, %d head, %d sec, %d bytes/sec  (LBA=%d)\n",
     bus, device, ide->sector_count * ide->bytes_per_sector / (1000 * 1000),
-    ide->hardware_device.cyls, ide->hardware_device.heads,
-    ide->hardware_device.sectors, ide->bytes_per_sector, ide->lba_supported);
+    ide->hardware_device.curr_cyls, ide->hardware_device.curr_heads,
+    ide->hardware_device.curr_sectors, ide->bytes_per_sector, ide->lba_supported);
 
       }
 
@@ -637,43 +479,38 @@ uint8 ide_identify_device(int bus, int device)
   return (ide->device_type);
 }
 
-// Set the pio base addresses
-void ide_raw_init(int base1, int base2)
+// set the pio base addresses
+void ide_raw_init(unsigned int base1, unsigned int base2)
 {
-  unsigned int pio_base_addr1 = base1;
-  unsigned int pio_base_addr2 = base2;
+  pio_reg_addrs[CB_DATA] = base1 + 0;  // 0
+  pio_reg_addrs[CB_FR  ] = base1 + 1;  // 1
+  pio_reg_addrs[CB_SC  ] = base1 + 2;  // 2
+  pio_reg_addrs[CB_SN  ] = base1 + 3;  // 3
+  pio_reg_addrs[CB_CL  ] = base1 + 4;  // 4
+  pio_reg_addrs[CB_CH  ] = base1 + 5;  // 5
+  pio_reg_addrs[CB_DH  ] = base1 + 6;  // 6
+  pio_reg_addrs[CB_CMD ] = base1 + 7;  // 7
 
-  pio_reg_addrs[CB_DATA] = pio_base_addr1 + 0;  // 0
-  pio_reg_addrs[CB_FR  ] = pio_base_addr1 + 1;  // 1
-  pio_reg_addrs[CB_SC  ] = pio_base_addr1 + 2;  // 2
-  pio_reg_addrs[CB_SN  ] = pio_base_addr1 + 3;  // 3
-  pio_reg_addrs[CB_CL  ] = pio_base_addr1 + 4;  // 4
-  pio_reg_addrs[CB_CH  ] = pio_base_addr1 + 5;  // 5
-  pio_reg_addrs[CB_DH  ] = pio_base_addr1 + 6;  // 6
-  pio_reg_addrs[CB_CMD ] = pio_base_addr1 + 7;  // 7
-
-  pio_reg_addrs[CB_DC  ] = pio_base_addr2 + 6;  // 8
-  pio_reg_addrs[CB_DA  ] = pio_base_addr2 + 7;  // 9
+  pio_reg_addrs[CB_DC  ] = base2 + 6;  // 8
+  pio_reg_addrs[CB_DA  ] = base2 + 7;  // 9
 }
 
-static bool ide_get_partition_info(ide_device *device, tPartition *partition, uint32 position)
+static bool ata_get_partition_info(ide_device *device, tPartition *partition, uint32 position)
 {
 	char buffer[512];
 	uint8* partitionBuffer = buffer;
 
-	// Try to read partition table
-	if (ide_read_block(device, buffer, position, 1) != NO_ERROR) {
+	if (ata_read_block(device, buffer, position, 1) != NO_ERROR) {
 
-	dprintf("unable to read partition table\n");
+	dprintf("ata_get_partition_info(): unable to read partition table\n");
 
 		return false;
 	}
 
-	// Check partition table signature
 	if ((partitionBuffer[PART_IDENT_OFFSET]   != 0x55) ||
 	    (partitionBuffer[PART_IDENT_OFFSET+1] != 0xaa)) {
 
-	dprintf("partition table signature is incorrect\n");
+	dprintf("ata_get_partition_info(): partition table signature is incorrect\n");
 
 		return false;
 	}
@@ -683,12 +520,12 @@ static bool ide_get_partition_info(ide_device *device, tPartition *partition, ui
 	return true;
 }
 
-bool ide_get_partitions(ide_device *device)
+bool ata_get_partitions(ide_device *device)
 {
   uint8 i, j;
 
   memset(&device->partitions, 0, sizeof(tPartition) * MAX_PARTITIONS);
-  if(ide_get_partition_info(device, device->partitions, 0) == false)
+  if(ata_get_partition_info(device, device->partitions, 0) == false)
     return false;
 
   dprintf("Primary Partition Table\n");
@@ -715,7 +552,7 @@ bool ide_get_partitions(ide_device *device)
        (device->partitions[j].partition_type == PTLinuxExtended))
     {
       int extOffset = device->partitions[j].starting_block;
-      if(ide_get_partition_info(device, &device->partitions[4], extOffset) == false)
+      if(ata_get_partition_info(device, &device->partitions[4], extOffset) == false)
         return false;
       dprintf("Extended Partition Table\n");
       for (i=NUM_PARTITIONS; i<MAX_PARTITIONS; i++)

@@ -1,26 +1,26 @@
 /*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2002, Rob Judd <judd@ob-wan.com>
 ** Distributed under the terms of the NewOS License.
 **
-** Modified Sep 2001 by Rob Judd <judd@ob-wan.com>
 */
 
-#ifndef __IDE_PRIVATE_H__
-#define	__IDE_PRIVATE_H__
+#ifndef _IDE_PRIVATE_H
+#define	_IDE_PRIVATE_H
 
 #include <newos/types.h>
 
-#include "partition.h"
+#include "ata_partition.h"
 
 typedef struct
 {
 	unsigned short 	config;               /* obsolete stuff */
-	unsigned short 	cyls;                 /* logical cylinders */
+	unsigned short 	cyls;                 /* default logical cylinders */
 	unsigned short 	_reserved_2;
-	unsigned short 	heads;                /* logical heads */
+	unsigned short 	heads;                /* default logical heads */
 	unsigned short 	_vendor_4;            /* bytes per track unformatted */
 	unsigned short 	_vendor_5;            /* sectors per track unformatted */
-	unsigned short 	sectors;              /* logical sectors */
+	unsigned short 	sectors;              /* default logical sectors */
 	unsigned short 	_vendor_7;
 	unsigned short 	_vendor_8;
 	unsigned short 	_vendor_9;
@@ -55,8 +55,6 @@ enum
   ATAPI_DEVICE
 };
 
-#define IDE_NAME                40
-
 typedef	struct s_ide_device
 {
   uint32        magic1;
@@ -66,7 +64,7 @@ typedef	struct s_ide_device
   int           bus;
   int           device;
   uint8         device_type;
-  uint8         _reserved;      // for alignment
+  uint8         _reserved;      // used for pointer return to ide.c
   uint32        sector_count;
   uint32        bytes_per_sector;
   bool          lba_supported;
@@ -76,18 +74,17 @@ typedef	struct s_ide_device
 } ide_device;
 
 #define	MAX_IDE_BUSES   2
-#define	MAX_DEVICES     4
-#define MAX_PARTITIONS  (MAX_IDE_BUSES * MAX_DEVICES)
+#define	MAX_IDE_DEVICES (2 * MAX_IDE_BUSES)
+#define MAX_PARTITIONS  8
 
-extern	ide_device      devices[MAX_DEVICES];
+extern	ide_device      devices[MAX_IDE_DEVICES];
 
 enum {
-  DISK_GET_GEOMETRY = 1,
+  DISK_EXECUTE_DIAGNOSTIC = 1,
+  DISK_GET_GEOMETRY,
   DISK_USE_DMA,
   DISK_USE_BUS_MASTERING,
   DISK_USE_PIO,
-  DISK_GET_ACOUSTIC_LEVEL,
-  DISK_SET_ACOUSTIC_LEVEL
 };
 
 typedef struct s_drive_geometry
@@ -104,5 +101,4 @@ typedef struct s_drive_geometry
   char		firmware[8];
 } drive_geometry;
 
-#endif
-
+#endif // _IDE_PRIVATE_H

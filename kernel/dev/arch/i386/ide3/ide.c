@@ -1,8 +1,7 @@
 /*
 ** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2002, Rob Judd <judd@ob-wan.com>
 ** Distributed under the terms of the NewOS License.
-**
-** Modified Sep 2001 by Rob Judd <judd@ob-wan.com>
 */
 
 #include <kernel/kernel.h>
@@ -27,7 +26,7 @@
 #include "ide_private.h"
 #include "ide_raw.h"
 
-ide_device   devices[MAX_DEVICES];
+ide_device      devices[MAX_IDE_DEVICES];
 sem_id ide_sem, ide_sem_0, ide_sem_1;
 
 #define IDE_0_INTERRUPT  14
@@ -35,12 +34,12 @@ sem_id ide_sem, ide_sem_0, ide_sem_1;
 
 typedef struct
 {
-	ide_device*	dev;			// Pointer to entry in 'devices' table
+	ide_device* dev;
 
-	// Specs for whole disk or partition
-	uint32		block_start;	// Number of first block
-	uint32		block_count;	// Number of blocks used
-	uint16		block_size;		// Bytes per block
+	// specs for whole disk or partition
+	uint32		block_start;
+	uint32		block_count;
+	uint16		block_size;
 } ide_ident;
 
 //--------------------------------------------------------------------------------
@@ -48,9 +47,6 @@ static int ide_open(dev_ident _ident, dev_cookie *cookie)
 {
 	ide_ident* ident = (ide_ident*)_ident;
 
-//	dprintf("ide_open() on ident %d\n", (int)ident);
-
-	// We hold our 'ident' structure as cookie, as it contains all we need
 	*cookie = ident;
 
 	return NO_ERROR;
@@ -59,27 +55,31 @@ static int ide_open(dev_ident _ident, dev_cookie *cookie)
 //--------------------------------------------------------------------------------
 static int ide_close(dev_cookie _cookie)
 {
-//	dprintf("ide_close()\n");
-
 	return NO_ERROR;
 }
 
 //--------------------------------------------------------------------------------
 static int ide_freecookie(dev_cookie cookie)
 {
-	// We do not have anything to free here, as our cookie is our
-	//  dev_ident as well :)
+	// nothing to free here, as cookie is also dev_ident
 	return NO_ERROR;
 }
 
 //--------------------------------------------------------------------------------
-static int ide_seek(dev_cookie cookie, off_t pos, seek_type st)
+static int ata_execute_diagnostic(ide_device* dev)
 {
-	return ERR_UNIMPLEMENTED;
+	uint8 err;
+	uint8* buf = (uint8*)&dev->_reserved;
+
+	err = ata_cmd(dev->bus, 0, CMD_EXECUTE_DRIVE_DIAGNOSTIC, buf);
+	if(err == NO_ERROR)
+		return (int)buf;
+
+	return NO_ERROR;
 }
 
 //--------------------------------------------------------------------------------
-static int ide_get_geometry(ide_device* device, void *buf, size_t len)
+static int ata_get_geometry(ide_device* device, void *buf, size_t len)
 {
 	drive_geometry* drive_geometry = buf;
 
@@ -87,9 +87,9 @@ static int ide_get_geometry(ide_device* device, void *buf, size_t len)
 		return ERR_VFS_INSUFFICIENT_BUF;
 
 	drive_geometry->blocks = device->end_block - device->start_block;
-	drive_geometry->heads = device->hardware_device.heads;
-	drive_geometry->cylinders = device->hardware_device.cyls;
-	drive_geometry->sectors = device->hardware_device.sectors;
+	drive_geometry->heads = device->hardware_device.curr_heads;
+	drive_geometry->cylinders = device->hardware_device.curr_cyls;
+	drive_geometry->sectors = device->hardware_device.curr_sectors;
 	drive_geometry->removable = false;
 	drive_geometry->bytes_per_sector = device->bytes_per_sector;
 	drive_geometry->read_only = false;
@@ -130,8 +130,12 @@ static int ide_ioctl(dev_cookie _cookie, int op, void *buf, size_t len)
 	bus_acquire(cookie);
 
 	switch(op) {
+		case DISK_EXECUTE_DIAGNOSTIC:
+			err = ata_execute_diagnostic(cookie->dev);
+			break;
+
 		case DISK_GET_GEOMETRY:
-			err = ide_get_geometry(cookie->dev,buf,len);
+			err = ata_get_geometry(cookie->dev, buf, len);
 			break;
 
 		case DISK_USE_DMA:
@@ -166,7 +170,7 @@ static ssize_t ide_read(dev_cookie _cookie, void *buf, off_t pos, ssize_t len)
 
 	bus_acquire(cookie);
 
-	// Calculate start block and number of blocks to read
+	// calculate start block and number of blocks to read
 	block = pos / cookie->block_size;
 	block += cookie->block_start;
 	sectors = len / cookie->block_size;
@@ -174,30 +178,24 @@ static ssize_t ide_read(dev_cookie _cookie, void *buf, off_t pos, ssize_t len)
 	// correct len to be the actual # of bytes to read
 	len -= len % cookie->block_size;
 
-	// If it goes beyond the disk/partition, exit
+	// exit if read exceeds partition size
 	if (block + sectors > cookie->block_start + cookie->block_count) {
 		bus_release(cookie);
 		return 0;
 	}
 
-	// Start reading the sectors
 	currentSector = 0;
 	while(currentSector < sectors) {
-		// Read max. of 255 sectors at a time
 		sectorsToRead = (sectors - currentSector) > 255 ? 255 : sectors;
-
-		// If the read fails, exit with I/O error
-		if (ide_read_block(cookie->dev, buf, block, sectorsToRead) != NO_ERROR) {
+		if (ata_read_block(cookie->dev, buf, block, sectorsToRead) != NO_ERROR) {
 			bus_release(cookie);
 			return ERR_IO_ERROR;
 		}
 
-		// Move to next block to read
 		block += sectorsToRead * cookie->block_size;
 		currentSector += sectorsToRead;
 	}
 
-	// Give up
 	bus_release(cookie);
 
 	return len;
@@ -217,28 +215,22 @@ static ssize_t ide_write(dev_cookie _cookie, const void *buf, off_t pos, ssize_t
 	if(cookie == NULL)
 		return ERR_INVALID_ARGS;
 
-	// Make sure no other I/O is done
 	bus_acquire(cookie);
 
-	// Get the start pos and block count to write
 	block = pos / cookie->block_size + cookie->block_start;
 	sectors = len / cookie->block_size;
 
-	// If we're writing more than the disk/partition size
+	// exit if write exceeds partition size
 	if (block + sectors > cookie->block_start + cookie->block_count) {
-		// exit without writing
 		bus_release(cookie);
 		return ERR_INVALID_ARGS;
 	}
 
-	// Loop over sectors to write
 	currentSector = 0;
 	while(currentSector < sectors) {
-		// Write a max of 255 sectors at a time
 		sectorsToWrite = (sectors - currentSector) > 255 ? 255 : sectors;
 
-		// Write them
-		if (ide_write_block(cookie->dev, buf, block, sectorsToWrite) != NO_ERROR) {
+		if (ata_write_block(cookie->dev, buf, block, sectorsToWrite) != NO_ERROR) {
 			//	  dprintf("ide_write: ide_block returned %d\n", rc);
 			len = currentSector * cookie->block_size;
 			bus_release(cookie);
@@ -255,38 +247,21 @@ static ssize_t ide_write(dev_cookie _cookie, const void *buf, off_t pos, ssize_t
 }
 
 //--------------------------------------------------------------------------------
-static int ide_canpage(dev_ident ident)
-{
-	return false;
-}
-
-//--------------------------------------------------------------------------------
-static ssize_t ide_readpage(dev_ident ident, iovecs *vecs, off_t pos)
-{
-	return ERR_UNIMPLEMENTED;
-}
-
-//--------------------------------------------------------------------------------
-static ssize_t ide_writepage(dev_ident ident, iovecs *vecs, off_t pos)
-{
-	return ERR_UNIMPLEMENTED;
-}
-
-//--------------------------------------------------------------------------------
 static struct dev_calls ide_hooks = {
 	ide_open,
 	ide_close,
 	ide_freecookie,
 
-	ide_seek,
+	NULL, // pointless to seek ide devices
 	ide_ioctl,
 
 	ide_read,
 	ide_write,
 
-	ide_canpage,
-	ide_readpage,
-	ide_writepage
+	// can't page from ide devices
+	NULL,
+	NULL,
+	NULL
 };
 
 //--------------------------------------------------------------------------------
@@ -332,12 +307,12 @@ static bool ide_attach_devices(int bus, int device)
 	ide->device = device;
     type = ide_identify_device(bus, device);
 
-	// register all hdd partitions
+	// register all hdd partitions with devfs
 	if (type == ATA_DEVICE) {
 		ide->magic1 = IDE_MAGIC_COOKIE1;
         ide->magic2 = IDE_MAGIC_COOKIE2;
 
-		if (ide_get_partitions(ide)) {
+		if (ata_get_partitions(ide)) {
 			for (part=0; part < MAX_PARTITIONS; part++) {
 				if (ide->partitions[part].partition_type != 0 &&
 					(ident=ide_create_device_ident(ide, part)) != NULL) {
@@ -352,7 +327,8 @@ static bool ide_attach_devices(int bus, int device)
 		}
 	}
 
-	// register cd/dvd drives and let driver handle partitions
+	// register cd/dvd drives with devfs
+	// plugins handle partitions due to multitude of formats
 	if (type == ATAPI_DEVICE) {
 		sprintf(devpath, "disk/atapi/%d/%d", bus, device);
 		devfs_publish_device(devpath, ident, &ide_hooks);
@@ -368,11 +344,9 @@ static bool ide_attach_devices(int bus, int device)
 }
 
 //--------------------------------------------------------------------------------
-static bool ide_attach_buses(int bus)
+static bool ide_attach_bus(int bus)
 {
-	char devpath[256];
-	uint8 found = 0;
-	int dev;
+	uint8 dev, found = 0;
 
 	for(dev=0; dev < 2; dev++)
 		if (ide_attach_devices(bus, dev))
@@ -382,7 +356,7 @@ static bool ide_attach_buses(int bus)
 }
 
 //--------------------------------------------------------------------------------
- int ide_bus_init(kernel_args *ka)
+int ide_bus_init(kernel_args *ka)
 {
 	// create top-level semaphore for ide bus #1
 	if ((ide_sem = sem_create(1, "ide_sem_0")) < 0)
@@ -391,7 +365,7 @@ static bool ide_attach_buses(int bus)
 	// attach ide bus #1
 	int_set_io_interrupt_handler(0x20 + IDE_0_INTERRUPT, &ide_interrupt_handler, NULL);
 	ide_raw_init(0x1f0, 0x3f0);
-	ide_attach_buses(0);
+	ide_attach_bus(0);
 
 	// create top-level semaphore for ide bus #2
 	if ((ide_sem = sem_create(1, "ide_sem_1")) < 0)
@@ -400,7 +374,7 @@ static bool ide_attach_buses(int bus)
 	// attach ide bus #2
 	int_set_io_interrupt_handler(0x20 + IDE_1_INTERRUPT, &ide_interrupt_handler, NULL);
 	ide_raw_init(0x170, 0x370);
-	ide_attach_buses(1);
+	ide_attach_bus(1);
 
-	return 0;
+	return NO_ERROR;
 }
