@@ -9,12 +9,13 @@
 #include <boot/stage2.h>
 #include <kernel/vfs.h>
 #include <kernel/arch/vm_translation_map.h>
+#include <kernel/list.h>
 
 // vm page
 typedef struct vm_page {
 	int magic;
-	struct vm_page *queue_prev;
-	struct vm_page *queue_next;
+
+	struct list_node queue_node;
 
 	struct vm_page *hash_next;
 

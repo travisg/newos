@@ -15,14 +15,14 @@
 #include <kernel/thread.h>
 #include <kernel/smp.h>
 #include <kernel/sem.h>
+#include <kernel/list.h>
 #include <newos/errors.h>
 #include <boot/stage2.h>
 
 #include <string.h>
 
 typedef struct page_queue {
-	vm_page *head;
-	vm_page *tail;
+	struct list_node list;
 	int count;
 } page_queue;
 
@@ -52,16 +52,9 @@ static vm_page *dequeue_page(page_queue *q)
 {
 	vm_page *page;
 
-	page = q->tail;
-	if(page != NULL) {
-		if(q->head == page)
-			q->head = NULL;
-		if(page->queue_prev != NULL) {
-			page->queue_prev->queue_next = NULL;
-		}
-		q->tail = page->queue_prev;
+	page = list_remove_head_type(&q->list, vm_page, queue_node);
+	if(page)
 		q->count--;
-	}
 
 #if DEBUG > 1
 	if(page)
@@ -76,13 +69,7 @@ static void enqueue_page(page_queue *q, vm_page *page)
 #if DEBUG > 1
 	VERIFY_VM_PAGE(page);
 #endif
-	if(q->head != NULL)
-		q->head->queue_prev = page;
-	page->queue_next = q->head;
-	q->head = page;
-	page->queue_prev = NULL;
-	if(q->tail == NULL)
-		q->tail = page;
+	list_add_head(&q->list, &page->queue_node);
 	q->count++;
 	if(q == &page_modified_queue || q == &page_modified_temporary_queue) {
 		if(q->count == 1)
@@ -95,16 +82,7 @@ static void remove_page_from_queue(page_queue *q, vm_page *page)
 #if DEBUG > 1
 	VERIFY_VM_PAGE(page);
 #endif
-	if(page->queue_prev != NULL) {
-		page->queue_prev->queue_next = page->queue_next;
-	} else {
-		q->head = page->queue_next;
-	}
-	if(page->queue_next != NULL) {
-		page->queue_next->queue_prev = page->queue_prev;
-	} else {
-		q->tail = page->queue_prev;
-	}
+	list_delete(&page->queue_node);
 	q->count--;
 }
 
@@ -214,20 +192,15 @@ int vm_page_init(kernel_args *ka)
 	page_lock = 0;
 
 	// initialize queues
-	page_free_queue.head = NULL;
-	page_free_queue.tail = NULL;
+	list_initialize(&page_free_queue.list);
 	page_free_queue.count = 0;
-	page_clear_queue.head = NULL;
-	page_clear_queue.tail = NULL;
+	list_initialize(&page_clear_queue.list);
 	page_clear_queue.count = 0;
-	page_active_queue.head = NULL;
-	page_active_queue.tail = NULL;
+	list_initialize(&page_active_queue.list);
 	page_active_queue.count = 0;
-	page_modified_queue.head = NULL;
-	page_modified_queue.tail = NULL;
+	list_initialize(&page_modified_queue.list);
 	page_modified_queue.count = 0;
-	page_modified_temporary_queue.head = NULL;
-	page_modified_temporary_queue.tail = NULL;
+	list_initialize(&page_modified_temporary_queue.list);
 	page_modified_temporary_queue.count = 0;
 
 	// calculate the size of memory by looking at the phys_mem_range array
