@@ -5,6 +5,7 @@
 #include <proc.h>
 #include <vm.h>
 #include <spinlock.h>
+#include <timer.h>
 
 #define THREAD_IDLE_PRIORITY 0
 #define THREAD_NUM_PRIORITY_LEVELS 64
@@ -32,6 +33,7 @@ struct thread {
 	int next_state;
 	int sem_count;
 	sem_id blocked_sem_id;
+	struct timer_event timer;
 	struct proc *proc;
 	struct area *kernel_stack_area;
 	struct area *user_stack_area;

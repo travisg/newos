@@ -21,6 +21,11 @@ int thread_spinlock = 0;
 
 static thread_id next_thread_id = 0;
 
+// scheduling timer
+#define LOCAL_CPU_TIMER timers[smp_get_current_cpu()]
+static struct timer_event *timers = NULL;
+
+// thread list
 #define CURR_THREAD cur_thread[smp_get_current_cpu()]
 static struct thread **cur_thread = NULL;
 static struct thread *thread_list = NULL;
@@ -376,6 +381,14 @@ int thread_init(kernel_args *ka)
 	}
 	memset(cur_thread, 0, sizeof(struct thread *) * smp_get_num_cpus());
 
+	// allocate a timer structure per cpu
+	timers = (struct timer_event *)kmalloc(sizeof(struct timer_event) * smp_get_num_cpus());
+	if(timers == NULL) {
+		panic("error allocating scheduling timers\n");
+		return -1;
+	}
+	memset(timers, 0, sizeof(struct timer_event) * smp_get_num_cpus());
+	
 	// allocate a snooze sem
 	snooze_sem = sem_create(0, "snooze sem");
 	if(snooze_sem < 0) {
@@ -414,7 +427,8 @@ int thread_init(kernel_args *ka)
 	thread_enqueue_run_q(t);
 
 	// set up a periodic timer (10ms)
-	timer_set_event(10000, TIMER_MODE_PERIODIC, NULL, NULL);
+	timer_setup_timer(NULL, NULL, &LOCAL_CPU_TIMER);
+	timer_set_event(10000, TIMER_MODE_PERIODIC, &LOCAL_CPU_TIMER);
 
 	// set up some debugger commands
 	dbg_add_command(dump_thread_list, "threads", "list all threads");

@@ -11,15 +11,6 @@
 #include <arch_cpu.h>
 #include <arch_timer.h>
 
-struct timer_event {
-	struct timer_event *next;
-	int mode;
-	time_t sched_time;
-	time_t periodic_time;
-	void (*func)(void *);
-	void *data;
-};
-
 static struct timer_event *events = NULL;
 static int timer_spinlock = 0;
 
@@ -62,22 +53,24 @@ restart_scan:
 	event = events;
 	if(event != NULL && event->sched_time < curr_time) {
 		// this event needs to happen
+		int mode = event->mode;
+		
 		events = event->next;
 
 		release_spinlock(&timer_spinlock);			
 
 		// call the callback
+		// note: if the event is not periodic, it is ok
+		// to delete the event structure inside the callback
 		if(event->func != NULL)
 			event->func(event->data);
 
 		acquire_spinlock(&timer_spinlock);
 	
-		if(event->mode == TIMER_MODE_PERIODIC) {
+		if(mode == TIMER_MODE_PERIODIC) {
 			// we need to adjust it and add it back to the list
 			event->sched_time = system_time() + event->periodic_time;
 			add_event_to_list(event, &events);
-		} else if(event->mode == TIMER_MODE_ONESHOT) {
-			kfree(event);
 		}			
 
 		goto restart_scan; // the list may have changed
@@ -92,17 +85,20 @@ restart_scan:
 	return INT_RESCHEDULE;
 }
 
-int timer_set_event(time_t relative_time, int mode, void (*func)(void *), void *data)
+void timer_setup_timer(void (*func)(void *), void *data, struct timer_event *event)
 {
-	struct timer_event *event;
-	int state;
-	
-	event = (struct timer_event *)kmalloc(sizeof(struct timer_event));
-	if(event == NULL)
-		return -1;
-	event->sched_time = system_time() + relative_time;
 	event->func = func;
 	event->data = data;
+}
+
+int timer_set_event(time_t relative_time, int mode, struct timer_event *event)
+{
+	int state;
+	
+	if(event == NULL)
+		return -1;
+
+	event->sched_time = system_time() + relative_time;
 	event->mode = mode;
 	if(event->mode == TIMER_MODE_PERIODIC)
 		event->periodic_time = relative_time;

@@ -293,7 +293,8 @@ int sem_acquire_etc(sem_id id, int count, int flags, long long timeout)
 //			dprintf("sem_acquire_etc: setting timeout sem for %d %d usecs, semid %d, tid %d\n",
 //				timeout, sem_id, t->id);
 			// set up an event to go off, with the thread struct as the data
-			timer_set_event(timeout, TIMER_MODE_ONESHOT, &sem_timeout, (void *)t);
+			timer_setup_timer(&sem_timeout, (void *)t, &t->timer);
+			timer_set_event(timeout, TIMER_MODE_ONESHOT, &t->timer);
 		}
 
 		GRAB_THREAD_LOCK();
@@ -303,7 +304,7 @@ int sem_acquire_etc(sem_id id, int count, int flags, long long timeout)
 		int_restore_interrupts(state);
 		return 0;		
 	}
-	
+
 err:
 	RELEASE_SEM_LOCK(sems[slot]);
 	int_restore_interrupts(state);
