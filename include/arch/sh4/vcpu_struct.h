@@ -2,7 +2,7 @@
 #define _VCPU_STRUCT_H
 
 struct vector {
-	int (*func)(unsigned int exception_code, unsigned int pc, unsigned int trap_code, unsigned int page_fault_addr);
+	int (*func)(void *iframe);
 };
 
 typedef struct {

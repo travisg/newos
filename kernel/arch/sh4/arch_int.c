@@ -7,6 +7,7 @@
 #include <kernel/thread.h>
 #include <kernel/vm_priv.h>
 #include <kernel/faults_priv.h>
+#include <kernel/syscalls.h>
 
 #include <kernel/arch/sh4/cpu.h>
 
@@ -22,14 +23,19 @@ void arch_int_disable_io_interrupt(int irq)
 	return;
 }
 
-static int sh4_handle_exception(unsigned int code, unsigned int pc, unsigned int trap, unsigned int page_fault_addr)
+
+static int sh4_handle_exception(void *_frame)
+//static int sh4_handle_exception(unsigned int code, unsigned int pc, unsigned int trap, unsigned int page_fault_addr)
 {
+	struct iframe *frame = (struct iframe *)_frame;
 	int ret;
 
 	// NOTE: not safe to do anything that may involve the FPU before 
 	// it is certain it is not an fpu exception
 
-	switch(code) {
+//	dprintf("sh4_handle_exception: frame 0x%x code 0x%x, pc 0x%x, ssr 0x%x\n", 
+//		frame, frame->excode, frame->spc, frame->ssr);
+	switch(frame->excode) {
 		case 0:  // reset
 		case 1:  // manual reset
 		case 5:  // TLB protection violation (read)
@@ -39,16 +45,20 @@ static int sh4_handle_exception(unsigned int code, unsigned int pc, unsigned int
 		case 10: // TLB multi hit
 		case 12: // illegal instruction
 		case 13: // slot illegal instruction
-			ret = general_protection_fault(code);
+			ret = general_protection_fault(frame->excode);
 			break;
-		case 11: // TRAPA
-			panic("trap # %d @ pc 0x%x!\n", trap, pc);
-			ret = INT_NO_RESCHEDULE;
+		case 11:  { // TRAPA
+			unsigned int *trap = (unsigned int *)0xff000020;
+			uint64 retcode;
+			
+			ret = syscall_dispatcher(*trap >> 2, frame->r4, frame->r5, frame->r6, frame->r7, frame->r0, &retcode);
+			frame->r0 = retcode & 0xffffffff;
+			frame->r1 = retcode >> 32;
 			break;
+		}
 		case 9: { // FPU exception
-			int fpscr = get_fpscr();	
 			int fpu_fault_code;
-			switch(fpscr & 0x0003f000) {
+			switch(frame->fpscr & 0x0003f000) {
 				case 0x1000:
 					fpu_fault_code = FPU_FAULT_CODE_INEXACT;	
 					break;
@@ -79,10 +89,10 @@ static int sh4_handle_exception(unsigned int code, unsigned int pc, unsigned int
 			ret = fpu_disable_fault();
 			break;
 		case EXCEPTION_PAGE_FAULT:
-			ret = vm_page_fault(page_fault_addr, pc);
+			ret = vm_page_fault(frame->page_fault_addr, frame->spc);
 			break;
 		default:
-			ret = int_io_interrupt_handler(code);
+			ret = int_io_interrupt_handler(frame->excode);
 	}
 	if(ret == INT_RESCHEDULE) {
 		GRAB_THREAD_LOCK();

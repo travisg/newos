@@ -66,10 +66,12 @@ _get_spc:
 	nop
 ");
 
-static int default_vector(unsigned int ex_code, unsigned int pc, unsigned int trap, unsigned int page_fault_addr)
+static int default_vector(void *_frame)
 {
-	dprintf("default_vector: ex_code 0x%x, pc 0x%x, trap 0x%x\n", ex_code, pc, trap);
-	dprintf("sgr = 0x%x\n", get_sgr());
+	struct iframe *frame = (struct iframe *)_frame;
+
+	dprintf("default_vector: ex_code 0x%x, pc 0x%x\n", frame->excode, frame->spc);
+	dprintf("sgr = 0x%x\n", frame->sgr);
 	dprintf("spinning forever\n");
 	for(;;);
 	return 0;

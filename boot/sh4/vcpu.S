@@ -216,13 +216,6 @@ _have_set_stack:
 	mov.l	r13,@-r15
 	mov.l	r14,@-r15
 	
-	/* check to see if this is a trap, in which case we dont push r0-r7 */
-	mov.l	saved_excode,r8
-	mov.l	trap_exception,r9
-	cmp/eq	r9,r8
-	bt	_after_r0r7_save
-	nop
-
 	/* push r0-r7 */
 	mov.l	r0,@-r15
 	mov.l	r1,@-r15
@@ -252,14 +245,7 @@ _after_r0r7_save:
 	fmov.s	fr13,@-r15
 	fmov.s	fr14,@-r15
 	fmov.s	fr15,@-r15
-	fmov	xd0,dr0
-	fmov	xd2,dr2
-	fmov	xd4,dr4
-	fmov	xd6,dr6
-	fmov	xd8,dr8
-	fmov	xd10,dr10
-	fmov	xd12,dr12
-	fmov	xd14,dr14
+	frchg
 	fmov.s	fr0,@-r15
 	fmov.s	fr1,@-r15
 	fmov.s	fr2,@-r15
@@ -276,53 +262,59 @@ _after_r0r7_save:
 	fmov.s	fr13,@-r15
 	fmov.s	fr14,@-r15
 	fmov.s	fr15,@-r15
+	frchg
 	sts.l	fpul,@-r15
 	sts.l	fpscr,@-r15
 
 	/* can save most of the special registers we need in r8-r14 */
 	/* the abi we're working with saves r8-14 on function calls */
-	stc	gbr,r8
-	sts	mach,r9
-	sts	macl,r10
-	sts	pr,r11
+	stc.l	gbr,@-r15
+	sts.l	mach,@-r15
+	sts.l	macl,@-r15
+	sts.l	pr,@-r15
 	mov.l	saved_sgr,r12
-	mov.l	saved_ssr,r13
-	mov.l	saved_spc,r14
+	mov.l	r12,@-r15
+	mov.l	saved_ssr,r12
+	mov.l	r12,@-r15
+	mov.l	saved_spc,r12
+	mov.l	r12,@-r15
+	mov.l	saved_excode,r12
+	shlr2	r12
+	mov.l	r12,@-r15
+	mov.l	saved_pfault,r12
+	mov.l	r12,@-r15
 
-	/* finish pushing the registers */
-	mov.l	saved_excode,r4		/* arg 1, exception code */
-	mov	r4,r2			/* save it for later */
-	mov.l	r4,@-r15
-	shlr2	r4			/* shift it two more bits to make exceptions be in range 0-255 */
-	mov	r14,r5			/* arg 2, program counter */
-	mov.l	tra_addr,r1
-	mov.l	@r1,r6			/* arg 3, trap code, if it exists */
-	mov.l	saved_page_fault_addr,r1
-	mov.l	@r1,r7			/* arg 4, page fault address, if this is a page fault */
+	/* arg1: address of the iframe */
+	mov		r15,r4
 
 	/* jump through the vector table into the kernel */
 	mov.l	vector_table_addr,r0
+	mov.l	saved_excode,r2
 	mov.l	@(r0,r2),r1
 	jsr	@r1
 	nop
 
 	/* restore everything and get outta here */
+	add		#0x8,r15		/* pop the pfault and excode data from the stack */
 	mov.l	saved_spc_addr,r1
-	mov.l	r14,@r1
+	mov.l	@r15+,r2
+	mov.l	r2,@r1
 	mov.l	saved_ssr_addr,r1
-	mov.l	r13,@r1
+	mov.l	@r15+,r2
+	mov.l	r2,@r1
 	mov.l	saved_sgr_addr,r1
-	mov.l	r12,@r1	
-	lds	r11,pr
-	lds	r10,macl
-	lds	r9,mach
-	ldc	r8,gbr	
+	mov.l	@r15+,r2
+	mov.l	r2,@r1
+	lds.l	@r15+,pr
+	lds.l	@r15+,macl
+	lds.l	@r15+,mach
+	ldc.l	@r15+,gbr	
 
-	mov.l	@r15+,r0		/* get the exception code */
 
 	/* restore the floating point registers */
 	lds.l	@r15+,fpscr
 	lds.l	@r15+,fpul
+	frchg
 	fmov.s	@r15+,fr15
 	fmov.s	@r15+,fr14
 	fmov.s	@r15+,fr13
@@ -339,14 +331,7 @@ _after_r0r7_save:
 	fmov.s	@r15+,fr2
 	fmov.s	@r15+,fr1
 	fmov.s	@r15+,fr0
-	fmov	dr14,xd14
-	fmov	dr12,xd12
-	fmov	dr10,xd10
-	fmov	dr8,xd8
-	fmov	dr6,xd6
-	fmov	dr4,xd4
-	fmov	dr2,xd2
-	fmov	dr0,xd0
+	frchg
 	fmov.s	@r15+,fr15
 	fmov.s	@r15+,fr14
 	fmov.s	@r15+,fr13
@@ -364,11 +349,6 @@ _after_r0r7_save:
 	fmov.s	@r15+,fr1
 	fmov.s	@r15+,fr0
 	
-	/* see if we need to restore r0-r7 */
-	cmp/eq	#0x2c,r0
-	bt	_after_r0r7_restore
-	nop
-
 	mov.l	@r15+,r7
 	mov.l	@r15+,r6
 	mov.l	@r15+,r5
@@ -401,10 +381,10 @@ _after_r0r7_restore:
 	ldc	r15,sr
 	
 	/* restore the ssr & spc registers */
-	mov.l	saved_ssr,r15
-	ldc	r15,ssr
 	mov.l	saved_spc,r15
 	ldc	r15,spc
+	mov.l	saved_ssr,r15
+	ldc	r15,ssr
 	mov.l	saved_sgr,r15
 	
 	/* get out of here */

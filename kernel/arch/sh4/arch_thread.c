@@ -72,7 +72,8 @@ void arch_thread_context_switch(struct thread *t_from, struct thread *t_to)
 {
 #if 0
 	int i;
-	dprintf("arch_thread_context_switch: to sp 0x%x\n", t_to->arch_info.sp);
+	dprintf("arch_thread_context_switch: 0x%x->0x%x to sp 0x%x\n", 
+		t_from->id, t_to->id, t_to->arch_info.sp);
 #endif
 #if 0
 	for(i=0; i<8; i++) {
