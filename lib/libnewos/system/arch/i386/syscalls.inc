@@ -6,7 +6,7 @@
 /*
 ** syscall interface works as such:
 ** eax has syscall #
-** ecx has number of args (0-16)
+** ecx has number of args (0-15)
 ** edx has pointer to buffer containing args from first to last
 ** each is verified to make sure someone doesnt try to clobber it
 */
@@ -140,15 +140,6 @@ name: \
 	movl	$n,%eax; \
 	jmp		syscall15
 
-#define SYSCALL16(name, n) \
-.globl name; \
-.type name,@function; \
-.align 8; \
-name: \
-	movl	$n,%eax; \
-	jmp		syscall16
-
-
 
 /* we will optimize by just passing a ptr to the place where the caller
 ** would have dumped the args */
@@ -245,12 +236,6 @@ syscall14:
 
 syscall15:
 	movl	$15, %ecx
-	lea		4(%esp), %edx
-	int		$99
-	ret
-
-syscall16:
-	movl	$16, %ecx
 	lea		4(%esp), %edx
 	int		$99
 	ret
