@@ -35,14 +35,14 @@ int atomic_or(volatile int *val, int incr);
 int atomic_set(volatile int *val, int set_to);
 int test_and_set(int *val, int set_to, int test_val);
 
-time_t system_time();
+time_t system_time(void);
 int arch_cpu_init(kernel_args *ka);
 int arch_cpu_init2(kernel_args *ka);
-void reboot();
+void reboot(void);
 
 void arch_cpu_invalidate_TLB_range(addr start, addr end);
 void arch_cpu_invalidate_TLB_list(addr pages[], int num_pages);
-void arch_cpu_global_TLB_invalidate();
+void arch_cpu_global_TLB_invalidate(void);
 
 int arch_cpu_user_memcpy(void *to, const void *from, size_t size, addr *fault_handler);
 int arch_cpu_user_strcpy(char *to, const char *from, addr *fault_handler);

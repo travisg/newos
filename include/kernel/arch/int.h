@@ -5,6 +5,9 @@
 #ifndef _ARCH_INT_H
 #define _ARCH_INT_H
 
+#include <kernel/ktypes.h>
+#include <boot/stage2.h>
+
 int arch_int_init(kernel_args *ka);
 int arch_int_init2(kernel_args *ka);
 

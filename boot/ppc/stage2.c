@@ -8,6 +8,8 @@
 #include <libc/string.h>
 #include "stage2_priv.h"
 
+void _start(int arg1, int arg2, void *openfirmware);
+
 static kernel_args ka = {0};
 
 void _start(int arg1, int arg2, void *openfirmware)

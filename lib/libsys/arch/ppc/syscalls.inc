@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -33,6 +33,21 @@ name:
 name:
 
 #define SYSCALL6(name, n) \
+.globl name; \
+.align 4; \
+name:
+
+#define SYSCALL7(name, n) \
+.globl name; \
+.align 4; \
+name:
+
+#define SYSCALL8(name, n) \
+.globl name; \
+.align 4; \
+name:
+
+#define SYSCALL9(name, n) \
 .globl name; \
 .align 4; \
 name:

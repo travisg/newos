@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -32,7 +32,7 @@ static int unmap_tmap(vm_translation_map *map, addr start, addr end)
 
 static int query_tmap(vm_translation_map *map, addr va, addr *out_physical, unsigned int *out_flags)
 {
-	return 0;	
+	return 0;
 }
 
 static addr get_mapped_size_tmap(vm_translation_map *map)
@@ -79,6 +79,11 @@ int vm_translation_map_module_init(kernel_args *ka)
 	return 0;
 }
 
+void vm_translation_map_module_init_post_sem(kernel_args *ka)
+{
+	return 0;
+}
+
 int vm_translation_map_module_init2(kernel_args *ka)
 {
 	return 0;
@@ -97,6 +102,6 @@ int vm_translation_map_quick_map(kernel_args *ka, addr va, addr pa, unsigned int
 // XXX currently assumes this translation map is active
 static int vm_translation_map_quick_query(addr va, addr *out_physical)
 {
-	return 0;	
+	return 0;
 }
 
