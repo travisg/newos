@@ -82,6 +82,9 @@ static int _keyboard_read(void *_buf, size_t *len)
 	char *buf = _buf;
 	size_t copied_bytes = 0;
 	size_t copy_len;
+
+	if(*len > sizeof(keyboard_buf) - 1)
+		*len = sizeof(keyboard_buf) - 1;
 	
 retry:
 	// block here until data is ready
@@ -94,28 +97,27 @@ retry:
 	if(head == saved_tail) {
 		mutex_unlock(&keyboard_read_mutex);
 		goto retry;
-	} else if(head < saved_tail) {
+	} else {
 		// copy out of the buffer
-		copy_len = min(*len, saved_tail - head);
+		if(head < saved_tail)
+			copy_len = min(*len, saved_tail - head);
+		else
+			copy_len = min(*len, sizeof(keyboard_buf) - head);
 		memcpy(buf, &keyboard_buf[head], copy_len);	
 		copied_bytes = copy_len;
-		head += copy_len;
-	} else {
-		// the buffer wraps around
-		
-		// copy the last part of the buffer
-		copy_len = min(*len, sizeof(keyboard_buf) - head);
-		memcpy(buf, &keyboard_buf[head], copy_len);
-		copied_bytes = copy_len;
-		head += copy_len;
-		if(copied_bytes < *len) {
-			// we still have buffer left, keep going		
+		head = (head + copy_len) % sizeof(keyboard_buf);
+		if(head == 0 && saved_tail > 0 && copied_bytes < *len) {
+			// we wrapped around and have more bytes to read
 			// copy the first part of the buffer
-			copy_len = min(*len - copied_bytes, saved_tail);
+			copy_len = min(saved_tail, *len - copied_bytes);
 			memcpy(&buf[*len], &keyboard_buf[0], copy_len);
 			copied_bytes += copy_len;
 			head = copy_len;
 		}
+	}
+	if(head != saved_tail) {
+		// we did not empty the keyboard queue
+		sem_release_etc(keyboard_sem, 1, SEM_FLAG_NO_RESCHED);
 	}
 	
 	mutex_unlock(&keyboard_read_mutex);
@@ -126,10 +128,16 @@ retry:
 
 static void insert_in_buf(char c)
 {
+	unsigned int temp_tail = tail;
+
+ 	// see if the next char will collide with the head
+	temp_tail = ++temp_tail % sizeof(keyboard_buf);
+	if(temp_tail == head) {
+		// buffer overflow, ditch this char
+		return;
+	}
 	keyboard_buf[tail] = c;
-	tail++;
-	if(tail >= sizeof(keyboard_buf))
-		tail = 0;
+	tail = temp_tail;
 	sem_release_etc(keyboard_sem, 1, SEM_FLAG_NO_RESCHED);
 }
 
