@@ -69,3 +69,4 @@ Fix:
 
 Random reboot on heavy fibo usage
 SH-4 ELF relocation
+tty - entering too long a line hangs read
