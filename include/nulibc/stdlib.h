@@ -33,7 +33,7 @@ int   setenv(char const *, char const *, int);
 int   putenv(char const *);
 void  unsetenv(char const *);
 
-void  qsort(void *, size_t, size_t, int (*)(void const *, void const *)));
+void  qsort(void *, size_t, size_t, int (*)(void const *, void const *));
 
 
 #ifdef __cplusplus
