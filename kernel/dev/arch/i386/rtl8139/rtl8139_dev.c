@@ -52,7 +52,7 @@
 
 static rtl8139 *grtl;
 
-static int rtl8139_int();
+static int rtl8139_int(void*);
 
 int rtl8139_detect(rtl8139 **rtl)
 {
@@ -151,7 +151,7 @@ int rtl8139_init(rtl8139 *rtl)
 
 	// set up the interrupt handler
 	grtl = rtl;
-	int_set_io_interrupt_handler(rtl->irq + 0x20, &rtl8139_int);
+	int_set_io_interrupt_handler(rtl->irq + 0x20, &rtl8139_int, NULL);
 
 	// read the mac address
 	rtl->mac_addr[0] = RTL_READ_8(rtl, RT_IDR0);
@@ -383,7 +383,7 @@ static int rtl8139_txint(rtl8139 *rtl, uint16 int_status)
 	return rc;
 }
 
-static int rtl8139_int()
+static int rtl8139_int(void* data)
 {
 	int rc = INT_NO_RESCHEDULE;
 

@@ -138,7 +138,7 @@ static void insert_in_buf(char c)
 	sem_release_etc(keyboard_sem, 1, SEM_FLAG_NO_RESCHED);
 }
 
-int handle_keyboard_interrupt()
+int handle_keyboard_interrupt(void* data)
 {
 	unsigned char key;
 	int retval = INT_NO_RESCHEDULE;
@@ -282,7 +282,7 @@ int setup_keyboard()
 int	keyboard_dev_init(kernel_args *ka)
 {
 	setup_keyboard();
-	int_set_io_interrupt_handler(0x21,&handle_keyboard_interrupt);
+	int_set_io_interrupt_handler(0x21,&handle_keyboard_interrupt, NULL);
 
 	devfs_publish_device("keyboard", NULL, &keyboard_hooks);
 

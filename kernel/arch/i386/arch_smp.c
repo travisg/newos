@@ -30,14 +30,14 @@ static unsigned int cpu_apic_version[SMP_MAX_CPUS] = { 0, 0};
 static unsigned int *ioapic = NULL; 
 static unsigned int apic_timer_tics_per_sec = 0;
 
-static int i386_timer_interrupt()
+static int i386_timer_interrupt(void* data)
 {
 	arch_smp_ack_interrupt();
 	
 	return apic_timer_interrupt();
 }
 
-static int i386_ici_interrupt()
+static int i386_ici_interrupt(void* data)
 {
 	// gin-u-wine inter-cpu interrupt
 //	dprintf("inter-cpu interrupt on cpu %d\n", arch_smp_get_current_cpu());
@@ -46,7 +46,7 @@ static int i386_ici_interrupt()
 	return smp_intercpu_int_handler();
 }
 
-static int i386_spurious_interrupt()
+static int i386_spurious_interrupt(void* data)
 {
 	// spurious interrupt
 //	dprintf("spurious interrupt on cpu %d\n", arch_smp_get_current_cpu());
@@ -54,7 +54,7 @@ static int i386_spurious_interrupt()
 	return INT_NO_RESCHEDULE;
 }
 
-static int i386_smp_error_interrupt()
+static int i386_smp_error_interrupt(void* data)
 {
 	// smp error interrupt
 //	dprintf("smp error interrupt on cpu %d\n", arch_smp_get_current_cpu());
@@ -92,10 +92,10 @@ int arch_smp_init(kernel_args *ka)
 		vm_create_anonymous_region(vm_get_kernel_aspace_id(), "ioapic", (void *)&ioapic,
 			REGION_ADDR_EXACT_ADDRESS, PAGE_SIZE, REGION_WIRING_WIRED_ALREADY, LOCK_RW|LOCK_KERNEL);
 
-		int_set_io_interrupt_handler(0xfb, &i386_timer_interrupt);
-		int_set_io_interrupt_handler(0xfd, &i386_ici_interrupt);
-		int_set_io_interrupt_handler(0xfe, &i386_smp_error_interrupt);
-		int_set_io_interrupt_handler(0xff, &i386_spurious_interrupt);
+		int_set_io_interrupt_handler(0xfb, &i386_timer_interrupt, NULL);
+		int_set_io_interrupt_handler(0xfd, &i386_ici_interrupt, NULL);
+		int_set_io_interrupt_handler(0xfe, &i386_smp_error_interrupt, NULL);
+		int_set_io_interrupt_handler(0xff, &i386_spurious_interrupt, NULL);
 	} else {
 		num_cpus = 1;
 	}

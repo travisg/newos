@@ -12,7 +12,11 @@ typedef long long           int64;
 typedef unsigned __int64   uint64;
 typedef __int64             int64;
 #endif
+#ifdef __BEOS__ //XXX this fixes the size_t definition problem, as gcc on BeOS
+typedef unsigned long      uint32; // wants size_t to be unsigned long iso int
+#else
 typedef unsigned int       uint32;
+#endif
 typedef int                 int32;
 typedef unsigned short     uint16;
 typedef short               int16;

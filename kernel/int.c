@@ -17,7 +17,8 @@
 
 struct io_handler {
 	struct io_handler *next;
-	int (*func)(void);
+	int (*func)(void*);
+	void* data;
 };
 
 static struct io_handler **io_handlers = NULL;
@@ -43,7 +44,7 @@ int int_init2(kernel_args *ka)
 	return arch_int_init2(ka);
 }
 
-int int_set_io_interrupt_handler(int vector, int (*func)(void))
+int int_set_io_interrupt_handler(int vector, int (*func)(void*), void* data)
 {
 	struct io_handler *io;
 	
@@ -54,6 +55,7 @@ int int_set_io_interrupt_handler(int vector, int (*func)(void))
 	if(io == NULL)
 		return ERR_NO_MEMORY;
 	io->func = func;
+	io->data = data;
 
 	acquire_spinlock(&int_handler_list_spinlock);
 	io->next = io_handlers[vector];
@@ -63,6 +65,50 @@ int int_set_io_interrupt_handler(int vector, int (*func)(void))
 	arch_int_enable_io_interrupt(vector);
 
 	return NO_ERROR;
+}
+
+int int_remove_io_interrupt_handler(int vector, int (*func)(void*), void* data)
+{
+	struct io_handler *io, *prev = NULL;
+
+	// lock the structures down so it is not modified while we search
+	acquire_spinlock(&int_handler_list_spinlock);
+	
+	// start at the beginning
+	io = io_handlers[vector];
+	
+	// while not at end
+	while(io != NULL) {
+		// see if we match both the function & data
+		if (io->func == func && io->data == data)
+			break;
+		
+		// Store our backlink and move to next
+		prev = io;
+		io = io->next;
+	}
+	
+	// If we found it
+	if (io != NULL) {
+		// unlink it, taking care of the change it was the first in line
+		if (prev != NULL)
+			prev->next = io->next;
+		else
+			io_handlers[vector] = io->next;
+	}
+
+	// release our lock as we're done with the table	
+	release_spinlock(&int_handler_list_spinlock);
+
+	// and disable the IRQ if nothing left
+	if (io != NULL) {
+		if (prev == NULL && io->next == NULL)
+			arch_int_disable_io_interrupt(vector);
+
+		kfree(io);
+	}
+
+	return (io != NULL) ? NO_ERROR : ERR_INVALID_ARGS;
 }
 
 int int_io_interrupt_handler(int vector)
@@ -77,7 +123,7 @@ int int_io_interrupt_handler(int vector)
 		
 		io = io_handlers[vector];
 		while(io != NULL) {
-			temp_ret = io->func();
+			temp_ret = io->func(io->data);
 			if(temp_ret == INT_RESCHEDULE)
 				ret = INT_RESCHEDULE;
 			io = io->next;
