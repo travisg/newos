@@ -19,16 +19,16 @@ extern "C"
 #endif
 
 
-struct __FILE;	/* declare as opaque type */
+struct __FILE {
+	int fd; 		/* system file descriptor */
+};
 typedef struct __FILE FILE;
 
 extern FILE *stdin;
 extern FILE *stdout;
 extern FILE *stderr;
 
-
 #define EOF -1
-
 
 int printf(char const *format, ...) __PRINTFLIKE(1,2);
 int fprintf(FILE *stream, char const *format, ...) __PRINTFLIKE(2,3);

@@ -9,7 +9,7 @@
 
 
 #include <newos/types.h>
-
+#include <sys/syscalls.h>
 
 #ifdef __cplusplus
 extern "C" {

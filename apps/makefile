@@ -27,6 +27,7 @@ include $(addsuffix /makefile, $(addprefix $(APPS_DIR)/, \
 	inputd \
 	window_server \
 	guiapp \
+	disktest \
 ))
 
 

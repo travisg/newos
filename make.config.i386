@@ -18,6 +18,10 @@ KERNEL_ADDONS += $(addprefix $(KERNEL_ADDONS_BUILD_DIR)/, \
 	dev/arch/i386/floppy/floppy \
 )
 
+APPS := $(addprefix $(APPS_BUILD_DIR)/, \
+	disktest/disktest \
+)
+
 # unused
 #	dev/arch/i386/ide/ide \
 #	dev/arch/i386/ide2/ide \

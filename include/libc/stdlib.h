@@ -20,6 +20,8 @@ int	      atoi(char const *);
 unsigned int  atoui(const char *num);
 long          atol(const char *num);
 unsigned long atoul(const char *num);
+long long strtoll(const char *, char **, int);
+unsigned long long strtoull(const char *, char **, int);
 
 void * malloc(size_t);
 void   free(void *);
