@@ -1,0 +1,14 @@
+/*
+** Copyright 2003 Graham Batty. All rights reserved.
+** Distributed under the terms of the NewOS License
+*/
+
+#ifndef __newos__libcxx_ciso646__
+# define __newos__libcxx_ciso646__
+
+namespace std
+{
+# include <iso646.h>
+}
+
+#endif

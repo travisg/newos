@@ -1,0 +1,14 @@
+/*
+** Copyright 2003 Graham Batty. All rights reserved.
+** Distributed under the terms of the NewOS License
+*/
+
+#ifndef __newos__libcxx_cctype__
+# define __newos__libcxx_cctype__
+
+namespace std
+{
+# include <ctype.h>
+}
+
+#endif

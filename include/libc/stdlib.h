@@ -82,10 +82,7 @@ void _exit(int);
 
 
 #ifdef __cplusplus
-void * operator new (size_t);
-void * operator new[] (size_t);
-void operator delete (void *);
-void operator delete[] (void *);
+# include <new>
 #endif
 
 #define max(a, b) ((a) > (b) ? (a) : (b))

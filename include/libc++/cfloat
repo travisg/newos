@@ -1,0 +1,14 @@
+/*
+** Copyright 2003 Graham Batty. All rights reserved.
+** Distributed under the terms of the NewOS License
+*/
+
+#ifndef __newos__libcxx_cfloat__
+# define __newos__libcxx_cfloat__
+
+namespace std
+{
+# include <float.h>
+}
+
+#endif
