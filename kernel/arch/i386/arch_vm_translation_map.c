@@ -326,7 +326,7 @@ static int query_tmap(vm_translation_map *map, addr_t va, addr_t *out_physical, 
 	} while(err < 0);
 	index = VADDR_TO_PTENT(va);
 
-	*out_physical = ADDR_REVERSE_SHIFT(pt[index].addr);
+	*out_physical = ADDR_REVERSE_SHIFT(pt[index].addr) | (va & 0xfff);
 
 	// read in the page state flags, clearing the modified and accessed flags in the process
 	*out_flags = 0;

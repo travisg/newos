@@ -56,6 +56,11 @@ static void _set_gate(desc_table *gate_addr, unsigned int addr_t, int type, int 
 void arch_int_enable_io_interrupt(int irq)
 {
 	if(irq < 0x20 || irq >= 0x30) return;
+
+	// if this interrupt is >= 0x28, then enable the cascade interrupt
+	if(irq >= 0x28)
+		arch_int_enable_io_interrupt(0x22);
+
 	irq -= 0x20;
 	// if this is a external interrupt via 8239, enable it here
 	if (irq < 8)

@@ -131,7 +131,7 @@ int int_io_interrupt_handler(int vector)
 	acquire_spinlock(&io_vectors[vector].vector_lock);
 
 	if(io_vectors[vector].handler_list == NULL) {
-		dprintf("unhandled io interrupt %d\n", vector);
+		dprintf("unhandled io interrupt 0x%x\n", vector);
 	} else {
 		struct io_handler *io;
 		int temp_ret;

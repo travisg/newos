@@ -13,7 +13,7 @@
 //  info: tells things that are important but not an error
 //  error: used if something has gone wrong
 //
-// common usage is 
+// common usage is
 //  SHOW_{FLOW,INFO,ERROR}( seriousness, format string, parameters... );
 //  SHOW_{FLOW,INFO,ERROR}0( seriousness, string );
 //
@@ -24,7 +24,7 @@
 // to specify the module that created the message you have
 // to define a string called
 //  DEBUG_MSG_PREFIX
-// you dynamically speficify the maximum seriousness level by defining 
+// you dynamically speficify the maximum seriousness level by defining
 // the following variables/macros
 //  debug_level_flow
 //  debug_level_info
@@ -35,7 +35,7 @@
 //  DEBUG_MAX_LEVEL_INFO
 //  DEBUG_MAX_LEVEL_ERRROR
 //
-// you _can_ ask to delay execution after each printed message 
+// you _can_ ask to delay execution after each printed message
 // by defining the duration (in ms) via
 //  DEBUG_WAIT_ON_MSG (for flow and info)
 //  DEBUG_WAIT_ON_ERROR (for error)
@@ -43,7 +43,7 @@
 #ifdef DEBUG_WAIT_ON_MSG
 #define DEBUG_WAIT thread_snooze( DEBUG_WAIT_ON_MSG );
 #else
-#define DEBUG_WAIT 
+#define DEBUG_WAIT
 #endif
 
 #ifdef DEBUG_WAIT_ON_ERROR
@@ -53,15 +53,15 @@
 #endif
 
 #ifndef DEBUG_MAX_LEVEL_FLOW
-#define DEBUG_MAX_LEVEL_FLOW 4
+#define DEBUG_MAX_LEVEL_FLOW 255
 #endif
 
 #ifndef DEBUG_MAX_LEVEL_INFO
-#define DEBUG_MAX_LEVEL_INFO 4
+#define DEBUG_MAX_LEVEL_INFO 255
 #endif
 
 #ifndef DEBUG_MAX_LEVEL_ERROR
-#define DEBUG_MAX_LEVEL_ERROR 4
+#define DEBUG_MAX_LEVEL_ERROR 255
 #endif
 
 #ifndef DEBUG_MSG_PREFIX
