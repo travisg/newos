@@ -210,6 +210,10 @@ $(warning found newos toolchain!)
 	OBJCOPY = $(TOOLCHAIN_ARCH)-newos-objcopy
 	STRIP = $(TOOLCHAIN_ARCH)-newos-strip
 	SIZE = $(TOOLCHAIN_ARCH)-newos-size
+else
+$(warning WARNING: custom newos toolchain not found!)
+$(warning download the appropriate toolchain for your build environment)
+$(warning at http://newos.sourceforge.net/download.php)
 endif
 
 GLOBAL_CFLAGS += -finline -nostdinc -fno-builtin
