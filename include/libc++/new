@@ -6,7 +6,7 @@
 #ifndef __newos__libcxx_new__
 # define __newos__libcxx_new__
 
-# include <stddef.h> // XXX should be cstddef
+# include <cstddef>
 # include <exception>
 
 # ifndef __cplusplus

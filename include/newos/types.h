@@ -9,10 +9,6 @@
 
 #include INC_ARCH(arch,types.h)
 
-#ifndef NULL
-#define NULL 0
-#endif
-
 #ifndef __cplusplus
 
 #define false 0
@@ -61,11 +57,15 @@ typedef int bool;
 #define __SIZE_T_INT        1
 #endif
 
+// note that we only declare a proxy typedef here for size_t, called _newos_size_t
+// which stddef.h then retypedefs as the actual size_t. ssize_t is not C++ standard,
+// so it belongs here as well as anywhere.
+
 #if __SIZE_T_LONG
-typedef unsigned long       size_t;
+typedef unsigned long       _newos_size_t;
 typedef signed long         ssize_t;
 #elif __SIZE_T_INT
-typedef unsigned int        size_t;
+typedef unsigned int        _newos_size_t;
 typedef signed int          ssize_t;
 #else
 #error "Don't know what size_t should be (int or long)!"
@@ -93,6 +93,8 @@ typedef int proc_id;
 typedef int sem_id;
 typedef int port_id;
 typedef int image_id;
+
+# include <stddef.h>
 
 #endif
 
