@@ -172,7 +172,7 @@ ifeq ($(ARCH),ppc)
 		OBJCOPY = ppc-elf-objcopy
 		STRIP = ppc-elf-strip
 	endif
-	GLOBAL_CFLAGS = -fno-pic -O
+	GLOBAL_CFLAGS = -fno-pic -O -D__PPC__
 	GLOBAL_LDFLAGS =
 	TOOLCHAIN_ARCH = ppc
 endif

@@ -43,5 +43,5 @@ tempstack:
 tempstack_end:
 	
 .data
-#include "boot/ppc/final.asminclude"
+#include "build/ppc/boot/final.asminclude"
 

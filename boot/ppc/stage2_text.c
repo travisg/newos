@@ -2,9 +2,9 @@
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
-#include <libc/string.h>
-#include <libc/stdarg.h>
-#include <libc/printf.h>
+#include <string.h>
+#include <stdarg.h>
+#include <stdio.h>
 #include <boot/stage2.h>
 #include "stage2_priv.h"
 
@@ -154,7 +154,7 @@ static void draw_char(unsigned char c, int x, int y)
 	int i,j;
 	unsigned char *base = &framebuffer[y*screen_size_x + x];
 	unsigned char line;
-	
+
 	for(i=0; i<CHAR_HEIGHT; i++) {
 		line = FONT[c*CHAR_HEIGHT + i];
 		for(j=0; j<CHAR_WIDTH; j++) {
@@ -220,8 +220,8 @@ int s2_text_init(kernel_args *ka)
 	char_x = char_y = 0;
 
 	num_cols = screen_size_x / CHAR_WIDTH;
-	num_rows = screen_size_y / CHAR_HEIGHT;	
-	
+	num_rows = screen_size_y / CHAR_HEIGHT;
+
 	for(i = 0; i<screen_size_x * screen_size_y; i++) {
 		framebuffer[i] = back_color;
 	}
