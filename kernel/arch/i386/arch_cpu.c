@@ -19,6 +19,7 @@
 
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 /* a few debug functions that get added to the kernel debugger menu */
 static void dbg_in(int argc, char **argv);
