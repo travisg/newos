@@ -12,6 +12,11 @@
 #define KERNEL_SIZE P3_AREA_LEN
 #define KERNEL_TOP  (KERNEL_BASE + (KERNEL_SIZE - 1))
 
+#define KERNEL_ADDR_MASK 0x80000000
+
+// a macro to test if a pointer is inside kernel space
+#define is_kernel_address(x) (((addr_t)(x)) & KERNEL_ADDR_MASK)
+
 /*
 ** User space layout is a little special:
 ** The user space does not completely cover the space not covered by the kernel.
@@ -23,6 +28,9 @@
 #define USER_BASE   (U0_AREA + 0x100000)
 #define USER_SIZE   (U0_AREA_LEN - (0x10000 + 0x100000))
 #define USER_TOP    (USER_BASE + USER_SIZE)
+
+// a macro to test if a pointer is inside user space
+#define is_user_address(x) (((addr_t)(x)) >= USER_BASE && ((addr_t)(x)) <= USER_TOP)
 
 #define USER_STACK_REGION (USER_BASE + USER_SIZE - USER_STACK_REGION_SIZE)
 #define USER_STACK_REGION_SIZE 0x10000000

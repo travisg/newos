@@ -45,12 +45,11 @@ void sh4_set_user_pgdir(addr_t pgdir)
 
 void sh4_invl_page(addr_t va)
 {
-	int state;
 	int i;
 
 	va = ROUNDOWN(va, PAGE_SIZE);
 
-	state = int_disable_interrupts();
+	int_disable_interrupts();
 
 	// wipe it out of the data tlbs
 	for(i=0; i<UTLB_COUNT; i++) {
@@ -66,7 +65,7 @@ void sh4_invl_page(addr_t va)
 			ia->valid = 0;
 	}
 
-	int_restore_interrupts(state);
+	int_restore_interrupts();
 }
 
 void arch_cpu_invalidate_TLB_range(addr_t start, addr_t end)
@@ -86,10 +85,9 @@ void arch_cpu_invalidate_TLB_list(addr_t pages[], int num_pages)
 
 void arch_cpu_global_TLB_invalidate()
 {
-	int state;
 	int i;
 
-	state = int_disable_interrupts();
+	int_disable_interrupts();
 
 	// wipe out the data tlbs
 	for(i=0; i<UTLB_COUNT; i++) {
@@ -103,7 +101,12 @@ void arch_cpu_global_TLB_invalidate()
 		ia->valid = 0;
 	}
 
-	int_restore_interrupts(state);
+	int_restore_interrupts();
+}
+
+void arch_cpu_sync_icache(void *address, size_t len)
+{
+	PANIC_UNIMPLEMENTED();
 }
 
 int arch_cpu_user_memcpy(void *to, const void *from, size_t size, addr_t *fault_handler)

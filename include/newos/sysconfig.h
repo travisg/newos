@@ -42,6 +42,14 @@
 #define _MAX_CPUS 1
 #endif
 
+#if ARCH_sh4
+/* sh-4 will not support smp, ever */
+#undef _WITH_SMP
+#define _WITH_SMP 0
+#undef _MAX_CPUS
+#define _MAX_CPUS 1
+#endif
+
 #else
 
 #endif

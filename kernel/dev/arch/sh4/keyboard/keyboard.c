@@ -1,5 +1,5 @@
 /*
-** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2004, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #include <kernel/kernel.h>
@@ -12,6 +12,7 @@
 #include <kernel/lock.h>
 #include <kernel/fs/devfs.h>
 #include <kernel/arch/cpu.h>
+#include <kernel/dev/arch/sh4/keyboard/keyboard.h>
 #include <kernel/dev/arch/sh4/maple/maple_bus.h>
 #include <newos/errors.h>
 
@@ -391,7 +392,7 @@ static int keyboard_thread()
 	return 0;
 }
 
-int setup_keyboard()
+static int setup_keyboard()
 {
 	int i;
 
@@ -410,7 +411,7 @@ int setup_keyboard()
 		uint32 func;
 
 		sprintf(temp,  "/dev/bus/maple/%d/0/ctrl", i);
-		keyboard.fd = sys_open(temp, STREAM_TYPE_DEVICE, 0);
+		keyboard.fd = sys_open(temp, 0);
 		if(keyboard.fd < 0)
 			continue;
 
@@ -427,7 +428,7 @@ int setup_keyboard()
 	if(keyboard.fd < 0)
 		return -1;
 
-	keyboard.thread = thread_create_kernel_thread("maple_keyboard_thread", &keyboard_thread, THREAD_HIGH_PRIORITY);
+	keyboard.thread = thread_create_kernel_thread("maple_keyboard_thread", &keyboard_thread, NULL);
 	thread_resume_thread(keyboard.thread);
 
 	return 0;

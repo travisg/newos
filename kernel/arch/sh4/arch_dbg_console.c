@@ -50,6 +50,11 @@ int arch_dbg_con_init(kernel_args *ka)
 	return 0;
 }
 
+int arch_dbg_con_init2(kernel_args *ka)
+{
+	return 0;
+}
+
 char arch_dbg_con_read()
 {
 	volatile uint16 *status = (uint16*)0xffe8001c;

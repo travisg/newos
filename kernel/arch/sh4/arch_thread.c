@@ -1,5 +1,5 @@
 /*
-** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2004, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #include <kernel/kernel.h>
@@ -36,8 +36,11 @@ int arch_thread_init_thread_struct(struct thread *t)
 	return 0;
 }
 
-int arch_thread_initialize_kthread_stack(struct thread *t, int (*start_func)(void), void (*entry_func)(void), void (*exit_func)(void))
+int arch_thread_initialize_kthread_stack(struct thread *t, int (*start_func)(void))
 {
+	PANIC_UNIMPLEMENTED();
+
+#if 0
 	unsigned int *kstack = (unsigned int *)t->kernel_stack_base;
 	unsigned int kstack_size = KSTACK_SIZE;
 	unsigned int *kstack_top = kstack + kstack_size / sizeof(unsigned int);
@@ -72,6 +75,7 @@ int arch_thread_initialize_kthread_stack(struct thread *t, int (*start_func)(voi
 
 	// save the sp
 	t->arch_info.sp = kstack_top;
+#endif
 
 	return 0;
 }
@@ -101,12 +105,12 @@ void arch_thread_context_switch(struct thread *t_from, struct thread *t_to)
 void arch_thread_dump_info(void *info)
 {
 	struct arch_thread *at = (struct arch_thread *)info;
-	dprintf("\tsp: 0x%x\n", at->sp);
+	dprintf("\tsp: %p\n", at->sp);
 }
 
-void arch_thread_enter_uspace(addr_t entry, void *args, addr_t ustack_top)
+void arch_thread_enter_uspace(struct thread *t, addr_t entry, void *args, addr_t ustack_top)
 {
-    dprintf("arch_thread_entry_uspace: entry 0x%x, ustack_top 0x%x\n",
+    dprintf("arch_thread_entry_uspace: entry 0x%lx, ustack_top 0x%lx\n",
 	        entry, ustack_top);
 
     int_disable_interrupts();
@@ -117,7 +121,7 @@ void arch_thread_enter_uspace(addr_t entry, void *args, addr_t ustack_top)
 	// never get to here
 }
 
-void arch_thread_switch_kstack_and_call(struct thread *t, addr_t new_kstack, void (*func)(void *), void *arg)
+void arch_thread_switch_kstack_and_call(addr_t new_kstack, void (*func)(void *), void *arg)
 {
 	sh4_switch_stack_and_call(new_kstack, func, arg);
 }

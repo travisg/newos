@@ -254,7 +254,12 @@ GLOBAL_ASFLAGS += -D__ASSEMBLY__
 LIBGCC := -lgcc
 LIBGCC_PATH := $(dir $(shell $(CC) $(GLOBAL_CFLAGS) -print-libgcc-file-name))
 $(warning LIBGCC_PATH = $(LIBGCC_PATH))
+ifneq ($(ARCH),sh4)
 LIBGCC_INCLUDE += -I$(LIBGCC_PATH)/include
+else
+LIBGCC_INCLUDE += -I$(LIBGCC_PATH)/../../include
+endif
+
 
 # print some info
 $(warning ARCH = $(ARCH))

@@ -1,5 +1,5 @@
 /*
-** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2004, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #include <boot/stage2.h>
@@ -18,6 +18,12 @@
 #define MAX_ARGS 16
 
 struct vector *vector_table;
+
+bool arch_int_are_interrupts_enabled(void)
+{
+	PANIC_UNIMPLEMENTED();
+	return false;
+}
 
 void arch_int_enable_io_interrupt(int irq)
 {
@@ -61,6 +67,7 @@ static int sh4_handle_exception(void *_frame)
 			ret = general_protection_fault(frame->excode);
 			break;
 		case 11:  { // TRAPA
+#if 0
 			/*
 			** arg layout:
 			** r4-r7:  arg 1 - 4
@@ -89,6 +96,9 @@ static int sh4_handle_exception(void *_frame)
 			ret = syscall_dispatcher(*trap >> 2, args, &retcode);
 			frame->r0 = retcode & 0xffffffff;
 			frame->r1 = retcode >> 32;
+#else
+			panic("implement syscall stuff\n");
+#endif
 			break;
 		}
 		case 9: { // FPU exception
@@ -145,11 +155,11 @@ static int sh4_handle_exception(void *_frame)
 			ret = int_io_interrupt_handler(frame->excode);
 	}
 	if(ret == INT_RESCHEDULE) {
-		int state = int_disable_interrupts();
+		int_disable_interrupts();
 		GRAB_THREAD_LOCK();
 		thread_resched();
 		RELEASE_THREAD_LOCK();
-		int_restore_interrupts(state);
+		int_restore_interrupts();
 	}
 	if(!(frame->ssr & 0x40000000) || (frame->excode == 11)) {
 		thread_atkernel_exit();

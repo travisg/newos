@@ -1,5 +1,5 @@
 /*
-** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2004, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #include <kernel/kernel.h>
@@ -7,7 +7,9 @@
 #include <arch/sh4/sh4.h>
 #include <kernel/int.h>
 #include <kernel/debug.h>
+#include <kernel/time.h>
 #include <kernel/timer.h>
+#include <kernel/arch/timer.h>
 #include <kernel/arch/cpu.h>
 
 #define timer_rate 12500000
@@ -18,11 +20,12 @@
 static const bigtime_t system_time_timer_period = (bigtime_t)SYSTEM_TIME_TIMER_QUANTA * timer_rate / 1000000;
 static volatile bigtime_t base_system_time = 0;
 
+#if 0
 bigtime_t system_time()
 {
 	bigtime_t outtime;
 	uint32 timer_val;
-	int state = int_disable_interrupts();
+	int_disable_interrupts();
 
 restart:
 	timer_val = SYSTEM_TIME_TIMER_QUANTA - *(uint32 *)TCNT1;
@@ -38,10 +41,11 @@ restart:
 		}
 	}
 
-	int_restore_interrupts(state);
+	int_restore_interrupts();
 
 	return outtime;
 }
+#endif
 
 static void start_timer(int timer)
 {
@@ -88,8 +92,10 @@ static void setup_timer(int timer, bigtime_t relative_timeout)
 	}
 }
 
-void arch_timer_set_hardware_timer(bigtime_t timeout)
+void arch_timer_set_hardware_timer(bigtime_t timeout, int type)
 {
+	PANIC_UNIMPLEMENTED();
+	
 	stop_timer(0);
 	setup_timer(0, timeout);
 	start_timer(0);
@@ -122,13 +128,11 @@ static int timer_interrupt1()
 
 int arch_init_timer(kernel_args *ka)
 {
-	int i;
-	uint8 old_val8;
 	uint16 old_val16;
 	dprintf("arch_init_timer: entry\n");
 
-	int_set_io_interrupt_handler(32, &timer_interrupt0, NULL);
-	int_set_io_interrupt_handler(33, &timer_interrupt1, NULL);
+	int_set_io_interrupt_handler(32, &timer_interrupt0, NULL, "timer0");
+	int_set_io_interrupt_handler(33, &timer_interrupt1, NULL, "timer1");
 
 	// stop all of the timers
 	*(uint8 *)TSTR = 0;

@@ -1,5 +1,5 @@
 /* 
-** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2004, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #include <kernel/kernel.h>
@@ -7,6 +7,11 @@
 #include <kernel/arch/debug.h>
 
 int arch_dbg_init(kernel_args *ka)
+{
+	return 0;
+}
+
+int arch_dbg_init2(kernel_args *ka)
 {
 	return 0;
 }
