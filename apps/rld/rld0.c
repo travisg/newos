@@ -9,9 +9,9 @@ int
 RLD_STARTUP(void *args)
 {
 #if DEBUG_RLD
-	sys_close(0); open("/dev/dprint", 0); /* stdin   */
-	sys_close(1); open("/dev/dprint", 0); /* stdout  */
-	sys_close(2); open("/dev/dprint", 0); /* stderr  */
+	_kern_close(0); _kern_open("/dev/dprint", 0); /* stdin   */
+	_kern_close(1); _kern_open("/dev/dprint", 0); /* stdout  */
+	_kern_close(2); _kern_open("/dev/dprint", 0); /* stderr  */
 #endif
 	return rldmain(args);
 }

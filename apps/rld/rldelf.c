@@ -247,7 +247,7 @@ count_regions(char const *buff, int phnum, int phentsize)
 			case PT_LOAD:
 				retval+= 1;
 				if(pheaders->p_memsz!= pheaders->p_filesz) {
-					unsigned A= pheaders->p_vaddr+pheaders->p_memsz;
+					unsigned A= pheaders->p_vaddr+pheaders->p_memsz-1;
 					unsigned B= pheaders->p_vaddr+pheaders->p_filesz-1;
 
 					A= PAGE_BASE(A);
@@ -367,7 +367,7 @@ parse_program_headers(image_t *image, char *buff, int phnum, int phentsize)
 					/*
 					 * may require splitting
 					 */
-					unsigned A= pheaders->p_vaddr+pheaders->p_memsz;
+					unsigned A= pheaders->p_vaddr+pheaders->p_memsz-1;
 					unsigned B= pheaders->p_vaddr+pheaders->p_filesz-1;
 
 					A= PAGE_BASE(A);
@@ -494,6 +494,10 @@ map_image(int fd, char const *path, image_t *image, bool fixed)
 		}
 
 		if(image->regions[i].flags & RFLAG_ANON) {
+#if DEBUG_RLD
+			printf("rld map_image: creating anon region: name '%s' address 0x%x specifier 0x%x size 0x%x\n",
+				region_name, load_address, addr_specifier, image->regions[i].vmsize);
+#endif
 			image->regions[i].id= _kern_vm_create_anonymous_region(
 				region_name,
 				(void **)&load_address,
@@ -504,11 +508,17 @@ map_image(int fd, char const *path, image_t *image, bool fixed)
 			);
 
 			if(image->regions[i].id < 0) {
+				printf("rld map_image: err %d from create_anon_region\n", image->regions[i].id);
 				goto error;
 			}
 			image->regions[i].delta  = load_address - image->regions[i].vmstart;
 			image->regions[i].vmstart= load_address;
 		} else {
+#if DEBUG_RLD
+			printf("rld map_image: mapping file: name '%s' address 0x%x specifier 0x%x size 0x%x path '%s' offset 0x%Lx\n",
+				region_name, load_address, addr_specifier, image->regions[i].vmsize,
+				path, ROUNDOWN(image->regions[i].fdstart, PAGE_SIZE));
+#endif
 			image->regions[i].id= _kern_vm_map_file(
 				region_name,
 				(void **)&load_address,
@@ -520,6 +530,7 @@ map_image(int fd, char const *path, image_t *image, bool fixed)
 				ROUNDOWN(image->regions[i].fdstart, PAGE_SIZE)
 			);
 			if(image->regions[i].id < 0) {
+				printf("rld map_image: err %d from map_file (address 0x%x)\n", image->regions[i].id, load_address);
 				goto error;
 			}
 			image->regions[i].delta  = load_address - image->regions[i].vmstart;
