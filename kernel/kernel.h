@@ -12,6 +12,8 @@
 #define SET_BIT(a, b) ((a) | (1 << (b)))
 #define CLEAR_BIT(a, b) ((a) & (~(1 << (b))))
 
+#define _PACKED __attribute__((packed)) 	
+
 // memory layout
 #define KERNEL_BASE 0x80000000
 #define KERNEL_SIZE 0x80000000

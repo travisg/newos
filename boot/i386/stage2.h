@@ -27,7 +27,8 @@ typedef struct {
 	unsigned int cpu_kstack_len[MAX_BOOT_CPUS];
 	// architecture specific
 	unsigned int system_time_cv_factor;
-	unsigned int pgdir;
+	unsigned int phys_pgdir;
+	unsigned int vir_pgdir;
 	unsigned int num_pgtables;
 	unsigned int pgtables[MAX_BOOT_PTABLES];
 	unsigned int phys_idt;

@@ -31,7 +31,7 @@ struct Elf32_Ehdr {
 	Elf32_Half		e_shentsize;
 	Elf32_Half		e_shnum;
 	Elf32_Half		e_shstrndx;
-};
+} _PACKED;
 
 #define ELFCLASS32 1
 #define ELFDATA2LSB 1
@@ -47,7 +47,7 @@ struct Elf32_Shdr {
 	Elf32_Word		sh_info;
 	Elf32_Word		sh_addralign;
 	Elf32_Word		sh_entsize;
-};
+} _PACKED;
 
 #define SHT_NULL 0
 #define SHT_PROGBITS 1
@@ -77,7 +77,7 @@ struct Elf32_Phdr {
 	Elf32_Word		p_memsz;
 	Elf32_Word		p_flags;
 	Elf32_Word		p_align;
-};
+} _PACKED;
 
 #define PF_X		0x1
 #define PF_W		0x2
@@ -102,7 +102,7 @@ struct Elf32_Sym {
 	unsigned char	st_info;
 	unsigned char 	st_other;
 	Elf32_Half		st_shndx;
-};
+} _PACKED;
 
 #define ELF32_ST_BIND(i) ((i) >> 4)
 #define ELF32_ST_TYPE(i) ((i) & 0xf)
@@ -119,13 +119,13 @@ struct Elf32_Sym {
 struct {
 	Elf32_Addr r_offset;
 	Elf32_Word r_info;
-} Elf32_Rel;
+}  _PACKED Elf32_Rel;
 
 struct {
 	Elf32_Addr r_offset;
 	Elf32_Word r_info;
 	Elf32_Sword r_addend;
-} Elf32_Rela;
+}  _PACKED Elf32_Rela;
 
 #define ELF32_R_SYM(i) ((i) >> 8)
 #define ELF32_R_TYPE(i) ((unsigned char)(i))
@@ -199,14 +199,10 @@ int elf_load(const char *path, struct proc *p, int flags, addr *entry)
 
 	for(i=0; i < eheader.e_phnum; i++) {
 		char area_name[64];
-		char num[8];
 		area_id a;
 		char *area_addr;
 		
-		strcpy(area_name, path);
-		strcat(area_name, "_seg");
-		sprintf(num, "%d", i);
-		strcat(area_name, num);
+		sprintf(area_name, "%s_seg%d", path, i);
 		
 		area_addr = (char *)pheaders[i].p_vaddr;
 		a = vm_create_area(p->aspace, area_name, (void **)&area_addr, AREA_EXACT_ADDRESS,
@@ -223,10 +219,7 @@ int elf_load(const char *path, struct proc *p, int flags, addr *entry)
 
 	dprintf("elf_load: done!\n");
 
-	vfs_close(fd);
-
-	return 0;
-	
+	err = 0;
 
 error:
 	vfs_close(fd);

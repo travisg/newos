@@ -101,7 +101,7 @@ struct area *vm_find_area_by_name(struct aspace *aspace, const char *name)
 struct area *_vm_create_area_struct(struct aspace *aspace, char *name, unsigned int base, unsigned int size, unsigned int lock)
 {
 	struct area *area;
-	struct area *t, *last = NULL;
+	struct area *a, *last = NULL;
 	
 	// allocate an area struct to represent this area
 	area = (struct area *)kmalloc(sizeof(struct area));	
@@ -115,26 +115,27 @@ struct area *_vm_create_area_struct(struct aspace *aspace, char *name, unsigned 
 	// insert into the list
 	// we'll need to search for the spot
 	// check for address overlaps
-	t = aspace->area_list;
-	while(t != NULL) {
-		if(t->base > base) {
-			if(base + size > t->base) {
+	a = aspace->area_list;
+	while(a != NULL) {
+//		dprintf("create_area_struct: a = 0x%x. base = 0x%x, size = 0x%x\n", a, a->base, a->size);
+		if(a->base > base) {
+			if(base + size > a->base) {
 				// overlap
 				kfree(area->name);
 				kfree(area);
 				return NULL;
 			}
-			area->next = t;
+			area->next = a;
 			if(last == NULL)
 				aspace->area_list = area;
 			else
 				last->next = area;
 			break;
 		}
-		last = t;
-		t = t->next;	
+		last = a;
+		a = a->next;	
 	}
-	if(t == NULL) {
+	if(a == NULL) {
 		area->next = NULL;
 		if(last == NULL)
 			aspace->area_list = area;
@@ -177,12 +178,26 @@ static area_id _vm_create_area(struct aspace *aspace, char *name, void **addr, i
 			base = 0;
 	
 			a = aspace->area_list;
-			if(a == NULL)
+			if(a == NULL) {
 				base = aspace->base;
-			else 
+			} else if(a != NULL && a->base > aspace->base) {
+				// lets try to build the area at the beginning of the aspace
+				if(aspace->base + size > a->base) {
+					// if we built it here, it would overlap, so let the loop below
+					// find the right spot
+					next_a = a->next;
+				} else {
+					// otherwise, we're done.
+					base = aspace->base;
+					a = NULL;
+				}
+			} else {
 				next_a = a->next;
+			}
 			while(a != NULL) {
+//				dprintf("a = 0x%x. base = 0x%x, size = 0x%x\n", a, a->base, a->size);
 				if(next_a != NULL) {
+//					dprintf("next_a = 0x%x. base = 0x%x, size = 0x%x\n", next_a, next_a->base, next_a->size);
 					if(next_a->base - (a->base + a->size) >= size) {
 						// we have a spot
 						base = a->base + a->size;
@@ -199,7 +214,7 @@ static area_id _vm_create_area(struct aspace *aspace, char *name, void **addr, i
 				if(next_a != NULL)
 					next_a = next_a->next;
 			}
-
+	
 			if(base == 0)
 				return -1;
 			*addr = (void *)base;

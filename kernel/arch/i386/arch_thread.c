@@ -7,16 +7,32 @@
 #include <arch_thread.h>
 #include <arch_cpu.h>
 
-struct arch_thread *arch_thread_create_thread_struct()
+int arch_proc_init_proc_struct(struct proc *p, bool kernel)
 {
-	struct arch_thread *at;
-	
-	at = (struct arch_thread *)kmalloc(sizeof(struct arch_thread));
-	if(at == NULL)
-		return NULL;
-	at->esp = NULL;
-	
-	return at;
+	if(!kernel) {
+		// user space
+		p->arch_info.pgdir = kmalloc(PAGE_SIZE);
+		if(p->arch_info.pgdir == NULL)
+			return -1;
+	} else {
+		// kernel
+		// this should only be called once, so find the pgdir area,
+		// which should map the kernel pgdir already
+		struct area *a;
+		
+		a = vm_find_area_by_name(vm_get_kernel_aspace(), "kernel_pgdir");
+		if(a == NULL)
+			return -1;
+		p->arch_info.pgdir = (unsigned int *)a->base;
+	}
+	return 0;
+}
+
+int arch_thread_init_thread_struct(struct thread *t)
+{
+	t->arch_info.esp = NULL;
+
+	return 0;
 }
 
 int arch_thread_initialize_kthread_stack(struct thread *t, int (*start_func)(void), void (*entry_func)(void))
@@ -24,7 +40,6 @@ int arch_thread_initialize_kthread_stack(struct thread *t, int (*start_func)(voi
 	unsigned int *kstack = (unsigned int *)t->kernel_stack_area->base;
 	unsigned int kstack_size = t->kernel_stack_area->size;
 	unsigned int *kstack_top = kstack + kstack_size / sizeof(unsigned int);
-	struct arch_thread *at;
 	int i;
 
 //	dprintf("arch_thread_initialize_kthread_stack: kstack 0x%p, start_func 0x%p, entry_func 0x%p\n",
@@ -56,16 +71,13 @@ int arch_thread_initialize_kthread_stack(struct thread *t, int (*start_func)(voi
 	}
 
 	// save the esp
-	at = (struct arch_thread *)t->arch_info;
-	at->esp = kstack_top;
+	t->arch_info.esp = kstack_top;
 	
 	return 0;
 }
 
 void arch_thread_context_switch(struct thread *t_from, struct thread *t_to)
 {
-	struct arch_thread *old_at = (struct arch_thread *)t_from->arch_info;
-	struct arch_thread *new_at = (struct arch_thread *)t_to->arch_info;
 #if 0
 	int i;
 
@@ -75,7 +87,7 @@ void arch_thread_context_switch(struct thread *t_from, struct thread *t_to)
 	for(i=0; i<11; i++)
 		dprintf("*esp[%d] (0x%x) = 0x%x\n", i, ((unsigned int *)new_at->esp + i), *((unsigned int *)new_at->esp + i));
 #endif
-	i386_context_switch(&old_at->esp, new_at->esp);
+	i386_context_switch(&t_from->arch_info.esp, t_to->arch_info.esp);
 }
 
 void arch_thread_dump_info(void *info)

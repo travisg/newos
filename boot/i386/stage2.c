@@ -181,19 +181,24 @@ void _start(unsigned int mem, char *str)
 	// Map the pg_dir into kernel space at 0xffc00000-0xffffffff
 	pgdir[1023] = (unsigned int)pgdir | DEFAULT_PAGE_FLAGS;
 
+	// also map it on the next vpage
+	new_pgtable[(next_vpage % 0x400000) / PAGE_SIZE] = (unsigned int)pgdir | DEFAULT_PAGE_FLAGS;
+	next_vpage += PAGE_SIZE;
+
 	// put the new page table into the page directory
 	// this maps the kernel at KERNEL_BASE
 	pgdir[KERNEL_BASE/(4*1024*1024)] = (unsigned int)new_pgtable | DEFAULT_PAGE_FLAGS;
 
 	// save the kernel args
 	ka->system_time_cv_factor = cv_factor;
-	ka->pgdir = (unsigned int)pgdir;
+	ka->phys_pgdir = (unsigned int)pgdir;
+	ka->vir_pgdir = (unsigned int)next_vpage - PAGE_SIZE;
 	ka->pgtables[0] = (unsigned int)new_pgtable;
 	ka->num_pgtables = 1;
 	ka->phys_idt = (unsigned int)idt;
-	ka->vir_idt = (unsigned int)next_vpage - PAGE_SIZE * 2;
+	ka->vir_idt = (unsigned int)next_vpage - PAGE_SIZE * 3;
 	ka->phys_gdt = (unsigned int)gdt;
-	ka->vir_gdt = (unsigned int)next_vpage - PAGE_SIZE;
+	ka->vir_gdt = (unsigned int)next_vpage - PAGE_SIZE * 2;
 	ka->mem_size = mem;
 	ka->str = str;
 	ka->bootdir = bootdir;
@@ -225,8 +230,8 @@ void _start(unsigned int mem, char *str)
 	dprintf("phys_alloc_range_high = 0x%x\n", ka->phys_alloc_range_high);
 	dprintf("virt_alloc_range_low = 0x%x\n", ka->virt_alloc_range_low);
 	dprintf("virt_alloc_range_high = 0x%x\n", ka->virt_alloc_range_high);
-#endif
 	dprintf("page_hole = 0x%x\n", ka->page_hole);
+#endif
 	dprintf("finding and booting other cpus...\n");
 	smp_boot(ka);
 

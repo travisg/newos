@@ -4,6 +4,7 @@
 #include <stage2.h>
 #include <vm.h>
 #include <smp.h>
+#include <arch_thread_struct.h>
 
 #define THREAD_IDLE_PRIORITY 0
 #define THREAD_NUM_PRIORITY_LEVELS 64
@@ -29,6 +30,7 @@ struct proc {
 	struct aspace *kaspace;
 	struct aspace *aspace;
 	struct thread *thread_list;
+	struct arch_proc arch_info;
 };
 
 struct thread {
@@ -46,7 +48,8 @@ struct thread {
 	struct area *kernel_stack_area;
 	struct area *user_stack_area;
 	// architecture dependant section
-	void *arch_info;
+//	void *arch_info;
+	struct arch_thread arch_info;
 };
 
 struct thread_queue {

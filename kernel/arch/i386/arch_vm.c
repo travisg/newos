@@ -19,15 +19,17 @@ int arch_vm_init(kernel_args *ka)
 
 int arch_vm_init2(kernel_args *ka)
 {
-	dprintf("arch_vm_init2: entry\n");
+	unsigned int *pgdir;
 	
+	dprintf("arch_vm_init2: entry\n");
+
 	// account for BIOS area and mark the pages unusable
 	vm_mark_page_range_inuse(0xa0000 / PAGE_SIZE, (0x100000 - 0xa0000) / PAGE_SIZE);
 
 	// account for the segment descriptor
 	gdt = (unsigned int *)ka->vir_gdt;	
 	vm_create_area(vm_get_kernel_aspace(), "gdt", (void *)&gdt, AREA_ALREADY_MAPPED, PAGE_SIZE, LOCK_RW|LOCK_KERNEL);
-	
+
 	return 0;
 }
 

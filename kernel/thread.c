@@ -24,7 +24,7 @@ struct thread_key {
 	thread_id id;
 };
 
-static struct proc *create_proc_struct(const char *name);
+static struct proc *create_proc_struct(const char *name, bool kernel);
 static int proc_struct_compare(void *_p, void *_key);
 static unsigned int proc_struct_hash(void *_p, void *_key, int range);
 
@@ -175,8 +175,7 @@ static struct thread *create_thread_struct(char *name)
 	t->q_next = NULL;
 	t->priority = -1;
 
-	t->arch_info = arch_thread_create_thread_struct();
-	if(t->arch_info == NULL)
+	if(arch_thread_init_thread_struct(t) < 0)
 		goto err2;
 	
 	return t;
@@ -333,7 +332,7 @@ static void _dump_thread_info(struct thread *t)
 	dprintf("kernel_stack_area: 0x%x\n", t->kernel_stack_area);
 	dprintf("user_stack_area:   0x%x\n", t->user_stack_area);
 	dprintf("architecture dependant section:\n");
-	arch_thread_dump_info(t->arch_info);
+	arch_thread_dump_info(&t->arch_info);
 
 	last_thread_dumped = t;
 }
@@ -449,7 +448,7 @@ int thread_init(kernel_args *ka)
 		&proc_struct_compare, &proc_struct_hash);
 
 	// create the kernel process
-	kernel_proc = create_proc_struct("kernel_proc");
+	kernel_proc = create_proc_struct("kernel_proc", true);
 	if(kernel_proc == NULL)
 		panic("could not create kernel proc!\n");
 
@@ -877,7 +876,7 @@ struct proc *proc_get_kernel_proc()
 	return kernel_proc;
 }
 
-static struct proc *create_proc_struct(const char *name)
+static struct proc *create_proc_struct(const char *name, bool kernel)
 {
 	struct proc *p;
 	
@@ -892,6 +891,11 @@ static struct proc *create_proc_struct(const char *name)
 	p->kaspace = vm_get_kernel_aspace();
 	p->aspace = NULL;
 	p->thread_list = NULL;
+	if(arch_proc_init_proc_struct(p, kernel) < 0) {
+		// XXX clean up proc struct
+		return NULL;
+	}
+	
 	return p;
 }
 
@@ -904,7 +908,7 @@ struct proc *proc_create_user_proc(const char *path, const char *name, int prior
 	
 	dprintf("proc_create_user_proc: entry '%s', name '%s'\n", path, name);
 	
-	p = create_proc_struct(name);
+	p = create_proc_struct(name, false);
 	if(p == NULL)
 		return NULL;
 	p->aspace = vm_create_aspace(name, USER_BASE, USER_SIZE);

@@ -353,7 +353,7 @@ static int smp_boot_all_cpus(kernel_args *ka)
 		*tramp_stack_ptr = ((unsigned int)final_stack) + STACK_SIZE * PAGE_SIZE - sizeof(unsigned int);
 		tramp_stack_ptr--;
 		// page dir
-		*tramp_stack_ptr = ka->pgdir;
+		*tramp_stack_ptr = ka->phys_pgdir;
 		tramp_stack_ptr--;
 
 		// put a gdt descriptor at the bottom of the stack

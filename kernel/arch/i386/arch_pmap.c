@@ -62,11 +62,14 @@ int arch_pmap_init2(kernel_args *ka)
 {
 	// now that the vm is initialized, create an area that represents
 	// the page hole
-	void *temp = (void *)page_hole;
+	void *temp;
 	
 	dprintf("arch_pmap_init2: entry\n");
 
+	temp = (void *)page_hole;
 	vm_create_area(vm_get_kernel_aspace(), "page_hole", &temp, AREA_ALREADY_MAPPED, PAGE_SIZE * 1024, LOCK_RW|LOCK_KERNEL);
+	temp = (void *)ka->vir_pgdir;
+	vm_create_area(vm_get_kernel_aspace(), "kernel_pgdir", &temp, AREA_ALREADY_MAPPED, PAGE_SIZE, LOCK_RW|LOCK_KERNEL);
 
 	return 0;
 }
