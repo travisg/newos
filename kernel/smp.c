@@ -393,6 +393,11 @@ int smp_init(kernel_args *ka)
 	return arch_smp_init(ka);
 }
 
+void smp_set_num_cpus(int num_cpus)
+{
+	smp_num_cpus = num_cpus;
+}
+	
 int smp_get_num_cpus()
 {
 	return smp_num_cpus;

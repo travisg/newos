@@ -26,6 +26,7 @@ int smp_enable_ici();
 int smp_disable_ici();
 
 int smp_get_num_cpus();
+void smp_set_num_cpus(int num_cpus);
 
 #include <kernel/arch/smp.h>
 #define smp_get_current_cpu() arch_smp_get_current_cpu()
