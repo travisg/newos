@@ -94,7 +94,7 @@ ifeq ($(ARCH),i386)
 floppy: floppy1
 
 floppy1: $(KERNEL) $(STAGE2) $(APPS) tools
-	$(BOOTMAKER) boot/config.ini --floppy -o $(FINAL)
+	$(BOOTMAKER) boot/$(ARCH)/config.ini --floppy -o $(FINAL)
 	ln -sf $(FINAL) final.$(ARCH)
 	ln -sf $(KERNEL) system.$(ARCH)
 
