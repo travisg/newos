@@ -74,7 +74,7 @@ static FILE *__create_FILE_struct(int fd, int flags)
 static int __delete_FILE_struct(int fd)
 {
     FILE *fNode, *fPrev;
-
+	sem_id sid;
     /* Search for the FILE for the file descriptor */
     fPrev = (FILE*)0;
     fNode = __open_file_stack_top;
@@ -94,11 +94,18 @@ static int __delete_FILE_struct(int fd)
         return EOF;
     }
 
-    /* free the FILE space/semaphore*/
-    close(fd);
-    _kern_sem_delete(fNode->sid);
+	/* Wait for the lock */
+	sid = fNode->sid;
+	_kern_sem_acquire(sid, 1);
+    
+	/* free the FILE space/semaphore*/
+    close(fNode->fd);
     free(fNode->buf);
     free(fNode);
+
+	/* Do we need to release before we delete? */
+	_kern_sem_release(sid, 1);
+    _kern_sem_delete(sid);
 
     /* Remove it from the list*/
     if(fNode == __open_file_stack_top)
@@ -154,6 +161,7 @@ int __stdio_deinit(void)
 
 	return 0;
 }
+
 
 FILE *fopen(const char *filename, const char *mode)
 {
@@ -214,6 +222,43 @@ FILE *fopen(const char *filename, const char *mode)
     return f;
 }
 
+
+long ftell(FILE* stream)
+{
+	fpos_t p;
+	_kern_sem_acquire(stream->sid, 1);
+	if(stream->flags & _STDIO_WRITE)
+	{
+		int err = write(stream->fd, stream->buf, stream->buf_pos);
+		stream->buf_pos = 0;
+		if(err < 0)
+		{
+			errno = EIO;
+			stream->flags |= _STDIO_ERROR;
+		}
+	}
+	p = lseek(stream->fd, 0, _SEEK_CUR) - ((stream->flags & _STDIO_UNGET) ? 1 : 0);
+	if(p < 0)
+	{
+		errno = EIO;
+	}
+	_kern_sem_release(stream->sid, 1);
+	
+	return p;
+}
+
+int fgetpos(FILE *stream, fpos_t *pos)
+{
+	fpos_t p = ftell(stream);
+	if(p < 0)
+	{
+		return p;
+	}
+	*pos = p;
+	return 0;
+}
+
+
 int fclose(FILE *stream)
 {
     int err;
@@ -231,8 +276,7 @@ int fflush(FILE *stream)
 		int err = 0;
         while(node != (FILE*)0)
         {
-            int e = fflush(node);
-            if(e == EOF)
+            if(fflush(node) == EOF)
                 err = EOF;
             node = node->next;
         }
@@ -241,19 +285,38 @@ int fflush(FILE *stream)
     else
     {
         _kern_sem_acquire(stream->sid, 1);
-        if(stream->flags & _STDIO_WRITE )
-        {
-            int err = write(stream->fd, stream->buf, stream->buf_pos);
-            stream->buf_pos = 0;
-			if(err < 0)
+		if(stream->buf_pos)
+		{
+			if(stream->flags & _STDIO_WRITE)
 			{
-				errno = EIO;
-				stream->flags |= _STDIO_ERROR;
-				_kern_sem_release(stream->sid, 1);
-				return EOF;
+				int err = write(stream->fd, stream->buf, stream->buf_pos);
+				stream->buf_pos = 0;
+				if(err < 0)
+				{
+					errno = EIO;
+					stream->flags |= _STDIO_ERROR;
+					_kern_sem_release(stream->sid, 1);
+					return EOF;
+				}
+
 			}
-			return err;
-        }
+			else if(stream->flags & _STDIO_READ)
+			{
+				off_t dif = stream->rpos - stream->buf_pos;
+				if(dif < 0)
+				{
+					dif = lseek(stream->fd, dif, SEEK_CUR);
+					stream->rpos = stream->buf_pos = 0;
+					if(dif < 0)
+					{
+						errno = EIO;
+						stream->flags |= _STDIO_ERROR;
+						_kern_sem_release(stream->sid, 1);
+						return EOF;
+					}
+				}
+			}
+		}
         _kern_sem_release(stream->sid, 1);
 		return 0;
     }
@@ -328,6 +391,115 @@ int ungetc(int c, FILE *stream)
 	return c;
 }
 
+int putc(int ch, FILE *stream)
+{
+	return fputc(ch, stream);
+}
+
+int fputc(int ch, FILE *stream)
+{
+	_kern_sem_acquire(stream->sid, 1);
+    if(stream->buf_pos  >= stream->buf_size)
+    {
+        int err = write(stream->fd, stream->buf, stream->buf_pos);
+        if(err < 0)
+        {
+            errno = EIO;
+            stream->flags |= _STDIO_ERROR;
+			_kern_sem_release(stream->sid, 1);
+			return EOF;
+        }
+        stream->buf_pos = 0;
+    }
+	stream->buf[stream->buf_pos++] = (unsigned char)ch;
+	_kern_sem_release(stream->sid, 1);
+    return ch;
+}
+
+size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream)
+{
+    unsigned char* tmp = (unsigned char*)ptr;
+    size_t i = nmemb;
+	size_t j = size;
+
+	_kern_sem_acquire(stream->sid, 1);
+
+	for(;i > 0; i--)
+    {
+		for(; j > 0; j--)
+		{
+			if(stream->buf_pos >= stream->buf_size)
+			{
+				int err = write(stream->fd, stream->buf, stream->buf_pos);
+				if(err < 0)
+				{
+					errno = EIO;
+					stream->flags |= _STDIO_ERROR;
+					_kern_sem_release(stream->sid, 1);
+					return nmemb - i;
+				}
+				stream->buf_pos = 0;
+			}
+			stream->buf[stream->buf_pos++] = *tmp++;
+		}
+		j = size;
+    }
+    _kern_sem_release(stream->sid, 1);
+	
+	return nmemb - i;
+}
+
+size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream)
+{
+    unsigned char* tmp = (unsigned char*)ptr;
+    size_t i = nmemb;
+	size_t j = size;
+
+	_kern_sem_acquire(stream->sid, 1);
+
+	if (stream->flags & _STDIO_EOF)
+	{
+		return 0;
+	}
+	if(stream->flags & _STDIO_UNGET)
+	{
+		*tmp++ = stream->unget;
+		stream->flags &= !_STDIO_UNGET;
+		j--;
+	}
+    
+	for(;i > 0; i--)
+    {
+		for(; j > 0; j--)
+		{
+			if (stream->rpos >= stream->buf_pos)
+			{
+
+				int len = read(stream->fd, stream->buf, stream->buf_size);
+				if (len==0)
+				{
+					stream->flags |= _STDIO_EOF;
+					_kern_sem_release(stream->sid, 1);
+					return nmemb - i;
+				}
+				else if (len < 0)
+				{
+					stream->flags |= _STDIO_ERROR;
+					_kern_sem_release(stream->sid, 1);
+					return nmemb - i;
+				}
+				stream->rpos=0;
+				stream->buf_pos=len;
+			}
+			*tmp++ = stream->buf[stream->rpos++];
+		}
+		j = size;
+    }
+    _kern_sem_release(stream->sid, 1);
+	
+	return nmemb - i;
+}
+
 
 char* fgets(char* str, int n, FILE * stream)
 {
@@ -388,6 +560,11 @@ char* fgets(char* str, int n, FILE * stream)
 int getchar(void)
 {
 	return fgetc(stdin);
+}
+
+int getc(FILE *stream)
+{
+	return fgetc(stream);
 }
 
 int fgetc(FILE *stream)
