@@ -358,6 +358,22 @@ static void dump_socket_info(int argc, char **argv)
 	}
 }
 
+static void list_sockets(int argc, char **argv)
+{
+	struct hash_iterator i;
+	tcp_socket *s;
+
+	dprintf("tcp sockets:\n");
+	hash_open(socket_table, &i);
+	while((s = hash_next(socket_table, &i)) != NULL) {
+		dprintf("\t%p\tlocal ", s);
+		dump_ipv4_addr(s->local_addr); dprintf(".%d\t", s->local_port);
+		dprintf("remote ");
+		dump_ipv4_addr(s->remote_port); dprintf(".%d\t", s->remote_port);
+		dprintf("\n");
+	}
+}
+
 static int bind_local_address(tcp_socket *s, netaddr *remote_addr)
 {
 	int err = 0;
@@ -547,6 +563,7 @@ send_reset:
 ditch_packet:
 	cbuf_free_chain(buf);
 	if(s) {
+		ASSERT_LOCKED_MUTEX(&s->lock);
 		mutex_unlock(&s->lock);
 		dec_socket_ref(s);
 	}
@@ -831,6 +848,7 @@ static void handle_ack(tcp_socket *s, uint32 sequence, uint32 window_size, bool 
 			return;
 		}
 	}
+	s->duplicate_ack_count = 0;
 
 	if(SEQUENCE_GTE(sequence, s->retransmit_tx_seq)) {
 		// XXX update RTT
@@ -999,9 +1017,7 @@ static void handle_data(tcp_socket *s, cbuf *buf)
 		if(s->reassembly_q == NULL ||
 		   SEQUENCE_GT(ntohl(((tcp_header *)cbuf_get_ptr(s->reassembly_q, 0))->seq_num), seq_low)) {
 			// stick it on the head of the queue
-			buf = cbuf_truncate_head(buf, header_length);
-
-			buf->packet_next = NULL;
+			buf->packet_next = s->reassembly_q;
 			s->reassembly_q = buf;
 		} else {
 			// find the spot in the queue where we need to stick it
@@ -1207,6 +1223,7 @@ int tcp_init(void)
 	next_ephemeral_port = rand() % 32000 + 1024;
 
 	dbg_add_command(&dump_socket_info, "tcp_socket", "dump info about socket at address");
+	dbg_add_command(&list_sockets, "tcp_sockets", "list all active tcp sockets");
 
 	return 0;
 }

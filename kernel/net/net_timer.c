@@ -31,6 +31,8 @@ static void add_to_queue(net_timer_event *e)
 	while(tmp != (net_timer_event *)&net_q) {
 		if(tmp->sched_time > e->sched_time)
 			break;
+		last = tmp;
+		tmp = tmp->next;
 	}
 
 	// add it to the list here

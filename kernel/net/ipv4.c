@@ -107,11 +107,9 @@ static unsigned int frag_hash_func(void *_frag, const void *_key, unsigned int r
 // expects hosts order
 void dump_ipv4_addr(ipv4_addr addr)
 {
-#if NET_CHATTY
 	uint8 *nuaddr = (uint8 *)&addr;
 
 	dprintf("%d.%d.%d.%d", nuaddr[3], nuaddr[2], nuaddr[1], nuaddr[0]);
-#endif
 }
 
 static void dump_ipv4_header(ipv4_header *head)
