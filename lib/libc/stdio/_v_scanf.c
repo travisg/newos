@@ -81,8 +81,6 @@ int vsscanf(char const *str, char const *format, va_list arg_ptr)
 
 struct _fscanf_struct
 {
-	int buff_pos;
-	unsigned char* buff;
 	int count;
 	FILE* stream;
 };
@@ -90,8 +88,17 @@ struct _fscanf_struct
 static void _fscanf_push(void *p, unsigned char c)
 {
 	struct _fscanf_struct *val = (struct _fscanf_struct*)p;
-	if(val->buff_pos < MAX_BUFF_SIZE)
-		val->buff[val->buff_pos++] = c;
+	FILE* stream = val->stream;
+
+	if(stream->flags & _STDIO_UNGET)
+	{
+		//a problem
+		return;
+	}
+	val->count--;
+	stream->flags &= !_STDIO_EOF;
+	stream->flags |= _STDIO_UNGET;
+	stream->unget = c;
 }
 
 static int _fscanf_read(void *p)
@@ -100,14 +107,16 @@ static int _fscanf_read(void *p)
 	unsigned char c;
 	FILE* stream;
 
-	if(val->buff_pos > 0)
-	{
-		return val->buff[--val->buff_pos];
-	}
-
 	stream = val->stream;
 
-    if (stream->rpos >= stream->buf_pos)
+    if(stream->flags & _STDIO_UNGET)
+	{
+		stream->flags &= !_STDIO_UNGET;
+		return stream->unget;
+	}
+
+    
+	if (stream->rpos >= stream->buf_pos)
     {
         int len = read(stream->fd, stream->buf, stream->buf_size);
         if (len==0)
@@ -137,8 +146,6 @@ int vfscanf( FILE *stream, char const *format, va_list arg_ptr)
 {
 	struct _fscanf_struct *val = (struct _fscanf_struct*)malloc(sizeof(struct _fscanf_struct));
 
-	val->buff = (unsigned char*)malloc(MAX_BUFF_SIZE*sizeof(unsigned char));
-	val->buff_pos = 0;
 	val->count = 0;
 	val->stream = stream;
     return _v_scanf(_fscanf_read, _fscanf_push, val, format, arg_ptr);
@@ -207,7 +214,7 @@ static int _read_next_non_space( int (*_read)(void*), void* arg)
 }
 
 /*  The code for this function is mostly taken from strtoull */
-static unsigned long long convertIntegralValue(int (*_read)(void*), void (*_push)(void*, unsigned char), void *arg, int base, short width)
+static long long convertIntegralValue(int (*_read)(void*), void (*_push)(void*, unsigned char), void *arg, int base, short width)
 {
 	unsigned long long acc;
 	int c;
@@ -291,8 +298,8 @@ static unsigned long long convertIntegralValue(int (*_read)(void*), void (*_push
 	}
 
 	qbase = (unsigned)base;
-	cutoff = (unsigned long long)ULLONG_MAX / qbase;
-	cutlim = (unsigned long long)ULLONG_MAX % qbase;
+	cutoff = (unsigned long long)LLONG_MAX / qbase;
+	cutlim = (unsigned long long)LLONG_MAX % qbase;
 
 
 	for (acc = 0, any = 0;; c = _read(arg), length++)
@@ -338,7 +345,7 @@ finish_EOF:
 	else if (neg)
 		acc = -acc;
 
-	return acc;
+	return (long long)acc;
 }
 
 
@@ -354,7 +361,7 @@ int _v_scanf( int (*_read)(void*), void (*_push)(void*, unsigned char),  void* a
 
 	while (*format)
 	{
-		long long s_temp = 0;
+		long long temp = 0;
 		fch = *format++;
 /*
 		write(1, "fch: \'", 6);
@@ -436,7 +443,7 @@ keeplooking:
 					goto keeplooking;
 				case 'u':
 				{
-					unsigned long long u_temp = convertIntegralValue(_read, _push, arg, 10, width);
+					temp = convertIntegralValue(_read, _push, arg, 10, width);
 					fieldsRead++;
 
 					switch(size)
@@ -444,59 +451,59 @@ keeplooking:
 						case SHORT:
 						{
 							unsigned short* us = (unsigned short*)va_arg(arg_ptr, unsigned short*);
-							if(u_temp > USHRT_MAX)
+							if(temp > USHRT_MAX)
 							{
 								*us = USHRT_MAX;
 								break;
 							}
-							*us = (unsigned short)u_temp;
+							*us = (unsigned short)temp;
 						}
 						break;
 						case INT:
 						{
 							unsigned int *ui = (unsigned int*)va_arg(arg_ptr, unsigned int*);
-							if(u_temp > UINT_MAX)
+							if(temp > UINT_MAX)
 							{
 								*ui = UINT_MAX;
 								break;
 							}
-							*ui = (unsigned int)u_temp;
+							*ui = (unsigned int)temp;
 						}
 						break;
 						case LONG:
 						{
 							unsigned long *ul = (unsigned long*)va_arg(arg_ptr, unsigned long*);
-							if(u_temp > ULONG_MAX)
+							if(temp > ULONG_MAX)
 							{
 								*ul = ULONG_MAX;
 								break;
 							}
-							*ul = (unsigned long)u_temp;
+							*ul = (unsigned long)temp;
 						}
 						break;
 						default:
 						{
 							unsigned long long *ull = (unsigned long long*)va_arg(arg_ptr, unsigned long long*);
-							*ull = (unsigned long long)u_temp;
+							*ull = (unsigned long long)temp;
 						}
 						break;
 					}
 				}
 				break;
 				case 'i':
-					s_temp = (long long)convertIntegralValue(_read, _push, arg, 0, width);
+					temp = (long long)convertIntegralValue(_read, _push, arg, 0, width);
 					goto read_signed_int;
 				case 'd':
-					s_temp = (long long)convertIntegralValue(_read, _push, arg, 10, width);
+					temp = (long long)convertIntegralValue(_read, _push, arg, 10, width);
 					goto read_signed_int;
 				case 'o':
-					s_temp = (long long)convertIntegralValue(_read, _push, arg, 8, width);
+					temp = (long long)convertIntegralValue(_read, _push, arg, 8, width);
 					goto read_signed_int;
 				case 'x':
 				case 'X':
 				case 'p':
 				{
-					s_temp = (long long)convertIntegralValue(_read, _push, arg, 16, width);
+					temp = (long long)convertIntegralValue(_read, _push, arg, 16, width);
 read_signed_int:
 					fieldsRead++;
 					switch(size)
@@ -504,53 +511,53 @@ read_signed_int:
 						case SHORT:
 						{
 							short* s = (short*)va_arg(arg_ptr, short*);
-							if(s_temp > SHRT_MAX)
+							if(temp > SHRT_MAX)
 							{
 								*s = SHRT_MAX;
 								break;
 							}
-							else if(s_temp < SHRT_MIN)
+							else if(temp < SHRT_MIN)
 							{
 								*s = SHRT_MIN;
 								break;
 							}
-							*s = (unsigned short)s_temp;
+							*s = (unsigned short)temp;
 						}
 						break;
 						case INT:
 						{
 							int *i = (int*)va_arg(arg_ptr, int*);
-							if(s_temp > INT_MAX)
+							if(temp > INT_MAX)
 							{
 								*i = INT_MAX;
 								break;
 							}
-							else if(s_temp < INT_MIN)
+							else if(temp < INT_MIN)
 							{
 								*i = INT_MIN;
 							}
-							*i = (unsigned int)s_temp;
+							*i = (unsigned int)temp;
 						}
 						break;
 						case LONG:
 						{
 							long *l = (long*)va_arg(arg_ptr, long*);
-							if(s_temp > LONG_MAX)
+							if(temp > LONG_MAX)
 							{
 								*l = LONG_MAX;
 								break;
 							}
-							else if(s_temp < LONG_MIN)
+							else if(temp < LONG_MIN)
 							{
 								*l = LONG_MIN;
 							}
-							*l = (unsigned long)s_temp;
+							*l = (unsigned long)temp;
 						}
 						break;
 						default:
 						{
 							long long *ll = (long long*)va_arg(arg_ptr, unsigned long long*);
-							*ll = (long long)s_temp;
+							*ll = (long long)temp;
 						}
 					}
 				}

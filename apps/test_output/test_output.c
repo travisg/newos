@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/syscalls.h>
 
 void testFormatting(FILE* f);
 void testLongLine(FILE* f);

@@ -225,14 +225,10 @@ int fclose(FILE *stream)
 
 int fflush(FILE *stream)
 {
-    int err;
-    err = 0;
-
     if(stream == (FILE*)0)
     {
-        FILE* node;
-        node = __open_file_stack_top;
-        err = 0;
+        FILE* node = __open_file_stack_top;
+		int err = 0;
         while(node != (FILE*)0)
         {
             int e = fflush(node);
@@ -240,27 +236,29 @@ int fflush(FILE *stream)
                 err = EOF;
             node = node->next;
         }
+		return err;
     }
     else
     {
+        _kern_sem_acquire(stream->sid, 1);
         if(stream->flags & _STDIO_WRITE )
         {
-            _kern_sem_acquire(stream->sid, 1);
-            err = write(stream->fd, stream->buf, stream->buf_pos);
-            _kern_sem_release(stream->sid, 1);
+            int err = write(stream->fd, stream->buf, stream->buf_pos);
             stream->buf_pos = 0;
+			if(err < 0)
+			{
+				errno = EIO;
+				stream->flags |= _STDIO_ERROR;
+				_kern_sem_release(stream->sid, 1);
+				return EOF;
+			}
+			return err;
         }
+        _kern_sem_release(stream->sid, 1);
+		return 0;
     }
-
-    if(err < 0)
-    {
-        errno = EIO;
-        stream->flags |= _STDIO_ERROR;
-        return EOF;
-    }
-
-    return err;
 }
+
 
 int printf(const char *fmt, ...)
 {
@@ -308,13 +306,28 @@ int ferror (FILE *stream)
     return i;
 }
 
-int getchar(void)
+void clearerr(FILE *stream)
 {
-	char c;
+	_kern_sem_acquire(stream->sid, 1);
+    stream->flags &= !_STDIO_ERROR;
+    _kern_sem_release(stream->sid, 1);
+}
 
-	read(stdin->fd, &c, 1);
+int ungetc(int c, FILE *stream)
+{
+	_kern_sem_acquire(stream->sid, 1);
+	if(stream->flags & _STDIO_UNGET)
+	{
+		_kern_sem_release(stream->sid, 1);
+		return EOF;
+	}
+	stream->flags &= !_STDIO_EOF;
+	stream->flags |= _STDIO_UNGET;
+	stream->unget = c;
+	_kern_sem_release(stream->sid, 1);
 	return c;
 }
+
 
 char* fgets(char* str, int n, FILE * stream)
 {
@@ -332,25 +345,33 @@ char* fgets(char* str, int n, FILE * stream)
         {
             break;
         }
-        if (stream->rpos >= stream->buf_pos)
-        {
+        if(stream->flags & _STDIO_UNGET)
+		{
+			c = stream->unget;
+			stream->flags &= !_STDIO_UNGET;
+		}
+		else
+		{
+			if (stream->rpos >= stream->buf_pos)
+			{
 
-            int len = read(stream->fd, stream->buf, stream->buf_size);
+				int len = read(stream->fd, stream->buf, stream->buf_size);
 
-            if (len==0)
-            {
-                stream->flags |= _STDIO_EOF;
-                break;
-            }
-            else if (len < 0)
-            {
-                stream->flags |= _STDIO_ERROR;
-                break;
-            }
-            stream->rpos=0;
-            stream->buf_pos=len;
-        }
-        c = stream->buf[stream->rpos++];
+				if (len==0)
+				{
+					stream->flags |= _STDIO_EOF;
+					break;
+				}
+				else if (len < 0)
+				{
+					stream->flags |= _STDIO_ERROR;
+					break;
+				}
+				stream->rpos=0;
+				stream->buf_pos=len;
+			}
+			c = stream->buf[stream->rpos++];
+		}
 
         *tmp++ = c;
         if(c == '\n')
@@ -364,31 +385,48 @@ char* fgets(char* str, int n, FILE * stream)
     return str;
 }
 
+int getchar(void)
+{
+	return fgetc(stdin);
+}
+
 int fgetc(FILE *stream)
 {
     int c;
     _kern_sem_acquire(stream->sid, 1);
-    if (stream->rpos >= stream->buf_pos)
-    {
-        int len = read(stream->fd, stream->buf, stream->buf_size);
 
-        if (len==0)
-        {
-            stream->flags |= _STDIO_EOF;
-            return EOF;
-        }
-        else if (len < 0)
-        {
-            stream->flags |= _STDIO_ERROR;
-            return EOF;
-        }
-        stream->rpos=0;
-        stream->buf_pos=len;
-    }
-    c = stream->buf[stream->rpos++];
+    if(stream->flags & _STDIO_UNGET)
+	{
+		c = stream->unget;
+		stream->flags &= !_STDIO_UNGET;
+	}
+	else
+	{
+		if (stream->rpos >= stream->buf_pos)
+		{
+			int len = read(stream->fd, stream->buf, stream->buf_size);
+
+			if (len==0)
+			{
+				stream->flags |= _STDIO_EOF;
+				_kern_sem_release(stream->sid, 1);
+				return EOF;
+			}
+			else if (len < 0)
+			{
+				stream->flags |= _STDIO_ERROR;
+				_kern_sem_release(stream->sid, 1);
+				return EOF;
+			}
+			stream->rpos=0;
+			stream->buf_pos=len;
+		}
+		c = stream->buf[stream->rpos++];
+	}
     _kern_sem_release(stream->sid, 1);
     return c;
 }
+
 
 int scanf(char const *fmt, ...)
 {
@@ -396,9 +434,9 @@ int scanf(char const *fmt, ...)
 	int i;
 
 	va_start(args, fmt);
-	_kern_sem_acquire(stdout->sid, 1);
-	i = vfscanf(stdout, fmt, args);
-	_kern_sem_release(stdout->sid, 1);
+	_kern_sem_acquire(stdin->sid, 1);
+	i = vfscanf(stdin, fmt, args);
+	_kern_sem_release(stdin->sid, 1);
 	va_end(args);
 
 	return i;

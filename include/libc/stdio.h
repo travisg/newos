@@ -19,18 +19,19 @@ extern "C"
 {
 #endif
 
-#define _STDIO_READ 1
-#define _STDIO_WRITE 2
-#define _STDIO_EOF 4
-#define _STDIO_ERROR 8 
+#define _STDIO_READ 0x0001
+#define _STDIO_WRITE 0x0002
+#define _STDIO_EOF 0x0004
+#define _STDIO_ERROR 0x0008
+#define _STDIO_UNGET 0x0010
 
 struct __FILE {
 	int fd; 		/* system file descriptor */
     off_t rpos;       /* The first unread buffer position */
 	off_t buf_pos;		/* first unwritten buffer position */ 
-	char* buf;		/* buffer */
+	unsigned char* buf;		/* buffer */
 	off_t buf_size;	/* buffer size */
-    char unget;     /* for  ungetc */
+    unsigned char unget;     /* for  ungetc */
     int flags;      /* for feof and ferror */
     struct __FILE* next; /* for fflush */
     sem_id sid;     /* semaphore */
@@ -60,8 +61,9 @@ int   fclose(FILE *);
 
 int   feof(FILE *);
 int   ferror(FILE *);
-char *fgets(char *, int, FILE *);
 void  clearerr(FILE *);
+
+char *fgets(char *, int, FILE *);
 int   fgetc(FILE *);
 int   ungetc(int c, FILE *stream);
 
@@ -72,6 +74,7 @@ int vscanf(char const *format, va_list ap);
 int vsscanf(char const *str, char const *format, va_list ap);
 int vfscanf(FILE *stream, char const *format, va_list ap);
 
+// This function will be removed soon
 int getchar(void);
 
 int _v_printf(int (*_write)(void*, const void *, ssize_t ), void* arg, const char *fmt, va_list args);

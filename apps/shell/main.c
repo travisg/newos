@@ -14,35 +14,6 @@
 #include "shell_vars.h"
 #include "args.h"
 
-static int readline(char *buf, int len)
-{
-	int i = 0;
-	char ch;
-
-	while(true){
-
-		ch = getchar();
-
-		switch(ch){
-		case  8 :
-			if(i>0){
-				printf("%c", ch);
-				i --;
-			}
-			break;
-
-		case '\n':
-			buf[i] = 0;
-			printf("\n");
-			return i;
-
-		default:
-			buf[i] = ch;
-			printf("%c",ch);
-			i++;
-		}
-	}
-}
 
 int main(int argc,char *argv[])
 {
@@ -62,10 +33,11 @@ int main(int argc,char *argv[])
 
 		printf("> ");
 
-		chars_read = readline(buf, sizeof(buf));
- 		if(chars_read > 0) {
+		fgets(buf, sizeof(buf), stdin);
+ 		if(strlen(buf) > 0) {
 			parse_string(buf);
 		}
+		buf[0] = '\0';
 	}
 
 	return 0;
