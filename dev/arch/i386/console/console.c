@@ -28,6 +28,12 @@ unsigned int origin = 0;
 #define COLUMNS 80
 #define NPAR 16
 
+#define TEXT_INDEX 0x3d4
+#define TEXT_DATA  0x3d5
+
+#define TEXT_CURSOR_LO 0x0f
+#define TEXT_CURSOR_HI 0x0e
+
 #define scr_end (origin+LINES*COLUMNS*2)
 
 static unsigned int pos = 0;
@@ -37,12 +43,21 @@ static unsigned int bottom=LINES;
 static unsigned int lines=LINES;
 static unsigned int columns=COLUMNS;
 static unsigned char attr=0x07;
-static int vidport = 0;
 
 static mutex console_lock;
 static int keyboard_fd = -1;
 
-static inline void gotoxy(unsigned int new_x,unsigned int new_y)
+static void update_cursor(unsigned int x, unsigned int y)
+{
+	short int pos = y*columns + x;
+
+	out8(TEXT_CURSOR_LO, TEXT_INDEX);
+	out8((char)pos, TEXT_DATA);
+	out8(TEXT_CURSOR_HI, TEXT_INDEX);
+	out8((char)(pos >> 8), TEXT_DATA);
+}
+
+static void gotoxy(unsigned int new_x,unsigned int new_y)
 {
 	if (new_x>=columns || new_y>=lines)
 		return;
@@ -188,6 +203,7 @@ static ssize_t console_write(dev_cookie cookie, const void *buf, off_t pos, ssiz
 	mutex_lock(&console_lock);
 
 	err = _console_write(buf, len);
+	update_cursor(x, y);
 
 	mutex_unlock(&console_lock);
 
@@ -239,8 +255,6 @@ struct dev_calls console_hooks = {
 
 int console_dev_init(kernel_args *ka)
 {
-	vidport = 0x3b4;
-
 	dprintf("con_init: mapping vid mem\n");
 	vm_map_physical_memory(vm_get_kernel_aspace_id(), "vid_mem", (void *)&origin, REGION_ADDR_ANY_ADDRESS,
 		SCREEN_END - SCREEN_START, LOCK_RW|LOCK_KERNEL, SCREEN_START);
@@ -249,6 +263,7 @@ int console_dev_init(kernel_args *ka)
 	pos = origin;
 
 	gotoxy(0, ka->cons_line);
+	update_cursor(x, y);
 
 	mutex_init(&console_lock, "console_lock");
 	keyboard_fd = sys_open("/dev/keyboard", STREAM_TYPE_DEVICE, 0);
