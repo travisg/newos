@@ -88,7 +88,7 @@ ifeq ($(ARCH),sh4)
 	AR = sh-elf-ar
 	OBJCOPY = sh-elf-objcopy
 	STRIP = sh-elf-strip
-	GLOBAL_CFLAGS = -ml -m4 -mhitachi -O2
+	GLOBAL_CFLAGS = -ml -m4 -mhitachi -O1
 	KERNEL_CFLAGS = -fno-pic
 	USER_CFLAGS = -fpic
 	GLOBAL_LDFLAGS = -EL

@@ -45,7 +45,7 @@ int devs_init(kernel_args *ka)
 	maple_bus_init(ka);
 	keyboard_dev_init(ka);
 //	console_dev_init(ka);
-//	rtl8139_dev_init(ka);
+	rtl8139_dev_init(ka);
 #endif
 	fb_console_dev_init(ka);
 
