@@ -12,7 +12,7 @@ static int next_proc_id = 0;
 static int proc_struct_compare(void *_p, void *_key)
 {
 	struct proc *p = _p;
-	struct proc_key *key = _p;
+	struct proc_key *key = _key;
 	
 	if(p->id == key->id) return 0;
 	else return 1;
@@ -21,7 +21,7 @@ static int proc_struct_compare(void *_p, void *_key)
 static int proc_struct_hash(void *_p, void *_key, int range)
 {
 	struct proc *p = _p;
-	struct proc_key *key = _p;
+	struct proc_key *key = _key;
 	
 	if(p != NULL) 
 		return (p->id % range);

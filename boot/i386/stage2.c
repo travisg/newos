@@ -41,7 +41,9 @@ void _start(unsigned int mem, char *str)
 	asm("fninit");		// initialize floating point unit
 
 	clearscreen();
-	message("stage2 bootloader entry.\n");
+	dprintf("stage2 bootloader entry.\n");
+
+	calculate_cpu_clock();
 
 	// calculate how big the bootdir is
 	{
@@ -388,7 +390,7 @@ static void scrup()
 	line = SCREEN_HEIGHT - 1;
 }
 
-void message(const char *str)
+void puts(const char *str)
 {
 	while (*str) {
 		if (*str == '\n') {
@@ -417,7 +419,7 @@ int dprintf(const char *fmt, ...)
 	ret = vsprintf(temp,fmt,args);
 	va_end(args);
 
-	message(temp);
+	puts(temp);
 	return ret;
 }
 

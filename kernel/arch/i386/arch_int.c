@@ -151,7 +151,9 @@ void i386_handle_trap(struct int_frame frame)
 	}
 	
 	if(ret == INT_RESCHEDULE) {
+		GRAB_THREAD_LOCK;
 		thread_resched();
+		RELEASE_THREAD_LOCK;
 	}	
 }
 

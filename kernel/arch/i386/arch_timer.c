@@ -12,7 +12,7 @@
 #define pit_clock_rate 1193180
 #define pit_max_timer_interval ((long long)0xffff * 1000000 / pit_clock_rate)
 
-static long long periodic_timer_rate = 3000; // us
+static long long periodic_timer_rate = 10000; // us
 
 static void set_isa_hardware_timer(long long relative_timeout)
 {

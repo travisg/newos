@@ -5,5 +5,7 @@
 
 #define KSTACK_SIZE (PAGE_SIZE*2)
 
+#define min(a, b) ((a) > (b) ? (a) : (b))
+
 #endif
 

@@ -8,6 +8,7 @@
 #include "timer.h"
 #include "proc.h"
 #include "smp.h"
+#include "sem.h"
 
 #include "stage2.h"
 
@@ -36,6 +37,7 @@ int _start(struct kernel_args *oldka, int cpu)
 		smp_init(&ka);
 		timer_init(&ka);
 		proc_init(&ka);
+		sem_init(&ka);
 		thread_init(&ka);
 	
 	#if 1
@@ -100,7 +102,16 @@ int _start(struct kernel_args *oldka, int cpu)
 #endif
 	kprintf("main: done... spinning forever on cpu %d\n", cpu);
 	dprintf("main: done... spinning forever on cpu %d\n", cpu);
-	for(;;);
+	{
+		static char c[] = "a";
+		
+		for(;;) {
+			c[0]++;
+			if(c[0] > 'z')
+				c[0] = 'a';
+			con_puts_xy(c, 79-cpu, 0);
+		}
+	}
 	
 	return 0;
 }

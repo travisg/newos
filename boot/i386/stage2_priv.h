@@ -4,7 +4,6 @@
 #include "stage2.h"
 
 void clearscreen();
-void message(const char*);
 int dprintf(const char *fmt, ...);
 
 //void put_uint_dec(unsigned int a);
