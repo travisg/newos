@@ -613,6 +613,7 @@ static void _dump_thread_info(struct thread *t)
 	dprintf("sem_count:   0x%x\n", t->sem_count);
 	dprintf("sem_deleted_retcode: 0x%x\n", t->sem_deleted_retcode);
 	dprintf("sem_errcode: 0x%x\n", t->sem_errcode);
+	dprintf("sem_flags:   0x%x\n", t->sem_flags);
 	dprintf("fault_handler: 0x%x\n", t->fault_handler);
 	dprintf("args:        0x%x\n", t->args);
 	dprintf("entry:       0x%x\n", t->entry);
@@ -927,6 +928,13 @@ void thread_start_threading()
 
 	RELEASE_THREAD_LOCK();
 	int_restore_interrupts(state);
+}
+
+int user_thread_snooze(time_t time)
+{
+	thread_snooze(time);
+	dprintf("user_thread_snooze() exit\n");
+	return NO_ERROR;
 }
 
 void thread_snooze(time_t time)
@@ -1674,6 +1682,7 @@ int proc_kill_proc(proc_id id)
 // expects the thread lock to be held
 static void deliver_signal(struct thread *t, int signal)
 {
+	int rc;
 	dprintf("deliver_signal: thread 0x%x (%d), signal %d\n", t, t->id, signal);
 	switch(signal) {
 		case SIG_KILL:
@@ -1686,7 +1695,8 @@ static void deliver_signal(struct thread *t, int signal)
 					thread_enqueue_run_q(t);
 					break;
 				case THREAD_STATE_WAITING:
-					sem_interrupt_thread(t);
+					rc = sem_interrupt_thread(t);
+					dprintf("deliver_signal, sem_interrupt_thread ret %d\n", rc);
 					break;
 				default:
 					;
