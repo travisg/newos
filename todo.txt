@@ -1,9 +1,8 @@
 Implement:
 
 PORTS:
- m68k port (NeXT slab)
- ppc port (iMac)
  ARM
+ m68k port (NeXT slab)
  mips port (SGI Indy)
  sparc v9 port
  sparc v8 port
@@ -28,7 +27,7 @@ vfs:
  vnode caching
  getcwd
  attributes
- CLOEXEC
+ detach close/freecookie
 VM:
  cache layer
  better region creation args (range of virtual addresses, etc)
@@ -37,7 +36,9 @@ VM:
  page out
 Improved bus managers (BeOS style)
 Fully relocatable kernel, stage2 relocates
-signals
+signals:
+ posix
+ more generic signalling system
 disk based filesystem
 RLD
  lazy binding
@@ -46,9 +47,18 @@ RLD
 IDE bus manager
 net:
  dns lookup
+bootmaker improvements (remove config.ini, slurp from directory)
+better kernel ASSERTS
+change 'addr' typedef to be 'addr_t'
+improved module bootup calls (int_module(ka, initialization level))
+system info syscall, centralize storage
+better solution for user space heap growth
 
 In Progress:
 
+ppc port (mac, pegasos)
+x86 floppy driver
+nfs
 GUI
 
 Finish:
@@ -57,6 +67,5 @@ use fxsave instead of fsave where appropriate
 
 Fix:
 
-Net stack needs to use memory more efficiently
-Places in kernel where page fault with ints off happens
 Random reboot on heavy fibo usage
+SH-4 ELF relocation
