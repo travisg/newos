@@ -167,4 +167,6 @@ allclean: depsclean clean toolsclean
 	rm -f `find . -type f -name '*.d'`
 	rm -f `find . -type f -name '*.o'`
 
-include $(DEPS)
+ifeq ($(filter $(MAKECMDGOALS), allclean), )
+  include $(DEPS)
+endif
