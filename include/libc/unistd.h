@@ -30,6 +30,10 @@ ssize_t pwrite(int, void const*, size_t, off_t);
 unsigned sleep(unsigned);
 int      usleep(unsigned);
 
+int   chdir(char *);
+char *getcwd(char *, size_t);
+char *getwd(char *);
+
 
 #ifdef __cplusplus
 } /* extern "C" */
