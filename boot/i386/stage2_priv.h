@@ -7,11 +7,13 @@
 
 #include <boot/stage2.h>
 
-void clearscreen();
-int dprintf(const char *fmt, ...);
-void sleep(long long time);
-long long system_time();
-void execute_n_instructions(int count);
+extern void _start(unsigned int mem, int in_vesa, unsigned int vesa_ptr);
+extern void clearscreen(void);
+extern void puts(const char *str);
+extern int dprintf(const char *fmt, ...);
+extern void sleep(long long time);
+extern long long system_time(void);
+extern void execute_n_instructions(int count);
 
 //void put_uint_dec(unsigned int a);
 //void put_uint_hex(unsigned int a);
@@ -43,7 +45,9 @@ struct gdt_idt_descr {
 } _PACKED;
 
 // SMP stuff
-int smp_boot(kernel_args *ka, unsigned int kernel_entry);
+extern int smp_boot(kernel_args *ka, unsigned int kernel_entry);
+extern void smp_trampoline(void);
+extern void smp_trampoline_end(void);
 
 #define MP_FLT_SIGNATURE '_PM_'
 #define MP_CTH_SIGNATURE 'PCMP'
@@ -95,7 +99,6 @@ int smp_boot(kernel_args *ka, unsigned int kernel_entry);
 #define APIC_LVT_TM        0x00008000
 #define APIC_LVT_M         0x00010000
 #define APIC_LVT_OS        0x00020000
-
 #define APIC_TPR_PRIO      0x000000ff
 #define APIC_TPR_INT       0x000000f0
 #define APIC_TPR_SUB       0x0000000f

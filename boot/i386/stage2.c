@@ -14,41 +14,42 @@
 
 const unsigned kBSSSize = 0x9000;
 
+
 // we're running out of the first 'file' contained in the bootdir, which is
 // a set of binaries and data packed back to back, described by an array
 // of boot_entry structures at the beginning. The load address is fixed.
 #define BOOTDIR_ADDR 0x100000
-const boot_entry *bootdir = (boot_entry*)BOOTDIR_ADDR;
+static const boot_entry *bootdir = (boot_entry*)BOOTDIR_ADDR;
 
 // stick the kernel arguments in a pseudo-random page that will be mapped
 // at least during the call into the kernel. The kernel should copy the
 // data out and unmap the page.
-kernel_args *ka = (kernel_args *)0x20000;
+static kernel_args *ka = (kernel_args *)0x20000;
 
 // needed for message
-unsigned short *kScreenBase = (unsigned short*) 0xb8000;
-unsigned screenOffset = 0;
-unsigned int line = 0;
+static unsigned short *kScreenBase = (unsigned short*) 0xb8000;
+static unsigned screenOffset = 0;
+static unsigned int line = 0;
 
-unsigned int cv_factor = 0;
+static unsigned int cv_factor = 0;
 
 // size of bootdir in pages
-unsigned int bootdir_pages = 0;
+static unsigned int bootdir_pages = 0;
 
 // working pagedir and pagetable
-unsigned int *pgdir = 0;
-unsigned int *pgtable = 0;
+static unsigned int *pgdir = 0;
+static unsigned int *pgtable = 0;
 
 // function decls for this module
-void calculate_cpu_conversion_factor();
-void load_elf_image(void *data, unsigned int *next_paddr,
+static void calculate_cpu_conversion_factor(void);
+static void load_elf_image(void *data, unsigned int *next_paddr,
 	addr_range *ar0, addr_range *ar1, unsigned int *start_addr, addr_range *dynamic_section);
-int mmu_init(kernel_args *ka, unsigned int *next_paddr);
-void mmu_map_page(unsigned int vaddr, unsigned int paddr);
-void cpuid(uint32 selector, uint32 *data);
-unsigned int get_eflags();
-void set_eflags(unsigned int val);
-int check_cpu();
+static int mmu_init(kernel_args *ka, unsigned int *next_paddr);
+static void mmu_map_page(unsigned int vaddr, unsigned int paddr);
+static void cpuid(uint32 selector, uint32 *data);
+static unsigned int get_eflags(void);
+static void set_eflags(unsigned int val);
+static int check_cpu(void);
 
 // called by the stage1 bootloader.
 // State:
@@ -275,7 +276,7 @@ void _start(unsigned int mem, int in_vesa, unsigned int vesa_ptr)
 		: : "g" (ka), "g" (kernel_entry));
 }
 
-void load_elf_image(void *data, unsigned int *next_paddr, addr_range *ar0, addr_range *ar1, unsigned int *start_addr, addr_range *dynamic_section)
+static void load_elf_image(void *data, unsigned int *next_paddr, addr_range *ar0, addr_range *ar1, unsigned int *start_addr, addr_range *dynamic_section)
 {
 	struct Elf32_Ehdr *imageHeader = (struct Elf32_Ehdr*) data;
 	struct Elf32_Phdr *segments = (struct Elf32_Phdr*)(imageHeader->e_phoff + (unsigned) imageHeader);
@@ -349,7 +350,7 @@ void load_elf_image(void *data, unsigned int *next_paddr, addr_range *ar0, addr_
 // allocate a page directory and page table to facilitate mapping
 // pages to the 0x80000000 - 0x80400000 region.
 // also identity maps the first 4MB of memory
-int mmu_init(kernel_args *ka, unsigned int *next_paddr)
+static int mmu_init(kernel_args *ka, unsigned int *next_paddr)
 {
 	int i;
 
@@ -397,7 +398,7 @@ int mmu_init(kernel_args *ka, unsigned int *next_paddr)
 
 // can only map the 4 meg region right after KERNEL_BASE, may fix this later
 // if need arises.
-void mmu_map_page(unsigned int vaddr, unsigned int paddr)
+static void mmu_map_page(unsigned int vaddr, unsigned int paddr)
 {
 //	dprintf("mmu_map_page: vaddr 0x%x, paddr 0x%x\n", vaddr, paddr);
 	if(vaddr < KERNEL_BASE || vaddr >= (KERNEL_BASE + 4096*1024)) {
@@ -409,7 +410,7 @@ void mmu_map_page(unsigned int vaddr, unsigned int paddr)
 	pgtable[(vaddr % (PAGE_SIZE * 1024)) / PAGE_SIZE] = paddr | DEFAULT_PAGE_FLAGS;
 }
 
-int check_cpu()
+static int check_cpu(void)
 {
 	unsigned int i;
 	uint32 data[4];
@@ -447,120 +448,130 @@ int check_cpu()
 	return 0;
 }
 
-long long rdtsc();
-asm(
-"rdtsc:\n"
-"	rdtsc\n"
-"	ret\n"
-);
+static long long rdtsc()
+{
+	long long retval;
 
-//void execute_n_instructions(int count);
-asm(
-".global execute_n_instructions\n"
-"execute_n_instructions:\n"
-"	movl	4(%esp), %ecx\n"
-"	shrl	$4, %ecx\n"		/* divide count by 16 */
-".again:\n"
-"	xorl	%eax, %eax\n"
-"	xorl	%eax, %eax\n"
-"	xorl	%eax, %eax\n"
-"	xorl	%eax, %eax\n"
-"	xorl	%eax, %eax\n"
-"	xorl	%eax, %eax\n"
-"	xorl	%eax, %eax\n"
-"	xorl	%eax, %eax\n"
-"	xorl	%eax, %eax\n"
-"	xorl	%eax, %eax\n"
-"	xorl	%eax, %eax\n"
-"	xorl	%eax, %eax\n"
-"	xorl	%eax, %eax\n"
-"	xorl	%eax, %eax\n"
-"	xorl	%eax, %eax\n"
-"	loop	.again\n"
-"	ret\n"
-);
+	asm(
+		"	rdtsc;"
+		: "=A" (retval)
+	);
 
-void system_time_setup(long a);
-asm(
-"system_time_setup:\n"
-	/* First divide 1M * 2^32 by proc_clock */
-"	movl	$0x0F4240, %ecx\n"
-"	movl	%ecx, %edx\n"
-"	subl	%eax, %eax\n"
-"	movl	4(%esp), %ebx\n"
-"	divl	%ebx, %eax\n"		/* should be 64 / 32 */
-"	movl	%eax, cv_factor\n"
-"	ret\n"
-);
+	return retval;
+}
 
-// long long system_time();
-asm(
-".global system_time\n"
-"system_time:\n"
+void execute_n_instructions(int count)
+{
+	asm(
+		"	movl	%0, %%ecx;"
+		"	shrl	$4, %%ecx;"		/* divide count by 16 */
+		".again:;"
+		"	xorl	%%eax, %%eax;"
+		"	xorl	%%eax, %%eax;"
+		"	xorl	%%eax, %%eax;"
+		"	xorl	%%eax, %%eax;"
+		"	xorl	%%eax, %%eax;"
+		"	xorl	%%eax, %%eax;"
+		"	xorl	%%eax, %%eax;"
+		"	xorl	%%eax, %%eax;"
+		"	xorl	%%eax, %%eax;"
+		"	xorl	%%eax, %%eax;"
+		"	xorl	%%eax, %%eax;"
+		"	xorl	%%eax, %%eax;"
+		"	xorl	%%eax, %%eax;"
+		"	xorl	%%eax, %%eax;"
+		"	xorl	%%eax, %%eax;"
+		"	loop	.again;"
+		: : "g" (count) : "eax", "ecx"
+	);
+}
+
+static void system_time_setup(long a)
+{
+	asm(
+			/* First divide 1M * 2^32 by proc_clock */
+		"	movl	$0x0F4240, %%ecx;"
+		"	movl	%%ecx, %%edx;"
+		"	subl	%%eax, %%eax;"
+		"	movl	%1, %%ebx;"
+		"	divl	%%ebx, %%eax;"		/* should be 64 / 32 */
+		"	movl	%%eax, %0;"
+		: "=g" (cv_factor) : "g" (a) : "ecx", "ebx"
+	);
+}
+
+long long system_time()
+{
+	long long retval;
+
 	/* load 64-bit factor into %eax (low), %edx (high) */
 	/* hand-assemble rdtsc -- read time stamp counter */
-"	rdtsc\n"		/* time in %edx,%eax */
 
-"	pushl	%ebx\n"
-"	pushl	%ecx\n"
-"	movl	cv_factor, %ebx\n"
-"	movl	%edx, %ecx\n"	/* save high half */
-"	mull	%ebx\n" 		/* truncate %eax, but keep %edx */
-"	movl	%ecx, %eax\n"
-"	movl	%edx, %ecx\n"	/* save high half of low */
-"	mull	%ebx\n"			/*, %eax*/
-	/* now compute  [%edx, %eax] + [%ecx], propagating carry */
-"	subl	%ebx, %ebx\n"	/* need zero to propagate carry */
-"	addl	%ecx, %eax\n"
-"	adc		%ebx, %edx\n"
-"	popl	%ecx\n"
-"	popl	%ebx\n"
-"	ret\n"
-);
+	asm(
+		"	rdtsc;"			/* time in %edx,%eax */
 
-// void cpuid(uint32 selector, uint32 *data);
-asm(
-".global cpuid\n"
-"cpuid:\n"
-"	pushl	%ebx\n"
-"	pushl	%edi\n"
+		"	pushl	%%ebx;"
+		"	pushl	%%ecx;"
+		"	movl	%1, %%ebx;"
+		"	movl	%%edx, %%ecx;"	/* save high half */
+		"	mull	%%ebx;" 		/* truncate %eax, but keep %edx */
+		"	movl	%%ecx, %%eax;"
+		"	movl	%%edx, %%ecx;"	/* save high half of low */
+		"	mull	%%ebx;"			/*, %eax*/
+			/* now compute  [%%edx, %%eax] + [%%ecx], propagating carry */
+		"	subl	%%ebx, %%ebx;"	/* need zero to propagate carry */
+		"	addl	%%ecx, %%eax;"
+		"	adc	%%ebx, %%edx;"
+		"	popl	%%ecx;"
+		"	popl	%%ebx;"
+		: "=A" (retval) : "g" (cv_factor)
+	);
 
-"	movl	12(%esp),%eax\n"
-"	movl	16(%esp),%edi\n"
-"	cpuid\n"
+	return retval;
+}
 
-"	movl	%eax,0(%edi)\n"
-"	movl	%ebx,4(%edi)\n"
-"	movl	%ecx,8(%edi)\n"
-"	movl	%edx,12(%edi)\n"
+static void cpuid(uint32 selector, uint32 *data)
+{
+	asm(
+		"	pushl	%%ebx;"
+		"	pushl	%%edi;"
 
-"	popl	%edi\n"
-"	popl	%ebx\n"
+		"	movl	%0,%%eax;"
+		"	movl	%1,%%edi;"
+		"	cpuid;"
 
-"	ret\n"
-);
+		"	movl	%%eax,0(%%edi);"
+		"	movl	%%ebx,4(%%edi);"
+		"	movl	%%ecx,8(%%edi);"
+		"	movl	%%edx,12(%%edi);"
 
-// unsigned int get_eflags();
-asm(
-".global get_eflags\n"
-"get_eflags:\n"
+		"	popl	%%edi;"
+		"	popl	%%ebx;"
+		: : "g" (selector), "g" (data) : "eax", "ebx"
+	);
+}
 
-"	pushfl\n"
-"	popl	%eax\n"
+static unsigned int get_eflags(void)
+{
+	unsigned retval;
 
-"	ret\n"
-);
+	asm(
+		"	pushfl;"
+		"	popl	%0;"
+		: "=r" (retval)
+	);
 
-// void set_eflags(unsigned int val);
-asm(
-".global set_eflags\n"
-"set_eflags:\n"
+	return retval;
+}
 
-"	pushl	4(%esp)\n"
-"	popfl\n"
-
-"	ret\n"
-);
+static void set_eflags(unsigned int val)
+{
+	asm(
+		"	pushl	%0;"
+		"	popfl;"
+		: : "g" (val)
+	);
+}
 
 void sleep(long long time)
 {
@@ -582,7 +593,7 @@ void sleep(long long time)
 
 #define TIMER_CLKNUM_HZ 1193167
 
-void calculate_cpu_conversion_factor()
+static void calculate_cpu_conversion_factor(void)
 {
 	unsigned char	low, high;
 	unsigned long	expired;
@@ -591,7 +602,7 @@ void calculate_cpu_conversion_factor()
 	double			timer_usecs;
 
 	/* program the timer to count down mode */
-    outb(0x34, 0x43);
+	outb(0x34, 0x43);
 
 	outb(0xff, 0x40);		/* low and then high */
 	outb(0xff, 0x40);

@@ -17,9 +17,7 @@ static struct mp_flt_struct *mp_flt_ptr = NULL;
 static kernel_args *saved_ka = NULL;
 static unsigned int kernel_entry_point = 0;
 
-void smp_trampoline();
-void smp_trampoline_end();
-int smp_get_current_cpu(kernel_args *ka);
+static int smp_get_current_cpu(kernel_args *ka);
 
 static unsigned int map_page(kernel_args *ka, unsigned int paddr, unsigned int vaddr)
 {
@@ -286,7 +284,7 @@ static int smp_setup_apic(kernel_args *ka)
 // along with us being on the final stack for this processor. We need
 // to set up the local APIC and load the global idt and gdt. When we're
 // done, we'll jump into the kernel with the cpu number as an argument.
-static int smp_cpu_ready()
+static int smp_cpu_ready(void)
 {
 	kernel_args *ka = saved_ka;
 	unsigned int curr_cpu = smp_get_current_cpu(ka);
@@ -441,7 +439,7 @@ static int smp_boot_all_cpus(kernel_args *ka)
 	return 0;
 }
 
-void calculate_apic_timer_conversion_factor(kernel_args *ka)
+static void calculate_apic_timer_conversion_factor(kernel_args *ka)
 {
 	long long t1, t2;
 	unsigned int config;
@@ -512,7 +510,7 @@ int smp_boot(kernel_args *ka, unsigned int kernel_entry)
 	return 0;
 }
 
-int smp_get_current_cpu(kernel_args *ka)
+static int smp_get_current_cpu(kernel_args *ka)
 {
 	if(ka->arch_args.apic == NULL)
 		return 0;
