@@ -5,26 +5,11 @@
 #include <kernel/kernel.h>
 #include <kernel/console.h>
 #include <kernel/debug.h>
-#include <kernel/int.h>
-#include <kernel/smp.h>
-#include <kernel/sem.h>
-#include <kernel/vfs.h>
 
 #include <stdarg.h>
 #include <stdio.h>
 
-// from con.h
-enum {
-	CONSOLE_OP_WRITEXY = 2376
-};
-
-struct console_op_xy_struct {
-	int x;
-	int y;
-	char buf[256];
-};
-
-static int console_fd = -1;
+static kernel_console_ops *ops = 0;
 
 int kprintf(const char *fmt, ...)
 {
@@ -32,12 +17,13 @@ int kprintf(const char *fmt, ...)
 	va_list args;
 	char temp[256];
 
-	if(console_fd >= 0) {
+	if(ops) {
 		va_start(args, fmt);
 		ret = vsprintf(temp,fmt,args);
 		va_end(args);
 
-		sys_write(console_fd, temp, 0, ret);
+		if(ops)
+			ops->kputs(temp);
 	}
 	return ret;
 }
@@ -46,26 +32,35 @@ int kprintf_xy(int x, int y, const char *fmt, ...)
 {
 	int ret = 0;
 	va_list args;
-	struct console_op_xy_struct buf;
+	char temp[256];
 
-	if(console_fd >= 0) {
+	if(ops) {
 		va_start(args, fmt);
-		ret = vsprintf(buf.buf,fmt,args);
+		ret = vsprintf(temp,fmt,args);
 		va_end(args);
 
-		buf.x = x;
-		buf.y = y;
-		sys_ioctl(console_fd, CONSOLE_OP_WRITEXY, &buf, ret + sizeof(buf.x) + sizeof(buf.y));
+		if(ops)
+			ops->kputs_xy(temp, x, y);
 	}
 	return ret;
+}
+
+int kputchar_xy(char c, int x, int y)
+{
+	if(ops)
+		return ops->kputchar_xy(c, x, y);
+	else
+		return 0;
+}
+
+void con_register_ops(kernel_console_ops *_ops)
+{
+	ops = _ops;
 }
 
 int con_init(kernel_args *ka)
 {
 	dprintf("con_init: entry\n");
-
-	console_fd = sys_open("/dev/console", 0);
-	dprintf("console_fd = %d\n", console_fd);
 
 	return 0;
 }

@@ -19,6 +19,8 @@ static isa_bus_manager *isa;
 
 static int text_init(void)
 {
+	addr_t i;
+
 	if(module_get(ISA_MODULE_NAME, 0, (void **)&isa) < 0) {
 		dprintf("text module_init: no isa bus found..\n");
 		return -1;
@@ -29,6 +31,12 @@ static int text_init(void)
 	vm_map_physical_memory(vm_get_kernel_aspace_id(), "vid_mem", (void *)&gOrigin, REGION_ADDR_ANY_ADDRESS,
 		SCREEN_END - SCREEN_START, LOCK_RW|LOCK_KERNEL, SCREEN_START);
 	dprintf("console/text: mapped vid mem to virtual address 0x%x\n", (uint32)gOrigin);
+
+	/* pre-touch all of the memory so that we dont fault while deep inside the kernel and displaying something */
+	for(i = (addr_t)gOrigin; i < (addr_t)gOrigin + (SCREEN_END - SCREEN_START); i += PAGE_SIZE) {
+		uint16 val = *(volatile uint16 *)i;
+		*(volatile uint16 *)i = val;
+	}
 	return 0;
 }
 

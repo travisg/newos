@@ -490,6 +490,71 @@ static bool process_vt100_command(struct console_desc *con, const char c, bool s
 	return ret;
 }
 
+// used by kprintf() to draw directly onto the screen
+static ssize_t _console_write_raw(struct console_desc *con, const void *buf, ssize_t len)
+{
+	const char *c;
+	size_t pos = 0;
+
+	while(pos < len) {
+		c = &((const char *)buf)[pos++];
+		switch(*c) {
+			case '\n':
+				cr(con);
+				lf(con);
+				break;
+			case 0x8: // backspace
+				del(con);
+				break;
+			case '\t':
+				tab(con);
+				break;
+			case '\r':
+			case '\0':
+			case 0x1b:
+				break;
+			default:
+				console_putch(con, *c);
+		}
+	}
+	return pos;
+}
+
+// used by kprintf_xy() to draw directly onto the screen. Do not update the console's current x y pos
+static ssize_t _console_write_raw_xy(struct console_desc *in_con, const void *buf, ssize_t len, int x, int y)
+{
+	const char *c;
+	size_t pos = 0;
+	struct console_desc con;
+
+	memcpy(&con, in_con, sizeof(con)); // not great, but it keeps us from updating the system's x y
+
+	gotoxy(&con, x, y);
+
+	while(pos < len) {
+		c = &((const char *)buf)[pos++];
+		switch(*c) {
+			case '\n':
+				cr(&con);
+				lf(&con);
+				break;
+			case 0x8: // backspace
+				del(&con);
+				break;
+			case '\t':
+				tab(&con);
+				break;
+			case '\r':
+			case '\0':
+			case 0x1b:
+				break;
+			default:
+				console_putch(&con, *c);
+		}
+	}
+	return pos;
+}
+
 static ssize_t _console_write(struct console_desc *con, const void *buf, size_t len)
 {
 	const char *c;
@@ -632,6 +697,34 @@ static int console_ioctl(dev_cookie cookie, int op, void *buf, size_t len)
 	return err;
 }
 
+static int con_kputs(const char *str)
+{
+	if(!str)
+		return 0;
+	
+	return _console_write_raw(&gconsole, str, strlen(str));
+}
+
+static int con_kputs_xy(const char *str, int x, int y)
+{
+	if(!str)
+		return 0;
+	
+	return _console_write_raw_xy(&gconsole, str, strlen(str), x, y);
+}
+
+static int con_kputchar_xy(char c, int x, int y)
+{
+	struct console_desc con;
+
+	memcpy(&con, &gconsole, sizeof(con)); // not great, but it keeps us from updating the system's x y
+	gotoxy(&con, x, y);
+	
+	console_putch(&con, c);
+
+	return 1;
+}
+
 static struct dev_calls console_hooks = {
 	&console_open,
 	&console_close,
@@ -644,6 +737,12 @@ static struct dev_calls console_hooks = {
 	NULL,
 	NULL,
 	NULL
+};
+
+static kernel_console_ops k_console_ops = {
+	&con_kputs,
+	&con_kputs_xy,
+	&con_kputchar_xy
 };
 
 int dev_bootstrap(void);
@@ -726,6 +825,11 @@ int dev_bootstrap(void)
 		devfs_publish_device("console", (dev_ident)&gconsole, &console_hooks);
 	}
 	else dprintf("con_init: failed to find a suitable module :-(\n");
+
+	if(found) {
+		// register with the kernel console
+		con_register_ops(&k_console_ops);
+	}
 
 	return found ? 0 : -1;
 }

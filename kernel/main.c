@@ -72,6 +72,7 @@ int _start(kernel_args *oldka, int cpu_num)
 
 		// now we can use the heap and create areas
 		dbg_init2(&global_kernel_args);
+		con_init(&global_kernel_args);
 		int_init2(&global_kernel_args);
 
 		faults_init(&global_kernel_args);
@@ -132,8 +133,6 @@ static int main2(void *unused)
 	dev_init(&global_kernel_args);
 	fixed_devs_init(&global_kernel_args);
 	dev_scan_drivers(&global_kernel_args);
-
-	con_init(&global_kernel_args);
 
 	net_init_postdev(&global_kernel_args);
 
