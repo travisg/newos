@@ -4,10 +4,9 @@ STAGE2_OBJ_DIR = $(STAGE2_DIR)/$(OBJ_DIR)
 STAGE2_OBJS = $(STAGE2_OBJ_DIR)/stage2.o
 DEPS += $(STAGE2_OBJS:.o=.d)
 
-STAGE2 = boot/stage2
-STAGE2_ARCH = $(STAGE2_OBJ_DIR)/stage2
+STAGE2 = $(STAGE2_OBJ_DIR)/stage2
 
-$(STAGE2_ARCH): $(STAGE2_OBJS) $(LIBC)
+$(STAGE2): $(STAGE2_OBJS) $(LIBC)
 	$(LD) -dN --script=$(STAGE2_DIR)/stage2.ld -L $(LIBGCC_PATH) $(LIBGCC) $(STAGE2_OBJS) $(LIBC) -o $@
 
 stage2clean:
