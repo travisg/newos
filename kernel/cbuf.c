@@ -868,10 +868,14 @@ int cbuf_truncate_tail(cbuf *buf, size_t trunc_bytes, bool free_unused)
 	return NO_ERROR;
 }
 
-cbuf *cbuf_extend_head(cbuf *buf, size_t extend_bytes)
+int cbuf_extend_head(cbuf **_buf, size_t extend_bytes)
 {
-	if(!buf)
-		return NULL;
+	cbuf *buf;
+
+	if(!_buf || !(*_buf))
+		return ERR_INVALID_ARGS;
+
+	buf = *_buf;
 
 	validate_cbuf(buf);
 
@@ -898,7 +902,7 @@ cbuf *cbuf_extend_head(cbuf *buf, size_t extend_bytes)
 
 		new_buf = cbuf_get_chain(extend_bytes);
 		if(!new_buf)
-			return NULL;
+			return ERR_NO_MEMORY;
 
 		if(new_buf->next == NULL) {
 			// simple case, the head extension is a single buffer.
@@ -918,8 +922,56 @@ cbuf *cbuf_extend_head(cbuf *buf, size_t extend_bytes)
 
 	validate_cbuf(buf);
 
-	return buf;
+	return NO_ERROR;
 }
+
+int cbuf_extend_tail(cbuf *head, size_t extend_bytes)
+{
+	cbuf *temp;
+	size_t available;
+
+	if(!head)
+		return ERR_INVALID_ARGS;
+
+	validate_cbuf(head);
+
+	// walk to the end of this buffer
+	for(temp = head; temp->next != NULL; temp = temp->next)
+		;
+	if(!temp)
+		return ERR_INVALID_ARGS;
+
+	// calculate the available space in this cbuf
+	ASSERT((addr)temp->data >= (addr)temp->dat);
+	ASSERT((addr)temp->data - (addr)temp->dat <= sizeof(temp->dat));
+	ASSERT((addr)temp->data + temp->len <= (addr)temp->dat + sizeof(temp->dat));
+
+	available = sizeof(temp->dat) - (temp->len + ((addr)temp->data - (addr)temp->dat));
+	if(available > 0) {
+		// we can extend by adding
+		size_t extend_by = min(available, extend_bytes);
+
+		temp->len += extend_by;
+		head->total_len += extend_by;
+		extend_bytes -= extend_by;
+	}
+
+	if(extend_bytes > 0) {
+		// we still need to extend
+		cbuf *new_buf;
+
+		new_buf = cbuf_get_chain(extend_bytes);
+		if(!new_buf) {
+			// XXX undo any previons extension we may have done
+			return ERR_NO_MEMORY;
+		}
+
+		cbuf_merge_chains(head, new_buf);
+	}
+
+	return NO_ERROR;
+}
+
 
 static void dbg_dump_cbuf_freelists(int argc, char **argv)
 {

@@ -1084,9 +1084,10 @@ out:
 	return bytes_read;
 }
 
-ssize_t tcp_sendto(void *prot_data, const void *inbuf, ssize_t len, sockaddr *toaddr)
+ssize_t tcp_sendto(void *prot_data, const void *_inbuf, ssize_t len, sockaddr *toaddr)
 {
 	tcp_socket *s = prot_data;
+	const uint8 *inbuf = _inbuf;
 	ssize_t sent = 0;
 	int err;
 
@@ -1101,7 +1102,6 @@ ssize_t tcp_sendto(void *prot_data, const void *inbuf, ssize_t len, sockaddr *to
 	while(sent < len) {
 		int buf_size;
 		int chunk_size;
-		cbuf *chunk;
 
 		if(s->state != STATE_ESTABLISHED && s->state != STATE_CLOSE_WAIT) {
 			sent = s->last_error;
@@ -1121,22 +1121,38 @@ ssize_t tcp_sendto(void *prot_data, const void *inbuf, ssize_t len, sockaddr *to
 			continue;
 		}
 
-		// add the data to the transmit buffer
-		chunk = cbuf_get_chain(chunk_size);
-		if(!chunk) {
-			sent = ERR_NO_MEMORY;
-			goto out;
+		if(s->write_buffer != NULL) {
+			err = cbuf_extend_tail(s->write_buffer, chunk_size);
+			if(err < 0) {
+				sent = err;
+				goto out;
+			}
+
+			err = cbuf_user_memcpy_to_chain(s->write_buffer, buf_size, inbuf, chunk_size);
+			if(err < 0) {
+				cbuf_truncate_tail(s->write_buffer, chunk_size, true);
+				sent = err;
+				goto out;
+			}
+		} else {
+			// the write buffer is null, create a new one
+			s->write_buffer = cbuf_get_chain(chunk_size);
+			if(s->write_buffer == NULL) {
+				sent = ERR_NO_MEMORY;
+				goto out;
+			}
+
+			err = cbuf_user_memcpy_to_chain(s->write_buffer, 0, inbuf, chunk_size);
+			if(err < 0) {
+				cbuf_free_chain(s->write_buffer);
+				s->write_buffer = NULL;
+				sent = err;
+				goto out;
+			}
 		}
 
-		err = cbuf_user_memcpy_to_chain(chunk, 0, inbuf, chunk_size);
-		if(err < 0) {
-			cbuf_free_chain(chunk);
-			sent = err;
-			goto out;
-		}
-
-		s->write_buffer = cbuf_merge_chains(s->write_buffer, chunk);
 		sent += chunk_size;
+		inbuf += chunk_size;
 
 		// XXX do nagle or something
 		tcp_flush_pending_data(s);

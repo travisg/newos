@@ -7,7 +7,7 @@
 
 #include <kernel/kernel.h>
 
-#define CBUF_LEN 256
+#define CBUF_LEN 2048
 
 #define CBUF_FLAG_CHAIN_HEAD 1
 #define CBUF_FLAG_CHAIN_TAIL 2
@@ -50,7 +50,8 @@ cbuf *cbuf_duplicate_chain(cbuf *chain, size_t offset, size_t len, size_t leadin
 cbuf *cbuf_truncate_head(cbuf *chain, size_t trunc_bytes, bool free_unused);
 int cbuf_truncate_tail(cbuf *chain, size_t trunc_bytes, bool free_unused);
 
-cbuf *cbuf_extend_head(cbuf *chain, size_t extend_bytes);
+int cbuf_extend_head(cbuf **chain, size_t extend_bytes);
+int cbuf_extend_tail(cbuf *chain, size_t extend_bytes);
 
 void cbuf_test(void);
 
