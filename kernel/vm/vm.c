@@ -267,6 +267,7 @@ static int find_and_insert_region_slot(vm_virtual_map *map, addr start, addr siz
 			region->aspace_next = map->region_list;
 			map->region_list = region;
 		}
+		map->change_count++;
 		return NO_ERROR;
 	} else {
 		return ERR_VM_NO_REGION_SLOT;
@@ -704,6 +705,7 @@ static void vm_remove_region_struct(vm_region *region)
 			} else {
 				aspace->virtual_map.region_list = temp->aspace_next;
 			}
+			aspace->virtual_map.change_count++;
 			break;
 		}
 		last = temp;

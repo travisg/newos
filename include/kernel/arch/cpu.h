@@ -46,6 +46,7 @@ void arch_cpu_global_TLB_invalidate();
 int arch_cpu_user_memcpy(void *to, void *from, size_t size, addr *fault_handler);
 int arch_cpu_user_strcpy(char *to, const char *from, addr *fault_handler);
 int arch_cpu_user_strncpy(char *to, const char *from, size_t size, addr *fault_handler);
+void *arch_cpu_user_memset(void *s, char c, size_t count, addr *fault_handler);
 
 #endif
 
