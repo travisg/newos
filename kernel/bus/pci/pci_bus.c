@@ -16,7 +16,6 @@ struct pci_fs {
 	fs_id id;
 	mutex lock;
 	void *covered_vnode;
-	void *redir_vnode;
 	int root_vnode; // just a placeholder to return a pointer to
 };
 
