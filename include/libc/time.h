@@ -29,11 +29,12 @@ clock_t clock(void);
 struct tm *localtime(const time_t *timer);
 time_t time(time_t *timer);
 
-/*
 char *ctime(const time_t *timer);
 double difftime(time_t time1, time_t time2);
 struct tm *gmtime(const time_t *timer);
+
 time_t mktime(struct tm *timeptr);
+/*
 size_t strftime(char *str, size_t maxsize, const char *format, const struct tm *timeptr);
 */
 #endif

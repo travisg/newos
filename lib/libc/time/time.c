@@ -9,6 +9,8 @@
 #include <time.h>
 #include <string.h>
 
+#include <stdio.h>
+
 static void asctime_helper(const struct tm *timeptr, char* buf);
 
 /*
@@ -77,11 +79,20 @@ static void asctime_helper(const struct tm *timeptr, char* buf)
 	buf[25] = '\0';
 }
 
+
+double difftime(time_t time1, time_t time2)
+{
+	return ((double)(time1 - time2))/1000000.0;
+}
+
+struct tm *gmtime(const time_t *timer)
+{
+	return (struct tm*)0;
+}
+
 /*
  Returns the processor clock time used since the beginning of the program). 
  return value / CLOCKS_PER_SEC = number of seconds.
-
-
 */
 clock_t clock(void)
 {
@@ -101,13 +112,12 @@ static time_t _getSecond(time_t museconds)
 */
 static int _getMonthFromYDay(int yDay, int isLeapYear)
 {
-	int a = (isLeapYear == 0) ? 0 : 1;
 	int i = 12;
 	int month_first;
 	do
 	{
 		i--;
-		month_first = monthDay[i] + ((i < 2) ? 0 : a);
+		month_first = monthDay[i] + ((i < 2) ? 0 : isLeapYear);
 	}
 	while(yDay < month_first);
 	return i;
@@ -140,9 +150,23 @@ static int _isLeapYear(int year)
 	return 0;
 }
 
-static struct tm *localtime_helper(const time_t *timer, struct tm *tmb)
+static int _getDayOfYear(int year, int month, int dayOfMonth)
 {
-	long long esec = *timer / 1000000L;
+	return dayOfMonth
+		+ monthDay[month] 
+		+ ((month > 1) ? _isLeapYear(year): 0)
+		- 1;
+}
+
+static long _getDay(int year, int month, int dayOfMonth)
+{
+	return _getDayOfYear(year, month, dayOfMonth)
+		+ _getLastDayOfYear(year - 1);
+}
+
+static struct tm *localtime_helper(const time_t timer, struct tm *tmb)
+{
+	long long esec = timer / 1000000L;
 	long eday = esec / 86400L;
 	long daySec = esec % 86400L;
 	long dayMin = daySec / 60;
@@ -159,11 +183,33 @@ static struct tm *localtime_helper(const time_t *timer, struct tm *tmb)
 	return tmb;
 }
 
+
+time_t mktime(struct tm* timeptr)
+{
+	long day = _getDay(timeptr->tm_year, timeptr->tm_mon, timeptr->tm_mday);
+	long long secs =  60 * (60 * timeptr->tm_hour + timeptr->tm_min) 
+					  + timeptr->tm_sec 
+					  + 86400L * day;
+	time_t t = 1000000L * secs;
+
+	printf("days: %ld secs: %lu\n", day, secs);					
+	printf("time_t: %Lu\n", t);
+	localtime_helper(t, timeptr);
+	
+	return t;
+}
+
+
 /*
 */
 struct tm *localtime(const time_t *timer)
 {
-	return localtime_helper(timer, &tm_buf);
+	return localtime_helper(*timer, &tm_buf);
+}
+
+char *ctime(const time_t *timer)
+{
+	return asctime(localtime(timer));
 }
 
 /*
@@ -172,7 +218,13 @@ struct tm *localtime(const time_t *timer)
 time_t time(time_t *timer)
 {
 	/* This is not the right syscall. */	
-	return (*timer = (time_t)_kern_system_time());
+	time_t t = (time_t)_kern_system_time();
+	
+	if(timer != (time_t*)0)
+	{
+		*timer = t;
+	}
+	return t;
 }
 
 #endif

@@ -3,10 +3,10 @@
 
 int main(int argc, char **argv)
 {
-        time_t t;
-        time(&t);
-		//printf("time_t: %ld\n", t);
+        time_t t = 253470834000000LL;
+		printf("clock_t: %Lu\n", t);
         printf("asctime: %s\n", asctime(localtime(&t)));
+		printf("mktime: %Lu\n", mktime(localtime(&t)));
         return 0;
 }
 
