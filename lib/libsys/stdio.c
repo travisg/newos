@@ -1,3 +1,7 @@
+/* 
+** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Distributed under the terms of the NewOS License.
+*/
 #include <libc/printf.h>
 #include <libc/string.h>
 #include <libsys/syscalls.h>

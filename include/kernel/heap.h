@@ -1,3 +1,7 @@
+/* 
+** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Distributed under the terms of the NewOS License.
+*/
 #ifndef _HEAP_H
 #define _HEAP_H
 

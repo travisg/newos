@@ -1,3 +1,7 @@
+/* 
+** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Distributed under the terms of the NewOS License.
+*/
 #ifndef _FAULTS_PRIV_H
 #define _FAULTS_PRIV_H
 

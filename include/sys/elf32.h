@@ -1,3 +1,7 @@
+/* 
+** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Distributed under the terms of the NewOS License.
+*/
 #ifndef _ELF32_H
 #define _ELF32_H
 

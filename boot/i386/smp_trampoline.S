@@ -1,3 +1,7 @@
+/* 
+** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Distributed under the terms of the NewOS License.
+*/
 // expects a stack page like this:
 // (stack has to be at (0x9e000)
 //	0x9effc            : final esp

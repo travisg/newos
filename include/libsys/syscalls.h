@@ -1,3 +1,7 @@
+/* 
+** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Distributed under the terms of the NewOS License.
+*/
 #ifndef _LIBSYS_SYSCALLS_H
 #define _LIBSYS_SYSCALLS_H
 

@@ -1,3 +1,7 @@
+/* 
+** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Distributed under the terms of the NewOS License.
+*/
 #include <arch/sh4/vcpu.h>
 #include <arch/sh4/vcpu_struct.h>
 #include <boot/stage2.h>

@@ -1,3 +1,7 @@
+/* 
+** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Distributed under the terms of the NewOS License.
+*/
 unsigned char sparcbootblock[] = {
 1,3,1,7,0,0,0,16,0,0,0,0,0,0,0,0,0,0,0,60,0,56,0,0,0,0,0,0,0,0,0,0,3,0,
 14,4,130,16,98,120,129,192,64,0,1,0,0,0,0,0,0,4,5,0,0,0,0,56,0,0,0,0,0,
