@@ -6,7 +6,7 @@
 #include <sys/syscalls.h>
 #include <stdio.h>
 #include <string.h>
-#include <stdlib.h>
+#include <stdlib.h>  
 #include <fcntl.h>
 #include <newos/types.h>
 #include <errno.h>
@@ -94,6 +94,7 @@ static int __delete_FILE_struct(int fd)
     }
 
     /* free the FILE space/semaphore*/
+    sys_close(fd);
     sys_sem_delete(fNode->sid);
     free(fNode->buf);
     free(fNode);
@@ -316,13 +317,12 @@ int getchar(void)
 
 char* fgets(char* str, int n, FILE * stream)
 {
-    char* tmp;
+    unsigned char* tmp;
     int i = n-1;
     tmp = str;
 
-    sys_write(stdout->fd, "before acq\r\n", -1, 12);
 	sys_sem_acquire(stream->sid, 1);
-    sys_write(stdout->fd, "after acq\r\n", -1, 11);
+
     for(;i > 0; i--)
     {
         int c;
@@ -333,9 +333,9 @@ char* fgets(char* str, int n, FILE * stream)
         }
         if (stream->rpos >= stream->buf_pos) 
         {
-            sys_write(stdout->fd, "before read\r\n", -1, 13);
+
             int len = sys_read(stream->fd, stream->buf, -1, stream->buf_size);
-            sys_write(stdout->fd, "after read\r\n", -1, 12);
+
             if (len==0) 
             {
                 stream->flags |= _STDIO_EOF;
@@ -355,9 +355,9 @@ char* fgets(char* str, int n, FILE * stream)
         if(c == '\n')
             break;
     }
-    sys_write(stdout->fd, "before rel\r\n", -1, 12);
+
     sys_sem_release(stream->sid, 1);
-    sys_write(stdout->fd, "after rel\r\n", -1, 11);
+
 
     *tmp = '\0';
     return str;
@@ -388,5 +388,34 @@ int fgetc(FILE *stream)
     sys_sem_release(stream->sid, 1);    
     return c;
 }
+
+int scanf(char const *fmt, ...)
+{
+	va_list args;
+	int i;
+
+	va_start(args, fmt);
+	sys_sem_acquire(stdout->sid, 1);
+	i = vfscanf(stdout, fmt, args);
+	sys_sem_release(stdout->sid, 1);    
+	va_end(args);
+
+	return i;
+}
+int fscanf(FILE *stream, char const *fmt, ...)
+{
+	va_list args;
+	int i;
+
+	va_start(args, fmt);
+	sys_sem_acquire(stream->sid, 1);
+	i = vfscanf(stream, fmt, args);
+	sys_sem_release(stream->sid, 1);    
+	va_end(args);
+
+	return i;
+}
+
+
 #endif
 

@@ -3,6 +3,7 @@
 ** Distributed under the terms of the NewOS License.
 */
 /* Code modified by Justin Smith 2003/06/26 */
+
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>

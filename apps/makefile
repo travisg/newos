@@ -2,6 +2,8 @@
 APPS_DIR := apps
 
 include $(addsuffix /makefile, $(addprefix $(APPS_DIR)/, \
+	test_output \
+	test_input \
 	false \
 	fibo \
 	fortune \

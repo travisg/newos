@@ -337,7 +337,7 @@ restart_loop:
 		} else {
             int bw = lbuf_write(c, lbuf, other_lbuf, 0);
             // The carriage return can be safely ignored in TTY_FLAG_NLCR.
-            if(bw == 0 && c != '\r')
+            if(bw == 0 && !((lbuf->flags & TTY_FLAG_NLCR) && c == '\r'))
             {
                 buf_pos--;
                 goto exit_loop;
