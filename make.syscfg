@@ -66,12 +66,12 @@ ifeq ($(ARCH),i386)
 		STRIP = i386-elf-strip
 	endif
 	ifeq ($(OSTYPE),cygwin)
-		CC = i386-linux-gcc
-		LD = i386-linux-ld
-		AS = i386-linux-as
-		AR = i386-linux-ar
-		OBJCOPY = i386-linux-objcopy
-		STRIP = i386-linux-strip
+		CC = i386-elf-gcc
+		LD = i386-elf-ld
+		AS = i386-elf-as
+		AR = i386-elf-ar
+		OBJCOPY = i386-elf-objcopy
+		STRIP = i386-elf-strip
 	endif
 	GLOBAL_CFLAGS = -O2
 	KERNEL_CFLAGS = -fno-pic
