@@ -192,6 +192,6 @@ $(warning ARCH = $(ARCH))
 
 # figure out where the build dir will be
 BUILD_DIR = build/$(ARCH)
-$(warning buid dir will be $(BUILD_DIR))
+$(warning build dir will be $(BUILD_DIR))
 $(shell mkdir -p $(BUILD_DIR))
 
