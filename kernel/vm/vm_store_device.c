@@ -33,16 +33,15 @@ static int device_has_page(struct vm_store *store, off_t offset)
 	return 0;
 }
 
-static int device_read(struct vm_store *store, off_t offset, void *buf, size_t *len)
+static ssize_t device_read(struct vm_store *store, off_t offset, iovecs *vecs)
 {
 	panic("device_store: read called. Invalid!\n");
 	return ERR_UNIMPLEMENTED;
 }
 
-static int device_write(struct vm_store *store, off_t offset, const void *buf, size_t *len)
+static ssize_t device_write(struct vm_store *store, off_t offset, iovecs *vecs)
 {
 	// no place to write, this will cause the page daemon to skip this store	
-	*len = 0;
 	return 0;
 }
 
@@ -89,7 +88,9 @@ static vm_store_ops device_ops = {
 	&device_has_page,
 	&device_read,
 	&device_write,
-	&device_fault
+	&device_fault,
+	NULL,
+	NULL
 };
 
 vm_store *vm_store_create_device(addr base_addr)

@@ -56,6 +56,18 @@ test_and_set:
 	xchg	%eax,(%edx)
 	ret
 
+/* int set_if_null(int *val, int set_to) */
+.global set_if_null
+set_if_null:
+	movl	4(%esp),%edx
+	movl	8(%esp),%ecx
+	xorl	%eax,%eax
+
+	lock
+	cmpxchgl	%ecx,(%edx)
+
+	ret
+
 /* saves the conversion factor needed for system_time */
 .global cv_factor
 cv_factor:

@@ -99,7 +99,7 @@ static int main2()
 	dprintf("start of main2: initializing devices\n");
 
 	// bootstrap the root filesystem
-	bootstrap_rootfs();	
+	bootstrap_rootfs();
 
 	err = sys_mount("/", "rootfs");
 	if(err < 0)
@@ -107,7 +107,7 @@ static int main2()
 
 	// bootstrap the bootfs
 	bootstrap_bootfs();
-	
+
 	sys_create("/boot", STREAM_TYPE_DIR);
 	err = sys_mount("/boot", "bootfs");
 	if(err < 0)
@@ -120,8 +120,6 @@ static int main2()
 	err = sys_mount("/dev", "devfs");
 	if(err < 0)
 		panic("error mounting devfs\n");
-	
-//	vfs_test();
 
 	dev_init(&ka);
 	bus_init(&ka);

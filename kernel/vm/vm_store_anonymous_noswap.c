@@ -26,16 +26,15 @@ static int anonymous_has_page(struct vm_store *store, off_t offset)
 	return 0;
 }
 
-static int anonymous_read(struct vm_store *store, off_t offset, void *buf, size_t *len)
+static ssize_t anonymous_read(struct vm_store *store, off_t offset, iovecs *vecs)
 {
 	panic("anonymous_store: read called. Invalid!\n");
 	return ERR_UNIMPLEMENTED;
 }
 
-static int anonymous_write(struct vm_store *store, off_t offset, const void *buf, size_t *len)
+static ssize_t anonymous_write(struct vm_store *store, off_t offset, iovecs *vecs)
 {
 	// no place to write, this will cause the page daemon to skip this store
-	*len = 0;
 	return 0;
 }
 
@@ -52,7 +51,9 @@ static vm_store_ops anonymous_ops = {
 	&anonymous_has_page,
 	&anonymous_read,
 	&anonymous_write,
-	NULL // fault() is unused
+	NULL, // fault() is unused
+	NULL,
+	NULL
 };
 
 vm_store *vm_store_create_anonymous_noswap()

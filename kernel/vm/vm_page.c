@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -42,7 +42,7 @@ static int page_scrubber();
 static vm_page *dequeue_page(page_queue *q)
 {
 	vm_page *page;
-	
+
 	page = q->tail;
 	if(page != NULL) {
 		if(page->queue_prev != NULL) {
@@ -70,7 +70,7 @@ static void remove_page_from_queue(page_queue *q, vm_page *page)
 	if(page->queue_prev != NULL) {
 		page->queue_prev->queue_next = page->queue_next;
 	} else {
-		q->head = page->queue_next;		
+		q->head = page->queue_next;
 	}
 	if(page->queue_next != NULL) {
 		page->queue_next->queue_prev = page->queue_prev;
@@ -91,9 +91,9 @@ static void move_page_to_queue(page_queue *from_q, page_queue *to_q, vm_page *pa
 int vm_page_init(kernel_args *ka)
 {
 	unsigned int i;
-	
+
 	dprintf("vm_page_init: entry\n");
-	
+
 	page_lock = 0;
 
 	// initialize queues
@@ -106,7 +106,7 @@ int vm_page_init(kernel_args *ka)
 	page_active_queue.head = NULL;
 	page_active_queue.tail = NULL;
 	page_active_queue.count = 0;
-	
+
 	// calculate the size of memory by looking at the phys_mem_range array
 	{
 		unsigned int last_phys_page = 0;
@@ -118,13 +118,13 @@ int vm_page_init(kernel_args *ka)
 		dprintf("first phys page = 0x%x, last 0x%x\n", physical_page_offset, last_phys_page);
 		num_pages = last_phys_page - physical_page_offset;
 	}
-	
+
 	// map in the new free page table
 	all_pages = (vm_page *)vm_alloc_from_ka_struct(ka, num_pages * sizeof(vm_page), LOCK_KERNEL|LOCK_RW);
 
 	dprintf("vm_init: putting free_page_table @ %p, # ents %d (size 0x%x)\n",
 		all_pages, num_pages, num_pages * sizeof(vm_page));
-	
+
 	// initialize the free page table
 	for(i=0; i < num_pages - 1; i++) {
 		all_pages[i].ppn = physical_page_offset + i;
@@ -154,7 +154,7 @@ int vm_page_init2(kernel_args *ka)
 {
 	void *null;
 
-	null = all_pages;	
+	null = all_pages;
 	vm_create_anonymous_region(vm_get_kernel_aspace_id(), "page_structures", &null, REGION_ADDR_EXACT_ADDRESS,
 		PAGE_ALIGN(num_pages * sizeof(vm_page)), REGION_WIRING_WIRED_ALREADY, LOCK_RW|LOCK_KERNEL);
 
@@ -167,7 +167,7 @@ int vm_page_init2(kernel_args *ka)
 int vm_page_init_postthread(kernel_args *ka)
 {
 	thread_id tid;
-	
+
 	// create a kernel thread to clear out pages
 	tid = thread_create_kernel_thread("page scrubber", &page_scrubber, 1);
 	thread_resume_thread(tid);
@@ -187,7 +187,7 @@ static int page_scrubber()
 
 	for(;;) {
 		thread_snooze(100000); // 10ms
-		
+
 		if(page_free_queue.count > 0) {
 			state = int_disable_interrupts();
 			acquire_spinlock(&page_lock);
@@ -197,7 +197,7 @@ static int page_scrubber()
 				if(page[i] == NULL)
 					break;
 			}
-			
+
 			release_spinlock(&page_lock);
 			int_restore_interrupts(state);
 
@@ -209,15 +209,15 @@ static int page_scrubber()
 
 			state = int_disable_interrupts();
 			acquire_spinlock(&page_lock);
-			
+
 			for(i=0; i<scrub_count; i++) {
 				page[i]->state = PAGE_STATE_CLEAR;
 				enqueue_page(&page_clear_queue, page[i]);
 			}
-	
+
 			release_spinlock(&page_lock);
 			int_restore_interrupts(state);
-		}	
+		}
 	}
 
 	return 0;
@@ -230,7 +230,7 @@ static void clear_page(addr pa)
 //	dprintf("clear_page: clearing page 0x%x\n", pa);
 
 	vm_get_physical_page(pa, &va, PHYSICAL_PAGE_CAN_WAIT);
-	
+
 	memset((void *)va, 0, PAGE_SIZE);
 
 	vm_put_physical_page(va);
@@ -281,7 +281,7 @@ int vm_mark_page_range_inuse(addr start_page, addr len)
 				// uh
 				dprintf("vm_mark_page_range_inuse: page 0x%x in non-free state %d!\n", start_page + i, page->state);
 		}
-	}		
+	}
 
 	release_spinlock(&page_lock);
 	int_restore_interrupts(state);
@@ -294,10 +294,10 @@ vm_page *vm_page_allocate_specific_page(addr page_num, int page_state)
 	vm_page *p;
 	int old_page_state = PAGE_STATE_BUSY;
 	int state;
-	
+
 	state = int_disable_interrupts();
 	acquire_spinlock(&page_lock);
-	
+
 	p = vm_lookup_page(page_num);
 	if(p == NULL)
 		goto out;
@@ -317,13 +317,13 @@ vm_page *vm_page_allocate_specific_page(addr page_num, int page_state)
 	}
 	if(p == NULL)
 		goto out;
-	
+
 	old_page_state = p->state;
 	p->state = PAGE_STATE_BUSY;
-	
-	if(old_page_state != PAGE_STATE_UNUSED)	
+
+	if(old_page_state != PAGE_STATE_UNUSED)
 		enqueue_page(&page_active_queue, p);
-	
+
 out:
 	release_spinlock(&page_lock);
 	int_restore_interrupts(state);
@@ -344,7 +344,7 @@ vm_page *vm_page_allocate_page(int page_state)
 	page_queue *q_other;
 	int state;
 	int old_page_state;
-	
+
 	switch(page_state) {
 		case PAGE_STATE_FREE:
 			q = &page_free_queue;
@@ -357,10 +357,10 @@ vm_page *vm_page_allocate_page(int page_state)
 		default:
 			return NULL; // invalid
 	}
-	
+
 	state = int_disable_interrupts();
 	acquire_spinlock(&page_lock);
-	
+
 	p = dequeue_page(q);
 	if(p == NULL) {
 		// the clear queue was empty, grab one from the free queue and zero it out
@@ -370,16 +370,16 @@ vm_page *vm_page_allocate_page(int page_state)
 			panic("vm_allocate_page: out of memory!\n");
 		}
 	}
-	
+
 	old_page_state = p->state;
 	p->state = PAGE_STATE_BUSY;
-	
+
 	enqueue_page(&page_active_queue, p);
-	
+
 	release_spinlock(&page_lock);
 	int_restore_interrupts(state);
 
-	if(page_state == PAGE_STATE_CLEAR && p->state == PAGE_STATE_FREE) {
+	if(page_state == PAGE_STATE_CLEAR && old_page_state == PAGE_STATE_FREE) {
 		clear_page(p->ppn * PAGE_SIZE);
 	}
 
@@ -438,7 +438,7 @@ vm_page *vm_lookup_page(addr page_num)
 	page_num -= physical_page_offset;
 	if(page_num > num_pages)
 		return NULL;
-		
+
 	return &all_pages[page_num];
 }
 
@@ -446,7 +446,7 @@ static int vm_page_set_state_nolock(vm_page *page, int page_state)
 {
 	page_queue *from_q = NULL;
 	page_queue *to_q = NULL;
-	
+
 	switch(page->state) {
 		case PAGE_STATE_BUSY:
 		case PAGE_STATE_ACTIVE:
@@ -483,10 +483,10 @@ static int vm_page_set_state_nolock(vm_page *page, int page_state)
 			break;
 		default:
 			panic("vm_page_set_state: invalid target state %d\n", page_state);
-	}	
+	}
 	move_page_to_queue(from_q, to_q, page);
 	page->state = page_state;
-	
+
 	return 0;
 }
 
@@ -495,12 +495,12 @@ int vm_page_set_state(vm_page *page, int page_state)
 	int err;
 	int state = int_disable_interrupts();
 	acquire_spinlock(&page_lock);
-	
+
 	err = vm_page_set_state_nolock(page, page_state);
-	
+
 	release_spinlock(&page_lock);
 	int_restore_interrupts(state);
-	
+
 	return err;
 }
 
@@ -514,12 +514,12 @@ void dump_page_stats(int argc, char **argv)
 	unsigned int page_types[8];
 	addr i;
 
-	memset(page_types, 0, sizeof(page_types));	
-	
+	memset(page_types, 0, sizeof(page_types));
+
 	for(i=0; i<num_pages; i++) {
 		page_types[all_pages[i].state]++;
 	}
-	
+
 	dprintf("page stats:\n");
 	dprintf("active: %d\ninactive: %d\nbusy: %d\nunused: %d\n",
 		page_types[PAGE_STATE_ACTIVE], page_types[PAGE_STATE_INACTIVE], page_types[PAGE_STATE_BUSY], page_types[PAGE_STATE_UNUSED]);
@@ -568,7 +568,7 @@ static void dump_free_page_table(int argc, char **argv)
 	if(free_start != END_OF_LIST) {
 		dprintf("free from %d -> %d\n", free_start + free_page_table_base, i-1 + free_page_table_base);
 	}
-/*			
+/*
 	for(i=0; i<free_page_table_size; i++) {
 		dprintf("%d->%d ", i, free_page_table[i]);
 	}
@@ -586,7 +586,7 @@ static addr vm_alloc_vspace_from_ka_struct(kernel_args *ka, unsigned int size)
 	for(i=1; i<ka->num_virt_alloc_ranges; i++) {
 		last_valloc_entry = i;
 		// check to see if the space between this one and the last is big enough
-		if(ka->virt_alloc_range[i].start - 
+		if(ka->virt_alloc_range[i].start -
 			(ka->virt_alloc_range[i-1].start + ka->virt_alloc_range[i-1].size) >= size) {
 
 			spot = ka->virt_alloc_range[i-1].start + ka->virt_alloc_range[i-1].size;
@@ -626,7 +626,7 @@ static bool is_page_in_phys_range(kernel_args *ka, addr paddr)
 		if(paddr >= ka->phys_mem_range[i].start &&
 			paddr < ka->phys_mem_range[i].start + ka->phys_mem_range[i].size) {
 			return true;
-		}	
+		}
 	}
 	return false;
 }
@@ -676,6 +676,6 @@ addr vm_alloc_from_ka_struct(kernel_args *ka, unsigned int size, int lock)
 		vm_translation_map_quick_map(ka, vspot + i*PAGE_SIZE, pspot * PAGE_SIZE, lock, &vm_alloc_ppage_from_kernel_struct);
 //		pmap_map_page(pspot, vspot + i*PAGE_SIZE, lock);
 	}
-	
+
 	return vspot;
 }

@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -16,7 +16,7 @@ void vm_test()
 //	region_id region, region2, region3;
 //	addr region_addr;
 //	int i;
-	
+
 	dprintf("vm_test: entry\n");
 #if 1
 	dprintf("vm_test 1: creating anonymous region and writing to it\n");
@@ -98,7 +98,7 @@ void vm_test()
 		vm_region_info info;
 		void *ptr;
 		int rc;
-		
+
 		region = vm_find_region_by_name(vm_get_kernel_aspace_id(), "vid_mem");
 		if(region < 0)
 			panic("vm_test 4: error finding region 'vid_mem'\n");
@@ -145,7 +145,7 @@ void vm_test()
 			panic("vm_test 5: regions are not identical\n");
 		else
 			dprintf("vm_test 5: comparison ok\n");
-		
+
 		if(vm_delete_region(vm_get_kernel_aspace_id(), region2) < 0)
 			panic("vm_test 5: error deleting cloned region\n");
 	}
@@ -163,7 +163,7 @@ void vm_test()
 		if(region < 0)
 			panic("vm_test 6: error creating test region\n");
 		dprintf("region = 0x%x, addr = 0x%x\n", region, region_addr);
-	
+
 		memset(region_addr, 99, PAGE_SIZE * 16);
 
 		dprintf("memsetted the region\n");
@@ -179,13 +179,44 @@ void vm_test()
 			panic("vm_test 6: regions are not identical\n");
 		else
 			dprintf("vm_test 6: comparison ok\n");
-		
+
 		if(vm_delete_region(vm_get_kernel_aspace_id(), region) < 0)
 			panic("vm_test 6: error deleting test region\n");
-		
+
 		if(vm_delete_region(vm_get_kernel_aspace_id(), region2) < 0)
 			panic("vm_test 6: error deleting cloned region\n");
 	}
 #endif
+#if 1
+	dprintf("vm_test 7: mmaping a known file a few times and verifying they see the same data\n");
+	{
+		void *ptr, *ptr2;
+		region_id rid, rid2;
+		char *blah;
+		int fd;
+
+		fd = sys_open("/boot/kernel", STREAM_TYPE_FILE, 0);
+
+		rid = vm_map_file(vm_get_kernel_aspace_id(), "mmap_test", &ptr, REGION_ADDR_ANY_ADDRESS,
+			PAGE_SIZE, LOCK_RW|LOCK_KERNEL, "/boot/kernel", 0, true);
+
+		rid2 = vm_map_file(vm_get_kernel_aspace_id(), "mmap_test2", &ptr2, REGION_ADDR_ANY_ADDRESS,
+			PAGE_SIZE, LOCK_RW|LOCK_KERNEL, "/boot/kernel", 0, true);
+
+		dprintf("diff %d\n", memcmp(ptr, ptr2, PAGE_SIZE));
+
+		dprintf("removing regions\n");
+
+		vm_delete_region(vm_get_kernel_aspace_id(), rid);
+		vm_delete_region(vm_get_kernel_aspace_id(), rid2);
+
+		dprintf("regions deleted\n");
+
+		sys_close(fd);
+
+dprintf("vm_test 7: passed\n");
+	}
+#endif
+
 	dprintf("vm_test: done\n");
 }

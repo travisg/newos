@@ -7,12 +7,15 @@
 
 #include <kernel/kernel.h>
 #include <boot/stage2.h>
+#include <kernel/vfs.h>
 #include <kernel/arch/vm_translation_map.h>
 
 // vm page
 typedef struct vm_page {
 	struct vm_page *queue_prev;
 	struct vm_page *queue_next;
+
+	struct vm_page *hash_next;
 
 	addr ppn; // physical page number
 	off_t offset;	
@@ -130,9 +133,11 @@ typedef struct vm_store_ops {
 	void (*destroy)(struct vm_store *backing_store);
 	off_t (*commit)(struct vm_store *backing_store, off_t size);
 	int (*has_page)(struct vm_store *backing_store, off_t offset);
-	int (*read)(struct vm_store *backing_store, off_t offset, void *buf, size_t *len);
-	int (*write)(struct vm_store *backing_store, off_t offset, const void *buf, size_t *len);
+	ssize_t (*read)(struct vm_store *backing_store, off_t offset, iovecs *vecs);
+	ssize_t (*write)(struct vm_store *backing_store, off_t offset, iovecs *vecs);
 	int (*fault)(struct vm_store *backing_store, struct vm_address_space *aspace, off_t offset);
+	void (*acquire_ref)(struct vm_store *backing_store);
+	void (*release_ref)(struct vm_store *backing_store);
 } vm_store_ops;
 
 // args for the create_area funcs
@@ -176,6 +181,8 @@ region_id vm_create_anonymous_region(aspace_id aid, char *name, void **address, 
 	addr size, int wiring, int lock);
 region_id vm_map_physical_memory(aspace_id aid, char *name, void **address, int addr_type,
 	addr size, int lock, addr phys_addr);
+region_id vm_map_file(aspace_id aid, char *name, void **address, int addr_type, 
+	addr size, int lock, const char *path, off_t offset, bool kernel);
 region_id vm_clone_region(aspace_id aid, char *name, void **address, int addr_type,
 	region_id source_region, int lock);	
 int vm_delete_region(aspace_id aid, region_id id);

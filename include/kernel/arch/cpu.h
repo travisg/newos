@@ -33,6 +33,7 @@ int atomic_add(volatile int *val, int incr);
 int atomic_and(volatile int *val, int incr);
 int atomic_or(volatile int *val, int incr);
 int test_and_set(volatile int *val, int set_to);
+int set_if_null(int *val, int set_to);
 
 time_t system_time();
 int arch_cpu_init(kernel_args *ka);

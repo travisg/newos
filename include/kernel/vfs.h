@@ -36,6 +36,11 @@ typedef struct iovecs {
 	iovec vec[0];
 } iovecs;	
 
+/* macro to allocate a iovec array on the stack */
+#define IOVECS(name, size) \
+	uint8 _##name[sizeof(iovecs) + (size)*sizeof(iovec)]; \
+	iovecs *name = (iovecs *)_##name
+
 struct file_stat {
 	vnode_id 	vnid;
 	stream_type	type;
@@ -107,9 +112,13 @@ int vfs_remove_vnode(fs_id fsid, vnode_id vnid);
 /* calls needed by the VM for paging */
 int vfs_get_vnode_from_path(const char *path, bool kernel, void **vnode);
 int vfs_put_vnode_ptr(void *vnode);
+void vfs_vnode_acquire_ref(void *vnode);
+void vfs_vnode_release_ref(void *vnode);
 ssize_t vfs_canpage(void *vnode);
 ssize_t vfs_readpage(void *vnode, iovecs *vecs, off_t pos);
 ssize_t vfs_writepage(void *vnode, iovecs *vecs, off_t pos);
+void *vfs_get_cache_ptr(void *vnode);
+int vfs_set_cache_ptr(void *vnode, void *cache);
 
 /* calls kernel code should make for file I/O */
 int sys_mount(const char *path, const char *fs_name);

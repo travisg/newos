@@ -6,7 +6,8 @@ KERNEL_OBJS += \
 		$(KERNEL_VM_OBJ_DIR)/vm_page.o \
 		$(KERNEL_VM_OBJ_DIR)/vm_store_anonymous_noswap.o \
 		$(KERNEL_VM_OBJ_DIR)/vm_store_device.o \
-		$(KERNEL_VM_OBJ_DIR)/vm_tests.o		
+		$(KERNEL_VM_OBJ_DIR)/vm_store_vnode.o \
+		$(KERNEL_VM_OBJ_DIR)/vm_tests.o
 
 KERNEL_VM_INCLUDES = $(KERNEL_INCLUDES)
 
