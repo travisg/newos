@@ -72,11 +72,12 @@ static uint16 read_csr(pcnet32 *nic, uint32 reg)
 	return READ_32(nic, PCNET_IO_DATAPORT);
 }
 
+/* XX this function is not used
 static uint16 read_bcr(pcnet32 *nic, uint32 reg)
 {
 	WRITE_32(nic, PCNET_IO_ADDRPORT, reg);
 	return READ_32(nic, PCNET_IO_CONFIGPORT);
-}
+}*/
 
 static void write_csr(pcnet32 *nic, uint32 reg, uint16 data)
 {
@@ -84,6 +85,7 @@ static void write_csr(pcnet32 *nic, uint32 reg, uint16 data)
 	WRITE_32(nic, PCNET_IO_DATAPORT, data);
 }
 
+/* XX this function is not used (but perhaps should be in some places?
 static void modify_csr(pcnet32 *nic, uint32 reg, uint16 bits, uint16 set)
 {
 	uint16 oldset;
@@ -101,6 +103,7 @@ static void modify_csr(pcnet32 *nic, uint32 reg, uint16 bits, uint16 set)
 	int_restore_interrupts();
 	release_spinlock(&nic->control_lock);
 }
+*/
 
 static void write_bcr(pcnet32 *nic, uint32 reg, uint16 data)
 {
@@ -147,8 +150,11 @@ pcnet32 *pcnet32_new(uint32 initmode, uint16 rxbuffer_size,	uint16 txbuffer_size
 	SHOW_FLOW(3, "rxring physical address: 0x%x", nic->rxring_phys);
 
 	nic->rxring_sem = sem_create(0, "pcnet32_rxring");
-	if (mutex_init(&nic->rxring_mutex, "pcnet32_rxring") < 0)
+	if (nic->rxring_sem < 0)
 		goto err_after_rxring_region;
+
+	if (mutex_init(&nic->rxring_mutex, "pcnet32_rxring") < 0)
+		goto err_after_rxring_sem;
        
 	// setup_transmit_descriptor_ring;
 	nic->txring_count = txring_count;
@@ -242,7 +248,7 @@ int pcnet32_detect(pcnet32 *dev)
 
 	if (module_get(PCI_BUS_MODULE_NAME, 0, (void**)&pci))
 	{
-		SHOW_FLOW(3, "Could not find PCI Bus.", 0);
+		SHOW_FLOW0(3, "Could not find PCI Bus.");
 		return -1;
 	}
 
@@ -259,7 +265,7 @@ int pcnet32_detect(pcnet32 *dev)
 
 	if (!foundit)
 	{
-		SHOW_FLOW(3, "Could not find PCNET32 Compatible Device", 0);
+		SHOW_FLOW0(3, "Could not find PCNET32 Compatible Device");
 		return -1;
 	}
 
@@ -287,12 +293,6 @@ int pcnet32_init(pcnet32 *nic)
 		return -1;
 	}
 
-// XX looks like there's no way to set busmaster at this point.
-//    but pcnet32 needs to be, so this needs to be fixed again.
-//	i = sys_open(dev->dev_path, STREAM_TYPE_ANY, 0);
-//	sys_ioctl(i, PCI_SET_BUSMASTER, NULL, 0);
-//	sys_close(i);
-
 	SHOW_FLOW(3, "detected device at irq %d, memory base 0x%lx, size 0x%lx", 
 		  nic->irq, nic->phys_base, nic->phys_size);
 
@@ -301,7 +301,7 @@ int pcnet32_init(pcnet32 *nic)
 		LOCK_KERNEL|LOCK_RW, nic->phys_base);
 
 	if(nic->io_region < 0) {
-		SHOW_FLOW(3, "error allocating device physical region at %p", 
+		SHOW_FLOW(3, "error allocating device physical region at %x", 
 			  nic->phys_base);
 		return nic->io_region;
 	}
@@ -335,9 +335,6 @@ int pcnet32_init(pcnet32 *nic)
 
 void pcnet32_start(pcnet32 *nic)
 {
-	bigtime_t time;
-	int err = -1;
-	addr_t temp;
 	int i = 0;
 	struct pcnet32_init *init;
 
@@ -478,7 +475,7 @@ ssize_t pcnet32_xmit(pcnet32 *nic, const char *ptr, ssize_t len)
 
 ssize_t pcnet32_rx(pcnet32 *nic, char *buf, ssize_t buf_len)
 {
-	uint16 i = 0, index = 0;
+	uint16 index = 0;
 	ssize_t real_len = -1;
 
 	SHOW_FLOW(3, "nic %p data %p buf_len %d", nic, buf, buf_len);
