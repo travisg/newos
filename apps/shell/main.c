@@ -29,7 +29,6 @@ int main(int argc,char *argv[])
 	}
 
 	for(;;) {
-		int chars_read;
 
 		printf("> ");
 

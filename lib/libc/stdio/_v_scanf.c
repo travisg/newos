@@ -298,18 +298,19 @@ static long long convertIntegralValue(int (*_read)(void*), void (*_push)(void*, 
 	}
 
 	qbase = (unsigned)base;
-	cutoff = (unsigned long long)LLONG_MAX / qbase;
-	cutlim = (unsigned long long)LLONG_MAX % qbase;
+	cutoff = (unsigned long long)ULLONG_MAX / qbase;
+	cutlim = (unsigned long long)ULLONG_MAX % qbase;
 
 
 	for (acc = 0, any = 0;; c = _read(arg), length++)
 	{
 		if(c <= 0)
 		{
-			goto finish_EOF;
+			goto finish;
 		}
 		if(width > 0 && length > width)
 		{
+			_push(arg, c);
 			goto finish;
 		}
 
@@ -335,9 +336,6 @@ static long long convertIntegralValue(int (*_read)(void*), void (*_push)(void*, 
 	}
 
 finish:
-	_push(arg, c);
-
-finish_EOF:
 	if (any < 0)
 	{
 		acc = ULLONG_MAX;
@@ -564,8 +562,6 @@ read_signed_int:
 				break;
 				case 'c':
 				{
-					width = 10;
-//					write(1, "hello", 5);
 					unsigned char* c = (unsigned char*)va_arg(arg_ptr, unsigned char*);
 					int i = 0;
 					if(width == -1)

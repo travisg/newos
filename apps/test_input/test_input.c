@@ -22,7 +22,7 @@ static void testGets(FILE* f)
 
 static void testScanf(FILE* f)
 {
-	char c[10];
+	char c[11];
 	char s[11];
 
 	unsigned int u;
@@ -53,7 +53,12 @@ static void testScanf(FILE* f)
 
 	printf("Read a char array (10):");
 	scanf("%10c", c);
-	c[9] = '\0';
+	c[10] = '\0';
+	for(i = 0; i < 11; i++)
+	{
+		printf("\n\'%c\'", c[i]);
+	}
+	printf("\n");	
 	printf("String value: %s\n", c);
 
 	printf("Read a string (10):");
