@@ -55,6 +55,8 @@ TRAP(trap45, 45)
 TRAP(trap46, 46)
 TRAP(trap47, 47)
 
+TRAP(trap254, 254)
+TRAP(trap255, 255)
 
 .align 8
 .globl int_bottom
@@ -66,6 +68,7 @@ int_bottom:
 	addl	$8,%esp
 	iret
 	
+#if 0
 .globl _page_fault_int
 .globl _general_protection_fault_int
 .globl _ignore_int_low
@@ -73,7 +76,6 @@ int_bottom:
 .globl _double_fault_int
 .globl _timer_int
 
-#if 0
 _page_fault_int:
 	pusha
 	cld

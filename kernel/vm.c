@@ -156,6 +156,9 @@ static int _vm_create_area(struct aspace *aspace, char *name, void **addr, int a
 	struct area *area;
 	unsigned int base;
 
+	dprintf("_vm_create_area: '%s', *addr = 0x%p, addr_type = %d, size = %d, src_addr = 0x%x\n",
+		name, *addr, addr_type, src_addr);
+
 	switch(addr_type) {
 		case AREA_ANY_ADDRESS: {
 			struct area *a;
@@ -251,7 +254,7 @@ int vm_map_physical_memory(struct aspace *aspace, char *name, void **addr, int a
 	return _vm_create_area(aspace, name, addr, addr_type, size, lock, phys_addr, SRC_ADDR_PHYSICAL);
 }
 
-static void vm_dump_areas(struct aspace *aspace)
+void vm_dump_areas(struct aspace *aspace)
 {
 	struct area *area;
 

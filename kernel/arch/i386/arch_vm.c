@@ -25,7 +25,7 @@ int arch_vm_init2(struct kernel_args *ka)
 
 	// account for the segment descriptor
 	gdt = (unsigned int *)ka->vir_gdt;	
-	vm_map_physical_memory(vm_get_kernel_aspace(), "gdt", (void *)&gdt, AREA_ANY_ADDRESS, PAGE_SIZE, 0, ka->phys_gdt);
+	vm_create_area(vm_get_kernel_aspace(), "gdt", (void *)&gdt, AREA_ALREADY_MAPPED, PAGE_SIZE, 0);
 	
 	return 0;
 }

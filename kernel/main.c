@@ -7,6 +7,7 @@
 #include "vm.h"
 #include "timer.h"
 #include "proc.h"
+#include "smp.h"
 
 #include "stage2.h"
 
@@ -27,6 +28,7 @@ int _start(struct kernel_args *oldka)
 	int_init2(&ka);
 	faults_init(&ka);
 	con_init(&ka);
+	smp_init(&ka);
 	timer_init(&ka);
 	proc_init(&ka);
 	thread_init(&ka);
@@ -44,6 +46,8 @@ int _start(struct kernel_args *oldka)
 	asm("int $13");
 #endif
 	kprintf("Welcome to the kernel!\n");
+
+	vm_dump_areas(vm_get_kernel_aspace());
 
 	int_enable_interrupts();
 	

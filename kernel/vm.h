@@ -30,6 +30,7 @@ enum {
 	AREA_ALREADY_MAPPED
 };
 
+void vm_dump_areas(struct aspace *aspace);
 int vm_init(struct kernel_args *ka);
 int vm_page_fault(int address, int errorcode);
 int vm_get_free_page(unsigned int *page);

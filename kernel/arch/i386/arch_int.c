@@ -205,11 +205,15 @@ int arch_int_init(struct kernel_args *ka)
 	set_intr_gate(46,  &trap46);
 	set_intr_gate(47,  &trap47);
 
+	set_intr_gate(254, &trap254);
+	set_intr_gate(255, &trap255);
+
 	return 0;
 }
 
 int arch_int_init2(struct kernel_args *ka)
 {
-	vm_map_physical_memory(vm_get_kernel_aspace(), "idt", (void *)&idt, AREA_ANY_ADDRESS, PAGE_SIZE, 0, ka->phys_idt);
+	idt = (desc_table *)ka->vir_idt;
+	vm_create_area(vm_get_kernel_aspace(), "idt", (void *)&idt, AREA_ALREADY_MAPPED, PAGE_SIZE, 0);
 	return 0;
 }

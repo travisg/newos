@@ -3,9 +3,9 @@
 
 #include "stage2.h"
 
-#define arch_smp_init(ka) ((int)0)
-#define arch_smp_get_num_cpus() ((int)1)
-#define arch_smp_get_current_cpu() ((int)0)
+int arch_smp_init(struct kernel_args *ka);
+int arch_smp_get_num_cpus();
+int arch_smp_get_current_cpu();
 
 #endif
 
