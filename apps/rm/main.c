@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #define RMS_OK          0
 #define RMS_FILE_IS_DIR 1
@@ -21,7 +22,7 @@ static int do_delete(const char *name)
 
 	if(stat.type == STREAM_TYPE_DIR) return RMS_FILE_IS_DIR;
 
-	return  _kern_unlink(name);
+	return  unlink(name);
 }
 
 int main(int argc,char *argv[])

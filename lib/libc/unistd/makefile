@@ -6,6 +6,7 @@ MY_OBJS += \
 	$(LIBC_UNISTD_DIR)/close.o \
 	$(LIBC_UNISTD_DIR)/dup.o \
 	$(LIBC_UNISTD_DIR)/dup2.o \
+	$(LIBC_UNISTD_DIR)/fsync.o \
 	$(LIBC_UNISTD_DIR)/getcwd.o \
 	$(LIBC_UNISTD_DIR)/ioctl.o \
 	$(LIBC_UNISTD_DIR)/lseek.o \
@@ -15,5 +16,7 @@ MY_OBJS += \
 	$(LIBC_UNISTD_DIR)/pwrite.o \
 	$(LIBC_UNISTD_DIR)/read.o \
 	$(LIBC_UNISTD_DIR)/sleep.o \
+	$(LIBC_UNISTD_DIR)/sync.o \
+	$(LIBC_UNISTD_DIR)/unlink.o \
 	$(LIBC_UNISTD_DIR)/usleep.o \
 	$(LIBC_UNISTD_DIR)/write.o

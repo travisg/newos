@@ -23,6 +23,9 @@ int     open(char const *, int, ...);
 int     close(int);
 int     dup(int);
 int     dup2(int, int);
+int		unlink(const char *);
+int		fsync(int);
+void	sync(void);
 
 off_t   lseek(int, off_t, int);
 ssize_t read(int, void *, size_t);
