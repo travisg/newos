@@ -40,6 +40,9 @@ ECHO := echo
 ifeq ($(OSTYPE),SunOS)
 	ECHO := /usr/ucb/echo
 endif
+ifeq ($(findstring solaris,$(OSTYPE)),solaris)
+	ECHO := /usr/ucb/echo
+endif
 
 BOOTMAKER = tools/bootmaker
 NETBOOT = tools/netboot
