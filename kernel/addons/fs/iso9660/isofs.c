@@ -322,7 +322,7 @@ static int isofs_mount(fs_cookie *_fs, fs_id id, const char *device, void *args,
 	fs->next_vnode_id = 0;
 
 	// Try to open the ISO file to read
-	fs->fd = sys_open(device, STREAM_TYPE_FILE, 0);
+	fs->fd = sys_open(device, STREAM_TYPE_ANY, 0);
 	if (fs->fd < 0) {
 		err = fs->fd;
 		goto err1;

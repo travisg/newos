@@ -12,6 +12,7 @@ DEV_SUB_INCLUDES =
 
 include $(DEV_DIR)/common/common.mk
 include $(DEV_DIR)/fb_console/fb_console.mk
+include $(DEV_DIR)/netblock/netblock.mk
 
 DEV_ARCH_DIR = $(DEV_DIR)/arch/$(ARCH)
 include $(DEV_ARCH_DIR)/arch_dev.mk

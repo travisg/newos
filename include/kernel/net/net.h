@@ -8,6 +8,7 @@
 #include <boot/stage2.h>
 
 int net_init(kernel_args *ka);
+int net_init_postdev(kernel_args *ka);
 
 enum {
 	ADDR_TYPE_NULL = 0,

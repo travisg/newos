@@ -111,10 +111,6 @@ static int net_test_thread(void *unused)
 
 int net_init(kernel_args *ka)
 {
-	int err;
-	ifnet *i;
-	ifaddr *address;
-
 	dprintf("net_init: entry\n");
 
 	if_init();
@@ -124,6 +120,15 @@ int net_init(kernel_args *ka)
 	loopback_init();
 	udp_init();
 	socket_init();
+}
+
+int net_init_postdev(kernel_args *ka)
+{
+	int err;
+	ifnet *i;
+	ifaddr *address;
+
+	dprintf("net_init_postdev: entry\n");
 
 	// open the network device
 	net_fd = sys_open("/dev/net/rtl8139/0", STREAM_TYPE_DEVICE, 0);
@@ -192,5 +197,4 @@ int net_init(kernel_args *ka)
 #endif
 	return 0;
 }
-
 

@@ -183,6 +183,50 @@ int main(int argc, char **argv)
 		port_test();
 	}
 #endif
+#if 0
+	{
+		int fd, bytes_read;
+		char buf[3];
+
+		fd = sys_open("/dev/ps2mouse", STREAM_TYPE_DEVICE, 0);
+		if(fd < 0) {
+			printf("failed to open device\n");
+			return -1;
+		}
+
+		bytes_read = sys_read(fd, buf, -1, 3);
+		if(bytes_read < 3) {
+			printf("failed to read device\n");
+			return -1;
+		}
+
+		printf("Status: %X\nDelta X: %d\nDelta Y: %d\n", buf[0], buf[1], buf[2]);
+	}
+#endif
+#if 0
+	{
+		int fd;
+		int buf[512/4];
+		int i, j;
+
+		fd = sys_open("/dev/disk/netblock/0/raw", STREAM_TYPE_DEVICE, 0);
+		if(fd < 0) {
+			printf("could not open netblock\n");
+			return -1;
+		}
+
+		sys_ioctl(fd, 90001, NULL, 0);
+
+		for(i=0; i<1*1024*1024; i += 512) {
+			for(j=0; j<512/4; j++)
+				buf[j] = i + j*4;
+			sys_write(fd, buf, -1, sizeof(buf));
+		}
+
+//		sys_read(fd, buf, 0, sizeof(buf));
+//		sys_write(fd, buf, 512, sizeof(buf));
+	}
+#endif
 
 	printf("exiting w/return code %d\n", rc);
 	return rc;
@@ -233,7 +277,7 @@ static void port_test(void)
 	t = sys_thread_create_thread("port_test", port_test_thread_func, NULL);
 	// resume thread
 	sys_thread_resume_thread(t);
-	
+
 	printf("porttest: write\n");
 	sys_port_write(test_p1, 1, &testdata, sizeof(testdata));
 
@@ -265,7 +309,7 @@ static int port_test_thread_func(void* arg)
 	char buf[5];
 
 	printf("porttest: port_test_thread_func()\n");
-	
+
 	n = sys_port_read(test_p1, &msg_code, &buf, 3);
 	printf("port_read #1 code %d len %d buf %3s\n", msg_code, n, buf);
 	n = sys_port_read(test_p1, &msg_code, &buf, 4);
@@ -277,7 +321,7 @@ static int port_test_thread_func(void* arg)
 	printf("porttest: testing delete p1 from other thread\n");
 	sys_port_delete(test_p1);
 	printf("porttest: end port_test_thread_func()\n");
-	
+
 	return 0;
 }
 

@@ -260,7 +260,7 @@ int udp_close(void *prot_data)
 	return 0;
 }
 
-ssize_t udp_recvfrom(void *prot_data, void *buf, ssize_t len, sockaddr *saddr)
+ssize_t udp_recvfrom(void *prot_data, void *buf, ssize_t len, sockaddr *saddr, int flags, time_t timeout)
 {
 	udp_endpoint *e = prot_data;
 	udp_queue_elem *qe;
@@ -268,7 +268,10 @@ ssize_t udp_recvfrom(void *prot_data, void *buf, ssize_t len, sockaddr *saddr)
 	ssize_t ret;
 
 retry:
-	err = sem_acquire(e->blocking_sem, 1);
+	if(flags & SOCK_FLAG_TIMEOUT)
+		err = sem_acquire_etc(e->blocking_sem, 1, SEM_FLAG_TIMEOUT, timeout, NULL);
+	else
+		err = sem_acquire(e->blocking_sem, 1);
 	if(err < 0)
 		return err;
 

@@ -108,11 +108,13 @@ static int main2(void *unused)
 	// bootstrap all the filesystems
 	vfs_bootstrap_all_filesystems();
 
+	net_init(&ka);
 	dev_init(&ka);
 	bus_init(&ka);
 	devs_init(&ka);
 	con_init(&ka);
-	net_init(&ka);
+
+	net_init_postdev(&ka);
 
 	/* remove this later, just a hack for right now */
 #ifdef ARCH_i386

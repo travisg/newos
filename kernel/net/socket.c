@@ -112,7 +112,26 @@ ssize_t socket_recvfrom(sock_id id, void *buf, ssize_t len, sockaddr *addr)
 
 	switch(s->type) {
 		case SOCK_PROTO_UDP:
-			err = udp_recvfrom(s->prot_data, buf, len, addr);
+			err = udp_recvfrom(s->prot_data, buf, len, addr, 0, 0);
+			break;
+		default:
+			err = ERR_INVALID_ARGS;
+	}
+	return err;
+}
+
+ssize_t socket_recvfrom_etc(sock_id id, void *buf, ssize_t len, sockaddr *addr, int flags, time_t timeout)
+{
+	netsocket *s;
+	ssize_t err;
+
+	s = lookup_socket(id);
+	if(!s)
+		return ERR_INVALID_HANDLE;
+
+	switch(s->type) {
+		case SOCK_PROTO_UDP:
+			err = udp_recvfrom(s->prot_data, buf, len, addr, flags, timeout);
 			break;
 		default:
 			err = ERR_INVALID_ARGS;
