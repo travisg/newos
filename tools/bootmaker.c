@@ -45,6 +45,9 @@
 #ifdef i386
 #define xLITTLE_ENDIAN 1
 #endif
+#ifdef __ppc__
+#define xBIG_ENDIAN 1
+#endif
 
 #define SWAP32(x) \
 	((((x) & 0xff) << 24) | (((x) & 0xff00) << 8) | (((x) & 0xff0000) >> 8) | (((x) & 0xff000000) >> 24))

@@ -1,31 +1,36 @@
 ifeq ($(HOSTTYPE),i586)
-	HOSTTYPE = i386
+	HOSTTYPE := i386
 endif
 ifeq ($(HOSTTYPE),i686)
-	HOSTTYPE = i386
+	HOSTTYPE := i386
 endif
 ifeq ($(HOSTTYPE), )
-	HOSTTYPE = i386
+	HOSTTYPE := i386
+endif
+ifeq ($(HOSTTYPE),macintosh)
+	ifeq ($(MACHTYPE),powerpc)
+		HOSTTYPE := ppc
+	endif
 endif
 ifeq ($(ARCH), )
-ARCH = $(HOSTTYPE)
-#ARCH = i386
-#ARCH = sparc
-#ARCH = sh4
-#ARCH = alpha
-#ARCH = sparc64
+ARCH := $(HOSTTYPE)
+#ARCH := i386
+#ARCH := sparc
+#ARCH := sh4
+#ARCH := alpha
+#ARCH := sparc64
 endif
 
-HOST_CC = gcc
-HOST_LD = ld
-HOST_AS = as
-HOST_AR = ar
-HOST_OBJCOPY = objcopy
+HOST_CC := $(CC)
+HOST_LD := $(LD)
+HOST_AS := $(AS)
+HOST_AR := $(AR)
+HOST_OBJCOPY := objcopy
 
 # setup echo
-ECHO = echo
+ECHO := echo
 ifeq ($(shell uname),SunOS)
-	ECHO = /usr/ucb/echo
+	ECHO := /usr/ucb/echo
 endif
 
 BOOTMAKER = tools/bootmaker
