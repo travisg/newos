@@ -5,6 +5,7 @@ MY_OBJS += \
 	$(KERNEL_ARCH_I386_DIR)/arch_cpu.o \
 	$(KERNEL_ARCH_I386_DIR)/arch_dbg_console.o \
 	$(KERNEL_ARCH_I386_DIR)/arch_debug.o \
+	$(KERNEL_ARCH_I386_DIR)/arch_elf.o \
 	$(KERNEL_ARCH_I386_DIR)/arch_faults.o \
 	$(KERNEL_ARCH_I386_DIR)/arch_i386.o \
 	$(KERNEL_ARCH_I386_DIR)/arch_interrupts.o \
