@@ -8,6 +8,9 @@
 #include <stdio.h>
 
 #include <newos/tty_priv.h>
+#include <newos/key_event.h>
+
+#include "consoled.h"
 
 struct console {
 	int console_fd;
@@ -25,14 +28,19 @@ struct console theconsole;
 static int console_reader(void *arg)
 {
 	char buf[1024];
+	_key_event kevents[16];
 	ssize_t len;
 	ssize_t write_len;
 	struct console *con = (struct console *)arg;
 
 	for(;;) {
-		len = read(con->keyboard_fd, buf, sizeof(buf));
+		len = read(con->keyboard_fd, kevents, sizeof(kevents));
 		if(len < 0)
 			break;
+
+		len = process_key_events(kevents, len / sizeof(_key_event), buf, sizeof(buf), con->keyboard_fd);
+		if(len <= 0)
+			continue;
 
 		write_len = write(con->tty_master_fd, buf, len);
 	}
