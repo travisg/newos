@@ -2036,7 +2036,7 @@ image_id vfs_load_fs_module(const char *name)
 
 	sprintf(path, "/boot/addons/fs/%s", name);
 
-	id = elf_load_kspace(path);
+	id = elf_load_kspace(path, "");
 	if(id < 0)
 		return id;
 

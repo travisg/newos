@@ -41,7 +41,7 @@ image_id dev_load_dev_module(const char *name)
 
 	sprintf(path, "/boot/addons/dev/%s", name);
 
-	id = elf_load_kspace(path);
+	id = elf_load_kspace(path, "");
 	if(id < 0)
 		return id;
 

@@ -106,6 +106,9 @@ static int main2()
 	con_init(&ka);
 	net_init(&ka);
 
+	beos_layer_init();
+	beos_load_beos_driver("speaker");
+
 #if 0
 		// XXX remove
 		vfs_test();

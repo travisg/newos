@@ -256,27 +256,32 @@ static int elf_parse_dynamic_section(struct elf_image_info *image)
 // this function first tries to see if the first image and it's already resolved symbol is okay, otherwise
 // it tries to link against the shared_image
 // XXX gross hack and needs to be done better
-static addr elf_resolve_symbol(struct elf_image_info *image, struct Elf32_Sym *sym, struct elf_image_info *shared_image)
+static addr elf_resolve_symbol(struct elf_image_info *image, struct Elf32_Sym *sym, struct elf_image_info *shared_image, const char *sym_prepend)
 {
 	struct Elf32_Sym *sym2;
+	char new_symname[512];
 
 	switch(sym->st_shndx) {
 		case SHN_UNDEF:
+			// patch the symbol name
+			strcpy(new_symname, sym_prepend);
+			strcat(new_symname, SYMNAME(image, sym));
+
 			// it's undefined, must be outside this image, try the other image
-			sym2 = elf_find_symbol(shared_image, SYMNAME(image, sym));
+			sym2 = elf_find_symbol(shared_image, new_symname);
 			if(!sym2) {
-				dprintf("elf_resolve_symbol: could not resolve symbol '%s'\n", SYMNAME(image, sym));
+				dprintf("elf_resolve_symbol: could not resolve symbol '%s'\n", new_symname);
 				return 0;
 			}
 
 			// make sure they're the same type
 			if(ELF32_ST_TYPE(sym->st_info) != ELF32_ST_TYPE(sym2->st_info)) {
-				dprintf("elf_resolve_symbol: found symbol '%s' in shared image but wrong type\n", SYMNAME(image, sym));
+				dprintf("elf_resolve_symbol: found symbol '%s' in shared image but wrong type\n", new_symname);
 				return 0;
 			}
 
 			if(ELF32_ST_BIND(sym2->st_info) != STB_GLOBAL && ELF32_ST_BIND(sym2->st_info) != STB_WEAK) {
-				dprintf("elf_resolve_symbol: found symbol '%s' but not exported\n", SYMNAME(image, sym));
+				dprintf("elf_resolve_symbol: found symbol '%s' but not exported\n", new_symname);
 				return 0;
 			}
 
@@ -294,7 +299,7 @@ static addr elf_resolve_symbol(struct elf_image_info *image, struct Elf32_Sym *s
 }
 
 // XXX for now just link against the kernel
-static int elf_relocate(struct elf_image_info *image)
+static int elf_relocate(struct elf_image_info *image, const char *sym_prepend)
 {
 	int i;
 	struct Elf32_Sym *sym;
@@ -321,7 +326,7 @@ static int elf_relocate(struct elf_image_info *image)
 				case R_386_GOTOFF:
 					sym = SYMBOL(image, ELF32_R_SYM(image->rel[i].r_info));
 
-					S = elf_resolve_symbol(image, sym, kernel_image);
+					S = elf_resolve_symbol(image, sym, kernel_image, sym_prepend);
 //					dprintf("S 0x%x\n", S);
 			}
 			// calc A
@@ -484,7 +489,7 @@ error:
 	return err;
 }
 
-image_id elf_load_kspace(const char *path)
+image_id elf_load_kspace(const char *path, const char *sym_prepend)
 {
 	struct Elf32_Ehdr eheader;
 	struct Elf32_Phdr *pheaders;
@@ -611,7 +616,7 @@ image_id elf_load_kspace(const char *path)
 			err = ERR_INVALID_BINARY;
 			goto error2;
 		}
-		image->regions[image_region].delta = image->regions[image_region].start - pheaders[i].p_vaddr;
+		image->regions[image_region].delta = image->regions[image_region].start - ROUNDOWN(pheaders[i].p_vaddr, PAGE_SIZE);
 
 //		dprintf("elf_load_kspace: created a region at 0x%x\n", image->regions[image_region].start);
 
@@ -627,6 +632,7 @@ image_id elf_load_kspace(const char *path)
 	if(image->regions[1].start != 0) {
 		if(image->regions[0].delta != image->regions[1].delta) {
 			dprintf("could not load binary, fix the region problem!\n");
+			dump_image_info(image);
 			err = ERR_NO_MEMORY;
 			goto error3;
 		}
@@ -639,7 +645,7 @@ image_id elf_load_kspace(const char *path)
 	if(err < 0)
 		goto error3;
 
-	err = elf_relocate(image);
+	err = elf_relocate(image, sym_prepend);
 	if(err < 0)
 		goto error3;
 

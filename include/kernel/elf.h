@@ -8,7 +8,7 @@
 #include <kernel/thread.h>
 
 int elf_load_uspace(const char *path, struct proc *p, int flags, addr *entry);
-image_id elf_load_kspace(const char *path);
+image_id elf_load_kspace(const char *path, const char *sym_prepend);
 addr elf_lookup_symbol(image_id id, const char *symbol);
 int elf_init(kernel_args *ka);
 
