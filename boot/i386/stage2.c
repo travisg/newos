@@ -545,11 +545,11 @@ slow_sample:
 	t2 = rdtsc();
 	p3= t2-t1;
 	r3= (double)(p3)/(double)(((s_high<<8)|s_low) - ((high<<8)|low));
-	if((r1/r2)> 1.01) {
+	if((r2/r3)> 1.01) {
 		dprintf("Tuning loop(2)\n");
 		goto not_so_quick_sample;
 	}
-	if((r1/r2)< 0.99) {
+	if((r2/r3)< 0.99) {
 		dprintf("Tuning loop(2)\n");
 		goto not_so_quick_sample;
 	}
