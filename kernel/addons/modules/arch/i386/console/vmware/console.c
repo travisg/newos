@@ -389,7 +389,7 @@ static int vmware_init(void)
 		vcons.fg = 0xffffff;
 		setup_bit_reversed();
 		init_fifo();
-		set_mode(80 * CHAR_WIDTH + 4, 50 * CHAR_HEIGHT + 4);
+		set_mode(132 * CHAR_WIDTH + 4, 50 * CHAR_HEIGHT + 4);
 		setup_color_table();
 		clear_screen();
 		dprintf("screen cleared\n");
