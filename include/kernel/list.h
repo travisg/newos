@@ -85,6 +85,16 @@ static inline struct list_node* list_peek_tail(struct list_node *list)
 	}	
 }
 
+static inline struct list_node* list_next(struct list_node *list, struct list_node *item)
+{
+	if(item->next != list)
+		return item->next;
+	else if(item->next->next != list)
+		return item->next->next;
+	else
+		return NULL;
+}
+
 static inline bool list_is_empty(struct list_node *list)
 {
 	return (list->next == list) ? true : false;

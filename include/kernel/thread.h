@@ -56,9 +56,9 @@ enum {
 
 struct proc {
 	struct proc *next;
-	struct proc *siblings_next;	
 	struct proc *parent;
-	struct proc *children;
+	struct list_node siblings_node;	
+	struct list_node children;
 	proc_id id;
 	char name[SYS_MAX_OS_NAME_LEN];
 	int num_threads;
@@ -68,15 +68,15 @@ struct proc {
 	struct vm_address_space *aspace;
 	struct vm_address_space *kaspace;
 	struct thread *main_thread;
-	struct thread *thread_list;
+	struct list_node thread_list;
 	struct arch_proc arch_info;
 };
 
 struct thread {
 	struct thread *all_next;
-	struct thread *proc_next;
-	struct list_node q_node;
 	thread_id id;
+	struct list_node proc_node;
+	struct list_node q_node;
 	char name[SYS_MAX_OS_NAME_LEN];
 	int priority;
 	int state;
