@@ -34,7 +34,7 @@ int _start()
 	serial_puts("Stage 2 loader entry\n");
 
 	// look at the bootdir
-	bootdir_len = 0;
+	bootdir_len = 1; // account for bootdir directory
 	for(i=0; i<64; i++) {
 		if(bootdir[i].be_type == BE_TYPE_NONE)
 			break;
