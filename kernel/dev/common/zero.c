@@ -7,7 +7,7 @@
 #include <kernel/heap.h>
 #include <kernel/fs/devfs.h>
 #include <kernel/vm.h>
-#include <kernel/dev/common/zero.h>
+#include <kernel/dev/fixed.h>
 #include <newos/errors.h>
 
 static int zero_open(dev_ident ident, dev_cookie *cookie)

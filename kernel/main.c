@@ -21,7 +21,7 @@
 #include <kernel/elf.h>
 #include <kernel/cpu.h>
 #include <kernel/dev/beos.h>
-#include <kernel/dev/devs.h>
+#include <kernel/dev/fixed.h>
 #include <kernel/bus/bus.h>
 #include <kernel/module.h>
 

@@ -3,7 +3,7 @@
 ** Distributed under the terms of the NewOS License.
 */
 #include <kernel/kernel.h>
-#include <kernel/dev/devs.h>
+#include <kernel/dev/fixed.h>
 #include <kernel/vfs.h>
 #include <kernel/debug.h>
 
@@ -22,9 +22,6 @@
 #include <kernel/dev/arch/sh4/console/console_dev.h>
 #include <kernel/dev/arch/sh4/rtl8139/rtl8139_dev.h>
 #endif
-#include <kernel/dev/common/null.h>
-#include <kernel/dev/common/zero.h>
-#include <kernel/dev/fb_console/fb_console.h>
 
 /* loads all the fixed drivers */
 int fixed_devs_init(kernel_args *ka)
