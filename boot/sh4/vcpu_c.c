@@ -18,21 +18,15 @@ void vcpu_clear_all_itlb_entries();
 void vcpu_clear_all_utlb_entries();
 void vcpu_dump_utlb_entry(int ent);
 
-static int default_vector(unsigned int ex_code, unsigned int pc, unsigned int trap)
-{
-	dprintf("default_vector: ex_code 0x%x, pc 0x%x, trap 0x%x\n", ex_code, pc, trap);
-	dprintf("spinning forever\n");
-	for(;;);
-	return 0;
-}
-
 unsigned int get_sr();
 void set_sr(unsigned int sr);
 unsigned int get_vbr();
 void set_vbr(unsigned int vbr);
+unsigned int get_sgr();
 asm("
 .globl _get_sr,_set_sr
 .globl _get_vbr,_set_vbr
+.globl _get_sgr
 
 _get_sr:
         stc     sr,r0
@@ -53,7 +47,21 @@ _set_vbr:
         ldc     r4,vbr
         rts
         nop
+
+_get_sgr:
+	stc	sgr,r0
+	rts
+	nop
 ");
+
+static int default_vector(unsigned int ex_code, unsigned int pc, unsigned int trap, unsigned int page_fault_addr)
+{
+	dprintf("default_vector: ex_code 0x%x, pc 0x%x, trap 0x%x\n", ex_code, pc, trap);
+	dprintf("sgr = 0x%x\n", get_sgr());
+	dprintf("spinning forever\n");
+	for(;;);
+	return 0;
+}
 
 int vcpu_init(kernel_args *ka)
 {
@@ -128,7 +136,7 @@ static struct ptent *get_ptent(struct pdent *pd, unsigned int fault_address)
 	dprintf("get_ptent: found ptent 0x%x\n", pt);
 #endif
 
-	return &pt[(fault_address >> 12) & 0x00000fff];
+	return &pt[(fault_address >> 12) & 0x000003ff];
 }
 
 static void tlb_map(unsigned int vpn, struct ptent *ptent, unsigned int tlb_ent, unsigned int asid)

@@ -15,6 +15,8 @@ void mmu_map_page(unsigned int vaddr, unsigned int paddr)
 	struct ptent *pt;
 	int index;
 
+	vaddr &= 0xfffff000;
+	paddr &= 0xfffff000;
 	dprintf("mmu_map_page: mapping 0x%x to 0x%x\n", paddr, vaddr);
 
 	if(vaddr < P1_AREA) {

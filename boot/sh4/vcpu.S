@@ -9,11 +9,10 @@ exception_ent_1:
 	mov.l	@r0,r0
 	shlr2	r0
 	shlr	r0			/* shift the exception code over 3 bits */
-#if 1
+
 	cmp/eq	#0x10,r0		/* test if it's a initial page write */
 	bt	_tlb_ipw
 	nop
-#endif
 
 	/* not a inital page write exception */
 	/* just enter the kernel and let it deal with it */
@@ -51,10 +50,13 @@ _soft_fault:
 	/* the tlb ipw handler returned another exception code */
 	/* we now need to enter the kernel with the soft fault */
 	shll2	r0
-	bra switch_banks_and_enter_kernel	
+	mov.l	tea_addr1,r1
+	mov.l	@r1,r1		/* load the faulted address */
+	bra switch_banks_and_enter_kernel
 	nop
 
 .align 2
+tea_addr1:	.long	0xff00000c
 expevt_addr1:	.long	0xff000024
 exception_flag:	.long	handling_exception
 initial_page_write_handler:	.long	_tlb_initial_page_write
@@ -71,8 +73,8 @@ TLB_miss_ent:
 	
 	/* we can stay on reg bank 1, switch to a tlb stack */
 	mov.l	tlb_stack_addr2,r15
-	sts.l	pr,@-r15		/* save the pr reg */
-	mov.l	r4,@-r15		/* save the exception code */
+	sts.l	pr,@-r15		/* save the pr reg into r13 */
+	mov.l	r4,@-r15		/* save the exception code into r12 */
 
 	/* arg 1 is exception code already in r4 */
 	stc	spc,r5			/* arg 2, spc */
@@ -83,9 +85,9 @@ TLB_miss_ent:
 	/* see if the tlb miss handler returned another exception code */
 	/* if so, the tlb miss just elevated to a page fault or other such */
 	/* 'soft' faults. */
-	mov.l	@r15+,r1
-	lds.l	@r15+,pr
-	cmp/eq	r0,r1
+	mov.l	@r15+,r1		/* restore the original exception code */	
+	lds.l	@r15+,pr		/* restore pr from r13 */
+	cmp/eq	r0,r1			/* check against the stored original exception code */
 	bf	_soft_fault1
 	nop
 
@@ -99,10 +101,13 @@ _soft_fault1:
 	/* we now need to enter the kernel with the soft fault */
 
 	shll2	r0
+	mov.l	tea_addr2,r1
+	mov.l	@r1,r1		/* load the faulted address */
 	bra switch_banks_and_enter_kernel	
 	nop
 
 .align 2
+tea_addr2:	.long	0xff00000c
 expevt_addr2:	.long	0xff000024
 tlb_miss_handler:	.long	_tlb_miss
 tlb_stack_addr2:	.long	tlb_stack_end-4
@@ -117,12 +122,29 @@ interrupt_ent:
 
 switch_banks_and_enter_kernel:
 	/* save the saved registers into memory */
-	mov.l	save_stack,r1	
-	stc.l	spc,@-r1
-	stc.l	ssr,@-r1
-	stc.l	sgr,@-r1
-	mov.l	r0,@-r1			/* put the modified exception code there too */
+	mov.l	save_stack,r2	
+	stc.l	spc,@-r2
+	stc.l	ssr,@-r2
+	stc.l	sgr,@-r2
+	mov.l	r0,@-r2			/* put the modified exception code there too */
+	mov.l	r1,@-r2			/* put the saved page fault address on the stack */
 	
+	/* see if we need to load the kernel stack or stay on the current one */
+	stc	ssr,r0
+	mov.l	md_bit_mask,r1
+	and	r1,r0
+	cmp/eq	r1,r0
+	bt	_keep_current_stack
+	nop
+
+	/* we need to set the stack because we came from user space */
+	bra	_have_set_stack
+	mov.l	kstack,r15
+
+_keep_current_stack:
+	stc	sgr,r15
+
+_have_set_stack:
 	/* enable exceptions & swap banks back to 0 */
 	mov.l	bl_rb_bit_mask,r0
 	stc	sr,r1
@@ -131,8 +153,7 @@ switch_banks_and_enter_kernel:
 	
 	/* at this point, we may take a TLB exception */
 
-	/* load the kernel stack and start pushing registers */
-	mov.l	kstack,r15
+	/* start pushing registers */
 	mov.l	r8,@-r15
 	mov.l	r9,@-r15
 	mov.l	r10,@-r15
@@ -177,6 +198,8 @@ _after_r0r7_save:
 	mov	r14,r5			/* arg 2, program counter */
 	mov.l	tra_addr,r1
 	mov.l	@r1,r6			/* arg 3, trap code, if it exists */
+	mov.l	saved_page_fault_addr,r1
+	mov.l	@r1,r7			/* arg 4, page fault address, if this is a page fault */
 
 	/* jump through the vector table into the kernel */
 	mov.l	vector_table_addr,r0
@@ -249,8 +272,10 @@ modified_sr_addr:	.long	modified_sr
 vector_table_addr: .long	vector_table
 trap_exception:	.long	0x2c
 vector_base_addr: .long	_vector_base
+md_bit_mask:	.long	0x40000000
 bl_rb_bit_mask:	.long	0xcfffffff
 save_stack:	.long	saved_spc+4
+saved_page_fault_addr: .long	saved_pfault
 saved_excode_addr: .long	saved_excode
 saved_spc_addr:	.long	saved_spc
 saved_ssr_addr:	.long	saved_ssr
@@ -262,6 +287,7 @@ tra_addr:	.long	0xff000020
    data structures for the kernel to write in. They're in the
    text segment, I know, but it's much faster if we can reference
    them pcrel. */
+saved_pfault:	.long	0
 saved_excode:	.long	0
 saved_sgr:	.long	0
 saved_ssr:	.long	0

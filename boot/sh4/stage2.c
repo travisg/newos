@@ -1,6 +1,7 @@
 #include <boot.h>
 #include <stage2.h>
 #include <string.h>
+#include <elf32.h>
 
 #include "sh4.h"
 #include "serial.h"
@@ -9,11 +10,14 @@
 
 #define BOOTDIR 0x8c001000
 #define P2_AREA 0x8c000000
-#define KERNEL_LOAD_ADDR 0xc0000000
 #define PHYS_ADDR_START 0x0c000000
+
+#define ROUNDUP(a, b) (((a) + ((b)-1)) & ~((b)-1))
 
 void test_interrupt();
 void switch_stacks_and_call(unsigned int stack, unsigned int call_addr, unsigned int call_arg, unsigned int call_arg2);
+
+void load_elf_image(void *data, unsigned int *next_paddr, addr_range *ar0, addr_range *ar1, unsigned int *start_addr);
 
 int _start()
 {
@@ -22,7 +26,7 @@ int _start()
 	unsigned int bootdir_len;
 	unsigned int next_vaddr;
 	unsigned int next_paddr;
-	unsigned int kernel_size;
+	unsigned int kernel_entry;
 	kernel_args *ka;
 
 	serial_init();
@@ -50,28 +54,18 @@ int _start()
 	mmu_init(ka, &next_paddr);
 
 	// map the kernel text & data
-	kernel_size = bootdir[2].be_size;
-	dprintf("kernel is %d pages long\n", kernel_size);
-	next_vaddr = KERNEL_LOAD_ADDR;
+	load_elf_image((void *)(bootdir[2].be_offset * PAGE_SIZE + BOOTDIR), &next_paddr,
+			&ka->kernel_seg0_addr, &ka->kernel_seg1_addr, &kernel_entry);
+	dprintf("mapped kernel from 0x%x to 0x%x\n", ka->kernel_seg0_addr.start, ka->kernel_seg1_addr.start + ka->kernel_seg1_addr.size);
+	dprintf("kernel entry @ 0x%x\n", kernel_entry);
 
-	for(i=0; i<kernel_size; i++) {
-		unsigned int page_to_map = (bootdir[2].be_offset + i) * PAGE_SIZE + BOOTDIR;
-		mmu_map_page(next_vaddr, page_to_map);
-		next_vaddr += PAGE_SIZE;
-	}
-
+#if 0
 	dprintf("diffing the mapped memory\n");
-	dprintf("memcmp = %d\n", memcmp((void *)KERNEL_LOAD_ADDR, (void *)BOOTDIR + bootdir[2].be_offset * PAGE_SIZE, PAGE_SIZE * kernel_size)); 
+	dprintf("memcmp = %d\n", memcmp((void *)KERNEL_LOAD_ADDR, (void *)BOOTDIR + bootdir[2].be_offset * PAGE_SIZE, PAGE_SIZE)); 
 	dprintf("done diffing the memory\n");
+#endif
 
-	// map in kernel bss
-	// XXX assume it's 64k
-	for(i=0; i<16; i++) {
-		mmu_map_page(next_vaddr, next_paddr);
-		memset((void *)next_vaddr, 0, PAGE_SIZE);
-		next_vaddr += PAGE_SIZE;
-		next_paddr += PAGE_SIZE;
-	}
+	next_vaddr = ROUNDUP(ka->kernel_seg1_addr.start + ka->kernel_seg1_addr.size, PAGE_SIZE);
 
 	// map in a kernel stack
 	ka->cpu_kstack[0].start = next_vaddr;
@@ -85,37 +79,36 @@ int _start()
 	// record this first region of allocation space
 	ka->phys_alloc_range[0].start = PHYS_ADDR_START;
 	ka->phys_alloc_range[0].size = next_paddr - PHYS_ADDR_START;
-	ka->virt_alloc_range[0].start = KERNEL_LOAD_ADDR;
-	ka->virt_alloc_range[0].size  = next_vaddr - KERNEL_LOAD_ADDR;
+	ka->num_phys_alloc_ranges = 1;
+	ka->virt_alloc_range[0].start = ka->kernel_seg0_addr.start;
+	ka->virt_alloc_range[0].size  = next_vaddr - ka->virt_alloc_range[0].start;
+	ka->num_virt_alloc_ranges = 1;
 
 	ka->cons_line = 0;
 	ka->str = 0;
-	ka->bootdir = (boot_entry *)BOOTDIR;
-	ka->bootdir_size = bootdir_len;	
-	ka->kernel_seg0_base = KERNEL_LOAD_ADDR;
-	ka->kernel_seg0_size = kernel_size * PAGE_SIZE;
-	ka->kernel_seg1_base = ka->kernel_seg0_base + ka->kernel_seg0_size;
-	ka->kernel_seg1_size = 64*1024;
+	ka->bootdir_addr.start = P1_TO_PHYS_ADDR(BOOTDIR);
+	ka->bootdir_addr.size = bootdir_len * PAGE_SIZE;	
 	ka->phys_mem_range[0].start = PHYS_ADDR_START;
 	ka->phys_mem_range[0].size  = 16*1024*1024;
-	ka->num_cpus = 0;
+	ka->num_phys_mem_ranges = 1;
+	ka->num_cpus = 1;
 
-	for(i=0; i<MAX_PHYS_ALLOC_ADDR_RANGE; i++) {
+	for(i=0; i<ka->num_phys_alloc_ranges; i++) {
 		dprintf("prange %d start = 0x%x, size = 0x%x\n",
 			i, ka->phys_alloc_range[i].start, ka->phys_alloc_range[i].size);
 	}
 		
-	for(i=0; i<MAX_VIRT_ALLOC_ADDR_RANGE; i++) {
+	for(i=0; i<ka->num_virt_alloc_ranges; i++) {
 		dprintf("vrange %d start = 0x%x, size = 0x%x\n",
 			i, ka->virt_alloc_range[i].start, ka->virt_alloc_range[i].size);
 	}
-		
-	// force an intital page write tlb
-	*(int *)KERNEL_LOAD_ADDR = 4;
 
 	dprintf("switching stack to 0x%x and calling 0x%x\n", 
-		ka->cpu_kstack[0].start + ka->cpu_kstack[0].size - 4, KERNEL_LOAD_ADDR + 0xa0);
-	switch_stacks_and_call(ka->cpu_kstack[0].start + ka->cpu_kstack[0].size - 4, KERNEL_LOAD_ADDR + 0xa0, (unsigned int)ka, 0);
+		ka->cpu_kstack[0].start + ka->cpu_kstack[0].size - 4, kernel_entry);
+	switch_stacks_and_call(ka->cpu_kstack[0].start + ka->cpu_kstack[0].size - 4, 
+		kernel_entry, 
+		(unsigned int)ka, 
+		0);
 	return 0;
 }
 
@@ -126,8 +119,54 @@ _switch_stacks_and_call:
 	mov	r4,r15
 	mov	r5,r1
 	mov	r6,r4
-	mov	r7,r5
 	jsr	@r1
-	nop
+	mov	r7,r5
 ");
+
+void load_elf_image(void *data, unsigned int *next_paddr, addr_range *ar0, addr_range *ar1, unsigned int *start_addr)
+{
+	struct Elf32_Ehdr *imageHeader = (struct Elf32_Ehdr*) data;
+	struct Elf32_Phdr *segments = (struct Elf32_Phdr*)(imageHeader->e_phoff + (unsigned) imageHeader);
+	int segmentIndex;
+
+	for (segmentIndex = 0; segmentIndex < imageHeader->e_phnum; segmentIndex++) {
+		struct Elf32_Phdr *segment = &segments[segmentIndex];
+		unsigned segmentOffset;
+
+		/* Map initialized portion */
+		for (segmentOffset = 0;
+			segmentOffset < ROUNDUP(segment->p_filesz, PAGE_SIZE);
+			segmentOffset += PAGE_SIZE) {
+
+			mmu_map_page(segment->p_vaddr + segmentOffset, (unsigned) data + segment->p_offset
+				+ segmentOffset);
+		}
+
+		/* Clean out the leftover part of the last page */
+		if(segment->p_filesz % PAGE_SIZE > 0) {
+			dprintf("memsetting 0 to va 0x%x, size %d\n", (void*)((unsigned) data + segment->p_offset + segment->p_filesz), PAGE_SIZE  - (segment->p_filesz % PAGE_SIZE));
+			memset((void*)((unsigned) data + segment->p_offset + segment->p_filesz), 0, PAGE_SIZE
+				- (segment->p_filesz % PAGE_SIZE));
+		}
+
+		/* Map uninitialized portion */
+		for (; segmentOffset < ROUNDUP(segment->p_memsz, PAGE_SIZE); segmentOffset += PAGE_SIZE) {
+			mmu_map_page(segment->p_vaddr + segmentOffset, *next_paddr);
+			(*next_paddr) += PAGE_SIZE;
+		}
+		switch(segmentIndex) {
+			case 0:
+				ar0->start = segment->p_vaddr;
+				ar0->size = segment->p_memsz;
+				*start_addr = segment->p_vaddr;
+				break;
+			case 1:
+				ar1->start = segment->p_vaddr;
+				ar1->size = segment->p_memsz;
+				break;
+			default:
+				;
+		}
+	}
+}
 

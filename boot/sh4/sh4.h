@@ -116,5 +116,19 @@ struct itlb_data {
 	struct itlb_data_array_2 da2;
 };
 
+// timer stuff
+#define	TOCR	0xffd80000
+#define TSTR	0xffd80004
+#define	TCOR0	0xffd80008
+#define TCNT0	0xffd8000c
+#define TCR0	0xffd80010
+#define TCOR1	0xffd80014
+#define TCNT1	0xffd80018
+#define TCR1	0xffd8001c
+#define TCOR2	0xffd80020
+#define TCNT2	0xffd80024
+#define TCR2	0xffd80028
+#define TCPR2	0xffd8002c
+
 #endif
 
