@@ -62,7 +62,8 @@ int queue_enqueue(queue *_q, void *e)
 		q->tail = elem;
 	}
 	elem->next = NULL;
-	q->count++;		
+	q->count++;	
+	return 0;
 }
 
 void *queue_dequeue(queue *_q)

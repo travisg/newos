@@ -90,32 +90,6 @@ void _start(unsigned int mem, char *str)
 	else
 		next_vaddr = ROUNDUP(ka->kernel_seg0_addr.start + ka->kernel_seg0_addr.size, PAGE_SIZE);
 	
-#if 0
-	// map kernel text and data
-	kernelSize = bootdir[2].be_size;
-
-	nextAllocPage = BOOTDIR_ADDR + bootdir[2].be_offset * PAGE_SIZE;
-	next_vpage = KERNEL_BASE;
-
-	dprintf("kernel text & data mapped from 0x%x", next_vpage);
-	for (i = 0; i < kernelSize; i++) {
-		new_pgtable[i] = nextAllocPage | DEFAULT_PAGE_FLAGS;	// present, writable, global
-		nextAllocPage += PAGE_SIZE;
-		next_vpage += PAGE_SIZE;
-	}
-	dprintf(" to 0x%x\n", next_vpage);
-
-	nextAllocPage = BOOTDIR_ADDR + (bootdir_pages + 3) * PAGE_SIZE;	/* skip rest of boot dir and two pts */
-
-	/* Map and clear BSS */
-	dprintf("kernel BSS mapped from 0x%x", next_vpage);
-	for (; i < kernelSize + ROUNDUP(kBSSSize, PAGE_SIZE) / PAGE_SIZE; i++) {
-		new_pgtable[i] = nextAllocPage | DEFAULT_PAGE_FLAGS;
-		nextAllocPage += PAGE_SIZE;
-		next_vpage += PAGE_SIZE;
-	}
-	dprintf("to 0x%x\n", next_vpage);
-#endif
 	// map in a kernel stack
 	ka->cpu_kstack[0].start = next_vaddr;
 	for(i=0; i<STACK_SIZE; i++) {
@@ -476,50 +450,13 @@ void calculate_cpu_conversion_factor()
 	low = inb(0x40);
 	high = inb(0x40);
 
-	expired = (ulong)0xffff - ((((ulong)high) << 8) + low);
+	expired = (unsigned long)0xffff - ((((unsigned long)high) << 8) + low);
 
 	timer_usecs = (expired * 1.0) / (TIMER_CLKNUM_HZ/1000000.0);
 	time_base_ticks = t2 -t1;
 
 	system_time_setup((int)(1000000.0/(timer_usecs / time_base_ticks)));
 }
-
-/*
-void put_uint_dec(unsigned int a)
-{
-	char temp[16];
-	int i;	
-	
-	temp[15] = 0;
-	for(i=14; i>=0; i--) {
-		temp[i] = (a % 10) + '0';
-		a /= 10;
-		if(a == 0) break;	
-	}
-	
-	message(&temp[i]);
-}
-
-void put_uint_hex(unsigned int a)
-{
-	char temp[16];
-	int i;	
-	
-	temp[15] = 0;
-	for(i=14; i>=2; i--) {
-		unsigned int b = (a % 16);
-		
-		if(b < 10) temp[i] = b + '0';
-		else temp[i] = (b - 10) + 'a';
-
-		a /= 16;
-		if(a == 0) {
-			break;
-		}	
-	}	
-	message(&temp[i]);
-}
-*/
 
 void clearscreen()
 {
@@ -530,26 +467,6 @@ void clearscreen()
 	}
 }
 
-/*
-void nmessage(const char *str1, unsigned int a, const char *str2)
-{
-	message(str1);
-	message("0x");
-	put_uint_hex(a);
-	message(str2);
-}
-
-void nmessage2(const char *str1, unsigned int a, const char *str2, unsigned int b, const char *str3)
-{
-	message(str1);
-	message("0x");
-	put_uint_hex(a);
-	message(str2);
-	message("0x");
-	put_uint_hex(b);
-	message(str3);
-}
-*/
 static void scrup()
 {
 	int i;
