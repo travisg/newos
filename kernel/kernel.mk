@@ -31,8 +31,8 @@ KERNEL = $(KERNEL_OBJ_DIR)/system
 
 kernel:	$(KERNEL)
 
-$(KERNEL): $(KERNEL_LIB) $(LIBS) $(DEV)
-	$(LD) -dN --script=$(KERNEL_ARCH_DIR)/kernel.ld -L $(LIBGCC_PATH) -o $@ $(KERNEL_LIB) $(KLIBS) $(DEV) $(LIBGCC)
+$(KERNEL): $(KERNEL_LIB) $(KLIBS) $(DEV)
+	$(LD) -dN --script=$(KERNEL_ARCH_DIR)/kernel.ld -L $(LIBGCC_PATH) -o $@ $(KERNEL_LIB) $(LINK_KLIBS) $(DEV) $(LIBGCC)
 
 $(KERNEL_LIB): $(KERNEL_OBJS)
 	$(LD) $(GLOBAL_LDFLAGS) -r -o $@ $(KERNEL_OBJS)

@@ -114,7 +114,7 @@ int sem_init(kernel_args *ka)
 	return 0;
 }
 
-sem_id sem_create(int count, char *name)
+sem_id sem_create(int count, const char *name)
 {
 	int i;
 	int state;

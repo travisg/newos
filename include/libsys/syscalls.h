@@ -17,6 +17,9 @@ typedef enum {
 	SEEK_END
 } seek_type;
 
+#define SEM_FLAG_NO_RESCHED 1
+#define SEM_FLAG_TIMEOUT 2
+
 int sys_null();
 int sys_open(const char *path, const char *stream, stream_type stream_type);
 int sys_seek(int fd, off_t pos, seek_type seek_type);
@@ -27,5 +30,12 @@ int sys_close(int fd);
 int sys_create(const char *path, const char *stream, stream_type stream_type);
 time_t sys_system_time();
 int sys_snooze(time_t time);
+sem_id sys_sem_create(int count, const char *name);
+int sys_sem_delete(sem_id id);
+int sys_sem_acquire(sem_id id, int count);
+int sys_sem_acquire_etc(sem_id id, int count, int flags, time_t timeout);
+int sys_sem_release(sem_id id, int count);
+int sys_sem_release_etc(sem_id id, int count, int flags);
+thread_id sys_get_current_thread_id();
 
 #endif

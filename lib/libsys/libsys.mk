@@ -1,19 +1,21 @@
 LIBSYS_DIR = $(LIB_DIR)/libsys
 LIBSYS_OBJ_DIR = $(LIBSYS_DIR)/$(OBJ_DIR)
 LIBSYS_OBJS = \
+	$(LIBSYS_OBJ_DIR)/stdio.o
 
 DEPS += $(LIBSYS_OBJS:.o=.d)
 
-LIBSYS = $(LIBSYS_OBJ_DIR)/libsys.a
+LIBSYS = $(LIBSYS_OBJ_DIR)/libsys.o
 
 LIBSYS_ARCH_DIR = $(LIBSYS_DIR)/arch/$(ARCH)
 include $(LIBSYS_ARCH_DIR)/arch_libsys.mk
 
 $(LIBSYS): $(LIBSYS_OBJS)
 	@mkdir -p $(LIBSYS_OBJ_DIR)
-	$(AR) r $@ $(LIBSYS_OBJS)
+	$(LD) -r -o $@ $(LIBSYS_OBJS)
 
 LIBS += $(LIBSYS) 
+LINK_LIBS += $(LIBSYS) 
 
 libsysclean:
 	rm -f $(LIBSYS_OBJS) $(LIBSYS)

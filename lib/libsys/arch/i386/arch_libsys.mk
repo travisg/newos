@@ -1,5 +1,5 @@
 LIBSYS_ARCH_OBJ_DIR = $(LIBSYS_ARCH_DIR)/$(OBJ_DIR)
-LIBSYS_OBJS = \
+LIBSYS_OBJS += \
 	$(LIBSYS_ARCH_OBJ_DIR)/syscalls.o 
 
 # build prototypes

@@ -1,11 +1,14 @@
 LIB_DIR = lib
 
 LIBS = 
-KLIBS = 
+LINK_LIBS =
+KLIBS =
+LINK_KLIBS = 
 LIBS_CLEAN =
 
-include $(LIB_DIR)/libc/libc.mk
 include $(LIB_DIR)/libsys/libsys.mk
+include $(LIB_DIR)/libc/libc.mk
+include $(LIB_DIR)/glue/glue.mk
 
 libs: $(LIBS)
 

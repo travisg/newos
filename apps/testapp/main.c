@@ -2,32 +2,29 @@
 #include <libc/string.h>
 #include <libc/printf.h>
 #include <libsys/syscalls.h>
-
-int a;
-int b = 1;
-
-int main();
-
-int _start()
-{
-	return main();
-}
+#include <libsys/stdio.h>
 
 int main()
 {
 	int fd;
 	size_t len;
+	char c;
 	
-	fd = sys_open("/dev/console", "", STREAM_TYPE_DEVICE);
-	if(fd < 0)
-		return -1;
+	printf("test\n");
+	
+	printf("my thread id is %d\n", sys_get_current_thread_id());
 
+	printf("enter something: ");
+	for(;;) {
+		c = getc();
+		printf("%c", c);
+	}
+/*
 	for(;;) {
 		sys_snooze(1000000);
-		len = strlen("booyah!");
-		sys_write(fd, "booyah!", 0, &len);
+		printf("booyah!");
 	}
-
+*/
 	for(;;);
 	return 0;
 }

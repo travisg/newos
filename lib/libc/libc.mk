@@ -34,7 +34,9 @@ $(LIBC): $(LIBC_OBJS)
 	$(AR) r $@ $(LIBC_OBJS)
 
 LIBS += $(LIBC) 
-KLIBS += $(LIBC) 
+LINK_LIBS += $(LIBC)
+KLIBS += $(LIBC)
+LINK_KLIBS += $(LIBC)
 
 libcclean:
 	rm -f $(LIBC_OBJS) $(LIBC)

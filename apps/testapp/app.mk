@@ -7,8 +7,8 @@ DEPS += $(TESTAPP_OBJS:.o=.d)
 
 TESTAPP = $(TESTAPP_OBJ_DIR)/testapp
 
-$(TESTAPP): $(TESTAPP_OBJS) $(LIBS)
-	$(LD) -dN --script=$(APPS_LDSCRIPT) -L $(LIBGCC_PATH) -o $@ $(TESTAPP_OBJS) $(LIBS) $(LIBGCC)
+$(TESTAPP): $(TESTAPP_OBJS) $(LIBS) $(GLUE)
+	$(LD) -dN --script=$(APPS_LDSCRIPT) -L $(LIBGCC_PATH) -o $@ $(GLUE) $(TESTAPP_OBJS) $(LINK_LIBS) $(LIBGCC)
 
 testappclean:
 	rm -f $(TESTAPP_OBJS) $(TESTAPP)
