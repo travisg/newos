@@ -222,7 +222,7 @@ static int map_tmap(vm_translation_map *map, addr va, addr pa, unsigned int attr
 		dprintf("map_tmap: asked for free page for pgtable. 0x%x\n", pgtable);
 #endif
 		// put it in the pgdir
-		put_pgtable_in_pgdir(&pd[index], pgtable, attributes);
+		put_pgtable_in_pgdir(&pd[index], pgtable, attributes | LOCK_RW);
 
 		// update any other page directories, if it maps kernel space
 		if(index >= FIRST_KERNEL_PGDIR_ENT && index < (FIRST_KERNEL_PGDIR_ENT + NUM_KERNEL_PGDIR_ENTS))
