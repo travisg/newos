@@ -28,8 +28,10 @@ struct dev_calls {
 	ssize_t (*dev_writepage)(dev_ident ident, iovecs *vecs, off_t pos);
 };
 
-/* api drivers will use to publish devices */
+/* api drivers will use these to publish devices */
 int devfs_publish_device(const char *path, dev_ident ident, struct dev_calls *calls);
+// the next two return the index generated (or <0 for failure)
 int devfs_publish_indexed_device(const char *path, dev_ident ident, struct dev_calls *calls);
+int devfs_publish_indexed_directory(const char *path);
 
 #endif

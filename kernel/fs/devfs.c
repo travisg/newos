@@ -1092,7 +1092,8 @@ err1:
 	return errval;
 }
 
-// this publishes a device with such that it's path is for eg "{path}/0" (always starts at 0)
+// this publishes a device such that it's path is for eg "{path}/0" (always starts at 0)
+// returns either the index produced or <0 on failure
 int devfs_publish_indexed_device(const char *dir, dev_ident ident, struct dev_calls *calls)
 {
 	char temp[SYS_MAX_PATH_LEN + 1];
@@ -1115,7 +1116,6 @@ int devfs_publish_indexed_device(const char *dir, dev_ident ident, struct dev_ca
 	// now stringize the index of the next child node.
 	sprintf(number, "%u", parent->stream.u.dir.next_index);
 	number[SYS_MAX_PATH_LEN] = '\0';
-	++parent->stream.u.dir.next_index;
 
 	child = devfs_create_vnode(thedevfs, number);
 	if (child == NULL) {
@@ -1124,10 +1124,63 @@ int devfs_publish_indexed_device(const char *dir, dev_ident ident, struct dev_ca
 		goto err1;
 	}
 
+	// set errval to the index and increment AFTER we are successful.
+	errval = parent->stream.u.dir.next_index;
+	++parent->stream.u.dir.next_index;
+
 	child->stream.type = STREAM_TYPE_DEVICE;
 	child->stream.u.dev.ident = ident;
 	child->stream.u.dev.calls = calls;
 
+	hash_insert(thedevfs->vnode_list_hash, child);
+
+	devfs_insert_in_dir(parent, child);
+
+err1:
+	mutex_unlock(&thedevfs->lock);
+	return errval;
+}
+
+// this publishes a directory such that it's path is for eg "{path}/0" (always starts at 0)
+// returns either the index produced or <0 on failure
+int devfs_publish_indexed_directory(const char *dir)
+{
+	char temp[SYS_MAX_PATH_LEN + 1];
+	char number[SYS_MAX_PATH_LEN + 1];
+	struct devfs_vnode *parent = NULL, 
+		           *child = NULL;
+	int errval = 0;
+	
+	strncpy(temp, dir, SYS_MAX_PATH_LEN);
+	temp[SYS_MAX_PATH_LEN] = '\0';
+
+	mutex_lock(&thedevfs->lock);
+
+	errval = devfs_find_parent_node(temp, thedevfs->root_vnode, &parent);
+	if (errval < 0) {
+		TRACE(("Couldn't get parent node\n"));
+		goto err1;
+	}
+
+	// now stringize the index of the next child node.
+	sprintf(number, "%u", parent->stream.u.dir.next_index);
+	number[SYS_MAX_PATH_LEN] = '\0';
+
+	child = devfs_create_vnode(thedevfs, number);
+	if (child == NULL) {
+		errval = ERR_NO_MEMORY;
+		TRACE(("Couldn't create node.\n"));
+		goto err1;
+	}
+
+	// set errval to the index and increment AFTER we are successful.
+	errval = parent->stream.u.dir.next_index;
+	++parent->stream.u.dir.next_index;
+
+	child->stream.type = STREAM_TYPE_DIR;
+	child->stream.u.dir.dir_head = NULL;
+	child->stream.u.dir.jar_head = NULL;
+		
 	hash_insert(thedevfs->vnode_list_hash, child);
 
 	devfs_insert_in_dir(parent, child);
