@@ -40,18 +40,18 @@ static uint16 gringlens[] = { 1, 2, 4, 8, 16, 32, 64, 128, 256, 512 };
 
 
 #define WRITE_8(nic, reg, dat) \
-	(nic)->isa_bus->write_io_8((nic)->io_port + (reg), dat)
+	(nic)->bus->write_io_8((nic)->io_port + (reg), dat)
 #define WRITE_16(nic, reg, dat) \
-	(nic)->isa_bus->write_io_16((nic)->io_port + (reg), dat)
+	(nic)->bus->write_io_16((nic)->io_port + (reg), dat)
 #define WRITE_32(nic, reg, dat) \
-	(nic)->isa_bus->write_io_32((nic)->io_port + (reg), dat)
+	(nic)->bus->write_io_32((nic)->io_port + (reg), dat)
 
 #define READ_8(nic, reg) \
-	(nic)->isa_bus->read_io_8((nic)->io_port + (reg))
+	(nic)->bus->read_io_8((nic)->io_port + (reg))
 #define READ_16(nic, reg) \
-	(nic)->isa_bus->read_io_16((nic)->io_port + (reg))
+	(nic)->bus->read_io_16((nic)->io_port + (reg))
 #define READ_32(nic, reg) \
-	(nic)->isa_bus->read_io_32((nic)->io_port + (reg))
+	(nic)->bus->read_io_32((nic)->io_port + (reg))
 
 #define RXRING_INDEX(_nic, _index) ((_index) & (_nic->rxring_count - 1))
 #define TXRING_INDEX(_nic, _index) ((_index) & (_nic->txring_count - 1))
@@ -110,7 +110,7 @@ static void write_bcr(pcnet32 *nic, uint32 reg, uint16 data)
 	WRITE_32(nic, PCNET_IO_CONFIGPORT, data);
 }
 
-pcnet32 *pcnet32_new(isa_bus_manager *isa_bus, uint32 initmode, uint16 rxbuffer_size, uint16 txbuffer_size)
+pcnet32 *pcnet32_new(pci_module_hooks *bus, uint32 initmode, uint16 rxbuffer_size, uint16 txbuffer_size)
 {
 	pcnet32 *nic = NULL;
 
@@ -127,7 +127,7 @@ pcnet32 *pcnet32_new(isa_bus_manager *isa_bus, uint32 initmode, uint16 rxbuffer_
 		goto err_none;
 
 	memset(nic, 0, sizeof(pcnet32));
-	nic->isa_bus = isa_bus;
+	nic->bus = bus;
 	nic->init_mode = initmode;
 
 	// Make it a 256-descriptor ring. 256*32 bytes long.

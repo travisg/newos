@@ -8,7 +8,7 @@
 #include <kernel/kernel.h>
 #include <kernel/vm.h>
 #include <kernel/smp.h>
-#include <kernel/bus/isa/isa.h>
+#include <kernel/bus/pci/pci.h>
 
 struct pcnet32_rxdesc
 {
@@ -42,7 +42,7 @@ struct pcnet32_init
 // This is so that we don't have to bother wrapping indexes, we just mask them.
 typedef struct pcnet32
 {
-	isa_bus_manager *isa_bus;
+	pci_module_hooks *bus;
 
 	spinlock_t control_lock; // lock before doing any register modification.
 	thread_id thread;
@@ -97,7 +97,7 @@ typedef struct pcnet32
 
 // these allocate and deallocate all the resources associated with
 // the network device.
-pcnet32 *pcnet32_new(isa_bus_manager *isa_bus, uint32 initmode, uint16 rxbuffer_size, uint16 txbuffer_size);
+pcnet32 *pcnet32_new(pci_module_hooks *bus, uint32 initmode, uint16 rxbuffer_size, uint16 txbuffer_size);
 void pcnet32_delete(pcnet32 *nic);
 
 // these detect and initialize a pcnet device.
