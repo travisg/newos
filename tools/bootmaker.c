@@ -558,7 +558,7 @@ void makeboot(section *s, char *outfile)
 
         if(!file) die("section %s has no file",s->name);
 
-        if(!strcmp(type, "elf32"))
+        if(!strcmp(type, "elf32") || !strcmp(type, "elf64"))
         	rawdata[c] = loadstripfile(file,&rawsize[c]);
         else if(!strcmp(type, "text"))
         	rawdata[c] = loadtextfile(file,&rawsize[c]);
