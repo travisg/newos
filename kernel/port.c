@@ -63,8 +63,6 @@ int port_init(kernel_args *ka)
 	int i;
 	int sz;
 
-	dprintf("port_init: entry\n");
-	
 	sz = sizeof(struct port_entry) * MAX_PORTS;
 
 	// create and initialize semaphore table
@@ -83,8 +81,6 @@ int port_init(kernel_args *ka)
 	dbg_add_command(&dump_port_info, "port", "Dump info about a particular port");
 
 	ports_active = true;
-
-	dprintf("port_init: exit, next_port = %d\n", next_port);
 
 	return 0;
 }
@@ -263,7 +259,6 @@ port_create(int32 queue_length, const char *name)
 
 out:
 	int_restore_interrupts(state);
-	dprintf("port_create(): port_id %d done, sem r %d w %d\n", retval, sem_r, sem_w);
 
 	return retval;
 }
@@ -273,8 +268,6 @@ port_close(port_id id)
 {
 	int 	state;
 	int		slot;
-
-	dprintf("port_close(): port_id %d\n", id);
 
 	if(ports_active == false)
 		return ERR_PORT_NOT_ACTIVE;
@@ -312,8 +305,6 @@ port_delete(port_id id)
 
 	char *old_name;
 	struct port_msg *q;
-
-	dprintf("port_delete(): port_id %d\n", id);
 
 	if(ports_active == false)
 		return ERR_PORT_NOT_ACTIVE;
@@ -640,6 +631,8 @@ port_read_etc(port_id id,
 	if (timeout < 0)
 		return ERR_INVALID_ARGS;
 
+	flags = flags & (PORT_FLAG_USE_USER_MEMCPY | PORT_FLAG_INTERRUPTABLE | PORT_FLAG_TIMEOUT);
+
 	slot = id % MAX_PORTS;
 
 	state = int_disable_interrupts();
@@ -658,16 +651,12 @@ port_read_etc(port_id id,
 	RELEASE_PORT_LOCK(ports[slot]);
 	int_restore_interrupts(state);
 
-	dprintf("port_read_etc(): port_id %d, wait\n", id);
-	
 	// XXX -> possible race condition if port gets deleted (->sem deleted too), therefore
 	// sem_id is cached in local variable up here
 	
 	// get 1 entry from the queue, block if needed
 	res = sem_acquire_etc(cached_semid, 1,
-						flags & (SEM_FLAG_TIMEOUT | SEM_FLAG_INTERRUPTABLE), timeout, NULL);
-
-	dprintf("port_read_etc(): port_id %d, done %d\n", id, res);
+						flags, timeout, NULL);
 
 	// XXX: possible race condition if port read by two threads...
 	//      both threads will read in 2 different slots allocated above, simultaneously
@@ -804,6 +793,9 @@ port_write_etc(port_id id,
 	if(id < 0)
 		return ERR_INVALID_HANDLE;
 
+	// mask irrelevant flags
+	flags = flags & (PORT_FLAG_USE_USER_MEMCPY | PORT_FLAG_INTERRUPTABLE | PORT_FLAG_TIMEOUT);
+
 	slot = id % MAX_PORTS;
 	
 	// check buffer_size
@@ -833,16 +825,13 @@ port_write_etc(port_id id,
 	RELEASE_PORT_LOCK(ports[slot]);
 	int_restore_interrupts(state);
 	
-	dprintf("port_write_etc(): port_id %d, wait\n", id);
-	
 	// XXX -> possible race condition if port gets deleted (->sem deleted too), 
 	// and queue is full therefore sem_id is cached in local variable up here
 	
 	// get 1 entry from the queue, block if needed
+	// assumes flags
 	res = sem_acquire_etc(cached_semid, 1,
 						flags & (SEM_FLAG_TIMEOUT | SEM_FLAG_INTERRUPTABLE), timeout, NULL);
-
-	dprintf("port_write_etc(): port_id %d, done %d\n", id, res);
 
 	// XXX: possible race condition if port written by two threads...
 	//      both threads will write in 2 different slots allocated above, simultaneously
@@ -907,8 +896,6 @@ port_write_etc(port_id id,
 
 	sem_get_count(ports[slot].read_sem, &c1);
 	sem_get_count(ports[slot].write_sem, &c2);
-	dprintf("port_write_etc(): meta complete, semcount read_sem %d write_sem %d\n", c1, c2);
-	dprintf("port_write_etc(): will release sem %x now\n", cached_semid);
 
 	// release sem, allowing read (might reschedule)
 	sem_release(cached_semid, 1);
@@ -924,8 +911,6 @@ int port_delete_owned_ports(proc_id owner)
 	int i;
 	int count = 0;
 	
-	dprintf("port_delete_owned_ports(%d) enter\n", owner);
-
 	if(ports_active == false)
 		return ERR_PORT_NOT_ACTIVE;
 
@@ -950,8 +935,6 @@ int port_delete_owned_ports(proc_id owner)
 	RELEASE_PORT_LIST_LOCK();
 	int_restore_interrupts(state);
 
-	dprintf("port_delete_owned_ports(%d) exit\n", owner);
-
 	return count;
 }
 
@@ -960,13 +943,15 @@ int port_delete_owned_ports(proc_id owner)
  * testcode
  */
 
-port_id test_p1, test_p2, test_p3;
+port_id test_p1, test_p2, test_p3, test_p4;
 
 void port_test()
 {
 	char testdata[5];
 	thread_id t;
 	int res;
+	int32 dummy;
+	int32 dummy2;
 
 	strcpy(testdata, "abcd");
 
@@ -974,6 +959,7 @@ void port_test()
 	test_p1 = port_create(1,    "test port #1");
 	test_p2 = port_create(10,   "test port #2");
 	test_p3 = port_create(1024, "test port #3");
+	test_p4 = port_create(1024, "test port #4");
 
 	dprintf("porttest: port_find()\n");
 	dprintf("'test port #1' has id %d (should be %d)\n", port_find("test port #1"), test_p1);
@@ -983,6 +969,16 @@ void port_test()
 	port_write(test_p2, 666, &testdata, sizeof(testdata));
 	port_write(test_p3, 999, &testdata, sizeof(testdata));
 	dprintf("porttest: port_count(test_p1) = %d\n", port_count(test_p1));
+
+	dprintf("porttest: port_write() on 1 with timeout of 1 sec (blocks 1 sec)\n");
+	port_write_etc(test_p1, 1, &testdata, sizeof(testdata), PORT_FLAG_TIMEOUT, 1000000);
+	dprintf("porttest: port_write() on 2 with timeout of 1 sec (wont block)\n");
+	res = port_write_etc(test_p2, 777, &testdata, sizeof(testdata), PORT_FLAG_TIMEOUT, 1000000);
+	dprintf("porttest: res=%d, %s\n", res, res == 0 ? "ok" : "BAD");
+
+	dprintf("porttest: port_read() on empty port 4 with timeout of 1 sec (blocks 1 sec)\n");
+	res = port_read_etc(test_p4, &dummy, &dummy2, sizeof(dummy2), PORT_FLAG_TIMEOUT, 1000000);
+	dprintf("porttest: res=%d, %s\n", res, res == ERR_PORT_TIMED_OUT ? "ok" : "BAD");
 
 	dprintf("porttest: spawning thread for port 1\n");
 	t = thread_create_kernel_thread("port_test", port_test_thread_func, NULL);
@@ -1018,17 +1014,18 @@ int port_test_thread_func(void* arg)
 {
 	int msg_code;
 	int n;
-	char buf[5];
+	char buf[6];
+	buf[5] = '\0';
 
 	dprintf("porttest: port_test_thread_func()\n");
 	
 	n = port_read(test_p1, &msg_code, &buf, 3);
-	dprintf("port_read #1 code %d len %d buf %3s\n", msg_code, n, buf);
+	dprintf("port_read #1 code %d len %d buf %s\n", msg_code, n, buf);
 	n = port_read(test_p1, &msg_code, &buf, 4);
-	dprintf("port_read #1 code %d len %d buf %4s\n", msg_code, n, buf);
+	dprintf("port_read #1 code %d len %d buf %s\n", msg_code, n, buf);
 	buf[4] = 'X';
 	n = port_read(test_p1, &msg_code, &buf, 5);
-	dprintf("port_read #1 code %d len %d buf %5s\n", msg_code, n, buf);
+	dprintf("port_read #1 code %d len %d buf %s\n", msg_code, n, buf);
 
 	dprintf("porttest: testing delete p1 from other thread\n");
 	port_delete(test_p1);

@@ -32,6 +32,8 @@ struct file_stat {
 #define SEM_FLAG_TIMEOUT 2
 #define SEM_FLAG_INTERRUPTABLE 4
 
+#define PORT_FLAG_TIMEOUT 2
+
 // info about a region that external entities may want to know
 typedef struct vm_region_info {
 	region_id id;
