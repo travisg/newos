@@ -1,33 +1,51 @@
 Implement:
 
 PORTS:
+ ppc port (iMac)
+ mips port (SGI Indy)	
  sparc v8 port
  sparc v9 port
  alpha port
- mips port (SGI Indy)	
 user-space loader
-kernel module loader
 disk based filesystem
-tty layer
+tty layer:
+ maybe handle in input_server?
+kernel ports/pipes (IPC)
+arguments to new processes
 process environment variables
-maple bus layer - dreamcast
-vfs redo:
- remove multiple streams
- move path parsing back into vfs?
- default vfs handlers
+dreamcast drivers:
+ maple bus layer
+ keyboard
+ mouse
+ cdrom
 sh4 cache enable - dreamcast
-statistic gathering
+statistic gathering:
+ process
+ thread
 SMP mailbox check during spin
-improved schedule quantum handling
-
-In Progress:
-VM:
- memmap
- swap
- page out
-ppc port (iMac)
+scheduler updates:
+ better quantum handling
+ priority boost on sem block
+improved kernel debugger support:
+ symbol lookups
+ stack tracing
 rtl8139 driver - dreamcast
 TCP/IP stack
+kernel slab allocator
+user space heap
+vfs:
+ vnode caching
+ getcwd
+ attributes (?)
+VM:
+ swap
+ page out
+ cache layer
+
+In Progress:
+kernel module loading:
+ symbols
+ modules
 
 Finish:
 
@@ -37,4 +55,3 @@ sh4 invalidate_TLB - dreamcast
 ide driver cleanup
 
 Fix:
-crash in stage2 on some systems
