@@ -53,7 +53,7 @@ static int device_fault(struct vm_store *store, struct vm_address_space *aspace,
 	vm_cache_ref *cache_ref = store->cache->ref;
 	vm_region *region;
 	
-	dprintf("device_fault: offset 0x%d + base_addr 0x%x\n", offset, d->base_addr);
+	dprintf("device_fault: offset 0x%x 0x%x + base_addr 0x%x\n", offset, d->base_addr);
 	
 	// figure out which page needs to be mapped where
 	(*aspace->translation_map.ops->lock)(&aspace->translation_map);

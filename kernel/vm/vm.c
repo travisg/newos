@@ -51,6 +51,9 @@ vm_region *_vm_create_region(vm_address_space *aspace, char *name, void **addres
 	int addr_type, addr size, int wiring, int lock);
 int vm_soft_fault(addr address, bool is_write, bool is_user);
 vm_region *vm_virtual_map_lookup(vm_virtual_map *map, addr address);
+int vm_region_acquire_ref(vm_region *region);
+void vm_region_release_ref(vm_region *region);
+void vm_region_release_ref2(vm_region *region);
 
 static int region_compare(void *_r, void *key)
 {
@@ -147,6 +150,8 @@ vm_region *_vm_create_region_struct(vm_address_space *aspace, char *name, addr b
 	region->id = next_region_id++;
 	region->lock = lock;
 	region->wiring = wiring;
+	region->ref_count = 1;
+	region->aspace = aspace;
 	region->map = &aspace->virtual_map;
 	region->name = (char *)kmalloc(strlen(name) + 1);
 	if(region->name == NULL)
@@ -461,6 +466,66 @@ region_id vm_map_physical_memory(aspace_id aid, char *name, void **address, int 
 		return -1;
 }
 
+region_id vm_clone_region(aspace_id aid, char *name, void **address, int addr_type,
+	region_id source_region, off_t offset, addr size, int lock)
+{
+	vm_region *new_region;
+	vm_region *src_region;
+	off_t new_offset;
+	
+	vm_address_space *aspace = vm_get_aspace_from_id(aid);
+	if(aspace == NULL)
+		return -1;
+
+	// look up the source region
+	sem_acquire(region_hash_sem, READ_COUNT);
+	src_region = hash_lookup(region_table, &source_region);
+	if(src_region != NULL) {
+		if(vm_region_acquire_ref(src_region) < 0) {
+			// it's ref has already been decremented, so it's not reliable
+			src_region = NULL;
+		}
+	}
+	sem_release(region_hash_sem, READ_COUNT);
+	
+	if(src_region == NULL)
+		return -1;
+
+	// figure out how this will work
+	if(src_region->cache_offset + offset < 0) {
+		dprintf("vm_clone_region: asked to map at offset %d, too low\n", (int)offset);
+		vm_region_release_ref(src_region);
+		return -1;
+	}
+	new_offset = src_region->cache_offset + offset;
+	if(new_offset + size > src_region->cache_offset + src_region->size) {
+		dprintf("vm_clone_region: asked to map past the end of the old region\n");
+		vm_region_release_ref(src_region);
+		return -1;
+	}		
+
+	// create the new region, with the src region's wiring
+	new_region = _vm_create_region(aspace, name, address, addr_type, size, src_region->wiring, lock);
+	if(new_region == NULL) {
+		vm_region_release_ref(src_region);
+		return -1;
+	}
+	
+	// attach the cache_ref of the src region to the new one
+	vm_cache_acquire_ref(src_region->cache_ref);
+	vm_cache_insert_region(src_region->cache_ref, new_region);
+	new_region->cache_ref = src_region->cache_ref;
+	new_region->cache_offset = new_offset;
+	
+	// release the ref on the old region
+	vm_region_release_ref(src_region);
+
+	if(new_region)
+		return new_region->id;
+	else
+		return -1;
+}
+
 int vm_delete_region(aspace_id aid, region_id rid)
 {
 	vm_region *temp, *last = NULL;
@@ -471,14 +536,41 @@ int vm_delete_region(aspace_id aid, region_id rid)
 
 	dprintf("vm_delete_region: aspace 0x%x, region 0x%x\n", aspace, rid);
 
-	// remove the region from the global hash table
+	// find the region structure
 	sem_acquire(region_hash_sem, READ_COUNT);
 	region = hash_lookup(region_table, &rid);
+	if(region != NULL) {
+		// acquire the ref once, to make sure no old else deletes this
+		// region before we can do it
+		if(vm_region_acquire_ref(region) < 0) {
+			region = NULL;
+		}
+	}
 	sem_release(region_hash_sem, READ_COUNT);
-
 	if(region == NULL)
 		return -1;
 
+	// release the ref twice, insuring no one else got this far
+	vm_region_release_ref2(region);
+
+	return 0;
+}
+
+int vm_region_acquire_ref(vm_region *region)
+{
+	if(region == NULL)
+		panic("vm_region_acquire_ref: passed NULL\n");
+	if(atomic_add(&region->ref_count, 1) == 0)
+		return -1;
+	return 0;
+}
+
+static void vm_remove_region_struct(vm_region *region)
+{
+	// time to die
+	vm_region *temp, *last = NULL;
+	vm_address_space *aspace = region->aspace;
+	
 	// remove the region from the aspace's virtual map
 	sem_acquire(aspace->virtual_map.sem, WRITE_COUNT);
 	temp = aspace->virtual_map.region_list;
@@ -499,13 +591,13 @@ int vm_delete_region(aspace_id aid, region_id rid)
 	sem_release(aspace->virtual_map.sem, WRITE_COUNT);
 
 	if(temp == NULL)
-		return -1;
+		panic("vm_region_release_ref: region not found in aspace's region_list\n");
 
 	// remove the region from the global hash table
 	sem_acquire(region_hash_sem, WRITE_COUNT);
 	hash_remove(region_table, region);
 	sem_release(region_hash_sem, WRITE_COUNT);
-	
+
 	vm_cache_remove_region(region->cache_ref, region);
 	vm_cache_release_ref(region->cache_ref);
 
@@ -517,14 +609,29 @@ int vm_delete_region(aspace_id aid, region_id rid)
 	if(region->name)
 		kfree(region->name);
 	kfree(region);
-	
-	return 0;
+}
+
+void vm_region_release_ref(vm_region *region)
+{
+	if(region == NULL)
+		panic("vm_region_release_ref: passed NULL\n");
+	if(atomic_add(&region->ref_count, -1) == 1) {
+		vm_remove_region_struct(region);
+	}
+}
+
+void vm_region_release_ref2(vm_region *region)
+{
+	if(region == NULL)
+		panic("vm_region_release_ref2: passed NULL\n");
+	if(atomic_add(&region->ref_count, -2) <= 2) {
+		vm_remove_region_struct(region);
+	}
 }
 
 int vm_get_region_info(region_id id, vm_region_info *info)
 {
 	vm_region *region;
-	int rc;
 
 	if(info == NULL)
 		return -1;
@@ -533,18 +640,22 @@ int vm_get_region_info(region_id id, vm_region_info *info)
 	sem_acquire(region_hash_sem, READ_COUNT);
 	region = hash_lookup(region_table, &id);
 	if(region != NULL) {
-		info->id = region->id;
-		info->base = region->base;
-		info->size = region->size;
-		info->lock = region->lock;
-		info->wiring = region->wiring;
-		rc = 0;
-	} else {
-		rc = -1;
+		if(vm_region_acquire_ref(region) < 0)
+			region = NULL;
 	}
 	sem_release(region_hash_sem, READ_COUNT);
+	if(region == NULL)
+		return -1;	
+
+	info->id = region->id;
+	info->base = region->base;
+	info->size = region->size;
+	info->lock = region->lock;
+	info->wiring = region->wiring;
 	
-	return rc;
+	vm_region_release_ref(region);
+	
+	return 0;
 }
 
 int vm_get_page_mapping(vm_address_space *aspace, addr vaddr, addr *paddr)
@@ -700,6 +811,7 @@ static void _dump_region(vm_region *region)
 	dprintf("size: 0x%x\n", region->size);
 	dprintf("lock: 0x%x\n", region->lock);
 	dprintf("wiring: 0x%x\n", region->wiring);
+	dprintf("ref_count: %d\n", region->ref_count);
 	dprintf("cache_ref: 0x%x\n", region->cache_ref);
 	// XXX 64-bit
 	dprintf("cache_offset: 0x%x 0x%x\n", region->cache_offset);
@@ -751,7 +863,7 @@ static void dump_region_list(int argc, char **argv)
 
 	hash_open(region_table, &iter);
 	while((region = hash_next(region_table, &iter)) != NULL) {
-		dprintf("0x%x\t0x%x\t%32s\t0x%x\t\t0x%x\n",
+		dprintf("0x%x\t0x%x\t%32s\t0x%x\t\t0x%x\t%d\t%d\n",
 			region, region->id, region->name, region->base, region->size, region->lock, region->wiring);
 	}
 	hash_close(region_table, &iter, false);
@@ -927,7 +1039,7 @@ void vm_test()
 	int i;
 	
 	dprintf("vm_test: entry\n");
-	
+#if 0
 	region = vm_create_anonymous_region(vm_get_kernel_aspace_id(), "test_region", (void **)&region_addr,
 		REGION_ADDR_ANY_ADDRESS, PAGE_SIZE * 16, REGION_WIRING_LAZY, LOCK_RW|LOCK_KERNEL);
 	dprintf("region = 0x%x, addr = 0x%x\n", region, region_addr);
@@ -935,6 +1047,7 @@ void vm_test()
 	memset((void *)region_addr, 0, PAGE_SIZE * 16);
 
 	dprintf("memsetted the region\n");
+#endif
 #if 0
 	region2 = vm_map_physical_memory(vm_get_kernel_aspace(), "test_physical_region", (void **)&region_addr,
 		REGION_ADDR_ANY_ADDRESS, PAGE_SIZE * 16, LOCK_RW|LOCK_KERNEL, 0xb8000);
@@ -944,6 +1057,7 @@ void vm_test()
 		((char *)region_addr)[i] = 'a';
 	}	
 #endif
+#if 0
 	region3 = vm_create_anonymous_region(vm_get_kernel_aspace_id(), "test_region_wired", (void **)&region_addr,
 		REGION_ADDR_ANY_ADDRESS, PAGE_SIZE * 16, REGION_WIRING_WIRED, LOCK_RW|LOCK_KERNEL);
 	dprintf("region = 0x%x, addr = 0x%x\n", region3, region_addr);
@@ -981,7 +1095,67 @@ void vm_test()
 
 		vm_put_physical_page(va);
 	}
+#endif
+#if 1
+	dprintf("cloning vidmem and testing if it compares\n");
+	{
+		vm_region_info info;
 
+		region = vm_find_region_by_name(vm_get_kernel_aspace_id(), "vid_mem");
+		dprintf("vid_mem region = 0x%x\n", region);
+		if(region >= 0) {
+			void *ptr;
+			
+			
+			region2 = vm_clone_region(vm_get_kernel_aspace_id(), "vid_mem2",
+				&ptr, REGION_ADDR_ANY_ADDRESS, region, 0, 0x8000, LOCK_RW|LOCK_KERNEL);
+			dprintf("region2 = 0x%x, ptr = 0x%x\n", region2, ptr);
+
+			vm_get_region_info(region, &info);
+			dprintf("memcmp = %d\n", memcmp(ptr, (void *)info.base, info.size));
+		}
+	}
+#endif
+#if 1
+	dprintf("cloning vidmem in RO and testing if it compares\n");
+	{
+		vm_region_info info;
+
+		region = vm_find_region_by_name(vm_get_kernel_aspace_id(), "vid_mem");
+		dprintf("vid_mem region = 0x%x\n", region);
+		if(region >= 0) {
+			void *ptr;
+			
+			
+			region2 = vm_clone_region(vm_get_kernel_aspace_id(), "vid_mem3",
+				&ptr, REGION_ADDR_ANY_ADDRESS, region, 0, 0x8000, LOCK_RO|LOCK_KERNEL);
+			dprintf("region2 = 0x%x, ptr = 0x%x\n", region2, ptr);
+
+			vm_get_region_info(region, &info);
+			dprintf("memcmp = %d\n", memcmp(ptr, (void *)info.base, info.size));
+		}
+	}
+#endif
+#if 1
+	dprintf("creating anonymous region, cloning it, and testing if it compares\n");
+	{
+		void *ptr;
+
+		region = vm_create_anonymous_region(vm_get_kernel_aspace_id(), "test_region", (void **)&region_addr,
+			REGION_ADDR_ANY_ADDRESS, PAGE_SIZE * 16, REGION_WIRING_LAZY, LOCK_RW|LOCK_KERNEL);
+		dprintf("region = 0x%x, addr = 0x%x\n", region, region_addr);
+	
+		memset((void *)region_addr, 99, PAGE_SIZE * 16);
+	
+		dprintf("memsetted the region\n");
+
+		region2 = vm_clone_region(vm_get_kernel_aspace_id(), "test_region2",
+			&ptr, REGION_ADDR_ANY_ADDRESS, region, 0, PAGE_SIZE * 16, LOCK_RW|LOCK_KERNEL);
+		dprintf("region2 = 0x%x, ptr = 0x%x\n", region2, ptr);
+
+		dprintf("memcmp = %d\n", memcmp((void *)region_addr, ptr, PAGE_SIZE * 16));
+	}
+#endif
 	dprintf("vm_test: done\n");
 }
 
@@ -1132,6 +1306,7 @@ int vm_page_fault(addr address, addr fault_address, bool is_write, bool is_user)
 				address, fault_address);
 		} else {
 			// XXX kill the process
+			panic("vm_page_fault: insert process killing code here\n");
 		}			
 	}
 
@@ -1141,7 +1316,6 @@ int vm_page_fault(addr address, addr fault_address, bool is_write, bool is_user)
 int vm_soft_fault(addr address, bool is_write, bool is_user)
 {
 	vm_address_space *aspace;
-	bool is_kernel_aspace;
 	vm_virtual_map *map;
 	vm_region *region;
 	vm_cache_ref *cache_ref;
@@ -1158,18 +1332,17 @@ int vm_soft_fault(addr address, bool is_write, bool is_user)
 	
 	if(address >= KERNEL_BASE && address <= KERNEL_BASE + (KERNEL_SIZE - 1)) {
 		aspace = vm_get_kernel_aspace();
-		is_kernel_aspace = true;
 	} else {
 		aspace = vm_get_current_user_aspace();
 		if(aspace == NULL) {
 			if(is_user == false) {
-				panic("vm_soft_fault: kernel thread accessing invalid user memory!\n");
+				dprintf("vm_soft_fault: kernel thread accessing invalid user memory!\n");
+				return -1;
 			} else {
 				// XXX weird state.
 				panic("vm_soft_fault: non kernel thread accessing user memory that doesn't exist!\n");
 			}
 		}
-		is_kernel_aspace = false;
 	}
 	map = &aspace->virtual_map;
 	
@@ -1178,12 +1351,21 @@ int vm_soft_fault(addr address, bool is_write, bool is_user)
 	if(region == NULL) {
 		sem_release(map->sem, READ_COUNT);
 		dprintf("vm_soft_fault: va 0x%x not covered by region in address space\n", address);
-		// XXX remove
-		panic("here\n");
 		return -1; // BAD_ADDRESS
 	}
-	// XXX check permissions
 	
+	// check permissions
+	if(is_user && (region->lock & LOCK_KERNEL) == LOCK_KERNEL) {
+		sem_release(map->sem, READ_COUNT);
+		dprintf("user access on kernel region\n");
+		return -1; // BAD_PERMISSION
+	}
+	if(is_write && (region->lock & LOCK_RW) == 0) {
+		sem_release(map->sem, READ_COUNT);
+		dprintf("write access attempted on read-only region\n");
+		return -1; // BAD_PERMISSION
+	}
+
 	cache_ref = region->cache_ref;
 	cache_offset = address - region->base + region->cache_offset;
 	vm_cache_acquire_ref(cache_ref);

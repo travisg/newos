@@ -79,10 +79,12 @@ typedef struct vm_region {
 	addr size;
 	int lock;
 	int wiring;
+	int ref_count;
 	
 	struct vm_cache_ref *cache_ref;
 	off_t cache_offset;	
-	
+
+	struct vm_address_space *aspace;
 	struct vm_region *aspace_next;
 	struct vm_virtual_map *map;
 	struct vm_region *cache_next;
@@ -168,6 +170,8 @@ region_id vm_create_anonymous_region(aspace_id aid, char *name, void **address, 
 	addr size, int wiring, int lock);
 region_id vm_map_physical_memory(aspace_id aid, char *name, void **address, int addr_type,
 	addr size, int lock, addr phys_addr);
+region_id vm_clone_region(aspace_id aid, char *name, void **address, int addr_type,
+	region_id source_region, off_t offset, addr size, int lock);	
 int vm_delete_region(aspace_id aid, region_id id);
 region_id vm_find_region_by_name(aspace_id aid, const char *name);
 int vm_get_region_info(region_id id, vm_region_info *info);

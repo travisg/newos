@@ -84,6 +84,8 @@ int _start(kernel_args *oldka, int cpu)
 	}
 	int_enable_interrupts();
 
+	vm_test();
+
 	// start the init process
 	if(cpu == 0) {
 		proc_id pid;
