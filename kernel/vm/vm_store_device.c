@@ -73,8 +73,7 @@ static int device_fault(struct vm_store *store, struct vm_address_space *aspace,
 	(*aspace->translation_map.ops->lock)(&aspace->translation_map);
 
 	// cycle through all of the regions that map this cache and map the page in
-	for(region = cache_ref->region_list; region != NULL; region = region->cache_next) {
-
+	list_for_every_entry(&cache_ref->region_list_head, region, vm_region, cache_node) {
 		VERIFY_VM_REGION(region);
 
 		// make sure this page in the cache that was faulted on is covered in this region

@@ -90,7 +90,7 @@ vm_cache *vm_cache_create(vm_store *store)
 		return NULL;
 
 	cache->magic = VM_CACHE_MAGIC;
-	cache->page_list = NULL;
+	list_initialize(&cache->page_list_head);
 	cache->ref = NULL;
 	cache->source = NULL;
 	cache->store = store;
@@ -99,7 +99,6 @@ vm_cache *vm_cache_create(vm_store *store)
 	cache->virtual_size = 0;
 	cache->temporary = 0;
 	cache->scan_skip = 0;
-
 
 	return cache;
 }
@@ -115,7 +114,7 @@ vm_cache_ref *vm_cache_ref_create(vm_cache *cache)
 	ref->magic = VM_CACHE_REF_MAGIC;
 	ref->cache = cache;
 	mutex_init(&ref->lock, "cache_ref_mutex");
-	ref->region_list = NULL;
+	list_initialize(&ref->region_list_head);
 	ref->ref_count = 0;
 	cache->ref = ref;
 
@@ -140,8 +139,6 @@ void vm_cache_acquire_ref(vm_cache_ref *cache_ref, bool acquire_store_ref)
 
 void vm_cache_release_ref(vm_cache_ref *cache_ref)
 {
-	vm_page *page;
-
 //	dprintf("vm_cache_release_ref: cache_ref 0x%x, ref will be %d\n", cache_ref, cache_ref->ref_count-1);
 
 	if(cache_ref == NULL)
@@ -160,25 +157,25 @@ void vm_cache_release_ref(vm_cache_ref *cache_ref)
 		}
 
 		// free all of the pages in the cache
-		page = cache_ref->cache->page_list;
-		while(page) {
-			vm_page *old_page = page;
+		vm_page *last, *next;
+		last = NULL;
+		list_for_every_entry_safe(&cache_ref->cache->page_list_head, last, next, vm_page, cache_node) {
+			VERIFY_VM_PAGE(last);
 
-			VERIFY_VM_PAGE(page);
-
-			page = page->cache_next;
+			// remove it from the cache list
+			list_delete(&last->cache_node);
 
 			// remove it from the hash table
 			int_disable_interrupts();
 			acquire_spinlock(&page_cache_table_lock);
 
-			hash_remove(page_cache_table, old_page);
+			hash_remove(page_cache_table, last);
 
 			release_spinlock(&page_cache_table_lock);
 			int_restore_interrupts();
 
 //			dprintf("vm_cache_release_ref: freeing page 0x%x\n", old_page->ppn);
-			vm_page_set_state(old_page, PAGE_STATE_FREE);
+			vm_page_set_state(last, PAGE_STATE_FREE);
 		}
 		vm_increase_max_commit(cache_ref->cache->virtual_size - store_committed_size);
 
@@ -229,13 +226,7 @@ void vm_cache_insert_page(vm_cache_ref *cache_ref, vm_page *page, off_t offset)
 
 	page->offset = offset;
 
-	if(cache_ref->cache->page_list != NULL) {
-		cache_ref->cache->page_list->cache_prev = page;
-	}
-	page->cache_next = cache_ref->cache->page_list;
-	page->cache_prev = NULL;
-	cache_ref->cache->page_list = page;
-
+	list_add_head(&cache_ref->cache->page_list_head, &page->cache_node);
 	page->cache_ref = cache_ref;
 
 	int_disable_interrupts();
@@ -265,16 +256,7 @@ void vm_cache_remove_page(vm_cache_ref *cache_ref, vm_page *page)
 	release_spinlock(&page_cache_table_lock);
 	int_restore_interrupts();
 
-	if(cache_ref->cache->page_list == page) {
-		if(page->cache_next != NULL)
-			page->cache_next->cache_prev = NULL;
-		cache_ref->cache->page_list = page->cache_next;
-	} else {
-		if(page->cache_prev != NULL)
-			page->cache_prev->cache_next = page->cache_next;
-		if(page->cache_next != NULL)
-			page->cache_next->cache_prev = page->cache_prev;
-	}
+	list_delete(&page->cache_node);
 	page->cache_ref = NULL;
 }
 
@@ -285,11 +267,7 @@ int vm_cache_insert_region(vm_cache_ref *cache_ref, vm_region *region)
 	VERIFY_VM_CACHE_REF(cache_ref);
 	VERIFY_VM_REGION(region);
 
-	region->cache_next = cache_ref->region_list;
-	if(region->cache_next)
-		region->cache_next->cache_prev = region;
-	region->cache_prev = NULL;
-	cache_ref->region_list = region;
+	list_add_head(&cache_ref->region_list_head, &region->cache_node);
 
 	mutex_unlock(&cache_ref->lock);
 	return 0;
@@ -302,12 +280,7 @@ int vm_cache_remove_region(vm_cache_ref *cache_ref, vm_region *region)
 	VERIFY_VM_CACHE_REF(cache_ref);
 	VERIFY_VM_REGION(region);
 
-	if(region->cache_prev)
-		region->cache_prev->cache_next = region->cache_next;
-	if(region->cache_next)
-		region->cache_next->cache_prev = region->cache_prev;
-	if(cache_ref->region_list == region)
-		cache_ref->region_list = region->cache_next;
+	list_delete(&region->cache_node);
 
 	mutex_unlock(&cache_ref->lock);
 	return 0;

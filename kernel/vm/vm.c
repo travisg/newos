@@ -209,7 +209,7 @@ static vm_region *_vm_create_region_struct(vm_address_space *aspace, const char 
 	region->aspace = aspace;
 	region->aspace_next = NULL;
 	region->map = &aspace->virtual_map;
-	region->cache_next = region->cache_prev = NULL;
+	list_clear_node(&region->cache_node);
 	region->hash_next = NULL;
 
 	return region;
@@ -1223,7 +1223,7 @@ static void dump_cache_ref(int argc, char **argv)
 	dprintf("lock.holder: %d\n", cache_ref->lock.holder);
 	dprintf("lock.sem: 0x%x\n", cache_ref->lock.sem);
 	dprintf("region_list:\n");
-	for(region = cache_ref->region_list; region != NULL; region = region->cache_next) {
+	list_for_every_entry(&cache_ref->region_list_head, region, vm_region, cache_node) {
 		dprintf(" region 0x%x: ", region->id);
 		dprintf("base_addr = 0x%lx ", region->base);
 		dprintf("size = 0x%lx ", region->size);
@@ -1290,7 +1290,7 @@ static void dump_cache(int argc, char **argv)
 	dprintf("scan_skip: %d\n", cache->scan_skip);
 	dprintf("virtual_size: 0x%Lx\n", cache->virtual_size);
 	dprintf("page_list:\n");
-	for(page = cache->page_list; page != NULL; page = page->cache_next) {
+	list_for_every_entry(&cache->page_list_head, page, vm_page, cache_node) {
 		if(page->type == PAGE_TYPE_PHYSICAL)
 			dprintf(" %p ppn 0x%lx offset 0x%Lx type %d state %d (%s) ref_count %d\n",
 				page, page->ppn, page->offset, page->type, page->state, page_state_to_text(page->state), page->ref_count);
@@ -1320,8 +1320,8 @@ static void _dump_region(vm_region *region)
 	dprintf("cache_ref: %p\n", region->cache_ref);
 	dprintf("aspace: %p\n", region->aspace);
 	dprintf("aspace_next: %p\n", region->aspace_next);
-	dprintf("cache_next: %p\n", region->cache_next);
-	dprintf("cache_prev: %p\n", region->cache_prev);
+	dprintf("cache_node.prev: %p\n", region->cache_node.prev);
+	dprintf("cache_node.next: %p\n", region->cache_node.next);
 	dprintf("hash_next: %p\n", region->hash_next);
 }
 

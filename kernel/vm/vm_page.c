@@ -144,7 +144,7 @@ static int pageout_daemon()
 
 		/* clear the modified flag on this page in all it's mappings */
 		mutex_lock(&page->cache_ref->lock);
-		for(region = page->cache_ref->region_list; region; region = region->cache_next) {
+		list_for_every_entry(&page->cache_ref->region_list_head, region, vm_region, cache_node) {
 			if(page->offset > region->cache_offset
 			  && page->offset < region->cache_offset + region->size) {
 				vm_translation_map *map = &region->aspace->translation_map;

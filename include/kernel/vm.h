@@ -24,8 +24,7 @@ typedef struct vm_page {
 
 	struct vm_cache_ref *cache_ref;
 
-	struct vm_page *cache_prev;
-	struct vm_page *cache_next;
+	struct list_node cache_node;
 
 	unsigned int ref_count;
 
@@ -59,7 +58,7 @@ typedef struct vm_cache_ref {
 	struct vm_cache *cache;
 	mutex lock;
 
-	struct vm_region *region_list;
+	struct list_node region_list_head;
 
 	int ref_count;
 } vm_cache_ref;
@@ -69,7 +68,7 @@ typedef struct vm_cache_ref {
 // vm_cache
 typedef struct vm_cache {
 	int magic;
-	vm_page *page_list;
+	struct list_node page_list_head;
 	vm_cache_ref *ref;
 	struct vm_cache *source;
 	struct vm_store *store;
@@ -108,8 +107,7 @@ typedef struct vm_region {
 	struct vm_address_space *aspace;
 	struct vm_region *aspace_next;
 	struct vm_virtual_map *map;
-	struct vm_region *cache_next;
-	struct vm_region *cache_prev;
+	struct list_node cache_node;
 	struct vm_region *hash_next;
 } vm_region;
 
