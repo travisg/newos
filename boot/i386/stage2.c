@@ -12,8 +12,13 @@
 #include <sys/elf32.h>
 
 const unsigned kBSSSize = 0x9000;
+
+// we're running out of the first 'file' contained in the bootdir, which is
+// a set of binaries and data packed back to back, described by an array
+// of boot_entry structures at the beginning. The load address is fixed.
 #define BOOTDIR_ADDR 0x100000
 const boot_entry *bootdir = (boot_entry*)BOOTDIR_ADDR;
+
 // stick the kernel arguments in a pseudo-random page that will be mapped
 // at least during the call into the kernel. The kernel should copy the
 // data out and unmap the page.
@@ -33,12 +38,19 @@ unsigned int bootdir_pages = 0;
 unsigned int *pgdir = 0;
 unsigned int *pgtable = 0;
 
+// function decls for this module
 void calculate_cpu_conversion_factor();
 void load_elf_image(void *data, unsigned int *next_paddr,
 	addr_range *ar0, addr_range *ar1, unsigned int *start_addr);
 int mmu_init(kernel_args *ka, unsigned int *next_paddr);
 void mmu_map_page(unsigned int vaddr, unsigned int paddr);
 
+// called by the stage1 bootloader.
+// State:
+//   32-bit
+//   mmu turned on, first 4 megs or so identity mapped
+//   stack somewhere below 1 MB
+//   supervisor mode
 void _start(unsigned int mem, char *str)
 {
 	unsigned int new_stack;
@@ -59,10 +71,11 @@ void _start(unsigned int mem, char *str)
 	clearscreen();
 	dprintf("stage2 bootloader entry.\n");
 
+	// calculate the conversion factor that translates rdtsc time to real microseconds
 	calculate_cpu_conversion_factor();
 	dprintf("system_time = %d %d\n", system_time());
 
-	// calculate how big the bootdir is
+	// calculate how big the bootdir is so we know where we can start grabbing pages
 	{
 		int entry;
 		for (entry = 0; entry < 64; entry++) {
@@ -82,6 +95,7 @@ void _start(unsigned int mem, char *str)
 
 	mmu_init(ka, &next_paddr);
 	
+	// load the kernel (3rd entry in the bootdir)
 	load_elf_image((void *)(bootdir[2].be_offset * PAGE_SIZE + BOOTDIR_ADDR), &next_paddr,
 			&ka->kernel_seg0_addr, &ka->kernel_seg1_addr, &kernel_entry);
 
@@ -145,13 +159,13 @@ void _start(unsigned int mem, char *str)
 		// put segment descriptors in it
 		gdt[0] = 0;
 		gdt[1] = 0;
-		gdt[2] = 0x0000ffff; // seg 0x8
+		gdt[2] = 0x0000ffff; // seg 0x8  -- kernel 4GB code
 		gdt[3] = 0x00cf9a00;
-		gdt[4] = 0x0000ffff; // seg 0x10
+		gdt[4] = 0x0000ffff; // seg 0x10 -- kernel 4GB data
 		gdt[5] = 0x00cf9200;
-		gdt[6] = 0x0000ffff; // seg 0x1b
+		gdt[6] = 0x0000ffff; // seg 0x1b -- ring 3 4GB code
 		gdt[7] = 0x00cffa00;
-		gdt[8] = 0x0000ffff; // seg 0x23
+		gdt[8] = 0x0000ffff; // seg 0x23 -- ring 3 4GB data
 		gdt[9] = 0x00cff200;
 		// gdt[10] & gdt[11] will be filled later by the kernel
 	
@@ -170,6 +184,9 @@ void _start(unsigned int mem, char *str)
 	}
 
 	// Map the pg_dir into kernel space at 0xffc00000-0xffffffff
+	// this enables a mmu trick where the 4 MB region that this pgdir entry
+	// represents now maps the 4MB of potential pagetables that the pgdir
+	// points to. Thrown away later in VM bringup, but useful for now.
 	pgdir[1023] = (unsigned int)pgdir | DEFAULT_PAGE_FLAGS;
 
 	// also map it on the next vpage
@@ -283,6 +300,8 @@ void load_elf_image(void *data, unsigned int *next_paddr, addr_range *ar0, addr_
 	}
 }
 
+// allocate a page directory and page table to facilitate mapping
+// pages to the 0x80000000 - 0x80400000 region.
 int mmu_init(kernel_args *ka, unsigned int *next_paddr)
 {
 	unsigned int *old_pgdir;
@@ -291,6 +310,7 @@ int mmu_init(kernel_args *ka, unsigned int *next_paddr)
 	// get the current page directory
 	asm("movl %%cr3, %%eax" : "=a" (old_pgdir));
 	
+	// allocate a new pgdir and
 	// copy the old pgdir to the new one
 	pgdir = (unsigned int *)*next_paddr;
 	(*next_paddr) += PAGE_SIZE;

@@ -31,6 +31,11 @@ FINAL = $(BOOT_DIR)/final
 BOOTBLOCK = $(BOOT_DIR)/bootblock.bin
 MAKEFLOP = $(BOOT_DIR)/makeflop
 
+bootclean:
+	rm -f $(MAKEFLOP)
+
+CLEAN += bootclean
+
 $(MAKEFLOP): $(MAKEFLOP).c
 	$(HOST_CC) -O3 $(MAKEFLOP).c -o $@
 
