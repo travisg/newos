@@ -18,7 +18,7 @@ main()
 	shared_hello();
 	printf("%d %d %d %d %d %d\n", fib(0), fib(1), fib(2), fib(3), fib(4), fib(5));
 
-	freston= dlopen("/boot/lib/girlfriend.so", RTLD_LAZY);
+	freston= dlopen("/boot/lib/girlfriend.so", RTLD_NOW);
 	girlfriend= dlsym(freston, "girlfriend");
 
 	((void(*)(void))girlfriend)();
