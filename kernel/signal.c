@@ -139,7 +139,7 @@ send_signal_etc(thread_id threadID, uint signal, uint32 flags)
 	}
 	// XXX check permission
 
-	dprintf("SIG: sending signal %s to thread 0x%x (pending 0x%x, \n", sigstr[signal], thread->id);
+	dprintf("SIG: sending signal %s to thread 0x%x\n", sigstr[signal], thread->id);
 
 	if (thread->proc == proc_get_kernel_proc()) {
 		// Signals to kernel threads will only wake them up
