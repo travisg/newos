@@ -40,6 +40,6 @@ allclean: depsclean clean
 #$(warning ALL_DEPS = $(ALL_DEPS))
 
 ifeq ($(filter $(MAKECMDGOALS), allclean), )
-	include $(ALL_DEPS)
+include $(ALL_DEPS)
 endif
 
