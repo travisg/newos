@@ -1,5 +1,6 @@
 /*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Copyright 2002, Michael Noisternig. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 
@@ -121,15 +122,18 @@ FUNCTION(i386_fxsave_swap):
 /* void i386_context_switch(unsigned int **old_esp, unsigned int *new_esp, addr new_pgdir); */
 FUNCTION(i386_context_switch):
 	pusha					/* pushes 8 words onto the stack */
-	movl	36(%esp),%eax
+	movl	36(%esp),%eax	/* save current_stack */
 	movl	%esp,(%eax)
+	pushl	%ss
+	popl	%edx
+	movl	%edx,4(%eax)
 	movl	44(%esp),%eax	/* get possible new pgdir */
-	cmpl	$0x0,%eax		/* is it null? */
+	orl		%eax,%eax		/* is it null? */
 	je		skip_pgdir_swap
-	movl	%eax,%cr3
+		movl	%eax,%cr3
 skip_pgdir_swap:
-	movl	40(%esp),%eax
-	movl	%eax,%esp
+	movl	40(%esp),%eax	/* get new current_stack */
+	lss		(%eax),%esp
 	popa
 	ret
 

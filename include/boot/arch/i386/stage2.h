@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -8,6 +8,16 @@
 #include <boot/stage2_struct.h>
 
 #define MAX_BOOT_PTABLES 4
+
+#define _PACKED __attribute__((packed))
+
+#define IDT_LIMIT 0x800
+#define GDT_LIMIT 0x800
+
+struct gdt_idt_descr {
+	unsigned short a;
+	unsigned int *b;
+} _PACKED;
 
 
 // kernel args

@@ -6,12 +6,8 @@
 #define _NEWOS_KERNEL_ARCH_I386_CPU_H
 
 #include <arch/cpu.h>
-
-#define KERNEL_CODE_SEG 0x8
-#define KERNEL_DATA_SEG 0x10
-#define USER_CODE_SEG 0x1b
-#define USER_DATA_SEG 0x23
-#define TSS 0x28
+#include <kernel/arch/i386/thread_struct.h>
+#include <kernel/arch/i386/descriptors.h>
 
 typedef struct desc_struct {
 	unsigned int a,b;
@@ -83,7 +79,7 @@ typedef struct pdentry {
 #define nop() __asm__ ("nop"::)
 
 void setup_system_time(unsigned int cv_factor);
-void i386_context_switch(unsigned int **old_esp, unsigned int *new_esp, addr new_pgdir);
+void i386_context_switch(struct arch_thread *old, struct arch_thread *new, addr new_pgdir);
 void i386_enter_uspace(addr entry, void *args, addr ustack_top);
 void i386_set_kstack(addr kstack);
 void i386_switch_stack_and_call(addr stack, void (*func)(void *), void *arg);
