@@ -89,6 +89,7 @@ unreal:
 	sti
 	mov		si,loadmsg
 	call	print
+	dec		cx				 ; TK: one sector is already read as second part of boot block
 	call	load_floppy      ; read remaining sectors at address edi
 	call 	disable_floppy_motor
 	mov		si,okmsg
@@ -163,10 +164,20 @@ load_floppy:
 tryagain:
 	mov		al,0x13          ; read a maximum of 18 sectors
 	sub		al,bl            ;   substract first sector (to prevent wrap-around ???)
+
+	xor		ah,ah            ; TK: don't read more then required, VMWare doesn't like that
+	cmp		ax,cx
+	jl		shorten
+	mov		ax,cx
+shorten:
+
 	mov		cx,bx            ;   -> sector/cylinder # to read from
 	mov		bx,0x8000        ; buffer address
 	mov		ah,0x2           ; command 'read sectors'
+	push	ax
 	int		0x13             ;   call BIOS
+	pop		ax               ; TK: should return number of transferred sectors in al
+	                         ; but VMWare 3 clobbers it, so we (re-)load al manually
 	jnc		okok             ;   no error -> proceed as usual
 	dec		byte [retrycnt]
 	jz		fail
