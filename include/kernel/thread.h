@@ -11,6 +11,7 @@
 #include <kernel/arch/thread_struct.h>
 #include <sys/resource.h>
 #include <signal.h>
+#include <kernel/list.h>
 
 #define THREAD_IDLE_PRIORITY 0
 #define THREAD_NUM_PRIORITY_LEVELS 64
@@ -74,7 +75,7 @@ struct proc {
 struct thread {
 	struct thread *all_next;
 	struct thread *proc_next;
-	struct thread *q_next;
+	struct list_node q_node;
 	thread_id id;
 	char name[SYS_MAX_OS_NAME_LEN];
 	int priority;
@@ -116,11 +117,6 @@ struct thread {
 	struct arch_thread arch_info;
 };
 
-struct thread_queue {
-	struct thread *head;
-	struct thread *tail;
-};
-
 struct proc_info {
 	proc_id id;
 	char name[SYS_MAX_OS_NAME_LEN];
@@ -144,13 +140,12 @@ struct thread_info {
 
 #include <kernel/arch/thread.h>
 
-void thread_enqueue(struct thread *t, struct thread_queue *q);
-struct thread *thread_lookat_queue(struct thread_queue *q);
-struct thread *thread_dequeue(struct thread_queue *q);
-struct thread *thread_dequeue_id(struct thread_queue *q, thread_id thr_id);
+void thread_enqueue(struct thread *t, struct list_node *q);
+struct thread *thread_lookat_queue(struct list_node *q);
+struct thread *thread_dequeue(struct list_node *q);
+void thread_dequeue_thread(struct thread *t);
 struct thread *thread_lookat_run_q(int priority);
 void thread_enqueue_run_q(struct thread *t);
-struct thread *thread_dequeue_run_q(int priority);
 void thread_atkernel_entry(void); // called when the thread enters the kernel on behalf of the thread
 void thread_atkernel_exit(void);
 

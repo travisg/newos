@@ -22,6 +22,7 @@
 #include <kernel/elf.h>
 #include <kernel/heap.h>
 #include <kernel/signal.h>
+#include <kernel/list.h>
 #include <newos/user_runtime.h>
 #include <newos/errors.h>
 #include <boot/stage2.h>
@@ -85,65 +86,40 @@ static unsigned int volatile death_stack_bitmap;
 static sem_id death_stack_sem;
 
 // thread queues
-static struct thread_queue run_q[THREAD_NUM_PRIORITY_LEVELS] = { { NULL, NULL }, };
-static struct thread_queue dead_q;
+static struct list_node run_q[THREAD_NUM_PRIORITY_LEVELS] = { { NULL, NULL }, };
+static struct list_node dead_q;
 
 static int _rand(void);
 //static struct proc *proc_get_proc_struct(proc_id id); // unused
 static struct proc *proc_get_proc_struct_locked(proc_id id);
 
 // insert a thread onto the tail of a queue
-void thread_enqueue(struct thread *t, struct thread_queue *q)
+void thread_enqueue(struct thread *t, struct list_node *q)
 {
-	t->q_next = NULL;
-	if(q->head == NULL) {
-		q->head = t;
-		q->tail = t;
-	} else {
-		q->tail->q_next = t;
-		q->tail = t;
-	}
+	list_add_tail(q, &t->q_node);
 }
 
-struct thread *thread_lookat_queue(struct thread_queue *q)
+struct thread *thread_lookat_queue(struct list_node *q)
 {
-	return q->head;
+	struct list_node *node = list_peek_head(q);
+	if(node)
+		return container_of(node, struct thread, q_node);
+	else
+		return NULL;
 }
 
-struct thread *thread_dequeue(struct thread_queue *q)
+struct thread *thread_dequeue(struct list_node *q)
 {
-	struct thread *t;
-
-	t = q->head;
-	if(t != NULL) {
-		q->head = t->q_next;
-		if(q->tail == t)
-			q->tail = NULL;
-	}
-	return t;
+	struct list_node *node = list_remove_head(q);
+	if(node)
+		return container_of(node, struct thread, q_node);
+	else
+		return NULL;
 }
 
-struct thread *thread_dequeue_id(struct thread_queue *q, thread_id thr_id)
+void thread_dequeue_thread(struct thread *t)
 {
-	struct thread *t;
-	struct thread *last = NULL;
-
-	t = q->head;
-	while(t != NULL) {
-		if(t->id == thr_id) {
-			if(last == NULL) {
-				q->head = t->q_next;
-			} else {
-				last->q_next = t->q_next;
-			}
-			if(q->tail == t)
-				q->tail = last;
-			break;
-		}
-		last = t;
-		t = t->q_next;
-	}
-	return t;
+	list_delete(&t->q_node);
 }
 
 struct thread *thread_lookat_run_q(int priority)
@@ -162,7 +138,7 @@ void thread_enqueue_run_q(struct thread *t)
 	thread_enqueue(t, &run_q[t->priority]);
 }
 
-struct thread *thread_dequeue_run_q(int priority)
+static struct thread *thread_dequeue_run_q(int priority)
 {
 	return thread_dequeue(&run_q[priority]);
 }
@@ -324,7 +300,6 @@ static struct thread *create_thread_struct(const char *name)
 	t->user_stack_region_id = -1;
 	t->user_stack_base = 0;
 	t->proc_next = NULL;
-	t->q_next = NULL;
 	t->priority = -1;
 	t->args = NULL;
 	t->sig_pending = 0;
@@ -584,7 +559,7 @@ int thread_set_priority(thread_id id, int priority)
 		if(t) {
 			if(t->state == THREAD_STATE_READY && t->priority != priority) {
 				// this thread is in a ready queue right now, so it needs to be reinserted
-				thread_dequeue_id(&run_q[t->priority], t->id);
+				thread_dequeue_thread(t);
 				t->priority = priority;
 				thread_enqueue_run_q(t);
 			} else {
@@ -845,8 +820,8 @@ static void _dump_thread_info(struct thread *t)
 	dprintf("THREAD: %p\n", t);
 	dprintf("id:          0x%x\n", t->id);
 	dprintf("name:        '%s'\n", t->name);
-	dprintf("all_next:    %p\nproc_next:  %p\nq_next:     %p\n",
-		t->all_next, t->proc_next, t->q_next);
+	dprintf("all_next:    %p\nproc_next:  %p\nq_node.prev:     %p\nq_node.next:     %p\n",
+		t->all_next, t->proc_next, t->q_node.prev, t->q_node.next);
 	dprintf("priority:    0x%x\n", t->priority);
 	dprintf("state:       %s\n", state_to_text(t->state));
 	dprintf("next_state:  %s\n", state_to_text(t->next_state));
@@ -948,8 +923,8 @@ static void dump_next_thread_in_q(int argc, char **argv)
 	}
 
 	dprintf("next thread in queue after thread @ %p\n", t);
-	if(t->q_next != NULL) {
-		_dump_thread_info(t->q_next);
+	if(t->q_node.next != NULL) {
+		_dump_thread_info(container_of(t->q_node.next, struct thread, q_node)); // XXX fixme
 	} else {
 		dprintf("NULL\n");
 	}
@@ -1087,10 +1062,12 @@ int thread_init(kernel_args *ka)
 		&thread_struct_compare, &thread_struct_hash);
 
 	// zero out the run queues
-	memset(run_q, 0, sizeof(run_q));
+	for(i = 0; i < THREAD_NUM_PRIORITY_LEVELS; i++) {
+		list_initialize(&run_q[i]);
+	}
 
 	// zero out the dead thread structure q
-	memset(&dead_q, 0, sizeof(dead_q));
+	list_initialize(&dead_q);
 
 	// allocate a snooze sem
 	snooze_sem = sem_create(0, "snooze sem");

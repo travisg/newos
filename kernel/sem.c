@@ -21,7 +21,7 @@
 struct sem_entry {
 	sem_id    id;
 	int       count;
-	struct thread_queue q;
+	struct list_node q;
 	const char *name;
 	int       lock;
 	proc_id   owner;		 // if set to -1, means owned by a port
@@ -44,7 +44,7 @@ static int sem_spinlock = 0;
 // used in functions that may put a bunch of threads in the run q at once
 #define READY_THREAD_CACHE_SIZE 16
 
-static int remove_thread_from_sem(struct thread *t, struct sem_entry *sem, struct thread_queue *queue, int sem_errcode);
+static int remove_thread_from_sem(struct thread *t, struct sem_entry *sem, struct list_node *queue, int sem_errcode);
 
 struct sem_timeout_args {
 	thread_id blocked_thread;
@@ -69,7 +69,7 @@ static void _dump_sem_info(struct sem_entry *sem)
 	dprintf("name:  '%s'\n", sem->name);
 	dprintf("owner: 0x%x\n", sem->owner);
 	dprintf("count: 0x%x\n", sem->count);
-	dprintf("queue: head %p tail %p\n", sem->q.head, sem->q.tail);
+	dprintf("queue: head %p tail %p\n", sem->q.next, sem->q.prev);
 }
 
 static void dump_sem_info(int argc, char **argv)
@@ -178,8 +178,7 @@ sem_id sem_create_etc(int count, const char *name, proc_id owner)
 			GRAB_SEM_LOCK(sems[i]);
 			RELEASE_SEM_LIST_LOCK();
 
-			sems[i].q.tail = NULL;
-			sems[i].q.head = NULL;
+			list_initialize(&sems[i].q);
 			sems[i].count = count;
 			sems[i].name = temp_name;
 			sems[i].owner = owner;
@@ -216,7 +215,7 @@ int sem_delete_etc(sem_id id, int return_code)
 	struct thread *t;
 	int released_threads;
 	char *old_name;
-	struct thread_queue release_queue;
+	struct list_node release_queue;
 
 	if(sems_active == false)
 		return ERR_SEM_NOT_ACTIVE;
@@ -236,7 +235,7 @@ int sem_delete_etc(sem_id id, int return_code)
 	}
 
 	released_threads = 0;
-	release_queue.head = release_queue.tail = NULL;
+	list_initialize(&release_queue);
 
 	// free any threads waiting for this semaphore
 	while((t = thread_dequeue(&sems[slot].q)) != NULL) {
@@ -276,7 +275,7 @@ static int sem_timeout(void *data)
 	struct sem_timeout_args *args = (struct sem_timeout_args *)data;
 	struct thread *t;
 	int slot;
-	struct thread_queue wakeup_queue;
+	struct list_node wakeup_queue;
 
 	t = thread_get_thread_struct(args->blocked_thread);
 	if(t == NULL)
@@ -294,7 +293,7 @@ static int sem_timeout(void *data)
 			args->blocked_thread, args->blocked_sem_id);
 	}
 
-	wakeup_queue.head = wakeup_queue.tail = NULL;
+	list_initialize(&wakeup_queue);
 	remove_thread_from_sem(t, &sems[slot], &wakeup_queue, ERR_SEM_TIMED_OUT);
 
 	RELEASE_SEM_LOCK(sems[slot]);
@@ -389,12 +388,12 @@ int sem_acquire_etc(sem_id id, int count, int flags, bigtime_t timeout, int *del
 		// check again to see if a kill signal is pending.
 		// it may have been delivered while setting up the sem, though it's pretty unlikely
 		if((flags & SEM_FLAG_INTERRUPTABLE) && t->sig_pending) {
-			struct thread_queue wakeup_queue;
+			struct list_node wakeup_queue;
 			// ok, so a tiny race happened where a signal was delivered to this thread while
 			// it was setting up the sem. We can only be sure a signal wasn't delivered
 			// here, since the threadlock is held. The previous check would have found most
 			// instances, but there was a race, so we have to handle it. It'll be more messy...
-			wakeup_queue.head = wakeup_queue.tail = NULL;
+			list_initialize(&wakeup_queue);
 			GRAB_SEM_LOCK(sems[slot]);
 			if(sems[slot].id == id) {
 				remove_thread_from_sem(t, &sems[slot], &wakeup_queue, ERR_INTERRUPTED);
@@ -439,7 +438,7 @@ int sem_release_etc(sem_id id, int count, int flags)
 	int slot = id % MAX_SEMS;
 	int released_threads = 0;
 	int err = 0;
-	struct thread_queue release_queue;
+	struct list_node release_queue;
 
 	if(sems_active == false)
 		return ERR_SEM_NOT_ACTIVE;
@@ -463,7 +462,7 @@ int sem_release_etc(sem_id id, int count, int flags)
 	// put back into the run list. This is done so the thread lock wont be held
 	// while this sems lock is held since the two locks are grabbed in the other
 	// order in sem_interrupt_thread.
-	release_queue.head = release_queue.tail = NULL;
+	list_initialize(&release_queue);
 
 	while(count > 0) {
 		int delta = count;
@@ -568,7 +567,7 @@ int sem_get_sem_info(sem_id id, struct sem_info *info)
 	info->proc			= sems[slot].owner;
 	strncpy(info->name, sems[slot].name, SYS_MAX_OS_NAME_LEN-1);
 	info->count			= sems[slot].count;
-	info->latest_holder	= sems[slot].q.head->id; // XXX not sure if this is correct
+	info->latest_holder	= -1; // XXX fixme
 
 	RELEASE_SEM_LOCK(sems[slot]);
 	int_restore_interrupts();
@@ -610,7 +609,7 @@ int sem_get_next_sem_info(proc_id proc, uint32 *cookie, struct sem_info *info)
 				info->proc			= sems[slot].owner;
 				strncpy(info->name, sems[slot].name, SYS_MAX_OS_NAME_LEN-1);
 				info->count			= sems[slot].count;
-				info->latest_holder	= sems[slot].q.head->id; // XXX not sure if this is the latest holder, or the next holder...
+				info->latest_holder	= -1; // XXX fixme
 
 				RELEASE_SEM_LOCK(sems[slot]);
 				slot++;
@@ -668,7 +667,7 @@ int set_sem_owner(sem_id id, proc_id proc)
 int sem_interrupt_thread(struct thread *t)
 {
 	int slot;
-	struct thread_queue wakeup_queue;
+	struct list_node wakeup_queue;
 
 //	dprintf("sem_interrupt_thread: called on thread %p (%d), blocked on sem 0x%x\n", t, t->id, t->sem_blocking);
 
@@ -687,7 +686,7 @@ int sem_interrupt_thread(struct thread *t)
 		panic("sem_interrupt_thread: thread 0x%x sez it's blocking on sem 0x%x, but that sem doesn't exist!\n", t->id, t->sem_blocking);
 	}
 
-	wakeup_queue.head = wakeup_queue.tail = NULL;
+	list_initialize(&wakeup_queue);
 	if(remove_thread_from_sem(t, &sems[slot], &wakeup_queue, ERR_INTERRUPTED) == ERR_NOT_FOUND)
 		panic("sem_interrupt_thread: thread 0x%x not found in sem 0x%x's wait queue\n", t->id, t->sem_blocking);
 
@@ -703,14 +702,12 @@ int sem_interrupt_thread(struct thread *t)
 // forcibly removes a thread from a semaphores wait q. May have to wake up other threads in the
 // process. All threads that need to be woken up are added to the passed in thread_queue.
 // must be called with sem lock held
-static int remove_thread_from_sem(struct thread *t, struct sem_entry *sem, struct thread_queue *queue, int sem_errcode)
+static int remove_thread_from_sem(struct thread *t, struct sem_entry *sem, struct list_node *queue, int sem_errcode)
 {
 	struct thread *t1;
 
 	// remove the thread from the queue and place it in the supplied queue
-	t1 = thread_dequeue_id(&sem->q, t->id);
-	if(t != t1)
-		return ERR_NOT_FOUND;
+	thread_dequeue_thread(t);
 	sem->count += t->sem_acquire_count;
 	t->state = THREAD_STATE_READY;
 	t->sem_errcode = sem_errcode;
