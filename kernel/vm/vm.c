@@ -619,7 +619,7 @@ region_id vm_map_physical_memory(aspace_id aid, char *name, void **address, int 
 	return region->id;
 }
 
-region_id vm_map_file(aspace_id aid, char *name, void **address, int addr_type,
+static region_id _vm_map_file(aspace_id aid, char *name, void **address, int addr_type,
 	addr size, int lock, int mapping, const char *path, off_t offset, bool kernel)
 {
 	vm_region *region;
@@ -690,6 +690,54 @@ restart:
 	return region->id;
 }
 
+region_id vm_map_file(aspace_id aid, char *name, void **address, int addr_type,
+	addr size, int lock, int mapping, const char *path, off_t offset)
+{
+	return _vm_map_file(aid, name, address, addr_type, size, lock, mapping, path, offset, true);
+}
+
+region_id user_vm_map_file(char *uname, void **uaddress, int addr_type,
+	addr size, int lock, int mapping, const char *upath, off_t offset)
+{
+	char name[SYS_MAX_OS_NAME_LEN];
+	void *address;
+	char path[SYS_MAX_PATH_LEN];
+	int rc, rc2;
+
+	if((addr)uname >= KERNEL_BASE && (addr)uname <= KERNEL_TOP)
+		return ERR_VM_BAD_USER_MEMORY;
+
+	if((addr)uaddress >= KERNEL_BASE && (addr)uaddress <= KERNEL_TOP)
+		return ERR_VM_BAD_USER_MEMORY;
+
+	if((addr)upath >= KERNEL_BASE && (addr)upath <= KERNEL_TOP)
+		return ERR_VM_BAD_USER_MEMORY;
+
+	rc = user_strncpy(name, uname, SYS_MAX_OS_NAME_LEN-1);
+	if(rc < 0)
+		return rc;
+	name[SYS_MAX_OS_NAME_LEN-1] = 0;
+
+	rc = user_strncpy(path, upath, SYS_MAX_PATH_LEN-1);
+	if(rc < 0)
+		return rc;
+	name[SYS_MAX_PATH_LEN-1] = 0;
+
+	rc = user_memcpy(&address, uaddress, sizeof(address));
+	if(rc < 0)
+		return rc;
+
+	rc = _vm_map_file(vm_get_current_user_aspace_id(), name, address, addr_type, size, lock, mapping, path, offset, false);
+	if(rc < 0)
+		return rc;
+
+	rc2 = user_memcpy(uaddress, &address, sizeof(address));
+	if(rc2 < 0)
+		return rc2;
+
+	return rc;
+}
+
 region_id user_vm_clone_region(aspace_id aid, char *uname, void **uaddress, int addr_type,
 	region_id source_region, int lock)
 {
@@ -698,6 +746,9 @@ region_id user_vm_clone_region(aspace_id aid, char *uname, void **uaddress, int 
 	int rc, rc2;
 
 	if((addr)uname >= KERNEL_BASE && (addr)uname <= KERNEL_TOP)
+		return ERR_VM_BAD_USER_MEMORY;
+
+	if((addr)uaddress >= KERNEL_BASE && (addr)uaddress <= KERNEL_TOP)
 		return ERR_VM_BAD_USER_MEMORY;
 
 	rc = user_strncpy(name, uname, SYS_MAX_OS_NAME_LEN-1);

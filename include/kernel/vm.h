@@ -188,7 +188,7 @@ region_id vm_create_anonymous_region(aspace_id aid, char *name, void **address, 
 region_id vm_map_physical_memory(aspace_id aid, char *name, void **address, int addr_type,
 	addr size, int lock, addr phys_addr);
 region_id vm_map_file(aspace_id aid, char *name, void **address, int addr_type,
-	addr size, int lock, int mapping, const char *path, off_t offset, bool kernel);
+	addr size, int lock, int mapping, const char *path, off_t offset);
 region_id vm_clone_region(aspace_id aid, char *name, void **address, int addr_type,
 	region_id source_region, int mapping, int lock);
 int vm_delete_region(aspace_id aid, region_id id);

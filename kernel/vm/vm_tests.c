@@ -198,10 +198,10 @@ void vm_test()
 		fd = sys_open("/boot/kernel", STREAM_TYPE_FILE, 0);
 
 		rid = vm_map_file(vm_get_kernel_aspace_id(), "mmap_test", &ptr, REGION_ADDR_ANY_ADDRESS,
-			PAGE_SIZE, LOCK_RW|LOCK_KERNEL, REGION_NO_PRIVATE_MAP, "/boot/kernel", 0, true);
+			PAGE_SIZE, LOCK_RW|LOCK_KERNEL, REGION_NO_PRIVATE_MAP, "/boot/kernel", 0);
 
 		rid2 = vm_map_file(vm_get_kernel_aspace_id(), "mmap_test2", &ptr2, REGION_ADDR_ANY_ADDRESS,
-			PAGE_SIZE, LOCK_RW|LOCK_KERNEL, REGION_NO_PRIVATE_MAP, "/boot/kernel", 0, true);
+			PAGE_SIZE, LOCK_RW|LOCK_KERNEL, REGION_NO_PRIVATE_MAP, "/boot/kernel", 0);
 
 		dprintf("diff %d\n", memcmp(ptr, ptr2, PAGE_SIZE));
 
@@ -309,10 +309,10 @@ void vm_test()
 		dprintf("vm_test 9: mapping /boot/kernel twice\n");
 
 		rid = vm_map_file(vm_get_kernel_aspace_id(), "mmap_test", &ptr, REGION_ADDR_ANY_ADDRESS,
-			PAGE_SIZE*4, LOCK_RW|LOCK_KERNEL, REGION_NO_PRIVATE_MAP, "/boot/kernel", 0, true);
+			PAGE_SIZE*4, LOCK_RW|LOCK_KERNEL, REGION_NO_PRIVATE_MAP, "/boot/kernel", 0);
 
 		rid2 = vm_map_file(vm_get_kernel_aspace_id(), "mmap_test2", &ptr2, REGION_ADDR_ANY_ADDRESS,
-			PAGE_SIZE*4, LOCK_RW|LOCK_KERNEL, REGION_PRIVATE_MAP, "/boot/kernel", 0, true);
+			PAGE_SIZE*4, LOCK_RW|LOCK_KERNEL, REGION_PRIVATE_MAP, "/boot/kernel", 0);
 
 		err = memcmp(ptr, ptr2, PAGE_SIZE);
 		if(err)
