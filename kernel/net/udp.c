@@ -252,7 +252,14 @@ int udp_bind(void *prot_data, sockaddr *addr)
 
 	if(e->port == 0) {
 		// XXX search to make sure this port isn't used already
-		e->port = addr->port;
+		if(addr->port != e->port) {
+			// remove it from the hashtable
+			mutex_lock(&endpoints_lock);
+			hash_remove(endpoints, e);
+			e->port = addr->port;
+			hash_insert(endpoints, e);
+			mutex_unlock(&endpoints_lock);
+		}
 		err = NO_ERROR;
 	} else {
 		err = ERR_NET_SOCKET_ALREADY_BOUND;
@@ -385,7 +392,7 @@ ssize_t udp_sendto(void *prot_data, const void *inbuf, ssize_t len, sockaddr *to
 	header->dest_port = htons(toaddr->port);
 	header->length = htons(total_len);
 	header->checksum = 0;
-	header->checksum = cksum16_2(&pheader, sizeof(pheader), header, total_len);
+	header->checksum = cbuf_ones_cksum16_2(buf, 0, total_len, &pheader, sizeof(pheader));
 	if(header->checksum == 0)
 		header->checksum = 0xffff;
 
