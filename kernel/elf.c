@@ -35,7 +35,7 @@ struct elf_image_info {
 	struct elf_linked_image *linked_images;
 
 	struct Elf32_Ehdr *eheader;
-	
+
 	// pointer to symbol participation data structures
 	char *needed;
 	unsigned int *symhash;
@@ -215,7 +215,7 @@ addr elf_lookup_symbol(image_id id, const char *symbol)
 {
 	struct elf_image_info *image;
 	struct Elf32_Sym *sym;
-	
+
 	//dprintf( "elf_lookup_symbol: %s\n", symbol );
 
 	image = find_image(id);
@@ -229,8 +229,8 @@ addr elf_lookup_symbol(image_id id, const char *symbol)
 	if(sym->st_shndx == SHN_UNDEF) {
 		return 0;
 	}
-	
-	/*dprintf( "found: %x (%x + %x)\n", sym->st_value + image->regions[0].delta, 
+
+	/*dprintf( "found: %x (%x + %x)\n", sym->st_value + image->regions[0].delta,
 		sym->st_value, image->regions[0].delta );*/
 	return sym->st_value + image->regions[0].delta;
 }
@@ -361,7 +361,7 @@ static int elf_relocate_rel(struct elf_image_info *image, const char *sym_prepen
 	addr final_val;
 
 	S = A = P = 0;
-	
+
 	for(i = 0; i * (int)sizeof(struct Elf32_Rel) < rel_len; i++) {
 		//dprintf("looking at rel type %d, offset 0x%x\n", ELF32_R_TYPE(rel[i].r_info), rel[i].r_offset);
 
@@ -425,7 +425,7 @@ static int elf_relocate_rel(struct elf_image_info *image, const char *sym_prepen
 		}
 		*(addr *)(image->regions[0].delta + rel[i].r_offset) = final_val;
 	}
-	
+
 	return NO_ERROR;
 }
 
@@ -440,11 +440,11 @@ static int elf_relocate(struct elf_image_info *image, const char *sym_prepend)
 	if( image->rel ) {
 		//dprintf( "total %i relocs\n", image->rel_len / (int)sizeof(struct Elf32_Rel) );
 		res = elf_relocate_rel( image, sym_prepend, image->rel, image->rel_len );
-		
+
 		if( res )
 			return res;
 	}
-	
+
 	if( image->pltrel ) {
 		//dprintf( "total %i plt-relocs\n", image->pltrel_len / (int)sizeof(struct Elf32_Rel) );
 		res = elf_relocate_rel( image, sym_prepend, image->pltrel, image->pltrel_len );
@@ -494,7 +494,7 @@ int elf_load_uspace(const char *path, struct proc *p, int flags, addr *entry)
 	fd = sys_open(path, STREAM_TYPE_FILE, 0);
 	if(fd < 0)
 		return fd;
-		
+
 	len = sys_read(fd, &eheader, 0, sizeof(eheader));
 	if(len < 0) {
 		err = len;
@@ -677,7 +677,7 @@ image_id elf_load_kspace(const char *path, const char *sym_prepend)
 		//err = ERR_NOT_ALLOWED;
 		goto done;
 	}
-	
+
 	eheader = (struct Elf32_Ehdr *)kmalloc( sizeof( *eheader ));
 	if( !eheader ) {
 		err = ERR_NO_MEMORY;
@@ -823,7 +823,7 @@ image_id elf_load_kspace(const char *path, const char *sym_prepend)
 
 done:
 	mutex_unlock(&image_load_lock);
-	
+
 	dprintf("elf_load_kspace: done!\n");
 
 	return image->id;
@@ -854,20 +854,20 @@ static int elf_unload_image( struct elf_image_info *image );
 static int elf_unlink_relocs( struct elf_image_info *image )
 {
 	elf_linked_image *link, *next_link;
-	
+
 	for( link = image->linked_images; link; link = next_link ) {
 		next_link = link->next;
 		elf_unload_image( link->image );
 		kfree( link );
 	}
-	
+
 	return NO_ERROR;
 }
 
 static void elf_unload_image_final( struct elf_image_info *image )
 {
 	int i;
-	
+
 	for( i = 0; i < 2; ++i ) {
 		vm_delete_region( vm_get_kernel_aspace_id(), image->regions[i].id );
 	}
@@ -897,7 +897,7 @@ int elf_unload_kspace( const char *path )
 	int err;
 	void *vnode;
 	struct elf_image_info *image;
-	
+
 	fd = sys_open(path, STREAM_TYPE_FILE, 0);
 	if(fd < 0)
 		return fd;
@@ -914,7 +914,7 @@ int elf_unload_kspace( const char *path )
 		err = ERR_NOT_FOUND;
 		goto error;
 	}
-	
+
 	err = elf_unload_image( image );
 
 error:
@@ -931,6 +931,9 @@ int elf_init(kernel_args *ka)
 {
 	vm_region_info rinfo;
 	int err;
+
+	mutex_init(&image_lock, "kimages_lock");
+	mutex_init(&image_load_lock, "kimages_load_lock");
 
 	// build a image structure for the kernel, which has already been loaded
 	kernel_image = create_image_struct();
@@ -961,9 +964,6 @@ int elf_init(kernel_args *ka)
 	// insert it first in the list of kernel images loaded
 	kernel_images = NULL;
 	insert_image_in_list(kernel_image);
-
-	mutex_init(&image_lock, "kimages_lock");
-	mutex_init(&image_load_lock, "kimages_load_lock");
 
 	return 0;
 }

@@ -112,7 +112,7 @@ int heap_init(addr new_heap_base, unsigned int new_heap_size)
 
 	// pre-init the mutex to at least fall through any semaphore calls
 	heap_lock.sem = -1;
-	heap_lock.count = 0;
+	heap_lock.holder = -1;
 
 	// set up some debug commands
 	dbg_add_command(&dump_bin_list, "heap_bindump", "dump stats about bin usage");
