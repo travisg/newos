@@ -8,6 +8,7 @@
 #include <kernel/smp.h>
 #include <kernel/console.h>
 #include <kernel/heap.h>
+#include <sys/errors.h>
 
 #include <kernel/arch/dbg_console.h>
 #include <kernel/arch/debug.h>
@@ -180,11 +181,12 @@ void kernel_debugger()
 	dprintf("kernel debugger on cpu %d\n", smp_get_current_cpu());
 	debugger_on_cpu = smp_get_current_cpu();
 
-	while(1) {
+	for(;;) {
 		dprintf("> ");
 		debug_read_line(line_buf[cur_line], LINE_BUF_SIZE);		
 		debug_parse_line(line_buf[cur_line], args, &argc, MAX_ARGS);
-		if(argc <= 0) continue;
+		if(argc <= 0)
+			continue;
 
 		debugger_on_cpu = smp_get_current_cpu();
 
@@ -283,7 +285,7 @@ int dbg_add_command(void (*func)(int, char **), const char *name, const char *de
 	
 	cmd = (struct debugger_command *)kmalloc(sizeof(struct debugger_command));
 	if(cmd == NULL)
-		return -1;
+		return ERR_NO_MEMORY;
 
 	cmd->func = func;
 	cmd->cmd = name;
@@ -298,7 +300,7 @@ int dbg_add_command(void (*func)(int, char **), const char *name, const char *de
 	release_spinlock(&dbg_spinlock);
 	int_restore_interrupts(flags);
 
-	return 0;
+	return NO_ERROR;
 }	
 
 static void cmd_reboot(int argc, char **argv)
@@ -330,7 +332,7 @@ int dbg_init2(kernel_args *ka)
 	dbg_add_command(&cmd_help, "help", "List all debugger commands");
 	dbg_add_command(&cmd_reboot, "reboot", "Reboot");
 	
-	return 0;
+	return NO_ERROR;
 }
 
 bool dbg_set_serial_debug(bool new_val)

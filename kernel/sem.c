@@ -10,6 +10,7 @@
 #include <kernel/debug.h>
 #include <kernel/heap.h>
 #include <kernel/thread.h>
+#include <sys/errors.h>
 
 #include <boot/stage2.h>
 
@@ -128,15 +129,15 @@ sem_id sem_create(int count, const char *name)
 {
 	int i;
 	int state;
-	sem_id retval = -1;
+	sem_id retval = ERR_SEM_OUT_OF_SLOTS;
 	char *temp_name;
 
 	if(sems_active == false)
-		return -1;
+		return ERR_SEM_NOT_ACTIVE;
 
 	temp_name = (char *)kmalloc(strlen(name)+1);
 	if(temp_name == NULL)
-		return -1;
+		return ERR_NO_MEMORY;
 	strcpy(temp_name, name);
 
 	state = int_disable_interrupts();
@@ -188,15 +189,15 @@ int sem_delete_etc(sem_id id, int return_code)
 {
 	int slot = id % MAX_SEMS;
 	int state;
-	int err = 0;
+	int err = NO_ERROR;
 	struct thread *t;
 	int released_threads = 0;
 	char *old_name;
 
 	if(sems_active == false)
-		return -1;
+		return ERR_SEM_NOT_ACTIVE;
 	if(id < 0)
-		return -1;
+		return ERR_INVALID_HANDLE;
 
 	state = int_disable_interrupts();
 	GRAB_SEM_LOCK(sems[slot]);
@@ -205,7 +206,7 @@ int sem_delete_etc(sem_id id, int return_code)
 		RELEASE_SEM_LOCK(sems[slot]);
 		int_restore_interrupts(state);
 		dprintf("sem_delete: invalid sem_id %d\n", id);
-		return -1;
+		return ERR_INVALID_HANDLE;
 	}
 
 	// free any threads waiting for this semaphore
@@ -312,26 +313,26 @@ int sem_acquire_etc(sem_id id, int count, int flags, time_t timeout, int *delete
 	int err = 0;
 
 	if(sems_active == false)
-		return -1;
+		return ERR_SEM_NOT_ACTIVE;
 
 	if(id < 0)
-		return -1;
+		return ERR_INVALID_HANDLE;
 
 	if(count <= 0)
-		return -1;
+		return ERR_INVALID_ARGS;
 
 	state = int_disable_interrupts();
 	GRAB_SEM_LOCK(sems[slot]);
 
 	if(sems[slot].id != id) {
 		dprintf("sem_acquire_etc: invalid sem_id %d\n", id);
-		err = -1;
+		err = ERR_INVALID_HANDLE;
 		goto err;
 	}
 
 	if(sems[slot].count - count < 0 && (flags & SEM_FLAG_TIMEOUT) != 0 && timeout == 0) {
 		// immediate timeout
-		err = -1;
+		err = ERR_SEM_TIMED_OUT;
 		goto err;
 	}
 
@@ -395,20 +396,20 @@ int sem_release_etc(sem_id id, int count, int flags)
 	int ready_threads_count = 0;
 
 	if(sems_active == false)
-		return -1;
+		return ERR_SEM_NOT_ACTIVE;
 
 	if(id < 0)
-		return -1;
+		return ERR_INVALID_HANDLE;
 
 	if(count <= 0)
-		return -1;
+		return ERR_INVALID_ARGS;
 
 	state = int_disable_interrupts();
 	GRAB_SEM_LOCK(sems[slot]);
 
 	if(sems[slot].id != id) {
 		dprintf("sem_release_etc: invalid sem_id %d\n", id);
-		err = -1;
+		err = ERR_INVALID_HANDLE;
 		goto err;
 	}
 

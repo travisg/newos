@@ -9,6 +9,7 @@
 #include <kernel/heap.h>
 #include <kernel/lock.h>
 #include <kernel/vm.h>
+#include <sys/errors.h>
 
 #include <kernel/arch/cpu.h>
 
@@ -176,7 +177,7 @@ static int envfs_delete_vnode(struct envfs *fs, struct envfs_vnode *v, bool forc
 	// cant delete it if it's in a directory or is a directory
 	// and has children
 	if(!force_delete && ((v->stream_list->type == STREAM_TYPE_DIR && v->stream_list->u.dir.dir_head != NULL) || v->dir_next != NULL)) {
-		return -1;
+		return ERR_NOT_ALLOWED;
 	}
 
 	// remove it from the global hash table
@@ -219,7 +220,7 @@ static struct envfs_vnode *envfs_find_in_dir(struct envfs_vnode *dir, const char
 static int envfs_insert_in_dir(struct envfs_vnode *dir, struct envfs_vnode *v)
 {
 	if(dir->stream_list->type != STREAM_TYPE_DIR)
-		return -1;
+		return ERR_INVALID_ARGS;
 
 	v->dir_next = dir->stream_list->u.dir.dir_head;
 	dir->stream_list->u.dir.dir_head = v;
@@ -332,7 +333,7 @@ int envfs_mount(void **fs_cookie, void *flags, void *covered_vnode, fs_id id, vo
 
 	fs = kmalloc(sizeof(struct envfs));
 	if(fs == NULL) {
-		err = -1;
+		err = ERR_NO_MEMORY;
 		goto err;
 	}
 	
@@ -342,21 +343,20 @@ int envfs_mount(void **fs_cookie, void *flags, void *covered_vnode, fs_id id, vo
 
 	err = mutex_init(&fs->lock, "envfs_mutex");
 	if(err < 0) {
-		err = -1;
 		goto err1;
 	}
 	
 	fs->vnode_list_hash = hash_init(BOOTFS_HASH_SIZE, (addr)&v->all_next - (addr)v,
 		NULL, &envfs_vnode_hash_func);
 	if(fs->vnode_list_hash == NULL) {
-		err = -1;
+		err = ERR_NO_MEMORY;
 		goto err2;
 	}
 
 	// create a vnode
 	v = envfs_create_vnode(fs, "");
 	if(v == NULL) {
-		err = -1;
+		err = ERR_NO_MEMORY;
 		goto err3;
 	}
 
@@ -365,7 +365,7 @@ int envfs_mount(void **fs_cookie, void *flags, void *covered_vnode, fs_id id, vo
 	
 	v->stream_list = envfs_create_stream("", STREAM_TYPE_DIR);
 	if(v->stream_list == NULL) {
-		err = -1;
+		err = ERR_NO_MEMORY;
 		goto err4;
 	}
 	v->stream_list->u.dir.dir_head = NULL;
@@ -458,7 +458,7 @@ int envfs_open(void *_fs, void *_base_vnode, const char *path, const char *strea
 
 	v = envfs_get_vnode_from_path(fs, base, path, &start, &redir->redir);
 	if(v == NULL) {
-		err = -1;
+		err = ERR_VFS_PATH_NOT_FOUND;
 		goto err;
 	}
 	if(redir->redir == true) {
@@ -471,13 +471,13 @@ int envfs_open(void *_fs, void *_base_vnode, const char *path, const char *strea
 	
 	s = envfs_get_stream_from_vnode(v, stream, stream_type);
 	if(s == NULL) {
-		err = -1;
+		err = ERR_VFS_PATH_NOT_FOUND;
 		goto err;
 	}
 	
 	cookie = kmalloc(sizeof(struct envfs_cookie));
 	if(cookie == NULL) {
-		err = -1;
+		err = ERR_NO_MEMORY;
 		goto err;
 	}
 
@@ -522,19 +522,19 @@ int envfs_seek(void *_fs, void *_vnode, void *_cookie, off_t pos, seek_type seek
 					if(pos == 0) {
 						cookie->u.dir.ptr = cookie->s->u.dir.dir_head;
 					} else {
-						err = -1;
+						err = ERR_INVALID_ARGS;
 					}
 					break;
 				case SEEK_CUR:
 				case SEEK_END:
 				default:
-					err = -1;
+					err = ERR_INVALID_ARGS;
 			}
 		case STREAM_TYPE_STRING:
 			// do nothing
 			break;
 		default:
-			err = -1;
+			err = ERR_INVALID_ARGS;
 	}
 
 	mutex_unlock(&fs->lock);
@@ -564,7 +564,7 @@ int envfs_read(void *_fs, void *_vnode, void *_cookie, void *buf, off_t pos, siz
 
 			if(strlen(cookie->u.dir.ptr->name) + 1 > *len) {
 				*len = 0;
-				err = -1;
+				err = ERR_VFS_INSUFFICIENT_BUF;
 				goto err;
 			}
 			
@@ -600,7 +600,7 @@ int envfs_read(void *_fs, void *_vnode, void *_cookie, void *buf, off_t pos, siz
 			memcpy(buf, cookie->s->u.string.key->value + pos, *len);
 			break;
 		default:
-			err = -1;
+			err = ERR_INVALID_ARGS;
 	}
 err:
 	mutex_unlock(&fs->lock);
@@ -630,7 +630,7 @@ int envfs_write(void *_fs, void *_vnode, void *_cookie, const void *buf, off_t p
 				break;
 			}
 			if(*len > 4095) {
-				err = -1;
+				err = ERR_TOO_BIG;
 				break;
 			}
 			if(pos < 0) {
@@ -639,7 +639,7 @@ int envfs_write(void *_fs, void *_vnode, void *_cookie, const void *buf, off_t p
 			// copy the data into a new buffer
 			temp = kmalloc(*len + 1);
 			if(temp == NULL) {
-				err = -1;
+				err = ERR_NO_MEMORY;
 				break;
 			}
 			memcpy(temp, buf, *len);
@@ -649,7 +649,7 @@ int envfs_write(void *_fs, void *_vnode, void *_cookie, const void *buf, off_t p
 			new_key = envfs_create_env_key(temp);
 			if(new_key == NULL) {
 				kfree(temp);
-				err = -1;
+				err = ERR_NO_MEMORY;
 				break;
 			}
 			envfs_inc_key_ref_count(new_key);
@@ -658,7 +658,7 @@ int envfs_write(void *_fs, void *_vnode, void *_cookie, const void *buf, off_t p
 			cookie->s->u.string.key = new_key;
 			break;
 		default:
-			err = -1;
+			err = ERR_INVALID_ARGS;
 	}
 err:
 	mutex_unlock(&fs->lock);
@@ -668,7 +668,7 @@ err:
 
 int envfs_ioctl(void *_fs, void *_vnode, void *_cookie, int op, void *buf, size_t len)
 {
-	return -1;
+	return ERR_INVALID_ARGS;
 }
 
 int envfs_close(void *_fs, void *_vnode, void *_cookie)
@@ -702,7 +702,7 @@ int envfs_create(void *_fs, void *_base_vnode, const char *path, const char *str
 
 	dir = envfs_get_container_vnode_from_path(fs, base, path, &start, &redir->redir);
 	if(dir == NULL) {
-		err = -1;
+		err = ERR_VFS_PATH_NOT_FOUND;
 		goto err;
 	}
 	if(redir->redir == true) {
@@ -715,7 +715,7 @@ int envfs_create(void *_fs, void *_base_vnode, const char *path, const char *str
 
 	// we only support stream types of STREAM_TYPE_STRING
 	if(stream_type != STREAM_TYPE_STRING) {
-		err = -1;
+		err = ERR_VFS_PATH_NOT_FOUND;
 		goto err;
 	}
 
@@ -724,7 +724,7 @@ int envfs_create(void *_fs, void *_base_vnode, const char *path, const char *str
 //		dprintf("rootfs_create: creating new vnode\n");
 		new_vnode = envfs_create_vnode(fs, &path[start]);
 		if(new_vnode == NULL) {
-			err = -1;
+			err = ERR_NO_MEMORY;
 			goto err;
 		}
 		created_vnode = true;
@@ -736,7 +736,7 @@ int envfs_create(void *_fs, void *_base_vnode, const char *path, const char *str
 		// create the new stream and insert it into the vnode
 		s = envfs_create_stream(stream, stream_type);
 		if(s == NULL) {
-			err = -1;
+			err = ERR_NO_MEMORY;
 			goto err1;
 		}
 		envfs_insert_stream_into_vnode(s, new_vnode);
@@ -747,13 +747,13 @@ int envfs_create(void *_fs, void *_base_vnode, const char *path, const char *str
 		s = envfs_get_stream_from_vnode(new_vnode, stream, stream_type);
 		if(s != NULL) {
 			// it already exists, so lets bail
-			err = -1;
+			err = ERR_VFS_ALREADY_EXISTS;
 			goto err;
 		} else {
 			// we need to create it
 			s = envfs_create_stream(stream, stream_type);
 			if(s == NULL) {
-				err = -1;
+				err = ERR_NO_MEMORY;
 				goto err1;
 			}
 			envfs_insert_stream_into_vnode(s, new_vnode);
@@ -797,7 +797,7 @@ int envfs_stat(void *_fs, void *_base_vnode, const char *path, const char *strea
 
 	dir = envfs_get_container_vnode_from_path(fs, base, path, &start, &redir->redir);
 	if(dir == NULL) {
-		err = -1;
+		err = ERR_VFS_PATH_NOT_FOUND;
 		goto err;
 	}
 	if(redir->redir == true) {
@@ -810,7 +810,7 @@ int envfs_stat(void *_fs, void *_base_vnode, const char *path, const char *strea
 
 	// we only support stream types of STREAM_TYPE_STRING
 	if(stream_type != STREAM_TYPE_STRING) {
-		err = -1;
+		err = ERR_VFS_PATH_NOT_FOUND;
 		goto err;
 	}
 
@@ -820,7 +820,7 @@ int envfs_stat(void *_fs, void *_base_vnode, const char *path, const char *strea
 		stat->size = 0;
 		err = 0;
 	} else {
-		err = -1;
+		err = ERR_VFS_PATH_NOT_FOUND;
 	}
 
 err:

@@ -11,6 +11,7 @@
 #include <kernel/lock.h>
 #include <kernel/vfs.h>
 #include <kernel/arch/cpu.h>
+#include <sys/errors.h>
 
 
 #define LSHIFT  42
@@ -222,7 +223,7 @@ static int keyboard_open(void *_fs, void *_base_vnode, const char *path, const c
 	}		
 
 	if(path[0] != '\0' || stream[0] != '\0' || stream_type != STREAM_TYPE_DEVICE) {
-		err = -1;
+		err = ERR_VFS_PATH_NOT_FOUND;
 		goto err;
 	}
 	
@@ -242,7 +243,7 @@ static int keyboard_seek(void *_fs, void *_vnode, void *_cookie, off_t pos, seek
 {
 //	dprintf("keyboard_seek: entry\n");
 
-	return -1;
+	return ERR_NOT_ALLOWED;
 }
 
 static int keyboard_close(void *_fs, void *_vnode, void *_cookie)
@@ -269,7 +270,7 @@ static int keyboard_create(void *_fs, void *_base_vnode, const char *path, const
 	}
 	mutex_unlock(&fs->lock);
 	
-	return -1;
+	return ERR_VFS_READONLY_FS;
 }
 
 static int keyboard_stat(void *_fs, void *_base_vnode, const char *path, const char *stream, stream_type stream_type, struct vnode_stat *stat, struct redir_struct *redir)
@@ -287,6 +288,9 @@ static int keyboard_stat(void *_fs, void *_base_vnode, const char *path, const c
 	}
 	mutex_unlock(&fs->lock);
 
+	if(path[0] != '\0' || stream[0] != '\0' || stream_type != STREAM_TYPE_DEVICE)
+		return ERR_VFS_PATH_NOT_FOUND;
+
 	stat->size = 0;
 	
 	return 0;
@@ -303,12 +307,12 @@ static int keyboard_read(void *_fs, void *_vnode, void *_cookie, void *buf, off_
 }
 static int keyboard_write(void *_fs, void *_vnode, void *_cookie, const void *buf, off_t pos, size_t *len)
 {
-	return -1;
+	return ERR_VFS_READONLY_FS;
 }
 
 static int keyboard_ioctl(void *_fs, void *_vnode, void *_cookie, int op, void *buf, size_t len)
 {
-	return -1;
+	return ERR_INVALID_ARGS;
 }
 
 static int keyboard_mount(void **fs_cookie, void *flags, void *covered_vnode, fs_id id, void **root_vnode)
@@ -318,7 +322,7 @@ static int keyboard_mount(void **fs_cookie, void *flags, void *covered_vnode, fs
 
 	fs = kmalloc(sizeof(struct keyboard_fs));
 	if(fs == NULL) {
-		err = -1;
+		err = ERR_NO_MEMORY;
 		goto err;
 	}
 
@@ -328,7 +332,6 @@ static int keyboard_mount(void **fs_cookie, void *flags, void *covered_vnode, fs
 
 	err = mutex_init(&fs->lock, "keyboard_mutex");
 	if(err < 0) {
-		err = -1;
 		goto err1;
 	}
 

@@ -8,6 +8,7 @@
 #include <kernel/debug.h>
 #include <kernel/lock.h>
 #include <kernel/vm_store_device.h>
+#include <sys/errors.h>
 
 struct device_store_data {
 	addr base_addr;
@@ -34,13 +35,13 @@ static int device_has_page(struct vm_store *store, off_t offset)
 static int device_read(struct vm_store *store, off_t offset, void *buf, size_t *len)
 {
 	panic("device_store: read called. Invalid!\n");
-	return -1;
+	return ERR_UNIMPLEMENTED;
 }
 
 static int device_write(struct vm_store *store, off_t offset, const void *buf, size_t *len)
 {
 	panic("device_store: write called. Invalid!\n");
-	return -1;
+	return ERR_UNIMPLEMENTED;
 }
 
 // this fault handler should take over the page fault routine and map the page in

@@ -17,6 +17,7 @@
 #include <kernel/sem.h>
 #include <kernel/lock.h>
 #include <kernel/khash.h>
+#include <sys/errors.h>
 
 #include <boot/stage2.h>
 
@@ -117,7 +118,7 @@ region_id vm_find_region_by_name(aspace_id aid, const char *name)
 	
 	aspace = vm_get_aspace_from_id(aid);
 	if(aspace == NULL)
-		return -1;
+		return ERR_VM_INVALID_ASPACE;
 
 	sem_acquire(aspace->virtual_map.sem, READ_COUNT);
 
@@ -225,6 +226,7 @@ static vm_region *_vm_create_region(vm_address_space *aspace, char *name, void *
 	if((lock & ~LOCK_MASK) != 0) {
 		// invalid lock
 		panic("_vm_create_region called with invalid lock %d\n", lock);
+		return ERR_INVALID_ARGS;
 	}
 
 	sem_acquire(aspace->virtual_map.sem, WRITE_COUNT);
@@ -317,13 +319,13 @@ region_id vm_create_anonymous_region(aspace_id aid, char *name, void **address, 
 
 	aspace = vm_get_aspace_from_id(aid);
 	if(aspace == NULL)
-		return -1;
+		return ERR_VM_INVALID_ASPACE;
 
 	size = PAGE_ALIGN(size);
 	
 	region = _vm_create_region(aspace, name, address, addr_type, size, wiring, lock);
 	if(region == NULL)
-		return -1;
+		return ERR_NO_MEMORY;
 
 	// create a new cache
 
@@ -429,7 +431,7 @@ region_id vm_create_anonymous_region(aspace_id aid, char *name, void **address, 
 	if(region)
 		return region->id;
 	else
-		return -1;
+		return ERR_NO_MEMORY;
 }
 
 region_id vm_map_physical_memory(aspace_id aid, char *name, void **address, int addr_type,
@@ -443,7 +445,7 @@ region_id vm_map_physical_memory(aspace_id aid, char *name, void **address, int 
 	
 	vm_address_space *aspace = vm_get_aspace_from_id(aid);
 	if(aspace == NULL)
-		return -1;
+		return ERR_VM_INVALID_ASPACE;
 
 	// if the physical address is somewhat inside a page, 
 	// move the actual region down to align on a page boundary
@@ -455,7 +457,7 @@ region_id vm_map_physical_memory(aspace_id aid, char *name, void **address, int 
 
 	region = _vm_create_region(aspace, name, address, addr_type, size, REGION_WIRING_WIRED_SPECIAL, lock);
 	if(region == NULL)
-		return -1;
+		return ERR_NO_MEMORY;
 
 	// create a new cache
 	store = vm_store_create_device(phys_addr);
@@ -474,14 +476,10 @@ region_id vm_map_physical_memory(aspace_id aid, char *name, void **address, int 
 	region->cache_ref = cache_ref;
 	region->cache_offset = 0;
 
-	if(region) {
-		// modify the pointer returned to be offset back into the new region
-		// the same way the physical address in was offset
-		(*address) += map_offset;
-		return region->id;
-	} else {
-		return -1;
-	}
+	// modify the pointer returned to be offset back into the new region
+	// the same way the physical address in was offset
+	(*address) += map_offset;
+	return region->id;
 }
 
 region_id vm_clone_region(aspace_id aid, char *name, void **address, int addr_type,
@@ -492,7 +490,7 @@ region_id vm_clone_region(aspace_id aid, char *name, void **address, int addr_ty
 	
 	vm_address_space *aspace = vm_get_aspace_from_id(aid);
 	if(aspace == NULL)
-		return -1;
+		return ERR_VM_INVALID_ASPACE;
 
 	// look up the source region
 	sem_acquire(region_hash_sem, READ_COUNT);
@@ -506,13 +504,13 @@ region_id vm_clone_region(aspace_id aid, char *name, void **address, int addr_ty
 	sem_release(region_hash_sem, READ_COUNT);
 	
 	if(src_region == NULL)
-		return -1;	
+		return ERR_VM_INVALID_REGION;	
 
 	// create the new region, with the src region's wiring
 	new_region = _vm_create_region(aspace, name, address, addr_type, src_region->size, src_region->wiring, lock);
 	if(new_region == NULL) {
 		vm_region_release_ref(src_region);
-		return -1;
+		return ERR_NO_MEMORY;
 	}
 	
 	// attach the cache_ref of the src region to the new one
@@ -524,19 +522,18 @@ region_id vm_clone_region(aspace_id aid, char *name, void **address, int addr_ty
 	// release the ref on the old region
 	vm_region_release_ref(src_region);
 
-	if(new_region)
-		return new_region->id;
-	else
-		return -1;
+	return new_region->id;
 }
 
 int vm_delete_region(aspace_id aid, region_id rid)
 {
 	vm_region *temp, *last = NULL;
 	vm_region *region;
-	vm_address_space *aspace = vm_get_aspace_from_id(aid);
+	vm_address_space *aspace;
+
+	aspace = vm_get_aspace_from_id(aid);
 	if(aspace == NULL)
-		return -1;
+		return ERR_VM_INVALID_ASPACE;
 
 	dprintf("vm_delete_region: aspace 0x%x, region 0x%x\n", aspace, rid);
 
@@ -552,7 +549,7 @@ int vm_delete_region(aspace_id aid, region_id rid)
 	}
 	sem_release(region_hash_sem, READ_COUNT);
 	if(region == NULL)
-		return -1;
+		return ERR_VM_INVALID_REGION;
 
 	// release the ref twice, insuring no one else got this far
 	vm_region_release_ref2(region);
@@ -638,7 +635,7 @@ int vm_get_region_info(region_id id, vm_region_info *info)
 	vm_region *region;
 
 	if(info == NULL)
-		return -1;
+		return ERR_INVALID_ARGS;
 
 	// remove the region from the global hash table
 	sem_acquire(region_hash_sem, READ_COUNT);
@@ -649,7 +646,7 @@ int vm_get_region_info(region_id id, vm_region_info *info)
 	}
 	sem_release(region_hash_sem, READ_COUNT);
 	if(region == NULL)
-		return -1;	
+		return ERR_VM_INVALID_REGION;	
 
 	info->id = region->id;
 	info->base = region->base;
@@ -973,12 +970,12 @@ aspace_id vm_create_aspace(const char *name, addr base, addr size, bool kernel)
 	
 	aspace = (vm_address_space *)kmalloc(sizeof(vm_address_space));
 	if(aspace == NULL)
-		return -1;
+		return ERR_NO_MEMORY;
 
 	aspace->name = (char *)kmalloc(strlen(name) + 1);
 	if(aspace->name == NULL ) {
 		kfree(aspace);
-		return -1;
+		return ERR_NO_MEMORY;
 	}
 	strcpy(aspace->name, name);
 
@@ -989,7 +986,7 @@ aspace_id vm_create_aspace(const char *name, addr base, addr size, bool kernel)
 	if(err < 0) {
 		kfree(aspace->name);
 		kfree(aspace);
-		return -1;
+		return err;
 	}
 
 	// initialize the virtual map
@@ -1012,9 +1009,11 @@ aspace_id vm_create_aspace(const char *name, addr base, addr size, bool kernel)
 int vm_delete_aspace(aspace_id aid)
 {
 	vm_region *region;
-	vm_address_space *aspace = vm_get_aspace_from_id(aid);
+	vm_address_space *aspace;
+
+	aspace = vm_get_aspace_from_id(aid);
 	if(aspace == NULL)
-		return -1;
+		return ERR_VM_INVALID_ASPACE;
 
 	dprintf("vm_delete_aspace: called on aspace 0x%x\n", aid);
 
@@ -1214,7 +1213,7 @@ static int vm_soft_fault(addr address, bool is_write, bool is_user)
 		if(aspace == NULL) {
 			if(is_user == false) {
 				dprintf("vm_soft_fault: kernel thread accessing invalid user memory!\n");
-				return -1;
+				return ERR_VM_PF_FATAL;
 			} else {
 				// XXX weird state.
 				panic("vm_soft_fault: non kernel thread accessing user memory that doesn't exist!\n");
@@ -1228,19 +1227,19 @@ static int vm_soft_fault(addr address, bool is_write, bool is_user)
 	if(region == NULL) {
 		sem_release(map->sem, READ_COUNT);
 		dprintf("vm_soft_fault: va 0x%x not covered by region in address space\n", address);
-		return -1; // BAD_ADDRESS
+		return ERR_VM_PF_BAD_ADDRESS; // BAD_ADDRESS
 	}
 	
 	// check permissions
 	if(is_user && (region->lock & LOCK_KERNEL) == LOCK_KERNEL) {
 		sem_release(map->sem, READ_COUNT);
 		dprintf("user access on kernel region\n");
-		return -1; // BAD_PERMISSION
+		return ERR_VM_PF_BAD_PERM; // BAD_PERMISSION
 	}
 	if(is_write && (region->lock & LOCK_RW) == 0) {
 		sem_release(map->sem, READ_COUNT);
 		dprintf("write access attempted on read-only region\n");
-		return -1; // BAD_PERMISSION
+		return ERR_VM_PF_BAD_PERM; // BAD_PERMISSION
 	}
 
 	cache_ref = region->cache_ref;
@@ -1315,7 +1314,7 @@ static int vm_soft_fault(addr address, bool is_write, bool is_user)
 		region = vm_virtual_map_lookup(map, address);
 		if(region == NULL || region->cache_ref != cache_ref || region->cache_offset != cache_offset) {
 			dprintf("vm_soft_fault: address space layout changed effecting ongoing soft fault\n");
-			err = -1; // BAD_ADDRESS
+			err = ERR_VM_PF_BAD_ADDRESS; // BAD_ADDRESS
 		}
 	}
 

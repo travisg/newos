@@ -11,6 +11,7 @@
 #include <kernel/thread.h>
 #include <kernel/heap.h>
 #include <kernel/arch/cpu.h>
+#include <sys/errors.h>
 
 #include <kernel/fs/rootfs.h>
 
@@ -395,7 +396,7 @@ static int get_new_fd(struct ioctx *ioctx)
 			return i;
 		}
 	}
-	return -1;
+	return ERR_NO_MORE_HANDLES;
 }
 
 static struct ioctx *get_current_ioctx(bool kernel)
@@ -453,12 +454,12 @@ static int get_vnode_from_fd(int fd, struct ioctx *ioctx, bool kernel, struct vn
 	mutex_lock(&ioctx->io_mutex);
 
 	if(fd >= ioctx->table_size) {
-		err = -1;
+		err = ERR_INVALID_HANDLE;
 		goto err;
 	}		
 
 	if(ioctx->fds[fd].vnode == NULL) {
-		err = -1;
+		err = ERR_INVALID_HANDLE;
 		goto err;
 	}
 
@@ -507,7 +508,7 @@ static int add_new_fd(struct ioctx *ioctx, struct vnode *new_vnode, void *cookie
 	fd = get_new_fd(ioctx);
 	if(fd < 0) {
 		mutex_unlock(&ioctx->io_mutex);
-		return -1;
+		return fd;
 	}
 
 	ioctx->fds[fd].vnode = new_vnode;
@@ -526,7 +527,7 @@ int vfs_register_filesystem(const char *name, struct fs_calls *calls)
 
 	container = (struct fs_container *)kmalloc(sizeof(struct fs_container));
 	if(container == NULL)
-		return -1;
+		return ERR_NO_MEMORY;
 
 	container->name = name;
 	container->calls = calls;
@@ -555,18 +556,18 @@ static int vfs_mount(const char *path, const char *fs_name, bool kernel)
 
 	mount = (struct fs_mount *)kmalloc(sizeof(struct fs_mount));
 	if(mount == NULL)
-		return -1;
+		return ERR_NO_MEMORY;
 
 	mount->mount_point = (char *)kmalloc(strlen(path)+1);
 	if(mount->mount_point == NULL) {
-		err = -1;
+		err = ERR_NO_MEMORY;
 		goto err;
 	}
 	strcpy(mount->mount_point, path);
 
 	mount->fs = find_fs(fs_name);
 	if(mount->fs == NULL) {
-		err = -1;
+		err = ERR_VFS_INVALID_FS;
 		goto err1;
 	}
 
@@ -575,7 +576,7 @@ static int vfs_mount(const char *path, const char *fs_name, bool kernel)
 	if(fs_mounts == NULL) {
 		// we haven't mounted anything yet	
 		if(strcmp(path, "/") != 0) {
-			err = -1;
+			err = ERR_VFS_GENERAL;
 			goto err1;
 		}
 
@@ -660,7 +661,7 @@ static int vfs_unmount(const char *path)
 
 	mount = find_mount(path, &last_mount);
 	if(mount == NULL) {
-		err = -1;
+		err = ERR_VFS_NOT_MOUNTPOINT;
 		goto err;
 	}
 
@@ -723,7 +724,7 @@ static int vfs_open(const char *path, const char *stream, stream_type stream_typ
 	new_vnode = add_vnode_to_list(((struct vnode *)redir.vnode)->mount, v);
 	if(new_vnode == NULL) {
 		mutex_unlock(&vfs_vnode_mutex);
-		err = -1;
+		err = ERR_NO_MEMORY;
 		goto err1;
 	}
 
@@ -733,7 +734,7 @@ static int vfs_open(const char *path, const char *stream, stream_type stream_typ
 
 	fd = add_new_fd(ioctx, new_vnode, cookie);
 	if(fd < 0) {
-		err = -1;
+		err = fd;
 		goto err2;
 	}
 

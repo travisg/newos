@@ -9,6 +9,7 @@
 #include <kernel/int.h>
 #include <kernel/sem.h>
 #include <kernel/vfs.h>
+#include <sys/errors.h>
 
 #include <kernel/arch/cpu.h>
 #include <kernel/arch/int.h>
@@ -66,30 +67,30 @@ static int ide_open(void *_fs, void *_base_vnode, const char *path, const char *
     }		
   if(stream[0] != '\0' || stream_type != STREAM_TYPE_DEVICE) 
     {
-      err = -1;
+      err = ERR_VFS_PATH_NOT_FOUND;
       goto err;
     }
   bus = (path[0] - '0');
   if( bus< 0 || bus> 2)
     {
-      err = -1;
+      err = ERR_VFS_PATH_NOT_FOUND;
       goto err;
     }
   device = (path[2] - '0');
   if( device<0 || device> 2)
     {
-      err = -1;
+      err = ERR_VFS_PATH_NOT_FOUND;
       goto err;
     }
   if(devices[(bus*2) + device].magic!=IDE_MAGIC_COOKIE)
     {
-      err = -1;
+      err = ERR_VFS_PATH_NOT_FOUND;
       goto err;
     }
   cookie = kmalloc(sizeof(ide_cookie));
   if(cookie==NULL)
     {
-      err = -1;
+      err = ERR_NO_MEMORY;
       goto err;
     }
   cookie->bus = bus;
@@ -121,7 +122,7 @@ static int ide_open(void *_fs, void *_base_vnode, const char *path, const char *
 static int ide_seek(void *_fs, void *_vnode, void *_cookie, off_t pos, seek_type seek_type)
 {
   dprintf("ide_seek: entry\n");
-  return -1;
+  return ERR_NOT_ALLOWED;
 }
 
 static int ide_close(void *_fs, void *_vnode, void *_cookie)
@@ -135,7 +136,7 @@ static int ide_close(void *_fs, void *_vnode, void *_cookie)
 static int ide_create(void *_fs, void *_base_vnode, const char *path, const char *stream, stream_type stream_type, struct redir_struct *redir)
 {
   struct ide_fs *fs = _fs;
-  int		ret = -1;
+  int		ret = ERR_NOT_ALLOWED;
   dprintf("ide_create: entry %X\n",fs);
   if(fs->redir_vnode != NULL) {
     // we were mounted on top of
@@ -154,7 +155,7 @@ static int ide_create(void *_fs, void *_base_vnode, const char *path, const char
 static int ide_stat(void *_fs, void *_base_vnode, const char *path, const char *stream, stream_type stream_type, struct vnode_stat *stat, struct redir_struct *redir)
 {
   struct ide_fs *fs = _fs;
-  int		ret = -1;
+  int		ret;
   dprintf("ide_stat: entry %X\n",fs);
   if(fs->redir_vnode != NULL) {
     // we were mounted on top of
@@ -187,7 +188,7 @@ static int ide_read(void *_fs, void *_vnode, void *_cookie, void *buf, off_t pos
   if(cookie==NULL)
     {
       *len = 0;
-      err = -1;
+      err = ERR_INVALID_ARGS;
       goto err;
     }
   block = pos / cookie->bytes_per_sector;
@@ -197,7 +198,7 @@ static int ide_read(void *_fs, void *_vnode, void *_cookie, void *buf, off_t pos
   if(block + sectors>cookie->block_start + cookie->partition_size)
     {
       *len = 0;
-      err = -1;
+      err = 0;
       goto err;
     }
   currentSector = 0;
@@ -209,7 +210,7 @@ static int ide_read(void *_fs, void *_vnode, void *_cookie, void *buf, off_t pos
       if(ide_read_block(&devices[(2*cookie->bus) + cookie->device] ,buf,block,sectorsToRead)!=0)
 	{
 	  *len = currentSector * cookie->bytes_per_sector;
-	  err = -1;
+	  err = ERR_IO_ERROR;
 	  goto err;
 	}
       block += sectorsToRead *  cookie->bytes_per_sector;
@@ -238,7 +239,7 @@ static int ide_write(void *_fs, void *_vnode, void *_cookie, const void *buf, of
   if(cookie==NULL)
     {
       *len = 0;
-      err = -1;
+      err = ERR_INVALID_ARGS;
       goto err;
     }
   block = pos / cookie->bytes_per_sector;
@@ -247,7 +248,7 @@ static int ide_write(void *_fs, void *_vnode, void *_cookie, const void *buf, of
   if(block + sectors>cookie->block_start + cookie->partition_size)
     {
       *len = 0;
-      err = -1;
+      err = 0;
       goto err;
     }
   currentSector = 0;
@@ -260,7 +261,7 @@ static int ide_write(void *_fs, void *_vnode, void *_cookie, const void *buf, of
 	{
 //	  dprintf("ide_write: ide_write_block returned %d\n", rc);
 	  *len = currentSector * cookie->bytes_per_sector;
-	  err = -1;
+	  err = ERR_IO_ERROR;
 	  goto err;
 	}
       block += sectorsToWrite *  cookie->bytes_per_sector;
@@ -278,7 +279,7 @@ static int ide_get_geometry(void *_cookie,void *buf,size_t len)
   ide_device		*device = &devices[(2*cookie->bus) + cookie->device];
   drive_geometry	*drive_geometry = buf;
   if(len<sizeof(drive_geometry))
-    return -1;
+    return ERR_VFS_INSUFFICIENT_BUF;
 
   drive_geometry->blocks = device->end_block - device->start_block;
   drive_geometry->heads = device->hardware_device.heads;
@@ -323,7 +324,7 @@ static int ide_ioctl(void *_fs, void *_vnode, void *_cookie, int op, void *buf, 
 
       break;
     default:
-      err = -1;
+      err = ERR_INVALID_ARGS;
     } 
   sem_release(fs->sem, 1);
   return err;
@@ -337,7 +338,7 @@ static int ide_mount(void **fs_cookie, void *flags, void *covered_vnode, fs_id i
   fs = kmalloc(sizeof(struct ide_fs));
   if(fs == NULL)
     {
-      err = -1;
+      err = ERR_NO_MEMORY;
       goto err;
     }
   
@@ -352,7 +353,7 @@ static int ide_mount(void **fs_cookie, void *flags, void *covered_vnode, fs_id i
     fs->sem = sem_create(1, temp);
     if(fs->sem < 0)
       {
-	err = -1;
+	err = ERR_NO_MEMORY;
 	goto err1;
       }
   }

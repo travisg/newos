@@ -9,6 +9,7 @@
 #include <kernel/heap.h>
 #include <kernel/lock.h>
 #include <kernel/vm.h>
+#include <sys/errors.h>
 
 #include <kernel/fs/rootfs.h>
 
@@ -80,7 +81,7 @@ static int rootfs_delete_vnode(struct rootfs *fs, struct rootfs_vnode *v, bool f
 	// cant delete it if it's in a directory or is a directory
 	// and has children
 	if(!force_delete && ((v->stream.type == STREAM_TYPE_DIR && v->stream.dir.dir_head != NULL) || v->dir_next != NULL)) {
-		return -1;
+		return ERR_NOT_ALLOWED;
 	}
 
 	// remove it from the global hash table
@@ -117,7 +118,7 @@ static struct rootfs_vnode *rootfs_find_in_dir(struct rootfs_vnode *dir, const c
 static int rootfs_insert_in_dir(struct rootfs_vnode *dir, struct rootfs_vnode *v)
 {
 	if(dir->stream.type != STREAM_TYPE_DIR)
-		return -1;
+		return ERR_INVALID_ARGS;
 
 	v->dir_next = dir->stream.dir.dir_head;
 	dir->stream.dir.dir_head = v;
@@ -242,7 +243,7 @@ int rootfs_mount(void **fs_cookie, void *flags, void *covered_vnode, fs_id id, v
 
 	fs = kmalloc(sizeof(struct rootfs));
 	if(fs == NULL) {
-		err = -1;
+		err = ERR_NO_MEMORY;
 		goto err;
 	}
 	
@@ -252,21 +253,20 @@ int rootfs_mount(void **fs_cookie, void *flags, void *covered_vnode, fs_id id, v
 
 	err = mutex_init(&fs->lock, "rootfs_mutex");
 	if(err < 0) {
-		err = -1;
 		goto err1;
 	}
 	
 	fs->vnode_list_hash = hash_init(ROOTFS_HASH_SIZE, (addr)&v->all_next - (addr)v,
 		NULL, &rootfs_vnode_hash_func);
 	if(fs->vnode_list_hash == NULL) {
-		err = -1;
+		err = ERR_NO_MEMORY;
 		goto err2;
 	}
 
 	// create a vnode
 	v = rootfs_create_vnode(fs);
 	if(v == NULL) {
-		err = -1;
+		err = ERR_NO_MEMORY;
 		goto err3;
 	}
 
@@ -274,7 +274,7 @@ int rootfs_mount(void **fs_cookie, void *flags, void *covered_vnode, fs_id id, v
 	v->parent = v;
 	v->name = kmalloc(strlen("") + 1);
 	if(v->name == NULL) {
-		err = -1;
+		err = ERR_NO_MEMORY;
 		goto err4;
 	}
 	strcpy(v->name, "");
@@ -282,7 +282,7 @@ int rootfs_mount(void **fs_cookie, void *flags, void *covered_vnode, fs_id id, v
 	// create a dir stream for it to hold
 	v->stream.name = kmalloc(strlen("") + 1);
 	if(v->stream.name == NULL) {
-		err = -1;
+		err = ERR_NO_MEMORY;
 		goto err4;
 	}
 	strcpy(v->stream.name, "");
@@ -376,7 +376,7 @@ int rootfs_open(void *_fs, void *_base_vnode, const char *path, const char *stre
 
 	v = rootfs_get_vnode_from_path(fs, base, path, &start, &redir->redir);
 	if(v == NULL) {
-		err = -1;
+		err = ERR_VFS_PATH_NOT_FOUND;
 		goto err;
 	}
 	if(redir->redir == true) {
@@ -389,13 +389,13 @@ int rootfs_open(void *_fs, void *_base_vnode, const char *path, const char *stre
 	
 	s = rootfs_get_stream_from_vnode(v, stream, stream_type);
 	if(s == NULL) {
-		err = -1;
+		err = ERR_VFS_PATH_NOT_FOUND;
 		goto err;
 	}
 	
 	cookie = kmalloc(sizeof(struct rootfs_cookie));
 	if(cookie == NULL) {
-		err = -1;
+		err = ERR_NO_MEMORY;
 		goto err;
 	}
 
@@ -431,17 +431,17 @@ int rootfs_seek(void *_fs, void *_vnode, void *_cookie, off_t pos, seek_type see
 					if(pos == 0) {
 						cookie->ptr = cookie->s->dir.dir_head;
 					} else {
-						err = -1;
+						err = ERR_INVALID_ARGS;
 					}
 					break;
 				case SEEK_CUR:
 				case SEEK_END:
 				default:
-					err = -1;
+					err = ERR_INVALID_ARGS;
 			}
 		case STREAM_TYPE_FILE:
 		default:
-			err = -1;
+			err = ERR_INVALID_ARGS;
 	}
 
 	mutex_unlock(&fs->lock);
@@ -470,7 +470,7 @@ int rootfs_read(void *_fs, void *_vnode, void *_cookie, void *buf, off_t pos, si
 
 			if(strlen(cookie->ptr->name) + 1 > *len) {
 				*len = 0;
-				err = -1;
+				err = ERR_VFS_INSUFFICIENT_BUF;
 				goto err;
 			}
 			
@@ -482,7 +482,7 @@ int rootfs_read(void *_fs, void *_vnode, void *_cookie, void *buf, off_t pos, si
 		}
 		case STREAM_TYPE_FILE:
 		default:
-			err = -1;
+			err = ERR_INVALID_ARGS;
 	}
 
 err:
@@ -493,12 +493,12 @@ err:
 
 int rootfs_write(void *_fs, void *_vnode, void *_cookie, const void *buf, off_t pos, size_t *len)
 {
-	return -1;
+	return ERR_NOT_ALLOWED;
 }
 
 int rootfs_ioctl(void *_fs, void *_vnode, void *_cookie, int op, void *buf, size_t len)
 {
-	return -1;
+	return ERR_INVALID_ARGS;
 }
 
 int rootfs_close(void *_fs, void *_vnode, void *_cookie)
@@ -532,7 +532,7 @@ int rootfs_create(void *_fs, void *_base_vnode, const char *path, const char *st
 	
 	dir = rootfs_get_container_vnode_from_path(fs, base, path, &start, &redir->redir);
 	if(dir == NULL) {
-		err = -1;
+		err = ERR_VFS_PATH_NOT_FOUND;
 		goto err;
 	}
 	if(redir->redir == true) {
@@ -543,7 +543,7 @@ int rootfs_create(void *_fs, void *_base_vnode, const char *path, const char *st
 	}
 	// we only support stream types of STREAM_TYPE_DIR, and an unnamed one at that
 	if(stream_type != STREAM_TYPE_DIR || stream[0] != '\0') {
-		err = -1;
+		err = ERR_NOT_ALLOWED;
 		goto err;
 	}		
 
@@ -552,13 +552,13 @@ int rootfs_create(void *_fs, void *_base_vnode, const char *path, const char *st
 //		dprintf("rootfs_create: creating new vnode\n");
 		new_vnode = rootfs_create_vnode(fs);
 		if(new_vnode == NULL) {
-			err = -1;
+			err = ERR_NO_MEMORY;
 			goto err;
 		}
 		created_vnode = true;
 		new_vnode->name = kmalloc(strlen(&path[start]) + 1);
 		if(new_vnode->name == NULL) {
-			err = -1;
+			err = ERR_NO_MEMORY;
 			goto err1;
 		}
 		strcpy(new_vnode->name, &path[start]);
@@ -575,7 +575,7 @@ int rootfs_create(void *_fs, void *_base_vnode, const char *path, const char *st
 		s = rootfs_get_stream_from_vnode(new_vnode, stream, stream_type);
 		if(s != NULL) {
 			// it already exists, so lets bail
-			err = -1;
+			err = ERR_VFS_ALREADY_EXISTS;
 			goto err;
 		} else {
 			// we need to create it
@@ -589,7 +589,7 @@ int rootfs_create(void *_fs, void *_base_vnode, const char *path, const char *st
 	// set up the new stream
 	s->name = kmalloc(strlen(stream) + 1);
 	if(s->name == NULL) {
-		err = -1;
+		err = ERR_NO_MEMORY;
 		goto err1;
 	}
 	strcpy(s->name, stream);
@@ -630,7 +630,7 @@ int rootfs_stat(void *_fs, void *_base_vnode, const char *path, const char *stre
 
 	v = rootfs_get_vnode_from_path(fs, base, path, &start, &redir->redir);
 	if(v == NULL) {
-		err = -1;
+		err = ERR_VFS_PATH_NOT_FOUND;
 		goto err;
 	}
 	if(redir->redir == true) {
@@ -643,7 +643,7 @@ int rootfs_stat(void *_fs, void *_base_vnode, const char *path, const char *stre
 	
 	s = rootfs_get_stream_from_vnode(v, stream, stream_type);
 	if(s == NULL) {
-		err = -1;
+		err = ERR_VFS_PATH_NOT_FOUND;
 		goto err;
 	}
 

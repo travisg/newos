@@ -9,6 +9,7 @@
 #include <kernel/vfs.h>
 #include <bus/bus.h>
 #include <libc/string.h>
+#include <sys/errors.h>
 
 #include <bus/pci/pci_bus.h>
 
@@ -52,13 +53,13 @@ int bus_register_bus(const char *path)
 	if(!find_bus(path)) {
 		b = (bus *)kmalloc(sizeof(bus));	
 		if(b == NULL) {
-			err = -1;
+			err = ERR_NO_MEMORY;
 			goto err;
 		}
 
 		b->path = kmalloc(strlen(path)+1);
 		if(b->path == NULL) {
-			err = -1;
+			err = ERR_NO_MEMORY;
 			kfree(b);
 			goto err;
 		}
@@ -67,7 +68,7 @@ int bus_register_bus(const char *path)
 		b->next = bus_list;
 		bus_list = b;
 	} else {
-		err = -1;
+		err = ERR_NOT_FOUND;
 	}
 
 	err = 0;
@@ -127,7 +128,7 @@ static int bus_find_device_recurse(int *n, char *base_path, int base_fd, id_list
 			sys_close(fd);
 		}
 	}
-	return -1;
+	return ERR_NOT_FOUND;
 }
 
 int bus_find_device(int n, id_list *vendor_ids, id_list *device_ids, device *dev)

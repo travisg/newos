@@ -17,6 +17,7 @@
 #include <kernel/queue.h>
 #include <libc/string.h>
 #include <boot/stage2.h>
+#include <sys/errors.h>
 
 // 256 MB of iospace
 #define IOSPACE_SIZE (256*1024*1024)
@@ -315,7 +316,7 @@ static int query_tmap(vm_translation_map *map, addr va, addr *out_physical, unsi
 	index = VADDR_TO_PDENT(va);
 	if(pd[index].present == 0) {
 		// no pagetable here
-		return -1;
+		return ERR_VM_PAGE_NOT_PRESENT;
 	}
 
 	vm_get_physical_page(ADDR_REVERSE_SHIFT(pd[index].addr), (addr *)&pt, PHYSICAL_PAGE_NO_WAIT);
@@ -323,7 +324,7 @@ static int query_tmap(vm_translation_map *map, addr va, addr *out_physical, unsi
 	if(pt[index].present == 0) {
 		// page mapping not valid
 		vm_put_physical_page((addr)pt);
-		return -1;
+		return ERR_VM_PAGE_NOT_PRESENT;
 	}
 	
 	*out_physical = ADDR_REVERSE_SHIFT(pt[index].addr);
@@ -346,7 +347,8 @@ static addr get_mapped_size_tmap(vm_translation_map *map)
 static int protect_tmap(vm_translation_map *map, addr base, addr top, unsigned int attributes)
 {
 	// XXX finish
-	return -1;
+	panic("protect_tmap called, not implemented\n");
+	return ERR_UNIMPLEMENTED;
 }
 
 static int map_iospace_chunk(addr va, addr pa)
@@ -451,14 +453,14 @@ static int put_physical_page_tmap(addr va)
 	desc = virtual_pmappings[va / IOSPACE_CHUNK_SIZE];
 	if(desc == NULL) {
 		mutex_unlock(&iospace_mutex);
-		return -1;
+		return ERR_VM_GENERAL;
 	}
 	
 	if(--desc->ref_count == 0) {
 		// put it on the mapped lru list
 		queue_enqueue(&mapped_paddr_lru, desc);
 		// no sense rescheduling on this one, there's likely a race in the waiting
-		// thread to grab the iospace_sem sem, which would block and eventually get back to
+		// thread to grab the iospace_mutex, which would block and eventually get back to
 		// this thread. waste of time.
 		sem_release_etc(iospace_full_sem, 1, SEM_FLAG_NO_RESCHED); 
 	}
@@ -484,13 +486,13 @@ static vm_translation_map_ops tmap_ops = {
 int vm_translation_map_create(vm_translation_map *new_map, bool kernel)
 {
 	if(new_map == NULL)
-		return -1;
+		return ERR_INVALID_ARGS;
 	
 	// initialize the new object
 	new_map->ops = &tmap_ops;
 	new_map->map_count = 0;
 	if(recursive_lock_create(&new_map->lock) < 0)
-		return -1;
+		return ERR_NO_MEMORY;
 
 	new_map->arch_data = kmalloc(sizeof(vm_translation_map_arch_info));
 	if(new_map == NULL)
@@ -504,7 +506,7 @@ int vm_translation_map_create(vm_translation_map *new_map, bool kernel)
 		new_map->arch_data->pgdir_virt = kmalloc(PAGE_SIZE);
 		if(new_map->arch_data->pgdir_virt == NULL) {
 			kfree(new_map->arch_data);
-			return -1;
+			return ERR_NO_MEMORY;
 		}
 		if(((addr)new_map->arch_data->pgdir_virt % PAGE_SIZE) != 0)
 			panic("vm_translation_map_create: malloced pgdir and found it wasn't aligned!\n");
@@ -701,13 +703,13 @@ static int vm_translation_map_quick_query(addr va, addr *out_physical)
 
 	if(page_hole_pgdir[VADDR_TO_PDENT(va)].present == 0) {
 		// no pagetable here
-		return -1;
+		return ERR_VM_PAGE_NOT_PRESENT;
 	}
 
 	pentry = page_hole + va / PAGE_SIZE;
 	if(pentry->present == 0) {
 		// page mapping not valid
-		return -1;
+		return ERR_VM_PAGE_NOT_PRESENT;
 	}
 	
 	*out_physical = pentry->addr << 12;

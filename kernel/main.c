@@ -4,6 +4,7 @@
 */
 #include <boot/stage2.h>
 #include <kernel/kernel.h>
+#include <sys/errors.h>
 #include <kernel/console.h>
 #include <kernel/debug.h>
 #include <kernel/faults.h>
@@ -34,7 +35,7 @@ int _start(kernel_args *oldka, int cpu)
 	smp_set_num_cpus(ka.num_cpus);
 
 	// if we're not a boot cpu, spin here until someone wakes us up
-	if(smp_trap_non_boot_cpus(&ka, cpu) == 0) {
+	if(smp_trap_non_boot_cpus(&ka, cpu) == NO_ERROR) {
 		// we're the boot processor, so wait for all of the APs to enter the kernel
 		smp_wait_for_ap_cpus(&ka);
 

@@ -17,6 +17,7 @@
 #include <kernel/vfs.h>
 #include <kernel/elf.h>
 #include <kernel/heap.h>
+#include <sys/errors.h>
 #include <boot/stage2.h>
 #include <libc/string.h>
 #include <libc/printf.h>
@@ -283,7 +284,7 @@ static thread_id _create_thread(const char *name, proc_id pid, int priority, add
 	
 	t = create_thread_struct(name);
 	if(t == NULL)
-		return -1;
+		return ERR_NO_MEMORY;
 
 	t->priority = priority;
 	t->state = THREAD_STATE_BIRTH;
@@ -314,7 +315,7 @@ static thread_id _create_thread(const char *name, proc_id pid, int priority, add
 	if(abort) {
 		kfree(t->name);
 		kfree(t);
-		return -1;
+		return ERR_TASK_PROC_DELETED;
 	}
 	
 	sprintf(stack_name, "%s_kstack", name);
@@ -397,9 +398,9 @@ int thread_suspend_thread(thread_id id)
 			t->next_state = THREAD_STATE_SUSPENDED;
 			global_resched = true;
 		}
-		retval = 0;
+		retval = NO_ERROR;
 	} else {
-		retval = -1;
+		retval = ERR_INVALID_HANDLE;
 	}
 
 	RELEASE_THREAD_LOCK();
@@ -427,9 +428,9 @@ int thread_resume_thread(thread_id id)
 		t->next_state = THREAD_STATE_READY;
 
 		thread_enqueue_run_q(t);
-		retval = 0;
+		retval = NO_ERROR;
 	} else {
-		retval = -1;
+		retval = ERR_INVALID_HANDLE;
 	}
 	
 	RELEASE_THREAD_LOCK();
@@ -681,7 +682,7 @@ int thread_init(kernel_args *ka)
 	cur_thread = (struct thread **)kmalloc(sizeof(struct thread *) * smp_get_num_cpus());
 	if(cur_thread == NULL) {
 		panic("error allocating cur_thread slots\n");
-		return -1;
+		return ERR_NO_MEMORY;
 	}
 	memset(cur_thread, 0, sizeof(struct thread *) * smp_get_num_cpus());
 
@@ -689,7 +690,7 @@ int thread_init(kernel_args *ka)
 	timers = (struct timer_event *)kmalloc(sizeof(struct timer_event) * smp_get_num_cpus());
 	if(timers == NULL) {
 		panic("error allocating scheduling timers\n");
-		return -1;
+		return ERR_NO_MEMORY;
 	}
 	memset(timers, 0, sizeof(struct timer_event) * smp_get_num_cpus());
 	
@@ -697,7 +698,7 @@ int thread_init(kernel_args *ka)
 	snooze_sem = sem_create(0, "snooze sem");
 	if(snooze_sem < 0) {
 		panic("error creating snooze sem\n");
-		return -1;
+		return snooze_sem;
 	}
 
 	// create an idle thread for each cpu
@@ -708,7 +709,7 @@ int thread_init(kernel_args *ka)
 		t = create_thread_struct(temp);
 		if(t == NULL) {
 			panic("error creating idle thread struct\n");
-			return -1;
+			return ERR_NO_MEMORY;
 		}
 		t->proc = proc_get_kernel_proc();
 		t->priority = THREAD_IDLE_PRIORITY;
@@ -727,7 +728,7 @@ int thread_init(kernel_args *ka)
 	death_stacks = (struct death_stack *)kmalloc(num_death_stacks * sizeof(struct death_stack));
 	if(death_stacks == NULL) {
 		panic("error creating death stacks\n");
-		return -1;
+		return ERR_NO_MEMORY;
 	}
 	{
 		char temp[64];
@@ -739,7 +740,7 @@ int thread_init(kernel_args *ka)
 				REGION_ADDR_ANY_ADDRESS, KSTACK_SIZE, REGION_WIRING_WIRED, LOCK_RW|LOCK_KERNEL);
 			if(death_stacks[i].rid < 0) {
 				panic("error creating death stacks\n");
-				return -1;
+				return death_stacks[i].rid;
 			}
 			death_stacks[i].in_use = false;
 		}
@@ -956,7 +957,7 @@ int thread_wait_on_thread(thread_id id, int *retcode)
 	if(t != NULL) {
 		sem = t->return_code_sem;
 	} else {
-		sem = -1;
+		sem = ERR_INVALID_HANDLE;
 	}
 	
 	RELEASE_THREAD_LOCK();
@@ -977,7 +978,7 @@ int proc_wait_on_proc(proc_id id, int *retcode)
 	if(p && p->main_thread) {
 		tid = p->main_thread->id;
 	} else {
-		tid = -1;
+		tid = ERR_INVALID_HANDLE;
 	}
 	RELEASE_PROC_LOCK();
 	int_restore_interrupts(state);
@@ -1429,7 +1430,7 @@ static int proc_create_proc2(void)
 	if(t->user_stack_region_id < 0) {
 		panic("proc_create_proc2: could not create default user stack region\n");
 		sem_delete_etc(p->proc_creation_sem, -1);
-		return -1;
+		return t->user_stack_region_id;
 	}
 
 	path = p->args;
@@ -1439,7 +1440,7 @@ static int proc_create_proc2(void)
 	if(err < 0){
 		// XXX clean up proc
 		sem_delete_etc(p->proc_creation_sem, -1);
-		return -1;
+		return err;
 	}
 
 	dprintf("proc_create_proc2: loaded elf. entry = 0x%x\n", entry);
@@ -1470,7 +1471,7 @@ proc_id proc_create_proc(const char *path, const char *name, int priority)
 
 	p = create_proc_struct(name, false);
 	if(p == NULL)
-		return -1;
+		return ERR_NO_MEMORY;
 
 	state = int_disable_interrupts();
 	GRAB_PROC_LOCK();
@@ -1482,14 +1483,14 @@ proc_id proc_create_proc(const char *path, const char *name, int priority)
 	tid = thread_create_kernel_thread_etc(name, proc_create_proc2, priority, p);
 	if(tid < 0) {
 		// XXX clean up proc
-		return -1;
+		return tid;
 	}
 	
 	// copy the args over
 	p->args = kmalloc(strlen(path) + 1);
 	if(p->args == NULL) {
 		// XXX clean up proc
-		return -1;
+		return ERR_NO_MEMORY;
 	}
 	strcpy(p->args, path);
 
@@ -1498,7 +1499,7 @@ proc_id proc_create_proc(const char *path, const char *name, int priority)
 	if(p->ioctx == NULL) {
 		// XXX clean up proc
 		panic("proc_create_proc: could not create new ioctx\n");
-		return -1;
+		return ERR_NO_MEMORY;
 	}
 
 	// create an address space for this process
@@ -1506,7 +1507,7 @@ proc_id proc_create_proc(const char *path, const char *name, int priority)
 	if(p->aspace_id < 0) {
 		// XXX clean up proc
 		panic("proc_create_proc: could not create user address space\n");
-		return -1;
+		return p->aspace_id;
 	}
 	p->aspace = vm_get_aspace_from_id(p->aspace_id);
 
@@ -1540,7 +1541,7 @@ int proc_kill_proc(proc_id id)
 			p->state = PROC_STATE_DEATH;
 		}
 	} else {
-		retval = -1;
+		retval = ERR_INVALID_HANDLE;
 	}
 	hash_remove(proc_hash, p);
 

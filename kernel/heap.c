@@ -137,8 +137,7 @@ static char *raw_alloc(unsigned int size, int bin_index)
 	
 	new_heap_ptr = heap_base_ptr + PAGE_ALIGN(size);
 	if(new_heap_ptr > heap_base + heap_size) {
-		dprintf("heap overgrew itself! spinning forever...\n");
-		for(;;);
+		panic("heap overgrew itself!\n");
 	}
 
 	for(addr = heap_base_ptr; addr < new_heap_ptr; addr += PAGE_SIZE) {

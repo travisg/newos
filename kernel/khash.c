@@ -5,6 +5,7 @@
 #include <kernel/heap.h>
 #include <kernel/khash.h>
 #include <kernel/debug.h>
+#include <sys/errors.h>
 #include <libc/string.h>
 
 #define malloc kmalloc
@@ -99,11 +100,11 @@ int hash_remove(void *_hash_table, void *e)
 			else
 				t->table[hash] = NEXT(t, i);
 			t->num_elems--;
-			return 0;
+			return NO_ERROR;
 		}
 	}
 
-	return -1;
+	return ERR_GENERAL;
 }
 
 void *hash_find(void *_hash_table, void *e)

@@ -3,6 +3,7 @@
 ** Distributed under the terms of the NewOS License.
 */
 #include <kernel/kernel.h>
+#include <sys/errors.h>
 #include <kernel/elf.h>
 #include <kernel/vfs.h>
 #include <kernel/thread.h>
@@ -18,16 +19,16 @@
 static int verify_eheader(struct Elf32_Ehdr *eheader)
 {
 	if(memcmp(eheader->e_ident, ELF_MAGIC, 4) != 0)
-		return -1;
+		return ERR_INVALID_BINARY;
 
 	if(eheader->e_ident[4] != ELFCLASS32)
-		return -1;
+		return ERR_INVALID_BINARY;
 		
 	if(eheader->e_phoff == 0)
-		return -1;
+		return ERR_INVALID_BINARY;
 		
 	if(eheader->e_phentsize < sizeof(struct Elf32_Phdr))
-		return -1;
+		return ERR_INVALID_BINARY;
 		
 	return 0;
 }
@@ -53,18 +54,17 @@ int elf_load(const char *path, struct proc *p, int flags, addr *entry)
 		goto error;
 	if(len != sizeof(eheader)) {
 		// short read
-		err = -1;
+		err = ERR_INVALID_BINARY;
 		goto error;
 	}
-	if(verify_eheader(&eheader) != 0) {
-		err = -1;
+	err = verify_eheader(&eheader);
+	if(err < 0)
 		goto error;
-	}
 	
 	pheaders = kmalloc(eheader.e_phnum * eheader.e_phentsize);
 	if(pheaders == NULL) {
 		dprintf("error allocating space for program headers\n");
-		err = -1;
+		err = ERR_NO_MEMORY;
 		goto error;
 	}
 	
@@ -93,7 +93,7 @@ int elf_load(const char *path, struct proc *p, int flags, addr *entry)
 			ROUNDUP(pheaders[i].p_memsz + (pheaders[i].p_vaddr % PAGE_SIZE), PAGE_SIZE), REGION_WIRING_LAZY, LOCK_RW);
 		if(id < 0) {
 			dprintf("error allocating region!\n");
-			err = -1;
+			err = ERR_INVALID_BINARY;
 			goto error;
 		}
 		

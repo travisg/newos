@@ -9,6 +9,7 @@
 #include <kernel/heap.h>
 #include <kernel/lock.h>
 #include <kernel/vm.h>
+#include <sys/errors.h>
 
 #include <kernel/arch/cpu.h>
 
@@ -106,7 +107,7 @@ static int bootfs_delete_vnode(struct bootfs *fs, struct bootfs_vnode *v, bool f
 	// cant delete it if it's in a directory or is a directory
 	// and has children
 	if(!force_delete && ((v->stream.type == STREAM_TYPE_DIR && v->stream.u.dir.dir_head != NULL) || v->dir_next != NULL)) {
-		return -1;
+		return ERR_NOT_ALLOWED;
 	}
 
 	// remove it from the global hash table
@@ -143,7 +144,7 @@ static struct bootfs_vnode *bootfs_find_in_dir(struct bootfs_vnode *dir, const c
 static int bootfs_insert_in_dir(struct bootfs_vnode *dir, struct bootfs_vnode *v)
 {
 	if(dir->stream.type != STREAM_TYPE_DIR)
-		return -1;
+		return ERR_INVALID_ARGS;
 
 	v->dir_next = dir->stream.u.dir.dir_head;
 	dir->stream.u.dir.dir_head = v;
@@ -259,13 +260,13 @@ int bootfs_create_vnode_tree(struct bootfs *fs, struct bootfs_vnode *v)
 		if(entry[i].be_type != BE_TYPE_NONE && entry[i].be_type != BE_TYPE_DIRECTORY) {
 			new_vnode = bootfs_create_vnode(fs, entry[i].be_name);
 			if(new_vnode == NULL)
-				return -1;
+				return ERR_NO_MEMORY;
 			
 			// set up the new node
 			new_vnode->stream.name = kmalloc(strlen("") + 1);
 			if(new_vnode->stream.name == NULL) {
 				bootfs_delete_vnode(fs, new_vnode, true);
-				return -1;
+				return ERR_NO_MEMORY;
 			}
 			strcpy(new_vnode->stream.name, "");
 			new_vnode->stream.type = STREAM_TYPE_FILE;
@@ -295,7 +296,7 @@ int bootfs_mount(void **fs_cookie, void *flags, void *covered_vnode, fs_id id, v
 
 	fs = kmalloc(sizeof(struct bootfs));
 	if(fs == NULL) {
-		err = -1;
+		err = ERR_NO_MEMORY;
 		goto err;
 	}
 	
@@ -305,21 +306,20 @@ int bootfs_mount(void **fs_cookie, void *flags, void *covered_vnode, fs_id id, v
 
 	err = mutex_init(&fs->lock, "bootfs_mutex");
 	if(err < 0) {
-		err = -1;
 		goto err1;
 	}
 	
 	fs->vnode_list_hash = hash_init(BOOTFS_HASH_SIZE, (addr)&v->all_next - (addr)v,
 		NULL, &bootfs_vnode_hash_func);
 	if(fs->vnode_list_hash == NULL) {
-		err = -1;
+		err = ERR_NO_MEMORY;
 		goto err2;
 	}
 
 	// create a vnode
 	v = bootfs_create_vnode(fs, "");
 	if(v == NULL) {
-		err = -1;
+		err = ERR_NO_MEMORY;
 		goto err3;
 	}
 
@@ -329,7 +329,7 @@ int bootfs_mount(void **fs_cookie, void *flags, void *covered_vnode, fs_id id, v
 	// create a dir stream for it to hold
 	v->stream.name = kmalloc(strlen("") + 1);
 	if(v->stream.name == NULL) {
-		err = -1;
+		err = ERR_NO_MEMORY;
 		goto err4;
 	}
 	strcpy(v->stream.name, "");
@@ -341,7 +341,6 @@ int bootfs_mount(void **fs_cookie, void *flags, void *covered_vnode, fs_id id, v
 
 	err = bootfs_create_vnode_tree(fs, fs->root_vnode);
 	if(err < 0) {
-		err = -1;
 		goto err4;
 	}
 
@@ -430,7 +429,7 @@ int bootfs_open(void *_fs, void *_base_vnode, const char *path, const char *stre
 
 	v = bootfs_get_vnode_from_path(fs, base, path, &start, &redir->redir);
 	if(v == NULL) {
-		err = -1;
+		err = ERR_VFS_PATH_NOT_FOUND;
 		goto err;
 	}
 	if(redir->redir == true) {
@@ -443,13 +442,13 @@ int bootfs_open(void *_fs, void *_base_vnode, const char *path, const char *stre
 	
 	s = bootfs_get_stream_from_vnode(v, stream, stream_type);
 	if(s == NULL) {
-		err = -1;
+		err = ERR_VFS_PATH_NOT_FOUND;
 		goto err;
 	}
 	
 	cookie = kmalloc(sizeof(struct bootfs_cookie));
 	if(cookie == NULL) {
-		err = -1;
+		err = ERR_NO_MEMORY;
 		goto err;
 	}
 
@@ -494,13 +493,13 @@ int bootfs_seek(void *_fs, void *_vnode, void *_cookie, off_t pos, seek_type see
 					if(pos == 0) {
 						cookie->u.dir.ptr = cookie->s->u.dir.dir_head;
 					} else {
-						err = -1;
+						err = ERR_INVALID_ARGS;
 					}
 					break;
 				case SEEK_CUR:
 				case SEEK_END:
 				default:
-					err = -1;
+					err = ERR_INVALID_ARGS;
 			}
 			break;
 		case STREAM_TYPE_FILE:
@@ -529,12 +528,12 @@ int bootfs_seek(void *_fs, void *_vnode, void *_cookie, off_t pos, seek_type see
 						cookie->u.file.pos = pos + cookie->s->u.file.len;
 					break;
 				default:
-					err = -1;
+					err = ERR_INVALID_ARGS;
 
 			}
 			break;
 		default:
-			err = -1;
+			err = ERR_INVALID_ARGS;
 	}
 
 	mutex_unlock(&fs->lock);
@@ -564,7 +563,7 @@ int bootfs_read(void *_fs, void *_vnode, void *_cookie, void *buf, off_t pos, si
 
 			if(strlen(cookie->u.dir.ptr->name) + 1 > *len) {
 				*len = 0;
-				err = -1;
+				err = ERR_VFS_INSUFFICIENT_BUF;
 				goto err;
 			}
 			
@@ -598,7 +597,7 @@ int bootfs_read(void *_fs, void *_vnode, void *_cookie, void *buf, off_t pos, si
 			cookie->u.file.pos = pos + *len;
 			break;
 		default:
-			err = -1;
+			err = ERR_INVALID_ARGS;
 	}
 err:
 	mutex_unlock(&fs->lock);
@@ -608,12 +607,12 @@ err:
 
 int bootfs_write(void *_fs, void *_vnode, void *_cookie, const void *buf, off_t pos, size_t *len)
 {
-	return -1;
+	return ERR_VFS_READONLY_FS;
 }
 
 int bootfs_ioctl(void *_fs, void *_vnode, void *_cookie, int op, void *buf, size_t len)
 {
-	return -1;
+	return ERR_VFS_READONLY_FS;
 }
 
 int bootfs_close(void *_fs, void *_vnode, void *_cookie)
@@ -632,7 +631,7 @@ int bootfs_close(void *_fs, void *_vnode, void *_cookie)
 
 int bootfs_create(void *_fs, void *_base_vnode, const char *path, const char *stream, stream_type stream_type, struct redir_struct *redir)
 {
-	return -1;
+	return ERR_VFS_READONLY_FS;
 }
 
 int bootfs_stat(void *_fs, void *_base_vnode, const char *path, const char *stream, stream_type stream_type, struct vnode_stat *stat, struct redir_struct *redir)
@@ -650,7 +649,7 @@ int bootfs_stat(void *_fs, void *_base_vnode, const char *path, const char *stre
 
 	v = bootfs_get_vnode_from_path(fs, base, path, &start, &redir->redir);
 	if(v == NULL) {
-		err = -1;
+		err = ERR_VFS_PATH_NOT_FOUND;
 		goto err;
 	}
 	if(redir->redir == true) {
@@ -663,7 +662,7 @@ int bootfs_stat(void *_fs, void *_base_vnode, const char *path, const char *stre
 	
 	s = bootfs_get_stream_from_vnode(v, stream, stream_type);
 	if(s == NULL) {
-		err = -1;
+		err = ERR_VFS_PATH_NOT_FOUND;
 		goto err;
 	}
 
@@ -675,7 +674,7 @@ int bootfs_stat(void *_fs, void *_base_vnode, const char *path, const char *stre
 			stat->size = s->u.file.len;
 			break;
 		default:
-			err = -1;
+			err = ERR_INVALID_ARGS;
 			break;
 	}
 

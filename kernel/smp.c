@@ -8,6 +8,7 @@
 #include <kernel/int.h>
 #include <kernel/smp.h>
 #include <kernel/heap.h>
+#include <sys/errors.h>
 
 #include <kernel/arch/cpu.h>
 #include <kernel/arch/smp.h>
@@ -394,7 +395,7 @@ int smp_init(kernel_args *ka)
 			msg = (struct smp_msg *)kmalloc(sizeof(struct smp_msg));
 			if(msg == NULL) {
 				panic("error creating smp mailboxes\n");
-				return 1;
+				return ERR_GENERAL;
 			}
 			memset(msg, 0, sizeof(struct smp_msg));
 			msg->next = free_msgs;
@@ -421,11 +422,11 @@ int smp_enable_ici()
 {
 	if(smp_num_cpus > 1) // dont actually do it if we only have one cpu
 		ici_enabled = true;
-	return 0;
+	return NO_ERROR;
 }
 
 int smp_disable_ici()
 {
 	ici_enabled = false;
-	return 0;
+	return NO_ERROR;
 }

@@ -8,6 +8,7 @@
 #include <kernel/heap.h>
 #include <kernel/smp.h>
 #include <kernel/arch/int.h>
+#include <sys/errors.h>
 #include <boot/stage2.h>
 #include <libc/string.h>
 #include <libc/printf.h>
@@ -51,7 +52,7 @@ int int_set_io_interrupt_handler(int vector, int (*func)(void))
 
 	io = (struct io_handler *)kmalloc(sizeof(struct io_handler));
 	if(io == NULL)
-		return -1;
+		return ERR_NO_MEMORY;
 	io->func = func;
 
 	acquire_spinlock(&int_handler_list_spinlock);
@@ -61,7 +62,7 @@ int int_set_io_interrupt_handler(int vector, int (*func)(void))
 
 	arch_int_enable_io_interrupt(vector);
 
-	return 0;
+	return NO_ERROR;
 }
 
 int int_io_interrupt_handler(int vector)

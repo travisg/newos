@@ -7,6 +7,7 @@
 #include <kernel/heap.h>
 #include <kernel/vfs.h>
 #include <libc/string.h>
+#include <sys/errors.h>
 
 struct zero_fs {
 	fs_id id;
@@ -36,7 +37,7 @@ static int zero_open(void *_fs, void *_base_vnode, const char *path, const char 
 
 static int zero_seek(void *_fs, void *_vnode, void *_cookie, off_t pos, seek_type seek_type)
 {
-	return -1;
+	return ERR_NOT_ALLOWED;
 }
 
 static int zero_close(void *_fs, void *_vnode, void *_cookie)
@@ -57,7 +58,7 @@ static int zero_create(void *_fs, void *_base_vnode, const char *path, const cha
 		return 0;
 	}
 	
-	return -1;
+	return ERR_VFS_READONLY_FS;
 }
 
 static int zero_stat(void *_fs, void *_base_vnode, const char *path, const char *stream, stream_type stream_type, struct vnode_stat *stat, struct redir_struct *redir)
@@ -85,12 +86,12 @@ static int zero_read(void *_fs, void *_vnode, void *_cookie, void *buf, off_t po
 
 static int zero_write(void *_fs, void *_vnode, void *_cookie, const void *buf, off_t pos, size_t *len)
 {
-	return -1;
+	return ERR_VFS_READONLY_FS;
 }
 
 static int zero_ioctl(void *_fs, void *_vnode, void *_cookie, int op, void *buf, size_t len)
 {
-	return -1;
+	return ERR_INVALID_ARGS;
 }
 
 static int zero_mount(void **fs_cookie, void *flags, void *covered_vnode, fs_id id, void **root_vnode)
@@ -99,7 +100,7 @@ static int zero_mount(void **fs_cookie, void *flags, void *covered_vnode, fs_id 
 
 	fs = kmalloc(sizeof(struct zero_fs));
 	if(fs == NULL)
-		return -1;
+		return ERR_NO_MEMORY;
 
 	fs->covered_vnode = covered_vnode;
 	fs->redir_vnode = NULL;

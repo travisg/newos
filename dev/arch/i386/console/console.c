@@ -10,6 +10,7 @@
 #include <kernel/vm.h>
 #include <kernel/lock.h>
 #include <kernel/vfs.h>
+#include <sys/errors.h>
 
 #include <kernel/arch/cpu.h>
 #include <kernel/arch/int.h>
@@ -147,7 +148,7 @@ static int console_open(void *_fs, void *_base_vnode, const char *path, const ch
 	}		
 
 	if(path[0] != '\0' || stream[0] != '\0' || stream_type != STREAM_TYPE_DEVICE) {
-		err = -1;
+		err = ERR_VFS_PATH_NOT_FOUND;
 		goto err;
 	}
 	
@@ -167,7 +168,7 @@ static int console_seek(void *_fs, void *_vnode, void *_cookie, off_t pos, seek_
 {
 //	dprintf("console_seek: entry\n");
 
-	return -1;
+	return ERR_NOT_ALLOWED;
 }
 
 static int console_close(void *_fs, void *_vnode, void *_cookie)
@@ -194,7 +195,7 @@ static int console_create(void *_fs, void *_base_vnode, const char *path, const 
 	}
 	mutex_unlock(&fs->lock);
 	
-	return -1;
+	return ERR_VFS_READONLY_FS;
 }
 
 static int console_stat(void *_fs, void *_base_vnode, const char *path, const char *stream, stream_type stream_type, struct vnode_stat *stat, struct redir_struct *redir)
@@ -213,6 +214,9 @@ static int console_stat(void *_fs, void *_base_vnode, const char *path, const ch
 		return 0;
 	}
 	mutex_unlock(&fs->lock);
+
+	if(path[0] != '\0' || stream[0] != '\0' || stream_type != STREAM_TYPE_DEVICE)
+		return ERR_VFS_PATH_NOT_FOUND;
 
 	stat->size = 0;
 	return 0;
@@ -293,7 +297,7 @@ static int console_ioctl(void *_fs, void *_vnode, void *_cookie, int op, void *b
 			break;
 		}
 		default:
-			err = -1;
+			err = ERR_INVALID_ARGS;
 	}
 
 	return err;
@@ -306,7 +310,7 @@ static int console_mount(void **fs_cookie, void *flags, void *covered_vnode, fs_
 
 	fs = kmalloc(sizeof(struct console_fs));
 	if(fs == NULL) {
-		err = -1;
+		err = ERR_NO_MEMORY;
 		goto err;
 	}
 
@@ -315,13 +319,13 @@ static int console_mount(void **fs_cookie, void *flags, void *covered_vnode, fs_
 	fs->id = id;
 	fs->keyboard_fd = sys_open("/dev/keyboard","",STREAM_TYPE_DEVICE);
 	if(fs->keyboard_fd < 0) {
-		err = -1;
+		err = fs->keyboard_fd;
 		goto err1;
 	}
 	err = mutex_init(&fs->lock, "console_mutex");
 	if(err < 0) {
-		err = -1;
-		goto err1;
+		err = ERR_NO_MEMORY;
+		goto err2;
 	}
 
 	*root_vnode = (void *)&fs->root_vnode;
@@ -329,7 +333,9 @@ static int console_mount(void **fs_cookie, void *flags, void *covered_vnode, fs_
 
 	return 0;
 
-err1:	
+err2:
+	sys_close(fs->keyboard_fd);
+err1:
 	kfree(fs);
 err:
 	return err;

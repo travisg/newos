@@ -8,6 +8,7 @@
 #include <kernel/heap.h>
 #include <kernel/vfs.h>
 #include <libc/string.h>
+#include <sys/errors.h>
 
 #include "rtl8139_priv.h"
 
@@ -31,6 +32,8 @@ static int rtl8139_open(void *_fs, void *_base_vnode, const char *path, const ch
 		redir->path = path;
 		return 0;
 	}
+	if(path[0] != '\0' || stream[0] != '\0' || stream_type != STREAM_TYPE_DEVICE)
+		return ERR_VFS_PATH_NOT_FOUND;
 
 	*_vnode = &fs->root_vnode;	
 	*_cookie = NULL;
@@ -40,7 +43,7 @@ static int rtl8139_open(void *_fs, void *_base_vnode, const char *path, const ch
 
 static int rtl8139_seek(void *_fs, void *_vnode, void *_cookie, off_t pos, seek_type seek_type)
 {
-	return -1;
+	return ERR_NOT_ALLOWED;
 }
 
 static int rtl8139_close(void *_fs, void *_vnode, void *_cookie)
@@ -61,7 +64,7 @@ static int rtl8139_create(void *_fs, void *_base_vnode, const char *path, const 
 		return 0;
 	}
 	
-	return -1;
+	return ERR_VFS_READONLY_FS;
 }
 
 static int rtl8139_stat(void *_fs, void *_base_vnode, const char *path, const char *stream, stream_type stream_type, struct vnode_stat *stat, struct redir_struct *redir)
@@ -76,6 +79,8 @@ static int rtl8139_stat(void *_fs, void *_base_vnode, const char *path, const ch
 		redir->path = path;
 		return 0;
 	}
+	if(path[0] != '\0' || stream[0] != '\0' || stream_type != STREAM_TYPE_DEVICE)
+		return ERR_VFS_PATH_NOT_FOUND;
 
 	stat->size = 0;
 	return 0;
@@ -87,9 +92,9 @@ static int rtl8139_read(void *_fs, void *_vnode, void *_cookie, void *buf, off_t
 	int err;
 	
 	if(*len < 1500)
-		return -1;
+		return ERR_VFS_INSUFFICIENT_BUF;
 	if(fs->rtl == NULL)
-		return -1;
+		return ERR_IO_ERROR;
 	err = rtl8139_rx(fs->rtl, buf, *len);
 	if(err < 0)
 		return err;
@@ -103,9 +108,9 @@ static int rtl8139_write(void *_fs, void *_vnode, void *_cookie, const void *buf
 	struct rtl8139_fs *fs = _fs;
 
 	if(*len > 1500)
-		return -1;
+		return ERR_VFS_INSUFFICIENT_BUF;
 	if(fs->rtl == NULL)
-		return -1;
+		return ERR_IO_ERROR;
 
 	rtl8139_xmit(fs->rtl, buf, *len);
 	return 0;
@@ -124,7 +129,7 @@ static int rtl8139_ioctl(void *_fs, void *_vnode, void *_cookie, int op, void *b
 				memcpy(buf, fs->rtl->mac_addr, sizeof(fs->rtl->mac_addr));
 				err = 0;
 			} else {
-				err = -1;
+				err = ERR_VFS_INSUFFICIENT_BUF;
 			}
 			break;
 		case 87912: // set the rtl pointer
@@ -132,7 +137,7 @@ static int rtl8139_ioctl(void *_fs, void *_vnode, void *_cookie, int op, void *b
 			err = 0;
 			break;
 		default:
-			err = -1;
+			err = ERR_INVALID_ARGS;
 	}
 	
 	
@@ -145,7 +150,7 @@ static int rtl8139_mount(void **fs_cookie, void *flags, void *covered_vnode, fs_
 
 	fs = kmalloc(sizeof(struct rtl8139_fs));
 	if(fs == NULL)
-		return -1;
+		return ERR_NO_MEMORY;
 
 	fs->covered_vnode = covered_vnode;
 	fs->redir_vnode = NULL;
@@ -217,7 +222,7 @@ int rtl8139_dev_init(kernel_args *ka)
 	if(rtl8139_detect(&rtl) < 0) {
 		// no rtl8139 here
 		dprintf("rtl8139_dev_init: no device found\n");
-		return -1;
+		return 0;
 	}
 	
 	rtl8139_init(rtl);

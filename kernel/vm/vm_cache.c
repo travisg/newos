@@ -11,6 +11,7 @@
 #include <kernel/debug.h>
 #include <kernel/lock.h>
 #include <kernel/arch/cpu.h>
+#include <sys/errors.h>
 
 vm_cache *vm_cache_create(vm_store *store)
 {

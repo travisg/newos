@@ -11,6 +11,7 @@
 #include <kernel/vm.h>
 #include <kernel/vfs.h>
 #include <kernel/khash.h>
+#include <sys/errors.h>
 
 #include <kernel/arch/cpu.h>
 #include <kernel/arch/int.h>
@@ -105,7 +106,7 @@ static int pcifs_delete_vnode(struct pcifs *fs, struct pcifs_vnode *v, bool forc
 	// cant delete it if it's in a directory or is a directory
 	// and has children
 	if(!force_delete && ((v->stream.type == STREAM_TYPE_DIR && v->stream.u.dir.dir_head != NULL) || v->dir_next != NULL)) {
-		return -1;
+		return ERR_NOT_ALLOWED;
 	}
 
 	// remove it from the global hash table
@@ -142,7 +143,7 @@ static struct pcifs_vnode *pcifs_find_in_dir(struct pcifs_vnode *dir, const char
 static int pcifs_insert_in_dir(struct pcifs_vnode *dir, struct pcifs_vnode *v)
 {
 	if(dir->stream.type != STREAM_TYPE_DIR)
-		return -1;
+		return ERR_INVALID_ARGS;
 
 	v->dir_next = dir->stream.u.dir.dir_head;
 	dir->stream.u.dir.dir_head = v;
@@ -309,13 +310,13 @@ static int pcifs_create_vnode_tree(struct pcifs *fs, struct pcifs_vnode *base)
 
 				new_vnode = pcifs_create_vnode(fs, "ctrl");
 				if(new_vnode == NULL)
-					return -1;
+					return ERR_NO_MEMORY;
 
 				// set up the new node
 				new_vnode->stream.name = kmalloc(strlen("") + 1);
 				if(new_vnode->stream.name == NULL) {
 					pcifs_delete_vnode(fs, new_vnode, true);
-					return -1;
+					return ERR_NO_MEMORY;
 				}
 				strcpy(new_vnode->stream.name, "");
 				new_vnode->stream.type = STREAM_TYPE_DEVICE;
@@ -352,7 +353,7 @@ static int pci_open(void *_fs, void *_base_vnode, const char *path, const char *
 
 	v = pcifs_get_vnode_from_path(fs, base, path, &start, &redir->redir);
 	if(v == NULL) {
-		err = -1;
+		err = ERR_VFS_PATH_NOT_FOUND;
 		goto err;
 	}
 	if(redir->redir == true) {
@@ -365,13 +366,13 @@ static int pci_open(void *_fs, void *_base_vnode, const char *path, const char *
 
 	s = pcifs_get_stream_from_vnode(v, stream, stream_type);
 	if(s == NULL) {
-		err = -1;
+		err = ERR_VFS_PATH_NOT_FOUND;
 		goto err;
 	}
 
 	cookie = kmalloc(sizeof(struct pcifs_cookie));
 	if(cookie == NULL) {
-		err = -1;
+		err = ERR_NO_MEMORY;
 		goto err;
 	}
 
@@ -418,18 +419,18 @@ static int pci_seek(void *_fs, void *_vnode, void *_cookie, off_t pos, seek_type
 					if(pos == 0) {
 						cookie->u.dir.ptr = cookie->s->u.dir.dir_head;
 					} else {
-						err = -1;
+						err = ERR_INVALID_ARGS;
 					}
 					break;
 				case SEEK_CUR:
 				case SEEK_END:
 				default:
-					err = -1;
+					err = ERR_INVALID_ARGS;
 			}
 			break;
 		case STREAM_TYPE_DEVICE:
 		default:
-			err = -1;
+			err = ERR_INVALID_ARGS;
 			break;
 	}
 
@@ -461,7 +462,7 @@ static int pci_create(void *_fs, void *_base_vnode, const char *path, const char
 
 	v = pcifs_get_vnode_from_path(fs, base, path, &start, &redir->redir);
 	if(v == NULL) {
-		err = -1;
+		err = ERR_VFS_PATH_NOT_FOUND;
 		goto err;
 	}
 	if(redir->redir == true) {
@@ -472,7 +473,7 @@ static int pci_create(void *_fs, void *_base_vnode, const char *path, const char
 		return 0;
 	}
 
-	err = -1;
+	err = ERR_VFS_READONLY_FS;
 
 err:	
 	mutex_unlock(&fs->lock);
@@ -493,7 +494,7 @@ static int pci_stat(void *_fs, void *_base_vnode, const char *path, const char *
 
 	v = pcifs_get_vnode_from_path(fs, base, path, &start, &redir->redir);
 	if(v == NULL) {
-		err = -1;
+		err = ERR_VFS_PATH_NOT_FOUND;
 		goto err;
 	}
 	if(redir->redir == true) {
@@ -534,7 +535,7 @@ static int pci_read(void *_fs, void *_vnode, void *_cookie, void *buf, off_t pos
 
 			if(strlen(cookie->u.dir.ptr->name) + 1 > *len) {
 				*len = 0;
-				err = -1;
+				err = ERR_VFS_INSUFFICIENT_BUF;
 				goto err;
 			}
 			
@@ -545,7 +546,7 @@ static int pci_read(void *_fs, void *_vnode, void *_cookie, void *buf, off_t pos
 			break;
 		}
 		default:
-			err = -1;
+			err = ERR_INVALID_ARGS;
 	}
 err:
 	mutex_unlock(&fs->lock);
@@ -558,7 +559,7 @@ static int pci_write(void *_fs, void *_vnode, void *_cookie, const void *buf, of
 	dprintf("pci_write: entry, len = %d\n", *len);
 
 	*len = 0;
-	return 0;
+	return ERR_VFS_READONLY_FS;
 }
 
 static int pci_ioctl(void *_fs, void *_vnode, void *_cookie, int op, void *buf, size_t len)
@@ -582,7 +583,7 @@ static int pci_ioctl(void *_fs, void *_vnode, void *_cookie, int op, void *buf, 
 			dump_pci_config(v->stream.u.dev.cfg);
 			break;
 		default:
-			err = -1;
+			err = ERR_INVALID_ARGS;
 			goto err;
 	}
 
@@ -599,7 +600,7 @@ static int pci_mount(void **fs_cookie, void *flags, void *covered_vnode, fs_id i
 
 	fs = kmalloc(sizeof(struct pcifs));
 	if(fs == NULL) {
-		err = -1;
+		err = ERR_NO_MEMORY;
 		goto err;
 	}
 
@@ -609,21 +610,20 @@ static int pci_mount(void **fs_cookie, void *flags, void *covered_vnode, fs_id i
 
 	err = mutex_init(&fs->lock, "pci_mutex");
 	if(err < 0) {
-		err = -1;
 		goto err1;
 	}
 
 	fs->vnode_list_hash = hash_init(PCIFS_HASH_SIZE, (addr)&v->all_next - (addr)v,
 		NULL, &pcifs_vnode_hash_func);
 	if(fs->vnode_list_hash == NULL) {
-		err = -1;
+		err = ERR_NO_MEMORY;
 		goto err2;
 	}
 
 	// create a vnode
 	v = pcifs_create_vnode(fs, "");
 	if(v == NULL) {
-		err = -1;
+		err = ERR_NO_MEMORY;
 		goto err3;
 	}
 
@@ -633,7 +633,7 @@ static int pci_mount(void **fs_cookie, void *flags, void *covered_vnode, fs_id i
 	// create a dir stream for it to hold
 	v->stream.name = kmalloc(strlen("") + 1);
 	if(v->stream.name == NULL) {
-		err = -1;
+		err = ERR_NO_MEMORY;
 		goto err4;
 	}
 	strcpy(v->stream.name, "");
@@ -645,7 +645,6 @@ static int pci_mount(void **fs_cookie, void *flags, void *covered_vnode, fs_id i
 
 	err = pcifs_create_vnode_tree(fs, fs->root_vnode);
 	if(err < 0) {
-		err = -1;
 		goto err4;
 	}
 

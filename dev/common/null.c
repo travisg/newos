@@ -6,6 +6,7 @@
 #include <boot/stage2.h>
 #include <kernel/heap.h>
 #include <kernel/vfs.h>
+#include <sys/errors.h>
 
 struct null_fs {
 	fs_id id;
@@ -35,7 +36,7 @@ static int null_open(void *_fs, void *_base_vnode, const char *path, const char 
 
 static int null_seek(void *_fs, void *_vnode, void *_cookie, off_t pos, seek_type seek_type)
 {
-	return -1;
+	return ERR_NOT_ALLOWED;
 }
 
 static int null_close(void *_fs, void *_vnode, void *_cookie)
@@ -56,7 +57,7 @@ static int null_create(void *_fs, void *_base_vnode, const char *path, const cha
 		return 0;
 	}
 	
-	return -1;
+	return ERR_VFS_READONLY_FS;
 }
 
 static int null_stat(void *_fs, void *_base_vnode, const char *path, const char *stream, stream_type stream_type, struct vnode_stat *stat, struct redir_struct *redir)
@@ -89,7 +90,7 @@ static int null_write(void *_fs, void *_vnode, void *_cookie, const void *buf, o
 
 static int null_ioctl(void *_fs, void *_vnode, void *_cookie, int op, void *buf, size_t len)
 {
-	return -1;
+	return ERR_INVALID_ARGS;
 }
 
 static int null_mount(void **fs_cookie, void *flags, void *covered_vnode, fs_id id, void **root_vnode)
@@ -98,7 +99,7 @@ static int null_mount(void **fs_cookie, void *flags, void *covered_vnode, fs_id 
 
 	fs = kmalloc(sizeof(struct null_fs));
 	if(fs == NULL)
-		return -1;
+		return ERR_NO_MEMORY;
 
 	fs->covered_vnode = covered_vnode;
 	fs->redir_vnode = NULL;

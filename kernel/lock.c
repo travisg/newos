@@ -7,17 +7,18 @@
 #include <kernel/lock.h>
 #include <kernel/debug.h>
 #include <kernel/arch/cpu.h>
+#include <sys/errors.h>
 
 int recursive_lock_create(recursive_lock *lock)
 {
 	if(lock == NULL)
-		return -1;
+		return ERR_INVALID_ARGS;
 	lock->holder = -1;
 	lock->recursion = 0;
 	lock->sem = sem_create(1, "recursive_lock_sem");
 //	if(lock->sem < 0)
 //		return -1;
-	return 0;
+	return NO_ERROR;
 }
 
 void recursive_lock_destroy(recursive_lock *lock)
@@ -65,7 +66,7 @@ int mutex_init(mutex *m, const char *in_name)
 	const char *name;
 
 	if(m == NULL)
-		return -1;
+		return ERR_INVALID_ARGS;
 
 	if(in_name == NULL)
 		name = "mutex_sem";

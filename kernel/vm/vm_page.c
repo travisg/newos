@@ -12,6 +12,7 @@
 #include <kernel/int.h>
 #include <kernel/thread.h>
 #include <kernel/smp.h>
+#include <sys/errors.h>
 #include <boot/stage2.h>
 
 #include <libc/string.h>
@@ -248,12 +249,12 @@ int vm_mark_page_range_inuse(addr start_page, addr len)
 
 	if(physical_page_offset > start_page) {
 		dprintf("vm_mark_page_range_inuse: start page %d is before free list\n");
-		return -1;
+		return ERR_INVALID_ARGS;
 	}
 	start_page -= physical_page_offset;
 	if(start_page + len >= num_pages) {
 		dprintf("vm_mark_page_range_inuse: range would extend past free list\n");
-		return -1;
+		return ERR_INVALID_ARGS;
 	}
 
 	state = int_disable_interrupts();

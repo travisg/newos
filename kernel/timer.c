@@ -10,6 +10,7 @@
 #include <kernel/smp.h>
 #include <kernel/vm.h>
 #include <kernel/timer.h>
+#include <sys/errors.h>
 #include <boot/stage2.h>
 
 #include <kernel/arch/cpu.h>
@@ -118,7 +119,7 @@ int timer_set_event(time_t relative_time, timer_mode mode, struct timer_event *e
 	int curr_cpu;
 	
 	if(event == NULL)
-		return -1;
+		return ERR_INVALID_ARGS;
 
 	if(event->sched_time != 0)
 		panic("timer_set_event: event 0x%x in list already!\n", event);
@@ -206,5 +207,5 @@ done:
 	release_spinlock(&timer_spinlock[curr_cpu]);
 	int_restore_interrupts(state);
 	
-	return (foundit ? 0 : -1);
+	return (foundit ? 0 : ERR_GENERAL);
 }
