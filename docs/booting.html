@@ -1,0 +1,50 @@
+<html>
+<head>
+<title>The NewOS Operating System: Docs</title>
+</head>
+<body BGCOLOR="#FFFFFF">
+
+<h1 align="center">Booting NewOS</h1>
+
+<hr>
+
+<hr>
+
+<table border="0" width="100%" bgcolor="#E8E8E8">
+ <tr>
+  <td width="100%" height="100%" valign="top" align="left">
+  <ul>
+  Booting on an x86 is relatively easy. Take a built binary, should be called 
+  'final.i386' or take the .flp file from the web site and simply copy it onto 
+  the raw floppy. For info on how to do this, read on.
+  <br>
+  <br>
+  To put the image file directly onto a floppy, you need to use either 'dd' if 
+  running a *nix or 'rawrite' if under windows.
+  <br>
+  <br>
+  Linux/FreeBSD example:<br>
+  dd if=final.i386 of=/dev/fd0 bs=18k
+  <br>
+  <br>
+  Rawrite can be found all over the internet and is pretty self-explanatory.	
+  </td>
+ </tr>
+</table>
+
+<hr>
+
+<table border="1" width="100%" bgcolor="#D9D5FF">
+ <tr> 
+  <td width="100%" height="49" valign="top" align="center"><small><font color="#000000">This
+   page copyright 2002 </font></small><font size="2">© <a href="mailto:geist@newos.org">Travis
+   Geiselbrecht</a><br>
+   Any questions, comments, gripes, whatever: 
+   <a href="mailto:geist@newos.org">geist@newos.org</a></font>
+  </td>
+ </tr>
+</table>
+		   
+</body>
+</html>
+

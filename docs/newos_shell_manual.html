@@ -1,486 +1,370 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html>
 <head>
-                                                               
-  <meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
-  <title>newos shell manual</title>
+<title>The NewOS Operating System: Docs</title>
 </head>
-  <body>
-                         
-<div align="Center">            
-<table cellpadding="2" cellspacing="2" border="1" width="100%">
-              <tbody>
-                <tr>
-                  <td valign="Top" align="Center"><big><big>NEWOS SHELL SCRIPT<br>
-                  <small><small><small>VERSION 0.2-PRE 1</small></small></small></big></big><br>
-                  </td>
-                </tr>
-                                               
-  </tbody>            
+<body BGCOLOR="#FFFFFF">
+
+<h1 align="center">NewOS shell manual<br>Version 0.2-pre 1</h1>
+
+<hr>
+
+<hr>
+
+<table border="0" width="100%" bgcolor="#E8E8E8">
+ <tr>
+  <td width="100%" height="100%" valign="top" align="left">
+   <center><h3>Contents</h3></center>
+   <ol>
+    <li><a href="#What_is_missing">What is missing</a></li>
+    <li><a href="#Running_a_shell_script">The shell</a></li>
+    <ol>
+     <li><a href="#Running_a_shell_script">Running a shell script</a>
+    </ol>
+    <li><a href="#Introduction">Introduction</a></li>
+    <li><a href="#Variables">Variables</a></li>
+    <ol>
+     <li><a href="#Variable_Syntax">Syntax</a></li>
+     <li><a href="#Strings">Numbers and Strings</a></li>
+     <li><a href="#Build_in_variables">Build in variables</a></li>
+    </ol>
+    <li><a href="#Operators">Operators</a></li>
+    <li><a href="#Functions">Functions</a></li>
+    <ol>
+     <li><a href="#exec_function">exec</a></li>
+     <li><a href="#casting">type casting</a></li>
+    </ol>
+    <li><a href="#Statements">Statements</a></li>
+    <ol>
+     <li><a href="#Comments">Comments</a></li>
+     <li><a href="#exec">exec</a></li>
+     <li><a href="#exit">exit</a></li>
+     <li><a href="#goto">goto</a></li>
+     <li><a href="#if">if</a></li>
+     <li><a href="#labels">label</a></li>
+    </ol>
+   </ol>
+  </td>
+ </tr>
 </table>
-            <br>
-             <br>
-                         
-<div align="Left"><b>Content</b>s<br>
-                         
-<ol>
-               <li><a href="#What_is_missing">What is missing</a>
-                 <br>
-               </li>
-               <li><a href="#Running_a_shell_script">The shell</a>
-               </li>
-                                                   
-  <ol>
-                 <li><a href="#Running_a_shell_script">Running a shell script</a>
-         </li>
-                                                   
-  </ol>
-               <li><a href="Introduction">Introduction</a>
-         <br>
-       </li>
-       <li><a href="#Variables">Variables</a>
-               </li>
-                                                   
-  <ol>
-                <li><a href="#Variable_Syntax">Syntax</a>
-                </li>
-                <li><a href="#Strings">Numbers and Strings</a>
-                  <br>
-                </li>
-                <li><a href="#Build_in_variables">Build in variables</a>
-                   <br>
-                 </li>
-                                                   
-  </ol>
-               <li><a href="#Operators">Operators</a>
-               </li>
-               <li><a href="#Functions">Functions</a>
-              </li>
-                                               
-  <ol>
-                <li><a href="#exec_function">exec</a>
-                </li>
-                <li><a href="#casting">type casting</a>
-                  <br>
-               </li>
-                                               
-  </ol>
-               <li><a href="#Statements">Statements</a>
-               </li>
-                                                   
-  <ol>
-                 <li><a href="Comments">Comments</a>
-              <br>
-            </li>
-            <li><a href="#exec">exec</a>
-                 </li>
-                 <li><a href="#exit">exit</a>
-                   <br>
-                 </li>
-                 <li><a href="#goto">goto</a>
-                 </li>
-                 <li><a href="#if">if</a>
-                 </li>
-                 <li><a href="#labels">label</a>
-          </li>
-                                                   
-  </ol>
-                         
-</ol>
-           
-<hr width="100%" size="2"><br>
-                         
-<div align="Center">             
-<table cellpadding="2" cellspacing="2" border="0" width="100%" bgcolor="#99ff99">
-               <tbody>
-                 <tr>
-                   <td valign="Top" align="Center"><big><b><a name="What_is_missing"></a>
-                   <small>What is missing       </small></b></big><br>
-                   </td>
-                 </tr>
-                                                   
-  </tbody>             
+
+<hr>
+
+<table border="0" width="100%" bgcolor="#E8E8E8">
+ <tr>
+  <td width="100%" height="100%" valign="top" align="left">
+   <a name="What_is_missing"></a>
+   <center><h3>What is missing</h3></center>
+   The following features are missing but are added in the next release:<br>
+   <ul>
+    <li>And,or,xor</li>
+    <li>Output redirection of 'echo' statement</li>
+    <li>else?</li>
+    <li>not operator?</li>
+    <li>More...</li>
+   </ul>
+  </td>
+ </tr>
 </table>
-             </div>
-             The following features are missing but are added in the next 
-release:<br>
-                       
-<ul>
-              <li>And,or,xor</li>
-              <li>Output redirection of 'echo' statement</li>
-      <li>else?</li>
-      <li>not operator?<br>
-      </li>
-       <li>More...<br>
-              </li>
-                       
-</ul>
-             <br>
-                         
-<table cellpadding="2" cellspacing="2" border="0" width="100%" bgcolor="#99ff99">
-               <tbody>
-                 <tr>
-                   <td valign="Top" align="Center"><b><a name="The_shell"></a>
-                The shell</b><br>
-                   </td>
-                 </tr>
-                                                   
-  </tbody>             
+
+<hr>
+
+<table border="0" width="100%" bgcolor="#E8E8E8">
+ <tr>
+  <td width="100%" height="100%" valign="top" align="left">
+   <a name="The_shell"></a>
+   <center><h3>The shell</h3></center>
+   <b>Command line options</b><br><br>
+   &nbsp;&nbsp;&nbsp;shell [-s] [&lt;script_name&gt; &lt;arguments&gt;]<br><br>
+   When the &lt;script_name&gt; is given as parameters the shell starts
+   the interpretor and  runs the script otherwise the shell starts an 
+   interactive session.All options before &nbsp;the script name are handled 
+   as shell parameters. An option is everything which   starts with a '-'.<br>
+   The script name is placed in the variable $p0 and the flowing &lt;arguments&gt;
+   are &nbsp;placed in $p1..$p??. $argc contains the number of arguments. The
+   path in $path is used as search path for the script. The $path value is&nbsp;
+   hard coded in the shell.<br>
+   By default the shell exits after when&nbsp; the script ends, but with
+   the '-s' option   the shell starts an interactive session.<br>
+  </td>
+ </tr>
 </table>
-             <br>
-             <small> <big><b>Commandline options<br>
-             </b></big><big><br>
-            </big><big> shell [-s] [&lt;script_name&gt; &lt;arguments&gt;]</big><big><br>
-            </big> <big><br>
-     When the &lt;script_name&gt; is given as parameters the shell starts 
-the interpretor and  runs the script<br>
-     otherwise the shell starts an interactive session.All options before 
-&nbsp;the   script name are handled as shell parameters. An option is everything 
-wich   starts with a '-'.<br>
-     The script name is placed in the variable $p0 and the flowing &lt;arguments&gt; 
-  are &nbsp;placed in $p1..$p??. $argc contains the number of arguments. The
-  path in $path is used as search path for the script. The $path value is&nbsp;
-hardcoded in the shell.<br>
-     By default the shell exits after when&nbsp; the script ends, but with
-the '-s' option   the shell starts an interactive session.<br>
-            </big><br>
-     <br>
-             </small>      
-<table cellpadding="2" cellspacing="2" border="0" width="100%" bgcolor="#99ff99">
-        <tbody>
-          <tr>
-            <td valign="Top" align="Center"><b><a name="Introduction"></a>
-     Script language Introduction</b><br>
-            </td>
-          </tr>
-                       
-  </tbody>      
-</table>
-      <small><b><br>
-     </b><big>The shell script language has the following features:<br>
-     </big></small>     
-<ul>
-       <li>Case sensetive</li>
-       <li>Identifier names:<br>
-     Starts with a alphabetic symbol and a number,alphabatic or a '_'  symbols
- can follow.<br>
-  Variabels :$&lt;identifier_name&gt;<br>
-  Label : &lt;identifier_name&gt;:<br>
+
+<hr>
+
+<table border="0" width="100%" bgcolor="#E8E8E8">
+ <tr>
+  <td width="100%" height="100%" valign="top" align="left">
+   <a name="Introduction"></a>
+   <center><h3>Script language Introduction</h3></center>
+   The shell script language has the following features:<br>
+   <ul>
+    <li>Case sensitive</li>
+    <li>Identifier names:<br>
+      Starts with a alphabetic symbol and a number,alphabetic or a '_'  symbols
+      can follow.<br>
+      Variables :$&lt;identifier_name&gt;<br>
+      Label : &lt;identifier_name&gt;:
     </li>
-       <li>if, goto</li>
+    <li>if, goto</li>
     <li>Formula's</li>
-    <li>etc...<br>
-       </li>
-         
-</ul>
-     <small><big><br>
-     </big></small><small><br>
-     <br>
-             </small>             
-<table cellpadding="2" cellspacing="2" border="0" width="100%">
-               <tbody>
-                 <tr>
-                   <td valign="Top" bgcolor="#99ff99" align="Center"><small><big><b><a name="Variables"></a>
-                Variables</b></big></small><br>
-                   </td>
-                 </tr>
-                                                   
-  </tbody>             
+    <li>etc...</li>
+   </ul>
+  </td>
+ </tr>
 </table>
-             <small><big><b><br>
-             <small><a name="Variable_Syntax"></a>
-             S<big>yntax</big><big><br>
-            </big> </small></b><small><big><br>
-      The syntax of a variable name is $&lt;Idenifier&gt;.<br>
-     $a=&lt;value&gt; , defines a variable. <br>
-     A variable can't be removed yet.<br>
-     When a new script is started the variables are not shared with the new
-proces.</big></small><b><small><br>
-  <big><br>
-            </big> <big><a name="Strings"></a>
-            </big><big> Number and Strings</big><big><br>
-            </big> </small></b><big><br>
-    <small>Numbers are stored and handled as&nbsp; 64 bit signed integers<br>
-    <br>
-    </small></big></big></small>Strings can start and end with single or
-double   qoutes. In double qouted strings varables (starting with a $) are
-substituted   by their value.<br>
-    <small><big><big>        <small>The shell variabels doesn't have a type,
-  it can contain a string    or a number.</small><br>
-            </big></big></small><big><small>It is not po</small></big>ssible 
- to  mix   strings and numbers in formula's. More info :<a href="#Operators">
-Operators</a>
-            <br>
-When a value is a string or a number, depends on how they are defined   an
- not   on their contents:<br>
-            <br>
-            $a='1', &nbsp; $a contains a string.<br>
-            <br>
-            $b= 1 , &nbsp; $b contains a number<br>
-            <br>
-            $c=$a+$b this failes because $a contains a string and $b contains 
-  a  number.<br>
-            <small><big><big><br>
-            </big><b><big><br>
-            </big> <small><big><a name="Build_in_variables"></a>
-            </big><big>   Build in variables</big><br>
-             </small></b></big></small>             
-<table cellpadding="2" cellspacing="2" border="1" width="100%">
-               <tbody>
-                 <tr>
-                   <td valign="Top">$path<br>
-                   </td>
-                   <td valign="Top">Search path for programs<br>
-                   </td>
-                 </tr>
-                 <tr>
-                   <td valign="Top">$argc<br>
-                   </td>
-                   <td valign="Top">number of arguments<br>
-                   </td>
-                 </tr>
-                 <tr>
-                   <td valign="Top">$p0<br>
-                   </td>
-                   <td valign="Top">Parameter 0, wich is the script file
-name<br>
-                   </td>
-                 </tr>
-                 <tr>
-                   <td valign="Top">$p1...p&lt;no&gt;<br>
-                   </td>
-                   <td valign="Top">Script parameters<br>
-                   </td>
-                 </tr>
-                                                   
-  </tbody>             
+
+<hr>
+
+<table border="0" width="100%" bgcolor="#E8E8E8">
+ <tr>
+  <td width="100%" height="100%" valign="top" align="left">
+   <a name="Variables"></a>
+   <center><h3>Variables</h3></center>
+   <a name="Variable_Syntax"></a>
+   <b>Syntax</b><br>
+   The syntax of a variable name is $&lt;Identifier&gt;.<br> 
+   $a=&lt;value&gt; , defines a variable. <br>
+   A variable can't be removed yet.<br>
+   When a new script is started the variables are not shared with the new process.
+   <br><br>
+   <a name="Strings"></a>
+   <b>Numbers and Strings</b><br>
+   Numbers are stored and handled as&nbsp; 64 bit signed integers<br>
+   <br>
+   Strings can start and end with single or double quotes. In double quoted strings 
+   variables (starting with a $) are substituted by their value.<br>
+   The shell variables doesn't have a type, it can contain a string or a number.<br>
+   It is not possible to mix strings and numbers in formula's. More info:
+   <a href="#Operators">Operators</a>
+   When a value is a string or a number, depends on how they are defined and not
+   on their contents:<br>
+   <br>
+   $a='1', &nbsp; $a contains a string.<br>
+   <br>
+   $b= 1 , &nbsp; $b contains a number<br>
+   <br>
+   $c=$a+$b this fails because $a contains a string and $b contains a number.<br>
+   <br>
+   <a name="Build_in_variables"></a>
+   <b>Built in variables</b><br>
+   <table cellpadding="2" cellspacing="2" border="1" width="100%">
+    <tr>
+     <td valign="Top">$path</td>
+     <td valign="Top">Search path for programs</td>
+    </tr>
+    <tr>
+     <td valign="Top">$argc</td>
+     <td valign="Top">number of arguments</td>
+    </tr>
+    <tr>
+     <td valign="Top">$p0</td>
+     <td valign="Top">Parameter 0, which is the script filename</td>
+    </tr>
+    <tr>
+     <td valign="Top">$p1...p&lt;no&gt;</td>
+     <td valign="Top">Script parameters</td>
+    </tr>
+   </table>
+   <b>Note:</b><br>
+   Parameters are stored as strings. When parameters are used with numbers 
+   they must be cast:<br>
+   <br>
+   <b>if(number($p1) == 1) goto the_end</b><br>
+   or<br>
+   <b>if($p1 == "1") goto the_end</b><br>
+   following will fail:<br>
+   <b>if($p1 == 1) goto the_end</b><br>
+  </td>
+ </tr>
 </table>
-             <small><big><b><small><br>
-            <big>Note:</big><br>
-            <br>
-            </small></b><small><big>Parameters are stored as strings. When
- parameters      are used with numbers they must be casted:<br>
-            <br>
-            <b>if(number($p1) == 1) goto the_end</b><br>
-            <br>
-            or<br>
-            <br>
-            <b>if($p1 == "1") goto the_end</b><br>
-            <br>
-            following will fail:<br>
-            <br>
-            <b>if($p1 == 1) goto the_end</b><br>
-            </big><br>
-            </small><b><small> </small><br>
-             </b></big></small>             
-<table cellpadding="2" cellspacing="2" border="0" width="100%" bgcolor="#99ff99">
-               <tbody>
-                 <tr>
-                   <td valign="Top" align="Center"><big><b><a name="Operators"></a>
-                Operators</b></big><br>
-                   </td>
-                 </tr>
-                                                   
-  </tbody>             
+
+<hr>
+
+<table border="0" width="100%" bgcolor="#E8E8E8">
+ <tr>
+  <td width="100%" height="100%" valign="top" align="left">
+   <a name="Operators"></a>
+   <center><h3>Operators</h3></center>
+   In the NewOS shell script language it is possible to write formulas the 
+   same way as in most   modern  programming languages.<br> 
+   The shell can handle the following operators:<br>
+        +, -, /, *, =, &lt;=, =, =&gt;, &lt;, &gt;, !=, ==<br>
+   <br>
+   All operators can be used with numerical values, and are calculated
+   as integers.<br>
+   String values can only be used with the compare operators(=,&lt;=,=&gt; etc..)
+   and the load operator(=).<br>
+   The compare operator returns a value 1 or 0 for true of false<br>
+   It is not possible to mix strings and numbers in formulas, the program fails with 
+   an error messages. But a string can be <a href="cast">cast</a> into a number 
+   or vice versa<br>
+   This is neccesary because some operator handle strings different as numbers :<br>
+   <ul>
+    <li>10&gt;2 is true</li>
+    <li>"10"&gt;"2" is false</li>
+   </ul>
+  </td>
+ </tr>
 </table>
-             <small><big><b><br>
-             </b>In the newos shell script langauge it is possible to write
-formulas the same way as in most   modern  programming languages.<br>
-    The shell can handle the following operators:<br>
-    +,-,/,*, =,&lt;= ,= ,=&gt; ,&lt; ,&gt; ,!=,==<br>
-    <br>
-    <br>
-    All opperators can be used with numerical values, and are calculated
-as integers.<br>
-    String values can only be used with the compare operators(=,&lt;=,=&gt; 
-etc..)  and the<br>
-    load operator(=).<br>
-    The compare operator returns a value 1 or 0 for true of false</big></small><br>
-            It is not possible to mix strings and numbers in formulas, the
- program     fails  with an error messages. But a string can be&nbsp; <a href="cast">
-      casted</a>
-            &nbsp; into a number or vice versa<br>
-            <small><big>This is neccesary because some operator handle strings
-different as nunbers :<br>
-</big></small>
-<ul>
-  <li><small><big>10&gt;2 is true</big></small></li>
-</ul>
-<small></small>
-<ul>
-  <li>"10"&gt;"2" is false</li>
-</ul>
-<small><big><br>
-            <b><br>
-             <br>
-            </b></big></small>            
-<table cellpadding="2" cellspacing="2" border="0" width="100%" bgcolor="#99ff99">
-              <tbody>
-                <tr>
-                  <td valign="Top" align="Center"><small><big><b><a name="Functions"></a>
-                  <big>    Functions</big></b></big></small><br>
-                  </td>
-                </tr>
-                                               
-  </tbody>            
+
+<hr>
+
+<table border="0" width="100%" bgcolor="#E8E8E8">
+ <tr>
+  <td width="100%" height="100%" valign="top" align="left">
+   <a name="Functions"></a>
+   <center><h3>Functions</h3></center>
+   <a name="exec_function"></a>
+   <b>exec</b><br>
+   <br>
+   <u>syntax:</u><br>
+   <br>
+   <b>exec(</b>&lt;string expression&gt;)<br>
+   <br>
+   <u>description:</u><br>
+   <br>
+   The exec function starts program in &lt;string expression&gt; (which is
+   the program name and parameters), waits until the process terminates and returns 
+   the exit value.  When filename is not found the execution of the script terminates
+   with an error  message.<br>
+   This 'exec' function is using the &nbsp;path in $path as search path.<br>
+   <br>
+   <u>examples:</u><br>
+   $program="shell $p0"<br>
+   $result=exec($program)<br>
+   <br>
+   or<br>
+   <br>
+   $result=exec("shell /boot/bin/initX")<br>
+   <br>
+
+   <a name="casting"></a>
+   <b>type casting: number() and string()</b><br>
+   <br>
+   <u>syntax</u><br>
+   &nbsp;&nbsp;&nbsp; number(&lt;expression&gt;)<br>
+   &nbsp;&nbsp;&nbsp; string(&lt;expression&gt;)<br>
+   <br>
+   The shell makes a distinction between strings &nbsp;and number. '1' is a 
+   string all though it contains a number.<br>
+   <b>number('1')</b> casts the string into a number. <br>
+   <br>
+   <b>string </b>converts a number to a string.<br>
+   <br>
+   <u>examples</u><br>
+   <br>
+   $a=2<br>
+   if($p1==$a+1) goto somewhere<br>
+   <br>
+   Fails because &nbsp;parameters($p1) is always a string, this should be:<br>
+   <br>
+   $a=2<br>
+   if($p1==string($a+1)) goto somewhere<br>
+   <br>
+   or<br>
+   <br>
+   $a=2<br>
+   if(number($p1)==$a+1) goto somewhere<br>
+   <br>
+   The difference between the last 2 examples is that the 'number' cast fails 
+   when $p1 doesn't contain a valid number.
+  </td>
+ </tr>
 </table>
-            <small><big><b><br>
-             <a name="exec_function"></a>
-            exec<br>
-    </b><br>
-  <br>
-  <u>  syntax:</u><br>
-    <br>
-    <b>exec(</b>&lt;string expression&gt;)<br>
-    <br>
-  <u>description:</u><br>
-  <br>
-    The exec function starts program in &lt;string expression&gt; (wich is
- the  program name <br>
-    and parameters), waits until the process terminates and returns the exit
-value.  When  file name is not found the execution of the script terminates
-with an error  message.<br>
-    This 'exec' function is using the &nbsp;path in $path as seatch path.<br>
-    <br>
-  <u>examples:</u><br>
-    <b><br>
-  <br>
-  </b>$program="shell $p0"<br>
-  $result=exec($program)<br>
-<br>
-or<br>
-<br>
-$result=exec("shell /boot/bin/initX")<br>
-  <b><br>
-            <a name="casting"></a>
-            type casting: number() and string()<br>
-            <br>
-            </b><u>syntax</u><br>
-            &nbsp;&nbsp;&nbsp; number(&lt;expression&gt;)<br>
-            &nbsp;&nbsp;&nbsp; string(&lt;expression&gt;)<br>
-            <br>
-            The shell makes a distinction between strings &nbsp;and number
- . '1' is a string allthough     it contains a number.<br>
-            <b>number('1')</b> casts the string into a number. <br>
-           <br>
-  <b>string </b>converts a number to a string.<br>
-  <br>
-  <u>examples</u><br>
-  <br>
-  <b>$a=2</b><br>
-           <b>if($p1==$a+1) goto somewhere<br>
-           </b><b><br>
-           </b>Failes because &nbsp;parameters($p1) are allways string.,
-this   should    be:<br>
-           <br>
-  <b>$a=2</b><br>
-           <b>if($p1==string($a+1)) goto somewhere</b><br>
-            <b><br>
-  or<br>
-  <br>
-  $a=2<br>
-  if(number($p1)==$a+1) goto somewhere<br>
-             <big><br>
-  </big></b><big><small>The difference between the last 2 examples is that
- the 'number' cast failes when $p1 doesn't contain a valid number.</small><br>
-  </big></big></small>          
-<table cellpadding="2" cellspacing="2" border="0" width="100%">
-            <tbody>
-              <tr>
-                <td valign="Top" bgcolor="#99ff99" align="Center"><b><a name="Statements"></a>
-             S<big>tatements</big></b><br>
-                </td>
-              </tr>
-                                       
-  </tbody>          
+
+<hr>
+
+<table border="0" width="100%" bgcolor="#E8E8E8">
+ <tr>
+  <td width="100%" height="100%" valign="top" align="left">
+   <a name="Statements"></a>
+   <center><h3>Statements</h3></center>
+   <a name="Comments"></a>
+   <b>Comments</b><br>
+   Comments always start with the '#' character end at the line end.<br>
+   <br>
+
+   <a name="exec"></a>
+   <b>exec</b><br>
+   <u>Syntax:</u><br>
+   &nbsp; &nbsp; &nbsp;[<b>exec</b>] &lt;program_name&gt; &lt;options&gt;<br>
+   <br>
+   <u>description:</u><br>
+   This command starts another process and executes a binary program.<br>
+   A program can also started by just using the &lt;program_name&gt;. The exec 
+   statement is optional but when the &lt;program_name&gt; is a detemened by 
+   a variable the 'exec' statements must be used.<br>
+   <br>
+   The exec statement can have the following 'options':<br>
+   <ul>
+    <li>'&amp;' at the end: The shell doesn't wait until the process ends</li>
+    <li>Output redirection</li>
+   </ul>
+   <u>Examples</u><br>
+   $texteditor = "word"<br>
+   if($no_ms) $texteditor="vi"<br>
+   exec $texteditor $p1<br>
+   <br>
+   <a name="exit"></a>
+   <b>exit</b><br>
+   <u>Syntax:</u><br
+   &nbsp; &nbsp; &nbsp;<b>exit</b> [(&lt;expression&gt;)]<br>
+   <br>
+   <u>description:</u><br>
+   The program exits with exit value &lt;expression&gt;.<br>
+   <br>
+   When script is started without the -s option the shell always exits 
+   after the script ends.<br>
+   When no expression is given, the exit code is 0.<br>
+   Expression must be a number.<br>
+   <br>
+
+   <a name="goto"></a>
+   <b>goto</b><br>
+   <u>Syntax:</u><br>
+   &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;<b>goto</b> &lt;label_name&gt;<br>
+   <br>
+   <u>description:</u><br>
+   After the 'goto' statement the program execution starts after the label 
+   &lt;label_name&gt;.<br>
+   When label can't be found, the program fails with 'label not found' error.<br>
+   <br>
+
+   <a name="if"></a>
+   <b>if</b><br>
+   <u>Syntax:</u><br>
+   &nbsp; &nbsp; &nbsp; &nbsp; <b>if</b>(&lt;expression&gt;) &lt;statement&gt;<br>
+   <br>
+   <u>description:</u><br>
+   &lt;statement&gt; is executed when &lt;expression&gt; &lt;&gt; 0<br>
+   Only one statement can follow 'if'.<br>
+   <br>
+
+   <a name="labels"></a>
+   <b>labels</b><br>
+   <u>Syntax:</u><br>
+   &nbsp; &nbsp; &nbsp; &lt;label_name&gt;:<br>
+   <br>
+   <u>Note:</u><br>
+   The script file is not yet checked for duplicate labels.
+  </td>
+ </tr>
 </table>
-          <small><big><b><big><a name="Comments"></a>
-       </big>Comments<br>
-    <br>
-    </b>Comments allways start with the '#' character end at the line end.<b><br>
-    <br>
-             <small><a name="exec"></a>
-                <big>exec<br>
-    <br>
-    </big></small></b><small><big><u>Syntax:</u><br>
-    <br>
-    &nbsp; &nbsp; &nbsp;[<b>exec] </b>&lt;program_name&gt; &lt;options&gt;<br>
-    <br>
-<u>    description:</u><br>
-    <br>
-    This command starts another process and executes a binary program.<br>
-    A program can also started by just using the &lt;program_name&gt;. The
-exec statement<br>
-is optional but &nbsp;when the &lt;program_name&gt; is a detemend by the&nbsp;
-a variable  the  'exec' statements must be used.<br>
- </big></small></big></small><small><big><small><big>   The exec statement 
-can have the following 'options':</big></small></big></small><br>
- 
-<ul>
-   <li>'&amp;' at the end: The shell doesn't wait until the process ends</li>
- 
-</ul>
-<ul>
-  <li>Output redirection</li>
-</ul>
-  <u>Examples</u><br>
-<br>
-$texteditor = "word"<br>
-if($no_ms) $texteditor="vi"<br>
-exec $texteditor $p1<br>
-<br>
-<big><b><small>&nbsp; <big><a name="exit"></a>
-            </big><big>    exit</big></small></b></big><br>
-<big><b><small><big>      </big></small></b><u><small><small><big>Syntax:</big></small></small></u></big><u><small><br>
-</small></u><small><big>      &nbsp; &nbsp; &nbsp; &nbsp; <b>exit</b>[<b>
-(</b> &lt;expression&gt;)]</big></small><small><br>
-</small><small><big><br>
-<u>Description:</u></big></small><u><small><br>
-</small></u><small><big>      &nbsp; &nbsp; &nbsp; &nbsp;The program exits 
-with exit value &lt;expression&gt;.    </big></small><small><br>
-</small><small><big>      When &nbsp;script is started without the -s option
-the shell allways  exits   after the script ends.</big></small><br>
-When no expression is given, the exit code is 0.<br>
-Expression must be a number.<br>
-<br>
-<big><b><small><big>           </big> <big><a name="goto"></a>
-            </big><big>    goto</big></small></b></big><br>
-<big><b><small><big>      </big></small></b><small><small><big><br>
-<u>Syntax:</u></big></small></small></big><u><small><br>
-</small></u><small><big>      &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;<b>goto</b>
-  &lt;label_name&gt;</big></small><small><br>
-</small><br>
-<small><br>
-</small><u><small><big>Description</big></small><small><br>
-</small></u><small><big>      After the 'goto' statement the program execution 
-starts after the label   &lt;label_name&gt;.</big></small><small><br>
-</small><small><big>      When label can't be found, the program fails with
-'label not found' error.</big></small><br>
-<br>
-<big><b><small><big>           </big> <big><a name="if"></a>
-            </big><big>    if</big></small></b></big><br>
-<br>
-<big><b><small><big>   </big></small></b><u><small><big>S<small>yntax:</small></big></small></u></big><u><small><br>
-</small></u><small><big>   &nbsp; &nbsp; &nbsp; &nbsp; <b>if(</b>&lt;expression&gt;) 
-&lt;statement&gt;</big></small><small><br>
-</small><small><br>
-</small><u><small><big>   Description:</big></small><small><br>
-</small></u><small><big>   &lt;statement&gt; is executed when &lt;expression&gt; 
-&lt;&gt; 0</big></small><small><big><br>
-Only one statement can follow 'if'.</big></small><small><br>
-</small><br>
-<big><b><small><big>           </big> <big><a name="labels"></a>
-            </big><big>    labels</big></small></b></big><br>
-<u><small><big>      Syntax:</big></small><small><br>
-</small></u><small><big>      &nbsp; &nbsp; &nbsp; &lt;label_n<u>aam&gt;<b>
-:<br>
-<br>
-</b></u></big></small><u><small><br>
-</small><small><big>  note:</big></small><small><br>
-</small></u><big><small><big><small>  The script file is not yet checked
-for duplicate labels</small>.</big></small></big> <br>
-             </div>
-             </div>
-                         
+
+<hr>
+
+<table border="1" width="100%" bgcolor="#D9D5FF">
+ <tr> 
+  <td width="100%" height="49" valign="top" align="center"><small><font color="#000000">This
+   page copyright 2002 </font></small><font size="2">
+<!--   <br>
+   Any questions, comments, gripes, whatever: 
+   <a href="mailto:geist@newos.org">geist@newos.org</a></font>
+  -->
+  </td>
+ </tr>
+</table>
+   
 </body>
 </html>
+

@@ -1,0 +1,74 @@
+<html>
+<head>
+<title>The NewOS Operating System: Docs</title>
+</head>
+<body BGCOLOR="#FFFFFF">
+
+<h1 align="center">Setting up the source repository</h1>
+
+<hr>
+
+<hr>
+
+<table border="0" width="100%" bgcolor="#E8E8E8">
+ <tr>
+  <td width="100%" height="100%" valign="top" align="left">
+If you want read only source access to the source depot,
+follow the following instructions and you'll be set.
+I'm not using CVS, so it may be a bit more different
+than you're used to.
+</ul>
+<br>
+<center><h3>Directions</h3></center>
+<ul>
+<li>Get a copy of the perforce client from
+www.perforce.com. They have it for pretty much every OS
+and architecture you can throw at it. They'll probably port
+it for you if they dont have it.</li>
+<li>Set up the perforce client:<br>
+    User Name (<b>P4USER</b>): readonly<br>
+        Server Address (<b>P4PORT</b>): www.newos.org:9998<br>
+    Client Name (<b>P4CLIENT</b>): YourFirstnameLastname 
+    (something unique)<br>
+        If you're using the Windows GUI, you can configure this
+stuff with that, otherwise you'll need to set up
+environment variables to store this information. The above
+bold names are the environment variables you'll need to set
+before running 'p4 client'.<br>
+    For example, using bash: export P4USER="readonly"<br>
+              using csh: setenv P4USER readonly<br>
+      </li>
+      <li>If you want just the newos source and no extra stuff,
+      only map //depot/newos/, to do this, set your client mapping line to <b>//depot/newos/... //yourclientnamehere/newos/...</b> instead of the default <b>//depot/... //yourclientnamehere/...</b></li>
+      <li>Need some help with perforce? <a
+      href="http://www.perforce.com/perforce/technical.html">Here
+      </a> is a link to their documentation</li>
+      <li>Some basic commands: (if using command line interface)<br>
+          'p4 client': Allows you to edit your client spec<br>
+      'p4 sync': syncs you with the source<br>
+          'p4 sync -f': unconditionally grabs all of the source
+  again, useful if you think you've gotten out of sync with
+  the server<br></li>
+  </ul>
+  Have fun! If you have any questions, please contact me at
+  <a href="mailto:geist@newos.org">geist@newos.org</a>
+  </td>
+ </tr>
+</table>
+
+<hr>
+
+<table border="1" width="100%" bgcolor="#D9D5FF">
+ <tr> 
+  <td width="100%" height="49" valign="top" align="center"><small><font color="#000000">This
+   page copyright 2002 </font></small><font size="2">© <a href="mailto:geist@newos.org">Travis
+   Geiselbrecht</a><br>
+   Any questions, comments, gripes, whatever: 
+   <a href="mailto:geist@newos.org">geist@newos.org</a></font>
+  </td>
+ </tr>
+</table>
+   
+</body>
+</html>
+

@@ -1,0 +1,249 @@
+<html>
+<head>
+<title>The NewOS Operating System: Docs</title>
+</head>
+<body BGCOLOR="#FFFFFF">
+
+<h1 align="center">How-to debug kernel crashes with GDB</h1>
+
+<hr>
+
+<hr>
+
+<table border="0" width="100%" bgcolor="#E8E8E8">
+ <tr>
+  <td width="100%" height="100%" valign="top" align="left">
+  If you are hacking the Kernel and experiencing Kernel Crashes,
+  the kernel now supports some minimal remote debugging capabilities
+  to hook into GDB. Here are some simple indications.
+  </td>
+ </tr>
+</table>
+
+<hr>
+
+<table border="0" width="100%" bgcolor="#E8E8E8">
+ <tr>
+  <td width="100%" height="100%" valign="top" align="left">
+   <center><h3>What you need</h3></center>
+   <ul>
+    <li> A GDB enabled machine and OS (I use FreeBSD myself, but any 
+     Linux or even Windows+CygWin will do.)</li>
+
+    <li> A null modem cable. If you are hacking the kernel you probably 
+     already have one for the serial debug output.</li>
+
+    <li> A kernel file with symbols. In the root makefile edit the lines 
+     for GLOBAL_CFLAGS and GLOBAL_LDFLAGS and add -g to them. Rebuild the kernel.<br><br>
+     <b>*You dont need to boot off a kernel with symbols*</b><br>
+      The kernel with symbols is only required in the
+      host running GDB. However, it is important that
+      both kernels (the running one and the one in the
+      GDB host) perfectly match each other: this means
+      they must be compiled from the same source tree
+      with the same compile options (except for the -g).
+     
+    <li> A kernel crash to analyse.</li>
+   </ul>
+  </td>
+ </tr>
+</table>
+
+<hr>
+
+<table border="0" width="100%" bgcolor="#E8E8E8">
+ <tr>
+  <td width="100%" height="100%" valign="top" align="left">
+   <center><h3>How to debug</h3></center>
+   <ul>
+    <li> once the kernel has crashed, close the terminal emulator (if you are using one) 
+     used for serial debug output.</li>
+
+    <li> launch GDB specifying the path to kernel file as argument.</li>
+
+    <li> in GDB type the following commands:
+     <br><br>
+     set remotebaud XXXX<br>
+     target remote YYYY<br>
+     <br>
+     XXXX is the baud rate your kernel is using for
+     serial debug output (115200 by default, unless
+     you changed it). YYYY is the device path to
+     the serial port used for debug output.<br><br>
+
+     Once you type the "target remote YYYY" command
+     you will be debugging your kernel. The kernel
+     debugger will remain in GDB mode until you quit
+     from GDB, at that point it will return to the
+     normal crash prompt.</li>
+   </ul>
+  </td>
+ </tr>
+</table>
+
+<hr>
+
+<table border="0" width="100%" bgcolor="#E8E8E8">
+ <tr>
+  <td width="100%" height="100%" valign="top" align="left">
+   <center><h3>Notes</h3></center>
+   <ul>
+   <li>Personally I have obtained better results by using
+   57600 as serial port speed. Your mileage may vary
+   depending on your serial ports, the length of your
+   serial cable and the phase of the moon. If you feel
+   that it is sluggish try reducing the serial port
+   speed in your kernel (kernel/arch/i386/ arch_dbg_console.c)</li>
+
+   <li>Currently only inspecting the crash is supported,
+   you cannot single step, set breakpoints etc.</li>
+
+   <li>For better debugging you may want to have your
+   kernel debugged without optimizations. In the
+   GLOBAL_CFLAGS change the -O to -O0. When compiling
+   with optimizations the compiler may assign some
+   of your local variables to registers, and you
+   will not be able to inspect some values for
+   functions other than the call stack tip.</li>
+
+   <li>After the "target remote" command you may get an eror message similar to:
+   <br>
+   &nbsp;&nbsp;&nbsp;ptrace(PT_GETDBREGS) failed: No such process
+   <br>
+   you can safely ignore it. It's just GDB being silly.</li>
+   </ul>
+  </td>
+ </tr>
+</table>
+
+<hr>
+
+<table border="0" width="100%" bgcolor="#E8E8E8">
+ <tr>
+  <td width="100%" height="100%" valign="top" align="left">
+   <center><h3>Troubleshooting</h3></center>
+   If you have troubles, before typing the "target remote" command. Type the 
+   following command:<br>
+   &nbsp;&nbsp;&nbsp;set remotedebug 1<br>
+   This will enable tracing all (actually most) of the data packets exchanged 
+   between GDB and the kernel.  Now try to reproduce your troubles and send the 
+   traces to the NewOS developer list.
+  </td>
+ </tr>
+</table>
+
+<hr>
+
+<table border="0" width="100%" bgcolor="#E8E8E8">
+ <tr>
+  <td width="100%" height="100%" valign="top" align="left">
+   <center><h3>Sample debug session</h3></center>
+&nbsp;&nbsp;&nbsp;[freston@cairo&nbsp;~/NewOS/newos]<br>
+&nbsp;&nbsp;&nbsp;[freston@cairo&nbsp;~/NewOS/newos]&nbsp;gdb&nbsp;kernel/obj.i386/system<br>
+&nbsp;&nbsp;&nbsp;GNU&nbsp;gdb&nbsp;4.18<br>
+&nbsp;&nbsp;&nbsp;Copyright&nbsp;1998&nbsp;Free&nbsp;Software&nbsp;Foundation,&nbsp;Inc.<br>
+&nbsp;&nbsp;&nbsp;GDB&nbsp;is&nbsp;free&nbsp;software,&nbsp;covered&nbsp;by&nbsp;the&nbsp;GNU&nbsp;General&nbsp;Public&nbsp;License,&nbsp;and&nbsp;you&nbsp;are<br>
+&nbsp;&nbsp;&nbsp;welcome&nbsp;to&nbsp;change&nbsp;it&nbsp;and/or&nbsp;distribute&nbsp;copies&nbsp;of&nbsp;it&nbsp;under&nbsp;certain&nbsp;conditions.<br>
+&nbsp;&nbsp;&nbsp;Type&nbsp;"show&nbsp;copying"&nbsp;to&nbsp;see&nbsp;the&nbsp;conditions.<br>
+&nbsp;&nbsp;&nbsp;There&nbsp;is&nbsp;absolutely&nbsp;no&nbsp;warranty&nbsp;for&nbsp;GDB.&nbsp;&nbsp;Type&nbsp;"show&nbsp;warranty"&nbsp;for&nbsp;details.<br>
+&nbsp;&nbsp;&nbsp;This&nbsp;GDB&nbsp;was&nbsp;configured&nbsp;as&nbsp;"i386-unknown-freebsd"...<br>
+&nbsp;&nbsp;&nbsp;(gdb)&nbsp;set&nbsp;remotebaud&nbsp;57600<br>
+&nbsp;&nbsp;&nbsp;(gdb)&nbsp;target&nbsp;remote&nbsp;/dev/cuaa0<br>
+&nbsp;&nbsp;&nbsp;Remote&nbsp;debugging&nbsp;using&nbsp;/dev/cuaa0<br>
+&nbsp;&nbsp;&nbsp;ptrace(PT_GETDBREGS)&nbsp;failed:&nbsp;No&nbsp;such&nbsp;process<br>
+&nbsp;&nbsp;&nbsp;0x80009132&nbsp;in&nbsp;kernel_debugger&nbsp;()&nbsp;at&nbsp;kernel/debug.c:227<br>
+&nbsp;&nbsp;&nbsp;227&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;dbg_save_registers(&(dbg_register_file[smp_get_current_cpu()][0]));<br>
+&nbsp;&nbsp;&nbsp;(gdb)&nbsp;where<br>
+&nbsp;&nbsp;&nbsp;#0&nbsp;&nbsp;0x80009132&nbsp;in&nbsp;kernel_debugger&nbsp;()&nbsp;at&nbsp;kernel/debug.c:227<br>
+&nbsp;&nbsp;&nbsp;#1&nbsp;&nbsp;0x800091d5&nbsp;in&nbsp;panic&nbsp;(fmt=0x80036de0&nbsp;"Keyboard&nbsp;Requested&nbsp;Halt\n")<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;at&nbsp;kernel/debug.c:257<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;#2&nbsp;&nbsp;0x8002bf85&nbsp;in&nbsp;handle_keyboard_interrupt&nbsp;(data=0x0)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;at&nbsp;kernel/dev/arch/i386/keyboard/keyboard.c:185<br>
+&nbsp;&nbsp;&nbsp;#3&nbsp;&nbsp;0x80008aca&nbsp;in&nbsp;int_io_interrupt_handler&nbsp;(vector=33)&nbsp;at&nbsp;kernel/int.c:135<br>
+&nbsp;&nbsp;&nbsp;#4&nbsp;&nbsp;0x80025981&nbsp;in&nbsp;i386_handle_trap&nbsp;(frame={gs&nbsp;=&nbsp;16,&nbsp;fs&nbsp;=&nbsp;16,&nbsp;es&nbsp;=&nbsp;16,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ds&nbsp;=&nbsp;2147745808,&nbsp;edi&nbsp;=&nbsp;0,&nbsp;esi&nbsp;=&nbsp;0,&nbsp;ebp&nbsp;=&nbsp;2147786692,&nbsp;esp&nbsp;=&nbsp;2147786648,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ebx&nbsp;=&nbsp;0,&nbsp;edx&nbsp;=&nbsp;39,&nbsp;ecx&nbsp;=&nbsp;1,&nbsp;eax&nbsp;=&nbsp;39,&nbsp;vector&nbsp;=&nbsp;33,&nbsp;error_code&nbsp;=&nbsp;0,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;eip&nbsp;=&nbsp;2147506764,&nbsp;cs&nbsp;=&nbsp;8,&nbsp;flags&nbsp;=&nbsp;646,&nbsp;user_esp&nbsp;=&nbsp;0,&nbsp;user_ss&nbsp;=&nbsp;0})<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;at&nbsp;kernel/arch/i386/arch_int.c:232<br>
+&nbsp;#5&nbsp;&nbsp;0x8002555c&nbsp;in&nbsp;int_bottom&nbsp;()<br>
+&nbsp;#6&nbsp;&nbsp;0x0&nbsp;in&nbsp;??&nbsp;()<br>
+&nbsp;(gdb)&nbsp;list<br>
+&nbsp;222&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+&nbsp;223&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+&nbsp;224<br>
+&nbsp;225&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;void&nbsp;kernel_debugger()<br>
+&nbsp;226&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+&nbsp;227&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;dbg_save_registers(&(dbg_register_file[smp_get_current_cpu()][0]));<br>
+&nbsp;228<br>
+&nbsp;229&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;kernel_debugger_loop();<br>
+&nbsp;230&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+&nbsp;231<br>
+&nbsp;(gdb)&nbsp;up<br>
+&nbsp;#1&nbsp;&nbsp;0x800091d5&nbsp;in&nbsp;panic&nbsp;(fmt=0x80036de0&nbsp;"Keyboard&nbsp;Requested&nbsp;Halt\n")<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;at&nbsp;kernel/debug.c:257<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;257&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;kernel_debugger();<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(gdb)&nbsp;up<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;#2&nbsp;&nbsp;0x8002bf85&nbsp;in&nbsp;handle_keyboard_interrupt&nbsp;(data=0x0)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;at&nbsp;kernel/dev/arch/i386/keyboard/keyboard.c:185<br>
+&nbsp;185&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;panic("Keyboard&nbsp;Requested&nbsp;Halt\n");<br>
+&nbsp;(gdb)&nbsp;list<br>
+&nbsp;180&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;else<br>
+&nbsp;181&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;leds&nbsp;|=&nbsp;LED_NUM;<br>
+&nbsp;182&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;set_leds();<br>
+&nbsp;183&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;break;<br>
+&nbsp;184&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;case&nbsp;SYSREQ:<br>
+&nbsp;185&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;panic("Keyboard&nbsp;Requested&nbsp;Halt\n");<br>
+&nbsp;186&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;break;<br>
+&nbsp;187&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;case&nbsp;F12:<br>
+&nbsp;188&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;reboot();<br>
+&nbsp;189&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;break;<br>
+&nbsp;(gdb)&nbsp;print&nbsp;leds<br>
+&nbsp;$1&nbsp;=&nbsp;1<br>
+&nbsp;(gdb)&nbsp;up<br>
+&nbsp;#3&nbsp;&nbsp;0x80008aca&nbsp;in&nbsp;int_io_interrupt_handler&nbsp;(vector=33)&nbsp;at&nbsp;kernel/int.c:135<br>
+&nbsp;135&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;temp_ret&nbsp;=&nbsp;io->func(io->data);<br>
+&nbsp;(gdb)&nbsp;list<br>
+&nbsp;130&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;struct&nbsp;io_handler&nbsp;*io;<br>
+&nbsp;131&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;int&nbsp;temp_ret;<br>
+&nbsp;132<br>
+&nbsp;133&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;io&nbsp;=&nbsp;io_handlers[vector];<br>
+&nbsp;134&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;while(io&nbsp;!=&nbsp;NULL)&nbsp;{<br>
+&nbsp;135&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;temp_ret&nbsp;=&nbsp;io->func(io->data);<br>
+&nbsp;136&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if(temp_ret&nbsp;==&nbsp;INT_RESCHEDULE)<br>
+&nbsp;137&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ret&nbsp;=&nbsp;INT_RESCHEDULE;<br>
+&nbsp;138&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;io&nbsp;=&nbsp;io->next;<br>
+&nbsp;139&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+&nbsp;(gdb)&nbsp;print&nbsp;vector<br>
+&nbsp;$2&nbsp;=&nbsp;33<br>
+&nbsp;(gdb)&nbsp;print&nbsp;io_handlers[vector]<br>
+&nbsp;$3&nbsp;=&nbsp;(struct&nbsp;io_handler&nbsp;*)&nbsp;0x8008fb20<br>
+&nbsp;(gdb)&nbsp;print&nbsp;io<br>
+&nbsp;$4&nbsp;=&nbsp;(struct&nbsp;io_handler&nbsp;*)&nbsp;0x8008fb20<br>
+&nbsp;(gdb)&nbsp;print&nbsp;*io<br>
+&nbsp;$5&nbsp;=&nbsp;{next&nbsp;=&nbsp;0x0,&nbsp;func&nbsp;=&nbsp;0x8002be6c&nbsp;<handle_keyboard_interrupt>,&nbsp;data&nbsp;=&nbsp;0x0}<br>
+&nbsp;(gdb)&nbsp;print&nbsp;*io->next<br>
+&nbsp;Cannot&nbsp;access&nbsp;memory&nbsp;at&nbsp;address&nbsp;0x0.<br>
+&nbsp;(gdb)&nbsp;quit<br>
+&nbsp;The&nbsp;program&nbsp;is&nbsp;running.&nbsp;&nbsp;Exit&nbsp;anyway?&nbsp;(y&nbsp;or&nbsp;n)&nbsp;y<br>
+&nbsp;[freston@cairo&nbsp;~/NewOS/newos]<br>
+  </td>
+ </tr>
+</table>
+
+<hr>
+
+<table border="1" width="100%" bgcolor="#D9D5FF">
+ <tr> 
+  <td width="100%" height="49" valign="top" align="center"><small><font color="#000000">This
+   page copyright 2002 </font></small><font size="2">Manuel J. Petit
+<!--   <br>
+   Any questions, comments, gripes, whatever: 
+   <a href="mailto:geist@newos.org">geist@newos.org</a></font>
+ -->
+  </td>
+ </tr>
+</table>
+   
+</body>
+</html>
+
