@@ -32,3 +32,4 @@ void			i386_selector_remove( selector_id id );
 selector_type	i386_selector_get( selector_id id );
 
 #endif
+
