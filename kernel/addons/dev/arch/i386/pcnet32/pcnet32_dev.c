@@ -530,6 +530,12 @@ ssize_t pcnet32_rx(pcnet32 *nic, char *buf, ssize_t buf_len)
 			nic->rxring_tail++;
 			mutex_unlock(&nic->rxring_mutex);
 			return real_len;
+		} else {
+			// there is a packet, but it's too large for the buffer.
+			// So we don't want to do anything with the ring, we just
+			// want to unlock our mutex and return.
+			mutex_unlock(&nic->rxring_mutex);
+			return ERR_TOO_BIG;
 		}
 	}
 
