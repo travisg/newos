@@ -552,6 +552,18 @@ int test_thread_starter_thread()
 	return 0;	
 }
 
+int test_thread2()
+{
+	while(1) {
+		size_t len = 1;
+		char c;
+		
+		vfs_read(0, &c, 0, &len);
+		kprintf("%c", c);
+	}
+	return 0;
+}
+
 int test_thread()
 {
 	int a = 0;
@@ -629,7 +641,7 @@ int thread_test()
 	int i;
 	char temp[64];
 	
-	for(i=0; i<16; i++) {
+	for(i=0; i<NUM_TEST_THREADS; i++) {
 		sprintf(temp, "test_thread%d", i);
 //		t = create_kernel_thread(temp, &test_thread, i % THREAD_NUM_PRIORITY_LEVELS);
 		t = create_kernel_thread(temp, &test_thread, 5);
@@ -641,6 +653,9 @@ int thread_test()
 		thread_test_sems[i] = sem_create(0, temp);
 	}	
 	t = create_kernel_thread("test starter thread", &test_thread_starter_thread, THREAD_MAX_PRIORITY);
+	thread_enqueue_run_q(t);
+
+	t = create_kernel_thread("test thread 2", &test_thread2, 5);
 	thread_enqueue_run_q(t);
 
 //	t = create_kernel_thread("panic thread", &panic_thread, THREAD_MAX_PRIORITY);

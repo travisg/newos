@@ -61,13 +61,14 @@ int _start(kernel_args *oldka, int cpu)
 		con_init(&ka);
 		kprintf("durn\n");
 	
+#if 0
 		// XXX remove
 		vfs_test();
-	
-	#if 1
+#endif	
+#if 1
 		// XXX remove
 		thread_test();
-	#endif
+#endif
 		kprintf("Welcome to the kernel!\n");
 	
 		vm_dump_areas(vm_get_kernel_aspace());

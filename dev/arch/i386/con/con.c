@@ -39,7 +39,10 @@ struct tty_queue tty_buffer = {
 	"" // buffer
 };
 
-int _keyboard_interrupt(void);
+// in keyboard.c
+int handle_keyboard_interrupt();
+int setup_keyboard();
+char keyboard_read();
 
 sem_id console_sem;
 
@@ -388,13 +391,6 @@ static void arch_con_puts_xy(const char *s, int x, int y)
 	restore_cur();
 }
 */
-static int handle_keyboard_interrupt()
-{
-	dprintf("keyboard interrupt\n");
-	// XXX remove
-	panic("keyboard panic!\n");
-	return INT_NO_RESCHEDULE;
-}
 
 int console_open(void *_fs, void *_base_vnode, const char *path, const char *stream, stream_type stream_type, void **_vnode, void **_cookie, struct redir_struct *redir)
 {
@@ -473,12 +469,14 @@ int console_create(void *_fs, void *_base_vnode, const char *path, const char *s
 
 int console_read(void *_fs, void *_vnode, void *_cookie, void *buf, off_t pos, size_t *len)
 {
+	char c;
 //	sem_acquire(console_sem, 1);
 //	sem_release(console_sem, 1);
 
 //	dprintf("console_read: entry\n");
 	
-	*len = 0;
+	*(char *)buf = keyboard_read();
+	*len = 1;
 	
 	return 0;
 }
@@ -646,7 +644,9 @@ int console_dev_init(kernel_args *ka)
 
 	gotoxy(0, ka->cons_line);
 
+
 	// Setup keyboard interrupt
+	setup_keyboard();
 	int_set_io_interrupt_handler(0x21,&handle_keyboard_interrupt);
 /*
 	outb_p(inb_p(0x21)&0xfd,0x21);

@@ -202,8 +202,8 @@ rootfs_get_container_vnode_from_path(struct rootfs *fs, struct rootfs_vnode *bas
 
 	cur_vnode = base;
 	while(vfs_helper_getnext_in_path(path, start, &end) > 0) {
-		dprintf("start = %d, end = %d\n", *start, end);
-		dprintf("cur = 0x%x, last = 0x%x\n", cur_vnode, last_vnode);
+//		dprintf("start = %d, end = %d\n", *start, end);
+//		dprintf("cur = 0x%x, last = 0x%x\n", cur_vnode, last_vnode);
 
 		if(last_vnode != NULL && last_vnode->redir_vnode != NULL) {
 			// we are at a mountpoint, redirect here
@@ -577,7 +577,7 @@ int rootfs_create(void *_fs, void *_base_vnode, const char *path, const char *st
 
 	new_vnode = rootfs_find_in_dir(dir, path, start, strlen(path) - 1);
 	if(new_vnode == NULL) {
-		dprintf("rootfs_create: creating new vnode\n");
+//		dprintf("rootfs_create: creating new vnode\n");
 		new_vnode = rootfs_create_vnode(fs);
 		if(new_vnode == NULL) {
 			err = -1;
@@ -596,7 +596,7 @@ int rootfs_create(void *_fs, void *_base_vnode, const char *path, const char *st
 		s = &new_vnode->stream;
 	} else {
 		// we found the vnode
-		dprintf("rootfs_create: found the vnode, possibly creating new stream\n");
+//		dprintf("rootfs_create: found the vnode, possibly creating new stream\n");
 		
 		s = rootfs_get_stream_from_vnode(new_vnode, stream, stream_type);
 		if(s != NULL) {
