@@ -6,4 +6,5 @@ KERNEL_ADDONS_CFLAGS = $(KERNEL_CFLAGS)
 KERNEL_ADDONS = 
 
 include $(KERNEL_ADDONS_DIR)/fs/iso9660/isofs.mk
+include $(KERNEL_ADDONS_DIR)/fs/zfs/zfs.mk
 
