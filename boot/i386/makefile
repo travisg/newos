@@ -54,7 +54,7 @@ $(FINAL): $(STAGE1) $(STAGE2) $(ALL) $(TOOLS) $(MAKEFLOP) $(CONFIG_FILE) $(BOOTB
 	$(BOOTMAKER) --strip-debug --strip-binary $(STRIP) $(CONFIG_FILE) -o $(FINAL).prepre
 	gzip -f -9 $(FINAL).prepre
 	cat $(STAGE1) $(FINAL).prepre.gz > $(FINAL).pre
-	$(MAKEFLOP) $(BOOTBLOCK) $(FINAL).pre $(FINAL)
+	$(MAKEFLOP) -p $(shell expr 18 \* 2 \* 512) $(BOOTBLOCK) $(FINAL).pre $(FINAL)
 	@rm -f $(FINAL).pre $(FINAL).prepre $(FINAL).prepre.gz
 
 $(STAGE1): $(STAGE1).elf
