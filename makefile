@@ -21,7 +21,7 @@ ifeq ($(ARCH),i386)
 	GLOBAL_CFLAGS = -fno-pic
 	GLOBAL_LDFLAGS = 
 	LIBGCC = -lgcc
-	LIBGCC_PATH = libgcc/$(ARCH)
+	LIBGCC_PATH = lib/libgcc/$(ARCH)
 endif
 
 ifeq ($(ARCH),sh4)
@@ -32,7 +32,7 @@ ifeq ($(ARCH),sh4)
 	GLOBAL_CFLAGS = -ml -m4 -mhitachi
 	GLOBAL_LDFLAGS = -EL
 	LIBGCC = -lgcc
-	LIBGCC_PATH = libgcc/$(ARCH)/ml/m4-single-only
+	LIBGCC_PATH = lib/libgcc/$(ARCH)/ml/m4-single-only
 endif
 	
 ifeq ($(ARCH),sparc)
@@ -54,7 +54,7 @@ ifeq ($(ARCH),alpha)
 	GLOBAL_CFLAGS =
 	GLOBAL_LDFLAGS =
 	LIBGCC = -lgcc
-	LIBGCC_PATH = libgcc/$(ARCH)
+	LIBGCC_PATH = lib/libgcc/$(ARCH)
 endif
 
 GLOBAL_CFLAGS += -Wall -W -Werror -Wno-multichar -Wno-unused -nostdinc -O -fno-builtin -DARCH_$(ARCH)

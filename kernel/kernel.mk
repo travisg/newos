@@ -25,8 +25,8 @@ KERNEL_DEPS = $(KERNEL_OBJS:.o=.d)
 
 KERNEL = $(KERNEL_DIR)/system
 
-$(KERNEL): $(KERNEL_LIB) $(LIB) $(DEV)
-	$(LD) -dN --script=$(KERNEL_ARCH_DIR)/kernel.ld -L $(LIBGCC_PATH) -o $@ $(KERNEL_LIB) $(LIB) $(DEV) $(LIBGCC)
+$(KERNEL): $(KERNEL_LIB) $(LIBS) $(DEV)
+	$(LD) -dN --script=$(KERNEL_ARCH_DIR)/kernel.ld -L $(LIBGCC_PATH) -o $@ $(KERNEL_LIB) $(LIBS) $(DEV) $(LIBGCC)
 
 $(KERNEL_LIB): $(KERNEL_OBJS)
 	$(LD) $(GLOBAL_LDFLAGS) -r -o $@ $(KERNEL_OBJS)

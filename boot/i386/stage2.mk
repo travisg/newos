@@ -11,8 +11,8 @@ STAGE2_ARCH = boot/$(ARCH)/stage2
 $(STAGE2): $(STAGE2_ARCH)
 	ln -sf ../$< $@  
 
-$(STAGE2_ARCH): $(STAGE2_OBJS) $(LIB)
-	$(LD) -dN --script=$(STAGE2_DIR)/stage2.ld -L $(LIBGCC_PATH) $(STAGE2_OBJS) $(LIB) $(LIBGCC) -o $@
+$(STAGE2_ARCH): $(STAGE2_OBJS) $(LIBS)
+	$(LD) -dN --script=$(STAGE2_DIR)/stage2.ld -L $(LIBGCC_PATH) $(STAGE2_OBJS) $(LIBS) $(LIBGCC) -o $@
 
 stage2clean:
 	rm -f $(STAGE2_OBJS) $(STAGE2_DIR)/stage2

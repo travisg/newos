@@ -1,5 +1,5 @@
-lib:
-	$(MAKE) -C .. lib
+libs:
+	$(MAKE) -C .. libs
 	
 clean:
 	$(MAKE) -C .. libclean
