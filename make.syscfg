@@ -172,8 +172,8 @@ endif
 GLOBAL_CFLAGS += -Wall -W -Wno-multichar -Wno-unused -Wmissing-prototypes -finline -nostdinc -fno-builtin -DARCH_$(ARCH) -DNEWOS=1
 
 # find libgcc
-LIBGCC = -lgcc
-LIBGCC_PATH = $(shell $(CC) $(GLOBAL_CFLAGS) -print-libgcc-file-name)
+LIBGCC := -lgcc
+LIBGCC_PATH := $(dir $(shell $(CC) $(GLOBAL_CFLAGS) -print-libgcc-file-name))
 $(warning LIBGCC_PATH = $(LIBGCC_PATH))
 
 # print some info
