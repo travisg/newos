@@ -1103,6 +1103,7 @@ int thread_init(kernel_args *ka)
 	unsigned int i;
 
 	dprintf("thread_init: entry\n");
+	kprintf("initializing threading system...\n");
 
 	// create the process hash table
 	proc_hash = hash_init(15, (addr_t)&kernel_proc->next - (addr_t)kernel_proc,

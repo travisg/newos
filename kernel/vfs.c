@@ -8,6 +8,7 @@
 #include <kernel/vm.h>
 #include <kernel/vm_cache.h>
 #include <kernel/debug.h>
+#include <kernel/console.h>
 #include <kernel/khash.h>
 #include <kernel/lock.h>
 #include <kernel/thread.h>
@@ -828,6 +829,7 @@ int vfs_free_ioctx(void *_ioctx)
 int vfs_init(kernel_args *ka)
 {
 	dprintf("vfs_init: entry\n");
+	kprintf("initializing fs layer...\n");
 
 	{
 		struct vnode *v;
@@ -2560,9 +2562,12 @@ int vfs_bootstrap_all_filesystems(void)
 	int err;
 	int fd;
 
+	kprintf("bootstrapping all built in file systems...\n");
+
 	// bootstrap the root filesystem
 	bootstrap_rootfs();
 
+	kprintf("\tmounting /");
 	err = sys_mount("/", NULL, "rootfs", NULL);
 	if(err < 0)
 		panic("error mounting rootfs!\n");
@@ -2572,6 +2577,7 @@ int vfs_bootstrap_all_filesystems(void)
 	// bootstrap the bootfs
 	bootstrap_bootfs();
 
+	kprintf(" /boot");
 	sys_mkdir("/boot");
 	err = sys_mount("/boot", NULL, "bootfs", NULL);
 	if(err < 0)
@@ -2580,6 +2586,7 @@ int vfs_bootstrap_all_filesystems(void)
 	// bootstrap the devfs
 	bootstrap_devfs();
 
+	kprintf(" /dev");
 	sys_mkdir("/dev");
 	err = sys_mount("/dev", NULL, "devfs", NULL);
 	if(err < 0)
@@ -2588,10 +2595,13 @@ int vfs_bootstrap_all_filesystems(void)
 	// bootstrap the pipefs
 	bootstrap_pipefs();
 
+	kprintf(" /pipe");
 	sys_mkdir("/pipe");
 	err = sys_mount("/pipe", NULL, "pipefs", NULL);
 	if(err < 0)
 		panic("error mounting pipefs\n");
+
+	kprintf("\n");
 
 	fd = sys_opendir("/boot/addons/fs");
 	if(fd >= 0) {

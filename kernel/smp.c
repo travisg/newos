@@ -477,6 +477,7 @@ int smp_init(kernel_args *ka)
 	int i;
 
 	dprintf("smp_init: entry\n");
+	kprintf("initializing smp mailboxes...\n");
 
 	if(ka->num_cpus > 1) {
 		free_msgs = NULL;

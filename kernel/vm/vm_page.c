@@ -9,6 +9,7 @@
 #include <kernel/vm_page.h>
 #include <kernel/vm_cache.h>
 #include <kernel/arch/vm_translation_map.h>
+#include <kernel/console.h>
 #include <kernel/debug.h>
 #include <kernel/int.h>
 #include <kernel/thread.h>
@@ -229,8 +230,11 @@ int vm_page_init(kernel_args *ka)
 	{
 		unsigned int last_phys_page = 0;
 
+		kprintf("physical memory ranges:\n");
+
 		physical_page_offset = ka->phys_mem_range[0].start / PAGE_SIZE;
 		for(i=0; i<ka->num_phys_mem_ranges; i++) {
+			kprintf("\tbase 0x%08lx size 0x%08lx\n", ka->phys_mem_range[i].start, ka->phys_mem_range[i].size);
 			last_phys_page = (ka->phys_mem_range[i].start + ka->phys_mem_range[i].size) / PAGE_SIZE - 1;
 		}
 		dprintf("first phys page = 0x%lx, last 0x%x\n", physical_page_offset, last_phys_page);

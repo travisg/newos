@@ -1666,6 +1666,8 @@ int vm_init(kernel_args *ka)
 	void *null_addr;
 
 	dprintf("vm_init: entry\n");
+	kprintf("initializing vm system...\n");
+
 	err = vm_translation_map_module_init(ka);
 	err = arch_vm_init(ka);
 
@@ -1688,6 +1690,7 @@ int vm_init(kernel_args *ka)
 		heap_size = 16*1024*1024;
 	heap_base = vm_alloc_from_ka_struct(ka, heap_size, LOCK_KERNEL|LOCK_RW);
 	dprintf("heap at 0x%lx, size 0x%lx\n", heap_base, heap_size);
+	kprintf("creating kernel heap at 0x%lx, size 0x%lx\n", heap_base, heap_size);
 	heap_init(heap_base, heap_size);
 
 	// initialize the free page list and page allocator

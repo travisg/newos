@@ -54,6 +54,8 @@ int _start(kernel_args *oldka, int cpu_num)
 		// we're the boot processor, so wait for all of the APs to enter the kernel
 		smp_wait_for_ap_cpus(&global_kernel_args);
 
+		kprintf("boot processor initializing kernel...\n");
+
 		// setup debug output
 		dbg_init(&global_kernel_args);
 #if _DEFAULT_SERIAL_DBG_ON
@@ -98,6 +100,8 @@ int _start(kernel_args *oldka, int cpu_num)
 		// start a thread to finish initializing the rest of the system
 		{
 			thread_id tid;
+
+			kprintf("creating worker thread to finish kernel initialization...\n");
 			tid = thread_create_kernel_thread("main2", &main2, NULL);
 			thread_resume_thread(tid);
 		}
@@ -114,6 +118,7 @@ int _start(kernel_args *oldka, int cpu_num)
 	int_restore_interrupts(); // idle threads were prestarted with interrupts off
 
 	dprintf("main: done... begin idle loop on cpu %d\n", cpu_num);
+	kprintf("main: done... begin idle loop on cpu %d\n", cpu_num);
 	for(;;)
 		arch_cpu_idle();
 
@@ -123,6 +128,7 @@ int _start(kernel_args *oldka, int cpu_num)
 static int main2(void *unused)
 {
 	dprintf("start of main2: initializing devices\n");
+	kprintf("start of main2: initializing devices\n");
 
 	// bootstrap all the filesystems
 	vfs_bootstrap_all_filesystems();
@@ -165,6 +171,9 @@ static int main2(void *unused)
 	// start the init process
 	{
 		proc_id pid;
+
+		kprintf("main2: starting init process...\n");
+
 		pid = proc_create_proc("/boot/bin/init", "init", NULL, 0, 5);
 //		pid = proc_create_proc("/boot/bin/static", "static", NULL, 0, 5);
 		if(pid < 0)
