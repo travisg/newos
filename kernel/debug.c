@@ -9,7 +9,7 @@
 #include <kernel/console.h>
 #include <kernel/heap.h>
 #include <kernel/gdb.h>
-#include <sys/errors.h>
+#include <newos/errors.h>
 
 #include <kernel/arch/dbg_console.h>
 #include <kernel/arch/debug.h>

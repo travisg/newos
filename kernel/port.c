@@ -10,7 +10,7 @@
 #include <kernel/debug.h>
 #include <kernel/heap.h>
 #include <kernel/cbuf.h>
-#include <sys/errors.h>
+#include <newos/errors.h>
 
 #include <nulibc/string.h>
 #include <nulibc/stdlib.h>

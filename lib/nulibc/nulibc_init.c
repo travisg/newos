@@ -6,7 +6,7 @@
 #include <kernel/user_runtime.h>
 
 
-extern void __init__dlfcn(struct uspace_prog_args_t *uspa);
+extern void __init__dlfcn(struct uspace_prog_args_t const *uspa);
 
 
 void

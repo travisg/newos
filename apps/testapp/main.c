@@ -1,12 +1,12 @@
 /*
-** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #include <types.h>
 #include <string.h>
 #include <stdio.h>
 #include <sys/syscalls.h>
-#include <sys/errors.h>
+#include <newos/errors.h>
 #include <nulibc/sys/resource.h>
 #include <nulibc/unistd.h>
 

@@ -5,7 +5,7 @@
 #include <kernel/heap.h>
 #include <kernel/khash.h>
 #include <kernel/debug.h>
-#include <sys/errors.h>
+#include <newos/errors.h>
 #include <nulibc/string.h>
 
 #define malloc kmalloc

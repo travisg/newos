@@ -15,7 +15,7 @@
 #include <kernel/net/misc.h>
 #include <kernel/net/ipv4.h>
 #include <kernel/dev/netblock/netblock.h>
-#include <sys/errors.h>
+#include <newos/errors.h>
 #include <nulibc/string.h>
 
 #define NB_TRACE 1

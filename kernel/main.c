@@ -3,8 +3,8 @@
 ** Distributed under the terms of the NewOS License.
 */
 #include <boot/stage2.h>
+#include <newos/errors.h>
 #include <kernel/kernel.h>
-#include <sys/errors.h>
 #include <kernel/console.h>
 #include <kernel/debug.h>
 #include <kernel/faults.h>

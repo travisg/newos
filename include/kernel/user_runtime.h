@@ -6,7 +6,7 @@
 #define __newos__kernel__user_runtime__hh__
 
 
-#include <sys/defines.h>
+#include <newos/defines.h>
 
 
 struct rld_export_t

@@ -1,5 +1,5 @@
 /*
-** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #include <kernel/kernel.h>
@@ -14,7 +14,7 @@
 #include <kernel/thread.h>
 #include <kernel/smp.h>
 #include <kernel/sem.h>
-#include <sys/errors.h>
+#include <newos/errors.h>
 #include <boot/stage2.h>
 
 #include <nulibc/string.h>

@@ -10,7 +10,7 @@
 #include <kernel/smp.h>
 #include <kernel/vm.h>
 #include <kernel/timer.h>
-#include <sys/errors.h>
+#include <newos/errors.h>
 #include <boot/stage2.h>
 
 #include <kernel/arch/cpu.h>

@@ -7,7 +7,7 @@
 
 #include <types.h>
 #include <kernel/ktypes.h>
-#include <sys/defines.h>
+#include <newos/defines.h>
 #include <nulibc/sys/resource.h>
 
 typedef enum {

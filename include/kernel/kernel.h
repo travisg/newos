@@ -7,8 +7,8 @@
 
 #include <kernel/ktypes.h>
 #include <kernel/arch/kernel.h>
-#include <sys/defines.h>
-#include <sys/errors.h>
+#include <newos/defines.h>
+#include <newos/errors.h>
 
 #define ROUNDUP(a, b) (((a) + ((b)-1)) & ~((b)-1))
 #define ROUNDOWN(a, b) (((a) / (b)) * (b))

@@ -10,7 +10,7 @@
 #include <string.h>
 #include <stdarg.h>
 #include <stdio.h>
-#include <sys/elf32.h>
+#include <newos/elf32.h>
 
 const unsigned kBSSSize = 0x9000;
 

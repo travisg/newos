@@ -1,5 +1,5 @@
 /*
-** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #include <kernel/kernel.h>
@@ -8,7 +8,7 @@
 #include <kernel/debug.h>
 #include <kernel/lock.h>
 #include <kernel/vm_store_device.h>
-#include <sys/errors.h>
+#include <newos/errors.h>
 
 struct device_store_data {
 	addr base_addr;

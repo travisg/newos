@@ -1,5 +1,5 @@
 /*
-** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Modified Sep 2001 by Rob Judd <judd@ob-wan.com>
 ** Distributed under the terms of the NewOS License.
 */
@@ -11,7 +11,7 @@
 #include <kernel/int.h>
 #include <kernel/sem.h>
 #include <kernel/vfs.h>
-#include <sys/errors.h>
+#include <newos/errors.h>
 
 #include <kernel/arch/cpu.h>
 #include <kernel/arch/int.h>

@@ -10,7 +10,7 @@
 #include <kernel/queue.h>
 #include <kernel/lock.h>
 #include <kernel/net/net.h>
-#include <sys/defines.h>
+#include <newos/defines.h>
 
 typedef struct ifaddr {
 	struct ifaddr *next;

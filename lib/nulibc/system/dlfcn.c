@@ -8,7 +8,7 @@
 #include <kernel/user_runtime.h>
 
 
-static struct rld_export_t *rld;
+static struct rld_export_t const *rld;
 
 void *
 dlopen(char const *name, unsigned flags)
@@ -30,7 +30,7 @@ dlclose(void *img)
 
 
 void
-__init__dlfcn(struct uspace_prog_args_t *uspa)
+__init__dlfcn(struct uspace_prog_args_t const *uspa)
 {
 	rld= uspa->rld_export;
 }

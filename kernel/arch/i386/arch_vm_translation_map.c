@@ -1,5 +1,5 @@
 /*
-** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #include <kernel/kernel.h>
@@ -17,7 +17,7 @@
 #include <kernel/queue.h>
 #include <nulibc/string.h>
 #include <boot/stage2.h>
-#include <sys/errors.h>
+#include <newos/errors.h>
 
 // 256 MB of iospace
 #define IOSPACE_SIZE (256*1024*1024)

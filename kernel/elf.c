@@ -4,7 +4,7 @@
 */
 
 #include <kernel/kernel.h>
-#include <sys/errors.h>
+#include <newos/errors.h>
 #include <kernel/elf.h>
 #include <kernel/vfs.h>
 #include <kernel/vm.h>
@@ -13,7 +13,7 @@
 #include <kernel/heap.h>
 #include <kernel/arch/cpu.h>
 
-#include <sys/elf32.h>
+#include <newos/elf32.h>
 
 #include <nulibc/string.h>
 #include <nulibc/stdio.h>

@@ -9,7 +9,7 @@
 
 
 #include <types.h>
-#include <sys/cdefs.h>
+#include <nulibc/sys/cdefs.h>
 #include <nulibc/stdarg.h>
 
 

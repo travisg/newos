@@ -3,7 +3,7 @@
 ** Distributed under the terms of the NewOS License.
 */
 #include <string.h>
-#include <sys/errors.h>
+#include <newos/errors.h>
 
 char const *
 strerror(int errnum)

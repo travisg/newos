@@ -1,5 +1,5 @@
 /*
-** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #include <kernel/kernel.h>
@@ -9,7 +9,7 @@
 #include <kernel/vm.h>
 #include <kernel/dev/common/zero.h>
 #include <nulibc/string.h>
-#include <sys/errors.h>
+#include <newos/errors.h>
 
 static int zero_open(dev_ident ident, dev_cookie *cookie)
 {

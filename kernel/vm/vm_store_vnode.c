@@ -1,5 +1,5 @@
 /*
-** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #include <kernel/kernel.h>
@@ -9,7 +9,7 @@
 #include <kernel/lock.h>
 #include <kernel/vm_store_vnode.h>
 #include <kernel/vfs.h>
-#include <sys/errors.h>
+#include <newos/errors.h>
 
 #define STORE_DATA(x) ((struct vnode_store_data *)(x->data))
 

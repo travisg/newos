@@ -1,5 +1,5 @@
 /*
-** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #include <kernel/kernel.h>
@@ -8,7 +8,7 @@
 #include <kernel/heap.h>
 #include <kernel/fs/devfs.h>
 #include <nulibc/string.h>
-#include <sys/errors.h>
+#include <newos/errors.h>
 #include <kernel/dev/arch/i386/rtl8139/rtl8139_dev.h>
 
 #include "rtl8139_priv.h"

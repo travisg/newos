@@ -1,5 +1,5 @@
 /*
-** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #include <kernel/kernel.h>
@@ -9,7 +9,7 @@
 #include <kernel/smp_priv.h>
 #include <kernel/smp.h>
 #include <kernel/heap.h>
-#include <sys/errors.h>
+#include <newos/errors.h>
 
 #include <kernel/arch/cpu.h>
 #include <kernel/arch/smp.h>

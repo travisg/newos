@@ -6,8 +6,8 @@
 
 #include <string.h>
 #include <stdio.h>
-#include <sys/errors.h>
-#include <sys/elf32.h>
+#include <newos/errors.h>
+#include <newos/elf32.h>
 #include <sys/syscalls.h>
 #include <kernel/user_runtime.h>
 #include <arch/cpu.h>

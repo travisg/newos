@@ -7,7 +7,7 @@
 #include <kernel/cbuf.h>
 #include <kernel/net/misc.h> // for cksum16
 #include <kernel/arch/cpu.h>
-#include <sys/errors.h>
+#include <newos/errors.h>
 
 #include <nulibc/string.h>
 

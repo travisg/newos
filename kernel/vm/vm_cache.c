@@ -1,5 +1,5 @@
 /*
-** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #include <kernel/kernel.h>
@@ -15,7 +15,7 @@
 #include <kernel/lock.h>
 #include <kernel/smp.h>
 #include <kernel/arch/cpu.h>
-#include <sys/errors.h>
+#include <newos/errors.h>
 
 /* hash table of pages keyed by cache they're in and offset */
 #define PAGE_TABLE_SIZE 1024 /* make this dynamic */

@@ -1,5 +1,5 @@
 /* 
-** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #include <kernel/kernel.h>
@@ -7,7 +7,7 @@
 #include <kernel/heap.h>
 #include <kernel/debug.h>
 #include <kernel/vm_store_anonymous_noswap.h>
-#include <sys/errors.h>
+#include <newos/errors.h>
 
 static void anonymous_destroy(struct vm_store *store)
 {
