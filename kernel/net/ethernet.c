@@ -21,17 +21,21 @@ typedef struct ethernet2_header {
 
 void dump_ethernet_addr(ethernet_addr addr)
 {
+#if NET_CHATTY
 	dprintf("%x:%x:%x:%x:%x:%x",
 		addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
+#endif
 }
 
 static void dump_ethernet_header(ethernet2_header *head)
 {
+#if NET_CHATTY
 	dprintf("ethernet 2 header: dest ");
 	dump_ethernet_addr(head->dest);
 	dprintf(" src ");
 	dump_ethernet_addr(head->src);
 	dprintf(" type 0x%x\n", ntohs(head->type));
+#endif
 }
 
 int ethernet_input(cbuf *buf, ifnet *i)

@@ -152,18 +152,18 @@ int net_init(kernel_args *ka)
 	address = kmalloc(sizeof(ifaddr));
 	address->addr.len = 4;
 	address->addr.type = ADDR_TYPE_IP;
-	NETADDR_TO_IPV4(&address->addr) = 0x0a000063; // 10.0.0.99
+	NETADDR_TO_IPV4(&address->addr) = IPV4_DOTADDR_TO_ADDR(192,168,0,99); // 192.168.0.99
 	address->netmask.len = 4;
 	address->netmask.type = ADDR_TYPE_IP;
-	NETADDR_TO_IPV4(&address->netmask) = 0xffffff00; // 255.255.255.0
+	NETADDR_TO_IPV4(&address->netmask) = IPV4_DOTADDR_TO_ADDR(255,255,255,0); // 255.255.255.0
 	address->broadcast.len = 4;
 	address->broadcast.type = ADDR_TYPE_IP;
-	NETADDR_TO_IPV4(&address->broadcast) = 0x0a0000ff; // 10.0.0.255
+	NETADDR_TO_IPV4(&address->broadcast) = IPV4_DOTADDR_TO_ADDR(192,168,0,255); // 192.168.0.255
 	if_bind_address(i, address);
 
 	// set up an initial routing table
-	ipv4_route_add(0x0a000000, 0xffffff00, 0x0a000063, i->id);
-	ipv4_route_add_gateway(0x00000000, 0x00000000, 0x0a000063, i->id, 0xc0000001);
+	ipv4_route_add(IPV4_DOTADDR_TO_ADDR(192,168,0,0), IPV4_DOTADDR_TO_ADDR(255,255,255,0), IPV4_DOTADDR_TO_ADDR(192,168,0,99), i->id);
+	ipv4_route_add_gateway(0x00000000, 0x00000000, IPV4_DOTADDR_TO_ADDR(192,168,0,99), i->id, IPV4_DOTADDR_TO_ADDR(192,168,0,1));
 
 	sys_close(net_fd);
 
