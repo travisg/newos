@@ -21,11 +21,14 @@ char const * const names[]=
 	"Press any key..."
 };
 #define RLD_SCRATCH_SIZE 65536
+#define RLD_PROGRAM_BASE 0x00200000	/* keep in sync with app ldscript */
 
 
 
 static region_id  rld_region;
+static region_id  rld_region_2;
 static char      *rld_base;
+static char      *rld_base_2;
 static char      *rld_ptr;
 
 void
@@ -36,6 +39,23 @@ rldheap_init(void)
 		(void**)&rld_base,
 		REGION_ADDR_ANY_ADDRESS,
 		RLD_SCRATCH_SIZE,
+		REGION_WIRING_LAZY,
+		LOCK_RW
+	);
+
+	/*
+	 * Fill in the gap upto RLD_PROGRAM_BASE,
+	 * 
+	 * NOTE: this will be required only untile the vm finally
+	 * support REGION_ADDR_ANY_ABOVE and REGION_ADDR_ANY_BELOW.
+	 * Not doing these leads to some funny troubles with some
+	 * libraries.
+	 */
+	rld_region_2= sys_vm_create_anonymous_region(
+		"RLD_padding",
+		(void**)&rld_base_2,
+		REGION_ADDR_ANY_ADDRESS,
+		RLD_PROGRAM_BASE - ((unsigned)(rld_base+RLD_SCRATCH_SIZE)),
 		REGION_WIRING_LAZY,
 		LOCK_RW
 	);
