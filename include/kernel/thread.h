@@ -33,8 +33,8 @@ struct proc {
 	void *ioctx;
 	void *cwd;
 	void *args;
-	struct aspace *kaspace;
-	struct aspace *aspace;
+	vm_address_space *kaspace;
+	vm_address_space *aspace;
 	struct thread *thread_list;
 	struct arch_proc arch_info;
 };
@@ -52,8 +52,8 @@ struct thread {
 	sem_id blocked_sem_id;
 	void *args;
 	struct proc *proc;
-	struct area *kernel_stack_area;
-	struct area *user_stack_area;
+	vm_region *kernel_stack_region;
+	vm_region *user_stack_region;
 	// architecture dependant section
 	struct arch_thread arch_info;
 };

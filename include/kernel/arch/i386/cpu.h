@@ -52,6 +52,34 @@ struct tss_descriptor {
 	uint32 base_31_24 : 8;
 };
 
+typedef struct ptentry {
+	unsigned int present:1;
+	unsigned int rw:1;
+	unsigned int supervisor:1;
+	unsigned int write_through:1;
+	unsigned int cache_disabled:1;
+	unsigned int accessed:1;
+	unsigned int dirty:1;
+	unsigned int reserved:1;
+	unsigned int global:1;
+	unsigned int avail:3;
+	unsigned int addr:20;
+} ptentry;
+
+typedef struct pdentry {
+	unsigned int present:1;
+	unsigned int rw:1;
+	unsigned int supervisor:1;
+	unsigned int write_through:1;
+	unsigned int cache_disabled:1;
+	unsigned int accessed:1;
+	unsigned int reserved:1;
+	unsigned int page_size:1;
+	unsigned int global:1;
+	unsigned int avail:3;
+	unsigned int addr:20;
+} pdentry;
+
 #define nop() __asm__ ("nop"::)
 
 void setup_system_time(unsigned int cv_factor);

@@ -11,7 +11,7 @@
 
 #include <kernel/arch/cpu.h>
 #include <kernel/arch/smp.h>
-#include <kernel/arch/pmap.h>
+//#include <kernel/arch/pmap.h>
 
 #include <libc/string.h>
 
@@ -157,7 +157,8 @@ int smp_intercpu_int_handler()
 //	dprintf("  message = %d\n", msg->message);
 	switch(msg->message) {
 		case SMP_MSG_INVL_PAGE:
-			arch_pmap_invl_page(msg->data);
+			// XXX fix
+//			arch_pmap_invl_page(msg->data);
 			break;
 		case SMP_MSG_RESCHEDULE:
 			retval = INT_RESCHEDULE;

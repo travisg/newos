@@ -177,8 +177,8 @@ static struct thread *create_thread_struct(const char *name)
 	strcpy(t->name, name);
 	t->id = atomic_add(&next_thread_id, 1);
 	t->proc = NULL;
-	t->kernel_stack_area = NULL;
-	t->user_stack_area = NULL;
+	t->kernel_stack_region = NULL;
+	t->user_stack_region = NULL;
 	t->proc_next = NULL;
 	t->q_next = NULL;
 	t->priority = -1;
@@ -204,7 +204,7 @@ static int _create_user_thread_kentry(void)
 	t = thread_get_current_thread();
 
 	// jump to the entry point in user space
-	arch_thread_enter_uspace((addr)t->args, (addr)t->user_stack_area->base + STACK_SIZE);
+	arch_thread_enter_uspace((addr)t->args, (addr)t->user_stack_region->base + STACK_SIZE);
 
 	// never get here
 	return 0;
@@ -226,9 +226,9 @@ static struct thread *_create_thread(const char *name, struct proc *p, int prior
 	t->next_state = THREAD_STATE_SUSPENDED;
 
 	sprintf(stack_name, "%s_kstack", name);
-	vm_create_area(t->proc->kaspace, stack_name, (void **)&kstack_addr,
-		AREA_ANY_ADDRESS, KSTACK_SIZE, LOCK_RW|LOCK_KERNEL, AREA_NO_FLAGS);
-	t->kernel_stack_area = vm_find_area_by_name(t->proc->kaspace, stack_name);
+	vm_create_anonymous_region(t->proc->kaspace, stack_name, (void **)&kstack_addr,
+		REGION_ADDR_ANY_ADDRESS, KSTACK_SIZE, REGION_WIRING_WIRED, LOCK_RW|LOCK_KERNEL);
+	t->kernel_stack_region = vm_find_region_by_name(t->proc->kaspace, stack_name);
 
 	if(kernel) {
 		// this sets up an initial kthread stack that runs the entry
@@ -243,13 +243,13 @@ static struct thread *_create_thread(const char *name, struct proc *p, int prior
 		ustack_addr = (USER_STACK_REGION  - STACK_SIZE) + USER_STACK_REGION_SIZE;
 		while(ustack_addr > USER_STACK_REGION) {
 			sprintf(stack_name, "%s_stack%d", p->name, t->id);
-			vm_create_area(p->aspace, stack_name, (void **)&ustack_addr,
-				AREA_EXACT_ADDRESS, STACK_SIZE, LOCK_RW, AREA_NO_FLAGS);
-			t->user_stack_area = vm_find_area_by_name(p->aspace, stack_name);
-			if(t->user_stack_area == NULL) {
+			vm_create_anonymous_region(p->aspace, stack_name, (void **)&ustack_addr,
+				REGION_ADDR_ANY_ADDRESS, STACK_SIZE, REGION_WIRING_WIRED, LOCK_RW);
+			t->user_stack_region = vm_find_region_by_name(p->aspace, stack_name);
+			if(t->user_stack_region == NULL) {
 				ustack_addr -= STACK_SIZE;
 			} else {
-				// we created an area
+				// we created an region
 				break;
 			}
 		}
@@ -365,8 +365,8 @@ static void _dump_thread_info(struct thread *t)
 	dprintf("sem_count:   0x%x\n", t->sem_count);
 	dprintf("blocked_sem: 0x%x\n", t->blocked_sem_id);
 	dprintf("proc:        0x%x\n", t->proc);
-	dprintf("kernel_stack_area: 0x%x\n", t->kernel_stack_area);
-	dprintf("user_stack_area:   0x%x\n", t->user_stack_area);
+	dprintf("kernel_stack_region: 0x%x\n", t->kernel_stack_region);
+	dprintf("user_stack_region:   0x%x\n", t->user_stack_region);
 	dprintf("architecture dependant section:\n");
 	arch_thread_dump_info(&t->arch_info);
 
@@ -388,7 +388,7 @@ static void dump_thread_info(int argc, char **argv)
 	// if the argument looks like a hex number, treat it as such
 	if(strlen(argv[1]) > 2 && argv[1][0] == '0' && argv[1][1] == 'x') {
 		num = atoul(argv[1]);
-		if(num > vm_get_kernel_aspace()->base) {
+		if(num > vm_get_kernel_aspace()->virtual_map.base) {
 			// XXX semi-hack
 			_dump_thread_info((struct thread *)num);
 			return;
@@ -416,7 +416,7 @@ static void dump_thread_list(int argc, char **argv)
 	hash_open(thread_hash, &i);
 	while((t = hash_next(thread_hash, &i)) != NULL) {
 		dprintf("0x%x\t%32s\t0x%x\t%16s\t0x%x\n",
-			t, t->name, t->id, state_to_text(t->state), t->kernel_stack_area->base);
+			t, t->name, t->id, state_to_text(t->state), t->kernel_stack_region->base);
 	}
 	hash_close(thread_hash, &i, false);
 }
@@ -488,6 +488,10 @@ int thread_init(kernel_args *ka)
 	if(kernel_proc == NULL)
 		panic("could not create kernel proc!\n");
 
+	kernel_proc->ioctx = vfs_new_ioctx();
+	if(kernel_proc->ioctx == NULL)
+		panic("could not create ioctx for kernel proc!\n");
+
 	// stick it in the process hash
 	hash_insert(proc_hash, kernel_proc);
 
@@ -536,7 +540,7 @@ int thread_init(kernel_args *ka)
 		t->state = THREAD_STATE_RUNNING;
 		t->next_state = THREAD_STATE_READY;
 		sprintf(temp, "idle_thread%d_kstack", i);
-		t->kernel_stack_area = vm_find_area_by_name(t->proc->kaspace, temp);		
+		t->kernel_stack_region = vm_find_region_by_name(t->proc->kaspace, temp);		
 		hash_insert(thread_hash, t);
 		insert_thread_into_proc(t->proc, t);
 		cur_thread[i] = t;
@@ -684,6 +688,8 @@ int test_thread5()
 int test_thread4()
 {
 	proc_create_proc("/boot/testapp", "testapp", 5);
+
+	dprintf("test_thread4: finished created new process\n");
 
 	return 0;
 }
@@ -951,21 +957,28 @@ static struct proc *create_proc_struct(const char *name, bool kernel)
 	
 	p = (struct proc *)kmalloc(sizeof(struct proc));
 	if(p == NULL)
-		return NULL;
+		goto error;
 	p->id = atomic_add(&next_proc_id, 1);
 	p->name = (char *)kmalloc(strlen(name)+1);
+	if(p->name == NULL)
+		goto error1;
 	strcpy(p->name, name);
-	p->ioctx = vfs_new_ioctx();
+	p->ioctx = NULL;
 	p->cwd = NULL;
 	p->kaspace = vm_get_kernel_aspace();
 	p->aspace = NULL;
 	p->thread_list = NULL;
-	if(arch_proc_init_proc_struct(p, kernel) < 0) {
-		// XXX clean up proc struct
-		return NULL;
-	}
-	
+	if(arch_proc_init_proc_struct(p, kernel) < 0)
+		goto error2;
+
 	return p;
+
+error2:
+	kfree(p->name);
+error1:
+	kfree(p);
+error:
+	return NULL;
 }
 
 static int proc_create_proc2(void)
@@ -978,10 +991,10 @@ static int proc_create_proc2(void)
 	char ustack_name[128];
 	void *ustack_addr;
 
-	dprintf("proc_create_proc2: entry\n");
-
 	t = thread_get_current_thread();
 	p = t->proc;
+
+	dprintf("proc_create_proc2: entry thread %d\n", t->id);
 
 	// create a new ioctx for this process
 	p->ioctx = vfs_new_ioctx();
@@ -990,26 +1003,25 @@ static int proc_create_proc2(void)
 		panic("proc_create_proc2: could not create new ioctx\n");
 		return NULL;
 	}
-		
+
 	// create an address space for this process
-	p->aspace = vm_create_aspace(p->name, USER_BASE, USER_SIZE);
+	p->aspace = vm_create_aspace(p->name, USER_BASE, USER_SIZE, false);
 	if(p->aspace == NULL) {
 		// XXX clean up proc
 		panic("proc_create_proc2: could not create user address space\n");
 		return NULL;
 	}
-	
+
 	// create an initial primary stack region
 	ustack_addr = (void *)((USER_STACK_REGION  - STACK_SIZE) + USER_STACK_REGION_SIZE);
 	sprintf(ustack_name, "%s_primary_stack", p->name);
-	vm_create_area(p->aspace, ustack_name, (void **)&ustack_addr,
-		AREA_EXACT_ADDRESS, STACK_SIZE, LOCK_RW, AREA_NO_FLAGS);
-	t->user_stack_area = vm_find_area_by_name(p->aspace, ustack_name);
-	if(t->user_stack_area == NULL) {
-		panic("proc_create_proc2: could not create default user stack area\n");
+	t->user_stack_region = vm_create_anonymous_region(p->aspace, ustack_name, (void **)&ustack_addr,
+		REGION_ADDR_EXACT_ADDRESS, STACK_SIZE, REGION_WIRING_LAZY, LOCK_RW);
+	if(t->user_stack_region == NULL) {
+		panic("proc_create_proc2: could not create default user stack region\n");
 		return NULL;
 	}
-		
+
 	path = p->args;
 	dprintf("proc_create_proc2: loading elf binary '%s'\n", path);
 
@@ -1018,7 +1030,7 @@ static int proc_create_proc2(void)
 		// XXX clean up proc
 		return NULL;
 	}
-	 
+
 	dprintf("proc_create_proc2: loaded elf. entry = 0x%x\n", entry);
 
 	// jump to the entry point in user space
@@ -1035,9 +1047,9 @@ struct proc *proc_create_proc(const char *path, const char *name, int priority)
 	struct thread *t;
 	int err;
 	unsigned int state;
-	
+
 	dprintf("proc_create_proc: entry '%s', name '%s'\n", path, name);
-	
+
 	p = create_proc_struct(name, false);
 	if(p == NULL)
 		return NULL;
@@ -1048,7 +1060,7 @@ struct proc *proc_create_proc(const char *path, const char *name, int priority)
 		// XXX clean up proc
 		return NULL;
 	}
-	
+
 	// copy the args over
 	p->args = kmalloc(strlen(path) + 1);
 	if(p->args == NULL) {
@@ -1056,7 +1068,7 @@ struct proc *proc_create_proc(const char *path, const char *name, int priority)
 		return NULL;
 	}
 	strcpy(p->args, path);
-	
+
 	state = int_disable_interrupts();
 	GRAB_PROC_LOCK();
 	hash_insert(proc_hash, p);

@@ -5,6 +5,8 @@
 #include <kernel/kernel.h>
 #include <kernel/vm.h>
 #include <kernel/vm_priv.h>
+#include <kernel/vm_page.h>
+#include <kernel/vm_cache.h>
 #include <kernel/heap.h>
 #include <kernel/debug.h>
 #include <kernel/console.h>
@@ -15,91 +17,110 @@
 #include <boot/stage2.h>
 
 #include <kernel/arch/cpu.h>
-#include <kernel/arch/pmap.h>
 #include <kernel/arch/vm.h>
 
 #include <libc/string.h>
 #include <libc/ctype.h>
 #include <libc/printf.h>
 
-static unsigned int first_free_page_index = 0;
-static unsigned int *free_page_table = NULL;
-static unsigned int free_page_table_base = 0;
-static unsigned int free_page_table_size = 0;
-
-#define END_OF_LIST 0xffffffff
-#define PAGE_INUSE  0xfffffffe
-
-static void dump_free_page_table(int argc, char **argv);
-
 #define HEAP_SIZE	0x00400000
 
-static struct aspace *aspace_list = NULL;
-static struct aspace *kernel_aspace = NULL;
-static aspace_id next_aspace_id = 0;
+#define WRITE_COUNT 1024
+#define READ_COUNT 1
 
-static area_id next_area_id = 0;
+static vm_address_space *kernel_aspace;
 
-struct area *vm_find_area_by_name(struct aspace *aspace, const char *name)
+static region_id next_region_id;
+
+//static sem_id region_list_sem;
+
+// function declarations
+vm_region *_vm_create_region_struct(vm_address_space *aspace, char *name, addr base,
+	addr size, int wiring, int lock);
+vm_region *_vm_create_region(vm_address_space *aspace, char *name, void **address,
+	int addr_type, addr size, int wiring, int lock);
+int vm_soft_fault(addr address, bool is_write, bool is_user);
+vm_region *vm_virtual_map_lookup(vm_virtual_map *map, addr address);
+
+vm_region *vm_find_region_by_name(vm_address_space *aspace, const char *name)
 {
-	struct area *area;
+	vm_region *region = NULL;
 
-	area = aspace->area_list;
-	while(area != NULL) {
-		if(strcmp(area->name, name) == 0)
-			return area;
-		area = area->next;
+	sem_acquire(aspace->virtual_map.sem, READ_COUNT);
+
+	region = aspace->virtual_map.region_list;
+	while(region != NULL) {
+		if(strcmp(region->name, name) == 0)
+			break;
+		region = region->next;
 	}
-	return NULL;
+
+	sem_release(aspace->virtual_map.sem, READ_COUNT);
+	return region;
 }
 
-struct area *_vm_create_area_struct(struct aspace *aspace, char *name, unsigned int base, unsigned int size, unsigned int lock)
+// creates semi-initialized region struct and adds to aspace's region list
+// NOTE: region_list_sem must be held
+vm_region *_vm_create_region_struct(vm_address_space *aspace, char *name, addr base,
+	addr size, int wiring, int lock)
 {
-	struct area *area;
-	struct area *a, *last = NULL;
+	vm_region *region;
+	vm_region *a, *last = NULL;
 	
-	// allocate an area struct to represent this area
-	area = (struct area *)kmalloc(sizeof(struct area));	
-	area->base = base;
-	area->size = size;
-	area->id = next_area_id++;
-	area->lock = lock;
-	area->name = (char *)kmalloc(strlen(name) + 1);
-	strcpy(area->name, name);
+//	dprintf("_vm_create_region_struct: aspace 0x%x name '%s' base 0x%x, size 0x%x\n", aspace, name, base, size);
 	
+	// allocate a region struct to represent this region
+	region = (vm_region *)kmalloc(sizeof(vm_region));	
+	region->base = base;
+	region->size = size;
+	region->id = next_region_id++;
+	region->lock = lock;
+	region->wiring = wiring;
+	region->map = &aspace->virtual_map;
+	region->name = (char *)kmalloc(strlen(name) + 1);
+	if(region->name == NULL) {
+		kfree(region);
+		return NULL;
+	}
+	strcpy(region->name, name);
+	
+	region->cache_ref = NULL;
+	region->cache_offset = 0;
+	region->cache_next = NULL;
+	region->cache_prev = NULL;
+
 	// insert into the list
 	// we'll need to search for the spot
 	// check for address overlaps
-	a = aspace->area_list;
+	a = aspace->virtual_map.region_list;
 	while(a != NULL) {
-//		dprintf("create_area_struct: a = 0x%x. base = 0x%x, size = 0x%x\n", a, a->base, a->size);
+//		dprintf("_vm_create_region_struct: a = 0x%x. base = 0x%x, size = 0x%x\n", a, a->base, a->size);
 		if(a->base > base) {
 			if(base + size > a->base) {
 				// overlap
-				kfree(area->name);
-				kfree(area);
+				kfree(region->name);
+				kfree(region);
 				return NULL;
 			}
-			area->next = a;
+			region->next = a;
 			if(last == NULL)
-				aspace->area_list = area;
+				aspace->virtual_map.region_list = region;
 			else
-				last->next = area;
+				last->next = region;
 			break;
 		}
 		last = a;
-		a = a->next;	
+		a = a->next;
 	}
 	if(a == NULL) {
-		area->next = NULL;
+		region->next = NULL;
 		if(last == NULL)
-			aspace->area_list = area;
+			aspace->virtual_map.region_list = region;
 		else
-			last->next = area;
+			last->next = region;
 	}
-	aspace->area_count++;
-
-	return area;
+//	dprintf("_vm_create_region_struct: returning 0x%x\n", region);
+	return region;
 }
 
 enum {
@@ -109,113 +130,125 @@ enum {
 	SRC_ADDR_CONTIGUOUS
 };
 
-static area_id _vm_create_area(struct aspace *aspace, char *name, void **addr, int addr_type,
-	unsigned int size, unsigned int lock,
-	unsigned int src_addr, unsigned int src_addr_type)
+// finds a place for a region in the address space and creates the initial structure
+vm_region *_vm_create_region(vm_address_space *aspace, char *name, void **address,
+	int addr_type, addr size, int wiring, int lock)
 {
-	struct area *area;
+	vm_region *region;
 	unsigned int base;
 
-	dprintf("_vm_create_area: '%s', *addr = 0x%p, addr_type = %d, size = %d, src_addr = 0x%x\n",
-		name, *addr, addr_type, size, src_addr);
+	dprintf("_vm_create_region: '%s', *address = 0x%p, addr_type = %d, size = %d\n",
+		name, *address, addr_type, size);
 
 	// check validity of lock
 	if((lock & ~LOCK_MASK) != 0) {
 		// invalid lock
-		panic("_vm_create_area called with invalid lock %d\n", lock);
+		panic("_vm_create_region called with invalid lock %d\n", lock);
 	}
-	
+
+	sem_acquire(aspace->virtual_map.sem, WRITE_COUNT);
+
+	region = NULL;
 	switch(addr_type) {
-		case AREA_ANY_ADDRESS: {
-			struct area *a;
-			struct area *next_a = NULL;
-			// find a hole big enough for a new area
+		case REGION_ADDR_ANY_ADDRESS: {
+			vm_region *r;
+			vm_region *next_r = NULL;
+			// find a hole big enough for a new region
 	
 			base = 0;
 	
-			a = aspace->area_list;
-			if(a == NULL) {
-				base = aspace->base;
-			} else if(a != NULL && a->base > aspace->base) {
-				// lets try to build the area at the beginning of the aspace
-				if(aspace->base + size > a->base) {
+			r = aspace->virtual_map.region_list;
+			if(r == NULL) {
+				base = aspace->virtual_map.base;
+			} else if(r != NULL && r->base > aspace->virtual_map.base) {
+				// lets try to build the region at the beginning of the aspace
+				if(aspace->virtual_map.base + size > r->base) {
 					// if we built it here, it would overlap, so let the loop below
 					// find the right spot
-					next_a = a->next;
+					next_r = r->next;
 				} else {
 					// otherwise, we're done.
-					base = aspace->base;
-					a = NULL;
+					base = aspace->virtual_map.base;
+					r = NULL;
 				}
 			} else {
-				next_a = a->next;
+				next_r = r->next;
 			}
-			while(a != NULL) {
-//				dprintf("a = 0x%x. base = 0x%x, size = 0x%x\n", a, a->base, a->size);
-				if(next_a != NULL) {
-//					dprintf("next_a = 0x%x. base = 0x%x, size = 0x%x\n", next_a, next_a->base, next_a->size);
-					if(next_a->base - (a->base + a->size) >= size) {
+			while(r != NULL) {
+//				dprintf("r = 0x%x. base = 0x%x, size = 0x%x\n", r, r->base, r->size);
+				if(next_r != NULL) {
+//					dprintf("next_r = 0x%x. base = 0x%x, size = 0x%x\n", next_r, next_r->base, next_r->size);
+					if(next_r->base - (r->base + r->size) >= size) {
 						// we have a spot
-						base = a->base + a->size;
+						base = r->base + r->size;
 						break;
 					}
 				} else {
-					if((aspace->base + aspace->size) - (a->base + a->size) + 1 >= size) {
+					if((aspace->virtual_map.base + aspace->virtual_map.size) - (r->base + r->size) + 1 >= size) {
 						// we have a spot
-						base = a->base + a->size;
+						base = r->base + r->size;
 						break;
 					}
 				}
-				a = next_a;
-				if(next_a != NULL)
-					next_a = next_a->next;
+				r = next_r;
+				if(next_r != NULL)
+					next_r = next_r->next;
 			}
-	
+			
 			if(base == 0)
-				return -1;
-			*addr = (void *)base;
-			area = _vm_create_area_struct(aspace, name, base, size, lock);
+				break; // didn't find a spot
+
+			*address = (void *)base;
+			region = _vm_create_region_struct(aspace, name, base, size, wiring, lock);
 			break;
 		}
-		case AREA_EXACT_ADDRESS:
-			base = (unsigned int)*addr;
-			
-			if(base < aspace->base || (base - aspace->base) + size > (base - aspace->base) + aspace->size) {
-				dprintf("_vm_create_area: area asked to be created outside of aspace\n");
-				return -1;
+		case REGION_ADDR_EXACT_ADDRESS:
+			base = (unsigned int)*address;
+
+			if(base < aspace->virtual_map.base || (base - aspace->virtual_map.base) + size > (base - aspace->virtual_map.base) + aspace->virtual_map.size) {
+				dprintf("_vm_create_region: region asked to be created outside of aspace\n");
+				break;
 			}
-			
-			area = _vm_create_area_struct(aspace, name, base, size, lock);
+
+			region = _vm_create_region_struct(aspace, name, base, size, wiring, lock);
 			break;
 		default:
 			// whut?
-			area = NULL;
-			return -1;
+			panic("_vm_create_region: invalid addr_type flag passed %d\n", addr_type);
 	}
 
-	// ok, now we've allocated the area descriptor and put it in place,
+	sem_release(aspace->virtual_map.sem, WRITE_COUNT);
+
+	return region;
+
+#if 0
+	// ok, now we've allocated the region descriptor and put it in place,
 	// lets find the pages
 	switch(src_addr_type) {
 		case SRC_ADDR_ANY: {
 			unsigned int i;
-			unsigned int page;
+			addr page;
 
 			for(i=0; i < PAGE_ALIGN(size) / PAGE_SIZE; i++) {
 				vm_get_free_page(&page);
-				pmap_map_page(page * PAGE_SIZE, base + i * PAGE_SIZE, lock); 
+				aspace->translation_map.ops->map(&aspace->translation_map,
+					base + i * PAGE_SIZE, page * PAGE_SIZE, lock);
+//				pmap_map_page(page * PAGE_SIZE, base + i * PAGE_SIZE, lock); 
 			}
 			break;
 		}
 		case SRC_ADDR_CONTIGUOUS: {
 			unsigned int i;
-			unsigned int page;
+			addr page;
 
 			if(vm_get_free_page_run(&page, PAGE_ALIGN(size) / PAGE_SIZE) < 0) {
-				panic("_vm_create_area: asked for contiguous area of len %d, could not find it\n", size);
+				panic("_vm_create_region: asked for contiguous region of len %d, could not find it\n", size);
 			}
 
 			for(i=0; i < PAGE_ALIGN(size) / PAGE_SIZE; i++) {
-				pmap_map_page((page + i) * PAGE_SIZE, base + i * PAGE_SIZE, lock);
+				aspace->translation_map.ops->map(&aspace->translation_map,
+					base + i * PAGE_SIZE, (page + i) * PAGE_SIZE, lock);
+//				pmap_map_page((page + i) * PAGE_SIZE, base + i * PAGE_SIZE, lock);
 			}
 			break;
 		}
@@ -224,7 +257,9 @@ static area_id _vm_create_area(struct aspace *aspace, char *name, void **addr, i
 			
 			vm_mark_page_range_inuse(src_addr / PAGE_SIZE, PAGE_ALIGN(size) / PAGE_SIZE);
 			for(i=0; i < PAGE_ALIGN(size) / PAGE_SIZE; i++) {
-				pmap_map_page(src_addr + i * PAGE_SIZE, base + i * PAGE_SIZE, lock); 
+				aspace->translation_map.ops->map(&aspace->translation_map,
+					base + i * PAGE_SIZE, src_addr + i * PAGE_SIZE, lock);
+//				pmap_map_page(src_addr + i * PAGE_SIZE, base + i * PAGE_SIZE, lock); 
 			}
 			break;
 		}
@@ -232,35 +267,161 @@ static area_id _vm_create_area(struct aspace *aspace, char *name, void **addr, i
 			break;
 		default:
 			// hmmm
-			return -1;
+			return NULL;
 	}
 	
-	return area->id;
+	return region;
+#endif
 }
 
-area_id vm_create_area(struct aspace *aspace, char *name, void **addr, int addr_type,
+static vm_region *_vm_create_anonymous_region(vm_address_space *aspace, char *name, void **address, int addr_type,
+	addr size, int wiring, int lock, addr phys_addr)
+{
+	vm_region *region;
+	vm_cache *cache;
+	vm_cache_ref *cache_ref;
+	
+	region = _vm_create_region(aspace, name, address, addr_type, size, wiring, lock);
+	if(region == NULL)
+		return NULL;
+
+	// create a new cache
+
+	// null vm_store for this one
+	cache = vm_cache_create(NULL);
+	if(cache == NULL)
+		panic("vm_create_anonymous_region: vm_cache_create returned NULL");
+	cache_ref = vm_cache_ref_create(cache);
+	if(cache_ref == NULL)
+		panic("vm_create_anonymous_region: vm_cache_ref_create returned NULL");
+
+	vm_cache_acquire_ref(cache_ref);
+	
+	region->cache_ref = cache_ref;
+	region->cache_offset = 0;
+
+	switch(wiring) {
+		case REGION_WIRING_LAZY:
+			break; // do nothing
+		case REGION_WIRING_WIRED: {
+			// pages aren't mapped at this point, but we just simulate a fault on
+			// every page, which should allocate them
+			addr va;
+			// XXX remove
+			for(va = region->base; va < region->base + region->size; va += PAGE_SIZE) {
+				dprintf("mapping wired pages: region 0x%x, cache_ref 0x%x 0x%x\n", region, cache_ref, region->cache_ref);
+				vm_soft_fault(va, false, false);
+			}
+			break;
+		}
+		case REGION_WIRING_WIRED_ALREADY: {
+			// the pages should already be mapped. This is only really useful during
+			// boot time. Find the appropriate vm_page objects and stick them in
+			// the cache object.
+			addr va;
+			addr pa;
+			unsigned int flags;
+			int err;
+			vm_page *page;
+			off_t offset = 0;
+
+			sem_acquire(cache_ref->sem, 1);
+			for(va = region->base; va < region->base + region->size; va += PAGE_SIZE, offset += PAGE_SIZE) {
+				err = (*aspace->translation_map.ops->query)(&aspace->translation_map,
+					va, &pa, &flags);
+				if(err < 0) {
+					dprintf("vm_create_anonymous_region: error looking up mapping for va 0x%x\n", va);
+					continue;
+				}
+				page = vm_lookup_page(pa / PAGE_SIZE);
+				if(page == NULL) {
+					dprintf("vm_create_anonymous_region: error looking up vm_page structure for pa 0x%x\n", pa);
+					continue;
+				}
+				vm_page_set_state(page, PAGE_STATE_WIRED);
+				vm_cache_insert_page(cache_ref, page, offset);
+			}
+			sem_release(cache_ref->sem, 1);
+			break;
+		}
+		case REGION_WIRING_WIRED_PHYSICAL: {
+			addr va;
+			unsigned int flags;
+			int err;
+			vm_page *page;
+			off_t offset = 0;
+
+			sem_acquire(cache_ref->sem, 1);
+			for(va = region->base; va < region->base + region->size; va += PAGE_SIZE, offset += PAGE_SIZE, phys_addr += PAGE_SIZE) {
+				err = (*aspace->translation_map.ops->map)(&aspace->translation_map,
+					va, phys_addr, lock);
+				if(err < 0) {
+					dprintf("vm_create_anonymous_region: error mapping va 0x%x to pa 0x%x\n",
+						va, phys_addr);
+				}
+				page = vm_page_allocate_specific_page(phys_addr / PAGE_SIZE, PAGE_STATE_FREE);
+				if(page == NULL) {
+					// not finding a page structure is not the end of the world
+					// this may be covering a range of the physical address space
+					// that is not covered by RAM, such as a device.
+					continue;
+				}
+				vm_page_set_state(page, PAGE_STATE_WIRED);
+				vm_cache_insert_page(cache_ref, page, offset);
+			}
+			sem_release(cache_ref->sem, 1);
+			break;
+		}
+		default:
+			;		
+	}
+	return region;
+}
+
+vm_region *vm_create_anonymous_region(vm_address_space *aspace, char *name, void **address, int addr_type,
+	addr size, int wiring, int lock)
+{
+	if(wiring == REGION_WIRING_WIRED_PHYSICAL) {
+		// invalid here
+		return NULL;
+	}
+	return _vm_create_anonymous_region(aspace, name, address, addr_type, size, wiring, lock, 0);
+}
+
+vm_region *vm_map_physical_memory(vm_address_space *aspace, char *name, void **address, int addr_type,
+	addr size, int lock, addr phys_addr)
+{
+	return _vm_create_anonymous_region(aspace, name, address, addr_type, size,
+		REGION_WIRING_WIRED_PHYSICAL, lock, phys_addr);
+}
+
+#if 0	
+vm_region *vm_create_region(vm_address_space *aspace, char *name, void **address, int addr_type,
 	unsigned int size, unsigned int lock, int flags)
 {
 	if(addr_type == AREA_ALREADY_MAPPED) {
-		return _vm_create_area(aspace, name, addr, AREA_EXACT_ADDRESS, size, lock, 0, SRC_ADDR_MAPPED_ALREADY);
+		return _vm_create_region(aspace, name, address, REGION_ADDR_EXACT_ADDRESS, size, lock, 0, SRC_ADDR_MAPPED_ALREADY);
 	} else {
 		if(flags == AREA_FLAGS_CONTIG)
-			return _vm_create_area(aspace, name, addr, addr_type, size, lock, 0, SRC_ADDR_CONTIGUOUS);
+			return _vm_create_region(aspace, name, address, addr_type, size, lock, 0, SRC_ADDR_CONTIGUOUS);
 		else
-			return _vm_create_area(aspace, name, addr, addr_type, size, lock, 0, 0);
+			return _vm_create_region(aspace, name, address, addr_type, size, lock, 0, 0);
 	}
 
 }
 
-int vm_map_physical_memory(struct aspace *aspace, char *name, void **addr, int addr_type,
+vm_region *vm_map_physical_memory(vm_address_space *aspace, char *name, void **address, int addr_type,
 	unsigned int size, unsigned int lock, unsigned int phys_addr)
 {
-	return _vm_create_area(aspace, name, addr, addr_type, size, lock, phys_addr, SRC_ADDR_PHYSICAL);
+	return _vm_create_region(aspace, name, address, addr_type, size, lock, phys_addr, SRC_ADDR_PHYSICAL);
 }
+#endif
 
-int vm_get_page_mapping(addr vaddr, addr *paddr)
+int vm_get_page_mapping(vm_address_space *aspace, addr vaddr, addr *paddr)
 {
-	return pmap_get_page_mapping(vaddr, paddr);
+	unsigned int null_flags;
+	return aspace->translation_map.ops->query(&aspace->translation_map,
+		vaddr, paddr, &null_flags);
 }
 
 static void display_mem(int argc, char **argv)
@@ -338,34 +499,35 @@ static void display_mem(int argc, char **argv)
 	dprintf("\n");
 }
 
-static void vm_dump_kspace_areas(int argc, char **argv)
+void vm_dump_regions(vm_address_space *aspace)
 {
-	vm_dump_areas(vm_get_kernel_aspace());
-}
+	vm_region *region;
 
-void vm_dump_areas(struct aspace *aspace)
-{
-	struct area *area;
+	dprintf("region dump of address space '%s', base 0x%x, size 0x%x:\n", aspace->name, aspace->virtual_map.base, aspace->virtual_map.size);
 
-	dprintf("area dump of address space '%s', base 0x%x, size 0x%x:\n", aspace->name, aspace->base, aspace->size);
-
-	for(area = aspace->area_list; area != NULL; area = area->next) {
-		dprintf("area 0x%x: ", area->id);
-		dprintf("base_addr = 0x%x ", area->base);
-		dprintf("size = 0x%x ", area->size);
-		dprintf("name = '%s' ", area->name);
-		dprintf("lock = 0x%x\n", area->lock);
+	for(region = aspace->virtual_map.region_list; region != NULL; region = region->next) {
+		dprintf("region 0x%x: ", region->id);
+		dprintf("base_addr = 0x%x ", region->base);
+		dprintf("size = 0x%x ", region->size);
+		dprintf("name = '%s' ", region->name);
+		dprintf("lock = 0x%x\n", region->lock);
 	}
 }
 
-static void dump_aspace_areas(int argc, char **argv)
+static void vm_dump_kspace_regions(int argc, char **argv)
+{
+	vm_dump_regions(vm_get_kernel_aspace());
+}
+
+#if 0
+static void dump_aspace_regions(int argc, char **argv)
 {
 	int id = -1;
 	unsigned long num;
-	struct aspace *as;
+	vm_address_space *as;
 
 	if(argc < 2) {
-		dprintf("aspace_areas: not enough arguments\n");
+		dprintf("aspace_regions: not enough arguments\n");
 		return;
 	}
 
@@ -377,7 +539,7 @@ static void dump_aspace_areas(int argc, char **argv)
 
 	for(as = aspace_list; as != NULL; as = as->next) {
 		if(as->id == id || !strcmp(argv[1], as->name)) {
-			vm_dump_areas(as);
+			vm_dump_regions(as);
 			break;
 		}
 	}
@@ -385,148 +547,91 @@ static void dump_aspace_areas(int argc, char **argv)
 
 static void dump_aspace_list(int argc, char **argv)
 {
-	struct aspace *as;
+	vm_address_space *as;
 
-	dprintf("id\t%32s\tbase\tsize\t\tarea_count\n", "name");
+	dprintf("id\t%32s\tbase\tsize\t\tregion_count\n", "name");
 	for(as = aspace_list; as != NULL; as = as->next) {
 		dprintf("0x%x\t%32s\t0x%x\t0x%x\t0x%x\n",
-			as->id, as->name, as->base, as->size, as->area_count);
+			as->id, as->name, as->base, as->size, as->region_count);
 	}
 }
+#endif
 
-struct aspace *vm_get_kernel_aspace()
+vm_address_space *vm_get_kernel_aspace()
 {
 	return kernel_aspace;
 }
 
-struct aspace *vm_create_aspace(const char *name, unsigned int base, unsigned int size)
+vm_address_space *vm_get_current_user_aspace()
 {
-	struct aspace *aspace;
+	return thread_get_current_thread()->proc->aspace;
+}
+
+vm_address_space *vm_create_aspace(const char *name, unsigned int base, unsigned int size, bool kernel)
+{
+	vm_address_space *aspace;
+	int err;
 	
-	aspace = (struct aspace *)kmalloc(sizeof(struct aspace));
+	aspace = (vm_address_space *)kmalloc(sizeof(vm_address_space));
 	if(aspace == NULL)
 		return NULL;
-	aspace->id = next_aspace_id++;
+
 	aspace->name = (char *)kmalloc(strlen(name) + 1);
 	if(aspace->name == NULL ) {
 		kfree(aspace);
 		return NULL;
 	}
 	strcpy(aspace->name, name);
-	aspace->base = base;
-	aspace->size = size;
-	aspace->area_list = NULL;
-	aspace->area_count = 0;
 
-	// insert it into the aspace list
-	aspace->next = aspace_list;
-	aspace_list = aspace;
+	// initialize the corresponding translation map
+	err = vm_translation_map_create(&aspace->translation_map, kernel);
+	if(err < 0) {
+		kfree(aspace->name);
+		kfree(aspace);
+		return NULL;
+	}
+
+	// initialize the virtual map
+	aspace->virtual_map.base = base;
+	aspace->virtual_map.size = size;
+	aspace->virtual_map.region_list = NULL;
+	aspace->virtual_map.region_hint = NULL;
+	aspace->virtual_map.change_count = 0;
+	aspace->virtual_map.sem = sem_create(WRITE_COUNT, "aspacelock");
+	aspace->virtual_map.aspace = aspace;
 
 	return aspace;	
 }
 
-static addr _alloc_vspace_from_ka_struct(kernel_args *ka, unsigned int size)
+void vm_test()
 {
-	addr spot = 0;
-	unsigned int i;
-	int last_valloc_entry = 0;
-
-	size = PAGE_ALIGN(size);
-	// find a slot in the virtual allocation addr range
-	for(i=1; i<ka->num_virt_alloc_ranges; i++) {
-		last_valloc_entry = i;
-		// check to see if the space between this one and the last is big enough
-		if(ka->virt_alloc_range[i].start - 
-			(ka->virt_alloc_range[i-1].start + ka->virt_alloc_range[i-1].size) >= size) {
-
-			spot = ka->virt_alloc_range[i-1].start + ka->virt_alloc_range[i-1].size;
-			ka->virt_alloc_range[i-1].size += size;
-			goto out;
-		}
-	}
-	if(spot == 0) {
-		// we hadn't found one between allocation ranges. this is ok.
-		// see if there's a gap after the last one
-		if(ka->virt_alloc_range[last_valloc_entry].start + ka->virt_alloc_range[last_valloc_entry].size + size <=
-			KERNEL_BASE + (KERNEL_SIZE - 1)) {
-			spot = ka->virt_alloc_range[last_valloc_entry].start + ka->virt_alloc_range[last_valloc_entry].size;
-			ka->virt_alloc_range[last_valloc_entry].size += size;
-			goto out;
-		}
-		// see if there's a gap before the first one
-		if(ka->virt_alloc_range[0].start > KERNEL_BASE) {
-			if(ka->virt_alloc_range[0].start - KERNEL_BASE >= size) {
-				ka->virt_alloc_range[0].start -= size;
-				spot = ka->virt_alloc_range[0].start;
-				goto out;
-			}
-		}
-	}
-
-out:
-	return spot;
-}
-
-// XXX horrible brute-force method of determining if the page can be allocated
-static bool is_page_in_phys_range(kernel_args *ka, addr paddr)
-{
-	unsigned int i;
-
-	for(i=0; i<ka->num_phys_mem_ranges; i++) {
-		if(paddr >= ka->phys_mem_range[i].start &&
-			paddr < ka->phys_mem_range[i].start + ka->phys_mem_range[i].size) {
-			return true;
-		}	
-	}
-	return false;
-}
-
-static addr _alloc_ppage_from_kernel_struct(kernel_args *ka)
-{
-	unsigned int i;
-
-	for(i=0; i<ka->num_phys_alloc_ranges; i++) {
-		addr next_page;
-
-		next_page = ka->phys_alloc_range[i].start + ka->phys_alloc_range[i].size;
-		// see if the page after the next allocated paddr run can be allocated
-		if(i + 1 < ka->num_phys_alloc_ranges && ka->phys_alloc_range[i+1].size != 0) {
-			// see if the next page will collide with the next allocated range
-			if(next_page >= ka->phys_alloc_range[i+1].start)
-				continue;
-		}
-		// see if the next physical page fits in the memory block
-		if(is_page_in_phys_range(ka, next_page)) {
-			// we got one!
-			ka->phys_alloc_range[i].size += PAGE_SIZE;
-			return (ka->phys_alloc_range[i].start + ka->phys_alloc_range[i].size - PAGE_SIZE);
-		}
-	}
-
-	return 0;	// could not allocate a block
-}
-
-static addr alloc_from_ka_struct(kernel_args *ka, unsigned int size, int lock)
-{
-	addr vspot;
-	addr pspot;
-	unsigned int i;
-	int curr_phys_alloc_range = 0;
-
-	// find the vaddr to allocate at
-	vspot = _alloc_vspace_from_ka_struct(ka, size);
-//	dprintf("alloc_from_ka_struct: vaddr 0x%x\n", vspot);
-
-	// map the pages
-	for(i=0; i<PAGE_ALIGN(size)/PAGE_SIZE; i++) {
-		pspot = _alloc_ppage_from_kernel_struct(ka);
-//		dprintf("alloc_from_ka_struct: paddr 0x%x\n", pspot);
-		if(pspot == 0)
-			panic("error allocating page from ka_struct!\n");
-		pmap_map_page(pspot, vspot + i*PAGE_SIZE, lock);
-	}
+	vm_region *region;
+	addr region_addr;
+	int i;
 	
-	return vspot;
+	dprintf("vm_test: entry\n");
+	
+	region = vm_create_anonymous_region(vm_get_kernel_aspace(), "test_region", (void **)&region_addr,
+		REGION_ADDR_ANY_ADDRESS, PAGE_SIZE * 16, REGION_WIRING_LAZY, LOCK_RW|LOCK_KERNEL);
+	dprintf("region = 0x%x, addr = 0x%x, region->base = 0x%x\n", region, region_addr, region->base);
+
+	memset((void *)region_addr, 0, PAGE_SIZE * 16);
+	
+	region = vm_map_physical_memory(vm_get_kernel_aspace(), "test_physical_region", (void **)&region_addr,
+		REGION_ADDR_ANY_ADDRESS, PAGE_SIZE * 16, LOCK_RW|LOCK_KERNEL, 0xb8000);
+	dprintf("region = 0x%x, addr = 0x%x, region->base = 0x%x\n", region, region_addr, region->base);
+
+	for(i=0; i<64; i++) {
+		((char *)region_addr)[i] = 'a';
+	}	
+
+	region = vm_create_anonymous_region(vm_get_kernel_aspace(), "test_region_wired", (void **)&region_addr,
+		REGION_ADDR_ANY_ADDRESS, PAGE_SIZE * 16, REGION_WIRING_WIRED, LOCK_RW|LOCK_KERNEL);
+	dprintf("region = 0x%x, addr = 0x%x, region->base = 0x%x\n", region, region_addr, region->base);
+
+	memset((void *)region_addr, 0, PAGE_SIZE * 16);
+	
+	dprintf("vm_test: done\n");
 }
 
 int vm_init(kernel_args *ka)
@@ -536,261 +641,265 @@ int vm_init(kernel_args *ka)
 	int last_used_virt_range = -1;
 	int last_used_phys_range = -1;
 	addr heap_base;
+	void *null_addr;
 
 	dprintf("vm_init: entry\n");
-	err = arch_pmap_init(ka);
+	err = vm_translation_map_module_init(ka);
 	err = arch_vm_init(ka);
+
+	// initialize some globals
+	kernel_aspace = NULL;
+	next_region_id = 0;
 	
-	// calculate the size of memory by looking at the phys_mem_range array
-	{
-		unsigned int last_phys_page = 0;
-
-		free_page_table_base = ka->phys_mem_range[0].start / PAGE_SIZE;
-		for(i=0; i<ka->num_phys_mem_ranges; i++) {
-			last_phys_page = (ka->phys_mem_range[i].start + ka->phys_mem_range[i].size) / PAGE_SIZE - 1;
-		}
-		dprintf("first phys page = 0x%x, last 0x%x\n", free_page_table_base, last_phys_page);
-		free_page_table_size = last_phys_page - free_page_table_base;
-	}
-	
-	// map in this new table
-	free_page_table = (unsigned int *)alloc_from_ka_struct(ka, free_page_table_size*sizeof(unsigned int),LOCK_KERNEL|LOCK_RW);
-
-	dprintf("vm_init: putting free_page_table @ %p, # ents %d\n",
-		free_page_table, free_page_table_size);
-	
-	// initialize the free page table
-	for(i=0; i<free_page_table_size-1; i++) {
-		free_page_table[i] = i+1;
-	}
-	free_page_table[i] = END_OF_LIST;
-	first_free_page_index = 0;
-
-	// mark some of the page ranges inuse
-	for(i = 0; i < ka->num_phys_alloc_ranges; i++) {
-		vm_mark_page_range_inuse(ka->phys_alloc_range[i].start / PAGE_SIZE,
-			ka->phys_alloc_range[i].size / PAGE_SIZE);
-	}
-
-	// map in the new heap
-	heap_base = _alloc_vspace_from_ka_struct(ka, HEAP_SIZE);
-	if(heap_base == 0)
-		panic("could not allocate heap!\n");
-	for(i = 0; i < HEAP_SIZE / PAGE_SIZE; i++) {
-		addr ppage;
-		if(vm_get_free_page((unsigned int *)&ppage) < 0)
-			panic("error getting page for kernel heap!\n");
-		pmap_map_page(ppage * PAGE_SIZE, heap_base + i * PAGE_SIZE, LOCK_KERNEL|LOCK_RW);
-	}
-
+	// map in the new heap and initialize it
+	heap_base = vm_alloc_from_ka_struct(ka, HEAP_SIZE, LOCK_KERNEL|LOCK_RW);
+	dprintf("heap at 0x%x\n", heap_base);
 	heap_init(heap_base, HEAP_SIZE);
+
+	// initialize the free page list
+	vm_page_init(ka);
 	
 	// create the initial kernel address space
-	kernel_aspace = vm_create_aspace("kernel_land", KERNEL_BASE, KERNEL_SIZE);
+	kernel_aspace = vm_create_aspace("kernel_land", KERNEL_BASE, KERNEL_SIZE, true);
 
 	// do any further initialization that the architecture dependant layers may need now
-	arch_pmap_init2(ka);
+	vm_translation_map_module_init2(ka);
 	arch_vm_init2(ka);
+	vm_page_init2(ka);
 
-	// allocate areas to represent stuff that already exists
-	_vm_create_area_struct(kernel_aspace, "kernel_heap", ROUNDOWN((unsigned int)heap_base, PAGE_SIZE), HEAP_SIZE, LOCK_RW|LOCK_KERNEL);
-	_vm_create_area_struct(kernel_aspace, "free_page_table", (unsigned int)free_page_table, PAGE_ALIGN(free_page_table_size * sizeof(unsigned int)), LOCK_RW|LOCK_KERNEL);
-	_vm_create_area_struct(kernel_aspace, "kernel_seg0", ROUNDOWN((unsigned int)ka->kernel_seg0_addr.start, PAGE_SIZE), PAGE_ALIGN(ka->kernel_seg0_addr.size), LOCK_RW|LOCK_KERNEL);
-	_vm_create_area_struct(kernel_aspace, "kernel_seg1", ROUNDOWN((unsigned int)ka->kernel_seg1_addr.start, PAGE_SIZE), PAGE_ALIGN(ka->kernel_seg1_addr.size), LOCK_RW|LOCK_KERNEL);
+	// allocate regions to represent stuff that already exists
+	null_addr = (void *)ROUNDOWN(heap_base, PAGE_SIZE);
+	vm_create_anonymous_region(kernel_aspace, "kernel_heap", &null_addr, REGION_ADDR_EXACT_ADDRESS,
+		HEAP_SIZE, REGION_WIRING_WIRED_ALREADY, LOCK_RW|LOCK_KERNEL);
+
+	null_addr = (void *)ROUNDOWN(ka->kernel_seg0_addr.start, PAGE_SIZE);
+	vm_create_anonymous_region(kernel_aspace, "kernel_seg0", &null_addr, REGION_ADDR_EXACT_ADDRESS,
+		PAGE_ALIGN(ka->kernel_seg0_addr.size), REGION_WIRING_WIRED_ALREADY, LOCK_RW|LOCK_KERNEL);
+
+	if(ka->kernel_seg1_addr.size > 0) {
+		null_addr = (void *)ROUNDOWN(ka->kernel_seg1_addr.start, PAGE_SIZE);
+		vm_create_anonymous_region(kernel_aspace, "kernel_seg1", &null_addr, REGION_ADDR_EXACT_ADDRESS,
+			PAGE_ALIGN(ka->kernel_seg1_addr.size), REGION_WIRING_WIRED_ALREADY, LOCK_RW|LOCK_KERNEL);
+	}
 	for(i=0; i < ka->num_cpus; i++) {
 		char temp[64];
 		
 		sprintf(temp, "idle_thread%d_kstack", i);
-		_vm_create_area_struct(kernel_aspace, temp, (unsigned int)ka->cpu_kstack[i].start, ka->cpu_kstack[i].size, LOCK_RW|LOCK_KERNEL);
+		null_addr = (void *)ka->cpu_kstack[i].start;
+		vm_create_anonymous_region(kernel_aspace, temp, &null_addr, REGION_ADDR_EXACT_ADDRESS,
+			ka->cpu_kstack[i].size, REGION_WIRING_WIRED_ALREADY, LOCK_RW|LOCK_KERNEL);
 	}
 	{
 		void *null;
-		vm_map_physical_memory(kernel_aspace, "bootdir", &null, AREA_ANY_ADDRESS,
+		vm_map_physical_memory(kernel_aspace, "bootdir", &null, REGION_ADDR_ANY_ADDRESS,
 			ka->bootdir_addr.size, LOCK_RO|LOCK_KERNEL, ka->bootdir_addr.start);
 	}
-	vm_dump_areas(kernel_aspace);
+	vm_dump_regions(kernel_aspace);
 
 	// add some debugger commands
-	dbg_add_command(&dump_aspace_areas, "aspace_areas", "Dump areas in an address space");
-	dbg_add_command(&dump_aspace_list, "aspaces", "Dump a list of all address spaces");
-	dbg_add_command(&vm_dump_kspace_areas, "area_dump_kspace", "Dump kernel space areas");
-	dbg_add_command(&dump_free_page_table, "free_pages", "Dump free page table list");	
+//	dbg_add_command(&dump_aspace_regions, "aspace_regions", "Dump regions in an address space");
+//	dbg_add_command(&dump_aspace_list, "aspaces", "Dump a list of all address spaces");
+	dbg_add_command(&vm_dump_kspace_regions, "region_dump_kspace", "Dump kernel space regions");
 //	dbg_add_command(&display_mem, "dl", "dump memory long words (64-bit)");
 	dbg_add_command(&display_mem, "dw", "dump memory words (32-bit)");
 	dbg_add_command(&display_mem, "ds", "dump memory shorts (16-bit)");
 	dbg_add_command(&display_mem, "db", "dump memory bytes (8-bit)");
 
 	dprintf("vm_init: exit\n");
+	
+	vm_test();
+//	panic("done with tests\n");
 
 	return err;
 }
 
 int vm_init_postsem(kernel_args *ka)
 {
+	vm_region *region;
+	
+	// fill in all of the semaphores that were not allocated before
+	// since we're still single threaded and only the kernel address space exists,
+	// it isn't that hard to find all of the ones we need to create
+	kernel_aspace->virtual_map.sem = sem_create(WRITE_COUNT, "kernel_aspacelock");
+	
+	for(region = kernel_aspace->virtual_map.region_list; region; region = region->next) {
+		if(region->cache_ref->sem < 0) {
+			region->cache_ref->sem = sem_create(1, "cache_ref_sem");
+		}
+	}
+
 	return heap_init_postsem(ka);
 }
 
-int vm_mark_page_range_inuse(unsigned int start_page, unsigned int len)
+int vm_page_fault(addr address, addr fault_address, bool is_write, bool is_user)
 {
-	unsigned int i;
-	unsigned int last_i;
-	unsigned int j;
+	int err;
 	
-#if 1
-	dprintf("vm_mark_page_range_inuse: entry. start_page %d len %d, first_free %d\n",
-		start_page, len, first_free_page_index);
-#endif
-	dprintf("first_free 0x%x\n", first_free_page_index);
-	if(start_page - free_page_table_base || start_page - free_page_table_base + len >= free_page_table_size) {
-		dprintf("vm_mark_page_range_inuse: range would extend past free list\n");
-		return -1;
-	}
-	start_page -= free_page_table_base;
-
-	// walk thru the free page list to find the spot
-	last_i = END_OF_LIST;
-	i = first_free_page_index;
-	while(i != END_OF_LIST && i < start_page) {
-		last_i = i;
-		i = free_page_table[i];
+	dprintf("vm_page_fault: page fault at 0x%x, ip 0x%x\n", address, fault_address);
+	
+	err = vm_soft_fault(address, is_write, is_user);
+	if(err < 0) {
+		if(!is_user) {
+			// unhandled page fault in the kernel
+			panic("vm_page_fault: unhandled page fault in kernel space at 0x%x, ip 0x%x\n",
+				address, fault_address);
+		} else {
+			// XXX kill the process
+		}			
 	}
 
-	if(i == END_OF_LIST || i > start_page) {
-		dprintf("vm_mark_page_range_inuse: could not find start_page (%d) in free_page_list\n", start_page);
-		dump_free_page_table(0, NULL);
-		return -1;
-	}
+	return INT_NO_RESCHEDULE;
+}
 
-	for(j=i; j<(len + i); j++) {
-		if(free_page_table[j] == PAGE_INUSE) {
-			dprintf("vm_mark_page_range_inuse: found page inuse already\n");	
-			dump_free_page_table(0, NULL);
-		}
-		free_page_table[j] = PAGE_INUSE;
-	}
+int vm_soft_fault(addr address, bool is_write, bool is_user)
+{
+	vm_address_space *aspace;
+	vm_virtual_map *map;
+	vm_region *region;
+	vm_cache_ref *cache_ref;
+	off_t cache_offset;
+	vm_page dummy_page;
+	vm_page *page;
+	int change_count;
+	int err;
 
-	if(first_free_page_index == i) {
-		first_free_page_index = j;
+	dprintf("vm_soft_fault: address 0x%x, is_write %d, is_user %d\n",
+		address, is_write, is_user);
+	
+	address = ROUNDOWN(address, PAGE_SIZE);
+	
+	if(address >= KERNEL_BASE && address <= KERNEL_BASE + (KERNEL_SIZE - 1)) {
+		aspace = vm_get_kernel_aspace();
 	} else {
-		free_page_table[last_i] = j;
+		aspace = vm_get_current_user_aspace();
 	}
-
-	return 0;
-}
-
-int vm_mark_page_inuse(unsigned int page)
-{
-	return vm_mark_page_range_inuse(page, 1);
-}
-
-int vm_get_free_page_run(unsigned int *page, unsigned int len)
-{
-	unsigned int start;
-	unsigned int i;
-	int err = 0;
+	map = &aspace->virtual_map;
 	
-	start = first_free_page_index;
-	if(start == END_OF_LIST)
-		return -1;
+	sem_acquire(map->sem, READ_COUNT);
+	region = vm_virtual_map_lookup(map, address);
+	if(region == NULL) {
+		sem_release(map->sem, READ_COUNT);
+		dprintf("vm_soft_fault: va 0x%x not covered by region in address space\n", address);
+		return -1; // BAD_ADDRESS
+	}
+	// XXX check permissions
+	
+	cache_ref = region->cache_ref;
+	cache_offset = address - region->base + region->cache_offset;
+	vm_cache_acquire_ref(cache_ref);
+	change_count = map->change_count;
+	sem_release(map->sem, READ_COUNT);
+
+	// see if this cache has a fault handler
+	if(cache_ref->cache->store && cache_ref->cache->store->ops->fault) {
+		int err = (*cache_ref->cache->store->ops->fault)(cache_ref->cache->store, aspace, cache_offset);
+		vm_cache_release_ref(cache_ref);
+		return err;
+	}
+	
+	dummy_page.state = PAGE_STATE_INACTIVE;
+	
+	sem_acquire(cache_ref->sem, 1);
 
 	for(;;) {
-		bool foundit = true;
-		if(start + len >= free_page_table_size) {
-			err = -1;
-			break;
-		}
-		for(i=0; i<len; i++) {
-			if(free_page_table[start + i] != start + i + 1) {
-				foundit = false;
-				break;
+		 page = vm_cache_lookup_page(cache_ref, cache_offset);
+		 if(page != NULL && page->state != PAGE_STATE_BUSY) {
+		 	vm_page_set_state(page, PAGE_STATE_BUSY);
+		 	sem_release(cache_ref->sem, 1);
+		 	break;
+		 }
+		 
+		 if(page == NULL)
+		 	break;
+		 
+		 // page must be busy
+		 sem_release(cache_ref->sem, 1);
+		 thread_snooze(20000);
+		 sem_acquire(cache_ref->sem, 1);
+	}
+
+	if(page == NULL) {
+		// still havent found a page, insert the dummy page to lock it
+		dummy_page.state = PAGE_STATE_BUSY;
+		vm_cache_insert_page(cache_ref, &dummy_page, cache_offset);
+		
+		// see if the vm_store has it
+		if(cache_ref->cache->store && cache_ref->cache->store->ops->has_page) {
+			if(cache_ref->cache->store->ops->has_page(cache_ref->cache->store, cache_offset)) {
+				// XXX read it in from the store
+				panic("not done\n");
 			}
 		}
-		if(foundit) {
-			vm_mark_page_range_inuse(start, len);
-			*page = start + free_page_table_base;
-			err = 0;
-			break;
-		} else {
-			start = free_page_table[start + i];
-			if(start == END_OF_LIST) {
-				err = -1;
-				break;
-			}
+		sem_release(cache_ref->sem, 1);
+	}
+
+	if(page == NULL) {
+		// still haven't found a page, so zero out a new one
+		page = vm_page_allocate_page(PAGE_STATE_CLEAR);
+		dprintf("vm_soft_fault: just allocated page 0x%x\n", page->ppn);
+		sem_acquire(cache_ref->sem, 1);
+		vm_cache_remove_page(cache_ref, &dummy_page);
+		vm_cache_insert_page(cache_ref, page, cache_offset);
+		sem_release(cache_ref->sem, 1);
+		dummy_page.state = PAGE_STATE_INACTIVE;
+	}
+
+	if(page->cache_ref != cache_ref && is_write) {
+		// XXX handle making private copy on write
+		panic("not done\n");
+	}
+	
+	err = 0;
+	sem_acquire(map->sem, READ_COUNT);
+	if(change_count != map->change_count) {
+		// something may have changed, see if the address is still valid
+		region = vm_virtual_map_lookup(map, address);
+		if(region == NULL || region->cache_ref != cache_ref || region->cache_offset != cache_offset) {
+			dprintf("vm_soft_fault: address space layout changed effecting ongoing soft fault\n");
+			err = -1; // BAD_ADDRESS
 		}
 	}
+
+	if(err == 0) {
+		(*aspace->translation_map.ops->lock)(&aspace->translation_map);
+		(*aspace->translation_map.ops->map)(&aspace->translation_map, address,
+			page->ppn * PAGE_SIZE, region->lock);
+		(*aspace->translation_map.ops->unlock)(&aspace->translation_map);
+	}
+	
+	sem_release(map->sem, READ_COUNT);
+
+	if(dummy_page.state == PAGE_STATE_BUSY) {
+		sem_acquire(cache_ref->sem, 1);
+		vm_cache_remove_page(cache_ref, &dummy_page);
+		sem_release(cache_ref->sem, 1);
+		dummy_page.state = PAGE_STATE_INACTIVE;
+	}
+
+	vm_page_set_state(page, PAGE_STATE_ACTIVE);
+	
+	vm_cache_release_ref(cache_ref);
 
 	return err;
 }
 
-int vm_get_free_page(unsigned int *page)
+vm_region *vm_virtual_map_lookup(vm_virtual_map *map, addr address)
 {
-	unsigned int index = first_free_page_index;
-	
-//	dprintf("vm_get_free_page entry\n");
-		
-	if(index == END_OF_LIST)
-		return -1;
+	vm_region *region;
 
-	*page = index + free_page_table_base;
-	first_free_page_index = free_page_table[index];
-	free_page_table[index] = PAGE_INUSE;
-//	dprintf("vm_get_free_page exit, returning page 0x%x\n", *page);
-	return 0;
+	// check the region_list region first
+	region = map->region_hint;
+	if(region && region->base <= address && (region->base + region->size) > address)
+		return region;
+
+	for(region = map->region_list; region != NULL; region = region->next) {
+		if(region->base <= address && (region->base + region->size) > address)
+			break;
+	}
+
+	if(region)
+		map->region_hint = region;
+	return region;
 }
 
-static void dump_free_page_table(int argc, char **argv)
-{
-	unsigned int i = 0;
-	unsigned int free_start = END_OF_LIST;
-	unsigned int inuse_start = PAGE_INUSE;
-
-	dprintf("dump_free_page_table():\n");
-	dprintf("first_free_page_index = %d\n", first_free_page_index);
-
-	while(i < free_page_table_size) {
-		if(free_page_table[i] == PAGE_INUSE) {
-			if(inuse_start != PAGE_INUSE) {
-				i++;
-				continue;
-			}
-			if(free_start != END_OF_LIST) {
-				dprintf("free from %d -> %d\n", free_start + free_page_table_base, i-1 + free_page_table_base);
-				free_start = END_OF_LIST;
-			}
-			inuse_start = i;
-		} else {
-			if(free_start != END_OF_LIST) {
-				i++;
-				continue;
-			}
-			if(inuse_start != PAGE_INUSE) {
-				dprintf("inuse from %d -> %d\n", inuse_start + free_page_table_base, i-1 + free_page_table_base);
-				inuse_start = PAGE_INUSE;
-			}
-			free_start = i;
-		}
-		i++;
-	}
-	if(inuse_start != PAGE_INUSE) {
-		dprintf("inuse from %d -> %d\n", inuse_start + free_page_table_base, i-1 + free_page_table_base);
-	}
-	if(free_start != END_OF_LIST) {
-		dprintf("free from %d -> %d\n", free_start + free_page_table_base, i-1 + free_page_table_base);
-	}
-/*			
-	for(i=0; i<free_page_table_size; i++) {
-		dprintf("%d->%d ", i, free_page_table[i]);
-	}
-*/
-}
-
-int vm_page_fault(int address, unsigned int fault_address)
-{
-	dprintf("PAGE FAULT: faulted on address 0x%x. ip = 0x%x. Killing system.\n", address, fault_address);
-	
-	panic("page fault\n");
-//	cli();
-	for(;;);
-	return INT_NO_RESCHEDULE;
-}
 

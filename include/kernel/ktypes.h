@@ -9,8 +9,7 @@
 #include <kernel/arch/ktypes.h>
 
 typedef int thread_id;
-typedef int area_id;
-typedef int aspace_id;
+typedef int region_id;
 typedef int proc_id;
 typedef int sem_id;
 

@@ -82,23 +82,23 @@ int elf_load(const char *path, struct proc *p, int flags, addr *entry)
 	}
 
 	for(i=0; i < eheader.e_phnum; i++) {
-		char area_name[64];
-		area_id a;
-		char *area_addr;
+		char region_name[64];
+		vm_region *region;
+		char *region_addr;
 		
-		sprintf(area_name, "%s_seg%d", path, i);
+		sprintf(region_name, "%s_seg%d", path, i);
 		
-		area_addr = (char *)ROUNDOWN(pheaders[i].p_vaddr, PAGE_SIZE);
-		a = vm_create_area(p->aspace, area_name, (void **)&area_addr, AREA_EXACT_ADDRESS,
-			ROUNDUP(pheaders[i].p_memsz + (pheaders[i].p_vaddr % PAGE_SIZE), PAGE_SIZE), LOCK_RW, AREA_NO_FLAGS);
-		if(a < 0) {
+		region_addr = (char *)ROUNDOWN(pheaders[i].p_vaddr, PAGE_SIZE);
+		region = vm_create_anonymous_region(p->aspace, region_name, (void **)&region_addr, REGION_ADDR_EXACT_ADDRESS,
+			ROUNDUP(pheaders[i].p_memsz + (pheaders[i].p_vaddr % PAGE_SIZE), PAGE_SIZE), REGION_WIRING_LAZY, LOCK_RW);
+		if(region == NULL) {
 			dprintf("error allocating area!\n");
 			err = -1;
 			goto error;
 		}
 		
 		len = pheaders[i].p_filesz;
-		err = sys_read(fd, area_addr + (pheaders[i].p_vaddr % PAGE_SIZE), pheaders[i].p_offset, &len);
+		err = sys_read(fd, region_addr + (pheaders[i].p_vaddr % PAGE_SIZE), pheaders[i].p_offset, &len);
 		if(err < 0) {
 			dprintf("error reading in seg %d\n", i);
 			goto error;

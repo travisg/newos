@@ -10,35 +10,11 @@
 #include <kernel/thread.h>
 #include <kernel/arch/thread.h>
 #include <kernel/arch/cpu.h>
-#include <kernel/arch/i386/pmap.h>
 #include <kernel/int.h>
 #include <libc/string.h>
 
 int arch_proc_init_proc_struct(struct proc *p, bool kernel)
 {
-	if(!kernel) {
-		// user space
-		p->arch_info.pgdir_virt = kmalloc(PAGE_SIZE);
-		if(p->arch_info.pgdir_virt == NULL)
-			return -1;
-		if(((addr)p->arch_info.pgdir_virt % PAGE_SIZE) != 0)
-			panic("arch_proc_init_proc_struct: malloced pgdir and found it wasn't aligned!\n");
-		vm_get_page_mapping((addr)p->arch_info.pgdir_virt, (addr *)&p->arch_info.pgdir_phys);
-		
-		pmap_init_and_add_pgdir_to_list((addr)p->arch_info.pgdir_virt);
-
-	} else {
-		// kernel
-		// this should only be called once, so find the pgdir area,
-		// which should map the kernel pgdir already
-		struct area *a;
-		
-		a = vm_find_area_by_name(vm_get_kernel_aspace(), "kernel_pgdir");
-		if(a == NULL)
-			return -1;
-		p->arch_info.pgdir_virt = (unsigned int *)a->base;
-		vm_get_page_mapping((addr)p->arch_info.pgdir_virt, (addr *)&p->arch_info.pgdir_phys);
-	}
 	return 0;
 }
 
@@ -51,8 +27,8 @@ int arch_thread_init_thread_struct(struct thread *t)
 
 int arch_thread_initialize_kthread_stack(struct thread *t, int (*start_func)(void), void (*entry_func)(void))
 {
-	unsigned int *kstack = (unsigned int *)t->kernel_stack_area->base;
-	unsigned int kstack_size = t->kernel_stack_area->size;
+	unsigned int *kstack = (unsigned int *)t->kernel_stack_region->base;
+	unsigned int kstack_size = t->kernel_stack_region->size;
 	unsigned int *kstack_top = kstack + kstack_size / sizeof(unsigned int);
 	int i;
 
@@ -92,6 +68,7 @@ int arch_thread_initialize_kthread_stack(struct thread *t, int (*start_func)(voi
 
 void arch_thread_context_switch(struct thread *t_from, struct thread *t_to)
 {
+	unsigned int *new_pgdir;
 #if 0
 	int i;
 
@@ -104,13 +81,29 @@ void arch_thread_context_switch(struct thread *t_from, struct thread *t_to)
 	for(i=0; i<11; i++)
 		dprintf("*esp[%d] (0x%x) = 0x%x\n", i, ((unsigned int *)new_at->esp + i), *((unsigned int *)new_at->esp + i));
 #endif
-	i386_set_kstack(t_to->kernel_stack_area->base + KSTACK_SIZE);
+	i386_set_kstack(t_to->kernel_stack_region->base + KSTACK_SIZE);
 
-	if(t_from->proc->arch_info.pgdir_phys != t_to->proc->arch_info.pgdir_phys) { 
-		i386_context_switch(&t_from->arch_info.esp, t_to->arch_info.esp, t_to->proc->arch_info.pgdir_phys);
+	if(t_from->proc->aspace != NULL && t_to->proc->aspace != NULL) {
+		// they are both uspace threads
+		addr pgdir_from = vm_translation_map_get_pgdir(&t_from->proc->aspace->translation_map);
+		addr pgdir_to = vm_translation_map_get_pgdir(&t_to->proc->aspace->translation_map);
+
+		if(pgdir_from != pgdir_to) {
+			new_pgdir = (unsigned int *)pgdir_to;
+		} else {
+			new_pgdir = NULL;
+		}
+	} else if(t_from->proc->aspace == t_to->proc->aspace) {
+		// they must both be kspace threads	
+		new_pgdir = NULL;
+	} else if(t_to->proc->aspace == NULL) {
+		// the one we're switching to is kspace
+		new_pgdir = (unsigned int *)vm_translation_map_get_pgdir(&t_to->proc->kaspace->translation_map);
 	} else {
-		i386_context_switch(&t_from->arch_info.esp, t_to->arch_info.esp, NULL);
+		new_pgdir = (unsigned int *)vm_translation_map_get_pgdir(&t_to->proc->aspace->translation_map);
 	}
+
+	i386_context_switch(&t_from->arch_info.esp, t_to->arch_info.esp, new_pgdir);
 }
 
 void arch_thread_dump_info(void *info)
@@ -127,7 +120,7 @@ void arch_thread_enter_uspace(addr entry, addr ustack_top)
 
 	int_disable_interrupts();
 
-	i386_set_kstack(thread_get_current_thread()->kernel_stack_area->base + KSTACK_SIZE);
+	i386_set_kstack(thread_get_current_thread()->kernel_stack_region->base + KSTACK_SIZE);
 
 	i386_enter_uspace(entry, ustack_top - 4);
 }

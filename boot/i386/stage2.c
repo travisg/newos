@@ -9,6 +9,7 @@
 #include <libc/string.h>
 #include <libc/stdarg.h>
 #include <libc/printf.h>
+#include <sys/elf32.h>
 
 const unsigned kBSSSize = 0x9000;
 #define BOOTDIR_ADDR 0x100000
@@ -25,21 +26,30 @@ unsigned int line = 0;
 
 unsigned int cv_factor = 0;
 
+// size of bootdir in pages
+unsigned int bootdir_pages = 0;
+
+// working pagedir and pagetable
+unsigned int *pgdir = 0;
+unsigned int *pgtable = 0;
+
 void calculate_cpu_conversion_factor();
+void load_elf_image(void *data, unsigned int *next_paddr,
+	addr_range *ar0, addr_range *ar1, unsigned int *start_addr);
+int mmu_init(kernel_args *ka, unsigned int *next_paddr);
+void mmu_map_page(unsigned int vaddr, unsigned int paddr);
 
 void _start(unsigned int mem, char *str)
 {
-	unsigned int *old_pgdir;
-	unsigned int *pgdir;
-	unsigned int *new_pgtable;
-	unsigned int bootdir_pages = 0;
 	unsigned int new_stack;
 	unsigned int *idt;
 	unsigned int *gdt;
-	unsigned int next_vpage;
+	unsigned int next_vaddr;
+	unsigned int next_paddr;
 	unsigned int nextAllocPage;
 	unsigned int kernelSize;
 	unsigned int i;
+	unsigned int kernel_entry;
 	
 	// Important.  Make sure supervisor threads can fault on read only pages...
 	asm("movl %%eax, %%cr0" : : "a" ((1 << 31) | (1 << 16) | (1 << 5) | 1));
@@ -65,29 +75,22 @@ void _start(unsigned int mem, char *str)
 //		nmessage("bootdir is ", bootdir_pages, " pages long\n");
 	}
 
-	// get the current page directory
-	asm("movl %%cr3, %%eax" : "=a" (old_pgdir));
+	ka->bootdir_addr.start = (unsigned long)bootdir;
+	ka->bootdir_addr.size = bootdir_pages * PAGE_SIZE;
+
+	next_paddr = BOOTDIR_ADDR + bootdir_pages * PAGE_SIZE;
+
+	mmu_init(ka, &next_paddr);
 	
-	// copy the old pgdir to the new one
-	pgdir =  (unsigned int *)(BOOTDIR_ADDR + (bootdir_pages + 1) * PAGE_SIZE);
-	for(i = 0; i < 512; i++)
-		pgdir[i] = old_pgdir[i];
+	load_elf_image((void *)(bootdir[2].be_offset * PAGE_SIZE + BOOTDIR_ADDR), &next_paddr,
+			&ka->kernel_seg0_addr, &ka->kernel_seg1_addr, &kernel_entry);
 
-	// clear out the top part of the pgdir
-	for(; i < 1024; i++)
-		pgdir[i] = 0;
-
-	// switch to the new pgdir
-	asm("movl %0, %%eax;"
-		"movl %%eax, %%cr3;" :: "m" (pgdir) : "eax");
-
-	// Get new page table and clear it out
-	new_pgtable = (unsigned int *)(BOOTDIR_ADDR + (bootdir_pages + 2) * PAGE_SIZE);
-	for (i = 0; i < 1024; i++)
-		new_pgtable[i] = 0;
-
-//	nmessage("pgtable at ", new_pgtable, "\n");
-
+	if(ka->kernel_seg1_addr.size > 0) 
+		next_vaddr = ROUNDUP(ka->kernel_seg1_addr.start + ka->kernel_seg1_addr.size, PAGE_SIZE);
+	else
+		next_vaddr = ROUNDUP(ka->kernel_seg0_addr.start + ka->kernel_seg0_addr.size, PAGE_SIZE);
+	
+#if 0
 	// map kernel text and data
 	kernelSize = bootdir[2].be_size;
 
@@ -112,24 +115,26 @@ void _start(unsigned int mem, char *str)
 		next_vpage += PAGE_SIZE;
 	}
 	dprintf("to 0x%x\n", next_vpage);
+#endif
+	// map in a kernel stack
+	ka->cpu_kstack[0].start = next_vaddr;
+	for(i=0; i<STACK_SIZE; i++) {
+		mmu_map_page(next_vaddr, next_paddr);
+		next_vaddr += PAGE_SIZE;
+		next_paddr += PAGE_SIZE;
+	} 
+	ka->cpu_kstack[0].size = next_vaddr - ka->cpu_kstack[0].start;
 
-	/* map in an initial kernel stack */
-	for (; i < kernelSize + ROUNDUP(kBSSSize, PAGE_SIZE) / PAGE_SIZE + STACK_SIZE; i++) {
-		new_pgtable[i] = nextAllocPage | DEFAULT_PAGE_FLAGS;
-		nextAllocPage += PAGE_SIZE;
-		next_vpage += PAGE_SIZE;
-	}
-	new_stack = kernelSize * PAGE_SIZE + ROUNDUP(kBSSSize, PAGE_SIZE) + 2 * PAGE_SIZE + KERNEL_BASE;
-
-	dprintf("new stack at 0x%x to 0x%x\n", new_stack - STACK_SIZE * PAGE_SIZE, new_stack);
+	dprintf("new stack at 0x%x to 0x%x\n", ka->cpu_kstack[0].start, ka->cpu_kstack[0].start + ka->cpu_kstack[0].size);
 
 	// set up a new idt
 	{
 		struct gdt_idt_descr idt_descr;
 		
 		// find a new idt
-		idt = (unsigned int *)nextAllocPage;
-		nextAllocPage += PAGE_SIZE;
+		idt = (unsigned int *)next_paddr;
+		ka->arch_args.phys_idt = (unsigned int)idt;
+		next_paddr += PAGE_SIZE;
 	
 //		nmessage("idt at ", (unsigned int)idt, "\n");
 	
@@ -139,7 +144,7 @@ void _start(unsigned int mem, char *str)
 		}
 	
 		idt_descr.a = IDT_LIMIT - 1;
-		idt_descr.b = (unsigned int *)next_vpage;
+		idt_descr.b = (unsigned int *)next_vaddr;
 		
 		asm("lidt	%0;"
 			: : "m" (idt_descr));
@@ -147,8 +152,9 @@ void _start(unsigned int mem, char *str)
 //		nmessage("idt at virtual address ", next_vpage, "\n");
 
 		// map the idt into virtual space
-		new_pgtable[(next_vpage % 0x400000) / PAGE_SIZE] = (unsigned int)idt | DEFAULT_PAGE_FLAGS;
-		next_vpage += PAGE_SIZE;
+		mmu_map_page(next_vaddr, (unsigned int)idt);
+		ka->arch_args.vir_idt = (unsigned int)next_vaddr;
+		next_vaddr += PAGE_SIZE;
 	}
 
 	// set up a new gdt
@@ -156,8 +162,9 @@ void _start(unsigned int mem, char *str)
 		struct gdt_idt_descr gdt_descr;
 		
 		// find a new gdt
-		gdt = (unsigned int *)nextAllocPage;
-		nextAllocPage += PAGE_SIZE;
+		gdt = (unsigned int *)next_paddr;
+		ka->arch_args.phys_gdt = (unsigned int)gdt;
+		next_paddr += PAGE_SIZE;
 	
 //		nmessage("gdt at ", (unsigned int)gdt, "\n");
 	
@@ -175,7 +182,7 @@ void _start(unsigned int mem, char *str)
 		// gdt[10] & gdt[11] will be filled later by the kernel
 	
 		gdt_descr.a = GDT_LIMIT - 1;
-		gdt_descr.b = (unsigned int *)next_vpage;
+		gdt_descr.b = (unsigned int *)next_vaddr;
 		
 		asm("lgdt	%0;"
 			: : "m" (gdt_descr));
@@ -183,49 +190,32 @@ void _start(unsigned int mem, char *str)
 //		nmessage("gdt at virtual address ", next_vpage, "\n");
 
 		// map the gdt into virtual space
-		new_pgtable[(next_vpage % 0x400000) / PAGE_SIZE] = (unsigned int)gdt | DEFAULT_PAGE_FLAGS;
-		next_vpage += PAGE_SIZE;
+		mmu_map_page(next_vaddr, (unsigned int)gdt);
+		ka->arch_args.vir_gdt = (unsigned int)next_vaddr;
+		next_vaddr += PAGE_SIZE;
 	}
 
 	// Map the pg_dir into kernel space at 0xffc00000-0xffffffff
 	pgdir[1023] = (unsigned int)pgdir | DEFAULT_PAGE_FLAGS;
 
 	// also map it on the next vpage
-	new_pgtable[(next_vpage % 0x400000) / PAGE_SIZE] = (unsigned int)pgdir | DEFAULT_PAGE_FLAGS;
-	next_vpage += PAGE_SIZE;
-
-	// put the new page table into the page directory
-	// this maps the kernel at KERNEL_BASE
-	pgdir[KERNEL_BASE/(4*1024*1024)] = (unsigned int)new_pgtable | DEFAULT_PAGE_FLAGS;
+	mmu_map_page(next_vaddr, (unsigned int)pgdir);
+	ka->arch_args.vir_pgdir = next_vaddr;
+	next_vaddr += PAGE_SIZE;
 
 	// save the kernel args
 	ka->arch_args.system_time_cv_factor = cv_factor;
-	ka->arch_args.phys_pgdir = (unsigned int)pgdir;
-	ka->arch_args.vir_pgdir = (unsigned int)next_vpage - PAGE_SIZE;
-	ka->arch_args.pgtables[0] = (unsigned int)new_pgtable;
-	ka->arch_args.num_pgtables = 1;
-	ka->arch_args.phys_idt = (unsigned int)idt;
-	ka->arch_args.vir_idt = (unsigned int)next_vpage - PAGE_SIZE * 3;
-	ka->arch_args.phys_gdt = (unsigned int)gdt;
-	ka->arch_args.vir_gdt = (unsigned int)next_vpage - PAGE_SIZE * 2;
 	ka->phys_mem_range[0].start = 0;
 	ka->phys_mem_range[0].size = mem;
 	ka->num_phys_mem_ranges = 1;
 	ka->str = str;
-	ka->bootdir_addr.start = (unsigned long)bootdir;
-	ka->bootdir_addr.size = bootdir_pages * PAGE_SIZE;
-	ka->kernel_seg0_addr.start = KERNEL_BASE;
-	ka->kernel_seg0_addr.size = kernelSize * PAGE_SIZE;
-	ka->kernel_seg1_addr.start = KERNEL_BASE + kernelSize * PAGE_SIZE;
-	ka->kernel_seg1_addr.size = ROUNDUP(kBSSSize, PAGE_SIZE);
 	ka->phys_alloc_range[0].start = BOOTDIR_ADDR;
-	ka->phys_alloc_range[0].size = nextAllocPage - BOOTDIR_ADDR;
+	ka->phys_alloc_range[0].size = next_paddr - BOOTDIR_ADDR;
 	ka->num_phys_alloc_ranges = 1;
 	ka->virt_alloc_range[0].start = KERNEL_BASE;
-	ka->virt_alloc_range[0].size = next_vpage - KERNEL_BASE;
+	ka->virt_alloc_range[0].size = next_vaddr - KERNEL_BASE;
+	ka->num_virt_alloc_ranges = 1;
 	ka->arch_args.page_hole = 0xffc00000;
-	ka->cpu_kstack[0].start = new_stack - STACK_SIZE * PAGE_SIZE;
-	ka->cpu_kstack[0].size = STACK_SIZE * PAGE_SIZE;
 	ka->num_cpus = 1;
 #if 0			
 	dprintf("kernel args at 0x%x\n", ka);
@@ -248,19 +238,127 @@ void _start(unsigned int mem, char *str)
 	dprintf("finding and booting other cpus...\n");
 	smp_boot(ka);
 
-	dprintf("jumping into kernel at 0x80000080\n");
+	dprintf("jumping into kernel at 0x%x\n", kernel_entry);
 	
 	ka->cons_line = line;
 
 	asm("movl	%0, %%eax;	"			// move stack out of way
 		"movl	%%eax, %%esp; "
-		: : "m" (new_stack - 4));
+		: : "m" (ka->cpu_kstack[0].start - 4));
 	asm("pushl  $0x0; "					// we're the BSP cpu (0)
 		"pushl 	%0;	"					// kernel args
 		"pushl 	$0x0;"					// dummy retval for call to main
-		"pushl 	$0x80000080;	"		// this is the start address
+		"pushl 	%1;	"					// this is the start address
 		"ret;		"					// jump.
-		: : "m" (ka));
+		: : "g" (ka), "g" (kernel_entry));
+}
+
+void load_elf_image(void *data, unsigned int *next_paddr, addr_range *ar0, addr_range *ar1, unsigned int *start_addr)
+{
+	struct Elf32_Ehdr *imageHeader = (struct Elf32_Ehdr*) data;
+	struct Elf32_Phdr *segments = (struct Elf32_Phdr*)(imageHeader->e_phoff + (unsigned) imageHeader);
+	int segmentIndex;
+
+	ar0->size = 0;
+	ar1->size = 0;
+
+	for (segmentIndex = 0; segmentIndex < imageHeader->e_phnum; segmentIndex++) {
+		struct Elf32_Phdr *segment = &segments[segmentIndex];
+		unsigned segmentOffset;
+
+//		dprintf("segment %d\n", segmentIndex);
+//		dprintf("p_vaddr 0x%x p_paddr 0x%x p_filesz 0x%x p_memsz 0x%x\n",
+//			segment->p_vaddr, segment->p_paddr, segment->p_filesz, segment->p_memsz);
+
+		/* Map initialized portion */
+		for (segmentOffset = 0;
+			segmentOffset < ROUNDUP(segment->p_filesz, PAGE_SIZE);
+			segmentOffset += PAGE_SIZE) {
+
+			mmu_map_page(segment->p_vaddr + segmentOffset, *next_paddr);
+			memcpy((void *)ROUNDOWN(segment->p_vaddr + segmentOffset, PAGE_SIZE),
+				(void *)ROUNDOWN((unsigned)data + segment->p_offset + segmentOffset, PAGE_SIZE), PAGE_SIZE);
+			(*next_paddr) += PAGE_SIZE;
+		}
+
+		/* Clean out the leftover part of the last page */
+		if(segment->p_filesz % PAGE_SIZE > 0) {
+			dprintf("memsetting 0 to va 0x%x, size %d\n", (void*)((unsigned) data + segment->p_offset + segment->p_filesz), PAGE_SIZE  - (segment->p_filesz % PAGE_SIZE));
+			memset((void*)((unsigned) data + segment->p_offset + segment->p_filesz), 0, PAGE_SIZE
+				- (segment->p_filesz % PAGE_SIZE));
+		}
+
+		/* Map uninitialized portion */
+		for (; segmentOffset < ROUNDUP(segment->p_memsz, PAGE_SIZE); segmentOffset += PAGE_SIZE) {
+			mmu_map_page(segment->p_vaddr + segmentOffset, *next_paddr);
+			(*next_paddr) += PAGE_SIZE;
+		}
+		switch(segmentIndex) {
+			case 0:
+				ar0->start = segment->p_vaddr;
+				ar0->size = segment->p_memsz;
+				*start_addr = segment->p_vaddr;
+				break;
+			case 1:
+				ar1->start = segment->p_vaddr;
+				ar1->size = segment->p_memsz;
+				break;
+			default:
+				;
+		}
+	}
+}
+
+int mmu_init(kernel_args *ka, unsigned int *next_paddr)
+{
+	unsigned int *old_pgdir;
+	int i;
+
+	// get the current page directory
+	asm("movl %%cr3, %%eax" : "=a" (old_pgdir));
+	
+	// copy the old pgdir to the new one
+	pgdir = (unsigned int *)*next_paddr;
+	(*next_paddr) += PAGE_SIZE;
+	ka->arch_args.phys_pgdir = (unsigned int)pgdir;
+	for(i = 0; i < 512; i++)
+		pgdir[i] = old_pgdir[i];
+
+	// clear out the top part of the pgdir
+	for(; i < 1024; i++)
+		pgdir[i] = 0;
+
+	// switch to the new pgdir
+	asm("movl %0, %%eax;"
+		"movl %%eax, %%cr3;" :: "m" (pgdir) : "eax");
+
+	// Get new page table and clear it out
+	pgtable = (unsigned int *)*next_paddr;
+	ka->arch_args.pgtables[0] = (unsigned int)pgtable;
+	ka->arch_args.num_pgtables = 1;
+	(*next_paddr) += PAGE_SIZE;
+	for (i = 0; i < 1024; i++)
+		pgtable[i] = 0;
+
+	// put the new page table into the page directory
+	// this maps the kernel at KERNEL_BASE
+	pgdir[KERNEL_BASE/(4*1024*1024)] = (unsigned int)pgtable | DEFAULT_PAGE_FLAGS;
+
+	return 0;
+}
+
+// can only map the 4 meg region right after KERNEL_BASE, may fix this later
+// if need arises.
+void mmu_map_page(unsigned int vaddr, unsigned int paddr)
+{
+//	dprintf("mmu_map_page: vaddr 0x%x, paddr 0x%x\n", vaddr, paddr);
+	if(vaddr < KERNEL_BASE || vaddr >= (KERNEL_BASE + 4096*1024)) {
+		dprintf("mmu_map_page: asked to map invalid page!\n");
+		for(;;);
+	}
+	paddr &= ~(PAGE_SIZE-1);
+//	dprintf("paddr 0x%x @ index %d\n", paddr, (vaddr % (PAGE_SIZE * 1024)) / PAGE_SIZE);
+	pgtable[(vaddr % (PAGE_SIZE * 1024)) / PAGE_SIZE] = paddr | DEFAULT_PAGE_FLAGS;
 }
 
 long long get_time_base();

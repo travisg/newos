@@ -8,11 +8,10 @@
 #include <kernel/vm.h>
 
 // Should only be used by vm internals
-int vm_get_free_page_run(unsigned int *page, unsigned int len);
-int vm_get_free_page(unsigned int *page);
-int vm_page_fault(int address, unsigned int fault_address);
-int vm_mark_page_inuse(unsigned int page);
-int vm_mark_page_range_inuse(unsigned int start_page, unsigned int len);
+int vm_page_fault(addr address, addr fault_address, bool is_write, bool is_user);
+
+// allocates memory from the ka structure
+addr vm_alloc_from_ka_struct(kernel_args *ka, unsigned int size, int lock);
 
 #endif
 

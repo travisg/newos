@@ -10,6 +10,7 @@
 #include <kernel/thread.h>
 #include <kernel/smp.h>
 #include <kernel/syscalls.h>
+#include <kernel/vm_priv.h>
 
 #include <kernel/arch/cpu.h>
 #include <kernel/arch/int.h>
@@ -19,7 +20,6 @@
 
 #include <kernel/arch/i386/interrupts.h>
 #include <kernel/arch/i386/faults.h>
-#include <kernel/arch/i386/vm.h>
 
 #include <boot/stage2.h>
 
@@ -155,7 +155,11 @@ void i386_handle_trap(struct int_frame frame)
 			unsigned int cr2;
 		
 			asm volatile("movl %%cr2, %0;" : "=g" (cr2));
-			ret = i386_page_fault(cr2, frame.eip);
+			
+			int_enable_interrupts();
+			ret = vm_page_fault(cr2, frame.eip,
+				(frame.error_code & 0x2) != 0,
+				(frame.error_code & 0x4) != 0);
 			break;
 		}
 		case 99: {
@@ -253,6 +257,7 @@ int arch_int_init(kernel_args *ka)
 int arch_int_init2(kernel_args *ka)
 {
 	idt = (desc_table *)ka->arch_args.vir_idt;
-	vm_create_area(vm_get_kernel_aspace(), "idt", (void *)&idt, AREA_ALREADY_MAPPED, PAGE_SIZE, LOCK_RW|LOCK_KERNEL, AREA_NO_FLAGS);
+	vm_create_anonymous_region(vm_get_kernel_aspace(), "idt", (void *)&idt,
+		REGION_ADDR_EXACT_ADDRESS, PAGE_SIZE, REGION_WIRING_WIRED_ALREADY, LOCK_RW|LOCK_KERNEL);
 	return 0;
 }

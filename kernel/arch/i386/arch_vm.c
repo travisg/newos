@@ -5,12 +5,12 @@
 #include <kernel/kernel.h>
 #include <kernel/console.h>
 #include <kernel/vm.h>
+#include <kernel/vm_page.h>
 #include <kernel/vm_priv.h>
 #include <kernel/debug.h>
 
 #include <kernel/arch/vm.h>
 #include <kernel/arch/int.h>
-#include <kernel/arch/pmap.h>
 #include <kernel/arch/cpu.h>
 
 #include <kernel/arch/i386/interrupts.h>
@@ -32,14 +32,3 @@ int arch_vm_init2(kernel_args *ka)
 
 	return 0;
 }
-
-int map_page_into_kspace(addr paddr, addr kaddr, int lock)
-{
-	return pmap_map_page(paddr, kaddr, lock);
-}
-
-int i386_page_fault(int cr2reg, unsigned int fault_address)
-{
-	return vm_page_fault(cr2reg, fault_address);
-}
-

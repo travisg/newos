@@ -77,7 +77,7 @@ int _start(kernel_args *oldka, int cpu)
 #endif
 		kprintf("Welcome to the kernel!\n");
 	
-		vm_dump_areas(vm_get_kernel_aspace());
+//		vm_dump_areas(vm_get_kernel_aspace());
 		
 		smp_wake_up_all_non_boot_cpus();
 		smp_enable_ici(); // ici's were previously being ignored

@@ -19,6 +19,7 @@ void execute_n_instructions(int count);
 //void nmessage2(const char *str1, unsigned int a, const char *str2, unsigned int b, const char *str3);
 
 #define ROUNDUP(a, b) (((a) + ((b) - 1)) & (~((b) - 1)))
+#define ROUNDOWN(a, b) (((a) / (b)) * (b))
 
 #define PAGE_SIZE 0x1000
 #define KERNEL_BASE 0x80000000

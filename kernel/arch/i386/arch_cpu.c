@@ -28,13 +28,14 @@ int arch_cpu_init(kernel_args *ka)
 
 int arch_cpu_init2(kernel_args *ka)
 {
-	area_id a;
+	vm_region *r;
 	struct tss_descriptor *tss_d;
 	unsigned int i;
 	
 	// account for the segment descriptors
 	gdt = (unsigned int *)ka->arch_args.vir_gdt;	
-	vm_create_area(vm_get_kernel_aspace(), "gdt", (void **)&gdt, AREA_ALREADY_MAPPED, PAGE_SIZE, LOCK_RW|LOCK_KERNEL, AREA_NO_FLAGS);	
+	vm_create_anonymous_region(vm_get_kernel_aspace(), "gdt", (void **)&gdt,
+		REGION_ADDR_EXACT_ADDRESS, PAGE_SIZE, REGION_WIRING_WIRED_ALREADY, LOCK_RW|LOCK_KERNEL);	
 	
 	tss = kmalloc(sizeof(struct tss *) * ka->num_cpus);
 	if(tss == NULL) {
@@ -53,10 +54,10 @@ int arch_cpu_init2(kernel_args *ka)
 		char tss_name[16];
 		
 		sprintf(tss_name, "tss%d", i);
-		a = vm_create_area(vm_get_kernel_aspace(), tss_name, (void **)&tss[i],
-			AREA_ANY_ADDRESS, PAGE_SIZE, LOCK_RW | LOCK_KERNEL, AREA_NO_FLAGS);
-		if(a < 0) {
-			panic("arch_cpu_init2: unable to create area for tss\n");
+		r = vm_create_anonymous_region(vm_get_kernel_aspace(), tss_name, (void **)&tss[i],
+			REGION_ADDR_ANY_ADDRESS, PAGE_SIZE, REGION_WIRING_WIRED, LOCK_RW|LOCK_KERNEL);
+		if(r == NULL) {
+			panic("arch_cpu_init2: unable to create region for tss\n");
 			return -1;
 		}
 		

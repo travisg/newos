@@ -20,7 +20,7 @@
 
 static char *bootdir = NULL;
 static off_t bootdir_len = 0;
-static area_id bootdir_area = -1;
+static region_id bootdir_region = -1;
 
 struct bootfs_stream {
 	char *name;
@@ -653,17 +653,17 @@ struct fs_calls bootfs_calls = {
 
 int bootstrap_bootfs()
 {
-	struct area *a;
+	vm_region *region;
 	
 	dprintf("bootstrap_bootfs: entry\n");
 	
 	// find the bootdir and set it up
-	a = vm_find_area_by_name(vm_get_kernel_aspace(), "bootdir");
-	if(a == NULL)
+	region = vm_find_region_by_name(vm_get_kernel_aspace(), "bootdir");
+	if(region == NULL)
 		panic("bootstrap_bootfs: no bootdir area found!\n");
-	bootdir = (char *)a->base;
-	bootdir_len = a->size;
-	bootdir_area = a->id;
+	bootdir = (char *)region->base;
+	bootdir_len = region->size;
+	bootdir_region = region->id;
 	
 	dprintf("bootstrap_bootfs: found bootdir at 0x%x\n", bootdir);
 	

@@ -15,7 +15,8 @@
 #include <libc/string.h>
 
 static struct sem_entry *sems = NULL;
-static area_id sem_area = 0;
+static region_id sem_region = 0;
+static bool sems_active = false;
 
 static sem_id next_sem = 0;
 
@@ -67,7 +68,7 @@ static void dump_sem_info(int argc, char **argv)
 	if(strlen(argv[1]) > 2 && argv[1][0] == '0' && argv[1][1] == 'x') {
 		unsigned long num = atoul(argv[1]);
 		
-		if(num > vm_get_kernel_aspace()->base) {
+		if(num > KERNEL_BASE && num <= (KERNEL_BASE + (KERNEL_SIZE - 1))) { 
 			// XXX semi-hack
 			_dump_sem_info((struct sem_entry *)num);
 			return;
@@ -94,20 +95,25 @@ static void dump_sem_info(int argc, char **argv)
 int sem_init(kernel_args *ka)
 {
 	int i;
+	vm_region *region;
 	
 	dprintf("sem_init: entry\n");
 	
 	// create and initialize semaphore table
-	sem_area = vm_create_area(vm_get_kernel_aspace(), "sem_table", (void **)&sems,
-		AREA_ANY_ADDRESS, sizeof(struct sem_entry) * MAX_SEMS, LOCK_RW|LOCK_KERNEL, AREA_NO_FLAGS);
-	if(sems == NULL) {
+	region = vm_create_anonymous_region(vm_get_kernel_aspace(), "sem_table", (void **)&sems,
+		REGION_ADDR_ANY_ADDRESS, sizeof(struct sem_entry) * MAX_SEMS, REGION_WIRING_WIRED, LOCK_RW|LOCK_KERNEL);
+	if(region == NULL) {
 		panic("unable to allocate semaphore table!\n");
 	}
+	sem_region = region->id;
+
 	dprintf("memsetting len %d @ 0x%x\n", sizeof(struct sem_entry) * MAX_SEMS, sems);
 	memset(sems, 0, sizeof(struct sem_entry) * MAX_SEMS);
 	dprintf("done\n");
 	for(i=0; i<MAX_SEMS; i++)
 		sems[i].id = -1;
+
+	sems_active = true;
 
 	// add debugger commands
 	dbg_add_command(&dump_sem_list, "sems", "Dump a list of all active semaphores");
@@ -124,6 +130,9 @@ sem_id sem_create(int count, const char *name)
 	int state;
 	sem_id retval = -1;
 	char *temp_name;
+	
+	if(sems_active == false)
+		return -1;
 	
 	state = int_disable_interrupts();
 	GRAB_SEM_LIST_LOCK();
@@ -189,6 +198,8 @@ int sem_delete(sem_id id)
 	int released_threads = 0;
 	char *old_name;
 
+	if(sems_active == false)
+		return -1;
 	if(id < 0)
 		return -1;
 	
@@ -293,6 +304,9 @@ int sem_acquire_etc(sem_id id, int count, int flags, long long timeout)
 	int state;
 	int err = 0;
 	
+	if(sems_active == false)
+		return -1;
+	
 	if(id < 0)
 		return -1;
 
@@ -355,6 +369,9 @@ int sem_release_etc(sem_id id, int count, int flags)
 	struct thread *ready_threads[READY_THREAD_CACHE_SIZE];
 	int ready_threads_count = 0;
 	
+	if(sems_active == false)
+		return -1;
+
 	if(id < 0)
 		return -1;	
 	
