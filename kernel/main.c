@@ -90,9 +90,11 @@ int _start(kernel_args *oldka, int cpu)
 	}
 	int_enable_interrupts();
 
+#if 0
 	if(cpu == 0) {
 		vm_test();
 	}
+#endif
 
 	// start the init process
 	if(cpu == 0) {
