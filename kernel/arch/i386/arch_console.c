@@ -372,7 +372,7 @@ void arch_con_puts_xy(const char *s, int x, int y)
 /*
  *  void arch_con_init(void);
  */
-int arch_con_init(struct kernel_args *ka)
+int arch_con_init(kernel_args *ka)
 {
 	vidport = 0x3b4;
 

@@ -1,6 +1,7 @@
 #ifndef _I386_H
 #define _I386_H
 
+#include "kernel.h"
 #include "stage2.h"
 
 #define PAGE_SIZE 4096
@@ -19,9 +20,9 @@ int atomic_and(int *val, int incr);
 int atomic_or(int *val, int incr);
 int test_and_set(int *val, int set_to);
 
-long long system_time();
+time_t system_time();
 void setup_system_time(unsigned int cv_factor);
-int arch_cpu_init(struct kernel_args *ka);
+int arch_cpu_init(kernel_args *ka);
 void i386_context_switch(unsigned int **old_esp, unsigned int *new_esp);
 void reboot();
 

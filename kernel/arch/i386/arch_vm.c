@@ -11,14 +11,14 @@
 
 unsigned int *gdt = 0;
 
-int arch_vm_init(struct kernel_args *ka)
+int arch_vm_init(kernel_args *ka)
 {
 	TOUCH(ka);
 	dprintf("arch_vm_init: entry\n");	
 	return 0;
 }
 
-int arch_vm_init2(struct kernel_args *ka)
+int arch_vm_init2(kernel_args *ka)
 {
 	dprintf("arch_vm_init2: entry\n");
 	
@@ -32,7 +32,7 @@ int arch_vm_init2(struct kernel_args *ka)
 	return 0;
 }
 
-int map_page_into_kspace(unsigned int paddr, unsigned int kaddr)
+int map_page_into_kspace(addr paddr, addr kaddr)
 {
 	return pmap_map_page(paddr, kaddr);
 }

@@ -1,12 +1,13 @@
 #ifndef _VM_H
 #define _VM_H
 
+#include "kernel.h"
 #include "stage2.h"
 
 // address space
 struct aspace {
 	struct aspace *next;
-	int id;
+	aspace_id id;
 	char *name;
 	unsigned int base;
 	unsigned int size;
@@ -17,7 +18,7 @@ struct aspace {
 // area
 struct area {
 	struct area *next;
-	int id;
+	area_id id;
 	char *name;
 	unsigned int base;
 	unsigned int size;
@@ -31,12 +32,12 @@ enum {
 };
 
 void vm_dump_areas(struct aspace *aspace);
-int vm_init(struct kernel_args *ka);
+int vm_init(kernel_args *ka);
 int vm_page_fault(int address, unsigned int fault_address);
 int vm_get_free_page(unsigned int *page);
 struct aspace *vm_create_aspace(const char *name, unsigned int base, unsigned int size);
 struct aspace *vm_get_kernel_aspace();
-int vm_create_area(struct aspace *aspace, char *name, void **addr, int addr_type,
+area_id vm_create_area(struct aspace *aspace, char *name, void **addr, int addr_type,
 	unsigned int size, unsigned int lock);
 struct area *vm_find_area_by_name(struct aspace *aspace, const char *name);
 int vm_map_physical_memory(struct aspace *aspace, char *name, void **addr, int addr_type,

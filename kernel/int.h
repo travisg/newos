@@ -3,8 +3,8 @@
 
 #include "stage2.h"
 
-int int_init(struct kernel_args *ka);
-int int_init2(struct kernel_args *ka);
+int int_init(kernel_args *ka);
+int int_init2(kernel_args *ka);
 int int_io_interrupt_handler(int vector);
 int int_set_io_interrupt_handler(int vector, int (*func)(void));
 

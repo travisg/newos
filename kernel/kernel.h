@@ -13,5 +13,7 @@
 
 #define TOUCH(a) ((a) = (a))
 
+#include <ktypes.h>
+
 #endif
 

@@ -7,16 +7,16 @@
 static unsigned int mp_mem_phys = 0;
 static unsigned int mp_mem_virt = 0;
 static struct mp_flt_struct *mp_flt_ptr = NULL;
-static struct kernel_args *saved_ka = NULL;
+static kernel_args *saved_ka = NULL;
 
 void smp_trampoline();
 void smp_trampoline_end();
-int smp_get_current_cpu(struct kernel_args *ka);
+int smp_get_current_cpu(kernel_args *ka);
 
 #define DEFAULT_PAGE_FLAGS (1 | 2 | 256) // present/rw/global
 #define ADDR_MASK 0xfffff000
 
-static unsigned int map_page(struct kernel_args *ka, unsigned int paddr, unsigned int vaddr)
+static unsigned int map_page(kernel_args *ka, unsigned int paddr, unsigned int vaddr)
 {
 	unsigned int *pentry;
 	unsigned int *pgdir = (unsigned int *)(ka->page_hole + (4*1024*1024-PAGE_SIZE));
@@ -81,7 +81,7 @@ static unsigned int *smp_probe(unsigned int base, unsigned int limit)
 	return NULL;
 }	
 
-static void smp_do_config(struct kernel_args *ka)
+static void smp_do_config(kernel_args *ka)
 {
 	char *ptr;
 	int i;
@@ -165,7 +165,7 @@ static struct smp_scan_spots_struct smp_scan_spots[] = {
 	{ 0, 0, 0 }
 };
 
-static int smp_find_mp_config(struct kernel_args *ka)
+static int smp_find_mp_config(kernel_args *ka)
 {
 	int i;
 	
@@ -211,7 +211,7 @@ static int smp_find_mp_config(struct kernel_args *ka)
 	}
 }
 
-static int smp_setup_apic(struct kernel_args *ka)
+static int smp_setup_apic(kernel_args *ka)
 {
 	unsigned int config;
 //	dprintf("setting up the apic...");
@@ -254,7 +254,7 @@ static int smp_setup_apic(struct kernel_args *ka)
 // done, we'll jump into the kernel with the cpu number as an argument.
 static int smp_cpu_ready()
 {
-	struct kernel_args *ka = saved_ka;
+	kernel_args *ka = saved_ka;
 	unsigned int curr_cpu = smp_get_current_cpu(ka);
 	struct gdt_idt_descr idt_descr;	
 	struct gdt_idt_descr gdt_descr;	
@@ -293,7 +293,7 @@ static int smp_cpu_ready()
 	return 0;
 }
 
-static int smp_boot_all_cpus(struct kernel_args *ka)
+static int smp_boot_all_cpus(kernel_args *ka)
 {
 	unsigned int trampoline_code;
 	unsigned int trampoline_stack;
@@ -406,7 +406,7 @@ static int smp_boot_all_cpus(struct kernel_args *ka)
 	return 0;
 }
 
-int smp_boot(struct kernel_args *ka)
+int smp_boot(kernel_args *ka)
 {
 	dprintf("smp_boot: entry\n");
 
@@ -443,7 +443,7 @@ int smp_boot(struct kernel_args *ka)
 	return 0;
 }
 
-int smp_get_current_cpu(struct kernel_args *ka)
+int smp_get_current_cpu(kernel_args *ka)
 {
 	if(ka->apic == NULL)
 		return 0;

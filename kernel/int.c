@@ -18,7 +18,7 @@ struct io_handler {
 static struct io_handler **io_handlers = NULL;
 static int int_handler_list_spinlock = 0;
 
-int int_init(struct kernel_args *ka)
+int int_init(kernel_args *ka)
 {
 	dprintf("init_int_handlers: entry\n");
 
@@ -27,7 +27,7 @@ int int_init(struct kernel_args *ka)
 	return arch_int_init(ka);
 }
 
-int int_init2(struct kernel_args *ka)
+int int_init2(kernel_args *ka)
 {
 	io_handlers = (struct io_handler **)kmalloc(sizeof(struct io_handler *) * NUM_IO_HANDLERS);
 	if(io_handlers == NULL)

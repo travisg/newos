@@ -161,7 +161,7 @@ void i386_handle_trap(struct int_frame frame)
 	}	
 }
 
-int arch_int_init(struct kernel_args *ka)
+int arch_int_init(kernel_args *ka)
 {
 	idt = (desc_table *)ka->vir_idt;
 
@@ -221,7 +221,7 @@ int arch_int_init(struct kernel_args *ka)
 	return 0;
 }
 
-int arch_int_init2(struct kernel_args *ka)
+int arch_int_init2(kernel_args *ka)
 {
 	idt = (desc_table *)ka->vir_idt;
 	vm_create_area(vm_get_kernel_aspace(), "idt", (void *)&idt, AREA_ALREADY_MAPPED, PAGE_SIZE, 0);

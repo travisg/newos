@@ -6,8 +6,8 @@ void set_intr_gate(int n, void *addr);
 void set_trap_gate(int n, void *addr);
 void set_system_gate(int n, void *addr);
 */
-int arch_int_init(struct kernel_args *ka);
-int arch_int_init2(struct kernel_args *ka);
+int arch_int_init(kernel_args *ka);
+int arch_int_init2(kernel_args *ka);
 
 void arch_int_enable_interrupts();
 int arch_int_disable_interrupts();

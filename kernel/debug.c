@@ -223,14 +223,14 @@ static void cmd_help(int argc, char **argv)
 	}
 }
 
-int dbg_init(struct kernel_args *ka)
+int dbg_init(kernel_args *ka)
 {
 	commands = NULL;
 	
 	return arch_dbg_con_init(ka);
 }
 
-int dbg_init2(struct kernel_args *ka)
+int dbg_init2(kernel_args *ka)
 {
 	TOUCH(ka);
 

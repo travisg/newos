@@ -17,7 +17,7 @@ static unsigned int *pgdir = NULL;
 
 #define CHATTY_PMAP 0
 
-int arch_pmap_init(struct kernel_args *ka)
+int arch_pmap_init(kernel_args *ka)
 {
 	dprintf("arch_pmap_init: entry\n");
 
@@ -31,7 +31,7 @@ int arch_pmap_init(struct kernel_args *ka)
 	return 0;
 }
 
-int arch_pmap_init2(struct kernel_args *ka)
+int arch_pmap_init2(kernel_args *ka)
 {
 	// now that the vm is initialized, create an area that represents
 	// the page hole
@@ -45,7 +45,7 @@ int arch_pmap_init2(struct kernel_args *ka)
 	return 0;
 }
 
-int pmap_map_page(unsigned int paddr, unsigned int vaddr)
+int pmap_map_page(addr paddr, addr vaddr)
 {
 	unsigned int *pentry;
 
@@ -81,7 +81,7 @@ int pmap_map_page(unsigned int paddr, unsigned int vaddr)
 	return 0;
 }
 
-int pmap_unmap_page(unsigned int vaddr)
+int pmap_unmap_page(addr vaddr)
 {
 	unsigned int *pentry;
 
@@ -93,7 +93,7 @@ int pmap_unmap_page(unsigned int vaddr)
 	return 0;
 }
 
-void arch_pmap_invl_page(unsigned int vaddr)
+void arch_pmap_invl_page(addr vaddr)
 {
 	invalidate_TLB(vaddr);
 }

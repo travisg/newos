@@ -125,9 +125,6 @@ null_idt_descr:
 .global reboot
 reboot:
 	lidt	null_idt_descr
-	movl	$0x200,%eax
-	pushl	%eax
-	popf
 	int		$0
 done:
 	jmp		done

@@ -9,9 +9,11 @@
 #define NULL ((void *)0)
 #endif
 
+/*
 #define false 0
 #define true 1
 typedef int bool;
+*/
 
 typedef unsigned int	size_t;
 typedef int				ssize_t;

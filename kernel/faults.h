@@ -3,7 +3,7 @@
 
 #include "stage2.h"
 
-int faults_init(struct kernel_args *ka);
+int faults_init(kernel_args *ka);
 int general_protection_fault(int errorcode);
 
 #endif

@@ -64,14 +64,14 @@ struct thread *thread_dequeue(struct thread_queue *q)
 	return t;
 }
 
-struct thread *thread_dequeue_id(struct thread_queue *q, int thread_id)
+struct thread *thread_dequeue_id(struct thread_queue *q, thread_id thr_id)
 {
 	struct thread *t;
 	struct thread *last = NULL;
 
 	t = q->head;
 	while(t != NULL) {
-		if(t->id == thread_id) {
+		if(t->id == thr_id) {
 			if(last == NULL) {
 				q->head = t->q_next;
 			} else {
@@ -295,7 +295,7 @@ static void dump_thread_list(int argc, char **argv)
 	}
 }
 
-int thread_init(struct kernel_args *ka)
+int thread_init(kernel_args *ka)
 {
 	struct thread *t;
 	unsigned int i;
@@ -343,7 +343,7 @@ int thread_init(struct kernel_args *ka)
 	return 0;
 }
 
-void thread_snooze(long long time)
+void thread_snooze(time_t time)
 {
 	sem_acquire_etc(thread_get_current_thread()->snooze_sem_id, 1, SEM_FLAG_TIMEOUT, time);
 }
@@ -379,7 +379,7 @@ int thread_kthread_exit()
 	return 0;
 }
 
-int thread_get_current_thread_id()
+thread_id thread_get_current_thread_id()
 {
 	return CURR_THREAD->id;
 }

@@ -12,7 +12,7 @@ const boot_entry *bootdir = (boot_entry*)BOOTDIR_ADDR;
 // stick the kernel arguments in a pseudo-random page that will be mapped
 // at least during the call into the kernel. The kernel should copy the
 // data out and unmap the page.
-struct kernel_args *ka = (struct kernel_args *)0x20000;
+kernel_args *ka = (kernel_args *)0x20000;
 
 // needed for message
 unsigned short *kScreenBase = (unsigned short*) 0xb8000;

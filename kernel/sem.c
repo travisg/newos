@@ -6,16 +6,17 @@
 #include "int.h"
 #include "timer.h"
 #include "debug.h"
+#include "stage2.h"
 
 static struct sem_entry *sems = NULL;
-static int next_sem = 0;
+static sem_id next_sem = 0;
 
 struct sem_timeout {
-	int sem_id;
-	int thread_id;
+	sem_id     id;
+	thread_id  thr_id;
 };
 
-int sem_init(struct kernel_args *ka)
+int sem_init(kernel_args *ka)
 {
 	int i;
 	TOUCH(ka);
@@ -24,12 +25,12 @@ int sem_init(struct kernel_args *ka)
 	sems = (struct sem_entry *)kmalloc(sizeof(struct sem_entry *) * MAX_SEMS);
 	memset(sems, 0, sizeof(struct sem_entry *) * MAX_SEMS);
 	for(i=0; i<MAX_SEMS; i++)
-		sems[i].sem_id = -1;
+		sems[i].id = -1;
 
 	return 0;
 }
 
-int sem_create(int count, char *name)
+sem_id sem_create(int count, char *name)
 {
 	int i;
 	int state;
@@ -39,18 +40,18 @@ int sem_create(int count, char *name)
 	
 	// find the first empty spot
 	for(i=0; i<MAX_SEMS; i++) {
-		if(sems[i].sem_id == -1) {
+		if(sems[i].id == -1) {
 			// empty one
 			if((next_sem % MAX_SEMS) < i) {
 				// make the sem id be a multiple of the slot it's in
 				next_sem += i - (next_sem % MAX_SEMS);
 			}
-			sems[i].sem_id = next_sem++;
+			sems[i].id = next_sem++;
 
 			sems[i].count = count;
 			sems[i].name = (char *)kmalloc(strlen(name)+1);
 			if(sems[i].name == NULL) {
-				sems[i].sem_id = -1;
+				sems[i].id = -1;
 				return -1;
 			}
 			strcpy(sems[i].name, name);
@@ -58,7 +59,7 @@ int sem_create(int count, char *name)
 			RELEASE_THREAD_LOCK();
 			int_restore_interrupts(state);
 
-			return sems[i].sem_id;
+			return sems[i].id;
 		}
 	}
 	RELEASE_THREAD_LOCK();
@@ -67,9 +68,9 @@ int sem_create(int count, char *name)
 	return -1;
 }
 
-int sem_delete(int sem_id)
+int sem_delete(sem_id id)
 {
-	int slot = sem_id % MAX_SEMS;
+	int slot = id % MAX_SEMS;
 	int state;
 	int err = 0;
 	struct thread *t;
@@ -78,8 +79,8 @@ int sem_delete(int sem_id)
 	state = int_disable_interrupts();
 	GRAB_THREAD_LOCK();
 
-	if(sems[slot].sem_id != sem_id) {
-		dprintf("sem_delete: invalid sem_id %d\n", sem_id);
+	if(sems[slot].id != id) {
+		dprintf("sem_delete: invalid sem_id %d\n", id);
 		err = -1;
 		goto err;
 	}
@@ -92,7 +93,7 @@ int sem_delete(int sem_id)
 	}
 
 	kfree(sems[slot].name);
-	sems[slot].sem_id = -1;		
+	sems[slot].id = -1;
 	
 	if(released_threads > 0)
 		thread_resched();
@@ -108,7 +109,7 @@ err:
 static void sem_timeout(void *data)
 {
 	struct sem_timeout *to = (struct sem_timeout *)data;
-	int slot = to->sem_id % MAX_SEMS;
+	int slot = to->id % MAX_SEMS;
 	int state;
 	struct thread *t;
 	
@@ -117,7 +118,7 @@ static void sem_timeout(void *data)
 	
 //	dprintf("sem_timeout: called on 0x%x sem %d, tid %d\n", to, to->sem_id, to->thread_id);
 		
-	t = thread_dequeue_id(&sems[slot].q, to->thread_id);
+	t = thread_dequeue_id(&sems[slot].q, to->thr_id);
 	if(t != NULL) {
 		t->state = THREAD_STATE_READY;
 		thread_enqueue_run_q(t);
@@ -129,22 +130,22 @@ static void sem_timeout(void *data)
 	kfree(to);
 }
 
-int sem_acquire(int sem_id, int count)
+int sem_acquire(sem_id id, int count)
 {
-	return sem_acquire_etc(sem_id, count, 0, 0);
+	return sem_acquire_etc(id, count, 0, 0);
 }
 
-int sem_acquire_etc(int sem_id, int count, int flags, long long timeout)
+int sem_acquire_etc(sem_id id, int count, int flags, long long timeout)
 {
-	int slot = sem_id % MAX_SEMS;
+	int slot = id % MAX_SEMS;
 	int state;
 	int err = 0;
 	
 	state = int_disable_interrupts();
 	GRAB_THREAD_LOCK();
 	
-	if(sems[slot].sem_id != sem_id) {
-		dprintf("sem_acquire_etc: invalid sem_id %d\n", sem_id);
+	if(sems[slot].id != id) {
+		dprintf("sem_acquire_etc: invalid sem_id %d\n", id);
 		err = -1;
 		goto err;
 	}
@@ -166,8 +167,8 @@ int sem_acquire_etc(int sem_id, int count, int flags, long long timeout)
 				err = -1; // ENOMEM
 				goto err;
 			}
-			to->sem_id = sem_id;
-			to->thread_id = t->id;
+			to->id = id;
+			to->thr_id = t->id;
 			
 //			dprintf("sem_acquire_etc: setting timeout sem for %d %d usecs, semid %d, tid %d, 0x%x\n",
 //				timeout, sem_id, t->id, to);
@@ -184,14 +185,14 @@ err:
 	return err;
 }
 
-int sem_release(int sem_id, int count)
+int sem_release(sem_id id, int count)
 {
-	return sem_release_etc(sem_id, count, 0);
+	return sem_release_etc(id, count, 0);
 }
 
-int sem_release_etc(int sem_id, int count, int flags)
+int sem_release_etc(sem_id id, int count, int flags)
 {
-	int slot = sem_id % MAX_SEMS;
+	int slot = id % MAX_SEMS;
 	int state;
 	int released_threads = 0;
 	int err = 0;
@@ -199,8 +200,8 @@ int sem_release_etc(int sem_id, int count, int flags)
 	state = int_disable_interrupts();
 	GRAB_THREAD_LOCK();
 
-	if(sems[slot].sem_id != sem_id) {
-		dprintf("sem_release_etc: invalid sem_id %d\n", sem_id);
+	if(sems[slot].id != id) {
+		dprintf("sem_release_etc: invalid sem_id %d\n", id);
 		err = -1;
 		goto err;
 	}

@@ -8,7 +8,7 @@
 #define MAX_BOOT_PTABLES 4
 
 // kernel args
-struct kernel_args {
+typedef struct {
 	unsigned int cons_line;
 	unsigned int mem_size;
 	char *str;
@@ -43,7 +43,7 @@ struct kernel_args {
 	unsigned int cpu_apic_id[MAX_BOOT_CPUS];
 	unsigned int cpu_os_id[MAX_BOOT_CPUS];
 	unsigned int cpu_apic_version[MAX_BOOT_CPUS];
-};
+} kernel_args;
 
 #endif
 

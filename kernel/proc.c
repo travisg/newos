@@ -8,7 +8,7 @@
 
 static void *proc_hash = NULL;
 static struct proc *kernel_proc = NULL;
-static int next_proc_id = 0;
+static proc_id next_proc_id = 0;
 
 static int proc_struct_compare(void *_p, void *_key)
 {
@@ -30,13 +30,14 @@ static int proc_struct_hash(void *_p, void *_key, int range)
 		return (key->id % range);
 }
 
-int proc_init(struct kernel_args *ka)
+int proc_init(kernel_args *ka)
 {
-	dprintf("proc_init: entry\n");
 	TOUCH(ka);
 	
+	dprintf("proc_init: entry\n");
+	
 	// create the process hash table
-	proc_hash = hash_init(15, (unsigned int)&kernel_proc->next - (unsigned int)kernel_proc,
+	proc_hash = hash_init(15, (addr)&kernel_proc->next - (addr)kernel_proc,
 		&proc_struct_compare, &proc_struct_hash);
 
 	// create the kernel process

@@ -1,3 +1,4 @@
+#include "stage2.h"
 #include "console.h"
 #include "debug.h"
 #include "thread.h"
@@ -12,8 +13,8 @@
 struct timer_event {
 	struct timer_event *next;
 	int mode;
-	long long sched_time;
-	long long periodic_time;
+	time_t sched_time;
+	time_t periodic_time;
 	void (*func)(void *);
 	void *data;
 };
@@ -21,7 +22,7 @@ struct timer_event {
 static struct timer_event *events = NULL;
 static int timer_spinlock = 0;
 
-int timer_init(struct kernel_args *ka)
+int timer_init(kernel_args *ka)
 {
 	dprintf("init_timer: entry\n");
 
@@ -51,7 +52,7 @@ static void add_event_to_list(struct timer_event *event, struct timer_event **li
 
 int timer_interrupt()
 {
-	long long curr_time = system_time();
+	time_t curr_time = system_time();
 	struct timer_event *event;
 	
 	acquire_spinlock(&timer_spinlock);
@@ -90,7 +91,7 @@ restart_scan:
 	return INT_RESCHEDULE;
 }
 
-int timer_set_event(long long relative_time, int mode, void (*func)(void *), void *data)
+int timer_set_event(time_t relative_time, int mode, void (*func)(void *), void *data)
 {
 	struct timer_event *event;
 	int state;

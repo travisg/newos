@@ -47,17 +47,17 @@ struct thread_queue {
 void thread_enqueue(struct thread *t, struct thread_queue *q);
 struct thread *thread_lookat_queue(struct thread_queue *q);
 struct thread *thread_dequeue(struct thread_queue *q);
-struct thread *thread_dequeue_id(struct thread_queue *q, int thread_id);
+struct thread *thread_dequeue_id(struct thread_queue *q, thread_id thr_id);
 struct thread *thread_lookat_run_q(int priority);
 void thread_enqueue_run_q(struct thread *t);
 struct thread *thread_dequeue_run_q(int priority);
 
 void thread_resched();
 void thread_snooze(long long time);
-int thread_init(struct kernel_args *ka);
+int thread_init(kernel_args *ka);
 int thread_kthread_exit();
 struct thread *thread_get_current_thread();
-int thread_get_current_thread_id();
+thread_id thread_get_current_thread_id();
 
 #if 1
 // XXX remove later

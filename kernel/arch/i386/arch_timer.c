@@ -44,7 +44,7 @@ int arch_timer_set_hardware_timer(long long timeout)
 	set_isa_hardware_timer(timeout);
 }
 
-int arch_init_timer(struct kernel_args *ka)
+int arch_init_timer(kernel_args *ka)
 {
 	TOUCH(ka);
 	dprintf("arch_init_timer: entry\n");

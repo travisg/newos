@@ -59,7 +59,7 @@ static void apic_write(unsigned int *addr, unsigned int data)
 	*addr = data;
 }
 
-int arch_smp_init(struct kernel_args *ka)
+int arch_smp_init(kernel_args *ka)
 {
 	dprintf("arch_smp_init: entry\n");
 

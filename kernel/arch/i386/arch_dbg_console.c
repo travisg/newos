@@ -8,7 +8,7 @@
 
 static const int dbg_baud_rate = 115200;
 
-int arch_dbg_con_init(struct kernel_args *ka)
+int arch_dbg_con_init(kernel_args *ka)
 {
 	short divisor = 115200 / dbg_baud_rate;
 	TOUCH(ka);

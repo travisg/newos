@@ -82,14 +82,14 @@ static int heap_spinlock = 0;
 
 static struct aspace *aspace_list = NULL;
 static struct aspace *kernel_aspace = NULL;
-static int next_aspace_id = 0;
+static aspace_id next_aspace_id = 0;
 
-static int next_area_id = 0;
+static area_id next_area_id = 0;
 
 struct area *vm_find_area_by_name(struct aspace *aspace, const char *name)
 {
 	struct area *area;
-	
+
 	area = aspace->area_list;
 	while(area != NULL) {
 		if(strcmp(area->name, name) == 0)
@@ -153,7 +153,7 @@ enum {
 	SRC_ADDR_MAPPED_ALREADY
 };
 
-static int _vm_create_area(struct aspace *aspace, char *name, void **addr, int addr_type,
+static area_id _vm_create_area(struct aspace *aspace, char *name, void **addr, int addr_type,
 	unsigned int size, unsigned int lock,
 	unsigned int src_addr, unsigned int src_addr_type)
 {
@@ -249,7 +249,7 @@ static int _vm_create_area(struct aspace *aspace, char *name, void **addr, int a
 	return area->id;
 }
 
-int vm_create_area(struct aspace *aspace, char *name, void **addr, int addr_type,
+area_id vm_create_area(struct aspace *aspace, char *name, void **addr, int addr_type,
 	unsigned int size, unsigned int lock)
 {
 	if(addr_type == AREA_ALREADY_MAPPED) 
@@ -311,7 +311,7 @@ struct aspace *vm_create_aspace(const char *name, unsigned int base, unsigned in
 	return aspace;	
 }
 
-int vm_init(struct kernel_args *ka)
+int vm_init(kernel_args *ka)
 {
 	int err;
 	unsigned int i;

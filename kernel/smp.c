@@ -153,7 +153,7 @@ void smp_send_broadcast_ici(int message, unsigned int data, void *data_ptr)
 	}
 }
 
-int smp_trap_non_boot_cpus(struct kernel_args *ka, int cpu)
+int smp_trap_non_boot_cpus(kernel_args *ka, int cpu)
 {
 	TOUCH(ka);
 
@@ -174,7 +174,7 @@ void smp_wake_up_all_non_boot_cpus()
 	}
 }
 
-void smp_wait_for_ap_cpus(struct kernel_args *ka)
+void smp_wait_for_ap_cpus(kernel_args *ka)
 {
 	unsigned int i;
 	int retry;
@@ -187,7 +187,7 @@ void smp_wait_for_ap_cpus(struct kernel_args *ka)
 	} while(retry == 1);
 }
 
-int smp_init(struct kernel_args *ka)
+int smp_init(kernel_args *ka)
 {	
 	if(ka->num_cpus > 1) {
 		smp_msgs = (struct smp_msg **)kmalloc(sizeof(struct smp_msg *) * ka->num_cpus);

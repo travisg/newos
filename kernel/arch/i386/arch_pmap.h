@@ -3,11 +3,11 @@
 
 #include "stage2.h"
 
-int arch_pmap_init(struct kernel_args *ka);
-int arch_pmap_init2(struct kernel_args *ka);
-int pmap_map_page(unsigned int paddr, unsigned int vaddr);
-int pmap_unmap_page(unsigned int vaddr);
-void arch_pmap_invl_page(unsigned int vaddr);
+int arch_pmap_init(kernel_args *ka);
+int arch_pmap_init2(kernel_args *ka);
+int pmap_map_page(addr paddr, addr vaddr);
+int pmap_unmap_page(addr vaddr);
+void arch_pmap_invl_page(addr vaddr);
 
 #endif
 

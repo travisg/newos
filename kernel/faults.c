@@ -7,7 +7,7 @@
 #include "int.h"
 #include "arch_faults.h"
 
-int faults_init(struct kernel_args *ka)
+int faults_init(kernel_args *ka)
 {
 	dprintf("init_fault_handlers: entry\n");
 	return arch_faults_init(ka);

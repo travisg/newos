@@ -75,7 +75,7 @@ void con_puts_xy(const char *s, int x, int y)
 	int_restore_interrupts(flags);
 }
 
-int con_init(struct kernel_args *ka)
+int con_init(kernel_args *ka)
 {
 	dprintf("con_init: entry\n");
 

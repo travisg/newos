@@ -1,3 +1,4 @@
+#include "ktypes.h"
 #include "kernel.h"
 #include "console.h"
 #include "debug.h"
@@ -9,15 +10,17 @@
 #include "proc.h"
 #include "smp.h"
 #include "sem.h"
+
 #include "arch_cpu.h"
+
 
 #include "stage2.h"
 
-int _start(struct kernel_args *oldka, int cpu)
+int _start(kernel_args *oldka, int cpu)
 {
-	struct kernel_args ka;
+	kernel_args ka;
 	
-	memcpy(&ka, oldka, sizeof(struct kernel_args));
+	memcpy(&ka, oldka, sizeof(kernel_args));
 
 	// if we're not a boot cpu, spin here until someone wakes us up
 	if(smp_trap_non_boot_cpus(&ka, cpu) == 0) {
