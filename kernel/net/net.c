@@ -115,7 +115,8 @@ static int net_test_thread4(void *unused)
 	addr.addr.len = 4;
 	addr.addr.type = ADDR_TYPE_IP;
 	addr.port = 1900;
-	NETADDR_TO_IPV4(addr.addr) = IPV4_DOTADDR_TO_ADDR(192,168,0,3);
+//	NETADDR_TO_IPV4(addr.addr) = IPV4_DOTADDR_TO_ADDR(192,168,0,3);
+	NETADDR_TO_IPV4(addr.addr) = IPV4_DOTADDR_TO_ADDR(63,203,215,73);
 
 retry:
 	err = socket_connect(id, &addr);
@@ -129,9 +130,15 @@ retry:
 		char buf2[1024];
 		ssize_t len;
 
+		len = socket_sendto(id, buf2, sizeof(buf2), NULL);
+//		dprintf("*** net test 4: len %d\n", len);
+		transferred_data += len;
+
+#if 0
 		len = socket_recvfrom(id, buf2, sizeof(buf2), NULL);
 //		dprintf("*** net test 4: len %d\n", len);
 		transferred_data += len;
+#endif
 #if 0
 		len = socket_recvfrom(id, buf2, sizeof(buf2), NULL);
 		dprintf("*** net test 4: len %d\n", len);

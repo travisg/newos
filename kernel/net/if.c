@@ -73,7 +73,7 @@ ifnet *if_register_interface(const char *path, int type)
 		case IF_TYPE_ETHERNET:
 			i->link_input = &ethernet_input;
 			i->link_output = &ethernet_output;
-			i->mtu = 1434;
+			i->mtu = ETHERNET_MAX_SIZE - ETHERNET_HEADER_SIZE;
 			break;
 		default:
 			kfree(i);

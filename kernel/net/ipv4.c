@@ -238,7 +238,7 @@ int ipv4_get_mss_for_dest(ipv4_addr dest_addr, uint32 *mss)
 	if(i == NULL)
 		return ERR_NET_NO_ROUTE;
 
-	*mss = i->mtu;
+	*mss = i->mtu - sizeof(ipv4_header);
 
 	return NO_ERROR;
 }

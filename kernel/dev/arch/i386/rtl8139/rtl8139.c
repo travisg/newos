@@ -9,6 +9,7 @@
 #include <kernel/fs/devfs.h>
 #include <string.h>
 #include <newos/errors.h>
+#include <kernel/net/ethernet.h>
 #include <kernel/dev/arch/i386/rtl8139/rtl8139_dev.h>
 
 #include "rtl8139_priv.h"
@@ -41,7 +42,7 @@ static ssize_t rtl8139_read(dev_cookie cookie, void *buf, off_t pos, ssize_t len
 {
 	rtl8139 *rtl = (rtl8139 *)cookie;
 
-	if(len < 1500)
+	if(len < ETHERNET_MAX_SIZE)
 		return ERR_VFS_INSUFFICIENT_BUF;
 	return rtl8139_rx(rtl, buf, len);
 }
@@ -50,7 +51,7 @@ static ssize_t rtl8139_write(dev_cookie cookie, const void *buf, off_t pos, ssiz
 {
 	rtl8139 *rtl = (rtl8139 *)cookie;
 
-	if(len > 1500)
+	if(len > ETHERNET_MAX_SIZE)
 		return ERR_VFS_INSUFFICIENT_BUF;
 	if(len < 0)
 		return ERR_INVALID_ARGS;

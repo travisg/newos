@@ -11,6 +11,7 @@
 #include <kernel/sem.h>
 #include <kernel/arch/cpu.h>
 #include <kernel/arch/i386/cpu.h>
+#include <kernel/net/ethernet.h>
 
 #include <kernel/bus/bus.h>
 #include <string.h>
@@ -180,11 +181,11 @@ int rtl8139_init(rtl8139 *rtl)
 	// Enable receive and transmit functions
 	RTL_WRITE_8(rtl, RT_CHIPCMD, RT_CMD_RX_ENABLE | RT_CMD_TX_ENABLE);
 
-	// Set Rx FIFO threashold to 1K, Rx size to 64k+16, 1024 byte DMA burst
-	RTL_WRITE_32(rtl, RT_RXCONFIG, 0x0000de00);
+	// Set Rx FIFO threashold to 256, Rx size to 64k+16, 256 byte DMA burst
+	RTL_WRITE_32(rtl, RT_RXCONFIG, 0x00009c00);
 
-	// Set Tx 1024 byte DMA burst
-	RTL_WRITE_32(rtl, RT_TXCONFIG, 0x03000600);
+	// Set Tx 256 byte DMA burst
+	RTL_WRITE_32(rtl, RT_TXCONFIG, 0x03000400);
 
 	// Turn off lan-wake and set the driver-loaded bit
 	RTL_WRITE_8(rtl, RT_CONFIG1, (RTL_READ_8(rtl, RT_CONFIG1) & ~0x30) | 0x20);
@@ -202,14 +203,17 @@ int rtl8139_init(rtl8139 *rtl)
 	RTL_WRITE_32(rtl, RT_RXBUF, temp);
 
 	// Setup TX buffers
+	dprintf("tx buffer (virtual) is at 0x%lx\n", rtl->txbuf);
 	*(int *)rtl->txbuf = 0;
 	vm_get_page_mapping(vm_get_kernel_aspace_id(), rtl->txbuf, &temp);
 	RTL_WRITE_32(rtl, RT_TXADDR0, temp);
 	RTL_WRITE_32(rtl, RT_TXADDR1, temp + 2*1024);
+	dprintf("first half of txbuf at 0x%lx\n", temp);
 	*(int *)(rtl->txbuf + 4*1024) = 0;
 	vm_get_page_mapping(vm_get_kernel_aspace_id(), rtl->txbuf + 4*1024, &temp);
 	RTL_WRITE_32(rtl, RT_TXADDR2, temp);
 	RTL_WRITE_32(rtl, RT_TXADDR3, temp + 2*1024);
+	dprintf("second half of txbuf at 0x%lx\n", temp);
 
 	// Reset RXMISSED counter
 	RTL_WRITE_32(rtl, RT_RXMISSED, 0);
@@ -299,8 +303,8 @@ restart:
 	}
 
 	memcpy((void*)(rtl->txbuf + rtl->txbn * 0x800), ptr, len);
-	if(len < 60)
-		len = 60;
+	if(len < ETHERNET_MIN_SIZE)
+		len = ETHERNET_MIN_SIZE;
 
 	RTL_WRITE_32(rtl, RT_TXSTATUS0 + rtl->txbn*4, len | 0x80000);
 	if(++rtl->txbn >= 4)
@@ -372,7 +376,7 @@ restart:
 	len = entry->len - 4; // minus the crc
 
 	// see if we got an error
-	if((entry->status & RT_RX_STATUS_OK) == 0 || len > 1500) {
+	if((entry->status & RT_RX_STATUS_OK) == 0 || len > ETHERNET_MAX_SIZE) {
 		// error, lets reset the card
 		rtl8139_resetrx(rtl);
 		release_spinlock(&rtl->reg_spinlock);
@@ -417,6 +421,21 @@ out:
 	if(release_sem)
 		sem_release(rtl->rx_sem, 1);
 	mutex_unlock(&rtl->lock);
+
+#if 0
+{
+	int i;
+	dprintf("RX %x (%d)\n", buf, len);
+
+	dprintf("dumping packet:");
+	for(i=0; i<len; i++) {
+		if(i%8 == 0)
+			dprintf("\n");
+		dprintf("0x%02x ", buf[i]);
+	}
+	dprintf("\n");
+}
+#endif
 
 	return rc;
 }
