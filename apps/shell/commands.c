@@ -14,8 +14,6 @@
 struct command cmds[] = {
 	{"exec", &cmd_exec},
 	{"stat", &cmd_stat},
-	{"mount", &cmd_mount},
-	{"unmount", &cmd_unmount},
 	{"mkdir", &cmd_mkdir},
 	{"cat", &cmd_cat},
 	{"cd", &cmd_cd},
@@ -77,45 +75,6 @@ int cmd_create_proc(int argc,char *argv[])
 	} else {
 		printf("Error: cannot execute '%s'\n", filename);
 		return 0; // should be -1, but the shell would exit
-	}
-
-	return 0;
-}
-
-int cmd_mount(int argc, char *argv[])
-{
-	int i, rc;
-
-	if(argc < 4) {
-		printf("not enough arguments to mount:\n");
-		printf("usage: mount <path> <device> <fsname>\n");
-		return 0;
-	}
-
-	rc = sys_mount(argv[1], argv[2], argv[3], NULL);
-	if (rc < 0) {
-		printf("sys_mount() returned error: %s\n", strerror(rc));
-	} else {
-		printf("%s successfully mounted on %s.\n", argv[2], argv[1]);
-	}
-
-	return 0;
-}
-
-int cmd_unmount(int argc, char *argv[])
-{
-	int rc;
-
-	if(argc < 2) {
-		printf("not enough arguments to unmount\n");
-		return 0;
-	}
-
-	rc = sys_unmount(argv[1]);
-	if (rc < 0) {
-		printf("sys_unmount() returned error: %s\n", strerror(rc));
-	} else {
-		printf("%s successfully unmounted.\n", argv[1]);
 	}
 
 	return 0;
