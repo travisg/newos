@@ -18,18 +18,7 @@ void puts(char *str);
 int printf(const char *fmt, ...);
 void switch_stacks_and_call(unsigned int new_stack, void *func, int arg0, int arg1);
 
-/* openfirmware calls */
-int of_init(void *of_entry);
-int of_open(const char *node_name);
-int of_finddevice(const char *dev);
-int of_instance_to_package(int in_handle);
-int of_getprop(int handle, const char *prop, void *buf, int buf_len);
-int of_setprop(int handle, const char *prop, const void *buf, int buf_len);
-int of_read(int handle, void *buf, int buf_len);
-int of_write(int handle, void *buf, int buf_len);
-int of_seek(int handle, long long pos);
-void of_exit(void);
-void *of_claim(unsigned int vaddr, unsigned int size, unsigned int align);
+int of_console_init(void);
 
 int s2_mmu_init(kernel_args *ka);
 int s2_mmu_remap_pagetable(kernel_args *ka);

@@ -1,9 +1,10 @@
 /*
-** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2004, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #include <boot/stage2.h>
 #include <boot/bootdir.h>
+#include <boot/shared/openfirmware.h>
 #include <string.h>
 #include <stdio.h>
 #include <newos/elf32.h>
@@ -26,6 +27,8 @@ void _start(int arg1, int arg2, void *openfirmware)
 
 	// initialize the openfirmware handle
 	of_init(openfirmware);
+
+	of_console_init();
 
 	// set up the framebuffer text mode
 //	s2_text_init(&ka);

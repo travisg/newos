@@ -3,6 +3,7 @@
 ** Distributed under the terms of the NewOS License.
 */
 #include <boot/stage2.h>
+#include <boot/shared/openfirmware.h>
 #include <kernel/kernel.h>
 #include <arch/cpu.h>
 #include <libc/string.h>

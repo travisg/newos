@@ -18,7 +18,7 @@ MY_OBJS := \
 MY_INCLUDES := $(STDINCLUDE)
 MY_CFLAGS := $(KERNEL_CFLAGS)
 MY_LDFLAGS := -dN
-MY_LIBS := $(LIBS_BUILD_DIR)/libc.a
+MY_LIBS := $(BOOT_TARGETDIR)/shared/openfirmware.o $(LIBS_BUILD_DIR)/libc.a
 MY_LIBPATHS :=
 MY_DEPS :=
 MY_LINKSCRIPT := $(MY_SRCDIR)/stage2.ld
@@ -45,7 +45,7 @@ STAGE1_OBJS := $(BOOT_TARGETDIR)/stage1.o
 ALL_DEPS := $(ALL_DEPS) $(STAGE1_OBJS:.o=.d)
 
 tftp: $(FINAL)
-	cp $(FINAL) /cygdrive/o/root/tftpboot/final.ppc
+	cp $(FINAL) /tftp/final.ppc
 
 $(FINAL): $(STAGE1_OBJS)
 	$(LD) $(GLOBAL_LDFLAGS) -dN --script=$(BOOT_SRCDIR)/stage1.ld $(STAGE1_OBJS) -o $@
@@ -59,22 +59,4 @@ $(BOOT_TARGETDIR)/stage1.d: $(BOOT_SRCDIR)/stage1.S
 	@echo "making deps for $<..."
 	($(ECHO) -n $(dir $@);$(CC) $(GLOBAL_CFLAGS) -g -Iinclude -I$(BOOT_TARGETDIR) -M -MG $<) > $@
 
-
-# rules for stage1
-#MY_TARGETDIR := $(BOOT_TARGETDIR)
-#MY_SRCDIR := $(BOOT_SRCDIR)
-#MY_TARGET := $(FINAL)
-#MY_OBJS := \
-#	stage1.o
-
-#MY_INCLUDES := $(STDINCLUDE)
-#MY_CFLAGS := $(KERNEL_CFLAGS)
-#MY_LDFLAGS := -dN
-#MY_LIBS := $(LIBS_BUILD_DIR)/libc/libc.a
-#MY_LIBPATHS :=
-#MY_DEPS := $(FINAL_ASMINCLUDE)
-#MY_LINKSCRIPT := $(MY_SRCDIR)/stage1.ld
-#MY_GLUE :=
-
-#include templates/app.mk
-
+include boot/shared/openfirmware/makefile
