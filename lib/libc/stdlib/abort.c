@@ -3,7 +3,7 @@
 ** Distributed under the terms of the NewOS License.
 */
 
-#ifndef KERNEL
+#if !_KERNEL
 #include <stdlib.h>
 #include <sys/syscalls.h>
 

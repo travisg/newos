@@ -11,7 +11,7 @@
 #include <unistd.h>
 
 /* gross hack to get this to link inside the kernel */
-#if KERNEL
+#if _KERNEL
 #include <kernel/vfs.h>
 #define read(fd, buf, size) sys_read(fd, buf, -1, size)
 #endif

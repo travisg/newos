@@ -42,7 +42,7 @@ void  qsort(void *, size_t, size_t, int (*)(void const *, void const *));
 int   rand(void);
 void  srand(unsigned);
 
-# if !KERNEL
+# if !_KERNEL
 void abort(void);
 void exit(int);
 # endif
@@ -52,7 +52,7 @@ void exit(int);
 # endif
 
 /* terrible hack to get around the different kernel name for malloc and free */
-# if KERNEL
+# if _KERNEL
 #  define malloc kmalloc
 #  define free kfree
 #  include <kernel/heap.h>
@@ -98,7 +98,7 @@ int   rand_r(unsigned int *ctx);
 long  random(void);
 void  srandom(unsigned long);
 
-# if !KERNEL
+# if !_KERNEL
 void _exit(int);
 # endif
 

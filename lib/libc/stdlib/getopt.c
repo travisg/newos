@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  */
 
-#if !KERNEL
+#if !_KERNEL
 #if defined(LIBC_SCCS) && !defined(lint)
 #if 0
 static char sccsid[] = "@(#)getopt.c	8.3 (Berkeley) 4/27/95";

@@ -18,7 +18,7 @@ namespace std
 /*
  * this will change when we get TLS working
  */
-#if KERNEL
+#if _KERNEL
 #define __WITH_ERRNO 0
 #else
 #define __WITH_ERRNO 1
