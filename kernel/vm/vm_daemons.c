@@ -33,11 +33,18 @@ static void scan_pages(vm_address_space *aspace, addr free_target)
 	sem_acquire(aspace->virtual_map.sem, READ_COUNT);
 
 	first_region = aspace->virtual_map.region_list;
-	while(first_region && (first_region->base + (first_region->size - 1)) < aspace->scan_va)
+	while(first_region && (first_region->base + (first_region->size - 1)) < aspace->scan_va) {
+		VERIFY_VM_REGION(first_region);
 		first_region = first_region->aspace_next;
+	}
+	if(first_region)
+		VERIFY_VM_REGION(first_region);
 
-	if(!first_region)
+	if(!first_region) {
 		first_region = aspace->virtual_map.region_list;
+	}
+	if(first_region)
+		VERIFY_VM_REGION(first_region);
 
 	if(!first_region) {
 		sem_release(aspace->virtual_map.sem, READ_COUNT);
@@ -45,7 +52,12 @@ static void scan_pages(vm_address_space *aspace, addr free_target)
 	}
 
 	region = first_region;
+
 	for(;;) {
+		VERIFY_VM_REGION(region);
+		VERIFY_VM_CACHE_REF(region->cache_ref);
+		VERIFY_VM_CACHE(region->cache_ref->cache);
+
 		// scan the pages in this region
 		mutex_lock(&region->cache_ref->lock);
 		if(!region->cache_ref->cache->scan_skip) {
@@ -62,6 +74,7 @@ static void scan_pages(vm_address_space *aspace, addr free_target)
 					aspace->translation_map.ops->unlock(&aspace->translation_map);
 					continue;
 				}
+				VERIFY_VM_PAGE(page);
 
 				// see if this page is busy, if it is lets forget it and move on
 				if(page->state == PAGE_STATE_BUSY || page->state == PAGE_STATE_WIRED) {
@@ -140,6 +153,8 @@ static int page_daemon()
 		vm_aspace_walk_start(&i);
 		aspace = vm_aspace_walk_next(&i);
 		while(aspace) {
+			VERIFY_VM_ASPACE(aspace);
+
 			mapped_size = aspace->translation_map.ops->get_mapped_size(&aspace->translation_map);
 
 //			dprintf("page_daemon: looking at aspace 0x%x, id 0x%x, mapped size %d\n", aspace, aspace->id, mapped_size);

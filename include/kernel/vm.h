@@ -12,13 +12,14 @@
 
 // vm page
 typedef struct vm_page {
+	int magic;
 	struct vm_page *queue_prev;
 	struct vm_page *queue_next;
 
 	struct vm_page *hash_next;
 
-	addr ppn; // physical page number
 	off_t offset;
+	addr ppn; // physical page number
 
 	struct vm_cache_ref *cache_ref;
 
@@ -30,6 +31,8 @@ typedef struct vm_page {
 	unsigned int type : 2;
 	unsigned int state : 3;
 } vm_page;
+
+#define VM_PAGE_MAGIC 'vmpg'
 
 enum {
 	PAGE_TYPE_PHYSICAL = 0,
@@ -50,6 +53,7 @@ enum {
 
 // vm_cache_ref
 typedef struct vm_cache_ref {
+	int magic;
 	struct vm_cache *cache;
 	mutex lock;
 
@@ -58,16 +62,21 @@ typedef struct vm_cache_ref {
 	int ref_count;
 } vm_cache_ref;
 
+#define VM_CACHE_REF_MAGIC 'vmcr'
+
 // vm_cache
 typedef struct vm_cache {
+	int magic;
 	vm_page *page_list;
 	vm_cache_ref *ref;
 	struct vm_cache *source;
 	struct vm_store *store;
-	off_t virtual_size;
 	unsigned int temporary : 1;
 	unsigned int scan_skip : 1;
+	off_t virtual_size;
 } vm_cache;
+
+#define VM_CACHE_MAGIC 'vmca'
 
 // info about a region that external entities may want to know
 // used in vm_get_region_info()
@@ -82,6 +91,7 @@ typedef struct vm_region_info {
 
 // vm region
 typedef struct vm_region {
+	int magic;
 	char *name;
 	region_id id;
 	addr base;
@@ -90,8 +100,8 @@ typedef struct vm_region {
 	int wiring;
 	int ref_count;
 
-	struct vm_cache_ref *cache_ref;
 	off_t cache_offset;
+	struct vm_cache_ref *cache_ref;
 
 	struct vm_address_space *aspace;
 	struct vm_region *aspace_next;
@@ -100,6 +110,8 @@ typedef struct vm_region {
 	struct vm_region *cache_prev;
 	struct vm_region *hash_next;
 } vm_region;
+
+#define VM_REGION_MAGIC 'vmrg'
 
 // virtual map (1 per address space)
 typedef struct vm_virtual_map {
@@ -119,6 +131,7 @@ enum {
 
 // address space
 typedef struct vm_address_space {
+	int magic;
 	vm_virtual_map virtual_map;
 	vm_translation_map translation_map;
 	char *name;
@@ -134,13 +147,18 @@ typedef struct vm_address_space {
 	struct vm_address_space *hash_next;
 } vm_address_space;
 
+#define VM_ASPACE_MAGIC 'vmas'
+
 // vm_store
 typedef struct vm_store {
+	int magic;
 	struct vm_store_ops *ops;
 	struct vm_cache *cache;
 	void *data;
 	off_t committed_size;
 } vm_store;
+
+#define VM_STORE_MAGIC 'vmst'
 
 // vm_store_ops
 typedef struct vm_store_ops {

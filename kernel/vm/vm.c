@@ -65,6 +65,10 @@ static int region_compare(void *_r, const void *key)
 	vm_region *r = _r;
 	const region_id *id = key;
 
+#if DEBUG > 1
+	VERIFY_VM_REGION(r);
+#endif
+
 	if(r->id == *id)
 		return 0;
 	else
@@ -75,6 +79,11 @@ static unsigned int region_hash(void *_r, const void *key, unsigned int range)
 {
 	vm_region *r = _r;
 	const region_id *id = key;
+
+#if DEBUG > 1
+	if(r != NULL)
+		VERIFY_VM_REGION(r);
+#endif
 
 	if(r != NULL)
 		return (r->id % range);
@@ -87,6 +96,10 @@ static int aspace_compare(void *_a, const void *key)
 	vm_address_space *aspace = _a;
 	const aspace_id *id = key;
 
+#if DEBUG > 1
+	VERIFY_VM_ASPACE(aspace);
+#endif
+
 	if(aspace->id == *id)
 		return 0;
 	else
@@ -97,6 +110,11 @@ static unsigned int aspace_hash(void *_a, const void *key, unsigned int range)
 {
 	vm_address_space *aspace = _a;
 	const aspace_id *id = key;
+
+#if DEBUG > 1
+	if(aspace != NULL)
+		VERIFY_VM_ASPACE(aspace);
+#endif
 
 	if(aspace != NULL)
 		return (aspace->id % range);
@@ -110,8 +128,10 @@ vm_address_space *vm_get_aspace_by_id(aspace_id aid)
 
 	sem_acquire(aspace_hash_sem, READ_COUNT);
 	aspace = hash_lookup(aspace_table, &aid);
-	if(aspace)
+	if(aspace) {
+		VERIFY_VM_ASPACE(aspace);
 		atomic_add(&aspace->ref_count, 1);
+	}
 	sem_release(aspace_hash_sem, READ_COUNT);
 
 	return aspace;
@@ -123,8 +143,10 @@ vm_region *vm_get_region_by_id(region_id rid)
 
 	sem_acquire(region_hash_sem, READ_COUNT);
 	region = hash_lookup(region_table, &rid);
-	if(region)
+	if(region) {
+		VERIFY_VM_REGION(region);
 		atomic_add(&region->ref_count, 1);
+	}
 	sem_release(region_hash_sem, READ_COUNT);
 
 	return region;
@@ -136,6 +158,8 @@ region_id vm_find_region_by_name(aspace_id aid, const char *name)
 	vm_address_space *aspace;
 	region_id id = ERR_NOT_FOUND;
 
+	ASSERT(name != NULL);
+
 	aspace = vm_get_aspace_by_id(aid);
 	if(aspace == NULL)
 		return ERR_VM_INVALID_ASPACE;
@@ -144,6 +168,8 @@ region_id vm_find_region_by_name(aspace_id aid, const char *name)
 
 	region = aspace->virtual_map.region_list;
 	while(region != NULL) {
+		VERIFY_VM_REGION(region);
+		ASSERT(region->name != NULL);
 		if(strcmp(region->name, name) == 0) {
 			id = region->id;
 			break;
@@ -160,6 +186,9 @@ static vm_region *_vm_create_region_struct(vm_address_space *aspace, const char 
 {
 	vm_region *region = NULL;
 
+	VERIFY_VM_ASPACE(aspace);
+	ASSERT(name != NULL);
+
 	region = (vm_region *)kmalloc(sizeof(vm_region));
 	if(region == NULL)
 		return NULL;
@@ -169,6 +198,7 @@ static vm_region *_vm_create_region_struct(vm_address_space *aspace, const char 
 		return NULL;
 	}
 	strcpy(region->name, name);
+	region->magic = VM_REGION_MAGIC;
 	region->id = atomic_add(&next_region_id, 1);
 	region->base = 0;
 	region->size = 0;
@@ -307,6 +337,9 @@ static int map_backing_store(vm_address_space *aspace, vm_store *store, void **v
 
 	int err;
 
+	VERIFY_VM_ASPACE(aspace);
+	VERIFY_VM_STORE(store);
+
 //	dprintf("map_backing_store: aspace 0x%x, store 0x%x, *vaddr 0x%x, offset 0x%Lx, size %d, addr_type %d, wiring %d, lock %d, _region 0x%x, region_name '%s'\n",
 //		aspace, store, *vaddr, offset, size, addr_type, wiring, lock, _region, region_name);
 
@@ -315,7 +348,9 @@ static int map_backing_store(vm_address_space *aspace, vm_store *store, void **v
 		return ERR_NO_MEMORY;
 
 	cache = store->cache;
+	VERIFY_VM_CACHE(cache);
 	cache_ref = cache->ref;
+	VERIFY_VM_CACHE_REF(cache_ref);
 
 	// if this is a private map, we need to create a new cache & store object
 	// pair to handle the private copies of pages as they are written to
@@ -666,6 +701,7 @@ region_id vm_map_physical_memory(aspace_id aid, char *name, void **address, int 
 	cache_ref = vm_cache_ref_create(cache);
 	if(cache_ref == NULL)
 		panic("vm_map_physical_memory: vm_cache_ref_create returned NULL");
+
 	// tell the page scanner to skip over this region, it's pages are special
 	cache->scan_skip = 1;
 
@@ -776,8 +812,11 @@ restart:
 			goto restart;
 		}
 	} else {
+		VERIFY_VM_CACHE_REF(cache_ref);
 		cache = cache_ref->cache;
+		VERIFY_VM_CACHE(cache);
 		store = cache->store;
+		VERIFY_VM_STORE(store);
 	}
 
 	// acquire a ref to the cache before we do work on it. Dont ripple the ref acquision to the vnode
@@ -911,6 +950,9 @@ region_id vm_clone_region(aspace_id aid, char *name, void **address, int addr_ty
 
 static int __vm_delete_region(vm_address_space *aspace, vm_region *region)
 {
+	VERIFY_VM_ASPACE(aspace);
+	VERIFY_VM_REGION(region);
+
 	if(region->aspace == aspace)
 		vm_put_region(region);
 	return NO_ERROR;
@@ -922,6 +964,8 @@ static int _vm_delete_region(vm_address_space *aspace, region_id rid)
 	vm_region *region;
 
 	dprintf("vm_delete_region: aspace id 0x%x, region id 0x%x\n", aspace->id, rid);
+
+	VERIFY_VM_ASPACE(aspace);
 
 	region = vm_get_region_by_id(rid);
 	if(region == NULL)
@@ -953,6 +997,8 @@ static void _vm_put_region(vm_region *region, bool aspace_locked)
 	vm_address_space *aspace;
 	bool removeit = false;
 
+	VERIFY_VM_REGION(region);
+
 	sem_acquire(region_hash_sem, WRITE_COUNT);
 	if(atomic_add(&region->ref_count, -1) == 1) {
 		hash_remove(region_table, region);
@@ -964,6 +1010,7 @@ static void _vm_put_region(vm_region *region, bool aspace_locked)
 		return;
 
 	aspace = region->aspace;
+	VERIFY_VM_ASPACE(aspace);
 
 	// remove the region from the aspace's virtual map
 	if(!aspace_locked)
@@ -1166,6 +1213,11 @@ static void dump_cache_ref(int argc, char **argv)
 	cache_ref = (vm_cache_ref *)address;
 
 	dprintf("cache_ref at %p:\n", cache_ref);
+	dprintf("magic: 0x%x ", cache_ref->magic);
+	if(cache_ref->magic == VM_CACHE_REF_MAGIC)
+		dprintf("(GOOD)\n");
+	else
+		dprintf("(BAD!)\n");
 	dprintf("cache: %p\n", cache_ref->cache);
 	dprintf("lock.holder: %d\n", cache_ref->lock.holder);
 	dprintf("lock.sem: 0x%x\n", cache_ref->lock.sem);
@@ -1223,12 +1275,17 @@ static void dump_cache(int argc, char **argv)
 	cache = (vm_cache *)address;
 
 	dprintf("cache at %p:\n", cache);
+	dprintf("magic: 0x%x ", cache->magic);
+	if(cache->magic == VM_CACHE_MAGIC)
+		dprintf("(GOOD)\n");
+	else
+		dprintf("(BAD!)\n");
 	dprintf("cache_ref: %p\n", cache->ref);
 	dprintf("source: %p\n", cache->source);
 	dprintf("store: %p\n", cache->store);
-	dprintf("virtual_size: 0x%Lx\n", cache->virtual_size);
 	dprintf("temporary: %d\n", cache->temporary);
 	dprintf("scan_skip: %d\n", cache->scan_skip);
+	dprintf("virtual_size: 0x%Lx\n", cache->virtual_size);
 	dprintf("page_list:\n");
 	for(page = cache->page_list; page != NULL; page = page->cache_next) {
 		if(page->type == PAGE_TYPE_PHYSICAL)
@@ -1244,6 +1301,11 @@ static void dump_cache(int argc, char **argv)
 static void _dump_region(vm_region *region)
 {
 	dprintf("dump of region at %p:\n", region);
+	dprintf("magic: 0x%x ", region->magic);
+	if(region->magic == VM_REGION_MAGIC)
+		dprintf("(GOOD)\n");
+	else
+		dprintf("(BAD!)\n");
 	dprintf("name: '%s'\n", region->name);
 	dprintf("id: 0x%x\n", region->id);
 	dprintf("base: 0x%lx\n", region->base);
@@ -1251,10 +1313,13 @@ static void _dump_region(vm_region *region)
 	dprintf("lock: 0x%x\n", region->lock);
 	dprintf("wiring: 0x%x\n", region->wiring);
 	dprintf("ref_count: %d\n", region->ref_count);
-	dprintf("cache_ref: %p\n", region->cache_ref);
 	dprintf("cache_offset: 0x%Lx\n", region->cache_offset);
+	dprintf("cache_ref: %p\n", region->cache_ref);
+	dprintf("aspace: %p\n", region->aspace);
+	dprintf("aspace_next: %p\n", region->aspace_next);
 	dprintf("cache_next: %p\n", region->cache_next);
 	dprintf("cache_prev: %p\n", region->cache_prev);
+	dprintf("hash_next: %p\n", region->hash_next);
 }
 
 static void dump_region(int argc, char **argv)
@@ -1312,11 +1377,22 @@ static void _dump_aspace(vm_address_space *aspace)
 	vm_region *region;
 
 	dprintf("dump of address space at %p:\n", aspace);
+	dprintf("magic: 0x%x ", aspace->magic);
+	if(aspace->magic == VM_ASPACE_MAGIC)
+		dprintf("(GOOD)\n");
+	else
+		dprintf("(BAD!)\n");
 	dprintf("name: '%s'\n", aspace->name);
 	dprintf("id: 0x%x\n", aspace->id);
 	dprintf("ref_count: %d\n", aspace->ref_count);
 	dprintf("fault_count: %d\n", aspace->fault_count);
+	dprintf("state: %d\n", aspace->state);
+	dprintf("scan_va: 0x%lx\n", aspace->scan_va);
 	dprintf("working_set_size: 0x%lx\n", aspace->working_set_size);
+	dprintf("max_working_set: 0x%lx\n", aspace->max_working_set);
+	dprintf("min_working_set: 0x%lx\n", aspace->min_working_set);
+	dprintf("last_working_set_adjust: %Ld\n", aspace->last_working_set_adjust);
+	dprintf("hash_next: %p\n", aspace->hash_next);
 	dprintf("translation_map: %p\n", &aspace->translation_map);
 	dprintf("virtual_map.base: 0x%lx\n", aspace->virtual_map.base);
 	dprintf("virtual_map.size: 0x%lx\n", aspace->virtual_map.size);
@@ -1385,6 +1461,8 @@ static void dump_aspace_list(int argc, char **argv)
 
 vm_address_space *vm_get_kernel_aspace(void)
 {
+	VERIFY_VM_ASPACE(kernel_aspace);
+
 	/* we can treat this one a little differently since it can't be deleted */
 	sem_acquire(aspace_hash_sem, READ_COUNT);
 	atomic_add(&kernel_aspace->ref_count, 1);
@@ -1394,6 +1472,7 @@ vm_address_space *vm_get_kernel_aspace(void)
 
 aspace_id vm_get_kernel_aspace_id(void)
 {
+	VERIFY_VM_ASPACE(kernel_aspace);
 	return kernel_aspace->id;
 }
 
@@ -1417,6 +1496,8 @@ void vm_put_aspace(vm_address_space *aspace)
 	vm_region *region;
 	bool removeit = false;
 
+	VERIFY_VM_ASPACE(aspace);
+
 	sem_acquire(aspace_hash_sem, WRITE_COUNT);
 	if(atomic_add(&aspace->ref_count, -1) == 1) {
 		hash_remove(aspace_table, aspace);
@@ -1431,6 +1512,9 @@ void vm_put_aspace(vm_address_space *aspace)
 
 	if(aspace == kernel_aspace)
 		panic("vm_put_aspace: tried to delete the kernel aspace!\n");
+
+	if(aspace->state != VM_ASPACE_STATE_DELETION)
+		panic("vm_put_apsace: removed the last ref to aspace %p that's not in the DELETION state\n", aspace);
 
 	if(aspace->virtual_map.region_list)
 		panic("vm_put_aspace: aspace at %p has zero ref count, but region list isn't empty!\n", aspace);
@@ -1450,16 +1534,19 @@ aspace_id vm_create_aspace(const char *name, addr base, addr size, bool kernel)
 	int err;
 
 	aspace = (vm_address_space *)kmalloc(sizeof(vm_address_space));
-	if(aspace == NULL)
-		return ERR_NO_MEMORY;
+	if(aspace == NULL) {
+		err = ERR_NO_MEMORY;
+		goto err;
+	}
 
 	aspace->name = (char *)kmalloc(strlen(name) + 1);
 	if(aspace->name == NULL ) {
-		kfree(aspace);
-		return ERR_NO_MEMORY;
+		err = ERR_NO_MEMORY;
+		goto err1;
 	}
 	strcpy(aspace->name, name);
 
+	aspace->magic = VM_ASPACE_MAGIC;
 	aspace->id = next_aspace_id++;
 	aspace->ref_count = 1;
 	aspace->state = VM_ASPACE_STATE_NORMAL;
@@ -1472,11 +1559,8 @@ aspace_id vm_create_aspace(const char *name, addr base, addr size, bool kernel)
 
 	// initialize the corresponding translation map
 	err = vm_translation_map_create(&aspace->translation_map, kernel);
-	if(err < 0) {
-		kfree(aspace->name);
-		kfree(aspace);
-		return err;
-	}
+	if(err < 0)
+		goto err2;
 
 	// initialize the virtual map
 	aspace->virtual_map.base = base;
@@ -1493,6 +1577,13 @@ aspace_id vm_create_aspace(const char *name, addr base, addr size, bool kernel)
 	sem_release(aspace_hash_sem, WRITE_COUNT);
 
 	return aspace->id;
+
+err2:
+	kfree(aspace->name);
+err1:
+	kfree(aspace);
+err:
+	return err;
 }
 
 int vm_delete_aspace(aspace_id aid)
@@ -1521,6 +1612,7 @@ int vm_delete_aspace(aspace_id aid)
 	// delete all the regions in this aspace
 	region = aspace->virtual_map.region_list;
 	while(region) {
+		VERIFY_VM_REGION(region);
 		next = region->aspace_next;
 		// decrement the ref on this region, may actually push the ref < 0, but that's okay
 		_vm_put_region(region, true);
@@ -1549,8 +1641,10 @@ vm_address_space *vm_aspace_walk_next(struct hash_iterator *i)
 
 	sem_acquire(aspace_hash_sem, READ_COUNT);
 	aspace = hash_next(aspace_table, i);
-	if(aspace)
+	if(aspace) {
+		VERIFY_VM_ASPACE(aspace);
 		atomic_add(&aspace->ref_count, 1);
+	}
 	sem_release(aspace_hash_sem, READ_COUNT);
 	return aspace;
 }
@@ -1835,10 +1929,14 @@ static int vm_soft_fault(addr address, bool is_write, bool is_user)
 	TRACE;
 
 	top_cache_ref = region->cache_ref;
+	VERIFY_VM_CACHE_REF(top_cache_ref);
 	cache_offset = address - region->base + region->cache_offset;
 	vm_cache_acquire_ref(top_cache_ref, true);
 	change_count = map->change_count;
 	sem_release(map->sem, READ_COUNT);
+
+	VERIFY_VM_CACHE(top_cache_ref->cache);
+	VERIFY_VM_STORE(top_cache_ref->cache->store);
 
 	// see if this cache has a fault handler
 	if(top_cache_ref->cache->store->ops->fault) {
@@ -1850,11 +1948,13 @@ static int vm_soft_fault(addr address, bool is_write, bool is_user)
 
 	TRACE;
 
+	dummy_page.magic = VM_PAGE_MAGIC;
 	dummy_page.state = PAGE_STATE_INACTIVE;
 	dummy_page.type = PAGE_TYPE_DUMMY;
 
 	last_cache_ref = top_cache_ref;
 	for(cache_ref = top_cache_ref; cache_ref; cache_ref = (cache_ref->cache->source) ? cache_ref->cache->source->ref : NULL) {
+		VERIFY_VM_CACHE_REF(cache_ref);
 		mutex_lock(&cache_ref->lock);
 
 		TRACE;
@@ -1891,6 +1991,9 @@ static int vm_soft_fault(addr address, bool is_write, bool is_user)
 			dummy_page.state = PAGE_STATE_BUSY;
 			vm_cache_insert_page(cache_ref, &dummy_page, cache_offset);
 		}
+
+		VERIFY_VM_CACHE(cache_ref->cache);
+		VERIFY_VM_STORE(cache_ref->cache->store);
 
 		// see if the vm_store has it
 		if(cache_ref->cache->store->ops->has_page) {
@@ -2067,26 +2170,36 @@ static vm_region *vm_virtual_map_lookup(vm_virtual_map *map, addr address)
 
 	// check the region_list region first
 	region = map->region_hint;
+	if(region)
+		VERIFY_VM_REGION(region);
 	if(region && region->base <= address && (region->base + region->size) > address)
 		return region;
 
 	for(region = map->region_list; region != NULL; region = region->aspace_next) {
+		VERIFY_VM_REGION(region);
 		if(region->base <= address && (region->base + region->size) > address)
 			break;
 	}
 
 	if(region)
 		map->region_hint = region;
+	VERIFY_VM_REGION(region);
 	return region;
 }
 
 int vm_get_physical_page(addr paddr, addr *vaddr, int flags)
 {
+#if DEBUG > 1
+	VERIFY_VM_ASPACE(kernel_aspace);
+#endif
 	return (*kernel_aspace->translation_map.ops->get_physical_page)(paddr, vaddr, flags);
 }
 
 int vm_put_physical_page(addr vaddr)
 {
+#if DEBUG > 1
+	VERIFY_VM_ASPACE(kernel_aspace);
+#endif
 	return (*kernel_aspace->translation_map.ops->put_physical_page)(vaddr);
 }
 

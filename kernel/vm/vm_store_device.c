@@ -4,6 +4,7 @@
 */
 #include <kernel/kernel.h>
 #include <kernel/vm.h>
+#include <kernel/vm_priv.h>
 #include <kernel/heap.h>
 #include <kernel/debug.h>
 #include <kernel/lock.h>
@@ -17,30 +18,35 @@ struct device_store_data {
 static void device_destroy(struct vm_store *store)
 {
 	if(store) {
+		VERIFY_VM_STORE(store);
 		kfree(store);
 	}
 }
 
 static off_t device_commit(struct vm_store *store, off_t size)
 {
+	VERIFY_VM_STORE(store);
 	store->committed_size = size;
 	return size;
 }
 
 static int device_has_page(struct vm_store *store, off_t offset)
 {
+	VERIFY_VM_STORE(store);
 	// this should never be called
 	return 0;
 }
 
 static ssize_t device_read(struct vm_store *store, off_t offset, iovecs *vecs)
 {
+	VERIFY_VM_STORE(store);
 	panic("device_store: read called. Invalid!\n");
 	return ERR_UNIMPLEMENTED;
 }
 
 static ssize_t device_write(struct vm_store *store, off_t offset, iovecs *vecs)
 {
+	VERIFY_VM_STORE(store);
 	// no place to write, this will cause the page daemon to skip this store
 	return 0;
 }
@@ -55,6 +61,11 @@ static int device_fault(struct vm_store *store, struct vm_address_space *aspace,
 	vm_cache_ref *cache_ref = store->cache->ref;
 	vm_region *region;
 
+	VERIFY_VM_STORE(store);
+	VERIFY_VM_CACHE(store->cache);
+	VERIFY_VM_CACHE_REF(store->cache->ref);
+	VERIFY_VM_ASPACE(aspace);
+
 //	dprintf("device_fault: offset 0x%x 0x%x + base_addr 0x%x\n", offset, d->base_addr);
 
 	// figure out which page needs to be mapped where
@@ -63,6 +74,9 @@ static int device_fault(struct vm_store *store, struct vm_address_space *aspace,
 
 	// cycle through all of the regions that map this cache and map the page in
 	for(region = cache_ref->region_list; region != NULL; region = region->cache_next) {
+
+		VERIFY_VM_REGION(region);
+
 		// make sure this page in the cache that was faulted on is covered in this region
 		if(offset >= region->cache_offset && (offset - region->cache_offset) < region->size) {
 //			dprintf("device_fault: mapping paddr 0x%x to vaddr 0x%x\n",
@@ -102,6 +116,7 @@ vm_store *vm_store_create_device(addr base_addr)
 	if(store == NULL)
 		return NULL;
 
+	store->magic = VM_STORE_MAGIC;
 	store->ops = &device_ops;
 	store->cache = NULL;
 	store->data = (void *)((addr)store + sizeof(vm_store));

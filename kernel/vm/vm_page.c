@@ -60,11 +60,20 @@ static vm_page *dequeue_page(page_queue *q)
 		q->tail = page->queue_prev;
 		q->count--;
 	}
+
+#if DEBUG > 1
+	if(page)
+		VERIFY_VM_PAGE(page);
+#endif
+
 	return page;
 }
 
 static void enqueue_page(page_queue *q, vm_page *page)
 {
+#if DEBUG > 1
+	VERIFY_VM_PAGE(page);
+#endif
 	if(q->head != NULL)
 		q->head->queue_prev = page;
 	page->queue_next = q->head;
@@ -81,6 +90,9 @@ static void enqueue_page(page_queue *q, vm_page *page)
 
 static void remove_page_from_queue(page_queue *q, vm_page *page)
 {
+#if DEBUG > 1
+	VERIFY_VM_PAGE(page);
+#endif
 	if(page->queue_prev != NULL) {
 		page->queue_prev->queue_next = page->queue_next;
 	} else {
@@ -96,6 +108,9 @@ static void remove_page_from_queue(page_queue *q, vm_page *page)
 
 static void move_page_to_queue(page_queue *from_q, page_queue *to_q, vm_page *page)
 {
+#if DEBUG > 1
+	VERIFY_VM_PAGE(page);
+#endif
 	if(from_q != to_q) {
 		remove_page_from_queue(from_q, page);
 		enqueue_page(to_q, page);
@@ -240,6 +255,7 @@ int vm_page_init_postheap(kernel_args *ka)
 
 	// initialize the free page table
 	for(i=0; i < num_pages - 1; i++) {
+		all_pages[i].magic = VM_PAGE_MAGIC;
 		all_pages[i].ppn = physical_page_offset + i;
 		all_pages[i].type = PAGE_TYPE_PHYSICAL;
 		all_pages[i].state = PAGE_STATE_FREE;
@@ -513,6 +529,9 @@ vm_page *vm_page_allocate_page(int page_state)
 		clear_page(p->ppn * PAGE_SIZE);
 	}
 
+	if(p)
+		VERIFY_VM_PAGE(p);
+
 	return p;
 }
 
@@ -568,6 +587,8 @@ vm_page *vm_lookup_page(addr page_num)
 	page_num -= physical_page_offset;
 	if(page_num > num_pages)
 		return NULL;
+
+	VERIFY_VM_PAGE(&all_pages[page_num]);
 
 	return &all_pages[page_num];
 }
@@ -653,7 +674,11 @@ addtoactive:
 int vm_page_set_state(vm_page *page, int page_state)
 {
 	int err;
-	int state = int_disable_interrupts();
+	int state;
+
+	VERIFY_VM_PAGE(page);
+
+	state = int_disable_interrupts();
 	acquire_spinlock(&page_lock);
 
 	err = vm_page_set_state_nolock(page, page_state);

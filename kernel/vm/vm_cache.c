@@ -34,6 +34,10 @@ static int page_compare_func(void *_p, const void *_key)
 
 //	dprintf("page_compare_func: p 0x%x, key 0x%x\n", p, key);
 
+#if DEBUG > 1
+	VERIFY_VM_PAGE(p);
+#endif
+
 	if(p->cache_ref == key->ref && p->offset == key->offset)
 		return 0;
 	else
@@ -52,6 +56,12 @@ static unsigned int page_hash_func(void *_p, const void *_key, unsigned int rang
 	else
 		dprintf("page_hash_func: p 0x%x, key 0x%x, HASH = 0x%x\n", p, key, HASH(key->offset, key->ref) % range);
 #endif
+
+#if DEBUG > 1
+	if(p != NULL)
+		VERIFY_VM_PAGE(p);
+#endif
+
 	if(p)
 		return HASH(p->offset, p->cache_ref) % range;
 	else
@@ -81,6 +91,7 @@ vm_cache *vm_cache_create(vm_store *store)
 	if(cache == NULL)
 		return NULL;
 
+	cache->magic = VM_CACHE_MAGIC;
 	cache->page_list = NULL;
 	cache->ref = NULL;
 	cache->source = NULL;
@@ -90,6 +101,7 @@ vm_cache *vm_cache_create(vm_store *store)
 	cache->virtual_size = 0;
 	cache->temporary = 0;
 	cache->scan_skip = 0;
+
 
 	return cache;
 }
@@ -102,6 +114,7 @@ vm_cache_ref *vm_cache_ref_create(vm_cache *cache)
 	if(ref == NULL)
 		return NULL;
 
+	ref->magic = VM_CACHE_REF_MAGIC;
 	ref->cache = cache;
 	mutex_init(&ref->lock, "cache_ref_mutex");
 	ref->region_list = NULL;
@@ -117,6 +130,10 @@ void vm_cache_acquire_ref(vm_cache_ref *cache_ref, bool acquire_store_ref)
 
 	if(cache_ref == NULL)
 		panic("vm_cache_acquire_ref: passed NULL\n");
+	VERIFY_VM_CACHE_REF(cache_ref);
+	VERIFY_VM_CACHE(cache_ref->cache);
+	VERIFY_VM_STORE(cache_ref->cache->store);
+
 	if(acquire_store_ref && cache_ref->cache->store->ops->acquire_ref) {
 		cache_ref->cache->store->ops->acquire_ref(cache_ref->cache->store);
 	}
@@ -131,11 +148,15 @@ void vm_cache_release_ref(vm_cache_ref *cache_ref)
 
 	if(cache_ref == NULL)
 		panic("vm_cache_release_ref: passed NULL\n");
+	VERIFY_VM_CACHE_REF(cache_ref);
+	VERIFY_VM_CACHE(cache_ref->cache);
+
 	if(atomic_add(&cache_ref->ref_count, -1) == 1) {
 		// delete this cache
 		// delete the cache's backing store, if it has one
 		off_t store_committed_size = 0;
 		if(cache_ref->cache->store) {
+			VERIFY_VM_STORE(cache_ref->cache->store);
 			store_committed_size = cache_ref->cache->store->committed_size;
 			(*cache_ref->cache->store->ops->destroy)(cache_ref->cache->store);
 		}
@@ -145,6 +166,8 @@ void vm_cache_release_ref(vm_cache_ref *cache_ref)
 		while(page) {
 			vm_page *old_page = page;
 			int state;
+
+			VERIFY_VM_PAGE(page);
 
 			page = page->cache_next;
 
@@ -183,6 +206,8 @@ vm_page *vm_cache_lookup_page(vm_cache_ref *cache_ref, off_t offset)
 	int state;
 	struct page_lookup_key key;
 
+	VERIFY_VM_CACHE_REF(cache_ref);
+
 	key.offset = offset;
 	key.ref = cache_ref;
 
@@ -202,6 +227,10 @@ void vm_cache_insert_page(vm_cache_ref *cache_ref, vm_page *page, off_t offset)
 	int state;
 
 //	dprintf("vm_cache_insert_page: cache 0x%x, page 0x%x, offset 0x%x 0x%x\n", cache_ref, page, offset);
+
+	VERIFY_VM_CACHE_REF(cache_ref);
+	VERIFY_VM_CACHE(cache_ref->cache);
+	VERIFY_VM_PAGE(page);
 
 	page->offset = offset;
 
@@ -230,6 +259,10 @@ void vm_cache_remove_page(vm_cache_ref *cache_ref, vm_page *page)
 
 //	dprintf("vm_cache_remove_page: cache 0x%x, page 0x%x\n", cache_ref, page);
 
+	VERIFY_VM_CACHE_REF(cache_ref);
+	VERIFY_VM_CACHE(cache_ref->cache);
+	VERIFY_VM_PAGE(page);
+
 	state = int_disable_interrupts();
 	acquire_spinlock(&page_cache_table_lock);
 
@@ -255,6 +288,9 @@ int vm_cache_insert_region(vm_cache_ref *cache_ref, vm_region *region)
 {
 	mutex_lock(&cache_ref->lock);
 
+	VERIFY_VM_CACHE_REF(cache_ref);
+	VERIFY_VM_REGION(region);
+
 	region->cache_next = cache_ref->region_list;
 	if(region->cache_next)
 		region->cache_next->cache_prev = region;
@@ -268,6 +304,9 @@ int vm_cache_insert_region(vm_cache_ref *cache_ref, vm_region *region)
 int vm_cache_remove_region(vm_cache_ref *cache_ref, vm_region *region)
 {
 	mutex_lock(&cache_ref->lock);
+
+	VERIFY_VM_CACHE_REF(cache_ref);
+	VERIFY_VM_REGION(region);
 
 	if(region->cache_prev)
 		region->cache_prev->cache_next = region->cache_next;

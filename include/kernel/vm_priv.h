@@ -50,5 +50,13 @@ addr vm_alloc_from_ka_struct(kernel_args *ka, unsigned int size, int lock);
 // a global structure holding data about the vm for informational purposes
 extern vm_info_t vm_info;
 
+// minimal consistency checks
+#define VERIFY_VM_PAGE(page) ASSERT((page) && (page)->magic == VM_PAGE_MAGIC)
+#define VERIFY_VM_CACHE_REF(ref) ASSERT((ref) && (ref)->magic == VM_CACHE_REF_MAGIC && (ref)->ref_count >= 0)
+#define VERIFY_VM_CACHE(cache) ASSERT((cache) && (cache)->magic == VM_CACHE_MAGIC)
+#define VERIFY_VM_REGION(region) ASSERT((region) && (region)->magic == VM_REGION_MAGIC && (region)->ref_count >= 0)
+#define VERIFY_VM_ASPACE(aspace) ASSERT((aspace) && (aspace)->magic == VM_ASPACE_MAGIC && (aspace)->ref_count >= 0)
+#define VERIFY_VM_STORE(store) ASSERT((store) && (store)->magic == VM_STORE_MAGIC)
+
 #endif
 
