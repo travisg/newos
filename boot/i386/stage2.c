@@ -442,7 +442,7 @@ int check_cpu()
 
 	// check for bits we need
 	cpuid(1, data);
-	if(!(data[4] & 1<<4)) return -1; // check for rdtsc
+	if(!(data[3] & 1<<4)) return -1; // check for rdtsc
 
 	return 0;
 }
