@@ -299,12 +299,39 @@ int vfs_test()
 	dprintf("fd = %d\n", fd);
 	vfs_closedir(fd);
 
+	vfs_mkdir(NULL, "/boot");
+	vfs_mkdir(NULL, "/boot");
+	
 	fd = vfs_opendir(NULL, "/");
 	dprintf("fd = %d\n", fd);
 
-	vfs_mkdir(NULL, "/boot");
-	vfs_mkdir(NULL, "/boot");
+	vfs_mkdir(NULL, "/foo");
+	vfs_mkdir(NULL, "/foo/bar");
+	vfs_mkdir(NULL, "/foo/bar/gar");
+	vfs_mkdir(NULL, "/foo/bar/tar");
 
+	fd = vfs_opendir(NULL, "/foo/bar");
+	if(fd < 0)
+		panic("unable to open /foo/bar\n");
+
+	{
+		char buf[64];
+		int buf_len;
+		struct dirent *de = (struct dirent *)buf;
+
+		vfs_rewinddir(fd);
+		for(;;) {
+			buf_len = sizeof(buf);
+			err = vfs_readdir(fd, buf, &buf_len);
+			if(err < 0)
+				panic("readdir returned %d\n", err);
+			if(buf_len > 0) 
+				dprintf("readdir returned name = '%s'\n", de->name);
+			else
+				break;
+		}
+	}
+	
 	err = vfs_mount("/boot", "rootfs");
 	if(err < 0)
 		panic("failed mount test\n");
@@ -312,6 +339,31 @@ int vfs_test()
 	fd = vfs_opendir(NULL, "/boot");
 	dprintf("fd = %d\n", fd);
 	vfs_closedir(fd);
+	
+	if(vfs_mkdir(NULL, "/boot/foo") < 0)
+		panic("could not create /boot/foo\n");
+	if(vfs_mkdir(NULL, "/boot/foo/bar") < 0)
+		panic("could not create /boot/foo/bar\n");
+	fd = vfs_opendir(NULL, "/boot/foo");
+	if(fd < 0)
+		panic("unable to open dir /boot/foo\n");
+	{
+		char buf[64];
+		int buf_len;
+		struct dirent *de = (struct dirent *)buf;
+
+		vfs_rewinddir(fd);
+		for(;;) {
+			buf_len = sizeof(buf);
+			err = vfs_readdir(fd, buf, &buf_len);
+			if(err < 0)
+				panic("readdir returned %d\n", err);
+			if(buf_len > 0) 
+				dprintf("readdir returned name = '%s'\n", de->name);
+			else
+				break;
+		}
+	}
 	
 	return 0;
 }
@@ -592,6 +644,72 @@ err:
 	return err;
 }
 
+int vfs_readdir(int fd, void *buf, unsigned int *buf_len)
+{
+	struct ioctx *ioctx;
+	struct vnode *dir_vnode;
+	int err;
+
+#if MAKE_NOIZE
+	dprintf("vfs_readdir: fd = %d\n", fd);
+#endif
+
+	ioctx = get_current_ioctx();
+	sem_acquire(ioctx->io_sem, 1);
+
+	// XXX better handling	
+	dir_vnode = ioctx->fds[fd].vnode;
+	if(dir_vnode == NULL) {
+		sem_release(ioctx->io_sem, 1);
+		return -1;
+	}
+	inc_vnode_ref_count(dir_vnode, false);
+	inc_fd_ref_count(ioctx, fd, true);
+
+	sem_release(ioctx->io_sem, 1);
+
+	err = dir_vnode->mount->fs->calls->fs_readdir(dir_vnode->mount->cookie, dir_vnode->priv_vnode,
+		ioctx->fds[fd].cookie, buf, buf_len);
+
+	dec_fd_ref_count(ioctx, fd, false);
+	dec_vnode_ref_count(dir_vnode, false, true);
+
+	return err;
+}
+
+int vfs_rewinddir(int fd)
+{
+	struct ioctx *ioctx;
+	struct vnode *dir_vnode;
+	int err;
+
+#if MAKE_NOIZE
+	dprintf("vfs_rewinddir: fd = %d\n", fd);
+#endif
+
+	ioctx = get_current_ioctx();
+	sem_acquire(ioctx->io_sem, 1);
+
+	// XXX better handling	
+	dir_vnode = ioctx->fds[fd].vnode;
+	if(dir_vnode == NULL) {
+		sem_release(ioctx->io_sem, 1);
+		return -1;
+	}
+	inc_vnode_ref_count(dir_vnode, false);
+	inc_fd_ref_count(ioctx, fd, true);
+
+	sem_release(ioctx->io_sem, 1);
+
+	err = dir_vnode->mount->fs->calls->fs_rewinddir(dir_vnode->mount->cookie, dir_vnode->priv_vnode,
+		ioctx->fds[fd].cookie);
+
+	dec_fd_ref_count(ioctx, fd, false);
+	dec_vnode_ref_count(dir_vnode, false, true);
+	
+	return err;
+}	
+
 int vfs_closedir(int fd)
 {
 	struct ioctx *ioctx;
@@ -601,6 +719,16 @@ int vfs_closedir(int fd)
 	dprintf("vfs_closedir: fd = %d, ioctx = 0x%x\n", fd, ioctx);
 #endif
 	return dec_fd_ref_count(ioctx, fd, false);
+}
+
+int vfs_mkdir_loopback(void *_base_vnode, const char *path)
+{
+	struct vnode *base_vnode = _base_vnode;
+	
+#if MAKE_NOIZE	
+	dprintf("vfs_mkdir_loopback: entry. path = '%s', base_vnode 0x%x\n", path, base_vnode);
+#endif	
+	return base_vnode->mount->fs->calls->fs_mkdir(base_vnode->mount->cookie, base_vnode->priv_vnode, path);
 }
 
 int vfs_mkdir(void *_base_vnode, const char *path)
@@ -616,10 +744,10 @@ int vfs_mkdir(void *_base_vnode, const char *path)
 	
 		base_vnode = ioctx->cwd;
 	
+		inc_vnode_ref_count(base_vnode, false);
+
 		sem_release(ioctx->io_sem, 1);
 	}
-
-	inc_vnode_ref_count(base_vnode, false);
 	
 	err = base_vnode->mount->fs->calls->fs_mkdir(base_vnode->mount->cookie, base_vnode->priv_vnode, path);	
 

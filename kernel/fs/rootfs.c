@@ -156,14 +156,15 @@ rootfs_get_container_vnode_from_path(struct rootfs *fs, struct rootfs_vnode *bas
 
 	cur_vnode = base;
 	while(vfs_helper_getnext_in_path(path, start, &end) > 0) {
-		last_start = *start;
-
 		if(last_vnode != NULL && last_vnode->redir_vnode != NULL) {
 			// we are at a mountpoint, redirect here
 			*redir = true;
+			*start = last_start;
 			return last_vnode;
 		}	
 	
+		last_start = *start;
+
 		if(*start == end) {
 			// zero length path component, assume this means '.'
 			return last_vnode;
@@ -176,6 +177,8 @@ rootfs_get_container_vnode_from_path(struct rootfs *fs, struct rootfs_vnode *bas
 		*start = end;
 	}
 
+	if(last_vnode != NULL && last_vnode->redir_vnode != NULL)
+		*redir = true;
 	*start = last_start;
 	return last_vnode;
 }
@@ -358,15 +361,53 @@ err:
 	return err;
 }
 
+int rootfs_readdir(void *_fs, void *_dir_vnode, void *_dircookie, void *buf, unsigned int *buf_len)
+{
+	struct rootfs *fs = _fs;
+	struct rootfs_dircookie *cookie = _dircookie;
+	int err = 0;
+	struct dirent *de = buf;
+
+	TOUCH(_dir_vnode);
+
+	dprintf("rootfs_readdir: vnode 0x%x, cookie 0x%x\n", _dir_vnode, cookie);
+
+	sem_acquire(fs->sem, 1);
+	
+	if(cookie->ptr == NULL) {
+		*buf_len = 0;
+		goto err;
+	}
+		
+	if(sizeof(struct dirent) + strlen(cookie->ptr->name) + 1 > *buf_len) {
+		*buf_len = 0;
+		err = -1;
+		goto err;
+	}
+	
+	strcpy(de->name, cookie->ptr->name);
+	de->name_len = strlen(cookie->ptr->name) + 1;
+	*buf_len = sizeof(struct dirent) + de->name_len;
+	
+	cookie->ptr = cookie->ptr->dir_next;
+	
+err:
+	sem_release(fs->sem, 1);
+
+	return err;
+}
+
 int rootfs_rewinddir(void *_fs, void *_dir_vnode, void *_dircookie)
 {
 	struct rootfs *fs = _fs;
-	struct rootfs_vnode *v = _dir_vnode;
+	struct rootfs_vnode *dir = _dir_vnode;
 	struct rootfs_dircookie *cookie = _dircookie;
+	
+	dprintf("rootfs_rewinddir: entry vnode 0x%x, cookie 0x%x\n", dir, cookie);
 	
 	sem_acquire(fs->sem, 1);
 
-	cookie->ptr = v->dir_head;
+	cookie->ptr = dir->dir_head;
 
 	sem_release(fs->sem, 1);
 
@@ -415,8 +456,9 @@ int rootfs_mkdir(void *_fs, void *_base_vnode, const char *path)
 	}
 	if(redir == true) {
 		sem_release(fs->sem, 1);
-		// XXXinsert vfs_mkdir here
+		return vfs_mkdir_loopback(dir->redir_vnode, &path[start]);
 	}
+	dprintf("rootfs_mkdir: found container at 0x%x\n", dir);
 	
 	if(rootfs_find_in_dir(dir, path, start, strlen(path) - 1) == NULL) {
 		new_vnode = rootfs_create_vnode(fs);
@@ -452,6 +494,7 @@ struct fs_calls rootfs_calls = {
 	&rootfs_unregister_mountpoint,
 	&rootfs_dispose_vnode,
 	&rootfs_opendir,
+	&rootfs_readdir,
 	&rootfs_rewinddir,
 	&rootfs_closedir,
 	&rootfs_freedircookie,
