@@ -197,3 +197,4 @@ int arch_smp_clear_apic_timer()
 
 	return 0;
 }
+
