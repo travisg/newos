@@ -333,10 +333,11 @@ superblock * hoardHeap::findAvailableSuperblock (int sizeclass,
 	// so we adjust the least empty bin.
 	_leastEmptyBin[sizeclass]--;
       }
-    } else {
+    } else if(sb->getNumAvailable() > 0){
       assert (sb->getOwner() == this);
       break;
     }
+    sb = NULL;
   }
 
 #if 1
