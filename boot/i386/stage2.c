@@ -452,9 +452,9 @@ static int check_cpu(void)
 	return 0;
 }
 
-void sleep(long long time)
+void sleep(uint64 time)
 {
-	long long start = system_time();
+	uint64 start = system_time();
 
 	while(system_time() - start <= time)
 		;
@@ -476,9 +476,7 @@ static void calculate_cpu_conversion_factor(void)
 {
 	unsigned char	low, high;
 	unsigned long	expired;
-	long long		t1, t2;
-	long long       time_base_ticks;
-	double			timer_usecs;
+	uint64			t1, t2;
 
 	/* program the timer to count down mode */
 	outb(0x34, 0x43);
@@ -497,20 +495,19 @@ static void calculate_cpu_conversion_factor(void)
 	high = inb(0x40);
 
 	expired = (unsigned long)0xffff - ((((unsigned long)high) << 8) + low);
+	t2 = (t2 - t1) * TIMER_CLKNUM_HZ;
 
-	timer_usecs = (expired * 1.0) / (TIMER_CLKNUM_HZ/1000000.0);
-	time_base_ticks = t2 -t1;
+	/* time in usecs per CPU cycle * 2^32 */
+	cv_factor = ((uint64)1000000<<32) * expired / t2;
 
-	dprintf("CPU at %d Hz\n", (int)((time_base_ticks / timer_usecs) * 1000000));
-
-	system_time_setup((int)((time_base_ticks / timer_usecs) * 1000000));
+	dprintf("CPU at %d Hz\n", t2/expired);
 }
 
 void clearscreen()
 {
 	int i;
 
-	for(i=0; i< SCREEN_WIDTH*SCREEN_HEIGHT*2; i++) {
+	for(i=0; i< SCREEN_WIDTH*SCREEN_HEIGHT; i++) {
 		kScreenBase[i] = 0xf20;
 	}
 }

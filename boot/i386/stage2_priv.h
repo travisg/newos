@@ -6,16 +6,17 @@
 #define _STAGE2_PRIV_H
 
 #include <boot/stage2.h>
+#include <newos/types.h>
 
 extern void _start(unsigned int mem, int in_vesa, unsigned int vesa_ptr, unsigned int console_ptr);
 extern void clearscreen(void);
 extern void puts(const char *str);
 extern int dprintf(const char *fmt, ...);
-extern void sleep(long long time);
-extern long long system_time(void);
+extern void sleep(uint64 time);
+extern uint64 system_time(void);
 extern void execute_n_instructions(int count);
 void system_time_setup(long a);
-long long rdtsc();
+uint64 rdtsc();
 unsigned int get_eflags(void);
 void set_eflags(unsigned int val);
 void cpuid(unsigned int selector, unsigned int *data);
@@ -36,8 +37,6 @@ void cpuid(unsigned int selector, unsigned int *data);
 #define SCREEN_WIDTH 80
 #define SCREEN_HEIGHT 24
 #define ADDR_MASK 0xfffff000
-
-#define NULL ((void *)0)
 
 // SMP stuff
 extern int smp_boot(kernel_args *ka, unsigned int kernel_entry);
