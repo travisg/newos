@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -39,15 +39,15 @@ int shell_parse(char *buf, int len)
 
 	// trim off the trailing carriage returns
 	for(i=strlen(buf)-1; i>=0; i--) {
-		if(buf[i] == 0x0a || buf[i] == 0x0d) 
+		if(buf[i] == 0x0a || buf[i] == 0x0d)
 			buf[i] = 0;
 	}
-	
+
 	// trim off the trailing spaces
 	for(i=strlen(buf)-1; i>=0; i--) {
-		if(isspace(buf[i])) 
+		if(isspace(buf[i]))
 			buf[i] = 0;
-		else 
+		else
 			break;
 	}
 
@@ -73,7 +73,7 @@ int shell_parse(char *buf, int len)
 			break;
 		}
 		i++;
-	}	
+	}
 	if(found_command == false) {
 /*
 		// search for the command in the /boot directory
@@ -81,14 +81,14 @@ int shell_parse(char *buf, int len)
 		int rc;
 
 		for(i=0; paths[i].path != NULL; i++) {
-			
+
 			strcpy(buf, paths[i].path);
 			strcpy(
 
 		rc = sys_stat(
 
 
-*/	
+*/
 		printf("Invalid command, please try again.\n");
 	}
 	return 0;
@@ -97,15 +97,30 @@ int shell_parse(char *buf, int len)
 int readline(char *buf, int len)
 {
 	int i;
-	
+
 	for(i=0; i<len-1; i++) {
 		buf[i] = getc();
+
+		/* knock out backspaces from the buffer */
+		if (buf[i] == 8) {
+			if (i>=1) {
+				printf("%c", buf[i]);
+				i -= 2;
+			}
+			else {
+				i--;
+			}
+			continue;
+		}
+
 		printf("%c", buf[i]);
+
 		if(buf[i] == '\n') {
 			buf[i] = 0;
 			break;
 		}
 	}
+
 	if(i == len-1) {
 		buf[i] = 0;
 	}
@@ -115,23 +130,23 @@ int readline(char *buf, int len)
 int main()
 {
 	char buf[1024];
-	
+
 	printf("Welcome to the NewOS shell\n");
-	
+
 	while(1) {
 		int chars_read;
-		
+
 		printf("> ");
-		
+
 		chars_read = readline(buf, sizeof(buf));
 		if(chars_read > 0) {
 			if(shell_parse(buf, chars_read) < 0)
 				break;
 		}
 	}
-	
+
 	printf("shell exiting\n");
-	
+
 	return 0;
 }
 
