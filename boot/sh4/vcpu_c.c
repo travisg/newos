@@ -213,7 +213,10 @@ unsigned int tlb_miss(unsigned int excode, unsigned int pc)
 
 	ent = get_ptent(pd, shifted_fault_addr);
 	if(ent == NULL || ent->v == 0) {
-		return EXCEPTION_PAGE_FAULT;
+		if(excode == 0x2)
+			return EXCEPTION_PAGE_FAULT_READ;
+		else
+			return EXCEPTION_PAGE_FAULT_WRITE;
 	}	
 
 #if CHATTY_TLB

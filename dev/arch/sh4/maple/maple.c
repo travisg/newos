@@ -19,7 +19,7 @@
 #define DMA_BUF_SIZE (32*1024)
 
 struct maple_bus {
-	area_id dma_area;
+	region_id dma_region;
 	void *dma_buffer;
 	int func_codes[4][6];
 };
@@ -381,11 +381,13 @@ static int maple_init(struct maple_fs *fs)
 {
 	void *foo;
 	int err;
+	vm_region *region;
 
-	fs->bus.dma_area = vm_create_area(vm_get_kernel_aspace(), "maple_bus_dma_area", &foo, AREA_ANY_ADDRESS, DMA_BUF_SIZE, 
-		LOCK_RW|LOCK_KERNEL, AREA_FLAGS_CONTIG);
+	region = vm_create_anonymous_region(vm_get_kernel_aspace(), "maple_bus_dma_region", &foo,
+		REGION_ADDR_ANY_ADDRESS, DMA_BUF_SIZE, REGION_WIRING_WIRED_CONTIG, LOCK_RW|LOCK_KERNEL);
+	fs->bus.dma_region = region->id;
 
-	vm_get_page_mapping((addr)foo, (addr *)&fs->bus.dma_buffer);
+	vm_get_page_mapping(vm_get_kernel_aspace(), (addr)foo, (addr *)&fs->bus.dma_buffer);
 	fs->bus.dma_buffer = (void *)PHYS_ADDR_TO_P2(fs->bus.dma_buffer);
 	memset(fs->bus.dma_buffer, 0, DMA_BUF_SIZE);
 	

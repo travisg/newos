@@ -11,7 +11,6 @@ struct arch_thread {
 };
 
 struct arch_proc {
-	unsigned int *pgdir;
 };
 
 #endif

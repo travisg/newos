@@ -213,7 +213,7 @@ int vm_mark_page_range_inuse(addr start_page, addr len)
 vm_page *vm_page_allocate_specific_page(addr page_num, int page_state)
 {
 	vm_page *p;
-	int old_page_state;
+	int old_page_state = PAGE_STATE_BUSY;
 	int state;
 	
 	state = int_disable_interrupts();

@@ -92,16 +92,21 @@ static int sh4_handle_exception(void *_frame)
 		case 65: // Slot FPU disable exception
 			ret = fpu_disable_fault();
 			break;
-		case EXCEPTION_PAGE_FAULT:
-			ret = vm_page_fault(frame->page_fault_addr, frame->spc);
+		case EXCEPTION_PAGE_FAULT_READ:
+		case EXCEPTION_PAGE_FAULT_WRITE:
+			int_enable_interrupts();
+			ret = vm_page_fault(frame->page_fault_addr, frame->spc, 
+				frame->excode == EXCEPTION_PAGE_FAULT_WRITE, (frame->ssr & 0x40000000) == 0);
 			break;
 		default:
 			ret = int_io_interrupt_handler(frame->excode);
 	}
 	if(ret == INT_RESCHEDULE) {
+		int state = int_disable_interrupts();
 		GRAB_THREAD_LOCK();
 		thread_resched();
 		RELEASE_THREAD_LOCK();
+		int_restore_interrupts(state);
 	} 
 
 	return 0;

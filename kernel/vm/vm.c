@@ -123,13 +123,6 @@ vm_region *_vm_create_region_struct(vm_address_space *aspace, char *name, addr b
 	return region;
 }
 
-enum {
-	SRC_ADDR_ANY = 0,
-	SRC_ADDR_PHYSICAL,
-	SRC_ADDR_MAPPED_ALREADY,
-	SRC_ADDR_CONTIGUOUS
-};
-
 // finds a place for a region in the address space and creates the initial structure
 vm_region *_vm_create_region(vm_address_space *aspace, char *name, void **address,
 	int addr_type, addr size, int wiring, int lock)
@@ -220,58 +213,6 @@ vm_region *_vm_create_region(vm_address_space *aspace, char *name, void **addres
 	sem_release(aspace->virtual_map.sem, WRITE_COUNT);
 
 	return region;
-
-#if 0
-	// ok, now we've allocated the region descriptor and put it in place,
-	// lets find the pages
-	switch(src_addr_type) {
-		case SRC_ADDR_ANY: {
-			unsigned int i;
-			addr page;
-
-			for(i=0; i < PAGE_ALIGN(size) / PAGE_SIZE; i++) {
-				vm_get_free_page(&page);
-				aspace->translation_map.ops->map(&aspace->translation_map,
-					base + i * PAGE_SIZE, page * PAGE_SIZE, lock);
-//				pmap_map_page(page * PAGE_SIZE, base + i * PAGE_SIZE, lock); 
-			}
-			break;
-		}
-		case SRC_ADDR_CONTIGUOUS: {
-			unsigned int i;
-			addr page;
-
-			if(vm_get_free_page_run(&page, PAGE_ALIGN(size) / PAGE_SIZE) < 0) {
-				panic("_vm_create_region: asked for contiguous region of len %d, could not find it\n", size);
-			}
-
-			for(i=0; i < PAGE_ALIGN(size) / PAGE_SIZE; i++) {
-				aspace->translation_map.ops->map(&aspace->translation_map,
-					base + i * PAGE_SIZE, (page + i) * PAGE_SIZE, lock);
-//				pmap_map_page((page + i) * PAGE_SIZE, base + i * PAGE_SIZE, lock);
-			}
-			break;
-		}
-		case SRC_ADDR_PHYSICAL: {
-			unsigned int i;
-			
-			vm_mark_page_range_inuse(src_addr / PAGE_SIZE, PAGE_ALIGN(size) / PAGE_SIZE);
-			for(i=0; i < PAGE_ALIGN(size) / PAGE_SIZE; i++) {
-				aspace->translation_map.ops->map(&aspace->translation_map,
-					base + i * PAGE_SIZE, src_addr + i * PAGE_SIZE, lock);
-//				pmap_map_page(src_addr + i * PAGE_SIZE, base + i * PAGE_SIZE, lock); 
-			}
-			break;
-		}
-		case SRC_ADDR_MAPPED_ALREADY:
-			break;
-		default:
-			// hmmm
-			return NULL;
-	}
-	
-	return region;
-#endif
 }
 
 static vm_region *_vm_create_anonymous_region(vm_address_space *aspace, char *name, void **address, int addr_type,
@@ -326,6 +267,7 @@ static vm_region *_vm_create_anonymous_region(vm_address_space *aspace, char *na
 			off_t offset = 0;
 
 			sem_acquire(cache_ref->sem, 1);
+			(*aspace->translation_map.ops->lock)(&aspace->translation_map);
 			for(va = region->base; va < region->base + region->size; va += PAGE_SIZE, offset += PAGE_SIZE) {
 				err = (*aspace->translation_map.ops->query)(&aspace->translation_map,
 					va, &pa, &flags);
@@ -341,6 +283,7 @@ static vm_region *_vm_create_anonymous_region(vm_address_space *aspace, char *na
 				vm_page_set_state(page, PAGE_STATE_WIRED);
 				vm_cache_insert_page(cache_ref, page, offset);
 			}
+			(*aspace->translation_map.ops->unlock)(&aspace->translation_map);
 			sem_release(cache_ref->sem, 1);
 			break;
 		}
@@ -352,6 +295,7 @@ static vm_region *_vm_create_anonymous_region(vm_address_space *aspace, char *na
 			off_t offset = 0;
 
 			sem_acquire(cache_ref->sem, 1);
+			(*aspace->translation_map.ops->lock)(&aspace->translation_map);
 			for(va = region->base; va < region->base + region->size; va += PAGE_SIZE, offset += PAGE_SIZE, phys_addr += PAGE_SIZE) {
 				err = (*aspace->translation_map.ops->map)(&aspace->translation_map,
 					va, phys_addr, lock);
@@ -369,7 +313,41 @@ static vm_region *_vm_create_anonymous_region(vm_address_space *aspace, char *na
 				vm_page_set_state(page, PAGE_STATE_WIRED);
 				vm_cache_insert_page(cache_ref, page, offset);
 			}
+			(*aspace->translation_map.ops->unlock)(&aspace->translation_map);
 			sem_release(cache_ref->sem, 1);
+			break;
+		}
+		case REGION_WIRING_WIRED_CONTIG: {
+			addr va;
+			addr phys_addr; 
+			int err;
+			vm_page *page;
+			off_t offset = 0;
+	
+			page = vm_page_allocate_page_run(PAGE_STATE_CLEAR, ROUNDUP(region->size, PAGE_SIZE) / PAGE_SIZE);
+			if(page == NULL) {
+				// XXX back out of this
+				panic("couldn't allocate page run of size %d\n", region->size);
+			}
+			phys_addr = page->ppn * PAGE_SIZE;
+
+			sem_acquire(cache_ref->sem, 1);
+			(*aspace->translation_map.ops->lock)(&aspace->translation_map);
+			for(va = region->base; va < region->base + region->size; va += PAGE_SIZE, offset += PAGE_SIZE, phys_addr += PAGE_SIZE) {
+				page = vm_lookup_page(phys_addr / PAGE_SIZE);
+				if(page == NULL) {
+					panic("couldn't lookup physical page just allocated\n");
+				}
+				err = (*aspace->translation_map.ops->map)(&aspace->translation_map, va, phys_addr, lock);
+				if(err < 0) {
+					panic("couldn't map physical page in page run\n");
+				}
+				vm_page_set_state(page, PAGE_STATE_WIRED);
+				vm_cache_insert_page(cache_ref, page, offset);
+			}
+			(*aspace->translation_map.ops->unlock)(&aspace->translation_map);
+			sem_release(cache_ref->sem, 1);
+
 			break;
 		}
 		default:

@@ -12,6 +12,7 @@
 
 int arch_proc_init_proc_struct(struct proc *p, bool kernel)
 {
+#if 0	
 	if(!kernel) {
 		unsigned int page;
 		if(vm_get_free_page(&page) < 0) {
@@ -22,6 +23,7 @@ int arch_proc_init_proc_struct(struct proc *p, bool kernel)
 	} else {
 		p->arch_info.pgdir = NULL;
 	}
+#endif
 	return 0;
 }
 
@@ -34,8 +36,8 @@ int arch_thread_init_thread_struct(struct thread *t)
 
 int arch_thread_initialize_kthread_stack(struct thread *t, int (*start_func)(void), void (*entry_func)(void))
 {
-	unsigned int *kstack = (unsigned int *)t->kernel_stack_area->base;
-	unsigned int kstack_size = t->kernel_stack_area->size;
+	unsigned int *kstack = (unsigned int *)t->kernel_stack_region->base;
+	unsigned int kstack_size = t->kernel_stack_region->size;
 	unsigned int *kstack_top = kstack + kstack_size / sizeof(unsigned int);
 	int i;
 
@@ -84,10 +86,11 @@ void arch_thread_context_switch(struct thread *t_from, struct thread *t_to)
 		dprintf("sp[%d] = 0x%x\n", i, t_to->arch_info.sp[i]);
 	}
 #endif
-	sh4_set_kstack(t_to->kernel_stack_area->base + KSTACK_SIZE);
+	sh4_set_kstack(t_to->kernel_stack_region->base + KSTACK_SIZE);
 	
-	if(t_from->proc->arch_info.pgdir != t_to->proc->arch_info.pgdir)
-		sh4_set_user_pgdir((addr)t_to->proc->arch_info.pgdir);
+	if(t_to->proc->aspace != NULL) {
+		sh4_set_user_pgdir(vm_translation_map_get_pgdir(&t_to->proc->aspace->translation_map));
+	}
 	sh4_context_switch(&t_from->arch_info.sp, t_to->arch_info.sp);
 }
 
@@ -104,7 +107,7 @@ void arch_thread_enter_uspace(addr entry, addr ustack_top)
 
     int_disable_interrupts();
 
-    sh4_set_kstack(thread_get_current_thread()->kernel_stack_area->base + KSTACK_SIZE);
+    sh4_set_kstack(thread_get_current_thread()->kernel_stack_region->base + KSTACK_SIZE);
 
     sh4_enter_uspace(entry, ustack_top - 4);
 	// never get to here

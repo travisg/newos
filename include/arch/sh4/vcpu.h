@@ -93,7 +93,8 @@ struct ptent {
 };
 
 // soft faults
-#define EXCEPTION_PAGE_FAULT 0xff
+#define EXCEPTION_PAGE_FAULT_READ 0xfe
+#define EXCEPTION_PAGE_FAULT_WRITE 0xff
 
 // can only be used in stage2
 int vcpu_init(kernel_args *ka);
