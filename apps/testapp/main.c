@@ -38,10 +38,10 @@ int main()
 	printf("waiting 5 seconds\n");
 	sys_snooze(5000000);
 #endif
-#if 1
-	fd = sys_open("/dev/bus/pci", "", STREAM_TYPE_DEVICE);
+#if 0
+	fd = sys_open("/dev/bus/pci/0/15/0/ctrl", "", STREAM_TYPE_DEVICE);
 	if(fd >= 0) {
-		sys_ioctl(fd, 99, NULL, 0);
+		sys_ioctl(fd, 10100, NULL, 0);
 	}
 #endif
 

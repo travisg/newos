@@ -1,7 +1,8 @@
 PCI_DEV_DIR = $(DEV_ARCH_DIR)/pci
 PCI_DEV_OBJ_DIR = $(PCI_DEV_DIR)/$(OBJ_DIR)
 DEV_OBJS += \
-	$(PCI_DEV_OBJ_DIR)/pci.o
+	$(PCI_DEV_OBJ_DIR)/pci.o \
+	$(PCI_DEV_OBJ_DIR)/pci_bus.o
 
 DEV_SUB_INCLUDES += \
 	-I$(DEV_ARCH_DIR)/pci

@@ -502,6 +502,7 @@ int bootfs_seek(void *_fs, void *_vnode, void *_cookie, off_t pos, seek_type see
 				default:
 					err = -1;
 			}
+			break;
 		case STREAM_TYPE_FILE:
 			switch(seek_type) {
 				case SEEK_SET:
@@ -529,7 +530,9 @@ int bootfs_seek(void *_fs, void *_vnode, void *_cookie, off_t pos, seek_type see
 					break;
 				default:
 					err = -1;
-			}					
+
+			}
+			break;
 		default:
 			err = -1;
 	}

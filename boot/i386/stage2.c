@@ -357,9 +357,9 @@ void mmu_map_page(unsigned int vaddr, unsigned int paddr)
 	pgtable[(vaddr % (PAGE_SIZE * 1024)) / PAGE_SIZE] = paddr | DEFAULT_PAGE_FLAGS;
 }
 
-long long get_time_base();
+long long rdtsc();
 asm("
-get_time_base:
+rdtsc:
 	rdtsc
 	ret
 ");
@@ -462,11 +462,11 @@ void calculate_cpu_conversion_factor()
 	outb(0xff, 0x40);		/* low and then high */
 	outb(0xff, 0x40);
 
-	t1 = get_time_base();
+	t1 = rdtsc();
 	
-	execute_n_instructions(16*20000);
+	execute_n_instructions(32*20000);
 
-	t2 = get_time_base();
+	t2 = rdtsc();
 
 	outb(0x00, 0x43); /* latch counter value */
 	low = inb(0x40);
@@ -476,6 +476,8 @@ void calculate_cpu_conversion_factor()
 
 	timer_usecs = (expired * 1.0) / (TIMER_CLKNUM_HZ/1000000.0);
 	time_base_ticks = t2 -t1;
+
+	dprintf("CPU at %d Hz\n", (int)((time_base_ticks / timer_usecs) * 1000000));
 
 	system_time_setup((int)(1000000.0/(timer_usecs / time_base_ticks)));
 }

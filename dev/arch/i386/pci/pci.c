@@ -10,6 +10,7 @@
 #include <kernel/lock.h>
 #include <kernel/vm.h>
 #include <kernel/vfs.h>
+#include <kernel/khash.h>
 
 #include <kernel/arch/cpu.h>
 #include <kernel/arch/int.h>
@@ -19,73 +20,373 @@
 
 #include <dev/arch/i386/pci/pci_bus.h>
 
-#define CONFIG_ADDRESS 0xcf8
-#define CONFIG_DATA 0xcfc
+#include "pci_p.h" // private includes
 
-struct pci_config_address {
-	unsigned reg : 8,
-		function : 3,
-		unit : 5,
-		bus : 8,
-		reserved : 7,
-		enable : 1;
-} _PACKED;
-
-struct pci_cfg {
-	uint16 vendor_id;
-	uint16 device_id;
-	
-	uint16 command;
-	uint16 status;
-	
-	uint8 revision_id;
-	uint8 interface;
-	uint8 sub_class;
-	uint8 base_class;
-	
-	uint8 cache_line_size;
-	uint8 latency_timer;
-	uint8 header_type;
-	uint8 bist;
-	
-	uint32 bus;
-	uint32 unit;
+struct pcifs_stream {
+	char *name;
+	stream_type type;
+	union {
+		struct stream_dir {
+			struct pcifs_vnode *dir_head;
+		} dir;
+		struct stream_dev {
+			struct pci_cfg *cfg;
+		} dev;
+	} u;
 };
 
-struct pci_fs {
+struct pcifs_vnode {
+	struct pcifs_vnode *all_next;
+	int id;
+	char *name;
+	void *redir_vnode;
+	struct pcifs_vnode *parent;
+	struct pcifs_vnode *dir_next;
+	struct pcifs_stream stream;
+};
+
+struct pcifs_cookie {
+	struct pcifs_stream *s;
+	union {
+		struct cookie_dir {
+			struct pcifs_vnode *ptr;
+		} dir;
+		struct cookie_dev {
+			int null;
+		} file;
+	} u;
+};
+
+struct pcifs {
 	fs_id id;
 	mutex lock;
+	int next_vnode_id;
 	void *covered_vnode;
-	void *redir_vnode;
-	int root_vnode; // just a placeholder to return a pointer to
+	void *vnode_list_hash;
+	struct pcifs_vnode *root_vnode;
 };
 
-sem_id pci_sem;
+#define PCIFS_HASH_SIZE 16
+static unsigned int pcifs_vnode_hash_func(void *_v, void *_key, int range)
+{
+	struct pcifs_vnode *v = _v;
+	struct pcifs_vnode *key = _key;
 
+	if(v != NULL)
+		return v->id % range;
+	else
+		return key->id % range;
+}
+
+static struct pcifs_vnode *pcifs_create_vnode(struct pcifs *fs, const char *name)
+{
+	struct pcifs_vnode *v;
+	
+	v = kmalloc(sizeof(struct pcifs_vnode));
+	if(v == NULL)
+		return NULL;
+
+	memset(v, 0, sizeof(struct pcifs_vnode));
+	v->id = fs->next_vnode_id++;
+
+	v->name = kmalloc(strlen(name) + 1);
+	if(v->name == NULL) {
+		kfree(v);
+		return NULL;
+	}
+	strcpy(v->name, name);
+
+	return v;
+}
+
+static int pcifs_delete_vnode(struct pcifs *fs, struct pcifs_vnode *v, bool force_delete)
+{
+	// cant delete it if it's in a directory or is a directory
+	// and has children
+	if(!force_delete && ((v->stream.type == STREAM_TYPE_DIR && v->stream.u.dir.dir_head != NULL) || v->dir_next != NULL)) {
+		return -1;
+	}
+
+	// remove it from the global hash table
+	hash_remove(fs->vnode_list_hash, v);
+
+	if(v->stream.name != NULL)
+		kfree(v->stream.name);
+	if(v->name != NULL)
+		kfree(v->name);
+	kfree(v);
+
+	return 0;
+}
+
+static struct pcifs_vnode *pcifs_find_in_dir(struct pcifs_vnode *dir, const char *path, int start, int end)
+{
+	struct pcifs_vnode *v;
+
+	if(dir->stream.type != STREAM_TYPE_DIR)
+		return NULL;
+
+	v = dir->stream.u.dir.dir_head;
+	while(v != NULL) {
+//		dprintf("pcifs_find_in_dir: looking at entry '%s'\n", v->name);
+		if(strncmp(v->name, &path[start], end - start) == 0) {
+//			dprintf("pcifs_find_in_dir: found it at 0x%x\n", v);
+			return v;
+		}
+		v = v->dir_next;
+	}
+	return NULL;
+}
+
+static int pcifs_insert_in_dir(struct pcifs_vnode *dir, struct pcifs_vnode *v)
+{
+	if(dir->stream.type != STREAM_TYPE_DIR)
+		return -1;
+
+	v->dir_next = dir->stream.u.dir.dir_head;
+	dir->stream.u.dir.dir_head = v;
+	
+	v->parent = dir;
+	return 0;
+}
+
+static struct pcifs_stream *
+pcifs_get_stream_from_vnode(struct pcifs_vnode *v, const char *stream, stream_type stream_type)
+{
+	if(v->stream.type != stream_type)
+		return NULL;
+	
+	if(strcmp(stream, v->stream.name) != 0)
+		return NULL;
+		
+	return &v->stream;
+}
+
+// get the vnode this path represents, or sets the redir boolean to true if it hits a registered mountpoint
+// and returns the vnode containing the mountpoint
+static struct pcifs_vnode *
+pcifs_get_vnode_from_path(struct pcifs *fs, struct pcifs_vnode *base, const char *path, int *start, bool *redir)
+{
+	int end = 0;
+	struct pcifs_vnode *cur_vnode;
+	struct pcifs_stream *s;
+	
+	*redir = false;
+
+	cur_vnode = base;
+	while(vfs_helper_getnext_in_path(path, start, &end) > 0) {
+		s = pcifs_get_stream_from_vnode(cur_vnode, "", STREAM_TYPE_DIR);
+		if(s == NULL)
+			return NULL;
+
+		if(cur_vnode->redir_vnode != NULL) {
+			// we are at a mountpoint, redirect here
+			*redir = true;
+			return cur_vnode;
+		}	
+	
+		if(*start == end) {
+			// zero length path component, assume this means '.'
+			return cur_vnode;
+		}
+		
+		cur_vnode = pcifs_find_in_dir(cur_vnode, path, *start, end);
+		if(cur_vnode == NULL)
+			return NULL;
+		*start = end;
+	}
+
+	if(cur_vnode->redir_vnode != NULL)
+		*redir = true;
+	return cur_vnode;
+}
+
+// get the vnode that would hold the last path entry. Same as above, but returns one path entry from the end
+static struct pcifs_vnode *
+pcifs_get_container_vnode_from_path(struct pcifs *fs, struct pcifs_vnode *base, const char *path, int *start, bool *redir)
+{
+	int last_start = 0;
+	int end = 0;
+	struct pcifs_vnode *cur_vnode;
+	struct pcifs_vnode *last_vnode = NULL;
+	
+	*redir = false;
+
+	cur_vnode = base;
+	while(vfs_helper_getnext_in_path(path, start, &end) > 0) {
+//		dprintf("start = %d, end = %d\n", *start, end);
+//		dprintf("cur = 0x%x, last = 0x%x\n", cur_vnode, last_vnode);
+
+		if(last_vnode != NULL && last_vnode->redir_vnode != NULL) {
+			// we are at a mountpoint, redirect here
+			*redir = true;
+			*start = last_start;
+			return last_vnode;
+		}	
+	
+		last_start = *start;
+
+		if(*start == end) {
+			// zero length path component, assume this means '.'
+			return last_vnode;
+		}
+		
+		last_vnode = cur_vnode;
+		if(cur_vnode == NULL || pcifs_get_stream_from_vnode(cur_vnode, "", STREAM_TYPE_DIR) == NULL)
+			return NULL;
+		cur_vnode = pcifs_find_in_dir(cur_vnode, path, *start, end);
+		*start = end;
+	}
+
+	if(last_vnode != NULL && last_vnode->redir_vnode != NULL)
+		*redir = true;
+	*start = last_start;
+	return last_vnode;
+}
+
+static struct pcifs_vnode *pcifs_create_dir_if_needed(struct pcifs *fs, struct pcifs_vnode *base, const char *name)
+{
+	struct pcifs_vnode *v;
+
+	v = pcifs_find_in_dir(base, name, 0, strlen(name));
+	if(v == NULL) {
+		v = pcifs_create_vnode(fs, name);
+		if(v == NULL)
+			return NULL;
+
+		// set up the new node
+		v->stream.name = kmalloc(strlen("") + 1);
+		if(v->stream.name == NULL) {
+			pcifs_delete_vnode(fs, v, true);
+			return NULL;
+		}
+		strcpy(v->stream.name, "");
+		v->stream.type = STREAM_TYPE_DIR;
+		v->stream.u.dir.dir_head = NULL;
+
+		// insert it into the parent dir
+		pcifs_insert_in_dir(base, v);
+
+		hash_insert(fs->vnode_list_hash, v);
+	}		
+
+	return v;
+}
+
+static int pcifs_create_vnode_tree(struct pcifs *fs, struct pcifs_vnode *base)
+{
+	int bus, unit, function;
+	struct pci_cfg *cfg = NULL;
+	struct pcifs_vnode *v;
+	struct pcifs_vnode *new_vnode;
+
+	dprintf("pcifs_create_vnode_tree: entry\n");
+
+	for(bus = 0; bus < 256; bus++) {
+		char bus_txt[4];
+		sprintf(bus_txt, "%d", bus);
+		for(unit = 0; unit < 32; unit++) {
+			char unit_txt[3];
+			sprintf(unit_txt, "%d", unit);
+			for(function = 0; function < 8; function++) {
+				char func_txt[2];
+				sprintf(func_txt, "%d", function);
+
+				if(cfg == NULL)
+					cfg = kmalloc(sizeof(struct pci_cfg));
+				if(pci_probe(bus, unit, function, cfg) < 0) {
+					// not possible for a unit to have a hole in functions
+					// if we dont find one in this unit, there are no more
+					break;
+				}
+
+				v = pcifs_create_dir_if_needed(fs, base, bus_txt);
+				v = pcifs_create_dir_if_needed(fs, v, unit_txt);
+				v = pcifs_create_dir_if_needed(fs, v, func_txt);
+
+				dprintf("created node %s/%s/%s/%s\n", bus_txt, unit_txt, func_txt, "ctrl");
+
+				new_vnode = pcifs_create_vnode(fs, "ctrl");
+				if(new_vnode == NULL)
+					return -1;
+
+				// set up the new node
+				new_vnode->stream.name = kmalloc(strlen("") + 1);
+				if(new_vnode->stream.name == NULL) {
+					pcifs_delete_vnode(fs, new_vnode, true);
+					return -1;
+				}
+				strcpy(new_vnode->stream.name, "");
+				new_vnode->stream.type = STREAM_TYPE_DEVICE;
+				new_vnode->stream.u.dev.cfg = cfg;
+				cfg = NULL;
+
+				// insert it into the parent dir
+				pcifs_insert_in_dir(v, new_vnode);
+
+				hash_insert(fs->vnode_list_hash, new_vnode);	
+			}
+		}
+	}
+
+	if(cfg != NULL)
+		kfree(cfg);
+
+	return 0;
+}
+	
 static int pci_open(void *_fs, void *_base_vnode, const char *path, const char *stream, stream_type stream_type, void **_vnode, void **_cookie, struct redir_struct *redir)
 {
-	struct pci_fs *fs = _fs;
-	int err;
+	struct pcifs *fs = _fs;
+	struct pcifs_vnode *base = _base_vnode;
+	struct pcifs_vnode *v;
+	struct pcifs_cookie *cookie;
+	struct pcifs_stream *s;
+	int err = 0;
+	int start = 0;
 	
 	dprintf("pci_open: entry on vnode 0x%x, path = '%s'\n", _base_vnode, path);
 
 	mutex_lock(&fs->lock);
-	if(fs->redir_vnode != NULL) {
-		// we were mounted on top of
-		redir->redir = true;
-		redir->vnode = fs->redir_vnode;
-		redir->path = path;
-		err = 0;
-		goto out;		
-	}		
 
-	if(path[0] != '\0' || stream[0] != '\0' || stream_type != STREAM_TYPE_DEVICE) {
+	v = pcifs_get_vnode_from_path(fs, base, path, &start, &redir->redir);
+	if(v == NULL) {
 		err = -1;
 		goto err;
 	}
-	
-	*_vnode = &fs->root_vnode;	
-	*_cookie = NULL;
+	if(redir->redir == true) {
+		// loop back into the vfs because the parse hit a mount point
+		redir->vnode = v->redir_vnode;
+		redir->path = &path[start];
+		err = 0;
+		goto out;
+	}
+
+	s = pcifs_get_stream_from_vnode(v, stream, stream_type);
+	if(s == NULL) {
+		err = -1;
+		goto err;
+	}
+
+	cookie = kmalloc(sizeof(struct pcifs_cookie));
+	if(cookie == NULL) {
+		err = -1;
+		goto err;
+	}
+
+	cookie->s = s;
+	switch(stream_type) {
+		case STREAM_TYPE_DIR:
+			cookie->u.dir.ptr = s->u.dir.dir_head;
+			break;
+		case STREAM_TYPE_DEVICE:
+			break;
+		default:
+			dprintf("pcifs_open: unhandled stream type\n");
+	}
+
+	*_cookie = cookie;
+	*_vnode = v;	
 
 	err = 0;
 
@@ -98,37 +399,83 @@ err:
 
 static int pci_seek(void *_fs, void *_vnode, void *_cookie, off_t pos, seek_type seek_type)
 {
-	dprintf("pci_seek: entry\n");
+	struct pcifs *fs = _fs;
+	struct pcifs_vnode *v = _vnode;
+	struct pcifs_cookie *cookie = _cookie;
+	int err = 0;
 
-	return -1;
+	dprintf("pcifs_seek: vnode 0x%x, cookie 0x%x, pos 0x%x 0x%x, seek_type %d\n", v, cookie, pos, seek_type);
+	
+	mutex_lock(&fs->lock);
+	
+	switch(cookie->s->type) {
+		case STREAM_TYPE_DIR:
+			switch(seek_type) {
+				// only valid args are seek_type SEEK_SET, pos 0.
+				// this rewinds to beginning of directory
+				case SEEK_SET:
+					if(pos == 0) {
+						cookie->u.dir.ptr = cookie->s->u.dir.dir_head;
+					} else {
+						err = -1;
+					}
+					break;
+				case SEEK_CUR:
+				case SEEK_END:
+				default:
+					err = -1;
+			}
+			break;
+		case STREAM_TYPE_DEVICE:
+		default:
+			err = -1;
+			break;
+	}
+
+	mutex_unlock(&fs->lock);
+	return err;
 }
 
 static int pci_close(void *_fs, void *_vnode, void *_cookie)
 {
 	dprintf("pci_close: entry\n");
 
+	if(_cookie)
+		kfree(_cookie);
+
 	return 0;
 }
 
 static int pci_create(void *_fs, void *_base_vnode, const char *path, const char *stream, stream_type stream_type, struct redir_struct *redir)
 {
-	struct pci_fs *fs = _fs;
+	struct pcifs *fs = _fs;
+	struct pcifs_vnode *base = _base_vnode;
+	struct pcifs_vnode *v;
+	int err;
+	int start = 0;
 	
 	dprintf("pci_create: entry\n");
 
 	mutex_lock(&fs->lock);
-	
-	if(fs->redir_vnode != NULL) {
-		// we were mounted on top of
-		redir->redir = true;
-		redir->vnode = fs->redir_vnode;
-		redir->path = path;
+
+	v = pcifs_get_vnode_from_path(fs, base, path, &start, &redir->redir);
+	if(v == NULL) {
+		err = -1;
+		goto err;
+	}
+	if(redir->redir == true) {
+		// loop back into the vfs because the parse hit a mount point
 		mutex_unlock(&fs->lock);
+		redir->vnode = v->redir_vnode;
+		redir->path = &path[start];
 		return 0;
 	}
+
+	err = -1;
+
+err:	
 	mutex_unlock(&fs->lock);
-	
-	return -1;
+	return err;
 }
 
 static int pci_read(void *_fs, void *_vnode, void *_cookie, void *buf, off_t pos, size_t *len)
@@ -147,187 +494,51 @@ static int pci_write(void *_fs, void *_vnode, void *_cookie, const void *buf, of
 	return 0;
 }
 
-static unsigned int pci_read_data(int bus, int unit, int function, int reg, int bytes)
-{
-	struct pci_config_address addr;
-	addr.enable = 1;
-	addr.reserved = 0;
-	addr.bus = bus;
-	addr.unit = unit;
-	addr.function = function;
-	addr.reg = reg & 0xfc;
-
-	out32(*(unsigned int *)&addr, CONFIG_ADDRESS);
-	switch(bytes) {
-		case 1:
-			return in8(CONFIG_DATA + (reg & 3));
-		case 2:
-			return in16(CONFIG_DATA + (reg & 3));
-		case 4:
-			return in32(CONFIG_DATA + (reg & 3));
-		default:
-			return 0;
-	}
-}
-
-static int pci_read_config(int bus, int unit, int func, struct pci_cfg *cfg)
-{
-	union {
-		struct pci_cfg cfg;
-		uint32 word[4];
-	} u;
-	int i;	
-
-	for(i=0; i<4; i++) {
-		u.word[i] = pci_read_data(bus, unit, func, 4*i, 4);
-	}
-	if(u.cfg.vendor_id == 0xffff)
-		return -1;
-	memcpy(cfg, &u.cfg, sizeof(struct pci_cfg));
-	cfg->bus = bus;
-	cfg->unit = unit;
-	return 0;
-}
-
-static const char *pci_class_to_string(uint8 base_class)
-{
-	switch(base_class) {
-		case 0: return "legacy";
-		case 1: return "mass storage";
-		case 2: return "network";
-		case 3: return "video";
-		case 4: return "multimedia";
-		case 5: return "memory";
-		case 6: return "bridge";
-		default: return "unknown";
-	}
-}
-
-static const char *pci_subclass_to_string(uint8 base_class, uint8 sub_class)
-{
-	switch(base_class) {
-		case 0: // legacy
-			return "unknown";
-		case 1: // mass storage
-			switch(sub_class) {
-				case 0: return "scsi";
-				case 1: return "ide";
-				case 2: return "floppy";
-				case 3: return "ipi";
-				default: return "unknown";
-			}
-		case 2: // network
-			switch(sub_class) {
-				case 0: return "ethernet";
-				case 1: return "token_ring";
-				case 2: return "fddi";
-				default: return "unknown";
-			}
-		case 3: // video
-			switch(sub_class) {
-				case 0: return "vga";
-				case 1: return "xga";
-				default: return "unknown";
-			}
-		case 4: // multimedia
-			return "unknown";
-		case 5: // memory
-			switch(sub_class) {
-				case 1: return "ram";
-				default: return "unknown";
-			}
-		case 6: // bridge
-			switch(sub_class) {
-				case 0: return "host";
-				case 1: return "isa";
-				case 2: return "eisa";
-				case 3: return "mca";
-				case 4: return "pcipci";
-				case 5: return "pcmcia";
-				case 0x80: return "other";
-				default: return "unknown";
-			}
-		default: return "unknown";
-	}
-}
-
-static void dump_pci_config(struct pci_cfg *cfg)
-{
-	dprintf("dump_pci_config: dumping cfg structure at 0x%x\n", cfg);
-	
-	dprintf("\tbus: %d, unit: %d\n", cfg->bus, cfg->unit);
-	
-	dprintf("\tvendor id: %d\n", cfg->vendor_id);
-	dprintf("\tdevice id: %d\n", cfg->device_id);
-	dprintf("\tcommand: %d\n", cfg->command);
-	dprintf("\tstatus: %d\n", cfg->status);
-
-	dprintf("\trevision id: %d\n", cfg->revision_id);
-	dprintf("\tinterface: %d\n", cfg->interface);
-	dprintf("\tsub class: %d '%s'\n", cfg->sub_class, pci_subclass_to_string(cfg->base_class, cfg->sub_class));
-	dprintf("\tbase class: %d '%s'\n", cfg->base_class, pci_class_to_string(cfg->base_class));
-
-	dprintf("\tcache line size: %d\n", cfg->cache_line_size);
-	dprintf("\tlatency timer: %d\n", cfg->latency_timer);
-	dprintf("\theader type: %d\n", cfg->header_type);
-	dprintf("\tbist: %d\n", cfg->bist);
-}
-
-static int pci_scan_all()
-{
-	int bus;
-	int unit;
-	
-	dprintf("pci_scan_all: entry\n");
-	
-	for(bus = 0; bus < 255; bus++) {
-		for(unit = 0; unit < 32; unit++) {
-			unsigned int dev_class;
-			struct pci_cfg cfg;
-						
-			if(pci_read_data(bus, unit, 0, 0, 2) == 0xffff)
-				continue;
-
-			if(pci_read_config(bus, unit, 0, &cfg) < 0)
-				continue;
-
-			dump_pci_config(&cfg);
-		}
-	}
-	return 0;
-}
-
 static int pci_ioctl(void *_fs, void *_vnode, void *_cookie, int op, void *buf, size_t len)
 {
+	struct pcifs *fs = _fs;
+	struct pcifs_vnode *v = _vnode;
 	int err = 0;
-	
+
+	mutex_lock(&fs->lock);
+
 	switch(op) {
-		// XXX hack
-		case 99:
-			// get config info
-			pci_scan_all();
+		case PCI_GET_CFG:
+			if(len < sizeof(struct pci_cfg)) {
+				err= -1;
+				goto err;
+			}
+
+			memcpy(buf, v->stream.u.dev.cfg, sizeof(struct pci_cfg));
+			break;
+		case PCI_DUMP_CFG:
+			dump_pci_config(v->stream.u.dev.cfg);
 			break;
 		default:
 			err = -1;
+			goto err;
 	}
 
+err:
+	mutex_unlock(&fs->lock);
 	return err;
 }
 
 static int pci_mount(void **fs_cookie, void *flags, void *covered_vnode, fs_id id, void **root_vnode)
 {
-	struct pci_fs *fs;
+	struct pcifs *fs;
+	struct pcifs_vnode *v;
 	int err;
 
-	fs = kmalloc(sizeof(struct pci_fs));
+	fs = kmalloc(sizeof(struct pcifs));
 	if(fs == NULL) {
 		err = -1;
 		goto err;
 	}
 
 	fs->covered_vnode = covered_vnode;
-	fs->redir_vnode = NULL;
 	fs->id = id;
+	fs->next_vnode_id = 0;
 
 	err = mutex_init(&fs->lock, "pci_mutex");
 	if(err < 0) {
@@ -335,41 +546,97 @@ static int pci_mount(void **fs_cookie, void *flags, void *covered_vnode, fs_id i
 		goto err1;
 	}
 
-	*root_vnode = (void *)&fs->root_vnode;
+	fs->vnode_list_hash = hash_init(PCIFS_HASH_SIZE, (addr)&v->all_next - (addr)v,
+		NULL, &pcifs_vnode_hash_func);
+	if(fs->vnode_list_hash == NULL) {
+		err = -1;
+		goto err2;
+	}
+
+	// create a vnode
+	v = pcifs_create_vnode(fs, "");
+	if(v == NULL) {
+		err = -1;
+		goto err3;
+	}
+
+	// set it up	
+	v->parent = v;
+	
+	// create a dir stream for it to hold
+	v->stream.name = kmalloc(strlen("") + 1);
+	if(v->stream.name == NULL) {
+		err = -1;
+		goto err4;
+	}
+	strcpy(v->stream.name, "");
+	v->stream.type = STREAM_TYPE_DIR;
+	v->stream.u.dir.dir_head = NULL;
+	fs->root_vnode = v;
+
+	hash_insert(fs->vnode_list_hash, v);
+
+	err = pcifs_create_vnode_tree(fs, fs->root_vnode);
+	if(err < 0) {
+		err = -1;
+		goto err4;
+	}
+
+	*root_vnode = v;
 	*fs_cookie = fs;
 
 	return 0;
 
+err4:
+	pcifs_delete_vnode(fs, v, true);
+err3:
+	hash_uninit(fs->vnode_list_hash);
+err2:
+	mutex_destroy(&fs->lock);
 err1:	
 	kfree(fs);
 err:
 	return err;
-}
+ }
 
 static int pci_unmount(void *_fs)
 {
-	struct pci_fs *fs = _fs;
-
+	struct pcifs *fs = _fs;
+	struct pcifs_vnode *v;
+	struct hash_iterator i;
+	
+	dprintf("pcifs_unmount: entry fs = 0x%x\n", fs);
+	
+	// delete all of the vnodes
+	hash_open(fs->vnode_list_hash, &i);
+	while((v = (struct pcifs_vnode *)hash_next(fs->vnode_list_hash, &i)) != NULL) {
+		pcifs_delete_vnode(fs, v, true);
+	}
+	hash_close(fs->vnode_list_hash, &i, false);
+	
+	hash_uninit(fs->vnode_list_hash);
 	mutex_destroy(&fs->lock);
 	kfree(fs);
 
-	return 0;	
+	return 0;
 }
 
 static int pci_register_mountpoint(void *_fs, void *_v, void *redir_vnode)
 {
-	struct pci_fs *fs = _fs;
+	struct pcifs *fs = _fs;
+	struct pcifs_vnode *v = _v;
 	
-	fs->redir_vnode = redir_vnode;
+	v->redir_vnode = redir_vnode;
 	
 	return 0;
 }
 
 static int pci_unregister_mountpoint(void *_fs, void *_v)
 {
-	struct pci_fs *fs = _fs;
+	struct pcifs *fs = _fs;
+	struct pcifs_vnode *v = _v;
 	
-	fs->redir_vnode = NULL;
+	v->redir_vnode = NULL;
 	
 	return 0;
 }

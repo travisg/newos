@@ -51,6 +51,9 @@ floppy: $(STAGE2) $(KERNEL) $(APPS) tools $(MAKEFLOP)
 disk: floppy
 	dd if=$(FINAL) of=/dev/disk/floppy/raw bs=18k
 
+ldisk: floppy
+	dd if=$(FINAL) of=/dev/fd0 bs=18k
+
 # 
 $(BOOT_OBJ_DIR)/%.o: $(BOOT_DIR)/%.c 
 	@mkdir -p $(BOOT_OBJ_DIR)
