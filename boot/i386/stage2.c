@@ -474,33 +474,97 @@ void sleep(uint64 time)
 
 static void calculate_cpu_conversion_factor(void)
 {
-	unsigned char	low, high;
-	unsigned long	expired;
-	uint64			t1, t2;
+	unsigned       s_low, s_high;
+	unsigned       low, high;
+	unsigned long  expired;
+	uint64         t1, t2;
+	uint64         p1, p2, p3;
+	double         r1, r2, r3;
 
-	/* program the timer to count down mode */
-	outb(0x34, 0x43);
 
+	outb(0x34, 0x43);  /* program the timer to count down mode */
 	outb(0xff, 0x40);		/* low and then high */
 	outb(0xff, 0x40);
 
+	/* quick sample */
+quick_sample:
+	do {
+		outb(0x00, 0x43); /* latch counter value */
+		s_low = inb(0x40);
+		s_high = inb(0x40);
+	} while(s_high!= 255);
 	t1 = rdtsc();
-
-	execute_n_instructions(32*20000);
-
+	do {
+		outb(0x00, 0x43); /* latch counter value */
+		low = inb(0x40);
+		high = inb(0x40);
+	} while(high> 224);
 	t2 = rdtsc();
+	p1= t2-t1;
+	r1= (double)(p1)/(double)(((s_high<<8)|s_low) - ((high<<8)|low));
 
-	outb(0x00, 0x43); /* latch counter value */
-	low = inb(0x40);
-	high = inb(0x40);
 
-	expired = (unsigned long)0xffff - ((((unsigned long)high) << 8) + low);
-	t2 = (t2 - t1) * TIMER_CLKNUM_HZ;
+	/* not so quick sample */
+not_so_quick_sample:
+	do {
+		outb(0x00, 0x43); /* latch counter value */
+		s_low = inb(0x40);
+		s_high = inb(0x40);
+	} while(s_high!= 255);
+	t1 = rdtsc();
+	do {
+		outb(0x00, 0x43); /* latch counter value */
+		low = inb(0x40);
+		high = inb(0x40);
+	} while(high> 192);
+	t2 = rdtsc();
+	p2= t2-t1;
+	r2= (double)(p2)/(double)(((s_high<<8)|s_low) - ((high<<8)|low));
+	if((r1/r2)> 1.01) {
+		dprintf("Tuning loop(1)\n");
+		goto quick_sample;
+	}
+	if((r1/r2)< 0.99) {
+		dprintf("Tuning loop(1)\n");
+		goto quick_sample;
+	}
+
+	/* slow sample */
+slow_sample:
+	do {
+		outb(0x00, 0x43); /* latch counter value */
+		s_low = inb(0x40);
+		s_high = inb(0x40);
+	} while(s_high!= 255);
+	t1 = rdtsc();
+	do {
+		outb(0x00, 0x43); /* latch counter value */
+		low = inb(0x40);
+		high = inb(0x40);
+	} while(high> 128);
+	t2 = rdtsc();
+	p3= t2-t1;
+	r3= (double)(p3)/(double)(((s_high<<8)|s_low) - ((high<<8)|low));
+	if((r1/r2)> 1.01) {
+		dprintf("Tuning loop(2)\n");
+		goto not_so_quick_sample;
+	}
+	if((r1/r2)< 0.99) {
+		dprintf("Tuning loop(2)\n");
+		goto not_so_quick_sample;
+	}
+
+	expired = ((s_high<<8)|s_low) - ((high<<8)|low);
+	p3*= TIMER_CLKNUM_HZ;
 
 	/* time in usecs per CPU cycle * 2^32 */
-	cv_factor = ((uint64)1000000<<32) * expired / t2;
+	cv_factor = ((uint64)1000000<<32) * expired / p3;
 
-	dprintf("CPU at %d Hz\n", t2/expired);
+	if(p3/expired/1000000000LL) {
+		dprintf("CPU at %Ld.%03Ld GHz\n", p3/expired/1000000000LL, ((p3/expired)%1000000000LL)/1000000LL);
+	} else {
+		dprintf("CPU at %Ld.%03Ld MHz\n", p3/expired/1000000LL, ((p3/expired)%1000000LL)/1000LL);
+	}
 }
 
 void clearscreen()
