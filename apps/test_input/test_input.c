@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/syscalls.h>
 
 void testFormatting(FILE* f);
 void testLongLine(FILE* f);
@@ -26,20 +25,36 @@ static void testScanf(FILE* f)
 	unsigned int u;
 	int i;
 	int d;
+	int o;
 	int x;
 	//argument is ignored for now
 	printf("Read an unsigned int:");
 	scanf("%u", &u);
+	printf("Integer value: %i\n", u);
+	
 	printf("Read an integer(undetermined base):");
 	scanf("%i", &i);
+	printf("Integer value: %i\n", i);
+	
 	printf("Read an integer (base 10):");
 	scanf("%d", &d);
+	printf("Integer value: %i\n", d);
+
+	printf("Read an integer (base 8):");
+	scanf("%o", &o);
+	printf("Integer value: %i\n", o);
+	
 	printf("Read an integer (base 16):");
 	scanf("%x", &x);
+	printf("Integer value: %i\n", x);
+	
 	printf("Read a an char array (10):");
 	scanf("%10c", c);
+	printf("String value: %s\n", c);
+	
 	printf("Read a an string (10):");
 	scanf("%10s", s);
+	printf("String value: %s\n", s);
 
 }
 

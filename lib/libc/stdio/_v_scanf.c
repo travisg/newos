@@ -91,6 +91,7 @@ static void _fscanf_push(void *p, unsigned char c)
 static int _fscanf_read(void *p)
 {
 	struct _fscanf_struct *val = (struct _fscanf_struct*)p;
+	unsigned char c;
 	FILE* stream;
 
 	if(val->buff_pos > 0)
@@ -116,8 +117,14 @@ static int _fscanf_read(void *p)
         stream->rpos=0;
         stream->buf_pos=len;
     }
+	c = stream->buf[stream->rpos++];
+/*
+	sys_write(1, "read: \'", -1, 7);
+	sys_write(1, &c, -1, 1);
+	sys_write(1, "\'\r\n", -1, 3);
+*/
 	val->count++;
-    return stream->buf[stream->rpos++];
+    return c;
 }
 
 int vfscanf( FILE *stream, char const *format, va_list arg_ptr)
@@ -309,15 +316,20 @@ int _v_scanf( int (*_read)(void*), void (*_push)(void*, unsigned char),  void* a
 	unsigned int fieldsRead = 0;
 	unsigned char fch;
 
+//	sys_write(1, "\r\n_v_scanf\r\n", -1, 12);
+
 	while (*format)
 	{
 		long long s_temp = 0;
-		bool is_set = false;
-
 		fch = *format++;
+/*
+		sys_write(1, "fch: \'", -1, 6);
+		sys_write(1, &fch, -1, 1);
+		sys_write(1, "\'\r\n", -1, 3);
+*/
+
     	if(isspace(fch))
     	{
-			
 		 	if(isspace(_read(arg)))
 			{
 				break;
@@ -337,11 +349,14 @@ int _v_scanf( int (*_read)(void*), void (*_push)(void*, unsigned char),  void* a
 			bool suppressAssignment = false;
 			short width = -1;
 			valSize size = INT;
-
 keeplooking:
 
 			fch = *format++;
-
+/*
+			sys_write(1, "fch: \'", -1, 6);
+			sys_write(1, &fch, -1, 1);
+			sys_write(1, "\'\r\n", -1, 3);
+*/
 			switch(fch)
 			{   
 				case '%':
@@ -352,7 +367,6 @@ keeplooking:
 					break;
 				case '*':
 					suppressAssignment = true;
-					fch = *format++;
 					goto keeplooking;
 				case '0':
 				case '1':
@@ -374,7 +388,7 @@ keeplooking:
 						fch = *format++;
 					}
 					while(isdigit(fch));
-					_push(arg, fch);
+					format--;
 					goto keeplooking;
 
 				case 'h':
@@ -387,8 +401,10 @@ keeplooking:
 					size = LONGLONG;
 					goto keeplooking;
 				case 'u':
-					fieldsRead++;
+				{
 					unsigned long long u_temp = convertIntegralValue(_read, _push, arg, 10, width);
+					fieldsRead++;
+
 					switch(size)
 					{
 						case SHORT:
@@ -430,30 +446,24 @@ keeplooking:
 							*ull = (unsigned long long)u_temp;
 						}
 						break;
-							
 					}
-					break;
+				}
+				break;
 				case 'i':
-					is_set = true;
 					s_temp = (long long)convertIntegralValue(_read, _push, arg, 0, width);
+					goto read_signed_int;
 				case 'd':
-					if(!is_set)
-					{
-						is_set = true;
-						s_temp = (long long)convertIntegralValue(_read, _push, arg, 10, width);
-					}
+					s_temp = (long long)convertIntegralValue(_read, _push, arg, 10, width);
+					goto read_signed_int;
 				case 'o':
-					if(!is_set)
-					{
-						is_set = true;
-						s_temp = (long long)convertIntegralValue(_read, _push, arg, 8, width);
-					}
+					s_temp = (long long)convertIntegralValue(_read, _push, arg, 8, width);
+					goto read_signed_int;
 				case 'x':
 				case 'X':
 				case 'p':
-					if(!is_set)
-						s_temp = (long long)convertIntegralValue(_read, _push, arg, 16, width);
-
+				{
+					s_temp = (long long)convertIntegralValue(_read, _push, arg, 16, width);
+read_signed_int:
 					fieldsRead++;
 					switch(size)
 					{
@@ -508,12 +518,13 @@ keeplooking:
 							long long *ll = (long long*)va_arg(arg_ptr, unsigned long long*);
 							*ll = (long long)s_temp;
 						}
-						break;
-							
 					}
-					break;
+				}
+				break;
 				case 'c':
 				{
+					width = 10;
+//					sys_write(1, "hello", -1, 5);
 					char* c = (char*)va_arg(arg_ptr, char*);
 					int i = 0;
 					if(width == -1)
@@ -530,6 +541,7 @@ keeplooking:
 				// Dangerous to use without specifying width.
 				case 's':
 				{
+					width = 10;
 					char* c = (char*)va_arg(arg_ptr, char*);
 					int i = 0;
 					do
@@ -550,7 +562,4 @@ keeplooking:
 	}
 	return fieldsRead;
 }
-
-
-
 

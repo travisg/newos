@@ -8,7 +8,8 @@
 #include <sys/syscalls.h>
 #include <errno.h>
 
-static int write(void* arg, const void* buf, ssize_t len)
+
+static int _write(void* arg, const void* buf, ssize_t len)
 {
     int err;
     if(((FILE*)arg)->buf_pos > 0)
@@ -33,7 +34,7 @@ static int write(void* arg, const void* buf, ssize_t len)
 
 int vfprintf(FILE *stream, char const *format, va_list ap)
 {
-    return _v_printf(write, stream, format, ap);
+    return _v_printf(_write, stream, format, ap);
 }
 
 #endif
