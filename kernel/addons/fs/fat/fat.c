@@ -182,7 +182,11 @@ int fat_mount(fs_cookie *fs, fs_id id, const char *device, void *args, vnode_id 
 	if(fat->sem < 0)
 		goto err3;
 
-	fat->root_vnid = ROOT_VNODE_ID;
+	if(fat->fat_type == 32) {
+		fat->root_vnid = CLUSTERS_TO_VNID(fat->bpb32.root_cluster, fat->bpb32.root_cluster);
+	} else {
+		fat->root_vnid = CLUSTERS_TO_VNID(1, 1);
+	}
 
 	*fs = fat;
 	*root_vnid = fat->root_vnid;

@@ -28,33 +28,32 @@ int fat_getvnode(fs_cookie fs, vnode_id id, fs_vnode *_v, bool r)
 	fat_fs *fat = (fat_fs *)fs;
 	fat_vnode *v;
 	int err;
+	uint32 dir_cluster, file_cluster;
 
 	SHOW_FLOW(3, "fs %p, vnode_id 0x%Lx, r %d", fs, id, r);
 
 	LOCK_READ(fat->sem);
 
-	// special case the root vnode
-	if(id == ROOT_VNODE_ID) {
-		v = kmalloc(sizeof(fat_vnode));
-		if(!v) {
-			err = ERR_NO_MEMORY;
-			goto out;
-		}
+	// break the vnid out into the parts
+	dir_cluster = VNID_TO_DIR_CLUSTER(id);
+	file_cluster = VNID_TO_FILE_CLUSTER(id);
 
-		v->id = id;
-		v->is_dir = true;
+	v = kmalloc(sizeof(fat_vnode));
+	if(!v) {
+		err = ERR_NO_MEMORY;
+		goto out;
+	}
 
+	v->id = id;
+	v->start_cluster = file_cluster;
+
+	if(v->id == fat->root_vnid) {
+		// special case the root vnode for size
 		if(fat->fat_type == 32) {
-			v->start_cluster = fat->bpb32.root_cluster;
 			v->size = 0; // XXX count clusters
 		} else {
-			// on fat 12/16 for the root vnode we'll overload this field to mean 'starting sector'
-			v->start_cluster = fat->first_data_sector - fat->root_dir_sectors;
 			v->size = fat->bpb.root_entry_count * 32;
 		}
-	} else {
-		err = ERR_UNIMPLEMENTED;
-		goto out;
 	}
 
 	*_v = v;
@@ -67,11 +66,20 @@ out:
 	return err;
 }
 
-int fat_putvnode(fs_cookie fs, fs_vnode v, bool r)
+int fat_putvnode(fs_cookie fs, fs_vnode _v, bool r)
 {
+	fat_fs *fat = (fat_fs *)fs;
+	fat_vnode *v = (fat_vnode *)_v;
+
 	SHOW_FLOW(3, "fs %p, v %p, r %d", fs, v, r);
 
-	return ERR_NOT_IMPLEMENTED;
+	LOCK_READ(fat->sem);
+
+	kfree(v);
+	
+	UNLOCK_READ(fat->sem);
+
+	return NO_ERROR;
 }
 
 int fat_removevnode(fs_cookie fs, fs_vnode v, bool r)

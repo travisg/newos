@@ -28,8 +28,6 @@ typedef struct fat_fs {
 	fat_bpb32 bpb32;
 } fat_fs;
 
-#define ROOT_VNODE_ID 0 // special vnid that represents the root
-
 /* reader/writer lock for fat */
 #define FAT_WRITE_COUNT 1024
 #define LOCK_READ(sem) sem_acquire(sem, 1)
@@ -45,6 +43,10 @@ typedef struct fat_vnode {
 	uint32 size;
 	uint32 start_cluster; // for fat 12/16 and the root dir, means 'starting sector'
 } fat_vnode;
+
+#define CLUSTERS_TO_VNID(dir_cluster, file_cluster) ((((vnode_id)dir_cluster) << 32) | ((vnode_id)file_cluster))
+#define VNID_TO_DIR_CLUSTER(vnid) ((uint32)((vnid) >> 32))
+#define VNID_TO_FILE_CLUSTER(vnid) ((uint32)(vnid))
 
 /* fs calls */
 int fat_mount(fs_cookie *fs, fs_id id, const char *device, void *args, vnode_id *root_vnid);
