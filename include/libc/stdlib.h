@@ -74,5 +74,7 @@ void operator delete (void *);
 void operator delete[] (void *);
 #endif
 
+#define max(a, b) ((a) > (b) ? (a) : (b))
+#define min(a, b) ((a) < (b) ? (a) : (b))
 
 #endif

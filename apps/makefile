@@ -22,6 +22,8 @@ include $(addsuffix /makefile, $(addprefix $(APPS_DIR)/, \
 	nettest \
 	irc \
 	consoled \
+	window_server \
+	guiapp \
 ))
 
 

@@ -15,6 +15,7 @@
 #include <kernel/dev/arch/i386/keyboard/keyboard.h>
 #include <kernel/dev/arch/i386/ps2mouse/ps2mouse.h>
 #include <kernel/dev/arch/i386/rtl8139/rtl8139_dev.h>
+#include <kernel/dev/arch/i386/vesa/vesa.h>
 #endif
 #ifdef ARCH_sh4
 #include <kernel/dev/arch/sh4/maple/maple_bus.h>
@@ -31,8 +32,9 @@ int fixed_devs_init(kernel_args *ka)
 #ifdef ARCH_i386
 //	ide_bus_init(ka);
 	keyboard_dev_init(ka);
-//	mouse_dev_init(ka);
+	mouse_dev_init(ka);
 	rtl8139_dev_init(ka);
+	vesa_dev_init(ka);
 #endif
 
 #ifdef ARCH_sh4

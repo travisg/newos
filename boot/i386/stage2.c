@@ -112,6 +112,14 @@ void _start(unsigned int mem, int in_vesa, unsigned int vesa_ptr, unsigned int c
 		ka->fb.x_size = mode_info->x_resolution;
 		ka->fb.y_size = mode_info->y_resolution;
 		ka->fb.bit_depth = mode_info->bits_per_pixel;
+		ka->fb.red_mask_size = mode_info->red_mask_size;
+		ka->fb.red_field_position = mode_info->red_field_position;
+		ka->fb.green_mask_size = mode_info->green_mask_size;
+		ka->fb.green_field_position = mode_info->green_field_position;
+		ka->fb.blue_mask_size = mode_info->blue_mask_size;
+		ka->fb.blue_field_position = mode_info->blue_field_position;
+		ka->fb.reserved_mask_size = mode_info->reserved_mask_size;
+		ka->fb.reserved_field_position = mode_info->reserved_field_position;
 		ka->fb.mapping.start = mode_info->phys_base_ptr;
 		ka->fb.mapping.size = ka->fb.x_size * ka->fb.y_size * (ka->fb.bit_depth/8);
 		ka->fb.already_mapped = 0;
@@ -583,7 +591,7 @@ slow_sample:
 	 * where reminder is:
 	 *
 	 *     floor((1<<k)*decimalPart((C*x0)/p3))
-	 *  
+	 *
 	 * which is approximated as:
 	 *
 	 *     floor((1<<k)*decimalPart(((C*x0)%p3)/p3)) ->

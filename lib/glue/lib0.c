@@ -54,3 +54,8 @@ int __gxx_personality_v0(void)
 {
 	return 0;
 }
+
+void
+__cxa_pure_virtual (void)
+{
+}

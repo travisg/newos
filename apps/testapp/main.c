@@ -9,6 +9,9 @@
 #include <sys/types.h>
 #include <sys/resource.h>
 #include <newos/errors.h>
+#include <newos/drivers.h>
+
+static int pipe_test(void);
 
 static int pipe_test(void);
 
@@ -404,10 +407,47 @@ int main(int argc, char **argv)
 		printf("passed the test\n");
 	}
 #endif
-#if 1
+#if 0
 	rc = pipe_test();
 #endif
+#if 1
+	{
+		int i,j,k;
+		int fd;
+		devfs_framebuffer_info fb;
+		int err;
+		void *framebuffer;
 
+		fd = sys_open("/dev/graphics/fb/0", STREAM_TYPE_DEVICE, 0);
+		if(fd < 0) {
+			printf("error opening framebuffer device\n");
+			return -1;
+		}
+
+		err = sys_ioctl(fd, IOCTL_DEVFS_GET_FRAMEBUFFER_INFO, &fb, sizeof(fb));
+		if(err < 0) {
+			printf("error getting framebuffer info\n");
+			return -1;
+		}
+
+		err = sys_ioctl(fd, IOCTL_DEVFS_MAP_FRAMEBUFFER, &framebuffer, sizeof(framebuffer));
+		if(err < 0) {
+			printf("error mapping framebuffer\n");
+			return -1;
+		}
+
+		for(k=0;; k++) {
+			for(i=0; i<fb.height; i++) {
+				uint16 row[fb.width];
+				for(j=0; j<fb.width; j++) {
+					uint16 color = ((j+i+k) & 0x1f) << 11;
+					row[j] = color;
+				}
+				memcpy(framebuffer + i*fb.width*2, row, sizeof(row));
+			}
+		}
+	}
+#endif
 	printf("exiting w/return code %d\n", rc);
 	return rc;
 }

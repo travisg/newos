@@ -6,4 +6,5 @@ include $(addsuffix /makefile, $(addprefix $(KERNEL_DIR)/$(KERNEL_DEV_I386_DIR)/
 	keyboard \
 	ps2mouse \
 	rtl8139 \
+	vesa \
 ))

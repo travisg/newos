@@ -34,6 +34,14 @@ typedef struct {
 		int x_size;
 		int y_size;
 		int bit_depth;
+		unsigned char red_mask_size;
+		unsigned char red_field_position;
+		unsigned char green_mask_size;
+		unsigned char green_field_position;
+		unsigned char blue_mask_size;
+		unsigned char blue_field_position;
+		unsigned char reserved_mask_size;
+		unsigned char reserved_field_position;
 		int already_mapped;
 		addr_range mapping;
 	} fb;
