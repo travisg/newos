@@ -291,7 +291,7 @@ static int map_backing_store(vm_address_space *aspace, vm_store *store, void **v
 
 	int err;
 
-//	dprintf("map_backing_store: aspace 0x%x, store 0x%x, *vaddr 0x%x, offset 0x%x 0x%x, size %d, addr_type %d, wiring %d, lock %d, _region 0x%x, region_name '%s'\n",
+//	dprintf("map_backing_store: aspace 0x%x, store 0x%x, *vaddr 0x%x, offset 0x%Lx, size %d, addr_type %d, wiring %d, lock %d, _region 0x%x, region_name '%s'\n",
 //		aspace, store, *vaddr, offset, size, addr_type, wiring, lock, _region, region_name);
 
 	region = _vm_create_region_struct(aspace, region_name, wiring, lock);
@@ -778,13 +778,13 @@ region_id user_vm_map_file(char *uname, void **uaddress, int addr_type,
 	rc = user_strncpy(path, upath, SYS_MAX_PATH_LEN-1);
 	if(rc < 0)
 		return rc;
-	name[SYS_MAX_PATH_LEN-1] = 0;
+	path[SYS_MAX_PATH_LEN-1] = 0;
 
 	rc = user_memcpy(&address, uaddress, sizeof(address));
 	if(rc < 0)
 		return rc;
 
-	rc = _vm_map_file(vm_get_current_user_aspace_id(), name, address, addr_type, size, lock, mapping, path, offset, false);
+	rc = _vm_map_file(vm_get_current_user_aspace_id(), name, &address, addr_type, size, lock, mapping, path, offset, false);
 	if(rc < 0)
 		return rc;
 

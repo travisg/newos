@@ -18,6 +18,13 @@
 #include <sys/errors.h>
 #include <libc/string.h>
 
+#define NB_TRACE 1
+#if NB_TRACE
+#define TRACE(x) dprintf x
+#else
+#define TRACE(x)
+#endif
+
 #define BLOCKSIZE 512
 
 struct netblock_dev {
@@ -203,6 +210,8 @@ static int netblock_seek(dev_cookie _cookie, off_t pos, seek_type st)
 	struct netblock_cookie *cookie = _cookie;
 	int err = NO_ERROR;
 
+	TRACE(("netblock_seek: cookie %p, pos 0x%Lx, st %d\n", cookie, pos, st));
+
 	mutex_lock(&cookie->dev->lock);
 
 	switch(st) {
@@ -243,6 +252,37 @@ static int netblock_close(dev_cookie cookie)
 //	dprintf("netblock_close: entry\n");
 
 	return 0;
+}
+
+static int netblock_ioctl(dev_cookie _cookie, int op, void *buf, size_t len)
+{
+	struct netblock_cookie *cookie = _cookie;
+	int err;
+
+	TRACE(("netblock_ioctl: cookie %p, op %d, buf %p, len %ud\n", cookie, op, buf, (unsigned int)len));
+
+	mutex_lock(&cookie->dev->lock);
+
+	err = NO_ERROR;
+	switch(op) {
+		case 90000: { // set the netblock server address
+			sockaddr *saddr = (sockaddr *)buf;
+
+			memcpy(&cookie->dev->saddr, saddr, sizeof(sockaddr));
+			break;
+		}
+		case 90001: { // read the device's size
+			cookie->dev->size = get_device_size(cookie->dev);
+			dprintf("netblock_ioctl: device size is %Ld\n", cookie->dev->size);
+			break;
+		}
+		default:
+			err = ERR_INVALID_ARGS;
+	}
+
+	mutex_unlock(&cookie->dev->lock);
+
+	return err;
 }
 
 static ssize_t _netblock_readwrite(struct netblock_dev *dev, bool write, void *_buf, off_t pos, ssize_t len)
@@ -309,6 +349,8 @@ static ssize_t netblock_read(dev_cookie _cookie, void *_buf, off_t pos, ssize_t 
 	ssize_t bytes_read = 0;
 	bool update_pos = false;
 
+	TRACE(("netblock_read: cookie %p, buf %p, pos 0x%Ld, len %ud\n", cookie, _buf, pos, len));
+
 	mutex_lock(&cookie->dev->lock);
 
 	// trim the pos and len to be proper
@@ -345,6 +387,8 @@ static ssize_t netblock_write(dev_cookie _cookie, const void *_buf, off_t pos, s
 	ssize_t bytes_written = 0;
 	bool update_pos = false;
 
+	TRACE(("netblock_write: cookie %p, buf %p, pos 0x%Ld, len %ud\n", cookie, _buf, pos, len));
+
 	mutex_lock(&cookie->dev->lock);
 
 	// trim the pos and len to be proper
@@ -375,33 +419,85 @@ out:
 	return bytes_written;
 }
 
-static int netblock_ioctl(dev_cookie _cookie, int op, void *buf, size_t len)
+static int netblock_canpage(dev_ident ident)
 {
-	struct netblock_cookie *cookie = _cookie;
-	int err;
+	return 1;
+}
 
-	mutex_lock(&cookie->dev->lock);
+static ssize_t netblock_readpage(dev_ident ident, iovecs *vecs, off_t pos)
+{
+	struct netblock_dev *dev = ident;
+	ssize_t bytes_read = 0;
+	unsigned int curr_vec;
 
-	err = NO_ERROR;
-	switch(op) {
-		case 90000: { // set the netblock server address
-			sockaddr *saddr = (sockaddr *)buf;
+	TRACE(("netblock_readpage: dev %p, vecs %p, num %d, total_len %u, pos 0x%Ld\n", dev, vecs, vecs->num, vecs->total_len, pos));
 
-			memcpy(&cookie->dev->saddr, saddr, sizeof(sockaddr));
+	if(pos % BLOCKSIZE != 0)
+		return ERR_INVALID_ARGS;
+
+	mutex_lock(&dev->lock);
+
+	// cycle through all of the iovecs
+	for(curr_vec = 0; curr_vec < vecs->num; curr_vec++) {
+		size_t vec_len = vecs->vec[curr_vec].len;
+		size_t vec_offset = 0;
+
+		// make sure this vec has a good len
+		if(vec_len % BLOCKSIZE != 0)
 			break;
+
+		// read the blocks into the proper place
+		while(vec_len > 0) {
+			read_block(dev, pos, ((uint8 *)vecs->vec[curr_vec].start) + vec_offset);
+
+			vec_offset += BLOCKSIZE;
+			vec_len -= BLOCKSIZE;
+			pos += BLOCKSIZE;
+			bytes_read += BLOCKSIZE;
 		}
-		case 90001: { // read the device's size
-			cookie->dev->size = get_device_size(cookie->dev);
-			dprintf("netblock_ioctl: device size is %Ld\n", cookie->dev->size);
-			break;
-		}
-		default:
-			err = ERR_INVALID_ARGS;
 	}
 
-	mutex_unlock(&cookie->dev->lock);
+	mutex_unlock(&dev->lock);
 
-	return err;
+	return bytes_read;
+}
+
+static ssize_t netblock_writepage(dev_ident ident, iovecs *vecs, off_t pos)
+{
+	struct netblock_dev *dev = ident;
+	ssize_t bytes_written = 0;
+	unsigned int curr_vec;
+
+	TRACE(("netblock_writepage: dev %p, vecs %p, num %d, total_len %u, pos 0x%Ld\n", dev, vecs, vecs->num, vecs->total_len, pos));
+
+	if(pos % BLOCKSIZE != 0)
+		return ERR_INVALID_ARGS;
+
+	mutex_lock(&dev->lock);
+
+	// cycle through all of the iovecs
+	for(curr_vec = 0; curr_vec < vecs->num; curr_vec++) {
+		size_t vec_len = vecs->vec[curr_vec].len;
+		size_t vec_offset = 0;
+
+		// make sure this vec has a good len
+		if(vec_len % BLOCKSIZE != 0)
+			break;
+
+		// read the blocks into the proper place
+		while(vec_len > 0) {
+			write_block(dev, pos, ((uint8 *)vecs->vec[curr_vec].start) + vec_offset);
+
+			vec_offset += BLOCKSIZE;
+			vec_len -= BLOCKSIZE;
+			pos += BLOCKSIZE;
+			bytes_written += BLOCKSIZE;
+		}
+	}
+
+	mutex_unlock(&dev->lock);
+
+	return bytes_written;
 }
 
 static struct dev_calls netblock_hooks = {
@@ -412,10 +508,9 @@ static struct dev_calls netblock_hooks = {
 	&netblock_ioctl,
 	&netblock_read,
 	&netblock_write,
-	/* cannot page from /dev/netblock */
-	NULL,
-	NULL,
-	NULL
+	&netblock_canpage,
+	&netblock_readpage,
+	&netblock_writepage
 };
 
 int netblock_dev_init(kernel_args *ka)

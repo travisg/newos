@@ -443,9 +443,9 @@ void *vfs_get_cache_ptr(void *vnode)
 int vfs_set_cache_ptr(void *vnode, void *cache)
 {
 	if(test_and_set((int *)&(((struct vnode *)vnode)->cache), (int)cache, 0) == 0)
-		return -1;
-	else
 		return 0;
+	else
+		return -1;
 }
 
 static struct file_descriptor *alloc_fd(void)
