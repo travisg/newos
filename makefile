@@ -132,7 +132,7 @@ final1: $(FINAL)
 
 tools: $(NETBOOT) $(BOOTMAKER) $(BIN2H) $(BIN2ASM)
 
-$(BOOTMAKER): $(BOOTMAKER).c tools/sh4bootblock.h tools/sparcbootblock.h
+$(BOOTMAKER): $(BOOTMAKER).c tools/sparcbootblock.h
 	$(HOST_CC) -O3 -o $@ $(BOOTMAKER).c
 	
 NETBOOT_LINK_ARGS =

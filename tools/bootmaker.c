@@ -1,5 +1,8 @@
-/* $Id$
-**
+/* 
+** Some Portions Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Distributed under the terms of the NewOS License.
+*/
+/*
 ** Copyright 1998 Brian J. Swetland
 ** All rights reserved.
 **
@@ -27,9 +30,7 @@
 */
 #include "../include/boot/bootdir.h"
 
-#include "bootblock.h"
 #include "sparcbootblock.h"
-#include "sh4bootblock.h"
 
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -39,9 +40,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-static int make_floppy = 0;
 static int make_sparcboot = 0;
-static int make_sh4boot = 0;
 
 void die(char *s, char *a)
 {
@@ -77,16 +76,6 @@ void *loadfile(char *file, int *size)
     return NULL;
 }
 
-int writesh4bootblock(FILE *fp, unsigned int blocks)
-{
-	unsigned char bb[0x1000];
-
-	memset(bb, 0, sizeof(bb));
-	memcpy(bb, sh4bootblock, sizeof(sh4bootblock));
-
-	return fwrite(bb,sizeof(bb),1,fp);
-}
-
 // write a boot block to the head of the dir.
 // note: the first 0x20 bytes are removed by the sparc prom
 // which makes the whole file off by 0x20 bytes
@@ -98,21 +87,6 @@ int writesparcbootblock(FILE *fp, unsigned int blocks)
 	memcpy(bb, sparcbootblock, sizeof(sparcbootblock));
 
 	return fwrite(bb,sizeof(bb),1,fp);
-}
-
-/* at location 2 is a uint16, set to blocks * 8 */
-int writebootblock(FILE *fp, unsigned int blocks)
-{
-    unsigned char bb[512];
-    
-    blocks *= 8;
-    
-    memcpy(bb,bootblock,512);
-    
-    bb[2] = (blocks & 0x00FF);
-    bb[3] = (blocks & 0xFF00) >> 8;
-    
-    fwrite(bb,512,1,fp);
 }
 
 typedef struct _nvpair 
@@ -375,16 +349,8 @@ void makeboot(section *s, char *outfile)
         die("cannot write to \"%s\"",outfile);
     }
 
-    if(make_sh4boot) {
-        writesh4bootblock(fp, nextpage+1);
-    }
-    
     if(make_sparcboot) {
         writesparcbootblock(fp, nextpage+1);
-    }
-    
-    if(make_floppy) {
-        writebootblock(fp, nextpage+1);
     }
     
     for(i=0;i<c;i++){
@@ -411,12 +377,8 @@ usage:
 	argv++;
 	
 	while(argc){
-		if(!strcmp(*argv,"--floppy")){
-			make_floppy = 1;
-		} else if(!strcmp(*argv,"--sparc")) {
+		if(!strcmp(*argv,"--sparc")) {
 			make_sparcboot = 1;
-		} else if(!strcmp(*argv,"--sh4")) {
-			make_sh4boot = 1;
 		} else if(!strcmp(*argv,"-o")){
 			argc--;
 			argv++;
@@ -435,14 +397,8 @@ usage:
 	}
 	
 	
-    if((argc > 3) && !strcmp(argv[3],"-floppy")){
-        make_floppy = 1;
-    }
     if((argc > 3) && !strcmp(argv[3],"-sparc")){
         make_sparcboot = 1;
-    }
-    if((argc > 3) && !strcmp(argv[3],"-sh4")){
-        make_sh4boot = 1;
     }
 
 	if(!file){

@@ -28,12 +28,20 @@ stage2clean:
 CLEAN += stage2clean
 
 FINAL = $(BOOT_DIR)/final
+BOOTBLOCK = $(BOOT_DIR)/bootblock.bin
+MAKEFLOP = $(BOOT_DIR)/makeflop
+
+$(MAKEFLOP): $(MAKEFLOP).c
+	$(HOST_CC) -O3 $(MAKEFLOP).c -o $@
 
 $(FINAL): $(STAGE2) $(KERNEL) $(APPS) tools
 	$(BOOTMAKER) $(BOOT_DIR)/config.ini -o $(FINAL)
 
-floppy: $(STAGE2) $(KERNEL) $(APPS) tools
-	$(BOOTMAKER) $(BOOT_DIR)/config.ini --floppy -o $(FINAL)
+floppy: $(STAGE2) $(KERNEL) $(APPS) tools $(MAKEFLOP)
+	$(BOOTMAKER) $(BOOT_DIR)/config.ini -o $(FINAL).pre
+	$(MAKEFLOP) $(FINAL).pre > $(FINAL)
+	rm -f $(FINAL).pre
+	rm -f ../../final.$(ARCH); ln -sf $(FINAL) ../../final.$(ARCH)
 
 disk: floppy
 	dd if=$(FINAL) of=/dev/disk/floppy/raw bs=18k
