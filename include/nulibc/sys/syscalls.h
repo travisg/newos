@@ -8,6 +8,7 @@
 #include <types.h>
 #include <kernel/ktypes.h>
 #include <sys/defines.h>
+#include <nulibc/sys/resource.h>
 
 typedef enum {
 	STREAM_TYPE_ANY = 0,
@@ -120,6 +121,8 @@ int sys_dup2(int ofd, int nfd);
 
 bigtime_t sys_system_time();
 int sys_snooze(bigtime_t time);
+int sys_getrlimit(int resource, struct rlimit * rlp);
+int sys_setrlimit(int resource, const struct rlimit * rlp);
 
 /* sem functions */
 sem_id sys_sem_create(int count, const char *name);

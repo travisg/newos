@@ -8,6 +8,9 @@
 #include <kernel/kernel.h>
 #include <boot/stage2.h>
 
+#define DEFAULT_FD_TABLE_SIZE	128
+#define MAX_FD_TABLE_SIZE		2048
+
 typedef enum {
 	STREAM_TYPE_ANY = 0,
 	STREAM_TYPE_FILE,
@@ -104,6 +107,10 @@ int vfs_register_filesystem(const char *name, struct fs_calls *calls);
 void *vfs_new_ioctx(void *parent_ioctx);
 int vfs_free_ioctx(void *ioctx);
 int vfs_test(void);
+
+struct rlimit;
+int vfs_getrlimit(int resource, struct rlimit * rlp);
+int vfs_setrlimit(int resource, const struct rlimit * rlp);
 
 image_id vfs_load_fs_module(const char *path);
 

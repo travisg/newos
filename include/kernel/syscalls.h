@@ -68,7 +68,9 @@ enum {
 	SYSCALL_SEM_SET_SEM_OWNER,
 	SYSCALL_FDDUP, /* 60 */
 	SYSCALL_FDDUP2,
-	SYSCALL_GET_PROC_TABLE
+	SYSCALL_GET_PROC_TABLE,
+	SYSCALL_GETRLIMIT,
+	SYSCALL_SETRLIMIT
 };
 
 int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_ret);

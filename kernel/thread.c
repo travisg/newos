@@ -25,6 +25,7 @@
 #include <nulibc/string.h>
 #include <nulibc/stdio.h>
 #include <nulibc/stdlib.h>
+#include <nulibc/sys/resource.h>
 
 struct proc_key {
 	proc_id id;
@@ -1822,7 +1823,7 @@ error:
 }
 
 
-// used by PS command any anthing else interested in a process list
+// used by PS command and anything else interested in a process list
 int user_proc_get_table(struct proc_info *pbuf, size_t len)
 {
 	struct proc *p;
@@ -1976,4 +1977,83 @@ void thread_atkernel_exit(void)
 
 	RELEASE_THREAD_LOCK();
 	int_restore_interrupts(state);
+}
+
+int user_getrlimit(int resource, struct rlimit * urlp)
+{
+	int				ret;
+	struct rlimit	rl;
+
+	if (urlp == NULL) {
+		return ERR_INVALID_ARGS;
+	}
+	if((addr)urlp >= KERNEL_BASE && (addr)urlp <= KERNEL_TOP) {
+		return ERR_VM_BAD_USER_MEMORY;
+	}
+
+	ret = getrlimit(resource, &rl);
+
+	if (ret == 0) {
+		ret = user_memcpy(urlp, &rl, sizeof(struct rlimit));
+		if (ret < 0) {
+			return ret;
+		}
+		return 0;
+	}
+
+	return ret;
+}
+
+int getrlimit(int resource, struct rlimit * rlp)
+{
+	if (!rlp) {
+		return -1;
+	}
+
+	switch(resource) {
+		case RLIMIT_NOFILE:
+			return vfs_getrlimit(resource, rlp);
+
+		default:
+			return -1;
+	}
+
+	return 0;
+}
+
+int user_setrlimit(int resource, const struct rlimit * urlp)
+{
+	int				err;
+	struct rlimit	rl;
+
+	if (urlp == NULL) {
+		return ERR_INVALID_ARGS;
+	}
+	if((addr)urlp >= KERNEL_BASE && (addr)urlp <= KERNEL_TOP) {
+		return ERR_VM_BAD_USER_MEMORY;
+	}
+
+	err = user_memcpy(&rl, urlp, sizeof(struct rlimit));
+	if (err < 0) {
+		return err;
+	}
+
+	return setrlimit(resource, &rl);
+}
+
+int setrlimit(int resource, const struct rlimit * rlp)
+{
+	if (!rlp) {
+		return -1;
+	}
+
+	switch(resource) {
+		case RLIMIT_NOFILE:
+			return vfs_setrlimit(resource, rlp);
+
+		default:
+			return -1;
+	}
+
+	return 0;
 }

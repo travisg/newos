@@ -24,6 +24,7 @@
 #include <nulibc/string.h>
 #include <nulibc/stdio.h>
 #include <nulibc/ctype.h>
+#include <nulibc/sys/resource.h>
 
 #define MAKE_NOIZE 0
 
@@ -57,7 +58,7 @@ struct ioctx {
 	mutex io_mutex;
 	int table_size;
 	int num_used_fds;
-	struct file_descriptor *fds[0];
+	struct file_descriptor **fds;
 };
 
 struct fs_container {
@@ -713,7 +714,6 @@ static int path_to_dir_vnode(char *path, struct vnode **v, char *filename, bool 
 	return path_to_vnode(path, v, kernel);
 }
 
-#define NEW_FD_TABLE_SIZE 32
 void *vfs_new_ioctx(void *_parent_ioctx)
 {
 	size_t table_size;
@@ -725,17 +725,25 @@ void *vfs_new_ioctx(void *_parent_ioctx)
 	if(parent_ioctx) {
 		table_size = parent_ioctx->table_size;
 	} else {
-		table_size = NEW_FD_TABLE_SIZE;
+		table_size = DEFAULT_FD_TABLE_SIZE;
 	}
 
-	ioctx = kmalloc(sizeof(struct ioctx) + sizeof(struct file_descriptor) * table_size);
+	ioctx = kmalloc(sizeof(struct ioctx));
 	if(ioctx == NULL)
 		return NULL;
 
+	memset(ioctx, 0, sizeof(struct ioctx));
 
-	memset(ioctx, 0, sizeof(struct ioctx) + sizeof(struct file_descriptor) * table_size);
+	ioctx->fds = kmalloc(sizeof(struct file_descriptor *) * table_size);
+	if(ioctx->fds == NULL) {
+		kfree(ioctx);
+		return NULL;
+	}
+
+	memset(ioctx->fds, 0, sizeof(struct file_descriptor *) * table_size);
 
 	if(mutex_init(&ioctx->io_mutex, "ioctx_mutex") < 0) {
+		kfree(ioctx->fds);
 		kfree(ioctx);
 		return NULL;
 	}
@@ -795,6 +803,7 @@ int vfs_free_ioctx(void *_ioctx)
 
 	mutex_destroy(&ioctx->io_mutex);
 
+	kfree(ioctx->fds);
 	kfree(ioctx);
 	return 0;
 }
@@ -2275,3 +2284,98 @@ int vfs_bootstrap_all_filesystems(void)
 	return NO_ERROR;
 }
 
+int vfs_getrlimit(int resource, struct rlimit * rlp)
+{
+	if (!rlp) {
+		return -1;
+	}
+
+	switch (resource) {
+		case RLIMIT_NOFILE:
+		{
+			struct ioctx * ioctx = get_current_ioctx(false);
+
+			mutex_lock(&ioctx->io_mutex);
+
+			rlp->rlim_cur = ioctx->table_size;
+			rlp->rlim_max = MAX_FD_TABLE_SIZE;
+
+			mutex_unlock(&ioctx->io_mutex);
+
+			return 0;
+		}
+
+		default:
+			return -1;
+	}
+}
+
+static int vfs_resize_fd_table(struct ioctx * ioctx, const int new_size)
+{
+	void	* new_fds;
+	int		ret;
+
+	if (new_size < 0 || new_size > MAX_FD_TABLE_SIZE) {
+		return -1;
+	}
+
+	mutex_lock(&ioctx->io_mutex);
+
+	if (new_size < ioctx->table_size) {
+		int i;
+
+		/* Make sure none of the fds being dropped are in use */
+		for(i = new_size; i < ioctx->table_size; i++) {
+			if (ioctx->fds[i]) {
+				ret = -1;
+				goto error;
+			}
+		}
+
+		new_fds = kmalloc(sizeof(struct file_descriptor *) * new_size);
+		if (!new_fds) {
+			ret = -1;
+			goto error;
+		}
+
+		memcpy(new_fds, ioctx->fds, sizeof(struct file_descriptor *) * new_size);
+	} else {
+		new_fds = kmalloc(sizeof(struct file_descriptor *) * new_size);
+		if (!new_fds) {
+			ret = -1;
+			goto error;
+		}
+
+		memcpy(new_fds, ioctx->fds, sizeof(struct file_descriptor *) * ioctx->table_size);
+		memset(new_fds + (sizeof(struct file_descriptor *) * ioctx->table_size), 0,
+				(sizeof(struct file_descriptor *) * new_size) - (sizeof(struct file_descriptor *) * ioctx->table_size));
+	}
+
+	kfree(ioctx->fds);
+	ioctx->fds = new_fds;
+	ioctx->table_size = new_size;
+
+	mutex_unlock(&ioctx->io_mutex);
+
+	return 0;
+
+error:
+	mutex_unlock(&ioctx->io_mutex);
+
+	return ret;
+}
+
+int vfs_setrlimit(int resource, const struct rlimit * rlp)
+{
+	if (!rlp) {
+		return -1;
+	}
+
+	switch (resource) {
+		case RLIMIT_NOFILE:
+			return vfs_resize_fd_table(get_current_ioctx(false), rlp->rlim_cur);
+
+		default:
+			return -1;
+	}
+}

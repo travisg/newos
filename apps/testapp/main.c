@@ -7,6 +7,8 @@
 #include <stdio.h>
 #include <sys/syscalls.h>
 #include <sys/errors.h>
+#include <nulibc/sys/resource.h>
+#include <nulibc/unistd.h>
 
 static void port_test(void);
 static int port_test_thread_func(void* arg);
@@ -224,6 +226,58 @@ int main(int argc, char **argv)
 
 //		sys_read(fd, buf, 0, sizeof(buf));
 //		sys_write(fd, buf, 512, sizeof(buf));
+	}
+#endif
+#if 0
+
+#define NUM_FDS 150
+	{
+		int				fds[NUM_FDS], i;
+		struct rlimit	rl;
+
+		rc = getrlimit(RLIMIT_NOFILE, &rl);
+		if (rc < 0) {
+			printf("error in getrlimit\n");
+			return -1;
+		}
+
+		printf("RLIMIT_NOFILE = %lu\n", rl.rlim_cur);
+
+		for(i = 0; i < NUM_FDS; i++) {
+			fds[i] = open("/boot/bin/testapp", 0);
+			if (fds[i] < 0) {
+				break;
+			}
+		}
+
+		printf("opened %d files\n", i);		
+
+		rl.rlim_cur += 15;
+
+		printf("Setting RLIMIT_NOFILE to %lu\n", rl.rlim_cur);
+		rc = setrlimit(RLIMIT_NOFILE, &rl);
+		if (rc < 0) {
+			printf("error in setrlimit\n");
+			return -1;
+		}
+
+		rl.rlim_cur = 0;
+		rc = getrlimit(RLIMIT_NOFILE, &rl);
+		if (rc < 0) {
+			printf("error in getrlimit\n");
+			return -1;
+		}
+
+		printf("RLIMIT_NOFILE = %lu\n", rl.rlim_cur);
+
+		for(;i < NUM_FDS; i++) {
+			fds[i] = open("/boot/bin/testapp", 0);
+			if (fds[i] < 0) {
+				break;
+			}
+		}
+
+		printf("opened a total of %d files\n", i);
 	}
 #endif
 

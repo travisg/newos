@@ -11,6 +11,7 @@
 #include <kernel/sem.h>
 #include <kernel/port.h>
 #include <kernel/arch/cpu.h>
+#include <nulibc/sys/resource.h>
 
 #define INT32TOINT64(x, y) ((int64)(x) | ((int64)(y) << 32))
 
@@ -234,6 +235,12 @@ int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_re
 			break;
 		case SYSCALL_GET_PROC_TABLE:
 			*call_ret = user_proc_get_table((struct proc_info *)arg0, (size_t)arg1);
+			break;
+		case SYSCALL_GETRLIMIT:
+			*call_ret = user_getrlimit((int)arg0, (struct rlimit *)arg1);
+			break;
+		case SYSCALL_SETRLIMIT:
+			*call_ret = user_setrlimit((int)arg0, (const struct rlimit *)arg1);
 			break;
 		default:
 			*call_ret = -1;
