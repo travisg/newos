@@ -5,8 +5,9 @@
 
 #define BASE 0x100000
 #define BOOTDIR_BASE (BASE + 0x1000)
-#define STAGE2_BOOTDIR_PAGE	(BOOTDIR_BASE + 0x60)
-#define STAGE2_OFFSET (BOOTDIR_BASE + 0x74)
+#define STAGE2_BOOTDIR_ENTRY	(BOOTDIR_BASE + 0x80)
+#define STAGE2_BOOTDIR_PAGE	(STAGE2_BOOTDIR_ENTRY + 0x60)
+#define STAGE2_OFFSET 		(STAGE2_BOOTDIR_ENTRY + 0x74)
 
 .text
 .globl _start
@@ -16,14 +17,14 @@ _start:
 
 	/* load the base of the bootdir */
 	lis		8,BOOTDIR_BASE@ha
-	ori		8,8,BOOTDIR_BASE@l	
+	ori		8,8,BOOTDIR_BASE@l
 
 	/* load the offset the stage2 will start into the bootdir */
 	lis		9,STAGE2_BOOTDIR_PAGE@ha
 	ori		9,9,STAGE2_BOOTDIR_PAGE@l
 	lwz		9,0(9)
 	mulli	9,9,4096
-	
+
 	/* load the offset into that page the stage2 entry point will be */
 	lis		10,STAGE2_OFFSET@ha
 	ori		10,10,STAGE2_OFFSET@l
@@ -39,9 +40,9 @@ _start:
 
 .align 4
 tempstack:
-	.skip 0x800	
+	.skip 0x800
 tempstack_end:
-	
+
 .data
 #include "build/ppc/boot/final.asminclude"
 

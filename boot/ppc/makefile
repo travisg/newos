@@ -9,6 +9,7 @@ MY_TARGETDIR := $(BOOT_TARGETDIR)
 MY_SRCDIR := $(BOOT_SRCDIR)
 MY_TARGET := $(STAGE2)
 MY_OBJS := \
+	stage2.o \
 	stage2_asm.o \
 	stage2_mmu.o \
 	stage2_of.o \
@@ -31,7 +32,7 @@ CONFIG_FILE := $(BOOT_SRCDIR)/config.ini
 SEMIFINAL := $(BOOT_TARGETDIR)/final.bootdir
 
 $(SEMIFINAL): $(STAGE2) $(ALL) $(TOOLS) $(MAKEFLOP) $(CONFIG_FILE)
-	$(BOOTMAKER) --bigendian --strip-debug --strip-binary $(STRIP) $(CONFIG_FILE) -o $(SEMIFINAL)
+	$(BOOTMAKER) --bigendian $(CONFIG_FILE) -o $(SEMIFINAL)
 
 FINAL_ASMINCLUDE := $(BOOT_TARGETDIR)/final.asminclude
 

@@ -25,7 +25,7 @@ int of_write(int handle, void *buf, int buf_len);
 int of_seek(int handle, long long pos);
 
 int s2_mmu_init();
-void mmu_map_page(unsigned int vsid, unsigned long pa, unsigned long va);;
+void mmu_map_page(unsigned long pa, unsigned long va);;
 void syncicache(void *address, int len);
 
 void s2_faults_init(kernel_args *ka);
@@ -36,7 +36,8 @@ void getdbats(int bats[8]);
 void setdbats(int bats[8]);
 unsigned int *getsdr1();
 void setsdr1(unsigned int sdr);
-unsigned int getsr(int sr);
+unsigned int getsr(unsigned int va);
+void setsr(unsigned int va, unsigned int val);
 unsigned int getmsr();
 void setmsr(unsigned int msr);
 

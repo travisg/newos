@@ -3,9 +3,9 @@
 ** Distributed under the terms of the NewOS License.
 */
 #include <boot/stage2.h>
-#include <libc/stdarg.h>
-#include <libc/printf.h>
-#include <libc/string.h>
+#include <string.h>
+#include <stdio.h>
+
 #include "stage2_priv.h"
 
 void _start(int arg1, int arg2, void *openfirmware);
@@ -23,12 +23,17 @@ void _start(int arg1, int arg2, void *openfirmware)
 
 	printf("Welcome to the stage2 bootloader!\n");
 
-	printf("arg1 0x%x, arg2 0x%x, openfirmware 0x%x\n", arg1, arg2, openfirmware);
+	printf("arg1 0x%x, arg2 0x%x, openfirmware %p\n", arg1, arg2, openfirmware);
 
 	printf("msr = 0x%x\n", getmsr());
 
+	// bring up the mmu
  	s2_mmu_init(&ka);
 
+	// initialize fault handlers
+	s2_faults_init(&ka);
+
+	printf("_start: spinning forever...\n");
 	for(;;);
 }
 

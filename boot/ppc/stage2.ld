@@ -4,7 +4,7 @@ OUTPUT_ARCH(powerpc)
 ENTRY(_start)
 SECTIONS
 {
-	. = 0x102000 + SIZEOF_HEADERS;
+	. = 0x100000 + 0x1000 + 0x4000 + SIZEOF_HEADERS;
 
 	/* text/read-only data */
 	.text :	{ *(.text .gnu.linkonce.t.*) }
