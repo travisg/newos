@@ -5,6 +5,7 @@
 #include <proc.h>
 #include <thread.h>
 #include <khash.h>
+#include <vfs.h>
 
 static void *proc_hash = NULL;
 static struct proc *kernel_proc = NULL;
@@ -47,6 +48,7 @@ int proc_init(kernel_args *ka)
 	kernel_proc->id = next_proc_id++;
 	kernel_proc->aspace = vm_get_kernel_aspace(); // already created
 	kernel_proc->thread_list = 0;
+	kernel_proc->ioctx = vfs_new_ioctx();
 
 	// stick it in the process hash
 	hash_insert(proc_hash, kernel_proc);

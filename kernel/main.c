@@ -56,6 +56,9 @@ int _start(kernel_args *oldka, int cpu)
 		proc_init(&ka);
 		thread_init(&ka);
 	
+		// XXX remove
+		vfs_test();
+	
 	#if 1
 		// XXX remove
 		thread_test();

@@ -248,13 +248,15 @@ static void _dump_thread_info(struct thread *t)
 {
 	dprintf("THREAD: 0x%x\n", t);
 	dprintf("name: %s\n", t->name);
-	dprintf("all_next:   0x%x\nproc_next:  0x%x\nq_next:     0x%x\n",
+	dprintf("all_next:    0x%x\nproc_next:  0x%x\nq_next:     0x%x\n",
 		t->all_next, t->proc_next, t->q_next);
-	dprintf("id:         0x%x\n", t->id);
-	dprintf("state:      %s\n", state_to_text(t->state));
-	dprintf("next_state: %s\n", state_to_text(t->next_state));
-	dprintf("sem_count:  0x%x\n", t->sem_count);
-	dprintf("proc:       0x%x\n", t->proc);
+	dprintf("id:          0x%x\n", t->id);
+	dprintf("priority:    0x%x\n", t->priority);
+	dprintf("state:       %s\n", state_to_text(t->state));
+	dprintf("next_state:  %s\n", state_to_text(t->next_state));
+	dprintf("sem_count:   0x%x\n", t->sem_count);
+	dprintf("blocked_sem: 0x%x\n", t->blocked_sem_id);
+	dprintf("proc:        0x%x\n", t->proc);
 	dprintf("kernel_stack_area: 0x%x\n", t->kernel_stack_area);
 	dprintf("user_stack_area:   0x%x\n", t->user_stack_area);
 	dprintf("architecture dependant section:\n");

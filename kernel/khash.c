@@ -1,6 +1,7 @@
 #include <string.h>
 #include <vm.h>
 #include <khash.h>
+#include <debug.h>
 
 #define TOUCH(a) ((a) = (a))
 
@@ -103,15 +104,34 @@ int hash_remove(void *_hash_table, void *e)
 	return -1;
 }
 
+void *hash_find(void *_hash_table, void *e)
+{
+	struct hash_table *t = _hash_table;
+	void *i;
+	int hash;
+
+	hash = t->hash_func(e, NULL, t->table_size);
+	for(i = t->table[hash]; i != NULL; i = NEXT(t, i)) {
+		if(i == e) {
+			return i;
+		}
+	}
+
+	return NULL;
+}
+
 void *hash_lookup(void *_hash_table, void *key)
 {
 	struct hash_table *t = _hash_table;
 	void *i;
 	int hash;
 
+	if(t->compare_func == NULL)
+		return NULL;
+
 	hash = t->hash_func(NULL, key, t->table_size);
 	for(i = t->table[hash]; i != NULL; i = NEXT(t, i)) {
-		if(i == key || t->compare_func(i, key) == 0) {
+		if(t->compare_func(i, key) == 0) {
 			return i;
 		}
 	}

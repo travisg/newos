@@ -4,11 +4,14 @@
 #include <stage2.h>
 #include <vm.h>
 #include <thread.h>
+#include <vfs.h>
 
 struct proc {
 	struct proc *next;
 	proc_id id;
 	char *name;
+	void *ioctx;
+	void *cwd;
 	struct aspace *aspace;
 	struct thread *thread_list;
 };

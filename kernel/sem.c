@@ -71,6 +71,10 @@ static void dump_sem_info(int argc, char **argv)
 			return;
 		} else {
 			int slot = num % MAX_SEMS;
+			if(sems[slot].id != (int)num) {
+				dprintf("sem 0x%x doesn't exist!\n", num);
+				return;
+			}
 			_dump_sem_info(&sems[slot]);
 			return;
 		}
@@ -126,11 +130,13 @@ sem_id sem_create(int count, char *name)
 	// find the first empty spot
 	for(i=0; i<MAX_SEMS; i++) {
 		if(sems[i].id == -1) {
-			// empty one
-			if((next_sem % MAX_SEMS) < i) {
-				// make the sem id be a multiple of the slot it's in
-				next_sem += i - (next_sem % MAX_SEMS);
+			// make the sem id be a multiple of the slot it's in
+			if(i >= next_sem % MAX_SEMS) {
+				next_sem += i - next_sem % MAX_SEMS;
+			} else {
+				next_sem += MAX_SEMS - (next_sem % MAX_SEMS - i);
 			}
+
 			sems[i].id = next_sem++;
 			
 			sems[i].lock = 0;
