@@ -48,6 +48,7 @@ int  fclose(FILE *);
 int   feof(FILE *);
 char *fgets(char *, int, FILE *);
 void  clearerr(FILE *);
+int   getc(FILE *);
 
 int scanf(char const *format, ...);
 int fscanf(FILE *stream, char const *format, ...);
@@ -55,6 +56,8 @@ int sscanf(char const *str, char const *format, ...);
 int vscanf(char const *format, va_list ap);
 int vsscanf(char const *str, char const *format, va_list ap);
 int vfscanf(FILE *stream, char const *format, va_list ap);
+
+int getchar(void);
 
 #ifdef __cplusplus
 }

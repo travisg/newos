@@ -67,7 +67,7 @@ int main(int argc, char **argv)
 	printf("enter something: ");
 
 	for(;;) {
-		c = getc();
+		c = getchar();
 		printf("%c", c);
 	}
 #endif
@@ -398,7 +398,7 @@ int main(int argc, char **argv)
 		id = sys_thread_create_thread("fpu thread4", &fpu_cruncher_thread, &f[4]);
 		sys_thread_resume_thread(id);
 
-		getc();
+		getchar();
 	}
 #endif
 

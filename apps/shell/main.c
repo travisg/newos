@@ -22,7 +22,7 @@ static int readline(char *buf, int len)
 
 	while(true){
 
-		ch = getc();
+		ch = getchar();
 
 		switch(ch){
 		case  8 :

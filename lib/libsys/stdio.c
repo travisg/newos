@@ -35,7 +35,7 @@ int printf(const char *fmt, ...)
 	return i;
 }
 
-char getc(void)
+int getchar(void)
 {
 	char c;
 	int len;
