@@ -232,19 +232,19 @@ static struct vnode *create_new_vnode()
 static int dec_vnode_ref_count(struct vnode *v, bool free_mem, bool r)
 {
 	int err;
+	int old_ref;
 
 	mutex_lock(&vfs_vnode_mutex);
 
 	if(v->busy == true)
 		panic("dec_vnode_ref_count called on vnode that was busy! vnode 0x%x\n", v);
 
-	v->ref_count--;
-
+	old_ref = atomic_add(&v->ref_count, -1);
 #if MAKE_NOIZE
 	dprintf("dec_vnode_ref_count: vnode 0x%x, ref now %d\n", v, v->ref_count);
 #endif
 
-	if(v->ref_count <= 0) {
+	if(old_ref == 1) {
 		v->busy = true;
 
 		mutex_unlock(&vfs_vnode_mutex);
@@ -275,19 +275,12 @@ static int dec_vnode_ref_count(struct vnode *v, bool free_mem, bool r)
 	return err;
 }
 
-static int inc_vnode_ref_count(struct vnode *v, bool locked)
+static int inc_vnode_ref_count(struct vnode *v)
 {
-	if(!locked)
-		mutex_lock(&vfs_vnode_mutex);
-
-	v->ref_count++;
-
+	atomic_add(&v->ref_count, 1);
 #if MAKE_NOIZE
 	dprintf("inc_vnode_ref_count: vnode 0x%x, ref now %d\n", v, v->ref_count);
 #endif
-
-	if(!locked)
-		mutex_unlock(&vfs_vnode_mutex);
 	return 0;
 }
 
@@ -328,7 +321,7 @@ static int get_vnode(fs_id fsid, vnode_id vnid, struct vnode **outv, int r)
 	dprintf("get_vnode: tried to lookup vnode, got 0x%x\n", v);
 #endif
 	if(v) {
-		inc_vnode_ref_count(v, true);
+		inc_vnode_ref_count(v);
 	} else {
 		// we need to create a new vnode and read it in
 		v = create_new_vnode();
@@ -417,7 +410,7 @@ void vfs_vnode_acquire_ref(void *v)
 #if MAKE_NOIZE
 	dprintf("vfs_vnode_acquire_ref: vnode 0x%x\n", v);
 #endif
-	inc_vnode_ref_count((struct vnode *)v, false);
+	inc_vnode_ref_count((struct vnode *)v);
 }
 
 void vfs_vnode_release_ref(void *v)
@@ -561,7 +554,7 @@ static struct vnode *get_vnode_from_fd(struct ioctx *ioctx, int fd)
 	v = f->vnode;
 	if(!v)
 		goto out;
-	inc_vnode_ref_count(v, false);
+	inc_vnode_ref_count(v);
 
 out:
 	put_fd(f);
@@ -610,13 +603,13 @@ static int path_to_vnode(char *path, struct vnode **v, bool kernel)
 		while(*++p == '/')
 			;
 		curr_v = root_vnode;
-		inc_vnode_ref_count(curr_v, false);
+		inc_vnode_ref_count(curr_v);
 	} else {
 		struct ioctx *ioctx = get_current_ioctx(kernel);
 
 		mutex_lock(&ioctx->io_mutex);
 		curr_v = ioctx->cwd;
-		inc_vnode_ref_count(curr_v, false);
+		inc_vnode_ref_count(curr_v);
 		mutex_unlock(&ioctx->io_mutex);
 	}
 
@@ -644,7 +637,7 @@ static int path_to_vnode(char *path, struct vnode **v, bool kernel)
 			// move to the covered vnode so we pass the '..' parse to the underlying filesystem
 			if(curr_v->mount->covers_vnode) {
 				next_v = curr_v->mount->covers_vnode;
-				inc_vnode_ref_count(next_v, false);
+				inc_vnode_ref_count(next_v);
 				dec_vnode_ref_count(curr_v, false, false);
 				curr_v = next_v;
 			}
@@ -681,7 +674,7 @@ static int path_to_vnode(char *path, struct vnode **v, bool kernel)
 		// see if we hit a mount point
 		if(curr_v->covered_by) {
 			next_v = curr_v->covered_by;
-			inc_vnode_ref_count(next_v, false);
+			inc_vnode_ref_count(next_v);
 			dec_vnode_ref_count(curr_v, false, false);
 			curr_v = next_v;
 		}
@@ -736,7 +729,7 @@ void *vfs_new_ioctx()
 	ioctx->table_size = NEW_FD_TABLE_SIZE;
 
 	if(ioctx->cwd)
-		inc_vnode_ref_count(ioctx->cwd, false);
+		inc_vnode_ref_count(ioctx->cwd);
 
 	return ioctx;
 }

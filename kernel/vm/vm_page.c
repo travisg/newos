@@ -7,11 +7,13 @@
 #include <kernel/vm.h>
 #include <kernel/vm_priv.h>
 #include <kernel/vm_page.h>
+#include <kernel/vm_cache.h>
 #include <kernel/arch/vm_translation_map.h>
 #include <kernel/debug.h>
 #include <kernel/int.h>
 #include <kernel/thread.h>
 #include <kernel/smp.h>
+#include <kernel/sem.h>
 #include <sys/errors.h>
 #include <boot/stage2.h>
 
@@ -23,8 +25,11 @@ typedef struct page_queue {
 	int count;
 } page_queue;
 
+extern bool trimming_cycle;
+
 static page_queue page_free_queue;
 static page_queue page_clear_queue;
+static page_queue page_modified_queue;
 static page_queue page_active_queue;
 
 static vm_page *all_pages;
@@ -32,6 +37,8 @@ static addr physical_page_offset;
 static unsigned int num_pages;
 
 static spinlock_t page_lock;
+
+static sem_id modified_pages_available;
 
 void dump_page_stats(int argc, char **argv);
 void dump_free_page_table(int argc, char **argv);
@@ -66,6 +73,10 @@ static void enqueue_page(page_queue *q, vm_page *page)
 	if(q->tail == NULL)
 		q->tail = page;
 	q->count++;
+	if(q == &page_modified_queue) {
+		if(q->count == 1)
+			sem_release_etc(modified_pages_available, 1, SEM_FLAG_NO_RESCHED);
+	}
 }
 
 static void remove_page_from_queue(page_queue *q, vm_page *page)
@@ -91,6 +102,82 @@ static void move_page_to_queue(page_queue *from_q, page_queue *to_q, vm_page *pa
 	}
 }
 
+static int pageout_daemon()
+{
+	int state;
+	vm_page *page;
+	vm_region *region;
+	IOVECS(vecs, 1);
+	ssize_t err;
+
+	dprintf("pageout daemon starting\n");
+
+	for(;;) {
+		sem_acquire(modified_pages_available, 1);
+
+		dprintf("here\n");
+
+		state = int_disable_interrupts();
+		acquire_spinlock(&page_lock);
+		page = dequeue_page(&page_modified_queue);
+		page->state = PAGE_STATE_BUSY;
+		vm_cache_acquire_ref(page->cache_ref, true);
+		release_spinlock(&page_lock);
+		int_restore_interrupts(state);
+
+		dprintf("got page 0x%x\n", page);
+
+		if(page->cache_ref->cache->temporary && !trimming_cycle) {
+			// unless we're in the trimming cycle, dont write out pages
+			// that back anonymous stores
+			state = int_disable_interrupts();
+			acquire_spinlock(&page_lock);
+			enqueue_page(&page_modified_queue, page);
+			page->state = PAGE_STATE_MODIFIED;
+			release_spinlock(&page_lock);
+			int_restore_interrupts(state);
+			vm_cache_release_ref(page->cache_ref);
+			continue;
+		}
+
+		/* clear the modified flag on this page in all it's mappings */
+		mutex_lock(&page->cache_ref->lock);
+		for(region = page->cache_ref->region_list; region; region = region->cache_next) {
+			if(page->offset > region->cache_offset
+			  && page->offset < region->cache_offset + region->size) {
+				vm_translation_map *map = &region->aspace->translation_map;
+				map->ops->lock(map);
+				map->ops->clear_flags(map, page->offset - region->cache_offset + region->base, PAGE_MODIFIED);
+				map->ops->unlock(map);
+			}
+		}
+		mutex_unlock(&page->cache_ref->lock);
+
+		/* write the page out to it's backing store */
+		vecs->num = 1;
+		vecs->total_len = PAGE_SIZE;
+		vm_get_physical_page(page->ppn * PAGE_SIZE, (addr *)&vecs->vec[0].start, PHYSICAL_PAGE_CAN_WAIT);
+		vecs->vec[0].len = PAGE_SIZE;
+
+		err = page->cache_ref->cache->store->ops->write(page->cache_ref->cache->store, page->offset, vecs);
+
+		vm_put_physical_page((addr)vecs->vec[0].start);
+
+		state = int_disable_interrupts();
+		acquire_spinlock(&page_lock);
+		if(page->ref_count > 0) {
+			page->state = PAGE_STATE_ACTIVE;
+		} else {
+			page->state = PAGE_STATE_INACTIVE;
+		}
+		enqueue_page(&page_active_queue, page);
+		release_spinlock(&page_lock);
+		int_restore_interrupts(state);
+
+		vm_cache_release_ref(page->cache_ref);
+	}
+}
+
 int vm_page_init(kernel_args *ka)
 {
 	unsigned int i;
@@ -106,6 +193,9 @@ int vm_page_init(kernel_args *ka)
 	page_clear_queue.head = NULL;
 	page_clear_queue.tail = NULL;
 	page_clear_queue.count = 0;
+	page_modified_queue.head = NULL;
+	page_modified_queue.tail = NULL;
+	page_modified_queue.count = 0;
 	page_active_queue.head = NULL;
 	page_active_queue.tail = NULL;
 	page_active_queue.count = 0;
@@ -172,9 +262,15 @@ int vm_page_init_postthread(kernel_args *ka)
 	thread_id tid;
 
 	// create a kernel thread to clear out pages
-	tid = thread_create_kernel_thread("page scrubber", &page_scrubber, 1);
+	tid = thread_create_kernel_thread("page scrubber", &page_scrubber, THREAD_LOWEST_PRIORITY);
 	thread_resume_thread(tid);
 
+	modified_pages_available = sem_create(0, "modified_pages_avail_sem");
+#if 0
+	// create a kernel thread to schedule modified pages to write
+	tid = thread_create_kernel_thread("pageout daemon", &pageout_daemon, THREAD_HIGHEST_PRIORITY);
+	thread_resume_thread(tid);
+#endif
 	return 0;
 }
 
@@ -189,7 +285,7 @@ static int page_scrubber()
 	dprintf("page_scrubber starting...\n");
 
 	for(;;) {
-		thread_snooze(100000); // 10ms
+		thread_snooze(100000); // 100ms
 
 		if(page_free_queue.count > 0) {
 			state = int_disable_interrupts();
@@ -454,10 +550,12 @@ static int vm_page_set_state_nolock(vm_page *page, int page_state)
 		case PAGE_STATE_BUSY:
 		case PAGE_STATE_ACTIVE:
 		case PAGE_STATE_INACTIVE:
-		case PAGE_STATE_MODIFIED:
 		case PAGE_STATE_WIRED:
 		case PAGE_STATE_UNUSED:
 			from_q = &page_active_queue;
+			break;
+		case PAGE_STATE_MODIFIED:
+			from_q = &page_modified_queue;
 			break;
 		case PAGE_STATE_FREE:
 			from_q = &page_free_queue;
@@ -473,10 +571,12 @@ static int vm_page_set_state_nolock(vm_page *page, int page_state)
 		case PAGE_STATE_BUSY:
 		case PAGE_STATE_ACTIVE:
 		case PAGE_STATE_INACTIVE:
-		case PAGE_STATE_MODIFIED:
 		case PAGE_STATE_WIRED:
 		case PAGE_STATE_UNUSED:
 			to_q = &page_active_queue;
+			break;
+		case PAGE_STATE_MODIFIED:
+			to_q = &page_modified_queue;
 			break;
 		case PAGE_STATE_FREE:
 			to_q = &page_free_queue;

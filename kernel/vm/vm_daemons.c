@@ -13,8 +13,7 @@
 #include <kernel/vm_cache.h>
 #include <kernel/vm_page.h>
 
-static bool trimming_cycle;
-static mutex modified_pages_available;
+bool trimming_cycle;
 static addr free_memory_low_water;
 static addr free_memory_high_water;
 
@@ -189,21 +188,10 @@ static int page_daemon()
 	}
 }
 
-static int pageout_daemon()
-{
-	dprintf("pageout daemon starting\n");
-
-	for(;;) {
-		mutex_lock(&modified_pages_available);
-	}
-}
-
 int vm_daemon_init()
 {
 	thread_id tid;
 
-	mutex_init(&modified_pages_available, "modified_pages_avail_mutex");
-	mutex_lock(&modified_pages_available);
 	trimming_cycle = false;
 
 	// calculate the free memory low and high water at which point we enter/leave trimming phase
@@ -212,10 +200,6 @@ int vm_daemon_init()
 
 	// create a kernel thread to select pages for pageout
 	tid = thread_create_kernel_thread("page daemon", &page_daemon, THREAD_HIGHEST_PRIORITY);
-	thread_resume_thread(tid);
-
-	// create a kernel thread to schedule modified pages to write
-	tid = thread_create_kernel_thread("pageout daemon", &pageout_daemon, THREAD_HIGHEST_PRIORITY);
 	thread_resume_thread(tid);
 
 	return 0;
