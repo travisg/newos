@@ -171,6 +171,7 @@
 
 //**************************************************************
 
+#if 0
 enum {
 //  NO_ERROR = 0,
   ERR_TIMEOUT = 1,
@@ -180,6 +181,7 @@ enum {
   ERR_DEVICE_FAULT,
   ERR_BUFFER_NOT_EMPTY
 };
+#endif
 
 // generic
 uint8 ide_identify_device(int bus, int device);
@@ -187,8 +189,8 @@ void  ide_raw_init(unsigned int base1, unsigned int base2);
 bool  ide_reset(void);
 
 // ata-specific
-uint8 ata_read_block(ide_device *device, char *buffer, uint32 block, uint16 numSectors);
-uint8 ata_write_block(ide_device *device, const char *buffer, uint32 block, uint16 numSectors);
+int ata_read_sector(ide_device *device, char *buffer, uint32 sector, uint16 numSectors);
+int ata_write_sector(ide_device *device, const char *buffer, uint32 sector, uint16 numSectors);
 bool  ata_get_partitions(ide_device *device);
 uint8 ata_cmd(int bus, int device, int cmd, uint8* buffer);
 

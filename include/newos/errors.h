@@ -101,4 +101,10 @@
 #define ERR_PIPE_GENERAL          (-8192)
 #define ERR_PIPE_WIDOW            (ERR_PIPE_GENERAL-1)
 
+/* Device errors */
+#define ERR_DEV_GENERAL           (-9216)
+#define ERR_DEV_TIMED_OUT         (ERR_DEV_GENERAL-1)
+#define ERR_DEV_HARDWARE_ERROR    (ERR_DEV_GENERAL-2)
+#define ERR_DEV_BUSY              (ERR_DEV_GENERAL-3)
+
 #endif

@@ -10,7 +10,8 @@
 #include <kernel/arch/cpu.h>
 #include <kernel/sem.h>
 #include <kernel/debug.h>
-#include <nulibc/string.h>
+
+#include <string.h>
 
 #include "ide_private.h"
 #include "ide_raw.h"
@@ -42,16 +43,19 @@ unsigned char pio_last_write[10];
 
 static uint8 pio_inbyte(uint16 port)
 {
+//	dprintf("inb 0x%x\n", pio_reg_addrs[port]);
   return in8(pio_reg_addrs[port]);
 }
 
 static uint16 pio_inword(uint16 port)
 {
+//	dprintf("inw 0x%x\n", pio_reg_addrs[port]);
   return in16(pio_reg_addrs[port]);
 }
 
 static void	pio_outbyte(uint16 port, uint8 data)
 {
+//	dprintf("outb 0x%x, 0x%x\n", pio_reg_addrs[port], data);
 	out8(data, pio_reg_addrs[port]);
 }
 
@@ -88,6 +92,8 @@ static bool ide_wait_busy()
 
   for(i=0; i<100000; i++)
 	{
+	  if((i % 10000) == 0)
+		  dprintf("CB_ASTAT = 0x%x\n", pio_inbyte(CB_ASTAT));
       if ((pio_inbyte(CB_ASTAT) & CB_STAT_BSY) == 0)
         return true;
 	}
@@ -100,12 +106,14 @@ static int ide_select_device(int bus, int device)
 	int			i;
 	ide_device	ide = devices[(bus*2) + device];
 
+	dprintf("0a\n");
 	// test for a known, valid device
 	if(ide.device_type == (NO_DEVICE | UNKNOWN_DEVICE))
       return NO_ERROR;
+	dprintf("0b\n");
 	// See if we can get it's attention
 	if(ide_wait_busy() == false)
-	  return ERR_TIMEOUT;
+	  return ERR_DEV_TIMED_OUT;
 	// Select required device
 	pio_outbyte(CB_DH, device ? CB_DH_DEV1 : CB_DH_DEV0);
 	DELAY400NS;
@@ -113,6 +121,7 @@ static int ide_select_device(int bus, int device)
       {
 		// read the device status
 		status = pio_inbyte(CB_STAT);
+		dprintf("0c status 0x%x\n", status);
 		if (ide.device_type == ATA_DEVICE) {
 		    if ((status & (CB_STAT_BSY | CB_STAT_RDY | CB_STAT_SKC))
                     == (CB_STAT_RDY | CB_STAT_SKC))
@@ -122,7 +131,9 @@ static int ide_select_device(int bus, int device)
 			  return NO_ERROR;
 		}
       }
-  return ERR_TIMEOUT;
+	dprintf("0d\n");
+
+  return ERR_DEV_TIMED_OUT;
 }
 
 static void ide_delay(int bus, int device)
@@ -135,7 +146,7 @@ static void ide_delay(int bus, int device)
 	return;
 }
 
-static uint8 reg_pio_data_in(int bus, int dev, int cmd, int fr, int sc,
+static int reg_pio_data_in(int bus, int dev, int cmd, int fr, int sc,
 					unsigned int cyl, int head, int sect, uint8 *output,
 					uint16 numSect, unsigned int multiCnt)
 {
@@ -145,10 +156,9 @@ static uint8 reg_pio_data_in(int bus, int dev, int cmd, int fr, int sc,
     unsigned char cylHigh;
     unsigned char status;
     uint16        *buffer = (uint16*)output;
-    int           i;
 
-//  dprintf("reg_pio_data_in: bus %d dev %d cmd %d fr %d sc %d cyl %d head %d sect %d numSect %d multiCnt %d\n",
-//  	bus, dev, cmd, fr, sc, cyl, head, sect, numSect, multiCnt);
+  dprintf("reg_pio_data_in: bus %d dev %d cmd %d fr %d sc %d cyl %d head %d sect %d numSect %d multiCnt %d\n",
+  	bus, dev, cmd, fr, sc, cyl, head, sect, numSect, multiCnt);
 
     devCtrl = CB_DC_HD15 | CB_DC_NIEN;
     devHead = dev ? CB_DH_DEV1 : CB_DH_DEV0;
@@ -162,8 +172,8 @@ static uint8 reg_pio_data_in(int bus, int dev, int cmd, int fr, int sc,
     if(cmd != CMD_READ_MULTIPLE || !multiCnt)
       multiCnt = 1;
     // select the drive
-    if(ide_select_device(bus, dev) == ERR_TIMEOUT)
-      return ERR_TIMEOUT;
+    if(ide_select_device(bus, dev) == ERR_DEV_TIMED_OUT)
+      return ERR_DEV_TIMED_OUT;
     // set up the registers
     pio_outbyte(CB_DC, devCtrl);
     pio_outbyte(CB_FR, fr);
@@ -183,7 +193,7 @@ static uint8 reg_pio_data_in(int bus, int dev, int cmd, int fr, int sc,
       // check status once only per read
       status = pio_inbyte(CB_STAT);
       if((numSect < 1) && (status & CB_STAT_DRQ))
-        return ERR_BUFFER_NOT_EMPTY;
+        return ERR_DEV_BUSY;
       if (numSect < 1)
         break;
       if((status & (CB_STAT_BSY | CB_STAT_DRQ)) == CB_STAT_DRQ)
@@ -197,18 +207,18 @@ static uint8 reg_pio_data_in(int bus, int dev, int cmd, int fr, int sc,
       }
       // catch all possible fault conditions
       if(status & CB_STAT_BSY)
-        return ERR_DISK_BUSY;
+        return ERR_DEV_BUSY;
       if(status & CB_STAT_DF)
-        return ERR_DEVICE_FAULT;
+        return ERR_DEV_BUSY;
       if(status & CB_STAT_ERR)
-        return ERR_HARDWARE_ERROR;
+        return ERR_DEV_HARDWARE_ERROR;
       if((status & CB_STAT_DRQ) == 0)
-        return ERR_DRQ_NOT_SET;
+        return ERR_DEV_BUSY;
     }
     return NO_ERROR;
 }
 
-static uint8 reg_pio_data_out(int bus, int dev, int cmd, int fr, int sc,
+static int reg_pio_data_out(int bus, int dev, int cmd, int fr, int sc,
 			     unsigned int cyl, int head, int sect, const uint8 *output,
 			     uint16 numSect, unsigned int multiCnt)
 {
@@ -231,8 +241,9 @@ static uint8 reg_pio_data_out(int bus, int dev, int cmd, int fr, int sc,
       multiCnt = 1;
    // select the drive
     if (ide_select_device(bus, dev) != NO_ERROR)
-      return ERR_TIMEOUT;
-    // set up the registers
+      return ERR_DEV_TIMED_OUT;
+	dprintf("1\n");
+	// set up the registers
     pio_outbyte(CB_DC, devCtrl);
     pio_outbyte(CB_FR, fr);
     pio_outbyte(CB_SC, sc);
@@ -244,8 +255,9 @@ static uint8 reg_pio_data_out(int bus, int dev, int cmd, int fr, int sc,
     pio_outbyte(CB_CMD, cmd);
     DELAY400NS;
     if (ide_wait_busy() == false)
-      return ERR_TIMEOUT;
-    status = pio_inbyte(CB_STAT);
+      return ERR_DEV_TIMED_OUT;
+ 	dprintf("2\n");
+   status = pio_inbyte(CB_STAT);
     while (1)
     {
       if ((status & (CB_STAT_BSY | CB_STAT_DRQ)) == CB_STAT_DRQ)
@@ -257,24 +269,27 @@ static uint8 reg_pio_data_out(int bus, int dev, int cmd, int fr, int sc,
         numSect = numSect - multiCnt;
         buffer += wordCnt;
       }
-      // check all possible fault conditions
+	dprintf("3 status 0x%x\n", status);
+
+	  // check all possible fault conditions
       if(status & CB_STAT_BSY)
-        return ERR_DISK_BUSY;
+        return ERR_DEV_BUSY;
       if(status & CB_STAT_DF)
-        return ERR_DEVICE_FAULT;
+        return ERR_DEV_BUSY;
       if(status & CB_STAT_ERR)
-        return ERR_HARDWARE_ERROR;
+        return ERR_DEV_HARDWARE_ERROR;
       if ((status & CB_STAT_DRQ) == 0)
-        return ERR_DRQ_NOT_SET;
+        return ERR_DEV_BUSY;
       ide_delay(bus, dev);
       // ensure drive isn't still busy
       ide_reg_poll();
       if(numSect < 1 && status & (CB_STAT_BSY | CB_STAT_DF | CB_STAT_ERR))
         {
           dprintf("reg_pio_data_out(): status = 0x%x\n", status);
-          return ERR_BUFFER_NOT_EMPTY;
+          return ERR_DEV_BUSY;
         }
     }
+	dprintf("4\n");
     return NO_ERROR;
 }
 
@@ -285,7 +300,7 @@ static void ata_block_to_chs(uint32 block, ide_device *device, int *cylinder, in
   *head = (block % device->hardware_device.heads);
   block /= device->hardware_device.heads;
   *cylinder = block & 0xFFFF;
-//  dprintf("ata_block_to_chs(): block %d -> cyl %d head %d sect %d\n", block, *cylinder, *head, *sect);
+  dprintf("ata_block_to_chs(): block %d -> cyl %d head %d sect %d\n", block, *cylinder, *head, *sect);
 }
 
 static void ata_block_to_lba(uint32 block, ide_device *device, int *cylinder, int *head, int *sect)
@@ -293,30 +308,34 @@ static void ata_block_to_lba(uint32 block, ide_device *device, int *cylinder, in
   *sect = block & 0xFF;
   *cylinder = (block >> 8) & 0xFFFF;
   *head = ((block >> 24) & 0xF) | CB_DH_LBA;
-//  dprintf("ata_block_to_lba(): block %d -> cyl %d head %d sect %d\n", block, *cylinder, *head, *sect);
+  dprintf("ata_block_to_lba(): block %d -> cyl %d head %d sect %d\n", block, *cylinder, *head, *sect);
 }
 
-uint8 ata_read_block(ide_device *device, char *data, uint32 block, uint16 numSectors)
+int ata_read_sector(ide_device *device, char *data, uint32 sector, uint16 numSectors)
 {
   int cyl, head, sect;
 
+	dprintf("ata_read_sector: dev %p, data %p, block 0x%x, sectors 0x%x\n", device, data, sector, numSectors);
+
   if(device->lba_supported)
-    ata_block_to_lba(block, device, &cyl, &head, &sect);
+    ata_block_to_lba(sector, device, &cyl, &head, &sect);
   else
-    ata_block_to_chs(block, device, &cyl, &head, &sect);
+    ata_block_to_chs(sector, device, &cyl, &head, &sect);
 
   return reg_pio_data_in(device->bus, device->device, CMD_READ_SECTORS,
 			          0, numSectors, cyl, head, sect, data, numSectors, 2);
 }
 
-uint8 ata_write_block(ide_device *device, const char *data, uint32 block, uint16 numSectors)
+int ata_write_sector(ide_device *device, const char *data, uint32 sector, uint16 numSectors)
 {
   int cyl, head, sect;
 
+	dprintf("ata_write_sector: dev %p, data %p, block 0x%x, sectors 0x%x\n", device, data, sector, numSectors);
+
   if(device->lba_supported)
-    ata_block_to_lba(block, device, &cyl, &head, &sect);
+    ata_block_to_lba(sector, device, &cyl, &head, &sect);
   else
-    ata_block_to_chs(block, device, &cyl, &head, &sect);
+    ata_block_to_chs(sector, device, &cyl, &head, &sect);
 
   return reg_pio_data_out(device->bus, device->device, CMD_WRITE_SECTORS,
 			          0, numSectors, cyl, head, sect, data, numSectors, 2);
@@ -399,8 +418,8 @@ static uint8 ide_drive_present(int bus, int device)
         ret = ATA_DEVICE;
     }
 
-//  dprintf("ide_drive_present: sector count = %d, sector number = %d,
-//    cl = %x, ch = %x, st = %x, return = %d\n", sc, sn, cl, ch, st, ret);
+  dprintf("ide_drive_present: sector count = %d, sector number = %d, "
+    "cl = %x, ch = %x, st = %x, return = %d\n", sc, sn, cl, ch, st, ret);
 
   return (ret ? ret : NO_DEVICE);
 }
@@ -446,10 +465,9 @@ uint8 ide_identify_device(int bus, int device)
       break;
 
     case ATA_DEVICE:
-      // try for more debug data with optional `identify' command
-      buffer = (uint8*)&ide->hardware_device;
-      if(ata_cmd(bus, device, CMD_IDENTIFY_DEVICE, buffer) == NO_ERROR)
-      {
+	// try for more debug data with optional `identify' command
+	buffer = (uint8*)&ide->hardware_device;
+	if(ata_cmd(bus, device, CMD_IDENTIFY_DEVICE, buffer) == NO_ERROR) {
       ide->device_type = ATA_DEVICE;
       ide_string_conv(ide->hardware_device.model, 40);
       ide_string_conv(ide->hardware_device.serial, 20);
@@ -462,8 +480,8 @@ uint8 ide_identify_device(int bus, int device)
       ide->start_block = 0;
       ide->end_block = ide->sector_count; // - ide->start_block;
 
-  dprintf("ide: disk at bus %d, device %d, model = %s\n",
-    bus, device, ide->hardware_device.model);
+  dprintf("ide %p: disk at bus %d, device %d, model = %s\n",
+    ide, bus, device, ide->hardware_device.model);
   dprintf("ide: disk serial number = %s firmware revision = %s\n",
     ide->hardware_device.serial, ide->hardware_device.firmware);
   dprintf("ide/%d/%d: %dMB; %d cyl, %d head, %d sec, %d bytes/sec  (LBA=%d)\n",
@@ -495,12 +513,13 @@ void ide_raw_init(unsigned int base1, unsigned int base2)
   pio_reg_addrs[CB_DA  ] = base2 + 7;  // 9
 }
 
+#if 0
 static bool ata_get_partition_info(ide_device *device, tPartition *partition, uint32 position)
 {
 	char buffer[512];
 	uint8* partitionBuffer = buffer;
 
-	if (ata_read_block(device, buffer, position, 1) != NO_ERROR) {
+	if (ata_read_sector(device, buffer, position, 1) != NO_ERROR) {
 
 	dprintf("ata_get_partition_info(): unable to read partition table\n");
 
@@ -575,3 +594,5 @@ bool ata_get_partitions(ide_device *device)
     }
   return true;
 }
+#endif
+

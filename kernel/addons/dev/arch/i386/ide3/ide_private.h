@@ -70,7 +70,7 @@ typedef	struct s_ide_device
   bool          lba_supported;
   uint32        start_block;
   uint32        end_block;
-  tPartition    partitions[8];  // 4 Primary + 4 Extended
+//  tPartition    partitions[8];  // 4 Primary + 4 Extended
 } ide_device;
 
 #define	MAX_IDE_BUSES   2
