@@ -9,6 +9,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <fcntl.h>
+#include <unistd.h>
 #include <newos/types.h>
 #include <errno.h>
 

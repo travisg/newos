@@ -6,7 +6,7 @@ STAGE2 = $(BOOT_TARGETDIR)/stage2
 
 ifeq ($(OSTYPE),cygwin)
 	BOOT_IMAGE_TARGET ?= a:
-else ifeq ($(OSTYPE),linux)
+else
 	BOOT_IMAGE_TARGET ?= /dev/fd0
 endif
 
