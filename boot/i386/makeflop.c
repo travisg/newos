@@ -5,6 +5,10 @@
 
 #include "bootblock.h"
 
+#ifndef O_BINARY
+#define O_BINARY 0
+#endif
+
 int main(int argc, char *argv[])
 {
 	struct stat st;
@@ -23,12 +27,16 @@ int main(int argc, char *argv[])
 		return -1;
 
 	filefd = open(argv[1], O_BINARY|O_RDONLY);
-	if(filefd < 0)
+	if(filefd < 0) {
+		printf("error: cannot open input file '%s'\n", argv[1]);
 		return -1;
+	}
 
-	outfd = open(argv[2], O_BINARY|O_WRONLY|O_CREAT);
-	if(outfd < 0)
+	outfd = open(argv[2], O_BINARY|O_WRONLY|O_CREAT|O_TRUNC, 0666);
+	if(outfd < 0) {
+		printf("error: cannot open output file '%s'\n", argv[2]);
 		return -1;
+	}
 
 	// patch the size of the output into bytes 3 & 4 of the bootblock
 	blocks = st.st_size / 512;

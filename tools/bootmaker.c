@@ -92,6 +92,10 @@ struct Elf32_Phdr {
 	Elf32_Word		p_align;
 };
 
+#ifndef O_BINARY
+#define O_BINARY 0
+#endif
+
 static int make_sparcboot = 0;
 
 void die(char *s, char *a)
@@ -432,7 +436,7 @@ void makeboot(section *s, char *outfile)
         if(c==64) die("too many sections (>63)",NULL);
     }
 
-	if((fd = open(outfile, O_BINARY|O_WRONLY|O_CREAT)) < 0) {
+    if((fd = open(outfile, O_BINARY|O_WRONLY|O_CREAT|O_TRUNC, 0666)) < 0) {
         die("cannot write to \"%s\"",outfile);
     }
 
@@ -441,13 +445,11 @@ void makeboot(section *s, char *outfile)
     }
     
     for(i=0;i<c;i++){
-		write(fd, rawdata[i], rawsize[i]);
+        write(fd, rawdata[i], rawsize[i]);
         if(rawsize[i]%4096) 
-			write(fd, fill, 4096 - (rawsize[i]%4096));
+            write(fd, fill, 4096 - (rawsize[i]%4096));
     }
-   	close(fd);
-    
-    
+    close(fd);
 }
 
 int main(int argc, char **argv)
