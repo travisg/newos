@@ -42,7 +42,7 @@ int vsnprintf(char *str, size_t size, char const *format, va_list ap);
 int vasprintf(char **ret, char const *format, va_list ap);
 
 FILE *fopen(char const *, char const *);
-int  *fflush(FILE *);
+int  fflush(FILE *);
 int  fclose(FILE *);
 
 int   feof(FILE *);

@@ -21,6 +21,7 @@ extern int errno;
  */
 #define ENOMEM	0xF0000000
 #define EBADF	0xF0000001
+#define EINVAL	0xF0000002
 
 
 #ifdef __cplusplus
