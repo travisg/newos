@@ -6,7 +6,8 @@
 #ifndef __newos__libcxx_new__
 # define __newos__libcxx_new__
 
-# include <newos/types.h>
+# include <stddef.h> // XXX should be cstddef
+# include <exception>
 
 # ifndef __cplusplus
 #  error new is a C++ header
@@ -14,6 +15,17 @@
 
 namespace std
 {
+	class bad_alloc : public exception
+	{
+	public:
+		bad_alloc() throw();
+		bad_alloc(const bad_alloc &other) throw();
+		bad_alloc &operator=(const bad_alloc &other) throw();
+
+		virtual ~bad_alloc() throw();
+		virtual const char *what() const throw();
+	};
+
 	// for now all new calls are nothrow, but this will have to change at some point.
 	struct nothrow_t {};
 	extern const nothrow_t nothrow;

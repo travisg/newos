@@ -1,0 +1,44 @@
+/*
+** Copyright 2003 Graham Batty. All rights reserved.
+** Distributed under the terms of the NewOS License
+*/
+
+#ifndef __newos__libcxx_exception__
+# define __newos__libcxx_exception__
+
+namespace std
+{
+	class exception
+	{
+	public:
+		exception() throw();
+		exception(const exception &other) throw();
+		exception &operator=(const exception &other) throw();
+
+		virtual ~exception() throw();
+		virtual const char *what() const throw();
+	};
+
+	class bad_exception : public exception
+	{
+	public:
+		bad_exception() throw();
+		bad_exception(const bad_exception &other) throw();
+		bad_exception &operator=(const bad_exception &other) throw();
+
+		virtual ~bad_exception() throw();
+		virtual const char *what() const throw();
+	};
+
+	typedef void (*unexpected_handler)();
+	unexpected_handler set_unexpected(unexpected_handler func) throw();
+	void unexpected();
+
+	typedef void (*terminate_handler)();
+	terminate_handler set_terminate(terminate_handler func) throw();
+	void terminate();
+
+	bool uncaught_exception();
+}
+
+#endif
