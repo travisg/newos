@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -25,6 +25,8 @@
 
 #include <libc/string.h>
 
+#define MAX_ARGS 16
+
 struct int_frame {
 	unsigned int gs;
 	unsigned int fs;
@@ -49,13 +51,12 @@ struct int_frame {
 
 static desc_table *idt = NULL;
 
-
 void interrupt_ack(int n)
 {
 	if(n >= 0x20 && n < 0x30) {
 		// 8239 controlled interrupt
 		if(n > 0x27)
-			out8(0x20, 0xa0);	// EOI to pic 2	
+			out8(0x20, 0xa0);	// EOI to pic 2
 		out8(0x20, 0x20);	// EOI to pic 1
 	}
 }
@@ -64,10 +65,10 @@ static void _set_gate(desc_table *gate_addr, unsigned int addr, int type, int dp
 {
 	unsigned int gate1; // first byte of gate desc
 	unsigned int gate2; // second byte of gate desc
-	
+
 	gate1 = (KERNEL_CODE_SEG << 16) | (0x0000ffff & addr);
 	gate2 = (0xffff0000 & addr) | 0x8000 | (dpl << 13) | (type << 8);
-	
+
 	gate_addr->a = gate1;
 	gate_addr->b = gate2;
 }
@@ -117,7 +118,7 @@ void arch_int_enable_interrupts()
 int arch_int_disable_interrupts()
 {
 	int flags;
-	
+
 	asm("pushfl;
 		popl %0;
 		cli" : "=g" (flags));
@@ -154,9 +155,9 @@ void i386_handle_trap(struct int_frame frame)
 		case 14: {
 			unsigned int cr2;
 			addr newip;
-		
+
 			asm volatile("movl %%cr2, %0;" : "=g" (cr2));
-			
+
 			// get the old interrupt enable/disable state and restore to that
 			if(frame.flags & 0x200) {
 				dprintf("page_fault: enabling interrupts\n");
@@ -167,7 +168,7 @@ void i386_handle_trap(struct int_frame frame)
 				(frame.error_code & 0x4) != 0,
 				&newip);
 			if(newip != 0) {
-				// the page fault handler wants us to modify the iframe to set the 
+				// the page fault handler wants us to modify the iframe to set the
 				// IP the cpu will return to to be this ip
 				frame.eip = newip;
 			}
@@ -175,10 +176,43 @@ void i386_handle_trap(struct int_frame frame)
 		}
 		case 99: {
 			uint64 retcode;
+			unsigned int args[MAX_ARGS];
+			int rc;
+
 
 			thread_atkernel_entry();
 
-			ret = syscall_dispatcher(frame.eax, frame.ebx, frame.ecx, frame.edx, frame.esi, frame.edi, frame.ebp, &retcode);
+#if 0
+{
+			int i;
+
+			dprintf("i386_handle_trap: syscall %d, count %d, ptr 0x%x\n", frame.eax, frame.ecx, frame.edx);
+			dprintf(" call stack:\n");
+			for(i=0; i<frame.ecx; i++)
+				dprintf("\t0x%x\n", ((unsigned int *)frame.edx)[i]);
+}
+#endif
+			/*
+			** syscall interface works as such:
+			** eax has syscall #
+			** ecx has number of args (0-16)
+			** edx has pointer to buffer containing args from first to last
+			** each is verified to make sure someone doesn't try to clobber it
+			*/
+			if(frame.ecx <= MAX_ARGS) {
+				if((addr)frame.edx >= KERNEL_BASE && (addr)frame.edx <= KERNEL_TOP) {
+					retcode =  ERR_VM_BAD_USER_MEMORY;
+				} else {
+					rc = user_memcpy(args, (void *)frame.edx, frame.ecx * sizeof(unsigned int));
+					if(rc < 0)
+						retcode = ERR_VM_BAD_USER_MEMORY;
+					else
+						ret = syscall_dispatcher(frame.eax, (void *)args, &retcode);
+				}
+			} else {
+				// want to pass too many args into the system
+				retcode = ERR_INVALID_ARGS;
+			}
 			frame.eax = retcode & 0xffffffff;
 			frame.edx = retcode >> 32;
 			break;

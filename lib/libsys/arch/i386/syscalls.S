@@ -1,7 +1,16 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
+
+/*
+** syscall interface works as such:
+** eax has syscall #
+** ecx has number of args (0-16)
+** edx has pointer to buffer containing args from first to last
+** each is verified to make sure someone doesnt try to clobber it
+*/
+
 #define SYSCALL0(name, n) \
 .globl name; \
 .align 8; \
@@ -22,7 +31,7 @@ name: \
 name: \
 	movl	$n,%eax; \
 	jmp		syscall2
-	
+
 #define SYSCALL3(name, n) \
 .globl name; \
 .align 8; \
@@ -50,7 +59,7 @@ name: \
 name: \
 	movl	$n,%eax; \
 	jmp		syscall6
-	
+
 SYSCALL0(sys_null, 0)
 SYSCALL2(sys_mount, 1)
 SYSCALL1(sys_unmount, 2)
@@ -92,75 +101,108 @@ SYSCALL1(sys_thread_resume_thread, 37);
 SYSCALL1(sys_proc_kill_proc, 38);
 SYSCALL0(sys_get_current_proc_id, 39);
 
+/* we will optimize by just passing a ptr to the place where the caller
+** would have dumped the args */
+
 syscall0:
+	movl	$0, %ecx
+	lea		4(%esp), %edx
 	int		$99
-	ret	
+	ret
 
 syscall1:
-	pushl	%ebx
-	movl	8(%esp), %ebx
+	movl	$1, %ecx
+	lea		4(%esp), %edx
 	int		$99
-	popl	%ebx
 	ret
 
 syscall2:
-	pushl	%ebx
-	movl	8(%esp), %ebx
-	movl	12(%esp), %ecx
+	movl	$2, %ecx
+	lea		4(%esp), %edx
 	int		$99
-	popl	%ebx
 	ret
-	
+
 syscall3:
-	pushl	%ebx
-	movl	8(%esp), %ebx
-	movl	12(%esp), %ecx
-	movl	16(%esp), %edx
+	movl	$3, %ecx
+	lea		4(%esp), %edx
 	int		$99
-	popl	%ebx
 	ret
 
 syscall4:
-	pushl	%ebx
-	pushl	%esi
-	movl	12(%esp), %ebx
-	movl	16(%esp), %ecx
-	movl	20(%esp), %edx
-	movl	24(%esp), %esi
+	movl	$4, %ecx
+	lea		4(%esp), %edx
 	int		$99
-	popl	%esi
-	popl	%ebx
 	ret
 
 syscall5:
-	pushl	%ebx
-	pushl	%esi
-	pushl	%edi
-	movl	16(%esp), %ebx
-	movl	20(%esp), %ecx
-	movl	24(%esp), %edx
-	movl	28(%esp), %esi
-	movl	32(%esp), %edi
+	movl	$5, %ecx
+	lea		4(%esp), %edx
 	int		$99
-	popl	%edi
-	popl	%esi
-	popl	%ebx
 	ret
 
 syscall6:
-	pushl	%ebx
-	pushl	%esi
-	pushl	%edi
-	pushl	%ebp
-	movl	20(%esp), %ebx
-	movl	24(%esp), %ecx
-	movl	28(%esp), %edx
-	movl	32(%esp), %esi
-	movl	36(%esp), %edi
-	movl	40(%esp), %ebp
+	movl	$6, %ecx
+	lea		4(%esp), %edx
 	int		$99
-	popl	%ebp
-	popl	%edi
-	popl	%esi
-	popl	%ebx
 	ret
+
+syscall7:
+	movl	$7, %ecx
+	lea		4(%esp), %edx
+	int		$99
+	ret
+
+syscall8:
+	movl	$8, %ecx
+	lea		4(%esp), %edx
+	int		$99
+	ret
+
+syscall9:
+	movl	$9, %ecx
+	lea		4(%esp), %edx
+	int		$99
+	ret
+
+syscall10:
+	movl	$10, %ecx
+	lea		4(%esp), %edx
+	int		$99
+	ret
+
+syscall11:
+	movl	$11, %ecx
+	lea		4(%esp), %edx
+	int		$99
+	ret
+
+syscall12:
+	movl	$12, %ecx
+	lea		4(%esp), %edx
+	int		$99
+	ret
+
+syscall13:
+	movl	$13, %ecx
+	lea		4(%esp), %edx
+	int		$99
+	ret
+
+syscall14:
+	movl	$14, %ecx
+	lea		4(%esp), %edx
+	int		$99
+	ret
+
+syscall15:
+	movl	$15, %ecx
+	lea		4(%esp), %edx
+	int		$99
+	ret
+
+syscall16:
+	movl	$16, %ecx
+	lea		4(%esp), %edx
+	int		$99
+	ret
+

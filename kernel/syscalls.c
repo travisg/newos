@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -13,8 +13,24 @@
 
 #define INT32TOINT64(x, y) ((int64)(x) | ((int64)(y) << 32))
 
-int syscall_dispatcher(unsigned long call_num, unsigned long arg0, unsigned long arg1,
-	unsigned long arg2, unsigned long arg3, unsigned long arg4, unsigned long arg5, uint64 *call_ret)
+#define arg0  (((uint32 *)arg_buffer)[0])
+#define arg1  (((uint32 *)arg_buffer)[1])
+#define arg2  (((uint32 *)arg_buffer)[2])
+#define arg3  (((uint32 *)arg_buffer)[3])
+#define arg4  (((uint32 *)arg_buffer)[4])
+#define arg5  (((uint32 *)arg_buffer)[5])
+#define arg6  (((uint32 *)arg_buffer)[6])
+#define arg7  (((uint32 *)arg_buffer)[7])
+#define arg8  (((uint32 *)arg_buffer)[8])
+#define arg9  (((uint32 *)arg_buffer)[9])
+#define arg10 (((uint32 *)arg_buffer)[10])
+#define arg11 (((uint32 *)arg_buffer)[11])
+#define arg12 (((uint32 *)arg_buffer)[12])
+#define arg13 (((uint32 *)arg_buffer)[13])
+#define arg14 (((uint32 *)arg_buffer)[14])
+#define arg15 (((uint32 *)arg_buffer)[15])
+
+int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_ret)
 {
 //	dprintf("syscall_dispatcher: call 0x%x, arg0 0x%x, arg1 0x%x arg2 0x%x arg3 0x%x arg4 0x%x\n",
 //		call_num, arg0, arg1, arg2, arg3, arg4);
