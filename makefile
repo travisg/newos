@@ -33,15 +33,14 @@ FINAL := $(call TOBUILDDIR, final)
 final: $(FINAL)
 
 # includes the config of the build
-include make.config
-include make.config.$(ARCH)
+include config/make.config
 
 include apps/makefile
 include kernel/makefile
 include kernel/addons/makefile
 include tools/makefile
 include lib/makefile
-include boot/$(ARCH)/makefile
+include boot/$(PLATFORM)/makefile
 
 clean: $(CLEAN)
 	rm -f $(ALL_OBJS)
