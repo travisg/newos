@@ -2,6 +2,7 @@
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
+#include <unistd.h>
 #include <sys/syscalls.h>
 #include <libsys/stdio.h>
 
@@ -10,12 +11,12 @@ static void setup_io()
 	int i;
 
 	for(i= 0; i< 256; i++) {
-		sys_close(i);
+		close(i);
 	}
 
-	sys_open("/dev/console", STREAM_TYPE_DEVICE, 0); /* stdin  */
-	sys_open("/dev/console", STREAM_TYPE_DEVICE, 0); /* stdout */
-	sys_open("/dev/console", STREAM_TYPE_DEVICE, 0); /* stderr */
+	open("/dev/console", 0); /* stdin  */
+	open("/dev/console", 0); /* stdout */
+	open("/dev/console", 0); /* stderr */
 }
 
 int main()

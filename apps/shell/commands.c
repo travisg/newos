@@ -3,6 +3,7 @@
 ** Distributed under the terms of the NewOS License.
 */
 #include <string.h>
+#include <unistd.h>
 #include <sys/syscalls.h>
 #include <libsys/stdio.h>
 #include <libsys/malloc.h>
@@ -131,21 +132,21 @@ int cmd_cat(int argc, char *argv[])
 		return 0;
 	}
 
-	fd = sys_open(argv[1], STREAM_TYPE_FILE, 0);
+	fd = open(argv[1], STREAM_TYPE_FILE, 0);
 	if(fd < 0) {
-		printf("cat: sys_open() returned error: %s!\n", strerror(fd));
+		printf("cat: open() returned error: %s!\n", strerror(fd));
 		goto done_cat;
 	}
 
 	for(;;) {
-		rc = sys_read(fd, buf, -1, sizeof(buf) -1);
+		rc = read(fd, buf, sizeof(buf) -1);
 		if(rc <= 0)
 			break;
 
 		buf[rc] = '\0';
 		printf("%s", buf);
 	}
-	sys_close(fd);
+	close(fd);
 
 done_cat:
 	return 0;
@@ -236,20 +237,20 @@ int cmd_ls(int argc, char *argv[])
 			char buf[1024];
 			int len;
 
-			fd = sys_open(arg, STREAM_TYPE_DIR, 0);
+			fd = open(arg, STREAM_TYPE_DIR, 0);
 			if(fd < 0) {
-				printf("ls: sys_open() returned error: %s!\n", strerror(fd));
+				printf("ls: open() returned error: %s!\n", strerror(fd));
 				goto done_ls;
 			}
 
 			for(;;) {
-				rc = sys_read(fd, buf, -1, sizeof(buf));
+				rc = read(fd, buf, sizeof(buf));
 				if(rc <= 0)
 					break;
 				printf("%s\n", buf);
 				count++;
 			}
-			sys_close(fd);
+			close(fd);
 			break;
 		}
 		default:

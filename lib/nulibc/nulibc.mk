@@ -8,8 +8,9 @@ include $(NULIBC_DIR)/stdio/nulibc_stdio.mk
 include $(NULIBC_DIR)/stdlib/nulibc_stdlib.mk
 include $(NULIBC_DIR)/string/nulibc_string.mk
 include $(NULIBC_DIR)/system/nulibc_system.mk
+include $(NULIBC_DIR)/unistd/nulibc_unistd.mk
 
-CFLAGS += -I$(INCL
+CFLAGS += 
 
 NULIBC_OBJS = \
 	$(NULIBC_HOARD_OBJS) \
@@ -17,7 +18,8 @@ NULIBC_OBJS = \
 	$(NULIBC_STDIO_OBJS) \
 	$(NULIBC_STDLIB_OBJS) \
 	$(NULIBC_STRING_OBJS) \
-	$(NULIBC_SYSTEM_OBJS)
+	$(NULIBC_SYSTEM_OBJS) \
+	$(NULIBC_UNISTD_OBJS)
 
 DEPS += $(NULIBC_OBJS:.o=.d)
 

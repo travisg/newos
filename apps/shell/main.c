@@ -4,6 +4,7 @@
 */
 #include <types.h>
 #include <string.h>
+#include <unistd.h>
 #include <libc/printf.h>
 #include <libc/ctype.h>
 #include <sys/syscalls.h>
@@ -169,9 +170,9 @@ static int launch(int (*cmd)(int, char **), int argc, char **argv, char *r_in, c
 	int err = 0;
 
 	if(strcmp(r_in, "")!= 0) {
-		new_in = sys_open(r_in, STREAM_TYPE_ANY, 0);
+		new_in = open(r_in, STREAM_TYPE_ANY, 0);
 	} else {
-		new_in = sys_dup(0);
+		new_in = dup(0);
 	}
 	if(new_in < 0) {
 		printf("cannot open redirection source %s: %s\n", r_in, strerror(new_in));
@@ -179,7 +180,7 @@ static int launch(int (*cmd)(int, char **), int argc, char **argv, char *r_in, c
 	}
 
 	if(strcmp(r_out, "")!= 0) {
-		new_out = sys_open(r_out, STREAM_TYPE_ANY, 0);
+		new_out = open(r_out, STREAM_TYPE_ANY, 0);
 
 		if(new_out < 0) {
 			err = sys_create(r_out,STREAM_TYPE_FILE);
@@ -187,10 +188,10 @@ static int launch(int (*cmd)(int, char **), int argc, char **argv, char *r_in, c
 				printf("cannot create redirection target %s: %s\n", r_out, strerror(err));
 				goto err;
 			}
-			new_out = sys_open(r_out,STREAM_TYPE_ANY, 0);
+			new_out = open(r_out,STREAM_TYPE_ANY, 0);
 		}
 	} else {
-		new_out = sys_dup(1);
+		new_out = dup(1);
 	}
 
 	if(new_out < 0) {
@@ -198,25 +199,25 @@ static int launch(int (*cmd)(int, char **), int argc, char **argv, char *r_in, c
 		printf("cannot open redirection target %s: %s\n", r_out, strerror(err));
 		goto err;
 	}
-	saved_in = sys_dup(0);
-	saved_out= sys_dup(1);
+	saved_in = dup(0);
+	saved_out= dup(1);
 
-	sys_dup2(new_in, 0);
-	sys_dup2(new_out, 1);
-	sys_close(new_in);
-	sys_close(new_out);
+	dup2(new_in, 0);
+	dup2(new_out, 1);
+	close(new_in);
+	close(new_out);
 
 	retval= cmd(argc, argv);
 
-	sys_dup2(saved_in, 0);
-	sys_dup2(saved_out, 1);
-	sys_close(saved_in);
-	sys_close(saved_out);
+	dup2(saved_in, 0);
+	dup2(saved_out, 1);
+	close(saved_in);
+	close(saved_out);
 
 	return retval;
 
 err:
-	sys_close(new_in);
+	close(new_in);
 
 	return 0;
 }
