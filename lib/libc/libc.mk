@@ -24,6 +24,7 @@ LIBC_OBJS = \
 	$(LIBC_OBJ_DIR)/strspn.o \
 	$(LIBC_OBJ_DIR)/strstr.o \
 	$(LIBC_OBJ_DIR)/strtok.o \
+	$(LIBC_OBJ_DIR)/strerror.o \
 	$(LIBC_OBJ_DIR)/vsprintf.o
 
 DEPS += $(LIBC_OBJS:.o=.d)

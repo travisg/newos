@@ -50,7 +50,7 @@ int cmd_mount(int argc, char *argv[])
 
 	rc = sys_mount(argv[1], argv[2], argv[3], NULL);
 	if (rc < 0) {
-		printf("sys_mount() returned error %d\n", rc);
+		printf("sys_mount() returned error: %s\n", strerror(rc));
 	} else {
 		printf("%s successfully mounted on %s.\n", argv[2], argv[1]);
 	}
@@ -69,7 +69,7 @@ int cmd_unmount(int argc, char *argv[])
 
 	rc = sys_unmount(argv[1]);
 	if (rc < 0) {
-		printf("sys_unmount() returned error %d\n", rc);
+		printf("sys_unmount() returned error: %s\n", strerror(rc));
 	} else {
 		printf("%s successfully unmounted.\n", argv[1]);
 	}
@@ -88,7 +88,7 @@ int cmd_mkdir(int argc, char *argv[])
 
 	rc = sys_create(argv[1], STREAM_TYPE_DIR);
 	if (rc < 0) {
-		printf("sys_mkdir() returned error %d\n", rc);
+		printf("sys_mkdir() returned error: %s\n", strerror(rc));
 	} else {
 		printf("%s successfully created.\n", argv[1]);
 	}
@@ -110,7 +110,7 @@ int cmd_cat(int argc, char *argv[])
 
 	fd = sys_open(argv[1], STREAM_TYPE_FILE, 0);
 	if(fd < 0) {
-		printf("cat: sys_open() returned %d!\n", fd);
+		printf("cat: sys_open() returned error: %s!\n", strerror(fd));
 		goto done_cat;
 	}
 
@@ -139,7 +139,7 @@ int cmd_cd(int argc, char *argv[])
 
 	rc = sys_setcwd(argv[1]);
 	if (rc < 0) {
-		printf("cd: sys_setcwd() returned error %d!\n", rc);
+		printf("cd: sys_setcwd() returned error: %s!\n", strerror(rc));
 	}
 
 	return 0;
@@ -152,7 +152,7 @@ int cmd_pwd(int argc, char *argv[])
 
 	rc = sys_getcwd(buf,256);
 	if (rc < 0) {
-		printf("cd: sys_getcwd() returned error %d!\n", rc);
+		printf("cd: sys_getcwd() returned error: %s!\n", strerror(rc));
 	}
 	buf[256] = 0;
 
@@ -198,8 +198,8 @@ int cmd_ls(int argc, char *argv[])
 
 	rc = sys_rstat(arg, &stat);
 	if(rc < 0) {
-		printf("sys_rstat() returned error %d!\n", rc);
-		goto done_ls;
+		printf("sys_rstat() returned error: %s!\n", strerror(rc));
+		goto err_ls;
 	}
 
 	switch(stat.type) {
@@ -215,7 +215,7 @@ int cmd_ls(int argc, char *argv[])
 
 			fd = sys_open(arg, STREAM_TYPE_DIR, 0);
 			if(fd < 0) {
-				printf("ls: sys_open() returned %d!\n", fd);
+				printf("ls: sys_open() returned error: %s!\n", strerror(fd));
 				goto done_ls;
 			}
 
@@ -236,6 +236,7 @@ int cmd_ls(int argc, char *argv[])
 
 done_ls:
 	printf("%d files found\n", count);
+err_ls:
 	return 0;
 }
 

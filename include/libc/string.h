@@ -36,6 +36,7 @@ int 	atoi(const char *num);
 unsigned int atoui(const char *num);
 long atol(const char *num);
 unsigned long atoul(const char *num);
+const char*	strerror(int errnum);
 
 #ifdef __cplusplus
 }
