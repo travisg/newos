@@ -3,7 +3,6 @@
 
 #include "Region.h"
 #include "GraphicsContext.h"
-#include <sys/syscalls.h>
 #include <win/Event.h>
 #include <win/WindowFlags.h>
 

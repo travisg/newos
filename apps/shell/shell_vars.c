@@ -1,7 +1,6 @@
 //#include <types.h>
 #include <string.h>
 #include <ctype.h>
-#include <sys/syscalls.h>
 #include <stdio.h>
 #include <stdlib.h>
 

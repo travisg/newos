@@ -5,7 +5,6 @@
 */
 /* Code modified by Justin Smith 2003/06/17 */
 #include <stdio.h>
-#include <sys/syscalls.h>
 #include <errno.h>
 #include <unistd.h>
 

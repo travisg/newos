@@ -1,7 +1,6 @@
 #ifndef _WINDOW_MANAGER_H
 #define _WINDOW_MANAGER_H
 
-#include <sys/syscalls.h>
 #include <win/Rect.h>
 
 class Renderer;

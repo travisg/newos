@@ -16,8 +16,6 @@
 #if KERNEL
 #include <kernel/vfs.h>
 #define read(fd, buf, size) sys_read(fd, buf, -1, size)
-#else
-#include <sys/syscalls.h>
 #endif
 
 int _v_scanf( int (*_read)(void*), void (*_push)(void*, unsigned char),  void* arg, const unsigned char *, va_list);
