@@ -13,6 +13,7 @@
 
 #define TRAP_ERRC(name, vector) \
 .globl name; \
+.type x,@function; \
 .align 8; \
 name: \
 	push	$vector; \
@@ -20,6 +21,7 @@ name: \
 
 #define TRAP(name, vector) \
 .globl name; \
+.type x,@function; \
 .align 8; \
 name: \
 	push	$0; \

@@ -1,4 +1,8 @@
-/* $Id$
+/*
+** Portions Copyright 2001-2004, Travis Geiselbrecht. All rights reserved.
+** Distributed under the terms of the NewOS License.
+*/
+/*
 **
 ** Copyright 1998 Brian J. Swetland
 ** All rights reserved.
@@ -57,6 +61,7 @@ typedef struct {
 #define BE_TYPE_CODE         3  /* executable code object                   */
 #define BE_TYPE_DATA         4  /* raw data object                          */
 #define BE_TYPE_ELF32        5  /* 32bit ELF object                         */
+#define BE_TYPE_ELF64        6  /* 64bit ELF object                         */
 
 /* for BE_TYPE_CODE */
 #define be_code_vaddr be_extra0 /* virtual address (rel offset 0)           */

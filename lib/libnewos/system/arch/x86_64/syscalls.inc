@@ -17,8 +17,8 @@
 .type name,@function; \
 .align 8; \
 name: \
-	mov		$n,%rax; \
-	mov		$0,%r11; \
+	mov		$n,%ax; \
+	mov		$0,%r11b; \
 	syscall; \
 	ret
 
@@ -27,8 +27,8 @@ name: \
 .type name,@function; \
 .align 8; \
 name: \
-	mov		$n,%rax; \
-	mov		$0,%r11; \
+	mov		$n,%ax; \
+	mov		$0,%r11b; \
 	syscall; \
 	ret
 
@@ -37,8 +37,8 @@ name: \
 .type name,@function; \
 .align 8; \
 name: \
-	mov		$n,%rax; \
-	mov		$0,%r11; \
+	mov		$n,%ax; \
+	mov		$0,%r11b; \
 	mov		%rcx,%r10; \
 	syscall; \
 	ret
@@ -48,8 +48,8 @@ name: \
 .type name,@function; \
 .align 8; \
 name: \
-	mov		$n,%rax; \
-	mov		$0,%r11; \
+	mov		$n,%ax; \
+	mov		$0,%r11b; \
 	mov		%rcx,%r10; \
 	syscall; \
 	ret
@@ -59,8 +59,8 @@ name: \
 .type name,@function; \
 .align 8; \
 name: \
-	mov		$n,%rax; \
-	mov		$0,%r11; \
+	mov		$n,%ax; \
+	mov		$0,%r11b; \
 	mov		%rcx,%r10; \
 	syscall; \
 	ret
@@ -70,8 +70,8 @@ name: \
 .type name,@function; \
 .align 8; \
 name: \
-	mov		$n,%rax; \
-	mov		$0,%r11; \
+	mov		$n,%ax; \
+	mov		$0,%r11b; \
 	mov		%rcx,%r10; \
 	syscall; \
 	ret
@@ -81,8 +81,8 @@ name: \
 .type name,@function; \
 .align 8; \
 name: \
-	mov		$n,%rax; \
-	mov		$0,%r11; \
+	mov		$n,%ax; \
+	mov		$0,%r11b; \
 	mov		%rcx,%r10; \
 	syscall; \
 	ret
@@ -92,8 +92,8 @@ name: \
 .type name,@function; \
 .align 8; \
 name: \
-	mov		$n,%rax; \
-	mov		$1,%r11; \
+	mov		$n,%ax; \
+	mov		$1,%r11b; \
 	mov		%rcx,%r10; \
 	syscall; \
 	ret
@@ -103,8 +103,8 @@ name: \
 .type name,@function; \
 .align 8; \
 name: \
-	mov		$n,%rax; \
-	mov		$2,%r11; \
+	mov		$n,%ax; \
+	mov		$2,%r11b; \
 	mov		%rcx,%r10; \
 	syscall; \
 	ret
@@ -114,8 +114,8 @@ name: \
 .type name,@function; \
 .align 8; \
 name: \
-	mov		$n,%rax; \
-	mov		$3,%r11; \
+	mov		$n,%ax; \
+	mov		$3,%r11b; \
 	mov		%rcx,%r10; \
 	syscall; \
 	ret
@@ -125,8 +125,8 @@ name: \
 .type name,@function; \
 .align 8; \
 name: \
-	mov		$n,%rax; \
-	mov		$4,%r11; \
+	mov		$n,%ax; \
+	mov		$4,%r11b; \
 	mov		%rcx,%r10; \
 	syscall; \
 	ret
@@ -136,8 +136,8 @@ name: \
 .type name,@function; \
 .align 8; \
 name: \
-	mov		$n,%rax; \
-	mov		$5,%r11; \
+	mov		$n,%ax; \
+	mov		$5,%r11b; \
 	mov		%rcx,%r10; \
 	syscall; \
 	ret
@@ -147,8 +147,8 @@ name: \
 .type name,@function; \
 .align 8; \
 name: \
-	mov		$n,%rax; \
-	mov		$6,%r11; \
+	mov		$n,%ax; \
+	mov		$6,%r11b; \
 	mov		%rcx,%r10; \
 	syscall; \
 	ret
@@ -158,8 +158,8 @@ name: \
 .type name,@function; \
 .align 8; \
 name: \
-	mov		$n,%rax; \
-	mov		$7,%r11; \
+	mov		$n,%ax; \
+	mov		$7,%r11b; \
 	mov		%rcx,%r10; \
 	syscall; \
 	ret
@@ -169,8 +169,8 @@ name: \
 .type name,@function; \
 .align 8; \
 name: \
-	mov		$n,%rax; \
-	mov		$8,%r11; \
+	mov		$n,%ax; \
+	mov		$8,%r11b; \
 	mov		%rcx,%r10; \
 	syscall; \
 	ret
@@ -180,8 +180,8 @@ name: \
 .type name,@function; \
 .align 8; \
 name: \
-	mov		$n,%rax; \
-	mov		$9,%r11; \
+	mov		$n,%ax; \
+	mov		$9,%r11b; \
 	mov		%rcx,%r10; \
 	syscall; \
 	ret

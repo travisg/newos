@@ -1,5 +1,5 @@
 /*
-** Some Portions Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Portions Copyright 2001-2004, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 /*
@@ -54,6 +54,8 @@
 
 #define SWAP32(x) \
 	((((x) & 0xff) << 24) | (((x) & 0xff00) << 8) | (((x) & 0xff0000) >> 8) | (((x) & 0xff000000) >> 24))
+#define SWAP64(x) \
+	SWAP32((x) << 32) | SWAP32((x) >> 32)
 
 #if xBIG_ENDIAN
 #define HOST_TO_BENDIAN32(x) (x)
@@ -122,6 +124,43 @@ struct Elf32_Phdr {
 	Elf32_Word		p_memsz;
 	Elf32_Word		p_flags;
 	Elf32_Word		p_align;
+};
+
+// ELF64 stuff
+typedef unsigned long long Elf64_Addr;
+typedef unsigned short Elf64_Quarter;
+typedef unsigned int Elf64_Half;
+typedef unsigned long long Elf64_Off;
+typedef unsigned long long Elf64_Size;
+typedef long long Elf64_Sword;
+typedef unsigned long long Elf64_Word;
+
+struct Elf64_Ehdr {
+	unsigned char	e_ident[EI_NIDENT];
+	Elf64_Quarter	e_type;
+	Elf64_Quarter	e_machine;
+	Elf64_Half		e_version;
+	Elf64_Addr		e_entry;
+	Elf64_Off		e_phoff;
+	Elf64_Off		e_shoff;
+	Elf64_Half		e_flags;
+	Elf64_Quarter	e_ehsize;
+	Elf64_Quarter	e_phentsize;
+	Elf64_Quarter	e_phnum;
+	Elf64_Quarter	e_shentsize;
+	Elf64_Quarter	e_shnum;
+	Elf64_Quarter	e_shstrndx;
+};
+
+struct Elf64_Phdr {
+	Elf64_Half		p_type;
+	Elf64_Half		p_flags;
+	Elf64_Off		p_offset;
+	Elf64_Addr		p_vaddr;
+	Elf64_Addr		p_paddr;
+	Elf64_Size		p_filesz;
+	Elf64_Size		p_memsz;
+	Elf64_Size		p_align;
 };
 
 #ifndef O_BINARY
@@ -388,7 +427,7 @@ char *getvaldef(section *s, char *name, char *def)
     return def;
 }
 
-Elf32_Addr elf_find_entry(void *buf, int size)
+Elf32_Off elf32_find_entry(void *buf, int size)
 {
 	struct Elf32_Ehdr *header;
 	struct Elf32_Phdr *pheader;
@@ -398,11 +437,20 @@ Elf32_Addr elf_find_entry(void *buf, int size)
 
 #define SWAPIT(x) ((byte_swap) ? SWAP32(x) : (x))
 
-	if(memcmp(cbuf, ELF_MAGIC, sizeof(ELF_MAGIC)-1) != 0)
+	if(memcmp(cbuf, ELF_MAGIC, sizeof(ELF_MAGIC)-1) != 0) {
+		fprintf(stderr, "file does not have proper magic value\n");
 		return 0;
+	}
 
-	if(cbuf[EI_CLASS] != ELFCLASS32)
+	if(cbuf[EI_CLASS] != ELFCLASS32) {
+		fprintf(stderr, "wrong elf class (%d)\n", cbuf[EI_CLASS]);
 		return 0;
+	}
+
+	if(cbuf[EI_VERSION] != 1) {
+		fprintf(stderr, "elf file has unsupported version (%d)\n", cbuf[EI_VERSION]);
+		return 0;
+	}
 
 	byte_swap = 0;
 #if xBIG_ENDIAN
@@ -420,8 +468,52 @@ Elf32_Addr elf_find_entry(void *buf, int size)
 
 	// XXX only looking at the first program header. Should be ok
 	return SWAPIT(pheader->p_offset);
-}
 #undef SWAPIT
+}
+
+Elf64_Off elf64_find_entry(void *buf, int size)
+{
+	struct Elf64_Ehdr *header;
+	struct Elf64_Phdr *pheader;
+	char *cbuf = buf;
+	int byte_swap;
+	int index;
+
+#define SWAPIT(x) ((byte_swap) ? SWAP64(x) : (x))
+
+	if(memcmp(cbuf, ELF_MAGIC, sizeof(ELF_MAGIC)-1) != 0) {
+		fprintf(stderr, "file does not have proper magic value\n");
+		return 0;
+	}
+	
+	if(cbuf[EI_CLASS] != ELFCLASS64) {
+		fprintf(stderr, "wrong elf class (%d)\n", cbuf[EI_CLASS]);
+		return 0;
+	}
+
+	if(cbuf[EI_VERSION] != 1) {
+		fprintf(stderr, "elf file has unsupported version (%d)\n", cbuf[EI_VERSION]);
+		return 0;
+	}
+
+	byte_swap = 0;
+#if xBIG_ENDIAN
+	if(cbuf[EI_DATA] == ELFDATA2LSB) {
+		byte_swap = 1;
+	}
+#else
+	if(cbuf[EI_DATA] == ELFDATA2MSB) {
+		byte_swap = 1;
+	}
+#endif
+
+	header = (struct Elf64_Ehdr *)cbuf;
+	pheader = (struct Elf64_Phdr *)&cbuf[SWAPIT(header->e_phoff)];
+
+	// XXX only looking at the first program header. Should be ok
+	return SWAPIT(pheader->p_offset);
+#undef SWAPIT
+}
 
 #define centry bdir.bd_entry[c]
 void makeboot(section *s, char *outfile)
@@ -502,7 +594,12 @@ void makeboot(section *s, char *outfile)
         if(!strcmp(type,"elf32")){
             centry.be_type = fix(BE_TYPE_ELF32);
             centry.be_code_vaddr = 0;
-            centry.be_code_ventr = fix(elf_find_entry(rawdata[c], rawsize[c]));
+            centry.be_code_ventr = fix(elf32_find_entry(rawdata[c], rawsize[c]));
+        }
+        if(!strcmp(type,"elf64")){
+            centry.be_type = fix(BE_TYPE_ELF64);
+            centry.be_code_vaddr = 0;
+            centry.be_code_ventr = fix(elf64_find_entry(rawdata[c], rawsize[c]));
         }
 
         if(centry.be_type == BE_TYPE_NONE){
