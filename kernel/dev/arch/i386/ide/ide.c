@@ -205,7 +205,7 @@ static ssize_t ide_write(dev_cookie _cookie, const void *buf, off_t pos, ssize_t
 	uint32		currentSector;
 	uint32		sectorsToWrite;
 
-	dprintf("ide_write: entry buf %p, pos 0x%Lx, *len %ld\n", buf, pos, len);
+	dprintf("ide_write: entry buf %p, pos 0x%Lx, *len %Ld\n", buf, pos, (long long)len);
 	if(cookie == NULL) {
 		return ERR_INVALID_ARGS;
 	}

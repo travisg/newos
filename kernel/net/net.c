@@ -75,8 +75,8 @@ static int net_test_thread3(void *unused)
 		char buf[64];
 
 		bytes_read = socket_recvfrom(id, buf, sizeof(buf), &saddr);
-		dprintf("net_test_thread3: read %ld bytes from host 0x%x, port %d: '%s'\n",
-			bytes_read, NETADDR_TO_IPV4(&saddr.addr), saddr.port, buf);
+		dprintf("net_test_thread3: read %Ld bytes from host 0x%x, port %d: '%s'\n",
+			(long long)bytes_read, NETADDR_TO_IPV4(&saddr.addr), saddr.port, buf);
 	}
 }
 
@@ -101,8 +101,8 @@ static int net_test_thread(void *unused)
 		char buf[64];
 
 		bytes_read = socket_recvfrom(id, buf, sizeof(buf), &saddr);
-		dprintf("net_test_thread: read %ld bytes from host 0x%x, port %d: '%s'\n",
-			bytes_read, NETADDR_TO_IPV4(&saddr.addr), saddr.port, buf);
+		dprintf("net_test_thread: read %Ld bytes from host 0x%x, port %d: '%s'\n",
+			(long long)bytes_read, NETADDR_TO_IPV4(&saddr.addr), saddr.port, buf);
 
 		// send it back
 		bytes_written = socket_sendto(id, buf, bytes_read, &saddr);

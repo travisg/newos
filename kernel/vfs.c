@@ -865,7 +865,7 @@ int vfs_test(void)
 		for(;;) {
 			len = sys_read(fd, buf, -1, sizeof(buf));
 			if(len < 0)
-				panic("readdir returned %ld\n", len);
+				panic("readdir returned %Ld\n", (long long)len);
 			if(len > 0)
 				dprintf("readdir returned name = '%s'\n", buf);
 			else
@@ -907,7 +907,7 @@ int vfs_test(void)
 		for(;;) {
 			len = sys_read(fd, buf, -1, sizeof(buf));
 			if(len < 0)
-				panic("readdir returned %ld\n", len);
+				panic("readdir returned %Ld\n", (long long)len);
 			if(len > 0)
 				dprintf("readdir returned name = '%s'\n", buf);
 			else
@@ -926,7 +926,7 @@ int vfs_test(void)
 		len = sys_read(fd, buf, 0, sizeof(buf));
 		if(len < 0)
 			panic("failed on read\n");
-		dprintf("read returned %ld\n", len);
+		dprintf("read returned %Ld\n", (long long)len);
 	}
 	sys_close(fd);
 	{
