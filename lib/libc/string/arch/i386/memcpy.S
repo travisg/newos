@@ -2,12 +2,14 @@
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
-#include <libc/arch/string.h>
 
-.globl memcpy
+#define GLOBAL(name) \
+	.globl name; \
+	.type name,@function; \
+	.align 8; \
+	name
 
-.align 4
-memcpy:
+GLOBAL(memcpy):
 	pushl	%esi
 	pushl	%edi
 	movl	12(%esp),%edi	/* dest */
