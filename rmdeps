@@ -1,0 +1,5 @@
+#!/bin/sh
+
+# emergency dependency cleaner, in case the deps file become
+# corrupt, which will cause make to fail immediately
+find . -name *.d|xargs rm 
