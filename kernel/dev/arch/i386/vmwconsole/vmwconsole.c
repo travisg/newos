@@ -146,9 +146,10 @@ static void clear_screen()
 	fill_rect(vcons.bg, 0, 0, vcons.scrn_width, vcons.scrn_height);
 }
 
+#if 0
 static void init_cursor()
 {
-	int i;
+	unsigned int i;
 	writeFIFO(SVGA_CMD_DEFINE_CURSOR);
 	writeFIFO(4); // ID
 	writeFIFO(0); // hot-x
@@ -160,6 +161,7 @@ static void init_cursor()
 	for (i = 0; i < vcons.glyph_height * vcons.glyph_width; i++) writeFIFO(0);
 	for (i = 0; i < vcons.glyph_height * vcons.glyph_width; i++) writeFIFO(~0);
 }
+#endif
 
 static void show_cursor(int show)
 {
@@ -485,7 +487,7 @@ static void load_font()
 	vcons.glyph_height = CHAR_HEIGHT;
 	vcons.text_cols = vcons.scrn_width / vcons.glyph_width;
 	vcons.text_rows = vcons.scrn_height / vcons.glyph_height;
-	define_font(1, ((CHAR_WIDTH + 7) & ~7), sizeof(FONT), (uint32*)FONT);
+	define_font(1, ((CHAR_WIDTH + 7) & ~7), sizeof(FONT), FONT);
 	dprintf("load_font: %dx%d glyphs\n", vcons.text_cols, vcons.text_rows);
 }
 
