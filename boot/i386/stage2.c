@@ -48,7 +48,7 @@ void mmu_map_page(unsigned int vaddr, unsigned int paddr);
 // called by the stage1 bootloader.
 // State:
 //   32-bit
-//   mmu turned on, first 4 megs or so identity mapped
+//   mmu disabled
 //   stack somewhere below 1 MB
 //   supervisor mode
 void _start(unsigned int mem, char *str)
@@ -63,8 +63,6 @@ void _start(unsigned int mem, char *str)
 	unsigned int i;
 	unsigned int kernel_entry;
 
-	// Important.  Make sure supervisor threads can fault on read only pages...
-	asm("movl %%eax, %%cr0" : : "a" ((1 << 31) | (1 << 16) | (1 << 5) | 1));
 	asm("cld");			// Ain't nothing but a GCC thang.
 	asm("fninit");		// initialize floating point unit
 
@@ -320,34 +318,35 @@ void load_elf_image(void *data, unsigned int *next_paddr, addr_range *ar0, addr_
 
 // allocate a page directory and page table to facilitate mapping
 // pages to the 0x80000000 - 0x80400000 region.
+// also identity maps the first 4MB of memory 
 int mmu_init(kernel_args *ka, unsigned int *next_paddr)
 {
-	unsigned int *old_pgdir;
 	int i;
 
-	// get the current page directory
-	asm("movl %%cr3, %%eax" : "=a" (old_pgdir));
-
-	// allocate a new pgdir and
-	// copy the old pgdir to the new one
+	// allocate a new pgdir
 	pgdir = (unsigned int *)*next_paddr;
 	(*next_paddr) += PAGE_SIZE;
 	ka->arch_args.phys_pgdir = (unsigned int)pgdir;
-	for(i = 0; i < 512; i++)
-		pgdir[i] = old_pgdir[i];
 
-	// clear out the top part of the pgdir
-	for(; i < 1024; i++)
+	// clear out the pgdir
+	for(i = 0; i < 1024; i++)
 		pgdir[i] = 0;
 
-	// switch to the new pgdir
-	asm("movl %0, %%eax;"
-		"movl %%eax, %%cr3;" :: "m" (pgdir) : "eax");
+	// make a pagetable at this random spot
+	pgtable = (unsigned int *)0x11000;
+
+	for (i = 0; i < 1024; i++) {
+		pgtable[i] = (i * 0x1000) | DEFAULT_PAGE_FLAGS;
+	}	// pkx: create first 4 MB one-to-one mapping
+
+	pgdir[0] = (unsigned int)pgtable | DEFAULT_PAGE_FLAGS;
+		// pkx: put the one-to-one mapping into the page dir.
 
 	// Get new page table and clear it out
 	pgtable = (unsigned int *)*next_paddr;
 	ka->arch_args.pgtables[0] = (unsigned int)pgtable;
 	ka->arch_args.num_pgtables = 1;
+
 	(*next_paddr) += PAGE_SIZE;
 	for (i = 0; i < 1024; i++)
 		pgtable[i] = 0;
@@ -355,6 +354,13 @@ int mmu_init(kernel_args *ka, unsigned int *next_paddr)
 	// put the new page table into the page directory
 	// this maps the kernel at KERNEL_BASE
 	pgdir[KERNEL_BASE/(4*1024*1024)] = (unsigned int)pgtable | DEFAULT_PAGE_FLAGS;
+
+	// switch to the new pgdir
+	asm("movl %0, %%eax;"
+		"movl %%eax, %%cr3;" :: "m" (pgdir) : "eax");
+	// Important.  Make sure supervisor threads can fault on read only pages...
+	asm("movl %%eax, %%cr0" : : "a" ((1 << 31) | (1 << 16) | (1 << 5) | 1));
+		// pkx: moved the paging turn-on to here.
 
 	return 0;
 }
