@@ -94,11 +94,19 @@ unreal:
 	mov		si,okmsg
 	call	print
 
-	; uncomment the next line to enable the VESA mode switch
-	; call	enable_vesa
-	; mov		[in_vesa],al
-
 	call	find_mem_size_real
+
+%if 1
+	in		al,0x60          ; read data from keyboard
+	and		al,0x7f
+	cmp		al,42            ; try to set VESA mode iff left shift key was pressed
+	mov		al,0
+	jne		no_vesa
+	call	enable_vesa
+no_vesa:
+	mov		[in_vesa],al
+%endif
+
 	cli
 
 	; mov		ebx,[dword 0x100074] ; load dword at rel. address 0x74 from read-destination-buffer
@@ -122,33 +130,26 @@ BITS 32
 	mov		ebp,0x10000
 	mov		esp,ebp
 
-	mov		eax,[vesa_info]
-	push	eax
+	push	dword [vesa_info]
 
-	xor		eax,eax
 	mov		al,[in_vesa]
 	push	eax
 
-	xor		eax,eax
 	mov		al,[ext_mem_count]
 	push	eax
 
-	xor		eax,eax
-	mov		eax,[ext_mem_info]
-	push	eax
+	mov		edx,[ext_mem_info]
+	push	edx
 
-	cmp		al, 0x0
-	je		probe_mem
+	xor		eax,eax			; default memsize = 0
+	or		edx,edx
+	jnz		no_probe_mem
 
-	xor		eax,eax
-	push	eax				; should be loaded with zero
-	jmp		call_stage2
-
-probe_mem:
 	call	find_mem_size_probe
+
+no_probe_mem:
 	push	eax
 
-call_stage2:
 	mov		ebx,0x100000
 	call	ebx              ; jump to stage1 entry
 inf:jmp		short inf
@@ -324,11 +325,10 @@ find_mem_next:
 
 	inc		byte [ext_mem_count]	; increment the count of the number
 
-	cmp		ebx,0x0			; test if we're done
-	je		done_mem_real
-
 	add		edi,0x20		; increment the buffer by 0x20
-	jmp		find_mem_next
+
+	or		ebx,ebx			; test if we're done
+	jne		find_mem_next
 	
 done_mem_real:
 	ret
@@ -391,7 +391,8 @@ mode_loop:
 	mov		bx,cx
 	or		bx,0x4000     ; add the linear mode bit
 	int		0x10
-	jmp		done_vesa_good
+	cmp		ax,0x004f
+	je		done_vesa_good
 
 next_mode:
 	; get ready to try the next mode

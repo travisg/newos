@@ -135,7 +135,7 @@ int dev_bootstrap(void)
 		vesa.fb_info.width = global_kernel_args.fb.x_size;
 		vesa.fb_info.height = global_kernel_args.fb.y_size;
 		vesa.fb_info.bit_depth = global_kernel_args.fb.bit_depth;
-		if(global_kernel_args.fb.bit_depth == 16) {
+		if(global_kernel_args.fb.bit_depth == 15 || global_kernel_args.fb.bit_depth == 16) {
 			if(global_kernel_args.fb.red_mask_size == 5
 				&& global_kernel_args.fb.green_mask_size == 6
 				&& global_kernel_args.fb.blue_mask_size == 5) {

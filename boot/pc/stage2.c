@@ -136,7 +136,7 @@ void _start(unsigned int memsize, void *extended_mem_block, unsigned int extende
 		ka->fb.reserved_mask_size = mode_info->reserved_mask_size;
 		ka->fb.reserved_field_position = mode_info->reserved_field_position;
 		ka->fb.mapping.start = mode_info->phys_base_ptr;
-		ka->fb.mapping.size = ka->fb.x_size * ka->fb.y_size * (ka->fb.bit_depth/8);
+		ka->fb.mapping.size = ka->fb.x_size * ka->fb.y_size * ((ka->fb.bit_depth+7)/8);
 		ka->fb.already_mapped = 0;
 	} else {
 		ka->fb.enabled = 0;
