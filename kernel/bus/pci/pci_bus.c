@@ -6,7 +6,7 @@
 #include <kernel/debug.h>
 #include <kernel/lock.h>
 
-#include <libc/string.h>
+#include <nulibc/string.h>
 
 #include <kernel/bus/pci/pci_bus.h>
 

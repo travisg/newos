@@ -7,7 +7,7 @@
 #include <kernel/vfs.h>
 #include <kernel/debug.h>
 
-#include <libc/string.h>
+#include <nulibc/string.h>
 
 #ifdef ARCH_i386
 #include <kernel/dev/arch/i386/ide/ide_bus.h>

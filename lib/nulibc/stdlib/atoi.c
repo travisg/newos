@@ -2,7 +2,7 @@
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
-#include <libc/string.h>
+#include <stdlib.h>
 #include <ctype.h>
 
 static int hexval(char c)

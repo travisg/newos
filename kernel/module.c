@@ -11,7 +11,7 @@
 
 #include <kernel/elf.h>
 
-#include <libc/string.h>
+#include <nulibc/string.h>
 
 typedef struct module_info {
 	struct module_info *next, *prev;

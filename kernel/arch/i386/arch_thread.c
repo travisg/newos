@@ -11,7 +11,7 @@
 #include <kernel/arch/thread.h>
 #include <kernel/arch/cpu.h>
 #include <kernel/int.h>
-#include <libc/string.h>
+#include <nulibc/string.h>
 
 int arch_proc_init_proc_struct(struct proc *p, bool kernel)
 {

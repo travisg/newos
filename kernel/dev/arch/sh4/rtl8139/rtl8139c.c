@@ -39,8 +39,8 @@
 
 #include "defs.h"
 #include <kernel/debug.h>
-#include <libc/string.h>
-#include <libc/stdarg.h>
+#include <nulibc/string.h>
+#include <nulibc/stdarg.h>
 
 #include "rtl8139c.h"
 

@@ -24,6 +24,7 @@
 #include <boot/stage2.h>
 #include <nulibc/string.h>
 #include <nulibc/stdio.h>
+#include <nulibc/stdlib.h>
 
 struct proc_key {
 	proc_id id;

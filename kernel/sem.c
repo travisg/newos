@@ -14,7 +14,8 @@
 
 #include <boot/stage2.h>
 
-#include <libc/string.h>
+#include <nulibc/string.h>
+#include <nulibc/stdlib.h>
 
 struct sem_entry {
 	sem_id    id;

@@ -6,7 +6,7 @@
 #include <kernel/khash.h>
 #include <kernel/debug.h>
 #include <sys/errors.h>
-#include <libc/string.h>
+#include <nulibc/string.h>
 
 #define malloc kmalloc
 #define free kfree

@@ -12,7 +12,7 @@
 #include <kernel/lock.h>	// for mutex handling
 #include <kernel/vm.h>
 
-#include <libc/string.h>
+#include <nulibc/string.h>
 
 #include "isovol.h"
 

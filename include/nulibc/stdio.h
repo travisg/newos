@@ -9,6 +9,7 @@
 
 
 #include <types.h>
+#include <sys/cdefs.h>
 #include <nulibc/stdarg.h>
 
 
@@ -25,11 +26,11 @@ extern FILE *stdout;
 extern FILE *stderr;
 
 
-int printf(char const *format, ...);
-int fprintf(FILE *stream, char const *format, ...);
-int sprintf(char *str, char const *format, ...);
-int snprintf(char *str, size_t size, char const *format, ...);
-int asprintf(char **ret, char const *format, ...);
+int printf(char const *format, ...) __PRINTFLIKE(1,2);
+int fprintf(FILE *stream, char const *format, ...) __PRINTFLIKE(2,3);
+int sprintf(char *str, char const *format, ...) __PRINTFLIKE(2,3);
+int snprintf(char *str, size_t size, char const *format, ...) __PRINTFLIKE(3,4);
+int asprintf(char **ret, char const *format, ...) __PRINTFLIKE(2,3);
 int vprintf(char const *format, va_list ap);
 int vfprintf(FILE *stream, char const *format, va_list ap);
 int vsprintf(char *str, char const *format, va_list ap);

@@ -8,7 +8,7 @@
 #include <kernel/fs/devfs.h>
 #include <kernel/vm.h>
 #include <kernel/dev/common/zero.h>
-#include <libc/string.h>
+#include <nulibc/string.h>
 #include <sys/errors.h>
 
 static int zero_open(dev_ident ident, dev_cookie *cookie)

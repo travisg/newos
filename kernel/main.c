@@ -23,7 +23,7 @@
 #include <kernel/dev/devs.h>
 #include <kernel/bus/bus.h>
 
-#include <libc/string.h>
+#include <nulibc/string.h>
 
 #include <kernel/arch/cpu.h>
 

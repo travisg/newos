@@ -7,7 +7,7 @@
 #include <kernel/debug.h>
 #include <kernel/heap.h>
 #include <kernel/vfs.h>
-#include <libc/string.h>
+#include <nulibc/string.h>
 
 #include "rtl8139_priv.h"
 

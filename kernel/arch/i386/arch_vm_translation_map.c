@@ -15,7 +15,7 @@
 #include <kernel/lock.h>
 #include <kernel/sem.h>
 #include <kernel/queue.h>
-#include <libc/string.h>
+#include <nulibc/string.h>
 #include <boot/stage2.h>
 #include <sys/errors.h>
 

@@ -7,7 +7,7 @@
 
 #include <kernel/arch/pmap.h>
 
-#include <libc/string.h>
+#include <nulibc/string.h>
 
 #define CHATTY_PMAP 0
 

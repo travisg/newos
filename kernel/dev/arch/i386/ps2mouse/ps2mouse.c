@@ -52,7 +52,7 @@
 #include <kernel/fs/devfs.h>
 #include <kernel/arch/int.h>
 #include <kernel/sem.h>
-#include <libc/string.h>
+#include <nulibc/string.h>
 #include <kernel/dev/arch/i386/ps2mouse/ps2mouse.h>
 
 /////////////////////////////////////////////////////////////////////////
