@@ -20,8 +20,6 @@
 
 #include <kernel/dev/arch/i386/console/console_dev.h>
 
-static unsigned int origin = 0;
-
 #define SCREEN_START 0xb8000
 #define SCREEN_END   0xc0000
 #define LINES 25
@@ -36,21 +34,49 @@ static unsigned int origin = 0;
 #define TEXT_CURSOR_LO 0x0f
 #define TEXT_CURSOR_HI 0x0e
 
-#define scr_end (origin+LINES*COLUMNS*2)
+typedef enum {
+	CONSOLE_STATE_NORMAL = 0,
+	CONSOLE_STATE_GOT_ESCAPE,
+	CONSOLE_STATE_SEEN_BRACKET,
+	CONSOLE_STATE_NEW_ARG,
+	CONSOLE_STATE_PARSING_ARG,
+} console_state;
 
-static unsigned int pos = 0;
-static unsigned int x = 0;
-static unsigned int y = 0;
-static unsigned int bottom=LINES;
-static unsigned int lines=LINES;
-static unsigned int columns=COLUMNS;
-static unsigned char attr=0x07;
+#define MAX_ARGS 8
 
-static mutex console_lock;
+static struct console_desc {
+	mutex lock;
 
-static void update_cursor(unsigned int x, unsigned int y)
+	unsigned int origin;
+	unsigned int end;
+	int lines;
+	int columns;
+
+	unsigned char attr;
+	unsigned char saved_attr;
+	bool          bright_attr;
+	bool          reverse_attr;
+
+	unsigned int pos;			/* current position within the buffer */
+	int x;						/* current x coordinate */
+	int y;						/* current y coordinate */
+	int saved_x;				/* used to save x and y */
+	int saved_y;
+
+	int scroll_top;	/* top of the scroll region */
+	int scroll_bottom;	/* bottom of the scroll region */
+
+	/* state machine */
+	console_state state;
+	int arg_ptr;
+	int args[MAX_ARGS];
+} gconsole;
+
+#define LINE_OFFSET(con, line) ((con)->columns * (line) * 2)
+
+static void update_cursor(struct console_desc *con, int x, int y)
 {
-	short int pos = y*columns + x;
+	short int pos = y * con->columns + x;
 
 	out8(TEXT_CURSOR_LO, TEXT_INDEX);
 	out8((char)pos, TEXT_DATA);
@@ -58,99 +84,231 @@ static void update_cursor(unsigned int x, unsigned int y)
 	out8((char)(pos >> 8), TEXT_DATA);
 }
 
-static void gotoxy(unsigned int new_x,unsigned int new_y)
+static void gotoxy(struct console_desc *con, int new_x, int new_y)
 {
-	if (new_x>=columns || new_y>=lines)
-		return;
-	x = new_x;
-	y = new_y;
-	pos = origin+((y*columns+x)<<1);
+	if(new_x >= con->columns)
+		new_x = con->columns;
+	if(new_x < 0)
+		new_x = 0;
+	if(new_y >= con->lines)
+		new_y = con->lines - 1;
+	if(new_y < 0)
+		new_y = 0;
+
+	con->x = new_x;
+	con->y = new_y;
+	con->pos = con->origin + (con->y * con->columns + con->x) * 2;
 }
 
-static void scrup(void)
+static void scrup(struct console_desc *con)
 {
 	unsigned long i;
 
-	// move the screen up one
-	memcpy((void *)origin, (void *)origin+2*COLUMNS, 2*(LINES-1)*COLUMNS);
+	ASSERT(con->scroll_top <= con->scroll_bottom);
 
-	// set the new position to the beginning of the last line
-	pos = origin + (LINES-1)*COLUMNS*2;
+	if(con->scroll_bottom - con->scroll_top > 1) {
+		// move the screen up one
+		memmove((void *)(con->origin + LINE_OFFSET(con, con->scroll_top)),
+			(void *)(con->origin + LINE_OFFSET(con, con->scroll_top + 1)),
+			LINE_OFFSET(con, con->scroll_bottom) - LINE_OFFSET(con, con->scroll_top));
+	}
 
 	// clear the bottom line
-	for(i = pos; i < scr_end; i += 2) {
-		*(unsigned short *)i = 0x0720;
+	for(i = con->origin + LINE_OFFSET(con, con->scroll_bottom); i < con->origin + LINE_OFFSET(con, con->scroll_bottom + 1); i += 2) {
+		*(unsigned char *)i = ' ';
+		*(unsigned char *)(i+1) = con->attr;
 	}
 }
 
-static void lf(void)
+static void scrdown(struct console_desc *con)
 {
-	if (y+1<bottom) {
-		y++;
-		pos += columns<<1;
-		return;
+	unsigned long i;
+
+	ASSERT(con->scroll_top <= con->scroll_bottom);
+
+	if(con->scroll_bottom - con->scroll_top > 1) {
+		// move the screen down one
+		memmove((void *)(con->origin + LINE_OFFSET(con, con->scroll_top + 1)),
+			(void *)(con->origin + LINE_OFFSET(con, con->scroll_top)),
+			LINE_OFFSET(con, con->scroll_bottom) - LINE_OFFSET(con, con->scroll_top));
 	}
-	scrup();
-}
 
-static void cr(void)
-{
-	pos -= x<<1;
-	x=0;
-}
-
-static void del(void)
-{
-	if (x > 0) {
-		pos -= 2;
-		x--;
-		*(unsigned short *)pos = 0x0720;
+	// clear the top line
+	for(i = con->origin + LINE_OFFSET(con, con->scroll_top); i < con->origin + LINE_OFFSET(con, con->scroll_top + 1); i += 2) {
+		*(unsigned char *)i = ' ';
+		*(unsigned char *)(i+1) = con->attr;
 	}
 }
 
-static int saved_x=0;
-static int saved_y=0;
-
-static void save_cur(void)
+static void lf(struct console_desc *con)
 {
-	saved_x=x;
-	saved_y=y;
+	if(con->y == con->scroll_bottom ) {
+ 		// we hit the bottom of our scroll region
+ 		scrup(con);
+	} else if(con->y < con->scroll_bottom) {
+		con->y++;
+		con->pos += con->columns * 2;
+	}
 }
 
-static void restore_cur(void)
+static void rlf(struct console_desc *con)
 {
-	x=saved_x;
-	y=saved_y;
-	pos=origin+((y*columns+x)<<1);
+	if(con->y == con->scroll_top) {
+ 		// we hit the top of our scroll region
+ 		scrdown(con);
+	} else if(con->y > con->scroll_top) {
+		con->y--;
+		con->pos -= con->columns * 2;
+	}
 }
 
-static char console_putch(const char c)
+static void cr(struct console_desc *con)
 {
-	if(++x>=COLUMNS) {
-		cr();
-		lf();
+	con->pos -= con->x * 2;
+	con->x = 0;
+}
+
+static void del(struct console_desc *con)
+{
+	if (con->x > 0) {
+		con->pos -= 2;
+		con->x--;
+		*(unsigned char *)con->pos = ' ';
+		*(unsigned char *)(con->pos + 1) = con->attr;
+	}
+}
+
+typedef enum {
+	LINE_ERASE_WHOLE,
+	LINE_ERASE_LEFT,
+	LINE_ERASE_RIGHT
+} erase_line_mode;
+
+static void erase_line(struct console_desc *con, erase_line_mode mode)
+{
+	unsigned char *ptr;
+	int len;
+	int i;
+
+	switch(mode) {
+		case LINE_ERASE_WHOLE:
+			ptr = (unsigned char *)(con->origin + LINE_OFFSET(con, con->y));
+			len = con->columns * 2;
+			break;
+		case LINE_ERASE_LEFT:
+			ptr = (unsigned char *)(con->origin + LINE_OFFSET(con, con->y));
+			len = con->x * 2;
+			break;
+		case LINE_ERASE_RIGHT:
+			ptr = (unsigned char *)con->pos;
+			len = (con->columns - con->x) * 2;
+			break;
+		default:
+			return;
 	}
 
-	*(char *)pos = c;
-	*(char *)(pos+1) = attr;
+	for(i = 0; i < len; i += 2) {
+		ptr[i] = ' ';
+		ptr[i+1] = con->attr;
+	}
+}
 
-	pos += 2;
+typedef enum {
+	SCREEN_ERASE_WHOLE,
+	SCREEN_ERASE_UP,
+	SCREEN_ERASE_DOWN
+} erase_screen_mode;
+
+static void erase_screen(struct console_desc *con, erase_screen_mode mode)
+{
+	unsigned char *ptr;
+	int len;
+	int i;
+
+	switch(mode) {
+		case SCREEN_ERASE_WHOLE:
+			ptr = (unsigned char *)con->origin;
+			len = con->end - con->origin;
+			break;
+		case SCREEN_ERASE_UP:
+			ptr = (unsigned char *)con->origin;
+			len = LINE_OFFSET(con, con->y + 1);
+			break;
+		case SCREEN_ERASE_DOWN:
+			ptr = (unsigned char *)(con->origin + LINE_OFFSET(con, con->y));
+			len = (con->lines - con->y) * con->columns * 2;
+			break;
+		default:
+			return;
+	}
+
+	for(i = 0; i < len; i += 2) {
+		ptr[i] = ' ';
+		ptr[i+1] = con->attr;
+	}
+}
+
+static void save_cur(struct console_desc *con, bool save_attrs)
+{
+	con->saved_x = con->x;
+	con->saved_y = con->y;
+	if(save_attrs)
+		con->saved_attr = con->attr;
+}
+
+static void restore_cur(struct console_desc *con, bool restore_attrs)
+{
+	con->x = con->saved_x;
+	con->y = con->saved_y;
+	con->pos = con->origin +((con->y * con->columns + con->x)<<1);
+	if(restore_attrs)
+		con->attr = con->saved_attr;
+}
+
+static char console_putch(struct console_desc *con, const char c)
+{
+	if(++con->x >= con->columns) {
+		cr(con);
+		lf(con);
+	}
+
+	*(char *)con->pos = c;
+	*(char *)(con->pos + 1) = con->attr;
+
+	con->pos += 2;
 
 	return c;
 }
 
-static void tab(void)
+static void tab(struct console_desc *con)
 {
-	x = (x + TAB_SIZE) & ~TAB_MASK;
-	if (x>=COLUMNS) {
-		x -= COLUMNS;
-		lf();
+	con->x = (con->x + TAB_SIZE) & ~TAB_MASK;
+	if (con->x >= con->columns) {
+		con->x -= con->columns;
+		lf(con);
 	}
-	pos=origin+((y*columns+x)<<1);
+	con->pos = con->origin + ((con->y * con->columns + con->x)<<1);
+}
+
+static void set_scroll_region(struct console_desc *con, int top, int bottom)
+{
+	if(top < 0)
+		top = 0;
+	if(bottom >= con->lines)
+		bottom = con->lines - 1;
+	if(top > bottom)
+		return;
+
+	con->scroll_top = top;
+	con->scroll_bottom = bottom;
 }
 
 static int console_open(dev_ident ident, dev_cookie *cookie)
 {
+	struct console_desc *con = (struct console_desc *)ident;
+
+	*cookie = (dev_cookie)con;
+
 	return 0;
 }
 
@@ -178,47 +336,266 @@ static ssize_t console_read(dev_cookie cookie, void *buf, off_t pos, ssize_t len
 	return ERR_NOT_ALLOWED;
 }
 
-static ssize_t _console_write(const void *buf, size_t len)
+static void set_vt100_attributes(struct console_desc *con, int *args, int arg_ptr)
 {
-	size_t i;
-	const char *c;
+	int i;
 
-	for(i=0; i<len; i++) {
-		c = &((const char *)buf)[i];
-		switch(*c) {
-			case '\n':
-				lf();
+#define FMASK 0x0f
+#define BMASK 0x70
+
+	for(i = 0; i <= arg_ptr; i++) {
+		switch(args[i]) {
+			case 0: // reset
+				con->attr = 0x0f;
+				con->bright_attr = true;
+				con->reverse_attr = false;
 				break;
-			case '\r':
-				cr();
+			case 1: // bright
+				con->bright_attr = true;
+				con->attr |= 0x08; // set the bright bit
 				break;
-			case 0x8: // backspace
-				del();
+			case 2: // dim
+				con->bright_attr = false;
+				con->attr &= ~0x08; // unset the bright bit
 				break;
-			case '\t':
-				tab();
+			case 4: // underscore we can't do
 				break;
-			case '\0':
+			case 5: // blink
+				con->attr |= 0x80; // set the blink bit
 				break;
-			default:
-				console_putch(*c);
+			case 7: // reverse
+				con->reverse_attr = true;
+				con->attr = ((con->attr & BMASK) >> 4) | ((con->attr & FMASK) << 4);
+				if(con->bright_attr)
+					con->attr |= 0x08;
+				break;
+			case 8: // hidden?
+				break;
+
+			/* foreground colors */
+			case 30: con->attr = (con->attr & ~FMASK) | 0 | (con->bright_attr ? 0x08 : 0); break; // black
+			case 31: con->attr = (con->attr & ~FMASK) | 4 | (con->bright_attr ? 0x08 : 0); break; // red
+			case 32: con->attr = (con->attr & ~FMASK) | 2 | (con->bright_attr ? 0x08 : 0); break; // green
+			case 33: con->attr = (con->attr & ~FMASK) | 6 | (con->bright_attr ? 0x08 : 0); break; // yellow
+			case 34: con->attr = (con->attr & ~FMASK) | 1 | (con->bright_attr ? 0x08 : 0); break; // blue
+			case 35: con->attr = (con->attr & ~FMASK) | 5 | (con->bright_attr ? 0x08 : 0); break; // magenta
+			case 36: con->attr = (con->attr & ~FMASK) | 3 | (con->bright_attr ? 0x08 : 0); break; // cyan
+			case 37: con->attr = (con->attr & ~FMASK) | 7 | (con->bright_attr ? 0x08 : 0); break; // white
+
+			/* background colors */
+			case 40: con->attr = (con->attr & ~BMASK) | (0 << 4); break; // black
+			case 41: con->attr = (con->attr & ~BMASK) | (4 << 4); break; // red
+			case 42: con->attr = (con->attr & ~BMASK) | (2 << 4); break; // green
+			case 43: con->attr = (con->attr & ~BMASK) | (6 << 4); break; // yellow
+			case 44: con->attr = (con->attr & ~BMASK) | (1 << 4); break; // blue
+			case 45: con->attr = (con->attr & ~BMASK) | (5 << 4); break; // magenta
+			case 46: con->attr = (con->attr & ~BMASK) | (3 << 4); break; // cyan
+			case 47: con->attr = (con->attr & ~BMASK) | (7 << 4); break; // white
 		}
 	}
-	return len;
+}
+
+static bool process_vt100_command(struct console_desc *con, const char c, bool seen_bracket, int *args, int arg_ptr)
+{
+	bool ret = true;
+
+	if(seen_bracket) {
+		switch(c) {
+			case 'H':
+			case 'f':
+				if(arg_ptr < 1) {
+					args[0] = 1;
+					args[1] = 1;
+				}
+				gotoxy(con, args[1] - 1, args[0] - 1);
+				break;
+			case 'A':
+				if(arg_ptr < 0)
+					args[0] = 1;
+				gotoxy(con, con->x, con->y - args[0]);
+				break;
+			case 'B':
+				if(arg_ptr < 0)
+					args[0] = 1;
+				gotoxy(con, con->x, con->y + args[0]);
+				break;
+			case 'C':
+				if(arg_ptr < 0)
+					args[0] = 1;
+				gotoxy(con, con->x + args[0], con->y);
+				break;
+			case 's':
+				save_cur(con, false);
+				break;
+			case 'u':
+				restore_cur(con, false);
+				break;
+			case 'r':
+				if(arg_ptr < 1) {
+					args[0] = 0;
+					args[1] = con->lines;
+				}
+				set_scroll_region(con, args[0] - 1, args[1] - 1);
+				break;
+			case 'K':
+				if(arg_ptr < 0) {
+					// erase to end of line
+					erase_line(con, LINE_ERASE_RIGHT);
+				} else {
+					if(args[0] == 1)
+						erase_line(con, LINE_ERASE_LEFT);
+					else if(args[0] == 2)
+						erase_line(con, LINE_ERASE_WHOLE);
+				}
+				break;
+			case 'J':
+				if(arg_ptr < 0) {
+					// erase to end of screen
+					erase_screen(con, SCREEN_ERASE_DOWN);
+				} else {
+					if(args[0] == 1)
+						erase_screen(con, SCREEN_ERASE_UP);
+					else if(args[0] == 2)
+						erase_screen(con, SCREEN_ERASE_WHOLE);
+				}
+				break;
+			case 'm':
+				if(arg_ptr >= 0) {
+					set_vt100_attributes(con, args, arg_ptr);
+				}
+				break;
+			default:
+				ret = false;
+		}
+	} else {
+		switch(c) {
+			case 'D':
+				rlf(con);
+				break;
+			case 'M':
+				lf(con);
+				break;
+			case '7':
+				save_cur(con, true);
+				break;
+			case '8':
+				restore_cur(con, true);
+				break;
+			default:
+				ret = false;
+		}
+	}
+
+	return ret;
+}
+
+static ssize_t _console_write(struct console_desc *con, const void *buf, size_t len)
+{
+	const char *c;
+	size_t pos = 0;
+
+	while(pos < len) {
+		c = &((const char *)buf)[pos++];
+
+		switch(con->state) {
+		case CONSOLE_STATE_NORMAL:
+			// just output the stuff
+			switch(*c) {
+				case '\n':
+					lf(con);
+					break;
+				case '\r':
+					cr(con);
+					break;
+				case 0x8: // backspace
+					del(con);
+					break;
+				case '\t':
+					tab(con);
+					break;
+				case '\0':
+					break;
+				case 0x1b:
+					// escape character
+					con->arg_ptr = -1;
+					con->state = CONSOLE_STATE_GOT_ESCAPE;
+					break;
+				default:
+					console_putch(con, *c);
+			}
+			break;
+		case CONSOLE_STATE_GOT_ESCAPE:
+			// look for either commands with no argument, or the '[' character
+			switch(*c) {
+				case '[':
+					con->state = CONSOLE_STATE_SEEN_BRACKET;
+					break;
+				default:
+					process_vt100_command(con, *c, false, con->args, con->arg_ptr);
+					con->state = CONSOLE_STATE_NORMAL;
+			}
+			break;
+		case CONSOLE_STATE_SEEN_BRACKET:
+			switch(*c) {
+				case '0'...'9':
+					con->arg_ptr = 0;
+					con->args[con->arg_ptr] = *c - '0';
+					con->state = CONSOLE_STATE_PARSING_ARG;
+					break;
+				default:
+					process_vt100_command(con, *c, true, con->args, con->arg_ptr);
+					con->state = CONSOLE_STATE_NORMAL;
+			}
+			break;
+		case CONSOLE_STATE_NEW_ARG:
+			switch(*c) {
+				case '0'...'9':
+					con->arg_ptr++;
+					if(con->arg_ptr == MAX_ARGS) {
+						con->state = CONSOLE_STATE_NORMAL;
+						break;
+					}
+					con->args[con->arg_ptr] = *c - '0';
+					con->state = CONSOLE_STATE_PARSING_ARG;
+					break;
+				default:
+					process_vt100_command(con, *c, true, con->args, con->arg_ptr);
+					con->state = CONSOLE_STATE_NORMAL;
+			}
+			break;
+		case CONSOLE_STATE_PARSING_ARG:
+			// parse args
+			switch(*c) {
+				case '0'...'9':
+					con->args[con->arg_ptr] *= 10;
+					con->args[con->arg_ptr] += *c - '0';
+					break;
+				case ';':
+					con->state = CONSOLE_STATE_NEW_ARG;
+					break;
+				default:
+					process_vt100_command(con, *c, true, con->args, con->arg_ptr);
+					con->state = CONSOLE_STATE_NORMAL;
+			}
+		}
+	}
+
+	return pos;
 }
 
 static ssize_t console_write(dev_cookie cookie, const void *buf, off_t pos, ssize_t len)
 {
 	ssize_t err;
+	struct console_desc *con = (struct console_desc *)cookie;
 
 //	dprintf("console_write: entry, len = %d\n", *len);
 
-	mutex_lock(&console_lock);
+	mutex_lock(&con->lock);
 
-	err = _console_write(buf, len);
-	update_cursor(x, y);
+	err = _console_write(con, buf, len);
+	update_cursor(con, con->x, con->y);
 
-	mutex_unlock(&console_lock);
+	mutex_unlock(&con->lock);
 
 	return err;
 }
@@ -226,23 +603,24 @@ static ssize_t console_write(dev_cookie cookie, const void *buf, off_t pos, ssiz
 static int console_ioctl(dev_cookie cookie, int op, void *buf, size_t len)
 {
 	int err;
+	struct console_desc *con = (struct console_desc *)cookie;
 
 	switch(op) {
 		case CONSOLE_OP_WRITEXY: {
 			int x,y;
-			mutex_lock(&console_lock);
+			mutex_lock(&con->lock);
 
 			x = ((int *)buf)[0];
 			y = ((int *)buf)[1];
 
-			save_cur();
-			gotoxy(x, y);
-			if(_console_write(((char *)buf) + 2*sizeof(int), len - 2*sizeof(int)) > 0)
+			save_cur(con, false);
+			gotoxy(con, x, y);
+			if(_console_write(con, ((char *)buf) + 2*sizeof(int), len - 2*sizeof(int)) > 0)
 				err = 0; // we're okay
 			else
 				err = ERR_IO_ERROR;
-			restore_cur();
-			mutex_unlock(&console_lock);
+			restore_cur(con, false);
+			mutex_unlock(&con->lock);
 			break;
 		}
 		default:
@@ -270,19 +648,27 @@ int console_dev_init(kernel_args *ka)
 {
 	if(!ka->fb.enabled) {
 		dprintf("con_init: mapping vid mem\n");
-		vm_map_physical_memory(vm_get_kernel_aspace_id(), "vid_mem", (void *)&origin, REGION_ADDR_ANY_ADDRESS,
+		vm_map_physical_memory(vm_get_kernel_aspace_id(), "vid_mem", (void *)&gconsole.origin, REGION_ADDR_ANY_ADDRESS,
 			SCREEN_END - SCREEN_START, LOCK_RW|LOCK_KERNEL, SCREEN_START);
-		dprintf("con_init: mapped vid mem to virtual address 0x%x\n", origin);
+		dprintf("con_init: mapped vid mem to virtual address 0x%x\n", gconsole.origin);
 
-		pos = origin;
+		// set up the console structure
+		mutex_init(&gconsole.lock, "console_lock");
+		gconsole.attr = 0x0f;
+		gconsole.lines = LINES;
+		gconsole.columns = COLUMNS;
+		gconsole.end = gconsole.origin + gconsole.columns * gconsole.lines * 2;
+		gconsole.scroll_top = 0;
+		gconsole.scroll_bottom = gconsole.lines - 1;
+		gconsole.bright_attr = true;
+		gconsole.reverse_attr = false;
 
-		gotoxy(0, ka->cons_line);
-		update_cursor(x, y);
-
-		mutex_init(&console_lock, "console_lock");
+		gotoxy(&gconsole, 0, ka->cons_line);
+		update_cursor(&gconsole, gconsole.x, gconsole.y);
+		save_cur(&gconsole, true);
 
 		// create device node
-		devfs_publish_device("console", NULL, &console_hooks);
+		devfs_publish_device("console", (dev_ident)&gconsole, &console_hooks);
 	}
 
 	return 0;
