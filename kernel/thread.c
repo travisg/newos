@@ -266,8 +266,6 @@ static int user_copy_arg_list(char **args, int argc, char ***kargs)
 		buf[SYS_THREAD_ARG_LENGTH_MAX] = 0;
 		largs[cnt] = kstrdup(buf);
 
-		dprintf("user_copy_arg_list : par %d = %s ptr=%d \n",cnt,buf,largs[cnt]);
-
 		if(largs[cnt] == NULL){
 			err = ERR_NO_MEMORY;
 			goto error;
@@ -1674,7 +1672,7 @@ proc_id proc_create_proc(const char *path, const char *name,char **args,int argc
 	int sem_retcode;
 	struct proc_arg *pargs;
 
-	dprintf("proc_create_proc: entry '%s', name '%s' args=%d argc=%d\n", path, name,args,argc);
+	dprintf("proc_create_proc: entry '%s', name '%s' args = %p argc = %d\n", path, name, args, argc);
 
 	p = create_proc_struct(name, false);
 	if(p == NULL)
