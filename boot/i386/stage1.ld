@@ -4,7 +4,7 @@ OUTPUT_ARCH(i386)
 ENTRY(_start)
 SECTIONS
 {
-	. = 0x401000 + SIZEOF_HEADERS;
+	. = 0x100000;
 
 	/* text/read-only data */
 	.text :	{ *(.text .gnu.linkonce.t.*) }
@@ -24,9 +24,9 @@ SECTIONS
 	__bss_start = .;
 	.bss : { *(.bss) }
 
-	. = ALIGN(0x1000);
+	/* . = ALIGN(0x1000); */
 	_end = . ;
 
 	/* Strip unnecessary stuff */
-	/DISCARD/ : { *(.comment .note .eh_frame .dtors) }
+	/DISCARD/ : { *(.comment .note .eh_frame .dtors .stab .stabstr) }
 }

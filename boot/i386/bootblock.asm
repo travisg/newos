@@ -89,7 +89,6 @@ unreal:
 	sti
 	mov		si,loadmsg
 	call	print
-	dec		cx				 ; TK: one sector is already read as second part of boot block
 	call	load_floppy      ; read remaining sectors at address edi
 	call 	disable_floppy_motor
 	mov		si,okmsg
@@ -100,8 +99,8 @@ unreal:
 	; call	enable_vesa
 	mov		[in_vesa],al
 
-	mov		ebx,[dword 0x100074] ; load dword at rel. address 0x74 from read-destination-buffer
-	add		ebx,0x101000         ; for stage2 entry
+	; mov		ebx,[dword 0x100074] ; load dword at rel. address 0x74 from read-destination-buffer
+	; add		ebx,0x101000         ; for stage2 entry
 	mov		al,0xcf
 	mov		[ds:gdt+14],al       ; set desc. 1 and 2
 	mov		[ds:gdt+22],al       ;   to 32-bit segment
@@ -131,7 +130,8 @@ BITS 32
 	call	find_mem_size
 	push	eax
 
-	call	ebx              ; jump to stage2 entry
+	mov		ebx,0x100000
+	call	ebx              ; jump to stage1 entry
 inf:jmp		short inf
 
 ; find memory size by testing

@@ -7,7 +7,7 @@
 
 #include <boot/stage2.h>
 
-extern void _start(unsigned int mem, int in_vesa, unsigned int vesa_ptr);
+extern void _start(unsigned int mem, int in_vesa, unsigned int vesa_ptr, unsigned int console_ptr);
 extern void clearscreen(void);
 extern void puts(const char *str);
 extern int dprintf(const char *fmt, ...);

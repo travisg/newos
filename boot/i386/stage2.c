@@ -18,7 +18,7 @@ const unsigned kBSSSize = 0x9000;
 // we're running out of the first 'file' contained in the bootdir, which is
 // a set of binaries and data packed back to back, described by an array
 // of boot_entry structures at the beginning. The load address is fixed.
-#define BOOTDIR_ADDR 0x100000
+#define BOOTDIR_ADDR 0x400000
 static const boot_entry *bootdir = (boot_entry*)BOOTDIR_ADDR;
 
 // stick the kernel arguments in a pseudo-random page that will be mapped
@@ -29,7 +29,6 @@ static kernel_args *ka = (kernel_args *)0x20000;
 // needed for message
 static unsigned short *kScreenBase = (unsigned short*) 0xb8000;
 static unsigned screenOffset = 0;
-static unsigned int line = 0;
 
 unsigned int cv_factor = 0;
 
@@ -54,7 +53,7 @@ static int check_cpu(void);
 //   mmu disabled
 //   stack somewhere below 1 MB
 //   supervisor mode
-void _start(unsigned int mem, int in_vesa, unsigned int vesa_ptr)
+void _start(unsigned int mem, int in_vesa, unsigned int vesa_ptr, unsigned int console_ptr)
 {
 	unsigned int new_stack;
 	unsigned int *idt;
@@ -69,7 +68,7 @@ void _start(unsigned int mem, int in_vesa, unsigned int vesa_ptr)
 	asm("cld");			// Ain't nothing but a GCC thang.
 	asm("fninit");		// initialize floating point unit
 
-	clearscreen();
+	screenOffset = console_ptr;
 	dprintf("stage2 bootloader entry.\n");
 	dprintf("memsize = 0x%x, in_vesa %d, vesa_ptr 0x%x\n", mem, in_vesa, vesa_ptr);
 
@@ -260,7 +259,7 @@ void _start(unsigned int mem, int in_vesa, unsigned int vesa_ptr)
 
 	dprintf("jumping into kernel at 0x%x\n", kernel_entry);
 
-	ka->cons_line = line;
+	ka->cons_line = screenOffset / SCREEN_WIDTH;
 
 	asm("movl	%0, %%eax;	"			// move stack out of way
 		"movl	%%eax, %%esp; "
@@ -346,7 +345,7 @@ static void load_elf_image(void *data, unsigned int *next_paddr, addr_range *ar0
 
 // allocate a page directory and page table to facilitate mapping
 // pages to the 0x80000000 - 0x80400000 region.
-// also identity maps the first 4MB of memory
+// also identity maps the first 8MB of memory
 static int mmu_init(kernel_args *ka, unsigned int *next_paddr)
 {
 	int i;
@@ -365,10 +364,18 @@ static int mmu_init(kernel_args *ka, unsigned int *next_paddr)
 
 	for (i = 0; i < 1024; i++) {
 		pgtable[i] = (i * 0x1000) | DEFAULT_PAGE_FLAGS;
-	}	// pkx: create first 4 MB one-to-one mapping
+	}
 
 	pgdir[0] = (unsigned int)pgtable | DEFAULT_PAGE_FLAGS;
-		// pkx: put the one-to-one mapping into the page dir.
+
+	// make another pagetable at this random spot
+	pgtable = (unsigned int *)0x12000;
+
+	for (i = 0; i < 1024; i++) {
+		pgtable[i] = (i * 0x1000 + 0x400000) | DEFAULT_PAGE_FLAGS;
+	}
+
+	pgdir[1] = (unsigned int)pgtable | DEFAULT_PAGE_FLAGS;
 
 	// Get new page table and clear it out
 	pgtable = (unsigned int *)*next_paddr;
@@ -516,18 +523,13 @@ static void scrup()
 	screenOffset = (SCREEN_HEIGHT - 1) * SCREEN_WIDTH;
 	for(i=0; i<SCREEN_WIDTH; i++)
 		kScreenBase[screenOffset + i] = 0x0720;
-	line = SCREEN_HEIGHT - 1;
 }
 
 void puts(const char *str)
 {
 	while (*str) {
 		if (*str == '\n') {
-			line++;
-			if(line > SCREEN_HEIGHT - 1)
-				scrup();
-			else
-				screenOffset += SCREEN_WIDTH - (screenOffset % 80);
+			screenOffset += SCREEN_WIDTH - (screenOffset % 80);
 		} else {
 			kScreenBase[screenOffset++] = 0xf00 | *str;
 		}

@@ -25,14 +25,40 @@ MY_GLUE :=
 
 include templates/app.mk
 
+STAGE1 = $(BOOT_TARGETDIR)/stage1
+
+# rules for stage1
+MY_TARGETDIR := $(BOOT_TARGETDIR)
+MY_SRCDIR := $(BOOT_SRCDIR)
+MY_TARGET := $(STAGE1).elf
+MY_OBJS := \
+	stage1.o \
+	inflate.o
+
+MY_INCLUDES := $(STDINCLUDE)
+MY_CFLAGS := $(KERNEL_CFLAGS)
+MY_LDFLAGS := -dN
+MY_LIBS := $(LIBS_BUILD_DIR)/libc/libc.a
+MY_LIBPATHS :=
+MY_DEPS :=
+MY_LINKSCRIPT := $(MY_SRCDIR)/stage1.ld
+MY_GLUE :=
+
+include templates/app.mk
+
 BOOTBLOCK := $(BOOT_SRCDIR)/bootblock.bin
 MAKEFLOP := $(BOOT_SRCDIR)/makeflop
 CONFIG_FILE := $(BOOT_SRCDIR)/config.ini
 
-$(FINAL): $(STAGE2) $(ALL) $(TOOLS) $(MAKEFLOP) $(CONFIG_FILE) $(BOOTBLOCK)
-	$(BOOTMAKER) --strip-debug --strip-binary $(STRIP) $(CONFIG_FILE) -o $(FINAL).pre
+$(FINAL): $(STAGE1) $(STAGE2) $(ALL) $(TOOLS) $(MAKEFLOP) $(CONFIG_FILE) $(BOOTBLOCK)
+	$(BOOTMAKER) --strip-debug --strip-binary $(STRIP) $(CONFIG_FILE) -o $(FINAL).prepre
+	gzip -f -9 $(FINAL).prepre
+	cat $(STAGE1) $(FINAL).prepre.gz > $(FINAL).pre
 	$(MAKEFLOP) $(BOOTBLOCK) $(FINAL).pre $(FINAL)
-	@rm -f $(FINAL).pre
+	@rm -f $(FINAL).pre $(FINAL).prepre $(FINAL).prepre.gz
+
+$(STAGE1): $(STAGE1).elf
+	$(OBJCOPY) -O binary $(STAGE1).elf $(STAGE1)
 
 disk: $(FINAL)
 ifeq ($(OSTYPE),cygwin)
