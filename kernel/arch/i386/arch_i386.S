@@ -3,11 +3,12 @@
 ** Distributed under the terms of the NewOS License.
 */
 
+#define FUNCTION(x) .global x; .type x,@function; x
+
 .text
 
 /* int atomic_add(int *val, int incr) */
-.global atomic_add
-atomic_add:
+FUNCTION(atomic_add):
 	movl	4(%esp),%edx
 	movl	8(%esp),%eax
 	lock
@@ -15,8 +16,7 @@ atomic_add:
 	ret
 
 /* int atomic_and(int *val, int incr) */
-.global atomic_and
-atomic_and:
+FUNCTION(atomic_and):
 	movl	4(%esp),%edx
 
 _atomic_and1:
@@ -32,8 +32,7 @@ _atomic_and1:
 	ret
 
 /* int atomic_or(int *val, int incr) */
-.global atomic_or
-atomic_or:
+FUNCTION(atomic_or):
 	movl	4(%esp),%edx
 
 _atomic_or1:
@@ -49,16 +48,14 @@ _atomic_or1:
 	ret
 
 /* int atomic_set(int *val, int set_to) */
-.global atomic_set
-atomic_set:
+FUNCTION(atomic_set):
 	movl	4(%esp),%edx
 	movl	8(%esp),%eax
 	xchg	%eax,(%edx)
 	ret
 
 /* int test_and_set(int *val, int set_to, int test_val) */
-.global test_and_set
-test_and_set:
+FUNCTION(test_and_set):
 	movl	4(%esp),%edx
 	movl	8(%esp),%ecx
 	movl	12(%esp),%eax
@@ -73,15 +70,13 @@ test_and_set:
 cv_factor:
 	.word 0
 
-.global setup_system_time
-setup_system_time:
+FUNCTION(setup_system_time):
 	movl	4(%esp),%eax
 	movl	%eax,cv_factor
 	ret
 
 /* long long system_time(); */
-.global system_time
-system_time:
+FUNCTION(system_time):
 	/* load 64-bit factor into %eax (low), %edx (high) */
 	rdtsc		/* time in %edx,%eax */
 
@@ -102,15 +97,13 @@ system_time:
 	ret
 
 /* void arch_cpu_global_TLB_invalidate(); */
-.global arch_cpu_global_TLB_invalidate
-arch_cpu_global_TLB_invalidate:
+FUNCTION(arch_cpu_global_TLB_invalidate):
 	movl	%cr3,%eax
 	movl	%eax,%cr3
 	ret
 
 /* void i386_context_switch(unsigned int **old_esp, unsigned int *new_esp, addr new_pgdir); */
-.global i386_context_switch
-i386_context_switch:
+FUNCTION(i386_context_switch):
 //	pushfl
 	pusha
 	movl	36(%esp),%eax
@@ -127,8 +120,7 @@ skip_pgdir_swap:
 	ret
 
 /* void i386_swap_pgdir(addr new_pgdir); */
-.global i386_swap_pgdir
-i386_swap_pgdir:
+FUNCTION(i386_swap_pgdir):
 	movl	4(%esp),%eax
 	movl	%eax,%cr3
 	ret
@@ -146,8 +138,7 @@ i386_uspace_exit_stub_end:
 
 
 /* void i386_enter_uspace(addr entry, void *args, addr ustack_top); */
-.global i386_enter_uspace
-i386_enter_uspace:
+FUNCTION(i386_enter_uspace):
 	movl	4(%esp),%eax	// get entry point
 	movl	8(%esp),%edx	// get arguments
 	movl	12(%esp),%ebx	// get user stack
@@ -181,8 +172,7 @@ _copy_more:
 	iret
 
 /* void i386_switch_stack_and_call(addr stack, void (*func)(void *), void *arg); */
-.global i386_switch_stack_and_call
-i386_switch_stack_and_call:
+FUNCTION(i386_switch_stack_and_call):
 	movl	4(%esp),%eax	// new stack
 	movl	8(%esp),%ecx	// func
 	movl	12(%esp),%edx	// args
@@ -197,16 +187,14 @@ null_idt_descr:
 	.word	0
 	.word	0,0
 
-.global reboot
-reboot:
+FUNCTION(reboot):
 	lidt	null_idt_descr
 	int		$0
 done:
 	jmp		done
 
 
-.global dbg_save_registers
-dbg_save_registers:
+FUNCTION(dbg_save_registers):
 	pushl	%esi
 	pushl	%eax
 	movl	12(%esp), %esi
