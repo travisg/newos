@@ -15,6 +15,7 @@
 #include <kernel/vfs.h>
 #include <kernel/dev.h>
 #include <kernel/net/net.h>
+#include <kernel/cbuf.h>
 #include <dev/devs.h>
 #include <bus/bus.h>
 
@@ -61,6 +62,7 @@ int _start(kernel_args *oldka, int cpu)
 
 		// now we can create and use semaphores
 		vm_init_postsem(&ka);
+		cbuf_init();
 		vfs_init(&ka);
 		thread_init(&ka);
 		vm_init_postthread(&ka);
