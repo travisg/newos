@@ -1,0 +1,11 @@
+#!/bin/sh
+
+while(true); do
+	sleep 30
+	P4OUTPUT=`p4 sync 2> /dev/null`
+	if [ -n "$P4OUTPUT" ]; then
+		echo something to do!
+		make clean
+		make
+	fi
+done
