@@ -27,10 +27,10 @@ struct page_lookup_key {
 	vm_cache_ref *ref;
 };
 
-static int page_compare_func(void *_p, void *_key)
+static int page_compare_func(void *_p, const void *_key)
 {
 	vm_page *p = _p;
-	struct page_lookup_key *key = _key;
+	const struct page_lookup_key *key = _key;
 
 //	dprintf("page_compare_func: p 0x%x, key 0x%x\n", p, key);
 
@@ -42,10 +42,10 @@ static int page_compare_func(void *_p, void *_key)
 
 #define HASH(offset, ref) ((unsigned int)(offset >> 12) ^ ((unsigned int)(ref)>>4))
 
-static unsigned int page_hash_func(void *_p, void *_key, int range)
+static unsigned int page_hash_func(void *_p, const void *_key, unsigned int range)
 {
 	vm_page *p = _p;
-	struct page_lookup_key *key = _key;
+	const struct page_lookup_key *key = _key;
 #if 0
 	if(p)
 		dprintf("page_hash_func: p 0x%x, key 0x%x, HASH = 0x%x\n", p, key, HASH(p->offset, p->cache_ref) % range);

@@ -21,10 +21,10 @@ static netsocket *sock_table;
 static mutex sock_mutex;
 static sock_id next_sock_id;
 
-static int sock_compare_func(void *_s, void *_key)
+static int sock_compare_func(void *_s, const void *_key)
 {
 	netsocket *s = _s;
-	sock_id *id = _key;
+	const sock_id *id = _key;
 
 	if(s->id == *id)
 		return 0;
@@ -32,10 +32,10 @@ static int sock_compare_func(void *_s, void *_key)
 		return 1;
 }
 
-static unsigned int sock_hash_func(void *_s, void *_key, int range)
+static unsigned int sock_hash_func(void *_s, const void *_key, unsigned int range)
 {
 	netsocket *s = _s;
-	sock_id *id = _key;
+	const sock_id *id = _key;
 
 	if(s)
 		return s->id % range;

@@ -58,10 +58,10 @@ static int vm_region_acquire_ref(vm_region *region);
 static void vm_region_release_ref(vm_region *region);
 static void vm_region_release_ref2(vm_region *region);
 
-static int region_compare(void *_r, void *key)
+static int region_compare(void *_r, const void *key)
 {
 	vm_region *r = _r;
-	region_id *id = key;
+	const region_id *id = key;
 
 	if(r->id == *id)
 		return 0;
@@ -69,10 +69,10 @@ static int region_compare(void *_r, void *key)
 		return -1;
 }
 
-static unsigned int region_hash(void *_r, void *key, int range)
+static unsigned int region_hash(void *_r, const void *key, unsigned int range)
 {
 	vm_region *r = _r;
-	region_id *id = key;
+	const region_id *id = key;
 
 	if(r != NULL)
 		return (r->id % range);
@@ -80,10 +80,10 @@ static unsigned int region_hash(void *_r, void *key, int range)
 		return (*id % range);
 }
 
-static int aspace_compare(void *_a, void *key)
+static int aspace_compare(void *_a, const void *key)
 {
 	vm_address_space *aspace = _a;
-	aspace_id *id = key;
+	const aspace_id *id = key;
 
 	if(aspace->id == *id)
 		return 0;
@@ -91,10 +91,10 @@ static int aspace_compare(void *_a, void *key)
 		return -1;
 }
 
-static unsigned int aspace_hash(void *_a, void *key, int range)
+static unsigned int aspace_hash(void *_a, const void *key, unsigned int range)
 {
 	vm_address_space *aspace = _a;
-	aspace_id *id = key;
+	const aspace_id *id = key;
 
 	if(aspace != NULL)
 		return (aspace->id % range);

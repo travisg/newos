@@ -94,10 +94,10 @@ struct devfs_cookie {
 static struct devfs *thedevfs = NULL;
 
 #define BOOTFS_HASH_SIZE 16
-static unsigned int devfs_vnode_hash_func(void *_v, void *_key, int range)
+static unsigned int devfs_vnode_hash_func(void *_v, const void *_key, unsigned int range)
 {
 	struct devfs_vnode *v = _v;
-	vnode_id *key = _key;
+	const vnode_id *key = _key;
 
 	if(v != NULL)
 		return v->id % range;
@@ -105,10 +105,10 @@ static unsigned int devfs_vnode_hash_func(void *_v, void *_key, int range)
 		return (*key) % range;
 }
 
-static int devfs_vnode_compare_func(void *_v, void *_key)
+static int devfs_vnode_compare_func(void *_v, const void *_key)
 {
 	struct devfs_vnode *v = _v;
-	vnode_id *key = _key;
+	const vnode_id *key = _key;
 
 	if(v->id == *key)
 		return 0;

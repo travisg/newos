@@ -108,10 +108,10 @@ static vnode_id next_vnode_id = 0;
 static void *mounts_table;
 static fs_id next_fsid = 0;
 
-static int mount_compare(void *_m, void *_key)
+static int mount_compare(void *_m, const void *_key)
 {
 	struct fs_mount *mount = _m;
-	fs_id *id = _key;
+	const fs_id *id = _key;
 
 	if(mount->id == *id)
 		return 0;
@@ -119,10 +119,10 @@ static int mount_compare(void *_m, void *_key)
 		return -1;
 }
 
-static unsigned int mount_hash(void *_m, void *_key, int range)
+static unsigned int mount_hash(void *_m, const void *_key, unsigned int range)
 {
 	struct fs_mount *mount = _m;
-	fs_id *id = _key;
+	const fs_id *id = _key;
 
 	if(mount)
 		return mount->id % range;
@@ -143,10 +143,10 @@ static struct fs_mount *fsid_to_mount(fs_id id)
 	return mount;
 }
 
-static int vnode_compare(void *_v, void *_key)
+static int vnode_compare(void *_v, const void *_key)
 {
 	struct vnode *v = _v;
-	struct vnode_hash_key *key = _key;
+	const struct vnode_hash_key *key = _key;
 
 	if(v->fsid == key->fsid && v->vnid == key->vnid)
 		return 0;
@@ -154,10 +154,10 @@ static int vnode_compare(void *_v, void *_key)
 		return -1;
 }
 
-static unsigned int vnode_hash(void *_v, void *_key, int range)
+static unsigned int vnode_hash(void *_v, const void *_key, unsigned int range)
 {
 	struct vnode *v = _v;
-	struct vnode_hash_key *key = _key;
+	const struct vnode_hash_key *key = _key;
 
 #define VHASH(fsid, vnid) (((uint32)((vnid)>>32) + (uint32)(vnid)) ^ (uint32)(fsid))
 

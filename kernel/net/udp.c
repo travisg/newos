@@ -58,10 +58,10 @@ typedef struct udp_endpoint {
 static udp_endpoint *endpoints;
 static mutex endpoints_lock;
 
-static int udp_endpoint_compare_func(void *_e, void *_key)
+static int udp_endpoint_compare_func(void *_e, const void *_key)
 {
 	udp_endpoint *e = _e;
-	uint16 *port = _key;
+	const uint16 *port = _key;
 
 	if(e->port == *port)
 		return 0;
@@ -69,10 +69,10 @@ static int udp_endpoint_compare_func(void *_e, void *_key)
 		return 1;
 }
 
-static unsigned int udp_endpoint_hash_func(void *_e, void *_key, int range)
+static unsigned int udp_endpoint_hash_func(void *_e, const void *_key, unsigned int range)
 {
 	udp_endpoint *e = _e;
-	uint16 *port = _key;
+	const uint16 *port = _key;
 
 	if(e)
 		return e->port % range;

@@ -78,10 +78,10 @@ static uint32 curr_identification;
 static void *frag_table;
 static mutex frag_table_mutex;
 
-static int frag_compare_func(void *_frag, void *_key)
+static int frag_compare_func(void *_frag, const void *_key)
 {
 	ipv4_fragment *frag = _frag;
-	ipv4_fragment_key *key = _key;
+	const ipv4_fragment_key *key = _key;
 
 	if(frag->src == key->src && frag->dest == key->dest &&
 	   frag->identification == key->identification && frag->protocol == key->protocol) {
@@ -92,10 +92,10 @@ static int frag_compare_func(void *_frag, void *_key)
 }
 
 // XXX lameo hash
-static unsigned int frag_hash_func(void *_frag, void *_key, int range)
+static unsigned int frag_hash_func(void *_frag, const void *_key, unsigned int range)
 {
 	ipv4_fragment *frag = _frag;
-	ipv4_fragment_key *key = _key;
+	const ipv4_fragment_key *key = _key;
 
 	if(frag)
 		return (frag->src ^ frag->dest ^ frag->protocol ^ frag->identification) % range;

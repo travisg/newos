@@ -23,19 +23,19 @@
 static void *iflist;
 static if_id next_id;
 
-static int if_compare_func(void *_i, void *_key)
+static int if_compare_func(void *_i, const void *_key)
 {
 	struct ifnet *i = _i;
-	if_id *id = _key;
+	const if_id *id = _key;
 
 	if(i->id == *id) return 0;
 	else return 1;
 }
 
-static unsigned int if_hash_func(void *_i, void *_key, int range)
+static unsigned int if_hash_func(void *_i, const void *_key, unsigned int range)
 {
 	struct ifnet *i = _i;
-	if_id *id = _key;
+	const if_id *id = _key;
 
 	if(i)
 		return (i->id % range);

@@ -5,10 +5,6 @@
 
 //
 // TODO:
-// - all functions in <kernel/khash.h> require non-const keys 
-//   -> make them const and remove type-casts here
-// - "hash_func" of <kernel/khash.h> must pass "range" unsigned
-//   -> change declaration there and fix all applications
 // - move string hash function to <kernel/khash.h>
 // - "offsetof" macro is missing
 //   -> move it to a public place
@@ -124,59 +120,42 @@ void *modules_images[num_module_paths];
 void *modules_list;
 
 
-static int module_hash_str( const char *str )
+static int module_info_compare( void *a, const void *key )
 {
-	char ch;
-	unsigned int hash = 0;
-	
-	// we assume hash to be at least 32 bits
-	while( (ch = *str++) != 0 ) {
-		hash ^= hash >> 28;
-		hash <<= 4;
-		hash ^= ch;
-	}
-	
-	return (int)hash;
-}
-
-static int module_info_compare( void *a, void *key )
-{
-	module_info *module = (module_info *)a;
-	const char *name = (const char *)key;
+	module_info *module = a;
+	const char *name = key;
 	
 	return strcmp( module->header->name, name );
 }
 
-static unsigned int module_info_hash( void *a, void *key, int range_in )
+static unsigned int module_info_hash( void *a, const void *key, unsigned int range )
 {
-	module_info *module = (module_info *)a;
-	const char *name = (const char *)key;
-	unsigned int range = (unsigned int)range_in;	
+	module_info *module = a;
+	const char *name = key;
 
 	if( module != NULL )
-		return module_hash_str( module->header->name ) % range;
+		return hash_hash_str( module->header->name ) % range;
 	else
-		return module_hash_str( key ) % range;
+		return hash_hash_str( key ) % range;
 }
 
-static int module_image_compare( void *a, void *key )
+static int module_image_compare( void *a, const void *key )
 {
-	module_image *image = (module_image *)a;
-	const char *name = (const char *)key;
+	module_image *image = a;
+	const char *name = key;
 	
 	return strcmp( image->name, name );
 }
 
-static unsigned int module_image_hash( void *a, void *key, int range_in )
+static unsigned int module_image_hash( void *a, const void *key, unsigned int range )
 {
 	module_image *image = (module_image *)a;
-	const char *name = (const char *)key;
-	unsigned int range = (unsigned int)range_in;	
+	const char *name = key;
 
 	if( image != NULL )
-		return module_hash_str( image->name ) % range;
+		return hash_hash_str( image->name ) % range;
 	else
-		return module_hash_str( key ) % range;
+		return hash_hash_str( key ) % range;
 }
 
 

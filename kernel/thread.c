@@ -43,8 +43,8 @@ struct proc_arg {
 };
 
 static struct proc *create_proc_struct(const char *name, bool kernel);
-static int proc_struct_compare(void *_p, void *_key);
-static unsigned int proc_struct_hash(void *_p, void *_key, int range);
+static int proc_struct_compare(void *_p, const void *_key);
+static unsigned int proc_struct_hash(void *_p, const void *_key, unsigned int range);
 
 // global
 spinlock_t thread_spinlock = 0;
@@ -195,10 +195,10 @@ static void remove_thread_from_proc(struct proc *p, struct thread *t)
 	}
 }
 
-static int thread_struct_compare(void *_t, void *_key)
+static int thread_struct_compare(void *_t, const void *_key)
 {
 	struct thread *t = _t;
-	struct thread_key *key = _key;
+	const struct thread_key *key = _key;
 
 	if(t->id == key->id) return 0;
 	else return 1;
@@ -282,10 +282,10 @@ error:
 	return err;
 }
 
-static unsigned int thread_struct_hash(void *_t, void *_key, int range)
+static unsigned int thread_struct_hash(void *_t, const void *_key, unsigned int range)
 {
 	struct thread *t = _t;
-	struct thread_key *key = _key;
+	const struct thread_key *key = _key;
 
 	if(t != NULL)
 		return (t->id % range);
@@ -1531,19 +1531,19 @@ found_thread:
 	}
 }
 
-static int proc_struct_compare(void *_p, void *_key)
+static int proc_struct_compare(void *_p, const void *_key)
 {
 	struct proc *p = _p;
-	struct proc_key *key = _key;
+	const struct proc_key *key = _key;
 
 	if(p->id == key->id) return 0;
 	else return 1;
 }
 
-static unsigned int proc_struct_hash(void *_p, void *_key, int range)
+static unsigned int proc_struct_hash(void *_p, const void *_key, unsigned int range)
 {
 	struct proc *p = _p;
-	struct proc_key *key = _key;
+	const struct proc_key *key = _key;
 
 	if(p != NULL)
 		return (p->id % range);

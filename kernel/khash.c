@@ -14,11 +14,11 @@
 struct hash_table {
 	struct hash_elem **table;
 	int next_ptr_offset;
-	int table_size;
+	unsigned int table_size;
 	int num_elems;
 	int flags;
-	int (*compare_func)(void *e, void *key);
-	unsigned int (*hash_func)(void *e, void *key, int range);
+	int (*compare_func)(void *e, const void *key);
+	unsigned int (*hash_func)(void *e, const void *key, unsigned int range);
 };
 
 // XXX gross hack
@@ -26,12 +26,12 @@ struct hash_table {
 #define NEXT(t, e) ((void *)(*(unsigned long *)NEXT_ADDR(t, e)))
 #define PUT_IN_NEXT(t, e, val) (*(unsigned long *)NEXT_ADDR(t, e) = (long)(val))
 
-void *hash_init(int table_size, int next_ptr_offset,
-	int compare_func(void *e, void *key),
-	unsigned int hash_func(void *e, void *key, int range))
+void *hash_init(unsigned int table_size, int next_ptr_offset,
+	int compare_func(void *e, const void *key),
+	unsigned int hash_func(void *e, const void *key, unsigned int range))
 {
 	struct hash_table *t;
-	int i;
+	unsigned int i;
 
 	t = (struct hash_table *)malloc(sizeof(struct hash_table));
 	if(t == NULL) {
@@ -89,7 +89,7 @@ int hash_remove(void *_hash_table, void *e)
 {
 	struct hash_table *t = _hash_table;
 	void *i, *last_i;
-	int hash;
+	unsigned int hash;
 
 	hash = t->hash_func(e, NULL, t->table_size);
 	last_i = NULL;
@@ -111,7 +111,7 @@ void *hash_find(void *_hash_table, void *e)
 {
 	struct hash_table *t = _hash_table;
 	void *i;
-	int hash;
+	unsigned int hash;
 
 	hash = t->hash_func(e, NULL, t->table_size);
 	for(i = t->table[hash]; i != NULL; i = NEXT(t, i)) {
@@ -123,11 +123,11 @@ void *hash_find(void *_hash_table, void *e)
 	return NULL;
 }
 
-void *hash_lookup(void *_hash_table, void *key)
+void *hash_lookup(void *_hash_table, const void *key)
 {
 	struct hash_table *t = _hash_table;
 	void *i;
-	int hash;
+	unsigned int hash;
 
 	if(t->compare_func == NULL)
 		return NULL;
@@ -172,11 +172,11 @@ void hash_rewind(void *_hash_table, struct hash_iterator *i)
 void *hash_next(void *_hash_table, struct hash_iterator *i)
 {
 	struct hash_table *t = _hash_table;
-	int index;
+	unsigned int index;
 
 restart:
 	if(!i->ptr) {
-		for(index = i->bucket + 1; index < t->table_size; index++) {
+		for(index = (unsigned int)(i->bucket + 1); index < t->table_size; index++) {
 			if(t->table[index]) {
 				i->bucket = index;
 				i->ptr = t->table[index];
@@ -192,3 +192,17 @@ restart:
 	return i->ptr;
 }
 
+unsigned int hash_hash_str( const char *str )
+{
+	char ch;
+	unsigned int hash = 0;
+	
+	// we assume hash to be at least 32 bits
+	while( (ch = *str++) != 0 ) {
+		hash ^= hash >> 28;
+		hash <<= 4;
+		hash ^= ch;
+	}
+	
+	return hash;
+}

@@ -91,10 +91,10 @@ struct isofs_vnode {
 static void iso_scan_dir(struct isofs* fs, struct isofs_vnode* dir);
 
 //--------------------------------------------------------------------------------
-static unsigned int isofs_vnode_hash_func(void *_v, void *_key, int range)
+static unsigned int isofs_vnode_hash_func(void *_v, const void *_key, unsigned int range)
 {
 	struct isofs_vnode *v = _v;	// convenience ptr to our vnode structure
-	vnode_id *key = _key;		// convenience ptr to vfs vnode ID
+	const vnode_id *key = _key;	// convenience ptr to vfs vnode ID
 
 	if(v != NULL)				// If we've got a private vnode structure
 		return v->id % range;	//   use that to calc hash value
@@ -103,10 +103,10 @@ static unsigned int isofs_vnode_hash_func(void *_v, void *_key, int range)
 }
 
 //--------------------------------------------------------------------------------
-static int isofs_vnode_compare_func(void *_v, void *_key)
+static int isofs_vnode_compare_func(void *_v, const void *_key)
 {
 	struct isofs_vnode *v = _v;	// convenience ptr to our vnode structure
-	vnode_id *key = _key;		// convenience ptr to vfs vnode ID
+	const vnode_id *key = _key;	// convenience ptr to vfs vnode ID
 
 	if(v->id == *key)			// If the passed kernel vnode ID == private vnode ID
 		return 0;				//    we're the same!

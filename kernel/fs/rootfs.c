@@ -59,10 +59,10 @@ struct rootfs_cookie {
 };
 
 #define ROOTFS_HASH_SIZE 16
-static unsigned int rootfs_vnode_hash_func(void *_v, void *_key, int range)
+static unsigned int rootfs_vnode_hash_func(void *_v, const void *_key, unsigned int range)
 {
 	struct rootfs_vnode *v = _v;
-	vnode_id *key = _key;
+	const vnode_id *key = _key;
 
 	if(v != NULL)
 		return v->id % range;
@@ -70,10 +70,10 @@ static unsigned int rootfs_vnode_hash_func(void *_v, void *_key, int range)
 		return (*key) % range;
 }
 
-static int rootfs_vnode_compare_func(void *_v, void *_key)
+static int rootfs_vnode_compare_func(void *_v, const void *_key)
 {
 	struct rootfs_vnode *v = _v;
-	vnode_id *key = _key;
+	const vnode_id *key = _key;
 
 	if(v->id == *key)
 		return 0;

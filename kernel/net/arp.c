@@ -69,10 +69,10 @@ static arp_wait_request *arp_waiters;
 static mutex arp_wait_mutex;
 static sem_id arp_wait_sem;
 
-static int arp_cache_compare(void *_e, void *_key)
+static int arp_cache_compare(void *_e, const void *_key)
 {
 	arp_cache_entry *e = _e;
-	ipv4_addr *addr = _key;
+	const ipv4_addr *addr = _key;
 
 	if(e->ip_addr == *addr)
 		return 0;
@@ -80,11 +80,11 @@ static int arp_cache_compare(void *_e, void *_key)
 		return 1;
 }
 
-static unsigned int arp_cache_hash(void *_e, void *_key, int range)
+static unsigned int arp_cache_hash(void *_e, const void *_key, unsigned int range)
 {
 	arp_cache_entry *e = _e;
-	ipv4_addr *key = _key;
-	ipv4_addr *addr;
+	const ipv4_addr *key = _key;
+	const ipv4_addr *addr;
 
 	if(e)
 		addr = &e->ip_addr;
