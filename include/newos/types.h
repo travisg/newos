@@ -104,5 +104,16 @@ typedef unsigned short      ushort;
 typedef unsigned int        uint;
 typedef unsigned long       ulong;
 
+/* system types */
+typedef int64 bigtime_t;
+typedef uint64 vnode_id;
+typedef int thread_id;
+typedef int region_id;
+typedef int aspace_id;
+typedef int proc_id;
+typedef int sem_id;
+typedef int port_id;
+typedef int image_id;
+
 #endif
 

@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -8,18 +8,7 @@
 #include <newos/types.h>
 #include <kernel/arch/ktypes.h>
 
-typedef int thread_id;
-typedef int region_id;
-typedef int aspace_id;
-typedef int proc_id;
-typedef int sem_id;
-typedef int port_id;
-typedef int image_id;
-
-typedef uint64 vnode_id;
 typedef uint32 fs_id;
-
-typedef int64 bigtime_t;
 
 // Handled in arch_ktypes.h
 

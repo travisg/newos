@@ -6,23 +6,10 @@
 #define _NEWOS_KERNEL_NET_NET_H
 
 #include <boot/stage2.h>
+#include <newos/net.h>
 
 int net_init(kernel_args *ka);
 int net_init_postdev(kernel_args *ka);
-
-enum {
-	ADDR_TYPE_NULL = 0,
-	ADDR_TYPE_ETHERNET,
-	ADDR_TYPE_IP
-};
-
-typedef struct netaddr {
-	uint8 len;
-	uint8 type;
-	uint8 pad0;
-	uint8 pad1;
-	uint8 addr[12];
-} netaddr;
 
 #define NET_CHATTY 0
 

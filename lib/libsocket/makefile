@@ -1,0 +1,20 @@
+# this file handles building libsocket.so
+
+MY_TARGET := $(LIBS_BUILD_DIR)/libsocket/libsocket.so
+ifeq ($(call FINDINLIST,$(MY_TARGET),$(ALL)),1)
+
+MY_STATIC_TARGET := $(LIBS_BUILD_DIR)/libsocket/libsocket.a
+
+MY_TARGETDIR := $(LIBS_BUILD_DIR)/libsocket
+MY_SRCDIR := $(LIBS_DIR)/libsocket
+MY_OBJS := \
+	socket.o
+
+MY_INCLUDES := $(STDINCLUDE)
+MY_CFLAGS := 
+MY_LINKSCRIPT := $(LIBS_LDSCRIPT)
+
+include templates/lib.mk
+
+endif
+

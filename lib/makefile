@@ -5,6 +5,7 @@ include $(addsuffix /makefile, $(addprefix $(LIBS_DIR)/, \
 	glue \
 	libm \
 	libc \
+	libsocket \
 ))
 
 

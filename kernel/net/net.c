@@ -263,7 +263,7 @@ int net_init_postdev(kernel_args *ka)
 	thread_resume_thread(id);
 }
 #endif
-#if 1
+#if 0
 	// start the test thread
 {
 	thread_id id;

@@ -12,5 +12,6 @@ MY_OBJS += \
 	$(KERNEL_NET_DIR)/net.o \
 	$(KERNEL_NET_DIR)/net_timer.o \
 	$(KERNEL_NET_DIR)/socket.o \
+	$(KERNEL_NET_DIR)/socket_dev.o \
 	$(KERNEL_NET_DIR)/udp.o \
 	$(KERNEL_NET_DIR)/tcp.o

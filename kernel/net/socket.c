@@ -152,26 +152,14 @@ int socket_connect(sock_id id, sockaddr *addr)
 	return err;
 }
 
+ssize_t socket_read(sock_id id, void *buf, ssize_t len)
+{
+	return socket_recvfrom_etc(id, buf, len, NULL, 0, 0);
+}
+
 ssize_t socket_recvfrom(sock_id id, void *buf, ssize_t len, sockaddr *addr)
 {
-	netsocket *s;
-	ssize_t err;
-
-	s = lookup_socket(id);
-	if(!s)
-		return ERR_INVALID_HANDLE;
-
-	switch(s->type) {
-		case SOCK_PROTO_UDP:
-			err = udp_recvfrom(s->prot_data, buf, len, addr, 0, 0);
-			break;
-		case SOCK_PROTO_TCP:
-			err = tcp_recvfrom(s->prot_data, buf, len, addr, 0, 0);
-			break;
-		default:
-			err = ERR_INVALID_ARGS;
-	}
-	return err;
+	return socket_recvfrom_etc(id, buf, len, addr, 0, 0);
 }
 
 ssize_t socket_recvfrom_etc(sock_id id, void *buf, ssize_t len, sockaddr *addr, int flags, bigtime_t timeout)
@@ -196,6 +184,11 @@ ssize_t socket_recvfrom_etc(sock_id id, void *buf, ssize_t len, sockaddr *addr, 
 	return err;
 }
 
+ssize_t socket_write(sock_id id, const void *buf, ssize_t len)
+{
+	return socket_sendto(id, buf, len, NULL);
+}
+
 ssize_t socket_sendto(sock_id id, const void *buf, ssize_t len, sockaddr *addr)
 {
 	netsocket *s;
@@ -218,6 +211,12 @@ ssize_t socket_sendto(sock_id id, const void *buf, ssize_t len, sockaddr *addr)
 	return err;
 }
 
+int socket_close(sock_id id)
+{
+	// XXX implement
+	return 0;
+}
+
 int socket_init(void)
 {
 	netsocket s;
@@ -229,6 +228,8 @@ int socket_init(void)
 	sock_table = hash_init(256, (addr)&s.next - (addr)&s, &sock_compare_func, &sock_hash_func);
 	if(!sock_table)
 		return ERR_NO_MEMORY;
+
+	socket_dev_init();
 
 	return 0;
 }
