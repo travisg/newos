@@ -91,7 +91,7 @@ endif
 
 OBJ_DIR = obj.$(ARCH)
 
-GLOBAL_CFLAGS += -Wall -W -Wno-multichar -Wno-unused -nostdinc -fno-builtin -DARCH_$(ARCH)
+GLOBAL_CFLAGS += -pipe -Wall -W -Wno-multichar -Wno-unused -nostdinc -fno-builtin -DARCH_$(ARCH)
 
 FINAL = boot/$(ARCH)/final
 
