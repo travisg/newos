@@ -25,6 +25,17 @@ int main()
 
 	printf("init: Welcome to NewOS!\n");
 
+	if(1) {
+		proc_id pid;
+
+		pid = sys_proc_create_proc("/boot/bin/fortune", "/boot/bin/fortune", NULL, 0, 5);
+		if(pid >= 0) {
+			int retcode;
+			sys_proc_wait_on_proc(pid, &retcode);
+		}
+	}
+
+		
 	while(1) {
 		proc_id pid;
 
