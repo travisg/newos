@@ -22,36 +22,85 @@
 #include "ns83820_dev.h"
 #include "ns83820_priv.h"
 
-int ns83820_detect(ns83820 **_ns)
+#define debug_level_flow 3
+#define debug_level_error 3
+#define debug_level_info 3
+
+#define DEBUG_MSG_PREFIX "NS83820 -- "
+
+#include <kernel/debug_ext.h>
+
+#if 0
+// macros to manipulate registers. Assumes a variable called ns of type ns83820 *
+#define NS_WRITE_32(reg, dat) ({ \
+	asm("wbinvd"); \
+	*(vuint32 *)((ns)->virt_base + (reg)) = (dat); \
+	dprintf("NS_WRITE_32: putting 0x%x at 0x%lx\n", dat, (ns)->virt_base + (reg)); \
+	asm("wbinvd"); \
+	})
+
+#define NS_READ_32(reg) ({ \
+	asm("wbinvd"); \
+	uint32 temp = *(vuint32 *)((ns)->virt_base + (reg)); \
+	dprintf("NS_READ_32: read 0x%x from 0x%lx\n", temp, (ns)->virt_base + (reg)); \
+	temp; \
+	})
+#else
+// macros to manipulate registers. Assumes a variable called ns of type ns83820 *
+#define NS_WRITE_32(reg, dat) ({ \
+	out32(dat, (ns)->io_port + (reg)); \
+	dprintf("NS_WRITE_32: putting 0x%x at 0x%lx\n", dat, (ns)->io_port + (reg)); \
+	})
+
+#define NS_READ_32(reg) ({ \
+	uint32 temp = in32((ns)->io_port + (reg)); \
+	dprintf("NS_READ_32: read 0x%x from 0x%lx\n", temp, (ns)->io_port + (reg)); \
+	temp; \
+	})
+
+#endif
+
+int ns83820_detect(ns83820 **_ns, int *num)
 {
-	int i;
+	int i, j;
 	pci_module_hooks *pci;
 	pci_info pinfo;
 	bool foundit = false;
 	ns83820 *ns;
+	int err;
 
 	if(module_get(PCI_BUS_MODULE_NAME, 0, (void **)&pci) < 0) {
 		dprintf("ns83820_detect: no pci bus found..\n");
 		return -1;
 	}
 
+	j = 0;
 	for(i = 0; pci->get_nth_pci_info(i, &pinfo) >= NO_ERROR; i++) {
 		if(pinfo.vendor_id == NS_VENDOR_ID && pinfo.device_id == NS_DEVICE_ID_83820) {
-			foundit = true;
-			break;
+			if(j == *num) {
+				foundit = true;
+				break;
+			} else {
+				j++;
+			}
 		}
 	}
 	if(!foundit) {
 		dprintf("ns83820_detect: didn't find device on pci bus\n");
-		return -1;
+		err = ERR_NOT_FOUND;
+		goto err;
 	}
 
 	// we found one
 	dprintf("ns83820_detect: found device at pci %d:%d:%d\n", pinfo.bus, pinfo.device, pinfo.function);
 
+	// increment the cookie that was passed to us so we wont find this device again
+	(*num)++;
+
 	ns = kmalloc(sizeof(ns83820));
 	if(ns == NULL) {
-		return ERR_NO_MEMORY;
+		err = ERR_NO_MEMORY;
+		goto err;
 	}
 	memset(ns, 0, sizeof(ns83820));
 	ns->irq = pinfo.u.h0.interrupt_line;
@@ -67,15 +116,41 @@ int ns83820_detect(ns83820 **_ns)
 	}
 	if(ns->phys_base == 0) {
 		kfree(ns);
-		ns = NULL;
-		return -1;
+		err = ERR_IO_ERROR;
+		goto err;
 	}
 
-	dprintf("detected ns83820 at irq %d, memory base 0x%lx, size 0x%lx\n", ns->irq, ns->phys_base, ns->phys_size);
+	dprintf("detected ns83820 at irq %d, memory base 0x%lx, size 0x%lx, io base 0x%x\n", 
+		ns->irq, ns->phys_base, ns->phys_size, ns->io_port);
 
 	*_ns = ns;
 
-	return 0;
+	err = NO_ERROR;
+
+err:
+	module_put(PCI_BUS_MODULE_NAME);
+
+	return err;
+}
+
+static int run_bist(ns83820 *ns, uint32 bist_enable_bit, uint32 bist_done_bit, uint32 bist_fail_bit)
+{
+	// start the bist
+	NS_WRITE_32(REG_PTSCR, bist_enable_bit);
+
+	// wait for it to complete or fail
+	for(;;) {
+		uint32 val = NS_READ_32(REG_PTSCR);
+
+		if(val & bist_fail_bit)
+			return -1;
+		if(val & bist_done_bit)
+			return 0;
+		if((val & bist_enable_bit) == 0)
+			return -1;
+
+		thread_snooze(10);
+	}
 }
 
 int ns83820_init(ns83820 *ns)
@@ -83,8 +158,9 @@ int ns83820_init(ns83820 *ns)
 	bigtime_t time;
 	int err = -1;
 	addr_t temp;
+	int i;
 
-	dprintf("ns83820_init: ns %p\n", ns);
+	SHOW_FLOW(1, "ns83820_init: ns %p", ns);
 
 	ns->region = vm_map_physical_memory(vm_get_kernel_aspace_id(), "ns83820_init", (void **)&ns->virt_base,
 		REGION_ADDR_ANY_ADDRESS, ns->phys_size, LOCK_KERNEL|LOCK_RW, ns->phys_base);
@@ -93,7 +169,37 @@ int ns83820_init(ns83820 *ns)
 		err = -1;
 		goto err;
 	}
-	dprintf("ns83820 mapped at address 0x%lx\n", ns->virt_base);
+	SHOW_FLOW(3, "ns83820 mapped at address 0x%lx", ns->virt_base);
+
+	// reset the chip
+	NS_WRITE_32(REG_CR, 0x100);
+	while(NS_READ_32(REG_CR) & 0x100)
+		;
+
+	SHOW_FLOW0(3, "chip is reset");
+
+	thread_snooze(100000);
+
+	// run the BISTs
+	NS_WRITE_32(REG_PTSCR, 1<<13); // RBIST_RST
+	run_bist(ns, 1<<10, 1<<9, 0x1b8); // RBIST_EN
+	run_bist(ns, 1<<1, 0, 1); // EEBIST_EN
+	run_bist(ns, 1<<2, 0, 0); // EELOAD_EN
+
+	// load the mac address
+	for(i = 0; i < 3; i++) {
+		uint16 temp;
+
+		NS_WRITE_32(REG_RFCR, i * 2);
+		temp = NS_READ_32(REG_RFDR);
+
+		ns->mac_addr[i*2] = temp & 0xff;
+		ns->mac_addr[i*2+1] = (temp >> 8) & 0xff;
+	}
+
+	SHOW_FLOW(1, "address %02x:%02x:%02x:%02x:%02x:%02x", 
+		ns->mac_addr[0], ns->mac_addr[1], ns->mac_addr[2], 
+		ns->mac_addr[3], ns->mac_addr[4], ns->mac_addr[5]);
 
 	// set up device here
 	return -1;

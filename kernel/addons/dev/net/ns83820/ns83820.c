@@ -110,21 +110,22 @@ int dev_bootstrap(void);
 int dev_bootstrap(void)
 {
 	ns83820 *ns;
+	int num = 0;
 
 	dprintf("ns83820_dev_init: entry\n");
 
-	// detect and setup the device
-	if(ns83820_detect(&ns) < 0) {
-		// no ns83820 here
-		dprintf("ns83820_dev_init: no device found\n");
-		return ERR_GENERAL;
+	while(ns83820_detect(&ns, &num) >= 0) {
+		if(ns83820_init(ns) < 0)
+			continue;
+
+		// create device node
+		devfs_publish_indexed_device("net/ns83820", ns, &ns83820_hooks);
 	}
 
-	ns83820_init(ns);
-
-	// create device node
-	devfs_publish_indexed_device("net/ns83820", ns, &ns83820_hooks);
-
-	return 0;
+	if(num <= 0) {
+		dprintf("ns83820_dev_init: no device found\n");
+		return ERR_GENERAL;
+	} else
+		return 0;
 }
 
