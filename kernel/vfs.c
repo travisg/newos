@@ -355,6 +355,11 @@ err:
 	return err;
 }
 
+static void put_vnode(struct vnode *v)
+{
+	dec_vnode_ref_count(v, true, false);
+}
+
 int vfs_get_vnode(fs_id fsid, vnode_id vnid, fs_vnode *fsv)
 {
 	int err;
@@ -1280,56 +1285,6 @@ err:
 	return err;	
 }
 
-static ssize_t vfs_readpage(int fd, iovecs *vecs, off_t pos, bool kernel)
-{
-	struct vnode *v;
-	struct file_descriptor *f;
-	int err;
-
-#if MAKE_NOIZE
-	dprintf("vfs_readpage: fd = %d, vecs 0x%x, pos 0x%x 0x%x, kernel %d\n", fd, vecs, pos, kernel);
-#endif
-
-	f = get_fd(get_current_ioctx(kernel), fd);
-	if(!f) {
-		err = ERR_INVALID_HANDLE;
-		goto err;
-	}
-
-	v = f->vnode;
-	err = v->mount->fs->calls->fs_readpage(v->mount->fscookie, v->priv_vnode, f->cookie, vecs, pos);
-
-	put_fd(f);
-
-err:
-	return err;
-}
-
-static ssize_t vfs_writepage(int fd, iovecs *vecs, off_t pos, bool kernel)
-{
-	struct vnode *v;
-	struct file_descriptor *f;
-	int err;
-
-#if MAKE_NOIZE
-	dprintf("vfs_writepage: fd = %d, vecs 0x%x, pos 0x%x 0x%x, kernel %d\n", fd, vecs, pos, kernel);
-#endif
-
-	f = get_fd(get_current_ioctx(kernel), fd);
-	if(!f) {
-		err = ERR_INVALID_HANDLE;
-		goto err;
-	}
-
-	v = f->vnode;
-	err = v->mount->fs->calls->fs_writepage(v->mount->fscookie, v->priv_vnode, f->cookie, vecs, pos);
-
-	put_fd(f);
-
-err:
-	return err;
-}
-
 static int vfs_create(char *path, stream_type stream_type, void *args, bool kernel)
 {
 	int err;
@@ -1447,6 +1402,71 @@ err:
 	return err;	
 }
 
+int vfs_get_vnode_from_path(const char *path, bool kernel, void **vnode)
+{
+	struct vnode *v;
+	int err;
+	char buf[SYS_MAX_PATH_LEN+1];
+
+#if MAKE_NOIZE	
+	dprintf("vfs_get_vnode_from_path: entry. path = '%s', kernel %d\n", path, kernel);
+#endif
+
+	strncpy(buf, path, SYS_MAX_PATH_LEN);
+	buf[SYS_MAX_PATH_LEN] = 0;
+
+	err = path_to_vnode(buf, &v, kernel);
+	if(err < 0)
+		goto err;
+
+	*vnode = v;
+
+err:
+	return err;
+}
+
+int vfs_put_vnode_ptr(void *vnode)
+{
+	struct vnode *v = vnode;
+
+	put_vnode(v);
+
+	return 0;
+}
+
+ssize_t vfs_canpage(void *_v)
+{
+	struct vnode *v = _v;
+
+#if MAKE_NOIZE
+	dprintf("vfs_canpage: vnode 0x%x\n", v);
+#endif
+
+	return v->mount->fs->calls->fs_canpage(v->mount->fscookie, v->priv_vnode);
+}	
+
+ssize_t vfs_readpage(void *_v, iovecs *vecs, off_t pos)
+{
+	struct vnode *v = _v;
+
+#if MAKE_NOIZE
+	dprintf("vfs_readpage: vnode 0x%x, vecs 0x%x, pos 0x%x 0x%x\n", v, vecs, pos);
+#endif
+
+	return v->mount->fs->calls->fs_readpage(v->mount->fscookie, v->priv_vnode, vecs, pos);
+}
+
+ssize_t vfs_writepage(void *_v, iovecs *vecs, off_t pos)
+{
+	struct vnode *v = _v;
+
+#if MAKE_NOIZE
+	dprintf("vfs_writepage: vnode 0x%x, vecs 0x%x, pos 0x%x 0x%x\n", v, vecs, pos);
+#endif
+
+	return v->mount->fs->calls->fs_writepage(v->mount->fscookie, v->priv_vnode, vecs, pos);
+}
+
 int sys_mount(const char *path, const char *fs_name)
 {
 	char buf[SYS_MAX_PATH_LEN+1];
@@ -1510,16 +1530,6 @@ int sys_seek(int fd, off_t pos, seek_type seek_type)
 int sys_ioctl(int fd, int op, void *buf, size_t len)
 {
 	return vfs_ioctl(fd, op, buf, len, true);
-}
-
-ssize_t sys_readpage(int fd, iovecs *vecs, off_t pos)
-{
-	return vfs_readpage(fd, vecs, pos, true);
-}
-
-ssize_t sys_writepage(int fd, iovecs *vecs, off_t pos)
-{
-	return vfs_writepage(fd, vecs, pos, true);
 }
 
 int sys_create(const char *path, stream_type stream_type)

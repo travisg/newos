@@ -81,9 +81,9 @@ struct fs_calls {
 	int (*fs_seek)(fs_cookie fs, fs_vnode v, file_cookie cookie, off_t pos, seek_type st);
 	int (*fs_ioctl)(fs_cookie fs, fs_vnode v, file_cookie cookie, int op, void *buf, size_t len);
 
-	int (*fs_canpage)(fs_cookie fs, fs_vnode v, file_cookie cookie);
-	ssize_t (*fs_readpage)(fs_cookie fs, fs_vnode v, file_cookie cookie, iovecs *vecs, off_t pos);
-	ssize_t (*fs_writepage)(fs_cookie fs, fs_vnode v, file_cookie cookie, iovecs *vecs, off_t pos);
+	int (*fs_canpage)(fs_cookie fs, fs_vnode v);
+	ssize_t (*fs_readpage)(fs_cookie fs, fs_vnode v, iovecs *vecs, off_t pos);
+	ssize_t (*fs_writepage)(fs_cookie fs, fs_vnode v, iovecs *vecs, off_t pos);
 
 	int (*fs_create)(fs_cookie fs, fs_vnode dir, const char *name, stream_type st, void *create_args, vnode_id *new_vnid);
 	int (*fs_unlink)(fs_cookie fs, fs_vnode dir, const char *name);
@@ -104,6 +104,13 @@ int vfs_get_vnode(fs_id fsid, vnode_id vnid, fs_vnode *v);
 int vfs_put_vnode(fs_id fsid, vnode_id vnid);
 int vfs_remove_vnode(fs_id fsid, vnode_id vnid);
 
+/* calls needed by the VM for paging */
+int vfs_get_vnode_from_path(const char *path, bool kernel, void **vnode);
+int vfs_put_vnode_ptr(void *vnode);
+ssize_t vfs_canpage(void *vnode);
+ssize_t vfs_readpage(void *vnode, iovecs *vecs, off_t pos);
+ssize_t vfs_writepage(void *vnode, iovecs *vecs, off_t pos);
+
 /* calls kernel code should make for file I/O */
 int sys_mount(const char *path, const char *fs_name);
 int sys_unmount(const char *path);
@@ -115,8 +122,6 @@ ssize_t sys_read(int fd, void *buf, off_t pos, ssize_t len);
 ssize_t sys_write(int fd, const void *buf, off_t pos, ssize_t len);
 int sys_seek(int fd, off_t pos, seek_type seek_type);
 int sys_ioctl(int fd, int op, void *buf, size_t len);
-ssize_t sys_readpage(int fd, iovecs *vecs, off_t pos);
-ssize_t sys_writepage(int fd, iovecs *vecs, off_t pos);
 int sys_create(const char *path, stream_type stream_type);
 int sys_unlink(const char *path);
 int sys_rename(const char *oldpath, const char *newpath);

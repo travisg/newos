@@ -22,9 +22,9 @@ struct dev_calls {
 	ssize_t (*dev_read)(dev_cookie cookie, void *buf, off_t pos, ssize_t len);
 	ssize_t (*dev_write)(dev_cookie cookie, const void *buf, off_t pos, ssize_t len);
 
-	int (*dev_canpage)(dev_cookie cookie);
-	ssize_t (*dev_readpage)(dev_cookie cookie, iovecs *vecs, off_t pos);
-	ssize_t (*dev_writepage)(dev_cookie cookie, iovecs *vecs, off_t pos);
+	int (*dev_canpage)();
+	ssize_t (*dev_readpage)(iovecs *vecs, off_t pos);
+	ssize_t (*dev_writepage)(iovecs *vecs, off_t pos);
 };
 
 /* api drivers will use to publish devices */

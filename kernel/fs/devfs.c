@@ -640,52 +640,49 @@ static int devfs_ioctl(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, int op, 
 	}
 }
 
-static int devfs_canpage(fs_cookie _fs, fs_vnode _v, file_cookie _cookie)
+static int devfs_canpage(fs_cookie _fs, fs_vnode _v)
 {
 	struct devfs *fs = _fs;
 	struct devfs_vnode *v = _v;
-	struct devfs_cookie *cookie = _cookie;
 
-	TRACE(("devfs_canpage: vnode 0x%x, cookie 0x%x\n", v, cookie));
+	TRACE(("devfs_canpage: vnode 0x%x\n", v));
 
 	if(v->stream.type == STREAM_TYPE_DEVICE) {
 		if(!v->stream.u.dev.calls->dev_canpage)
 			return 0;
-		return v->stream.u.dev.calls->dev_canpage(cookie->u.dev.dcookie);
+		return v->stream.u.dev.calls->dev_canpage();
 	} else {
 		return 0;
 	}
 }
 
-static ssize_t devfs_readpage(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, iovecs *vecs, off_t pos)
+static ssize_t devfs_readpage(fs_cookie _fs, fs_vnode _v, iovecs *vecs, off_t pos)
 {
 	struct devfs *fs = _fs;
 	struct devfs_vnode *v = _v;
-	struct devfs_cookie *cookie = _cookie;
 
-	TRACE(("devfs_readpage: vnode 0x%x, cookie 0x%x, vecs 0x%x, pos 0x%x 0x%x\n", v, cookie, vecs, pos));
+	TRACE(("devfs_readpage: vnode 0x%x, vecs 0x%x, pos 0x%x 0x%x\n", v, vecs, pos));
 
 	if(v->stream.type == STREAM_TYPE_DEVICE) {
 		if(!v->stream.u.dev.calls->dev_readpage)
 			return ERR_NOT_ALLOWED;
-		return v->stream.u.dev.calls->dev_readpage(cookie->u.dev.dcookie, vecs, pos);
+		return v->stream.u.dev.calls->dev_readpage(vecs, pos);
 	} else {
 		return ERR_NOT_ALLOWED;
 	}
 }
 
-static ssize_t devfs_writepage(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, iovecs *vecs, off_t pos)
+static ssize_t devfs_writepage(fs_cookie _fs, fs_vnode _v, iovecs *vecs, off_t pos)
 {
 	struct devfs *fs = _fs;
 	struct devfs_vnode *v = _v;
-	struct devfs_cookie *cookie = _cookie;
 
-	TRACE(("devfs_writepage: vnode 0x%x, cookie 0x%x, vecs 0x%x, pos 0x%x 0x%x\n", v, cookie, vecs, pos));
+	TRACE(("devfs_writepage: vnode 0x%x, vecs 0x%x, pos 0x%x 0x%x\n", v, vecs, pos));
 
 	if(v->stream.type == STREAM_TYPE_DEVICE) {
 		if(!v->stream.u.dev.calls->dev_writepage)
 			return ERR_NOT_ALLOWED;
-		return v->stream.u.dev.calls->dev_writepage(cookie->u.dev.dcookie, vecs, pos);
+		return v->stream.u.dev.calls->dev_writepage(vecs, pos);
 	} else {
 		return ERR_NOT_ALLOWED;
 	}

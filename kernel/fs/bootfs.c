@@ -682,17 +682,17 @@ static int bootfs_ioctl(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, int op,
 	return ERR_INVALID_ARGS;
 }
 
-static int bootfs_canpage(fs_cookie _fs, fs_vnode _v, file_cookie _cookie)
+static int bootfs_canpage(fs_cookie _fs, fs_vnode _v)
 {
 	return -1;
 }
 
-static ssize_t bootfs_readpage(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, iovecs *vecs, off_t pos)
+static ssize_t bootfs_readpage(fs_cookie _fs, fs_vnode _v, iovecs *vecs, off_t pos)
 {
 	return ERR_NOT_ALLOWED;
 }
 
-static ssize_t bootfs_writepage(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, iovecs *vecs, off_t pos)
+static ssize_t bootfs_writepage(fs_cookie _fs, fs_vnode _v, iovecs *vecs, off_t pos)
 {
 	return ERR_NOT_ALLOWED;
 }
