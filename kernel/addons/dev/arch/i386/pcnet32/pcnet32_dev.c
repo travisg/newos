@@ -159,7 +159,6 @@ pcnet32 *pcnet32_new(pci_module_hooks *bus, uint32 initmode, uint16 rxbuffer_siz
 	// setup_transmit_descriptor_ring;
 	nic->txring_count = txring_count;
 	nic->tx_buffersize = txbuffer_size;
-	nic->txring_tail = 
 	nic->txring_head = 0;
 
 	nic->txring_region = vm_create_anonymous_region(
@@ -175,9 +174,6 @@ pcnet32 *pcnet32_new(pci_module_hooks *bus, uint32 initmode, uint16 rxbuffer_siz
 			    (addr_t)nic->txring, &nic->txring_phys);
 	SHOW_FLOW(3, "txring physical address: 0x%x", nic->txring_phys);
 
-	if (mutex_init(&nic->txring_mutex, "pcnet32_txring") < 0)
-		goto err_after_txring_region;
-
 	// allocate the actual buffers
 	nic->buffers_region = vm_create_anonymous_region(
 		vm_get_kernel_aspace_id(), "pcnet32_buffers", (void**)&nic->buffers,
@@ -187,7 +183,7 @@ pcnet32 *pcnet32_new(pci_module_hooks *bus, uint32 initmode, uint16 rxbuffer_siz
 		REGION_WIRING_WIRED_CONTIG, LOCK_KERNEL | LOCK_RW);
 
 	if (nic->buffers_region < 0)
-		goto err_after_txring_mutex;
+		goto err_after_txring_region;
 
 	vm_get_page_mapping(vm_get_kernel_aspace_id(), 
 			    (addr_t)nic->buffers, &nic->buffers_phys);
@@ -216,9 +212,6 @@ err_after_interrupt_sem:
 
 err_after_buffers_region:
 	vm_delete_region(vm_get_kernel_aspace_id(), nic->buffers_region);
-
-err_after_txring_mutex:
-	mutex_destroy(&nic->txring_mutex);
 
 err_after_txring_region:
 	vm_delete_region(vm_get_kernel_aspace_id(), nic->txring_region);
@@ -401,7 +394,6 @@ void pcnet32_delete(pcnet32 *nic)
         sem_delete(nic->interrupt_sem);
         vm_delete_region(vm_get_kernel_aspace_id(), nic->buffers_region);
 
-        mutex_destroy(&nic->txring_mutex);
         vm_delete_region(vm_get_kernel_aspace_id(), nic->txring_region);
 
         mutex_destroy(&nic->rxring_mutex);
@@ -434,7 +426,6 @@ ssize_t pcnet32_xmit(pcnet32 *nic, const char *ptr, ssize_t len)
 
 	SHOW_FLOW(3, "nic %p data %p len %d", nic, ptr, len);
 
-	mutex_lock(&nic->txring_mutex);
 	index = TXRING_INDEX(nic, nic->txring_head);
 
 	SHOW_FLOW(3, "using txring index %d", index);
@@ -466,8 +457,6 @@ ssize_t pcnet32_xmit(pcnet32 *nic, const char *ptr, ssize_t len)
 	// tx_queue_tail = tx_queue_tail + 1;
 	// if (tx_queue_tail > last_tx_descriptor) tx_queue_tail = first_tx_descriptor;
 	nic->txring_head++;
-
-	mutex_unlock(&nic->txring_mutex);
 
 	// set the transmit demand bit in CSR0
 	modify_csr(nic, PCNET_CSR_STATUS, PCNET_STATUS_TDMD, PCNET_STATUS_TDMD);
@@ -561,20 +550,6 @@ static bool pcnet32_rxint(pcnet32 *nic)
 	return false;
 }
 
-static bool pcnet32_txint(pcnet32 *nic)
-{
-	uint32 index;
-
-	index = TXRING_INDEX(nic, nic->txring_tail);
-	if ( (nic->txring[index].status & PCNET_TXSTATUS_OWN) )
-	{
-		SHOW_FLOW(3, "Sent packet %d", index);
-		nic->txring_tail++;
-		return true;
-	} else
-        	return false;
-}
-
 static int pcnet32_thread(void *data)
 {
 	pcnet32 *nic = (pcnet32 *)data;
@@ -598,10 +573,6 @@ static int pcnet32_thread(void *data)
 		while (pcnet32_rxint(nic));
 		mutex_unlock(&nic->rxring_mutex);
 		
-		mutex_lock(&nic->txring_mutex);
-		while (pcnet32_txint(nic));
-		mutex_unlock(&nic->txring_mutex);
-
 		// re-enable pcnet interrupts
 		write_csr(nic, PCNET_CSR_STATUS, PCNET_STATUS_IENA);
 

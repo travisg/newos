@@ -74,10 +74,7 @@ typedef struct pcnet32
 
 	// transmit ring
 	uint16 txring_count;
-	uint16 txring_tail; // earliest inserted packet
 	uint16 txring_head; // next place to insert a packet
-
-	mutex txring_mutex; // lock this before doing anything with the txring.
 
 	region_id txring_region;
 	struct pcnet32_txdesc *txring;
