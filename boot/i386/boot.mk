@@ -51,7 +51,7 @@ floppy: $(STAGE2) $(KERNEL) $(APPS) tools $(MAKEFLOP)
 
 disk: floppy
 ifeq ($(OSTYPE),cygwin)
-	rawrite -f $(FINAL) -d a:
+	fdimage -q $(FINAL) a:
 else
 	dd if=$(FINAL) of=/dev/disk/floppy/raw bs=18k
 endif
