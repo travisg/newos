@@ -35,3 +35,10 @@ void _call_ctors(void)
 	}
 }
 
+int __gxx_personality_v0(void);
+
+// XXX hack to make gcc 3.x happy until we get libstdc++ working
+int __gxx_personality_v0(void)
+{
+	return 0;
+}
