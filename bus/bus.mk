@@ -29,19 +29,19 @@ CLEAN += busclean
 # build prototypes
 $(BUS_OBJ_DIR)/%.o: $(BUS_DIR)/%.c
 	@if [ ! -d $(BUS_OBJ_DIR) ]; then mkdir -p $(BUS_OBJ_DIR); fi
-	$(CC) -c $< $(GLOBAL_CFLAGS) $(BUS_INCLUDES) $(BUS_SUB_INCLUDES) -o $@
+	$(CC) -c $< $(GLOBAL_CFLAGS) $(KERNEL_CFLAGS) $(BUS_INCLUDES) $(BUS_SUB_INCLUDES) -o $@
 
 $(BUS_OBJ_DIR)/%.d: $(BUS_DIR)/%.c
 	@if [ ! -d $(BUS_OBJ_DIR) ]; then mkdir -p $(BUS_OBJ_DIR); fi
 	@echo "making deps for $<..."
-	@($(ECHO) -n $(dir $@); $(CC) $(GLOBAL_CFLAGS) $(BUS_INCLUDES) $(BUS_SUB_INCLUDES) -M -MG $<) > $@
+	@($(ECHO) -n $(dir $@); $(CC) $(GLOBAL_CFLAGS) $(KERNEL_CFLAGS) $(BUS_INCLUDES) $(BUS_SUB_INCLUDES) -M -MG $<) > $@
 
 $(BUS_OBJ_DIR)/%.d: $(BUS_DIR)/%.S
 	@if [ ! -d $(BUS_OBJ_DIR) ]; then mkdir -p $(BUS_OBJ_DIR); fi
 	@echo "making deps for $<..."
-	@($(ECHO) -n $(dir $@);$(CC) $(GLOBAL_CFLAGS) $(BUS_INCLUDES) $(BUS_SUB_INCLUDES) -M -MG $<) > $@
+	@($(ECHO) -n $(dir $@);$(CC) $(GLOBAL_CFLAGS) $(KERNEL_CFLAGS) $(BUS_INCLUDES) $(BUS_SUB_INCLUDES) -M -MG $<) > $@
 
 $(BUS_OBJ_DIR)/%.o: $(BUS_DIR)/%.S
 	@if [ ! -d $(BUS_OBJ_DIR) ]; then mkdir -p $(BUS_OBJ_DIR); fi
-	$(CC) -c $< $(GLOBAL_CFLAGS) $(BUS_INCLUDES) $(BUS_SUB_INCLUDES) -o $@
+	$(CC) -c $< $(GLOBAL_CFLAGS) $(KERNEL_CFLAGS) $(BUS_INCLUDES) $(BUS_SUB_INCLUDES) -o $@
 endif

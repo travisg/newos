@@ -40,14 +40,24 @@ include $(KERNEL_ARCH_DIR)/arch_kernel.mk
 DEPS += $(KERNEL_OBJS:.o=.d)
 
 KERNEL = $(KERNEL_OBJ_DIR)/system
+LINKHACK = $(KERNEL_OBJ_DIR)/linkhack.so
 
 kernel:	$(KERNEL)
 
-$(KERNEL): $(KERNEL_OBJS) $(KLIBS) $(DEV) $(BUS)
-	$(LD) --script=$(KERNEL_ARCH_DIR)/kernel.ld -L $(LIBGCC_PATH) -o $@ $(KERNEL_OBJS) $(DEV) $(BUS) $(LINK_KLIBS) $(LIBGCC)
+$(KERNEL): $(KERNEL_OBJS) $(KLIBS) $(DEV) $(BUS) $(LINKHACK)
+	$(LD) -Bdynamic -export-dynamic -dynamic-linker /foo/bar -T $(KERNEL_ARCH_DIR)/kernel.ld -L $(LIBGCC_PATH) -o $@ $(KERNEL_OBJS) $(DEV) $(BUS) $(LINKHACK) $(LINK_KLIBS) $(LIBGCC)
+
+# Build a shared object with nothing in it to link against the kernel.
+# Otherwise the linker optimizes and removes the dynamic section.
+# This allows us to build a kernel with a dynamic section but not relocatable.
+# Ttolen from the FreeBSD sys makefile.
+$(LINKHACK): $(KERNEL_DIR)/linkhack.c
+	$(CC) -shared -nostdlib $< -o $@
+
+DEPS += $(KERNEL_OBJ_DIR)/linkhack.d
 
 kernelclean:
-	rm -f $(KERNEL_OBJS)
+	rm -f $(KERNEL_OBJS) $(LINKHACK)
 
 CLEAN += kernelclean
 
@@ -55,11 +65,11 @@ CLEAN += kernelclean
 
 $(KERNEL_OBJ_DIR)/%.o: $(KERNEL_DIR)/%.c
 	@if [ ! -d $(KERNEL_OBJ_DIR) ]; then mkdir -p $(KERNEL_OBJ_DIR); fi
-	$(CC) -c $< $(GLOBAL_CFLAGS) $(KERNEL_INCLUDES) -o $@
+	$(CC) -c $< $(GLOBAL_CFLAGS) $(KERNEL_CFLAGS) $(KERNEL_INCLUDES) -o $@
 
 $(KERNEL_OBJ_DIR)/%.d: $(KERNEL_DIR)/%.c
 	@if [ ! -d $(KERNEL_OBJ_DIR) ]; then mkdir -p $(KERNEL_OBJ_DIR); fi
 	@echo "making deps for $<..."
-	@($(ECHO) -n $(dir $@); $(CC) $(GLOBAL_CFLAGS) $(KERNEL_INCLUDES) -M -MG $<) > $@
+	@($(ECHO) -n $(dir $@); $(CC) $(GLOBAL_CFLAGS) $(KERNEL_CFLAGS) $(KERNEL_INCLUDES) -M -MG $<) > $@
 
 endif

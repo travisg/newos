@@ -31,19 +31,19 @@ CLEAN += devclean
 # build prototypes
 $(DEV_OBJ_DIR)/%.o: $(DEV_DIR)/%.c
 	@if [ ! -d $(DEV_OBJ_DIR) ]; then mkdir -p $(DEV_OBJ_DIR); fi
-	$(CC) -c $< $(GLOBAL_CFLAGS) $(DEV_INCLUDES) $(DEV_SUB_INCLUDES) -o $@
+	$(CC) -c $< $(GLOBAL_CFLAGS) $(KERNEL_CFLAGS) $(DEV_INCLUDES) $(DEV_SUB_INCLUDES) -o $@
 
 $(DEV_OBJ_DIR)/%.d: $(DEV_DIR)/%.c
 	@if [ ! -d $(DEV_OBJ_DIR) ]; then mkdir -p $(DEV_OBJ_DIR); fi
 	@echo "making deps for $<..."
-	@($(ECHO) -n $(dir $@); $(CC) $(GLOBAL_CFLAGS) $(DEV_INCLUDES) $(DEV_SUB_INCLUDES) -M -MG $<) > $@
+	@($(ECHO) -n $(dir $@); $(CC) $(GLOBAL_CFLAGS) $(KERNEL_CFLAGS) $(DEV_INCLUDES) $(DEV_SUB_INCLUDES) -M -MG $<) > $@
 
 $(DEV_OBJ_DIR)/%.d: $(DEV_DIR)/%.S
 	@if [ ! -d $(DEV_OBJ_DIR) ]; then mkdir -p $(DEV_OBJ_DIR); fi
 	@echo "making deps for $<..."
-	@($(ECHO) -n $(dir $@);$(CC) $(GLOBAL_CFLAGS) $(DEV_INCLUDES) $(DEV_SUB_INCLUDES) -M -MG $<) > $@
+	@($(ECHO) -n $(dir $@);$(CC) $(GLOBAL_CFLAGS) $(KERNEL_CFLAGS) $(DEV_INCLUDES) $(DEV_SUB_INCLUDES) -M -MG $<) > $@
 
 $(DEV_OBJ_DIR)/%.o: $(DEV_DIR)/%.S
 	@if [ ! -d $(DEV_OBJ_DIR) ]; then mkdir -p $(DEV_OBJ_DIR); fi
-	$(CC) -c $< $(GLOBAL_CFLAGS) $(DEV_INCLUDES) $(DEV_SUB_INCLUDES) -o $@
+	$(CC) -c $< $(GLOBAL_CFLAGS) $(KERNEL_CFLAGS) $(DEV_INCLUDES) $(DEV_SUB_INCLUDES) -o $@
 endif

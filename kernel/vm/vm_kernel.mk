@@ -13,9 +13,9 @@ KERNEL_VM_INCLUDES = $(KERNEL_INCLUDES)
 
 $(KERNEL_VM_OBJ_DIR)/%.o: $(KERNEL_VM_DIR)/%.c
 	@if [ ! -d $(KERNEL_VM_OBJ_DIR) ]; then mkdir -p $(KERNEL_VM_OBJ_DIR); fi
-	$(CC) -c $< $(GLOBAL_CFLAGS) $(KERNEL_VM_INCLUDES) -o $@
+	$(CC) -c $< $(GLOBAL_CFLAGS) $(KERNEL_CFLAGS) $(KERNEL_VM_INCLUDES) -o $@
 
 $(KERNEL_VM_OBJ_DIR)/%.d: $(KERNEL_VM_DIR)/%.c
 	@if [ ! -d $(KERNEL_VM_OBJ_DIR) ]; then mkdir -p $(KERNEL_VM_OBJ_DIR); fi
 	@echo "making deps for $<..."
-	@($(ECHO) -n $(dir $@); $(CC) $(GLOBAL_CFLAGS) $(KERNEL_VM_INCLUDES) -M -MG $<) > $@
+	@($(ECHO) -n $(dir $@); $(CC) $(GLOBAL_CFLAGS) $(KERNEL_CFLAGS) $(KERNEL_VM_INCLUDES) -M -MG $<) > $@

@@ -9,18 +9,18 @@ DEV_SUB_INCLUDES += \
 
 $(IDE_DEV_OBJ_DIR)/%.o: $(IDE_DEV_DIR)/%.c
 	@mkdir -p $(IDE_DEV_OBJ_DIR)
-	$(CC) -c $< $(GLOBAL_CFLAGS) $(DEV_INCLUDES) -o $@
+	$(CC) -c $< $(GLOBAL_CFLAGS) $(KERNEL_CFLAGS) $(DEV_INCLUDES) -o $@
 
 $(IDE_DEV_OBJ_DIR)/%.d: $(IDE_DEV_DIR)/%.c
 	@mkdir -p $(IDE_DEV_OBJ_DIR)
 	@echo "making deps for $<..."
-	@($(ECHO) -n $(dir $@); $(CC) $(GLOBAL_CFLAGS) $(DEV_INCLUDES) -M -MG $<) > $@
+	@($(ECHO) -n $(dir $@); $(CC) $(GLOBAL_CFLAGS) $(KERNEL_CFLAGS) $(DEV_INCLUDES) -M -MG $<) > $@
 
 $(IDE_DEV_OBJ_DIR)/%.d: $(IDE_DEV_DIR)/%.S
 	@mkdir -p $(IDE_DEV_OBJ_DIR)
 	@echo "making deps for $<..."
-	@($(ECHO) -n $(dir $@);$(CC) $(GLOBAL_CFLAGS) $(DEV_INCLUDES) -M -MG $<) > $@
+	@($(ECHO) -n $(dir $@);$(CC) $(GLOBAL_CFLAGS) $(KERNEL_CFLAGS) $(DEV_INCLUDES) -M -MG $<) > $@
 
 $(IDE_DEV_OBJ_DIR)/%.o: $(IDE_DEV_DIR)/%.S
 	@mkdir -p $(IDE_DEV_OBJ_DIR)
-	$(CC) -c $< $(GLOBAL_CFLAGS) $(DEV_INCLUDES) -o $@
+	$(CC) -c $< $(GLOBAL_CFLAGS) $(KERNEL_CFLAGS) $(DEV_INCLUDES) -o $@

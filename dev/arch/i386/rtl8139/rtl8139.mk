@@ -9,18 +9,18 @@ DEV_SUB_INCLUDES += \
 
 $(RTL8139_DEV_OBJ_DIR)/%.o: $(RTL8139_DEV_DIR)/%.c
 	@mkdir -p $(RTL8139_DEV_OBJ_DIR)
-	$(CC) -c $< $(GLOBAL_CFLAGS) $(DEV_INCLUDES) -o $@
+	$(CC) -c $< $(GLOBAL_CFLAGS) $(KERNEL_CFLAGS) $(DEV_INCLUDES) -o $@
 
 $(RTL8139_DEV_OBJ_DIR)/%.d: $(RTL8139_DEV_DIR)/%.c
 	@mkdir -p $(RTL8139_DEV_OBJ_DIR)
 	@echo "making deps for $<..."
-	@($(ECHO) -n $(dir $@); $(CC) $(GLOBAL_CFLAGS) $(DEV_INCLUDES) -M -MG $<) > $@
+	@($(ECHO) -n $(dir $@); $(CC) $(GLOBAL_CFLAGS) $(KERNEL_CFLAGS) $(DEV_INCLUDES) -M -MG $<) > $@
 
 $(RTL8139_DEV_OBJ_DIR)/%.d: $(RTL8139_DEV_DIR)/%.S
 	@mkdir -p $(RTL8139_DEV_OBJ_DIR)
 	@echo "making deps for $<..."
-	@($(ECHO) -n $(dir $@);$(CC) $(GLOBAL_CFLAGS) $(DEV_INCLUDES) -M -MG $<) > $@
+	@($(ECHO) -n $(dir $@);$(CC) $(GLOBAL_CFLAGS) $(KERNEL_CFLAGS) $(DEV_INCLUDES) -M -MG $<) > $@
 
 $(RTL8139_DEV_OBJ_DIR)/%.o: $(RTL8139_DEV_DIR)/%.S
 	@mkdir -p $(RTL8139_DEV_OBJ_DIR)
-	$(CC) -c $< $(GLOBAL_CFLAGS) $(DEV_INCLUDES) -o $@
+	$(CC) -c $< $(GLOBAL_CFLAGS) $(KERNEL_CFLAGS) $(DEV_INCLUDES) -o $@

@@ -8,18 +8,18 @@ DEV_SUB_INCLUDES += \
 
 $(KEYBOARD_DEV_OBJ_DIR)/%.o: $(KEYBOARD_DEV_DIR)/%.c
 	@mkdir -p $(KEYBOARD_DEV_OBJ_DIR)
-	$(CC) -c $< $(GLOBAL_CFLAGS) $(DEV_INCLUDES) -o $@
+	$(CC) -c $< $(GLOBAL_CFLAGS) $(KERNEL_CFLAGS) $(DEV_INCLUDES) -o $@
 
 $(KEYBOARD_DEV_OBJ_DIR)/%.d: $(KEYBOARD_DEV_DIR)/%.c
 	@mkdir -p $(KEYBOARD_DEV_OBJ_DIR)
 	@echo "making deps for $<..."
-	@($(ECHO) -n $(dir $@); $(CC) $(GLOBAL_CFLAGS) $(DEV_INCLUDES) -M -MG $<) > $@
+	@($(ECHO) -n $(dir $@); $(CC) $(GLOBAL_CFLAGS) $(KERNEL_CFLAGS) $(DEV_INCLUDES) -M -MG $<) > $@
 
 $(KEYBOARD_DEV_OBJ_DIR)/%.d: $(KEYBOARD_DEV_DIR)/%.S
 	@mkdir -p $(KEYBOARD_DEV_OBJ_DIR)
 	@echo "making deps for $<..."
-	@($(ECHO) -n $(dir $@);$(CC) $(GLOBAL_CFLAGS) $(DEV_INCLUDES) -M -MG $<) > $@
+	@($(ECHO) -n $(dir $@);$(CC) $(GLOBAL_CFLAGS) $(KERNEL_CFLAGS) $(DEV_INCLUDES) -M -MG $<) > $@
 
 $(KEYBOARD_DEV_OBJ_DIR)/%.o: $(KEYBOARD_DEV_DIR)/%.S
 	@mkdir -p $(KEYBOARD_DEV_OBJ_DIR)
-	$(CC) -c $< $(GLOBAL_CFLAGS) $(DEV_INCLUDES) -o $@
+	$(CC) -c $< $(GLOBAL_CFLAGS) $(KERNEL_CFLAGS) $(DEV_INCLUDES) -o $@

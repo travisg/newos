@@ -252,6 +252,7 @@ void load_elf_image(void *data, unsigned int *next_paddr, addr_range *ar0, addr_
 	struct Elf32_Ehdr *imageHeader = (struct Elf32_Ehdr*) data;
 	struct Elf32_Phdr *segments = (struct Elf32_Phdr*)(imageHeader->e_phoff + (unsigned) imageHeader);
 	int segmentIndex;
+	int foundSegmentIndex = 0;
 
 	ar0->size = 0;
 	ar1->size = 0;
@@ -259,6 +260,9 @@ void load_elf_image(void *data, unsigned int *next_paddr, addr_range *ar0, addr_
 	for (segmentIndex = 0; segmentIndex < imageHeader->e_phnum; segmentIndex++) {
 		struct Elf32_Phdr *segment = &segments[segmentIndex];
 		unsigned segmentOffset;
+
+		if(segment->p_type != PT_LOAD)
+			continue;
 
 //		dprintf("segment %d\n", segmentIndex);
 //		dprintf("p_vaddr 0x%x p_paddr 0x%x p_filesz 0x%x p_memsz 0x%x\n",
@@ -289,7 +293,7 @@ void load_elf_image(void *data, unsigned int *next_paddr, addr_range *ar0, addr_
 			memset(segment->p_vaddr + segmentOffset, 0, PAGE_SIZE);
 			(*next_paddr) += PAGE_SIZE;
 		}
-		switch(segmentIndex) {
+		switch(foundSegmentIndex) {
 			case 0:
 				ar0->start = segment->p_vaddr;
 				ar0->size = segment->p_memsz;
@@ -301,6 +305,7 @@ void load_elf_image(void *data, unsigned int *next_paddr, addr_range *ar0, addr_
 			default:
 				;
 		}
+		foundSegmentIndex++;
 	}
 	*start_addr = imageHeader->e_entry;
 }
