@@ -9,9 +9,6 @@ include $(LIBSYS_DIR)/hoard/hoard.mk
 
 LIBSYS = $(LIBSYS_OBJ_DIR)/libsys.o
 
-LIBSYS_ARCH_DIR = $(LIBSYS_DIR)/arch/$(ARCH)
-include $(LIBSYS_ARCH_DIR)/arch_libsys.mk
-
 $(LIBSYS): $(LIBSYS_OBJS) $(LIBHOARD)
 	@mkdir -p $(LIBSYS_OBJ_DIR)
 	$(LD) $(GLOBAL_LDFLAGS) -r -o $@ $(LIBSYS_OBJS) $(LIBHOARD)
