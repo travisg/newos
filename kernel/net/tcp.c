@@ -476,7 +476,7 @@ int tcp_input(cbuf *buf, ifnet *i, ipv4_addr source_address, ipv4_addr target_ad
 		pheader.protocol = IP_PROT_TCP;
 		pheader.tcp_length = htons(length);
 
-		checksum = cksum16_2(&pheader, sizeof(pheader), header, length);
+		checksum = cbuf_ones_cksum16_2(buf, 0, cbuf_get_len(buf), &pheader, sizeof(pheader));
 		if(checksum != 0) {
 #if NET_CHATTY
 			dprintf("tcp_receive: packet failed checksum\n");
@@ -1573,7 +1573,7 @@ static void tcp_send(ipv4_addr dest_addr, uint16 dest_port, ipv4_addr src_addr, 
 	pheader.tcp_length = htons(cbuf_get_len(header_buf));
 
 	header->checksum = 0;
-	header->checksum = cbuf_ones_cksum16_2(header_buf, &pheader, sizeof(pheader), 0, cbuf_get_len(header_buf));
+	header->checksum = cbuf_ones_cksum16_2(header_buf, 0, cbuf_get_len(header_buf), &pheader, sizeof(pheader));
 
 	ipv4_output(header_buf, dest_addr, IP_PROT_TCP);
 	return;

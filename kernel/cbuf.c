@@ -696,15 +696,15 @@ static uint16 _cbuf_ones_cksum16(cbuf *buf, size_t offset, size_t len, uint16 su
 	return sum;
 }
 
-uint16 cbuf_ones_cksum16(cbuf *buf, size_t offset, size_t len)
+uint16 cbuf_ones_cksum16(cbuf *chain, size_t offset, size_t len)
 {
-	return ~_cbuf_ones_cksum16(buf, offset, len, 0);
+	return ~_cbuf_ones_cksum16(chain, offset, len, 0);
 }
 
-uint16 cbuf_ones_cksum16_2(cbuf *buf, void *buff, int len1, size_t offset, size_t len2)
+uint16 cbuf_ones_cksum16_2(cbuf *chain, size_t offset, size_t len, void *buf, size_t buf_len)
 {
-	uint16 sum = ones_sum16(0, buff, len1);
-	return ~_cbuf_ones_cksum16(buf, offset, len2, sum);
+	uint16 sum = ones_sum16(0, buf, buf_len);
+	return ~_cbuf_ones_cksum16(chain, offset, len, sum);
 }
 
 cbuf *cbuf_truncate_head(cbuf *buf, size_t trunc_bytes)
