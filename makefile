@@ -14,6 +14,13 @@ all:
 
 else
 
+ifeq ($(MAKEFILE_LIST),)
+$(warning This build system requires the MAKEFILE_LIST feature,)
+$(warning which was added to GNU make in version 3.80.)
+$(warning You are running $(MAKE_VERSION).)
+$(error Required make feature missing)
+endif
+
 # figures out the system
 include make.syscfg
 
