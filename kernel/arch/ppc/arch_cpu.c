@@ -24,14 +24,43 @@ int arch_cpu_init2(kernel_args *ka)
 
 void arch_cpu_invalidate_TLB_range(addr start, addr end)
 {
+	asm volatile("sync");
+	while(start < end) {
+		asm volatile("tlbie %0" :: "r" (start));
+		asm volatile("eieio");
+		asm volatile("sync");
+		start += PAGE_SIZE;
+	}
+	asm volatile("tlbsync");
+	asm volatile("sync");
 }
 
 void arch_cpu_invalidate_TLB_list(addr pages[], int num_pages)
 {
+	int i;
+
+	asm volatile("sync");
+	for(i = 0; i < num_pages; i++) {
+		asm volatile("tlbie %0" :: "r" (pages[i]));
+		asm volatile("eieio");
+		asm volatile("sync");
+	}
+	asm volatile("tlbsync");
+	asm volatile("sync");
 }
 
 void arch_cpu_global_TLB_invalidate(void)
 {
+	unsigned long i;
+
+	asm volatile("sync");
+	for(i=0; i< 0x40000; i += 0x1000) {
+		asm volatile("tlbie %0" :: "r" (i));
+		asm volatile("eieio");
+		asm volatile("sync");
+	}
+	asm volatile("tlbsync");
+	asm volatile("sync");
 }
 
 long long system_time(void)

@@ -13,8 +13,8 @@ MY_OBJS := \
 	stage2_asm.o \
 	stage2_mmu.o \
 	stage2_of.o \
-	stage2_text.o \
-	stage2_faults.o
+	stage2_faults.o \
+	stage2_text.o
 
 MY_INCLUDES := $(STDINCLUDE)
 MY_CFLAGS := $(KERNEL_CFLAGS)
@@ -44,12 +44,15 @@ STAGE1_OBJS := $(BOOT_TARGETDIR)/stage1.o
 
 ALL_DEPS := $(ALL_DEPS) $(STAGE1_OBJS:.o=.d)
 
+tftp: $(FINAL)
+	cp $(FINAL) /cygdrive/o/root/tftpboot/final.ppc
+
 $(FINAL): $(STAGE1_OBJS)
 	$(LD) $(GLOBAL_LDFLAGS) -dN --script=$(BOOT_SRCDIR)/stage1.ld $(STAGE1_OBJS) -o $@
 
 $(BOOT_TARGETDIR)/stage1.o: $(BOOT_SRCDIR)/stage1.S $(FINAL_ASMINCLUDE)
 	@mkdir -p $(BOOT_TARGETDIR)
-	$(CC) $(GLOBAL_CFLAGS) -g -I. -Iinclude -I$(BOOT_TARGETDIR) -c $< -o $@
+	$(CC) $(GLOBAL_CFLAGS) -I. -Iinclude -I$(BOOT_TARGETDIR) -c $< -o $@
 
 $(BOOT_TARGETDIR)/stage1.d: $(BOOT_SRCDIR)/stage1.S
 	@mkdir -p $(BOOT_TARGETDIR)

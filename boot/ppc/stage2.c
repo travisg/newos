@@ -3,22 +3,31 @@
 ** Distributed under the terms of the NewOS License.
 */
 #include <boot/stage2.h>
+#include <boot/bootdir.h>
 #include <string.h>
 #include <stdio.h>
+#include <newos/elf32.h>
+#include <arch/cpu.h>
 
 #include "stage2_priv.h"
 
 void _start(int arg1, int arg2, void *openfirmware);
+static void load_elf_image(void *data, addr_range *ar0, addr_range *ar1, unsigned int *start_addr, addr_range *dynamic_section);
+static void print_bootdir_entry(const boot_entry *entry);
+
+#define BOOTDIR_ADDR 0x101000
+static const boot_entry *bootdir = (boot_entry*)BOOTDIR_ADDR;
 
 static kernel_args ka = {0};
 
 void _start(int arg1, int arg2, void *openfirmware)
 {
-	int handle;
-
 	memset(&ka, 0, sizeof(ka));
 
+	// initialize the openfirmware handle
 	of_init(openfirmware);
+
+	// set up the framebuffer text mode
 	s2_text_init(&ka);
 
 	printf("Welcome to the stage2 bootloader!\n");
@@ -30,10 +39,121 @@ void _start(int arg1, int arg2, void *openfirmware)
 	// bring up the mmu
  	s2_mmu_init(&ka);
 
-	// initialize fault handlers
-	s2_faults_init(&ka);
+	printf("bootdir at %p\n", bootdir);
+	print_bootdir_entry(&bootdir[2]);
 
-	printf("_start: spinning forever...\n");
+	// boot the kernel
+	unsigned int kernel_entry;
+	load_elf_image((void *)(bootdir[2].be_offset * PAGE_SIZE + BOOTDIR_ADDR),
+			&ka.kernel_seg0_addr, &ka.kernel_seg1_addr, &kernel_entry, &ka.kernel_dynamic_section_addr);
+
+	printf("loaded kernel, entry at 0x%x\n", kernel_entry);
+
+	s2_mmu_remap_pagetable(&ka);
+
+	{
+		int i;
+
+		for(i=0; i<ka.num_phys_mem_ranges; i++) {
+			printf("phys map %d: pa 0x%lx, len 0x%lx\n", i, ka.phys_mem_range[i].start, ka.phys_mem_range[i].size);
+		}
+		for(i=0; i<ka.num_phys_alloc_ranges; i++) {
+			printf("phys alloc map %d: pa 0x%lx, len 0x%lx\n", i, ka.phys_alloc_range[i].start, ka.phys_alloc_range[i].size);
+		}
+		for(i=0; i<ka.num_virt_alloc_ranges; i++) {
+			printf("virt alloc map %d: pa 0x%lx, len 0x%lx\n", i, ka.virt_alloc_range[i].start, ka.virt_alloc_range[i].size);
+		}
+	}
+
+	printf("jumping into kernel...\n");
+
+	ka.cons_line = s2_get_text_line();
+
+	int (*_kernel_start)(kernel_args *, int cpu_num) = (void *)kernel_entry;
+	_kernel_start(&ka, 0);
+
+	printf("should not get here\n");
 	for(;;);
+}
+
+static void print_bootdir_entry(const boot_entry *entry)
+{
+	printf("entry at %p\n", entry);
+	printf("\tbe_name: '%s'\n", entry->be_name);
+	printf("\tbe_offset: %d\n", entry->be_offset);
+	printf("\tbe_type: %d\n", entry->be_type);
+	printf("\tbe_size: %d\n", entry->be_size);
+	printf("\tbe_vsize: %d\n", entry->be_vsize);
+	printf("\tbe_code_vaddr: %d\n", entry->be_code_vaddr);
+	printf("\tbe_code_ventr: %d\n", entry->be_code_ventr);
+}
+
+static void load_elf_image(void *data, addr_range *ar0, addr_range *ar1, unsigned int *start_addr, addr_range *dynamic_section)
+{
+	struct Elf32_Ehdr *imageHeader = (struct Elf32_Ehdr*) data;
+	struct Elf32_Phdr *segments = (struct Elf32_Phdr*)(imageHeader->e_phoff + (unsigned) imageHeader);
+	int segmentIndex;
+	int foundSegmentIndex = 0;
+
+	ar0->size = 0;
+	ar1->size = 0;
+	dynamic_section->size = 0;
+
+	for (segmentIndex = 0; segmentIndex < imageHeader->e_phnum; segmentIndex++) {
+		struct Elf32_Phdr *segment = &segments[segmentIndex];
+		unsigned segmentOffset;
+
+		switch(segment->p_type) {
+			case PT_LOAD:
+				break;
+			case PT_DYNAMIC:
+				dynamic_section->start = segment->p_vaddr;
+				dynamic_section->size = segment->p_memsz;
+			default:
+				continue;
+		}
+
+		printf("segment %d\n", segmentIndex);
+		printf("p_vaddr 0x%x p_paddr 0x%x p_filesz 0x%x p_memsz 0x%x\n",
+			segment->p_vaddr, segment->p_paddr, segment->p_filesz, segment->p_memsz);
+
+		/* Map initialized portion */
+		for (segmentOffset = 0;
+			segmentOffset < ROUNDUP(segment->p_filesz, PAGE_SIZE);
+			segmentOffset += PAGE_SIZE) {
+
+			mmu_map_page(&ka, mmu_allocate_page(&ka), segment->p_vaddr + segmentOffset);
+			memcpy((void *)ROUNDOWN(segment->p_vaddr + segmentOffset, PAGE_SIZE),
+				(void *)ROUNDOWN((unsigned)data + segment->p_offset + segmentOffset, PAGE_SIZE), PAGE_SIZE);
+		}
+
+		/* Clean out the leftover part of the last page */
+		if(segment->p_filesz % PAGE_SIZE > 0) {
+			printf("memsetting 0 to va 0x%x, size %d\n", (void*)((unsigned)segment->p_vaddr + segment->p_filesz), PAGE_SIZE  - (segment->p_filesz % PAGE_SIZE));
+			memset((void*)((unsigned)segment->p_vaddr + segment->p_filesz), 0, PAGE_SIZE
+				- (segment->p_filesz % PAGE_SIZE));
+		}
+
+		/* Map uninitialized portion */
+		for (; segmentOffset < ROUNDUP(segment->p_memsz, PAGE_SIZE); segmentOffset += PAGE_SIZE) {
+			printf("mapping zero page at va 0x%x\n", segment->p_vaddr + segmentOffset);
+			mmu_map_page(&ka, mmu_allocate_page(&ka), segment->p_vaddr + segmentOffset);
+			memset((void *)(segment->p_vaddr + segmentOffset), 0, PAGE_SIZE);
+		}
+		switch(foundSegmentIndex) {
+			case 0:
+				ar0->start = segment->p_vaddr;
+				ar0->size = segment->p_memsz;
+				break;
+			case 1:
+				ar1->start = segment->p_vaddr;
+				ar1->size = segment->p_memsz;
+				break;
+			default:
+				;
+		}
+		foundSegmentIndex++;
+	}
+	*start_addr = imageHeader->e_entry;
 }
 

@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -7,9 +7,9 @@
 
 // must match SMP_MAX_CPUS in arch_smp.h
 #define MAX_BOOT_CPUS 4
-#define MAX_PHYS_MEM_ADDR_RANGE 4
-#define MAX_VIRT_ALLOC_ADDR_RANGE 4
-#define MAX_PHYS_ALLOC_ADDR_RANGE 4
+#define MAX_PHYS_MEM_ADDR_RANGE 16
+#define MAX_VIRT_ALLOC_ADDR_RANGE 16
+#define MAX_PHYS_ALLOC_ADDR_RANGE 16
 
 typedef struct {
 	unsigned long start;

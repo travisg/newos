@@ -36,5 +36,10 @@ extern void dbg_make_register_file(unsigned int *file, const struct iframe *fram
 #define ASSERT(x)
 #endif
 
+#define PANIC_UNIMPLEMENTED() \
+	panic("%s: unimplemented\n", __FUNCTION__)
+#define ATRACE(x) \
+	dprintf("TRACE: (%s:%s:%d) %s", __FILE__, __FUNCTION__, __LINE__, x)
+
 #endif
 

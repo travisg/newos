@@ -140,10 +140,11 @@ unsigned char FONT[] = {
 };
 
 static unsigned char *framebuffer;
-static unsigned char draw_color;
-static unsigned char back_color;
+static unsigned int draw_color;
+static unsigned int back_color;
 static int char_x,char_y;
 static int screen_size_x, screen_size_y;
+static int screen_depth;
 static int num_cols, num_rows;
 
 #define CHAR_WIDTH 6
@@ -206,15 +207,26 @@ void putchar(char c)
 		memset(framebuffer + (screen_size_y-CHAR_HEIGHT)*screen_size_x, back_color, screen_size_x*CHAR_HEIGHT);
 		char_y--;
 	}
- }
+}
 
 int s2_text_init(kernel_args *ka)
 {
 	int i;
+	int screen_handle;
 
-	framebuffer = (unsigned char *)0x96008000;
-	screen_size_x = 1024;
-	screen_size_y = 768;
+	screen_handle = of_finddevice("screen");
+	if(screen_handle != 0) {
+		of_getprop(screen_handle, "width", &screen_size_x, sizeof(screen_size_x));
+		of_getprop(screen_handle, "height", &screen_size_y, sizeof(screen_size_y));
+		of_getprop(screen_handle, "address", &framebuffer, sizeof(framebuffer));
+		of_getprop(screen_handle, "depth", &screen_depth, sizeof(screen_depth));
+	} else {
+		// XXX hard coded
+		framebuffer = (unsigned char *)0x96008000;
+		screen_size_x = 1024;
+		screen_size_y = 768;
+	}
+
 	back_color = 0x0;
 	draw_color = 0xff;
 	char_x = char_y = 0;
@@ -226,17 +238,26 @@ int s2_text_init(kernel_args *ka)
 		framebuffer[i] = back_color;
 	}
 
-	ka->arch_args.screen_x = 1024;
-	ka->arch_args.screen_y = 768;
-	ka->arch_args.screen_depth = 8;
-	ka->arch_args.framebuffer.start = (unsigned long)framebuffer;
-	ka->arch_args.framebuffer.size = ka->arch_args.screen_x * ka->arch_args.screen_y * ka->arch_args.screen_depth / 8;
+	ka->fb.enabled = 1;
+	ka->fb.x_size = screen_size_x;
+	ka->fb.y_size = screen_size_y;
+	ka->fb.bit_depth = screen_depth;
+	ka->fb.mapping.start = (unsigned long)framebuffer;
+	ka->fb.mapping.size = ka->fb.x_size * ka->fb.y_size * ka->fb.bit_depth / 8;
+
+	printf("screen_handle = 0x%x\n", screen_handle);
 
 	return 0;
 }
 
-void s2_change_framebuffer_addr(unsigned int address)
+int s2_get_text_line(void)
+{
+	return char_y;
+}
+
+void s2_change_framebuffer_addr(kernel_args *ka, unsigned int address)
 {
 	framebuffer = (unsigned char *)address;
+	ka->fb.mapping.start = address;
 }
 
