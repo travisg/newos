@@ -6,7 +6,6 @@ improved VM
 sparc v8 port
 sparc v9 port
 alpha port
-user-space
 user-space loader
 kernel ELF loader
 improved kernel ELF loader - i386
@@ -17,8 +16,11 @@ maple bus layer - dreamcast
 default vfs handlers
 vfs system call wrappers
 sh4 cache enable - dreamcast
-system calls
 performance counters
+
+In Progress:
+system calls
+user-space
 
 Finish:
 
@@ -28,8 +30,8 @@ sh4 test_and_set - dreamcast
 improved schedule quantum handling
 sh4 invalidate_TLB - dreamcast
 PCI bus - i386
+user-space - sh4
+system calls - sh4
 
 Fix:
 
-sh4 crash - dreamcast
-sh4 bootfs corruption - dreamcast
