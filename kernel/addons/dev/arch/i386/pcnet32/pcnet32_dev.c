@@ -85,7 +85,7 @@ static void write_csr(pcnet32 *nic, uint32 reg, uint16 data)
 	WRITE_32(nic, PCNET_IO_DATAPORT, data);
 }
 
-/* XX this function is not used (but perhaps should be in some places?
+// XX this function is not used (but perhaps should be in some places?
 static void modify_csr(pcnet32 *nic, uint32 reg, uint16 bits, uint16 set)
 {
 	uint16 oldset;
@@ -103,7 +103,6 @@ static void modify_csr(pcnet32 *nic, uint32 reg, uint16 bits, uint16 set)
 	int_restore_interrupts();
 	release_spinlock(&nic->control_lock);
 }
-*/
 
 static void write_bcr(pcnet32 *nic, uint32 reg, uint16 data)
 {
@@ -468,6 +467,9 @@ ssize_t pcnet32_xmit(pcnet32 *nic, const char *ptr, ssize_t len)
 	nic->txring_head++;
 
 	mutex_unlock(&nic->txring_mutex);
+
+	// set the transmit demand bit in CSR0
+	modify_csr(nic, PCNET_CSR_STATUS, PCNET_STATUS_TDMD, PCNET_STATUS_TDMD);
 
 	// return "OK";
 	return len;
