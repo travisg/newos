@@ -78,10 +78,10 @@ ifeq ($(ARCH),i386)
 		OBJCOPY = i386-elf-objcopy
 		STRIP = i386-elf-strip
 	endif
-	GLOBAL_CFLAGS = -O2
+	GLOBAL_CFLAGS = -O2 -g
 	KERNEL_CFLAGS = -fno-pic
 	USER_CFLAGS = -fpic
-	GLOBAL_LDFLAGS =
+	GLOBAL_LDFLAGS = -g
 	TOOLCHAIN_ARCH = i386
 endif
 

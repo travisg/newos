@@ -23,6 +23,8 @@ $(MY_TARGET_IN): $(_TEMP_OBJS) $(MY_LIBS_IN)
 	@$(MKDIR)
 	@echo linking $@
 	@$(LD) $(GLOBAL_LDFLAGS) -Bdynamic -shared -Bsymbolic -T $(MY_LINKSCRIPT_IN) -L $(LIBGCC_PATH) -o $@ $(_TEMP_OBJS) $(MY_LIBS_IN) $(LIBGCC)
+	@echo creating listing file $@.lst
+	@$(OBJDUMP) -S $@ > $@.lst
 
 include templates/compile.mk
 
