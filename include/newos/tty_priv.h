@@ -9,6 +9,9 @@
 #define TTY_FLAG_ECHO        0x2     /* echo what is sent into this one to the other endpoint */
 #define TTY_FLAG_NLCR        0x4     /* translate LR to CRLF */
 
+#define TTY_FLAG_DEFAULT_OUTPUT TTY_FLAG_NLCR
+#define TTY_FLAG_DEFAULT_INPUT  (TTY_FLAG_CANON | TTY_FLAG_ECHO | TTY_FLAG_NLCR)
+
 struct tty_flags {
 	int input_flags;
 	int output_flags;

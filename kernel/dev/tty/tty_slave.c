@@ -31,7 +31,7 @@ static int ttys_open(dev_ident ident, dev_cookie *_cookie)
 
 	cookie = (tty_slave_cookie *)kmalloc(sizeof(tty_slave_cookie));
 	if(cookie == NULL)
-		return ERR_NO_MEMORY;	
+		return ERR_NO_MEMORY;
 
 	cookie->tty = tty;
 
@@ -75,7 +75,7 @@ static int ttys_ioctl(dev_cookie _cookie, int op, void *buf, size_t len)
 			err = cookie->tty->index;
 			break;
 		default:
-			err = ERR_INVALID_ARGS;
+			err = tty_ioctl(cookie->tty, op, buf, len);
 	}
 
 	return err;
@@ -90,7 +90,7 @@ static ssize_t ttys_read(dev_cookie _cookie, void *buf, off_t pos, ssize_t len)
 
 	ret = tty_read(cookie->tty, buf, len, ENDPOINT_SLAVE_READ);
 
-	TRACE(("ttys_read: returns %d\n", ret));	
+	TRACE(("ttys_read: returns %d\n", ret));
 
 	return ret;
 }
@@ -104,7 +104,7 @@ static ssize_t ttys_write(dev_cookie _cookie, const void *buf, off_t pos, ssize_
 
 	ret = tty_write(cookie->tty, buf, len, ENDPOINT_SLAVE_WRITE);
 
-	TRACE(("ttys_write: returns %d\n", ret));	
+	TRACE(("ttys_write: returns %d\n", ret));
 
 	return ret;
 }

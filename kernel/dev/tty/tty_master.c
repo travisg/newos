@@ -56,7 +56,7 @@ static int ttym_freecookie(dev_cookie _cookie)
 
 	dec_tty_ref(cookie->tty);
 	kfree(cookie);
-	
+
 	return 0;
 }
 
@@ -77,7 +77,7 @@ static int ttym_ioctl(dev_cookie _cookie, int op, void *buf, size_t len)
 			err = cookie->tty->index;
 			break;
 		default:
-			err = tty_ioctl(cookie->tty->index, op, buf, len);
+			err = tty_ioctl(cookie->tty, op, buf, len);
 	}
 
 	return err;
@@ -92,7 +92,7 @@ static ssize_t ttym_read(dev_cookie _cookie, void *buf, off_t pos, ssize_t len)
 
 	ret = tty_read(cookie->tty, buf, len, ENDPOINT_MASTER_READ);
 
-	TRACE(("ttym_read: returns %d\n", ret));	
+	TRACE(("ttym_read: returns %d\n", ret));
 
 	return ret;
 }
@@ -106,7 +106,7 @@ static ssize_t ttym_write(dev_cookie _cookie, const void *buf, off_t pos, ssize_
 
 	ret = tty_write(cookie->tty, buf, len, ENDPOINT_MASTER_WRITE);
 
-	TRACE(("ttym_write: returns %d\n", ret));	
+	TRACE(("ttym_write: returns %d\n", ret));
 
 	return ret;
 }
