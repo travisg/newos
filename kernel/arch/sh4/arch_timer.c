@@ -11,16 +11,16 @@
 #include <kernel/arch/cpu.h>
 
 #define timer_rate 12500000
-#define max_timer_interval ((time_t)0xffffffff * 1000000 / timer_rate)
-#define min_timer_interval ((time_t)0x1000)
+#define max_timer_interval ((bigtime_t)0xffffffff * 1000000 / timer_rate)
+#define min_timer_interval ((bigtime_t)0x1000)
 
 #define SYSTEM_TIME_TIMER_QUANTA 0xffffffff
-static const time_t system_time_timer_period = (time_t)SYSTEM_TIME_TIMER_QUANTA * timer_rate / 1000000;
-static volatile time_t base_system_time = 0;
+static const bigtime_t system_time_timer_period = (bigtime_t)SYSTEM_TIME_TIMER_QUANTA * timer_rate / 1000000;
+static volatile bigtime_t base_system_time = 0;
 
-time_t system_time()
+bigtime_t system_time()
 {
-	time_t outtime;
+	bigtime_t outtime;
 	uint32 timer_val;
 	int state = int_disable_interrupts();
 
@@ -29,9 +29,9 @@ restart:
 
 	if(*(uint16 *)TCR1 & 0x0100) {
 		// underflow has occurred already
-		outtime = base_system_time + system_time_timer_period + (time_t)timer_val * 1000000 / timer_rate;
+		outtime = base_system_time + system_time_timer_period + (bigtime_t)timer_val * 1000000 / timer_rate;
 	} else {
-		outtime = base_system_time + (time_t)timer_val * 1000000 / timer_rate;
+		outtime = base_system_time + (bigtime_t)timer_val * 1000000 / timer_rate;
 		if(*(uint16 *)TCR1 & 0x0100) {
 			// an underflow must have happened since we checked last, redo
 			goto restart;
@@ -55,7 +55,7 @@ static void stop_timer(int timer)
 	*(uint8 *)TSTR = old_val & ~(0x1 << timer %3);
 }
 
-static void setup_timer(int timer, time_t relative_timeout)
+static void setup_timer(int timer, bigtime_t relative_timeout)
 {
 	uint32 timer_val;
 
@@ -88,7 +88,7 @@ static void setup_timer(int timer, time_t relative_timeout)
 	}
 }
 
-void arch_timer_set_hardware_timer(time_t timeout)
+void arch_timer_set_hardware_timer(bigtime_t timeout)
 {
 	stop_timer(0);
 	setup_timer(0, timeout);

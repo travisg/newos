@@ -13,7 +13,7 @@
 #include <kernel/fs/devfs.h>
 #include <kernel/arch/cpu.h>
 #include <kernel/dev/arch/sh4/maple/maple_bus.h>
-#include <sys/errors.h>
+#include <newos/errors.h>
 
 /* Stolen from KOS */
 static char keymap_noshift[] = {
