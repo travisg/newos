@@ -4,19 +4,20 @@ _BUS_MAKE = 1
 BUS_DIR = bus
 BUS_OBJ_DIR = $(BUS_DIR)/$(OBJ_DIR)
 BUS_OBJS = \
-	$(BUS_OBJ_DIR)/bus_init.o
+	$(BUS_OBJ_DIR)/bus_init.o \
+	$(BUS_OBJ_DIR)/bus_man.o 
 
 BUS_INCLUDES = -Iinclude
 BUS_SUB_INCLUDES =
 
 DEPS += $(BUS_OBJS:.o=.d)
 
-BUS = $(BUS_OBJ_DIR)/bus.a
+BUS = $(BUS_OBJ_DIR)/bus.o
 
 include $(BUS_DIR)/bus_$(ARCH).mk
 
 $(BUS): $(BUS_OBJS)
-	$(AR) r $@ $(BUS_OBJS)
+	$(LD) -r -o $@ $(BUS_OBJS)
 
 busses: $(BUS)
 

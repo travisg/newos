@@ -18,6 +18,7 @@
 #include <libc/string.h>
 #include <libc/printf.h>
 
+#include <bus/bus.h>
 #include <bus/pci/pci_bus.h>
 
 #include "pci_p.h" // private includes
@@ -480,10 +481,43 @@ err:
 
 static int pci_read(void *_fs, void *_vnode, void *_cookie, void *buf, off_t pos, size_t *len)
 {
-	dprintf("pci_read: entry\n");
+	struct pcifs *fs = _fs;
+	struct pcifs_vnode *v = _vnode;
+	struct pcifs_cookie *cookie = _cookie;
+	int err = 0;
 
-	*len = 0;
-	return 0;	
+	dprintf("pcifs_read: vnode 0x%x, cookie 0x%x, pos 0x%x 0x%x, len 0x%x (0x%x)\n", v, cookie, pos, len, *len);
+
+	mutex_lock(&fs->lock);
+	
+	switch(cookie->s->type) {
+		case STREAM_TYPE_DIR: {
+			dprintf("pcifs_read: cookie is type DIR\n");
+
+			if(cookie->u.dir.ptr == NULL) {
+				*len = 0;
+				goto err;
+			}
+
+			if(strlen(cookie->u.dir.ptr->name) + 1 > *len) {
+				*len = 0;
+				err = -1;
+				goto err;
+			}
+			
+			strcpy(buf, cookie->u.dir.ptr->name);
+			*len = strlen(cookie->u.dir.ptr->name) + 1;
+			
+			cookie->u.dir.ptr = cookie->u.dir.ptr->dir_next;
+			break;
+		}
+		default:
+			err = -1;
+	}
+err:
+	mutex_unlock(&fs->lock);
+
+	return err;
 }
 
 static int pci_write(void *_fs, void *_vnode, void *_cookie, const void *buf, off_t pos, size_t *len)
@@ -669,6 +703,8 @@ int pci_bus_init(kernel_args *ka)
 	sys_create("/dev/bus", "", STREAM_TYPE_DIR);
 	sys_create("/dev/bus/pci", "", STREAM_TYPE_DIR);
 	sys_mount("/dev/bus/pci", "pci_bus_fs");
+
+	bus_register_bus("/dev/bus/pci");
 
 	return 0;
 }

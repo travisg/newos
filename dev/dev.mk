@@ -16,10 +16,10 @@ include $(DEV_ARCH_DIR)/arch_dev.mk
 
 DEPS += $(DEV_OBJS:.o=.d)
 
-DEV = $(DEV_OBJ_DIR)/dev.a
+DEV = $(DEV_OBJ_DIR)/dev.o
 
 $(DEV): $(DEV_OBJS)
-	$(AR) r $@ $(DEV_OBJS)
+	$(LD) -r -o $@ $(DEV_OBJS)
 
 devs: $(DEV)
 
