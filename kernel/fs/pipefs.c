@@ -875,7 +875,7 @@ static ssize_t pipefs_write(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, con
 		free_space = v->stream.u.pipe.buf_len - (v->stream.u.pipe.head - v->stream.u.pipe.tail);
 	else
 		free_space = v->stream.u.pipe.buf_len - ((v->stream.u.pipe.head + v->stream.u.pipe.buf_len) - v->stream.u.pipe.tail);
-	free_space = min(free_space, v->stream.u.pipe.buf_len - 1); // can't completely fill it
+	free_space--; // can't completely fill it
 	len = min(free_space, len);
 
 #if PIPEFS_TRACE
