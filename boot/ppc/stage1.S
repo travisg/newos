@@ -15,26 +15,26 @@ _start:
 	ori		1,1,tempstack_end@l
 
 	/* load the base of the bootdir */
-	lis		3,BOOTDIR_BASE@ha
-	ori		3,3,BOOTDIR_BASE@l	
+	lis		8,BOOTDIR_BASE@ha
+	ori		8,8,BOOTDIR_BASE@l	
 
 	/* load the offset the stage2 will start into the bootdir */
-	lis		4,STAGE2_BOOTDIR_PAGE@ha
-	ori		4,4,STAGE2_BOOTDIR_PAGE@l
-	lwz		4,0(4)
-	mulli	4,4,4096
+	lis		9,STAGE2_BOOTDIR_PAGE@ha
+	ori		9,9,STAGE2_BOOTDIR_PAGE@l
+	lwz		9,0(9)
+	mulli	9,9,4096
 	
 	/* load the offset into that page the stage2 entry point will be */
-	lis		5,STAGE2_OFFSET@ha
-	ori		5,5,STAGE2_OFFSET@l
-	lwz		5,0(5)
+	lis		10,STAGE2_OFFSET@ha
+	ori		10,10,STAGE2_OFFSET@l
+	lwz		10,0(10)
 
 	/* add them all together */
-	add		6,3,4
-	add		6,6,5
+	add		11,8,9
+	add		11,11,10
 
 	/* jump there */
-	mtlr	6
+	mtlr	11
 	blr
 
 .align 4

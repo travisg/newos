@@ -10,6 +10,9 @@ include apps/apps.mk
 BOOT_DIR = boot/$(ARCH)
 BOOT_OBJ_DIR = $(BOOT_DIR)/$(OBJ_DIR)
 STAGE2_OBJS = $(BOOT_OBJ_DIR)/stage2.o \
+	$(BOOT_OBJ_DIR)/stage2_asm.o \
+	$(BOOT_OBJ_DIR)/stage2_mmu.o \
+	$(BOOT_OBJ_DIR)/stage2_of.o \
 	$(BOOT_OBJ_DIR)/stage2_text.o
 
 DEPS += $(STAGE2_OBJS:.o=.d)
@@ -54,23 +57,23 @@ CLEAN += finalclean
 # 
 $(BOOT_OBJ_DIR)/stage1.o: $(BOOT_DIR)/stage1.S
 	@mkdir -p $(BOOT_OBJ_DIR)
-	$(CC) $(GLOBAL_CFLAGS) -I. -Iinclude -I$(BOOT_DIR) -c $< -o $@
+	$(CC) $(GLOBAL_CFLAGS) -g -I. -Iinclude -I$(BOOT_DIR) -c $< -o $@
 
 $(BOOT_OBJ_DIR)/%.o: $(BOOT_DIR)/%.c
 	@mkdir -p $(BOOT_OBJ_DIR)
-	$(CC) $(GLOBAL_CFLAGS) -Iinclude -I$(BOOT_DIR) -c $< -o $@
+	$(CC) $(GLOBAL_CFLAGS) -g -Iinclude -I$(BOOT_DIR) -c $< -o $@
 
 $(BOOT_OBJ_DIR)/%.d: $(BOOT_DIR)/%.c
 	@mkdir -p $(BOOT_OBJ_DIR)
 	@echo "making deps for $<..."
-	@($(ECHO) -n $(dir $@);$(CC) $(GLOBAL_CFLAGS) -Iinclude -I$(BOOT_DIR) -M -MG $<) > $@
+	@($(ECHO) -n $(dir $@);$(CC) $(GLOBAL_CFLAGS) -g -Iinclude -I$(BOOT_DIR) -M -MG $<) > $@
 
 $(BOOT_OBJ_DIR)/%.d: $(BOOT_DIR)/%.S
 	@mkdir -p $(BOOT_OBJ_DIR)
 	@echo "making deps for $<..."
-	@($(ECHO) -n $(dir $@);$(CC) $(GLOBAL_CFLAGS) -Iinclude -I$(BOOT_DIR) -M -MG $<) > $@
+	@($(ECHO) -n $(dir $@);$(CC) $(GLOBAL_CFLAGS) -g -Iinclude -I$(BOOT_DIR) -M -MG $<) > $@
 
 $(BOOT_OBJ_DIR)/%.o: $(BOOT_DIR)/%.S
 	@mkdir -p $(BOOT_OBJ_DIR)
-	$(CC) $(GLOBAL_CFLAGS) -Iinclude -I$(BOOT_DIR) -c $< -o $@
+	$(CC) $(GLOBAL_CFLAGS) -g -Iinclude -I$(BOOT_DIR) -c $< -o $@
 endif

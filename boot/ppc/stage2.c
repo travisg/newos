@@ -3,25 +3,28 @@
 ** Distributed under the terms of the NewOS License.
 */
 #include <boot/stage2.h>
-#include "stage2_text.h"
+#include <libc/stdarg.h>
+#include <libc/printf.h>
+#include <libc/string.h>
+#include "stage2_priv.h"
 
-void _start()
+static kernel_args ka = {0};
+
+void _start(int arg1, int arg2, void *openfirmware)
 {
-	s2_text_init();
+	int handle;
 
-	s2_printf("Welcome to the stage2 bootloader!\n");
-	s2_printf("Next line\n");
+	memset(&ka, 0, sizeof(ka));
 
-#if 1
-	{
-		int i;
-		for(i=0; i<1024; i++) {
-			s2_printf("line %d\n", i);
-		}
-	}
-#endif
+	of_init(openfirmware);
+	s2_text_init(&ka);
+
+	printf("Welcome to the stage2 bootloader!\n");
+
+	printf("arg1 0x%x, arg2 0x%x, openfirmware 0x%x\n", arg1, arg2, openfirmware);
+
+	s2_mmu_init(&ka);
+
 	for(;;);
 }
-
-
 
