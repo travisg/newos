@@ -62,7 +62,7 @@ bool recursive_lock_unlock(recursive_lock *lock)
 	bool retval = false;
 
 	if(thid != lock->holder)
-		panic("recursive_lock 0x%x unlocked by non-holder thread!\n", lock);
+		panic("recursive_lock %p unlocked by non-holder thread!\n", lock);
 	
 	if(--lock->recursion == 0) {
 		lock->holder = -1;

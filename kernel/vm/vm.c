@@ -179,7 +179,7 @@ static int find_and_insert_region_slot(vm_virtual_map *map, addr start, addr siz
 	vm_region *next_r;
 	bool foundspot = false;
 
-	dprintf("find_and_insert_region_slot: map 0x%x, start 0x%x, size %d, end 0x%x, addr_type %d, region 0x%x\n",
+	dprintf("find_and_insert_region_slot: map %p, start 0x%lx, size %ld, end 0x%lx, addr_type %d, region %p\n",
 		map, start, size, end, addr_type, region);
 //	dprintf("map->base 0x%x, map->size 0x%x\n", map->base, map->size);
 
@@ -460,7 +460,7 @@ region_id vm_create_anonymous_region(aspace_id aid, char *name, void **address, 
 	vm_address_space *aspace;
 	vm_cache_ref *cache_ref;
 
-	dprintf("create_anonymous_region: size 0x%x\n", size);
+	dprintf("create_anonymous_region: size 0x%lx\n", size);
 
 	aspace = vm_get_aspace_from_id(aid);
 	if(aspace == NULL)
@@ -481,7 +481,7 @@ region_id vm_create_anonymous_region(aspace_id aid, char *name, void **address, 
 	cache->temporary = 1;
 	cache->scan_skip = 0;
 
-	dprintf("create_anonymous_region: calling map_backing store\n", size);
+	dprintf("create_anonymous_region: calling map_backing store\n");
 
 	vm_cache_acquire_ref(cache_ref, true);
 	err = map_backing_store(aspace, store, address, 0, size, addr_type, wiring, lock, REGION_NO_PRIVATE_MAP, &region, name);
@@ -491,7 +491,7 @@ region_id vm_create_anonymous_region(aspace_id aid, char *name, void **address, 
 		return err;
 	}
 
-	dprintf("create_anonymous_region: done calling map_backing store\n", size);
+	dprintf("create_anonymous_region: done calling map_backing store\n");
 
 	cache_ref = store->cache->ref;
 	switch(wiring) {
@@ -551,7 +551,7 @@ region_id vm_create_anonymous_region(aspace_id aid, char *name, void **address, 
 			page = vm_page_allocate_page_run(PAGE_STATE_CLEAR, ROUNDUP(region->size, PAGE_SIZE) / PAGE_SIZE);
 			if(page == NULL) {
 				// XXX back out of this
-				panic("couldn't allocate page run of size %d\n", region->size);
+				panic("couldn't allocate page run of size %ld\n", region->size);
 			}
 			phys_addr = page->ppn * PAGE_SIZE;
 
@@ -579,7 +579,7 @@ region_id vm_create_anonymous_region(aspace_id aid, char *name, void **address, 
 			;
 	}
 	vm_put_aspace(aspace);
-	dprintf("create_anonymous_region: done\n", size);
+	dprintf("create_anonymous_region: done\n");
 	if(region)
 		return region->id;
 	else
@@ -1090,7 +1090,7 @@ static void display_mem(int argc, char **argv)
 		return;
 	}
 
-	dprintf("[0x%x] '", address);
+	dprintf("[0x%lx] '", address);
 	for(j=0; j<min(display_width, num) * item_size; j++) {
 		char c = *((char *)address + j);
 		if(!isalnum(c)) {
@@ -1101,7 +1101,7 @@ static void display_mem(int argc, char **argv)
 	dprintf("'");
 	for(i=0; i<num; i++) {
 		if((i % display_width) == 0 && i != 0) {
-			dprintf("\n[0x%x] '", address + i * item_size);
+			dprintf("\n[0x%lx] '", address + i * item_size);
 			for(j=0; j<min(display_width, (num-i)) * item_size; j++) {
 				char c = *((char *)address + i * item_size + j);
 				if(!isalnum(c)) {
@@ -1147,15 +1147,15 @@ static void dump_cache_ref(int argc, char **argv)
 	address = atoul(argv[1]);
 	cache_ref = (vm_cache_ref *)address;
 
-	dprintf("cache_ref at 0x%x:\n", cache_ref);
-	dprintf("cache: 0x%x\n", cache_ref->cache);
+	dprintf("cache_ref at %p:\n", cache_ref);
+	dprintf("cache: %p\n", cache_ref->cache);
 	dprintf("lock.count: %d\n", cache_ref->lock.count);
 	dprintf("lock.sem: 0x%x\n", cache_ref->lock.sem);
 	dprintf("region_list:\n");
 	for(region = cache_ref->region_list; region != NULL; region = region->cache_next) {
 		dprintf(" region 0x%x: ", region->id);
-		dprintf("base_addr = 0x%x ", region->base);
-		dprintf("size = 0x%x ", region->size);
+		dprintf("base_addr = 0x%lx ", region->base);
+		dprintf("size = 0x%lx ", region->size);
 		dprintf("name = '%s' ", region->name);
 		dprintf("lock = 0x%x\n", region->lock);
 	}
@@ -1204,42 +1204,42 @@ static void dump_cache(int argc, char **argv)
 	address = atoul(argv[1]);
 	cache = (vm_cache *)address;
 
-	dprintf("cache at 0x%x:\n", cache);
-	dprintf("cache_ref: 0x%x\n", cache->ref);
-	dprintf("source: 0x%x\n", cache->source);
-	dprintf("store: 0x%x\n", cache->store);
+	dprintf("cache at %p:\n", cache);
+	dprintf("cache_ref: %p\n", cache->ref);
+	dprintf("source: %p\n", cache->source);
+	dprintf("store: %p\n", cache->store);
 	// XXX 64-bit
-	dprintf("virtual_size: 0x%x 0x%x\n", cache->virtual_size);
+	dprintf("virtual_size: 0x%Lx\n", cache->virtual_size);
 	dprintf("temporary: %d\n", cache->temporary);
 	dprintf("scan_skip: %d\n", cache->scan_skip);
 	dprintf("page_list:\n");
 	for(page = cache->page_list; page != NULL; page = page->cache_next) {
 		// XXX offset is 64-bit
 		if(page->type == PAGE_TYPE_PHYSICAL)
-			dprintf(" 0x%x ppn 0x%x offset 0x%x 0x%x type %d state %d (%s) ref_count %d\n",
+			dprintf(" %p ppn 0x%lx offset 0x%Lx type %d state %d (%s) ref_count %d\n",
 				page, page->ppn, page->offset, page->type, page->state, page_state_to_text(page->state), page->ref_count);
 		else if(page->type == PAGE_TYPE_DUMMY)
-			dprintf(" 0x%x DUMMY PAGE state %d (%s)\n", page, page->state, page_state_to_text(page->state));
+			dprintf(" %p DUMMY PAGE state %d (%s)\n", page, page->state, page_state_to_text(page->state));
 		else
-			dprintf(" 0x%x UNKNOWN PAGE type %d\n", page, page->type);
+			dprintf(" %p UNKNOWN PAGE type %d\n", page, page->type);
 	}
 }
 
 static void _dump_region(vm_region *region)
 {
-	dprintf("dump of region at 0x%x:\n", region);
+	dprintf("dump of region at %p:\n", region);
 	dprintf("name: '%s'\n", region->name);
 	dprintf("id: 0x%x\n", region->id);
-	dprintf("base: 0x%x\n", region->base);
-	dprintf("size: 0x%x\n", region->size);
+	dprintf("base: 0x%lx\n", region->base);
+	dprintf("size: 0x%lx\n", region->size);
 	dprintf("lock: 0x%x\n", region->lock);
 	dprintf("wiring: 0x%x\n", region->wiring);
 	dprintf("ref_count: %d\n", region->ref_count);
-	dprintf("cache_ref: 0x%x\n", region->cache_ref);
+	dprintf("cache_ref: %p\n", region->cache_ref);
 	// XXX 64-bit
-	dprintf("cache_offset: 0x%x 0x%x\n", region->cache_offset);
-	dprintf("cache_next: 0x%x\n", region->cache_next);
-	dprintf("cache_prev: 0x%x\n", region->cache_prev);
+	dprintf("cache_offset: 0x%Lx\n", region->cache_offset);
+	dprintf("cache_next: %p\n", region->cache_next);
+	dprintf("cache_prev: %p\n", region->cache_prev);
 }
 
 static void dump_region(int argc, char **argv)
@@ -1286,7 +1286,7 @@ static void dump_region_list(int argc, char **argv)
 
 	hash_open(region_table, &iter);
 	while((region = hash_next(region_table, &iter)) != NULL) {
-		dprintf("0x%x\t0x%x\t%32s\t0x%x\t\t0x%x\t%d\t%d\n",
+		dprintf("%p\t0x%x\t%32s\t0x%lx\t\t0x%lx\t%d\t%d\n",
 			region, region->id, region->name, region->base, region->size, region->lock, region->wiring);
 	}
 	hash_close(region_table, &iter, false);
@@ -1296,23 +1296,23 @@ static void _dump_aspace(vm_address_space *aspace)
 {
 	vm_region *region;
 
-	dprintf("dump of address space at 0x%x:\n", aspace);
+	dprintf("dump of address space at %p:\n", aspace);
 	dprintf("name: '%s'\n", aspace->name);
 	dprintf("id: 0x%x\n", aspace->id);
 	dprintf("ref_count: %d\n", aspace->ref_count);
 	dprintf("fault_count: %d\n", aspace->fault_count);
-	dprintf("working_set_size: 0x%x\n", aspace->working_set_size);
-	dprintf("translation_map: 0x%x\n", &aspace->translation_map);
-	dprintf("virtual_map.base: 0x%x\n", aspace->virtual_map.base);
-	dprintf("virtual_map.size: 0x%x\n", aspace->virtual_map.size);
+	dprintf("working_set_size: 0x%lx\n", aspace->working_set_size);
+	dprintf("translation_map: %p\n", &aspace->translation_map);
+	dprintf("virtual_map.base: 0x%lx\n", aspace->virtual_map.base);
+	dprintf("virtual_map.size: 0x%lx\n", aspace->virtual_map.size);
 	dprintf("virtual_map.change_count: 0x%x\n", aspace->virtual_map.change_count);
 	dprintf("virtual_map.sem: 0x%x\n", aspace->virtual_map.sem);
-	dprintf("virtual_map.region_hint: 0x%x\n", aspace->virtual_map.region_hint);
+	dprintf("virtual_map.region_hint: %p\n", aspace->virtual_map.region_hint);
 	dprintf("virtual_map.region_list:\n");
 	for(region = aspace->virtual_map.region_list; region != NULL; region = region->aspace_next) {
 		dprintf(" region 0x%x: ", region->id);
-		dprintf("base_addr = 0x%x ", region->base);
-		dprintf("size = 0x%x ", region->size);
+		dprintf("base_addr = 0x%lx ", region->base);
+		dprintf("size = 0x%lx ", region->size);
 		dprintf("name = '%s' ", region->name);
 		dprintf("lock = 0x%x\n", region->lock);
 	}
@@ -1362,7 +1362,7 @@ static void dump_aspace_list(int argc, char **argv)
 
 	hash_open(aspace_table, &iter);
 	while((as = hash_next(aspace_table, &iter)) != NULL) {
-		dprintf("0x%x\t0x%x\t%32s\t0x%x\t\t0x%x\n",
+		dprintf("%p\t0x%x\t%32s\t0x%lx\t\t0x%lx\n",
 			as, as->id, as->name, as->virtual_map.base, as->virtual_map.size);
 	}
 	hash_close(aspace_table, &iter, false);
@@ -1561,7 +1561,7 @@ int vm_init(kernel_args *ka)
 
 	// map in the new heap and initialize it
 	heap_base = vm_alloc_from_ka_struct(ka, HEAP_SIZE, LOCK_KERNEL|LOCK_RW);
-	dprintf("heap at 0x%x\n", heap_base);
+	dprintf("heap at 0x%lx\n", heap_base);
 	heap_init(heap_base, HEAP_SIZE);
 
 	// initialize the free page list and physical page mapper
@@ -1696,7 +1696,7 @@ int vm_page_fault(addr address, addr fault_address, bool is_write, bool is_user,
 
 	err = vm_soft_fault(address, is_write, is_user);
 	if(err < 0) {
-		dprintf("vm_page_fault: vm_soft_fault returned error %d on fault at 0x%x, ip 0x%x, write %d, user %d, thread 0x%x\n",
+		dprintf("vm_page_fault: vm_soft_fault returned error %d on fault at 0x%lx, ip 0x%lx, write %d, user %d, thread 0x%x\n",
 			err, address, fault_address, is_write, is_user, thread_get_current_thread_id());
 		if(!is_user) {
 			struct thread *t = thread_get_current_thread();
@@ -1707,7 +1707,7 @@ int vm_page_fault(addr address, addr fault_address, bool is_write, bool is_user,
 				*newip = t->fault_handler;
 			} else {
 				// unhandled page fault in the kernel
-				panic("vm_page_fault: unhandled page fault in kernel space at 0x%x, ip 0x%x\n",
+				panic("vm_page_fault: unhandled page fault in kernel space at 0x%lx, ip 0x%lx\n",
 					address, fault_address);
 			}
 		} else {
@@ -1772,7 +1772,7 @@ static int vm_soft_fault(addr address, bool is_write, bool is_user)
 	if(region == NULL) {
 		sem_release(map->sem, READ_COUNT);
 		vm_put_aspace(aspace);
-		dprintf("vm_soft_fault: va 0x%x not covered by region in address space\n", address);
+		dprintf("vm_soft_fault: va 0x%lx not covered by region in address space\n", address);
 		return ERR_VM_PF_BAD_ADDRESS; // BAD_ADDRESS
 	}
 

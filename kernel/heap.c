@@ -76,11 +76,11 @@ static void dump_bin(int bin_index)
 	struct heap_bin *bin = &bins[bin_index];
 	unsigned int *temp;
 
-	dprintf("%d:\tesize %d\tgrow_size %d\talloc_count %d\tfree_count %d\traw_count %d\traw_list 0x%x\n",
+	dprintf("%d:\tesize %d\tgrow_size %d\talloc_count %d\tfree_count %d\traw_count %d\traw_list %p\n",
 		bin_index, bin->element_size, bin->grow_size, bin->alloc_count, bin->free_count, bin->raw_count, bin->raw_list);
 	dprintf("free_list: ");
 	for(temp = bin->free_list; temp != NULL; temp = (unsigned int *)*temp) {
-		dprintf("0x%x ", temp);
+		dprintf("%p ", temp);
 	}
 	dprintf("NULL\n");
 }
@@ -89,7 +89,7 @@ static void dump_bin_list(int argc, char **argv)
 {
 	int i;
 
-	dprintf("%d heap bins at 0x%x:\n", bin_count, bins);
+	dprintf("%d heap bins at %p:\n", bin_count, bins);
 
 	for(i=0; i<bin_count; i++) {
 		dump_bin(i);
@@ -105,7 +105,7 @@ int heap_init(addr new_heap_base, unsigned int new_heap_size)
 	heap_size = new_heap_size;
 	heap_base = PAGE_ALIGN((unsigned int)heap_alloc_table + (heap_size / PAGE_SIZE) * sizeof(struct heap_page));
 	heap_base_ptr = heap_base;
-	dprintf("heap_alloc_table = 0x%x, heap_base = 0x%x, heap_size = 0x%x\n", heap_alloc_table, heap_base, heap_size);
+	dprintf("heap_alloc_table = %p, heap_base = 0x%lx, heap_size = 0x%lx\n", heap_alloc_table, heap_base, heap_size);
 
 	// zero out the heap alloc table at the base of the heap
 	memset((void *)heap_alloc_table, 0, (heap_size / PAGE_SIZE) * sizeof(struct heap_page));
@@ -227,7 +227,7 @@ void kfree(void *address)
 		return;
 
 	if ((addr)address < heap_base || (addr)address >= (heap_base + heap_size))
-		panic("kfree: asked to free invalid address 0x%x\n", address);
+		panic("kfree: asked to free invalid address %p\n", address);
 
 	mutex_lock(&heap_lock);
 
@@ -242,7 +242,7 @@ void kfree(void *address)
 #endif
 
 	if(page[0].bin_index >= bin_count)
-		panic("kfree: page 0x%x: invalid bin_index %d\n", page, page->bin_index);
+		panic("kfree: page %p: invalid bin_index %d\n", page, page->bin_index);
 
 	bin = &bins[page[0].bin_index];
 
@@ -261,7 +261,7 @@ void kfree(void *address)
 		unsigned int *temp;
 		for(temp = bin->free_list; temp != NULL; temp = (unsigned int *)*temp) {
 			if(temp == (unsigned int *)address) {
-				panic("kfree: address 0x%x already exists in bin free list\n", address);
+				panic("kfree: address %p already exists in bin free list\n", address);
 			}
 		}
 	}

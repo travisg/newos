@@ -117,12 +117,12 @@ void arch_thread_dump_info(void *info)
 {
 	struct arch_thread *at = (struct arch_thread *)info;
 
-	dprintf("\tesp: 0x%x\n", at->esp);
+	dprintf("\tesp: %p\n", at->esp);
 }
 
 void arch_thread_enter_uspace(addr entry, void *args, addr ustack_top)
 {
-	dprintf("arch_thread_entry_uspace: entry 0x%x, args 0x%x, ustack_top 0x%x\n",
+	dprintf("arch_thread_entry_uspace: entry 0x%lx, args %p, ustack_top 0x%lx\n",
 		entry, args, ustack_top);
 
 	int_disable_interrupts();

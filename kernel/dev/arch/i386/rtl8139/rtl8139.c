@@ -64,7 +64,7 @@ static int rtl8139_ioctl(dev_cookie cookie, int op, void *buf, size_t len)
 	rtl8139 *rtl = (rtl8139 *)cookie;
 	int err;
 
-	dprintf("rtl8139_ioctl: op %d, buf 0x%x, len %d\n", op, buf, len);
+	dprintf("rtl8139_ioctl: op %d, buf %p, len %d\n", op, buf, len);
 
 	if(!rtl)
 		return ERR_IO_ERROR;

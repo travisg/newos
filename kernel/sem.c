@@ -56,18 +56,18 @@ static void dump_sem_list(int argc, char **argv)
 
 	for(i=0; i<MAX_SEMS; i++) {
 		if(sems[i].id >= 0) {
-			dprintf("0x%x\tid: 0x%x\t\tname: '%s'\n", &sems[i], sems[i].id, sems[i].name);
+			dprintf("%p\tid: 0x%x\t\tname: '%s'\n", &sems[i], sems[i].id, sems[i].name);
 		}
 	}
 }
 
 static void _dump_sem_info(struct sem_entry *sem)
 {
-	dprintf("SEM:   0x%x\n", sem);
+	dprintf("SEM:   %p\n", sem);
 	dprintf("name:  '%s'\n", sem->name);
 	dprintf("owner: 0x%x\n", sem->owner);
 	dprintf("count: 0x%x\n", sem->count);
-	dprintf("queue: head 0x%x tail 0x%x\n", sem->q.head, sem->q.tail);
+	dprintf("queue: head %p tail %p\n", sem->q.head, sem->q.tail);
 }
 
 static void dump_sem_info(int argc, char **argv)
@@ -88,9 +88,9 @@ static void dump_sem_info(int argc, char **argv)
 			_dump_sem_info((struct sem_entry *)num);
 			return;
 		} else {
-			int slot = num % MAX_SEMS;
+			unsigned slot = num % MAX_SEMS;
 			if(sems[slot].id != (int)num) {
-				dprintf("sem 0x%x doesn't exist!\n", num);
+				dprintf("sem 0x%lx doesn't exist!\n", num);
 				return;
 			}
 			_dump_sem_info(&sems[slot]);
@@ -680,7 +680,7 @@ int sem_interrupt_thread(struct thread *t)
 	int state;
 	struct thread_queue wakeup_queue;
 
-	dprintf("sem_interrupt_thread: called on thread 0x%x (%d), blocked on sem 0x%x\n", t, t->id, t->sem_blocking);
+	dprintf("sem_interrupt_thread: called on thread %p (%d), blocked on sem 0x%x\n", t, t->id, t->sem_blocking);
 
 	if(t->state != THREAD_STATE_WAITING)
 		return ERR_INVALID_ARGS;

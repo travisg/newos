@@ -237,7 +237,7 @@ static int dec_vnode_ref_count(struct vnode *v, bool free_mem, bool r)
 	mutex_lock(&vfs_vnode_mutex);
 
 	if(v->busy == true)
-		panic("dec_vnode_ref_count called on vnode that was busy! vnode 0x%x\n", v);
+		panic("dec_vnode_ref_count called on vnode that was busy! vnode %p\n", v);
 
 	old_ref = atomic_add(&v->ref_count, -1);
 #if MAKE_NOIZE
@@ -661,7 +661,7 @@ static int path_to_vnode(char *path, struct vnode **v, bool kernel)
 
 		if(!next_v) {
 			// pretty screwed up here
-			panic("path_to_vnode: could not lookup vnode (fsid 0x%x vnid 0x%x 0x%x)\n", curr_v->fsid, vnid);
+			panic("path_to_vnode: could not lookup vnode (fsid 0x%x vnid 0x%Lx)\n", curr_v->fsid, vnid);
 			err = ERR_VFS_PATH_NOT_FOUND;
 			dec_vnode_ref_count(curr_v, false, false);
 			goto out;
@@ -936,7 +936,7 @@ int vfs_test(void)
 		if(err < 0)
 			panic("err stating '/boot/kernel'\n");
 		dprintf("stat results:\n");
-		dprintf("\tvnid 0x%x 0x%x\n\ttype %d\n\tsize 0x%x 0x%x\n", stat.vnid, stat.type, stat.size);
+		dprintf("\tvnid 0x%Lx\n\ttype %d\n\tsize 0x%Lx\n", stat.vnid, stat.type, stat.size);
 	}
 
 #endif
@@ -1104,7 +1104,7 @@ static int vfs_unmount(char *path, bool kernel)
 
 	mount = fsid_to_mount(v->fsid);
 	if(!mount) {
-		panic("vfs_unmount: fsid_to_mount failed on root vnode @0x%x of mount\n", v);
+		panic("vfs_unmount: fsid_to_mount failed on root vnode @%p of mount\n", v);
 	}
 
 	if(mount->root_vnode != v) {

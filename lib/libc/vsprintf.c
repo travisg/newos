@@ -58,13 +58,17 @@ static int skip_atoi(const char **s)
 #define SPECIAL	32		/* 0x */
 #define LARGE	64		/* use 'ABCDEF' instead of 'abcdef' */
 
-#define do_div(n,base) ({ \
-int __res; \
-__res = ((unsigned long) n) % (unsigned) base; \
-n = ((unsigned long) n) / (unsigned) base; \
-__res; })
+static unsigned long long do_div(unsigned long long *n, unsigned base) 
+{ 
+	unsigned long long res;
+	res = (*n) %  (unsigned long long)base;
 
-static char * number(char * str, long num, int base, int size, int precision
+	*n = (*n) / (unsigned long long)base;
+
+	return res;
+}
+
+static char * number(char * str, long long num, unsigned base, int size, int precision
 	,int type)
 {
 	char c,sign,tmp[66];
@@ -102,7 +106,7 @@ static char * number(char * str, long num, int base, int size, int precision
 	if (num == 0)
 		tmp[i++]='0';
 	else while (num != 0)
-		tmp[i++] = digits[do_div(num,base)];
+		tmp[i++] = digits[do_div(&num,base)];
 	if (i > precision)
 		precision = i;
 	size -= precision;
@@ -137,7 +141,7 @@ int sprintf(char * buf, const char *fmt, ...);
 int vsprintf(char *buf, const char *fmt, va_list args)
 {
 	int len;
-	unsigned long num;
+	unsigned long long num;
 	int i, base;
 	char * str;
 	const char *s;
@@ -281,9 +285,13 @@ int vsprintf(char *buf, const char *fmt, va_list args)
 				--fmt;
 			continue;
 		}
-		if (qualifier == 'l')
+		if (qualifier == 'L')
+			num = va_arg(args, unsigned long long);
+		else if (qualifier == 'l') {
 			num = va_arg(args, unsigned long);
-		else if (qualifier == 'h') {
+			if (flags & SIGN)
+				num = (long) num;
+		} else if (qualifier == 'h') {
 			num = (unsigned short) va_arg(args, int);
 			if (flags & SIGN)
 				num = (short) num;

@@ -523,20 +523,20 @@ int thread_set_priority(thread_id id, int priority)
 
 static void _dump_proc_info(struct proc *p)
 {
-	dprintf("PROC: 0x%x\n", p);
+	dprintf("PROC: %p\n", p);
 	dprintf("id:          0x%x\n", p->id);
 	dprintf("name:        '%s'\n", p->name);
-	dprintf("next:        0x%x\n", p->next);
+	dprintf("next:        %p\n", p->next);
 	dprintf("num_threads: %d\n", p->num_threads);
 	dprintf("state:       %d\n", p->state);
 	dprintf("pending_signals: 0x%x\n", p->pending_signals);
-	dprintf("ioctx:       0x%x\n", p->ioctx);
+	dprintf("ioctx:       %p\n", p->ioctx);
 	dprintf("proc_creation_sem: 0x%x\n", p->proc_creation_sem);
 	dprintf("aspace_id:   0x%x\n", p->aspace_id);
-	dprintf("aspace:      0x%x\n", p->aspace);
-	dprintf("kaspace:     0x%x\n", p->kaspace);
-	dprintf("main_thread: 0x%x\n", p->main_thread);
-	dprintf("thread_list: 0x%x\n", p->thread_list);
+	dprintf("aspace:      %p\n", p->aspace);
+	dprintf("kaspace:     %p\n", p->kaspace);
+	dprintf("main_thread: %p\n", p->main_thread);
+	dprintf("thread_list: %p\n", p->thread_list);
 }
 
 static void dump_proc_info(int argc, char **argv)
@@ -599,10 +599,10 @@ static struct thread *last_thread_dumped = NULL;
 
 static void _dump_thread_info(struct thread *t)
 {
-	dprintf("THREAD: 0x%x\n", t);
+	dprintf("THREAD: %p\n", t);
 	dprintf("id:          0x%x\n", t->id);
 	dprintf("name:        '%s'\n", t->name);
-	dprintf("all_next:    0x%x\nproc_next:  0x%x\nq_next:     0x%x\n",
+	dprintf("all_next:    %p\nproc_next:  %p\nq_next:     %p\n",
 		t->all_next, t->proc_next, t->q_next);
 	dprintf("priority:    0x%x\n", t->priority);
 	dprintf("state:       %s\n", state_to_text(t->state));
@@ -614,15 +614,15 @@ static void _dump_thread_info(struct thread *t)
 	dprintf("sem_deleted_retcode: 0x%x\n", t->sem_deleted_retcode);
 	dprintf("sem_errcode: 0x%x\n", t->sem_errcode);
 	dprintf("sem_flags:   0x%x\n", t->sem_flags);
-	dprintf("fault_handler: 0x%x\n", t->fault_handler);
-	dprintf("args:        0x%x\n", t->args);
-	dprintf("entry:       0x%x\n", t->entry);
-	dprintf("proc:        0x%x\n", t->proc);
+	dprintf("fault_handler: 0x%lx\n", t->fault_handler);
+	dprintf("args:        %p\n", t->args);
+	dprintf("entry:       0x%lx\n", t->entry);
+	dprintf("proc:        %p\n", t->proc);
 	dprintf("return_code_sem: 0x%x\n", t->return_code_sem);
 	dprintf("kernel_stack_region_id: 0x%x\n", t->kernel_stack_region_id);
-	dprintf("kernel_stack_base: 0x%x\n", t->kernel_stack_base);
+	dprintf("kernel_stack_base: 0x%lx\n", t->kernel_stack_base);
 	dprintf("user_stack_region_id:   0x%x\n", t->user_stack_region_id);
-	dprintf("user_stack_base:   0x%x\n", t->user_stack_base);
+	dprintf("user_stack_base:   0x%lx\n", t->user_stack_base);
 	dprintf("architecture dependant section:\n");
 	arch_thread_dump_info(&t->arch_info);
 
@@ -671,14 +671,14 @@ static void dump_thread_list(int argc, char **argv)
 
 	hash_open(thread_hash, &i);
 	while((t = hash_next(thread_hash, &i)) != NULL) {
-		dprintf("0x%x", t);
+		dprintf("%p", t);
 		if(t->name != NULL)
 			dprintf("\t%32s", t->name);
 		else
 			dprintf("\t%32s", "<NULL>");
 		dprintf("\t0x%x", t->id);
 		dprintf("\t%16s", state_to_text(t->state));
-		dprintf("\t0x%x\n", t->kernel_stack_base);
+		dprintf("\t0x%lx\n", t->kernel_stack_base);
 	}
 	hash_close(thread_hash, &i, false);
 }
@@ -692,7 +692,7 @@ static void dump_next_thread_in_q(int argc, char **argv)
 		return;
 	}
 
-	dprintf("next thread in queue after thread @ 0x%x\n", t);
+	dprintf("next thread in queue after thread @ %p\n", t);
 	if(t->q_next != NULL) {
 		_dump_thread_info(t->q_next);
 	} else {
@@ -709,7 +709,7 @@ static void dump_next_thread_in_all_list(int argc, char **argv)
 		return;
 	}
 
-	dprintf("next thread in global list after thread @ 0x%x\n", t);
+	dprintf("next thread in global list after thread @ %p\n", t);
 	if(t->all_next != NULL) {
 		_dump_thread_info(t->all_next);
 	} else {
@@ -726,7 +726,7 @@ static void dump_next_thread_in_proc(int argc, char **argv)
 		return;
 	}
 
-	dprintf("next thread in proc after thread @ 0x%x\n", t);
+	dprintf("next thread in proc after thread @ %p\n", t);
 	if(t->proc_next != NULL) {
 		_dump_thread_info(t->proc_next);
 	} else {
@@ -763,7 +763,7 @@ static int get_death_stack(void)
 		panic("get_death_stack: couldn't find free stack!\n");
 	}
 
-	dprintf("get_death_stack: returning 0x%x\n", death_stacks[i].address);
+	dprintf("get_death_stack: returning 0x%lx\n", death_stacks[i].address);
 
 	return i;
 }
@@ -970,7 +970,7 @@ static void thread_exit2(void *_args)
 	// restore the interrupts
 	int_restore_interrupts(args.int_state);
 
-	dprintf("thread_exit2, running on death stack 0x%x\n", args.t->kernel_stack_base);
+	dprintf("thread_exit2, running on death stack 0x%lx\n", args.t->kernel_stack_base);
 
 	// delete the old kernel stack region
 	dprintf("thread_exit2: deleting old kernel stack id 0x%x for thread 0x%x\n", args.old_kernel_stack, args.t->id);
@@ -1384,7 +1384,7 @@ void thread_resched(void)
 		} else {
 			next_thread = thread_dequeue_run_q(THREAD_IDLE_PRIORITY);
 			if(next_thread == NULL)
-				panic("next_thread == NULL! no idle priorities!\n", last_thread_pri);
+				panic("next_thread == NULL! no idle priorities!\n");
 		}
 	}
 
@@ -1522,7 +1522,7 @@ static int proc_create_proc2(void *args)
 	// free the args
 	kfree(args);
 
-	dprintf("proc_create_proc2: loaded elf. entry = 0x%x\n", entry);
+	dprintf("proc_create_proc2: loaded elf. entry = 0x%lx\n", entry);
 
 	p->state = PROC_STATE_NORMAL;
 
@@ -1681,7 +1681,7 @@ int proc_kill_proc(proc_id id)
 static void deliver_signal(struct thread *t, int signal)
 {
 	int rc;
-	dprintf("deliver_signal: thread 0x%x (%d), signal %d\n", t, t->id, signal);
+	dprintf("deliver_signal: thread %p (%d), signal %d\n", t, t->id, signal);
 	switch(signal) {
 		case SIG_KILL:
 			t->pending_signals |= SIG_KILL;

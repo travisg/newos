@@ -189,7 +189,7 @@ void dump_pci_config(struct pci_cfg *cfg)
 {
 	int i;
 
-	dprintf("dump_pci_config: dumping cfg structure at 0x%x\n", cfg);
+	dprintf("dump_pci_config: dumping cfg structure at %p\n", cfg);
 
 	dprintf("\tbus: %d, unit: %d, function: %d\n", cfg->bus, cfg->unit, cfg->func);
 

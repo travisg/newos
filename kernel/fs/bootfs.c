@@ -331,7 +331,7 @@ static int bootfs_create_vnode_tree(struct bootfs *fs, struct bootfs_vnode *root
 			new_vnode->stream.u.file.start = bootdir + entry[i].be_offset * PAGE_SIZE;
 			new_vnode->stream.u.file.len = entry[i].be_size * PAGE_SIZE;
 
-			dprintf("bootfs_create_vnode_tree: added entry '%s', start 0x%x, len 0x%x\n", new_vnode->name,
+			dprintf("bootfs_create_vnode_tree: added entry '%s', start %p, len 0x%Lx\n", new_vnode->name,
 				new_vnode->stream.u.file.start, new_vnode->stream.u.file.len);
 
 			// insert it into the parent dir
@@ -524,7 +524,7 @@ static int bootfs_removevnode(fs_cookie _fs, fs_vnode _v, bool r)
 
 	if(v->dir_next) {
 		// can't remove node if it's linked to the dir
-		panic("bootfs_removevnode: vnode 0x%x asked to be removed is present in dir\n");
+		panic("bootfs_removevnode: vnode %p asked to be removed is present in dir\n", v);
 	}
 
 	bootfs_delete_vnode(fs, v, false);
@@ -917,7 +917,7 @@ int bootstrap_bootfs(void)
 	bootdir_len = rinfo.size;
 	bootdir_region = rinfo.id;
 
-	dprintf("bootstrap_bootfs: found bootdir at 0x%x\n", bootdir);
+	dprintf("bootstrap_bootfs: found bootdir at %p\n", bootdir);
 
 	return vfs_register_filesystem("bootfs", &bootfs_calls);
 }

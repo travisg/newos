@@ -160,30 +160,30 @@ static void dump_image_info(struct elf_image_info *image)
 {
 	int i;
 
-	dprintf("elf_image_info at 0x%x:\n", image);
-	dprintf(" next 0x%x\n", image->next);
+	dprintf("elf_image_info at %p:\n", image);
+	dprintf(" next %p\n", image->next);
 	dprintf(" id 0x%x\n", image->id);
 	for(i=0; i<2; i++) {
 		dprintf(" regions[%d].id 0x%x\n", i, image->regions[i].id);
-		dprintf(" regions[%d].start 0x%x\n", i, image->regions[i].start);
-		dprintf(" regions[%d].size 0x%x\n", i, image->regions[i].size);
-		dprintf(" regions[%d].delta %d\n", i, image->regions[i].delta);
+		dprintf(" regions[%d].start 0x%lx\n", i, image->regions[i].start);
+		dprintf(" regions[%d].size 0x%lx\n", i, image->regions[i].size);
+		dprintf(" regions[%d].delta %ld\n", i, image->regions[i].delta);
 	}
-	dprintf(" dynamic_ptr 0x%x\n", image->dynamic_ptr);
-	dprintf(" needed 0x%x\n", image->needed);
-	dprintf(" symhash 0x%x\n", image->symhash);
-	dprintf(" syms 0x%x\n", image->syms);
-	dprintf(" strtab 0x%x\n", image->strtab);
-	dprintf(" rel 0x%x\n", image->rel);
+	dprintf(" dynamic_ptr 0x%lx\n", image->dynamic_ptr);
+	dprintf(" needed %p\n", image->needed);
+	dprintf(" symhash %p\n", image->symhash);
+	dprintf(" syms %p\n", image->syms);
+	dprintf(" strtab %p\n", image->strtab);
+	dprintf(" rel %p\n", image->rel);
 	dprintf(" rel_len 0x%x\n", image->rel_len);
-	dprintf(" rela 0x%x\n", image->rela);
+	dprintf(" rela %p\n", image->rela);
 	dprintf(" rela_len 0x%x\n", image->rela_len);
 }
 
 static void dump_symbol(struct elf_image_info *image, struct Elf32_Sym *sym)
 {
 
-	dprintf("symbol at 0x%x, in image 0x%x\n", sym, image);
+	dprintf("symbol at %p, in image %p\n", sym, image);
 
 	dprintf(" name index %d, '%s'\n", sym->st_name, SYMNAME(image, sym));
 	dprintf(" st_value 0x%x\n", sym->st_value);
@@ -417,7 +417,7 @@ static int elf_relocate_rel(struct elf_image_info *image, const char *sym_prepen
 				break;
 			case R_386_JMP_SLOT:
 				final_val = S;
-				dprintf( "final=%x\n", final_val );
+				dprintf( "final=%lx\n", final_val );
 				break;
 			default:
 				dprintf("unhandled relocation type %d\n", ELF32_R_TYPE(rel[i].r_info));
@@ -489,7 +489,7 @@ int elf_load_uspace(const char *path, struct proc *p, int flags, addr *entry)
 	int i;
 	ssize_t len;
 
-	dprintf("elf_load: entry path '%s', proc 0x%x\n", path, p);
+	dprintf("elf_load: entry path '%s', proc %p\n", path, p);
 
 	fd = sys_open(path, STREAM_TYPE_FILE, 0);
 	if(fd < 0)

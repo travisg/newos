@@ -162,7 +162,7 @@ int ipv4_output(cbuf *buf, ipv4_addr target_addr, int protocol)
 	ipv4_addr if_addr;
 	int err;
 
-	dprintf("ipv4_output: buf 0x%x, target_addr 0x%x, protocol %d\n", buf, target_addr, protocol);
+	dprintf("ipv4_output: buf %p, target_addr 0x%x, protocol %d\n", buf, target_addr, protocol);
 
 	// figure out what interface we will send this over
 	err = ipv4_route_match(target_addr, &iid, &transmit_addr, &if_addr);
@@ -265,7 +265,7 @@ int ipv4_receive(cbuf *buf, ifnet *i)
 		case IP_PROT_UDP:
 			return udp_receive(buf, i, ntohl(header->src), ntohl(header->dest));
 		default:
-			dprintf("ipv4_receive: packet with unknown protocol (%d)\n");
+			dprintf("ipv4_receive: packet with unknown protocol (%d)\n", header->protocol);
 			err = ERR_NET_BAD_PACKET;
 			goto ditch_packet;
 	}

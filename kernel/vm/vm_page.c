@@ -125,7 +125,7 @@ static int pageout_daemon()
 		release_spinlock(&page_lock);
 		int_restore_interrupts(state);
 
-		dprintf("got page 0x%x\n", page);
+		dprintf("got page %p\n", page);
 
 		if(page->cache_ref->cache->temporary && !trimming_cycle) {
 			// unless we're in the trimming cycle, dont write out pages
@@ -208,7 +208,7 @@ int vm_page_init(kernel_args *ka)
 		for(i=0; i<ka->num_phys_mem_ranges; i++) {
 			last_phys_page = (ka->phys_mem_range[i].start + ka->phys_mem_range[i].size) / PAGE_SIZE - 1;
 		}
-		dprintf("first phys page = 0x%x, last 0x%x\n", physical_page_offset, last_phys_page);
+		dprintf("first phys page = 0x%lx, last 0x%x\n", physical_page_offset, last_phys_page);
 		num_pages = last_phys_page - physical_page_offset;
 	}
 
@@ -350,10 +350,10 @@ int vm_mark_page_range_inuse(addr start_page, addr len)
 	int state;
 
 	// XXX remove
-	dprintf("vm_mark_page_range_inuse: start 0x%x, len 0x%x\n", start_page, len);
+	dprintf("vm_mark_page_range_inuse: start 0x%lx, len 0x%lx\n", start_page, len);
 
 	if(physical_page_offset > start_page) {
-		dprintf("vm_mark_page_range_inuse: start page %d is before free list\n");
+		dprintf("vm_mark_page_range_inuse: start page %ld is before free list\n", start_page);
 		return ERR_INVALID_ARGS;
 	}
 	start_page -= physical_page_offset;
@@ -381,7 +381,7 @@ int vm_mark_page_range_inuse(addr start_page, addr len)
 			case PAGE_STATE_UNUSED:
 			default:
 				// uh
-				dprintf("vm_mark_page_range_inuse: page 0x%x in non-free state %d!\n", start_page + i, page->state);
+				dprintf("vm_mark_page_range_inuse: page 0x%lx in non-free state %d!\n", start_page + i, page->state);
 		}
 	}
 
@@ -567,7 +567,7 @@ static int vm_page_set_state_nolock(vm_page *page, int page_state)
 			from_q = &page_clear_queue;
 			break;
 		default:
-			panic("vm_page_set_state: vm_page 0x%x in invalid state %d\n", page->state);
+			panic("vm_page_set_state: vm_page %p in invalid state %d\n", page, page->state);
 	}
 
 	switch(page_state) {

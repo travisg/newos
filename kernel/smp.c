@@ -59,7 +59,7 @@ void acquire_spinlock(spinlock_t *lock)
 	if(smp_num_cpus > 1) {
 		int curr_cpu = smp_get_current_cpu();
 		if(int_is_interrupts_enabled())
-			panic("acquire_spinlock: attempt to acquire lock 0x%x with interrupts enabled\n");
+			panic("acquire_spinlock: attempt to acquire lock %p with interrupts enabled\n", lock);
 		while(1) {
 			while(*lock != 0)
 				smp_process_pending_ici(curr_cpu);

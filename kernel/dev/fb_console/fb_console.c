@@ -362,7 +362,7 @@ int fb_console_dev_init(kernel_args *ka)
 	if(ka->fb.enabled) {
 		int i;
 
-		dprintf("fb_console_dev_init: framebuffer found at 0x%x, x %d, y %d, bit depth %d\n",
+		dprintf("fb_console_dev_init: framebuffer found at 0x%lx, x %d, y %d, bit depth %d\n",
 			ka->fb.mapping.start, ka->fb.x_size, ka->fb.y_size, ka->fb.bit_depth);
 
 		memset(&console, 0, sizeof(console));
@@ -395,7 +395,7 @@ int fb_console_dev_init(kernel_args *ka)
 				return 0;
 		}
 
-		dprintf("framebuffer mapped at 0x%x\n", console.fb);
+		dprintf("framebuffer mapped at 0x%lx\n", console.fb);
 
 		// figure out the number of rows/columns we have
 		console.rows = console.fb_y / CHAR_HEIGHT;
@@ -407,7 +407,7 @@ int fb_console_dev_init(kernel_args *ka)
 		console.saved_x = 0;
 		console.saved_y = 0;
 
-		dprintf("console 0x%x\n", &console);
+		dprintf("console %p\n", &console);
 
 		// allocate some memory for this
 		console.render_buf = kmalloc(console.fb_x * console.fb_pixel_bytes);

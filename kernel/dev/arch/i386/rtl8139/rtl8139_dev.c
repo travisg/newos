@@ -100,7 +100,7 @@ int rtl8139_detect(rtl8139 **rtl)
 		goto err;
 	}
 
-	dprintf("detected rtl8139 at irq %d, memory base 0x%x, size 0x%x\n", (*rtl)->irq, (*rtl)->phys_base, (*rtl)->phys_size);
+	dprintf("detected rtl8139 at irq %d, memory base 0x%lx, size 0x%lx\n", (*rtl)->irq, (*rtl)->phys_base, (*rtl)->phys_size);
 
 err:
 	kfree(vendor_ids);
@@ -122,7 +122,7 @@ int rtl8139_init(rtl8139 *rtl)
 		err = -1;
 		goto err;
 	}
-	dprintf("rtl8139 mapped at address 0x%x\n", rtl->virt_base);
+	dprintf("rtl8139 mapped at address 0x%lx\n", rtl->virt_base);
 
 	// try to reset the device
  	time = system_time();
@@ -190,7 +190,7 @@ int rtl8139_init(rtl8139 *rtl)
 	// Setup RX buffers
 	*(int *)rtl->rxbuf = 0;
 	vm_get_page_mapping(vm_get_kernel_aspace_id(), rtl->rxbuf, &temp);
-	dprintf("rx buffer will be at 0x%x\n", temp);
+	dprintf("rx buffer will be at 0x%lx\n", temp);
 	RTL_WRITE_32(rtl, RT_RXBUF, temp);
 
 	// Setup TX buffers

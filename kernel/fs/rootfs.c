@@ -371,7 +371,7 @@ static int rootfs_removevnode(fs_cookie _fs, fs_vnode _v, bool r)
 
 	if(v->dir_next) {
 		// can't remove node if it's linked to the dir
-		panic("rootfs_removevnode: vnode 0x%x asked to be removed is present in dir\n");
+		panic("rootfs_removevnode: vnode %p asked to be removed is present in dir\n", v);
 	}
 
 	rootfs_delete_vnode(fs, v, false);

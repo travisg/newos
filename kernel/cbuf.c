@@ -276,7 +276,7 @@ int cbuf_memcpy_to_chain(cbuf *chain, size_t offset, const void *_src, size_t le
 	int buf_offset;
 
 	if((chain->flags & CBUF_FLAG_CHAIN_HEAD) == 0) {
-		dprintf("cbuf_memcpy_to_chain: chain at 0x%x not head\n", chain);
+		dprintf("cbuf_memcpy_to_chain: chain at %p not head\n", chain);
 		return ERR_INVALID_ARGS;
 	}
 
@@ -329,7 +329,7 @@ int cbuf_user_memcpy_to_chain(cbuf *chain, size_t offset, const void *_src, size
 	int err;
 
 	if((chain->flags & CBUF_FLAG_CHAIN_HEAD) == 0) {
-		dprintf("cbuf_memcpy_to_chain: chain at 0x%x not head\n", chain);
+		dprintf("cbuf_memcpy_to_chain: chain at %p not head\n", chain);
 		return ERR_INVALID_ARGS;
 	}
 
@@ -384,7 +384,7 @@ int cbuf_memcpy_from_chain(void *_dest, cbuf *chain, size_t offset, size_t len)
 	int buf_offset;
 
 	if((chain->flags & CBUF_FLAG_CHAIN_HEAD) == 0) {
-		dprintf("cbuf_memcpy_from_chain: chain at 0x%x not head\n", chain);
+		dprintf("cbuf_memcpy_from_chain: chain at %p not head\n", chain);
 		return ERR_INVALID_ARGS;
 	}
 
@@ -438,7 +438,7 @@ int cbuf_user_memcpy_from_chain(void *_dest, cbuf *chain, size_t offset, size_t 
 	int err;
 
 	if((chain->flags & CBUF_FLAG_CHAIN_HEAD) == 0) {
-		dprintf("cbuf_memcpy_from_chain: chain at 0x%x not head\n", chain);
+		dprintf("cbuf_memcpy_from_chain: chain at %p not head\n", chain);
 		return ERR_INVALID_ARGS;
 	}
 
@@ -499,12 +499,12 @@ cbuf *cbuf_merge_chains(cbuf *chain1, cbuf *chain2)
 		return chain1;
 
 	if((chain1->flags & CBUF_FLAG_CHAIN_HEAD) == 0) {
-		dprintf("cbuf_merge_chain: chain at 0x%x not head\n", chain1);
+		dprintf("cbuf_merge_chain: chain at %p not head\n", chain1);
 		return NULL;
 	}
 
 	if((chain2->flags & CBUF_FLAG_CHAIN_HEAD) == 0) {
-		dprintf("cbuf_merge_chain: chain at 0x%x not head\n", chain2);
+		dprintf("cbuf_merge_chain: chain at %p not head\n", chain2);
 		return NULL;
 	}
 
@@ -639,12 +639,12 @@ static void dbg_dump_cbuf_freelists(int argc, char **argv)
 
 	dprintf("cbuf_free_list:\n");
 	for(buf = cbuf_free_list; buf; buf = buf->next)
-		dprintf("0x%x ", buf);
+		dprintf("%p ", buf);
 	dprintf("\n");
 
 	dprintf("cbuf_free_noblock_list:\n");
 	for(buf = cbuf_free_noblock_list; buf; buf = buf->next)
-		dprintf("0x%x ", buf);
+		dprintf("%p ", buf);
 	dprintf("\n");
 }
 

@@ -125,7 +125,7 @@ int timer_set_event(time_t relative_time, timer_mode mode, struct timer_event *e
 		relative_time = 0;
 
 	if(event->sched_time != 0)
-		panic("timer_set_event: event 0x%x in list already!\n", event);
+		panic("timer_set_event: event %p in list already!\n", event);
 
 	event->sched_time = system_time() + relative_time;
 	if(event->sched_time == 0)

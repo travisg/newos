@@ -415,7 +415,7 @@ static int devfs_removevnode(fs_cookie _fs, fs_vnode _v, bool r)
 
 	if(v->dir_next) {
 		// can't remove node if it's linked to the dir
-		panic("devfs_removevnode: vnode 0x%x asked to be removed is present in dir\n");
+		panic("devfs_removevnode: vnode %p asked to be removed is present in dir\n", v);
 	}
 
 	devfs_delete_vnode(fs, v, false);

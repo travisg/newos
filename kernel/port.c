@@ -91,7 +91,7 @@ void dump_port_list(int argc, char **argv)
 
 	for(i=0; i<MAX_PORTS; i++) {
 		if(ports[i].id >= 0) {
-			dprintf("0x%x\tid: 0x%x\t\tname: '%s'\n", &ports[i], ports[i].id, ports[i].name);
+			dprintf("%p\tid: 0x%x\t\tname: '%s'\n", &ports[i], ports[i].id, ports[i].name);
 		}
 	}
 }
@@ -99,7 +99,7 @@ void dump_port_list(int argc, char **argv)
 static void _dump_port_info(struct port_entry *port)
 {
 	int cnt;
-	dprintf("PORT:   0x%x\n", port);
+	dprintf("PORT:   %p\n", port);
 	dprintf("name:  '%s'\n", port->name);
 	dprintf("owner: 0x%x\n", port->owner);
 	dprintf("cap:  %d\n", port->capacity);
@@ -130,9 +130,9 @@ static void dump_port_info(int argc, char **argv)
 			_dump_port_info((struct port_entry *)num);
 			return;
 		} else {
-			int slot = num % MAX_PORTS;
+			unsigned slot = num % MAX_PORTS;
 			if(ports[slot].id != (int)num) {
-				dprintf("port 0x%x doesn't exist!\n", num);
+				dprintf("port 0x%lx doesn't exist!\n", num);
 				return;
 			}
 			_dump_port_info(&ports[slot]);

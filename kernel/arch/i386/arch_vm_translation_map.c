@@ -433,7 +433,7 @@ static int map_iospace_chunk(addr va, addr pa)
 	pa &= ~(PAGE_SIZE - 1); // make sure it's page aligned
 	va &= ~(PAGE_SIZE - 1); // make sure it's page aligned
 	if(va < IOSPACE_BASE || va >= (IOSPACE_BASE + IOSPACE_SIZE))
-		panic("map_iospace_chunk: passed invalid va 0x%x\n", va);
+		panic("map_iospace_chunk: passed invalid va 0x%lx\n", va);
 
 	ppn = ADDR_SHIFT(pa);
 	pt = &iospace_pgtables[(va - IOSPACE_BASE)/PAGE_SIZE];
@@ -526,7 +526,7 @@ static int put_physical_page_tmap(addr va)
 	paddr_chunk_desc *desc;
 
 	if(va < IOSPACE_BASE || va >= IOSPACE_BASE + IOSPACE_SIZE)
-		panic("someone called put_physical_page on an invalid va 0x%x\n", va);
+		panic("someone called put_physical_page on an invalid va 0x%lx\n", va);
 	va -= IOSPACE_BASE;
 
 	mutex_lock(&iospace_mutex);
@@ -534,7 +534,7 @@ static int put_physical_page_tmap(addr va)
 	desc = virtual_pmappings[va / IOSPACE_CHUNK_SIZE];
 	if(desc == NULL) {
 		mutex_unlock(&iospace_mutex);
-		panic("put_physical_page called on page at va 0x%x which is not checked out\n", va);
+		panic("put_physical_page called on page at va 0x%lx which is not checked out\n", va);
 		return ERR_VM_GENERAL;
 	}
 
@@ -652,7 +652,7 @@ int vm_translation_map_module_init(kernel_args *ka)
 	iospace_pgtables = (ptentry *)vm_alloc_from_ka_struct(ka,
 		PAGE_SIZE * (IOSPACE_SIZE / (PAGE_SIZE * 1024)), LOCK_RW|LOCK_KERNEL);
 
-	dprintf("paddr_desc 0x%x, virtual_pmappings 0x%x, iospace_pgtables 0x%x\n",
+	dprintf("paddr_desc %p, virtual_pmappings %p, iospace_pgtables %p\n",
 		paddr_desc, virtual_pmappings, iospace_pgtables);
 
 	// initialize our data structures
