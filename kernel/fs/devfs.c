@@ -433,7 +433,7 @@ err:
 	return err;
 }
 
-static int devfs_open(fs_cookie _fs, fs_vnode _v, file_cookie *_cookie, int oflags)
+static int devfs_open(fs_cookie _fs, fs_vnode _v, file_cookie *_cookie, stream_type st, int oflags)
 {
 	struct devfs *fs = _fs;
 	struct devfs_vnode *v = _v;
@@ -442,6 +442,11 @@ static int devfs_open(fs_cookie _fs, fs_vnode _v, file_cookie *_cookie, int ofla
 	int start = 0;
 
 	TRACE(("devfs_open: vnode 0x%x, oflags 0x%x\n", v, oflags));
+
+	if(st != STREAM_TYPE_ANY && st != v->stream.type) {
+		err = ERR_VFS_WRONG_STREAM_TYPE;
+		goto err;
+	}
 
 	cookie = kmalloc(sizeof(struct devfs_cookie));
 	if(cookie == NULL) {
@@ -463,7 +468,8 @@ static int devfs_open(fs_cookie _fs, fs_vnode _v, file_cookie *_cookie, int ofla
 			mutex_lock(&fs->lock);
 			break;
 		default:
-			dprintf("devfs_open: unhandled stream type\n");
+			err = ERR_VFS_WRONG_STREAM_TYPE;
+			kfree(cookie);
 	}
 
 	*_cookie = cookie;

@@ -251,7 +251,7 @@ int console_dev_init(kernel_args *ka)
 	gotoxy(0, ka->cons_line);
 
 	mutex_init(&console_lock, "console_lock");
-	keyboard_fd = sys_open("/dev/keyboard", 0);
+	keyboard_fd = sys_open("/dev/keyboard", STREAM_TYPE_DEVICE, 0);
 	if(keyboard_fd < 0) 
 		panic("console_dev_init: error opening /dev/keyboard\n");
 

@@ -44,7 +44,7 @@ int elf_load(const char *path, struct proc *p, int flags, addr *entry)
 	
 	dprintf("elf_load: entry path '%s', proc 0x%x\n", path, p);
 	
-	fd = sys_open(path, 0);
+	fd = sys_open(path, STREAM_TYPE_FILE, 0);
 	if(fd < 0)
 		return fd;
 

@@ -461,7 +461,7 @@ err:
 	return err;
 }
 
-static int bootfs_open(fs_cookie _fs, fs_vnode _v, file_cookie *_cookie, int oflags)
+static int bootfs_open(fs_cookie _fs, fs_vnode _v, file_cookie *_cookie, stream_type st, int oflags)
 {
 	struct bootfs *fs = _fs;
 	struct bootfs_vnode *v = _v;
@@ -469,7 +469,12 @@ static int bootfs_open(fs_cookie _fs, fs_vnode _v, file_cookie *_cookie, int ofl
 	int err = 0;
 	int start = 0;
 
-	TRACE(("bootfs_open: vnode 0x%x, oflags 0x%x\n", v, oflags));
+	TRACE(("bootfs_open: vnode 0x%x, stream_type %d, oflags 0x%x\n", v, st, oflags));
+
+	if(st != STREAM_TYPE_ANY && st != v->stream.type) {
+		err = ERR_VFS_WRONG_STREAM_TYPE;
+		goto err;
+	}
 
 	cookie = kmalloc(sizeof(struct bootfs_cookie));
 	if(cookie == NULL) {
@@ -488,7 +493,8 @@ static int bootfs_open(fs_cookie _fs, fs_vnode _v, file_cookie *_cookie, int ofl
 			cookie->u.file.pos = 0;
 			break;
 		default:
-			dprintf("bootfs_open: unhandled stream type\n");
+			err = ERR_VFS_WRONG_STREAM_TYPE;
+			kfree(cookie);			
 	}
 
 	*_cookie = cookie;
@@ -542,8 +548,6 @@ static ssize_t bootfs_read(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, void
 	
 	switch(cookie->s->type) {
 		case STREAM_TYPE_DIR: {
-			dprintf("bootfs_read: cookie is type DIR\n");
-
 			if(cookie->u.dir.ptr == NULL) {
 				err = 0;
 				break;
@@ -564,8 +568,6 @@ static ssize_t bootfs_read(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, void
 			break;
 		}
 		case STREAM_TYPE_FILE:
-			dprintf("bootfs_read: cookie is type FILE\n");
-
 			if(len <= 0) {
 				err = 0;
 				break;

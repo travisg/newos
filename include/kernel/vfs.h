@@ -9,7 +9,7 @@
 #include <boot/stage2.h>
 
 typedef enum {
-	STREAM_TYPE_NULL = 0,
+	STREAM_TYPE_ANY = 0,
 	STREAM_TYPE_FILE,
 	STREAM_TYPE_DIR,
 	STREAM_TYPE_DEVICE
@@ -71,7 +71,7 @@ struct fs_calls {
 	int (*fs_putvnode)(fs_cookie fs, fs_vnode v, bool r);
 	int (*fs_removevnode)(fs_cookie fs, fs_vnode v, bool r);
 
-	int (*fs_open)(fs_cookie fs, fs_vnode v, file_cookie *cookie, int oflags);
+	int (*fs_open)(fs_cookie fs, fs_vnode v, file_cookie *cookie, stream_type st, int oflags);
 	int (*fs_close)(fs_cookie fs, fs_vnode v, file_cookie cookie);
 	int (*fs_freecookie)(fs_cookie fs, fs_vnode v, file_cookie cookie);
 	int (*fs_fsync)(fs_cookie fs, fs_vnode v);
@@ -108,7 +108,7 @@ int vfs_remove_vnode(fs_id fsid, vnode_id vnid);
 int sys_mount(const char *path, const char *fs_name);
 int sys_unmount(const char *path);
 int sys_sync();
-int sys_open(const char *path, int omode);
+int sys_open(const char *path, stream_type st, int omode);
 int sys_close(int fd);
 int sys_fsync(int fd);
 ssize_t sys_read(int fd, void *buf, off_t pos, ssize_t len);
@@ -127,7 +127,7 @@ int sys_wstat(const char *path, struct file_stat *stat, int stat_mask);
 int user_mount(const char *path, const char *fs_name);
 int user_unmount(const char *path);
 int user_sync();
-int user_open(const char *path, int omode);
+int user_open(const char *path, stream_type st, int omode);
 int user_close(int fd);
 int user_fsync(int fd);
 ssize_t user_read(int fd, void *buf, off_t pos, ssize_t len);

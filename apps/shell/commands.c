@@ -66,7 +66,7 @@ int cmd_ls(char *args)
 			char buf[1024];
 			int len;
 
-			fd = sys_open(args, 0);
+			fd = sys_open(args, STREAM_TYPE_DIR, 0);
 			if(fd < 0)
 				goto done_ls;
 

@@ -81,7 +81,7 @@ static mutex vfs_vnode_mutex;
 /* function declarations */
 static int vfs_mount(char *path, const char *fs_name, bool kernel);
 static int vfs_unmount(char *path, bool kernel);
-static int vfs_open(char *path, int omode, bool kernel);
+static int vfs_open(char *path, stream_type st, int omode, bool kernel);
 static int vfs_seek(int fd, off_t pos, seek_type seek_type, bool kernel);
 static ssize_t vfs_read(int fd, void *buf, off_t pos, ssize_t len, bool kernel);
 static ssize_t vfs_write(int fd, const void *buf, off_t pos, ssize_t len, bool kernel);
@@ -743,11 +743,11 @@ int vfs_test()
 
 	dprintf("vfs_test() entry\n");
 	
-	fd = sys_open("/", 0);
+	fd = sys_open("/", STREAM_TYPE_DIR, 0);
 	dprintf("fd = %d\n", fd);
 	sys_close(fd);
 
-	fd = sys_open("/", 0);
+	fd = sys_open("/", STREAM_TYPE_DIR, 0);
 	dprintf("fd = %d\n", fd);
 
 	sys_create("/foo", STREAM_TYPE_DIR);
@@ -756,7 +756,7 @@ int vfs_test()
 	sys_create("/foo/bar/tar", STREAM_TYPE_DIR);
 
 #if 1
-	fd = sys_open("/foo/bar", 0);
+	fd = sys_open("/foo/bar", STREAM_TYPE_DIR, 0);
 	if(fd < 0)
 		panic("unable to open /foo/bar\n");
 
@@ -795,11 +795,11 @@ int vfs_test()
 #endif
 #if 1	
 
-	fd = sys_open("/boot", 0);
+	fd = sys_open("/boot", STREAM_TYPE_DIR, 0);
 	dprintf("fd = %d\n", fd);
 	sys_close(fd);
 	
-	fd = sys_open("/boot", 0);
+	fd = sys_open("/boot", STREAM_TYPE_DIR, 0);
 	if(fd < 0)
 		panic("unable to open dir /boot\n");
 	{
@@ -819,7 +819,7 @@ int vfs_test()
 	}
 	sys_close(fd);
 
-	fd = sys_open("/boot/kernel", 0);
+	fd = sys_open("/boot/kernel", STREAM_TYPE_FILE, 0);
 	if(fd < 0)
 		panic("unable to open kernel file '/boot/kernel'\n");
 	{
@@ -920,7 +920,7 @@ static int vfs_mount(char *path, const char *fs_name, bool kernel)
 		struct ioctx *ioctx;
 		void *null_cookie;
 
-		fd = sys_open(path, 0);
+		fd = sys_open(path, STREAM_TYPE_DIR, 0);
 		if(fd < 0) {
 			err = fd;
 			goto err1;
@@ -1089,7 +1089,7 @@ static int vfs_sync()
 	return 0;
 }
 
-static int vfs_open(char *path, int omode, bool kernel)
+static int vfs_open(char *path, stream_type st, int omode, bool kernel)
 {
 	int fd;
 	struct vnode *v;
@@ -1105,7 +1105,7 @@ static int vfs_open(char *path, int omode, bool kernel)
 	if(err < 0)
 		goto err;
 
-	err = v->mount->fs->calls->fs_open(v->mount->fscookie, v->priv_vnode, &cookie, omode);
+	err = v->mount->fs->calls->fs_open(v->mount->fscookie, v->priv_vnode, &cookie, st, omode);
 	if(err < 0)
 		goto err1;
 
@@ -1472,14 +1472,14 @@ int sys_sync()
 	return vfs_sync();
 }
 
-int sys_open(const char *path, int omode)
+int sys_open(const char *path, stream_type st, int omode)
 {
 	char buf[SYS_MAX_PATH_LEN+1];
 
 	strncpy(buf, path, SYS_MAX_PATH_LEN);
 	buf[SYS_MAX_PATH_LEN] = 0;
 
-	return vfs_open(buf, omode, true);
+	return vfs_open(buf, st, omode, true);
 }
 
 int sys_close(int fd)
@@ -1619,7 +1619,7 @@ int user_sync()
 	return vfs_sync();
 }
 
-int user_open(const char *upath, int omode)
+int user_open(const char *upath, stream_type st, int omode)
 {
 	char path[SYS_MAX_PATH_LEN];
 	int rc;
@@ -1632,7 +1632,7 @@ int user_open(const char *upath, int omode)
 		return rc;
 	path[SYS_MAX_PATH_LEN-1] = 0;
 
-	return vfs_open(path, omode, false);	
+	return vfs_open(path, st, omode, false);	
 }
 
 int user_close(int fd)

@@ -47,7 +47,7 @@ int net_init(kernel_args *ka)
 	dprintf("net_init: entry\n");
 
 	// open the network device
-	net_fd = sys_open("/dev/net/rtl8139/0", 0);
+	net_fd = sys_open("/dev/net/rtl8139/0", STREAM_TYPE_DEVICE, 0);
 	if(net_fd < 0) {
 		dprintf("net_init: no net devices\n");
 		return -1;

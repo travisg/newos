@@ -11,11 +11,11 @@ static int outfd = -1;
 
 int __stdio_init()
 {
-	infd = sys_open("/dev/console", 0);
+	infd = sys_open("/dev/console", STREAM_TYPE_DEVICE, 0);
 	if(infd < 0)
 		return infd;
 
-	outfd = sys_open("/dev/console", 0);
+	outfd = sys_open("/dev/console", STREAM_TYPE_DEVICE, 0);
 	if(outfd < 0)
 		return outfd;
 		

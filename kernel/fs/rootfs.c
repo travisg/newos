@@ -386,7 +386,7 @@ err:
 	return err;
 }
 
-static int rootfs_open(fs_cookie _fs, fs_vnode _v, file_cookie *_cookie, int oflags)
+static int rootfs_open(fs_cookie _fs, fs_vnode _v, file_cookie *_cookie, stream_type st, int oflags)
 {
 	struct rootfs *fs = (struct rootfs *)_fs;
 	struct rootfs_vnode *v = (struct rootfs_vnode *)_v;
@@ -394,7 +394,12 @@ static int rootfs_open(fs_cookie _fs, fs_vnode _v, file_cookie *_cookie, int ofl
 	int err = 0;
 	int start = 0;
 
-	TRACE(("rootfs_open: vnode 0x%x, oflags 0x%x\n", v, oflags));
+	TRACE(("rootfs_open: vnode 0x%x, stream_type %d, oflags 0x%x\n", v, st, oflags));
+
+	if(st != STREAM_TYPE_ANY && st != STREAM_TYPE_DIR) {
+		err = ERR_VFS_WRONG_STREAM_TYPE;
+		goto err;
+	}	
 
 	cookie = kmalloc(sizeof(struct rootfs_cookie));
 	if(cookie == NULL) {

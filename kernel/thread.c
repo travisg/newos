@@ -1265,7 +1265,7 @@ int test_thread5()
 {
 	int fd;
 	
-	fd = sys_open("/bus/pci", STREAM_TYPE_DEVICE);
+	fd = sys_open("/bus/pci", STREAM_TYPE_DEVICE, 0);
 	if(fd < 0) {
 		dprintf("test_thread5: error opening /bus/pci\n");
 		return 1;
@@ -1301,7 +1301,7 @@ int test_thread3()
 	ssize_t len;
 
 	kprintf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
-	fd = sys_open("/boot/testfile", STREAM_TYPE_FILE);
+	fd = sys_open("/boot/testfile", STREAM_TYPE_FILE, 0);
 	if(fd < 0)
 		panic("could not open /boot/testfile\n");
 	len = sys_read(fd, buf, 0, sizeof(buf));

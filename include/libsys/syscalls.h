@@ -10,7 +10,7 @@
 #include <sys/defines.h>
 
 typedef enum {
-	STREAM_TYPE_NULL = 0,
+	STREAM_TYPE_ANY = 0,
 	STREAM_TYPE_FILE,
 	STREAM_TYPE_DIR,
 	STREAM_TYPE_DEVICE,
@@ -72,7 +72,7 @@ int sys_null();
 int sys_mount(const char *path, const char *fs_name);
 int sys_unmount(const char *path);
 int sys_sync();
-int sys_open(const char *path, int omode);
+int sys_open(const char *path, stream_type st, int omode);
 int sys_close(int fd);
 int sys_fsync(int fd);
 ssize_t sys_read(int fd, void *buf, off_t pos, ssize_t len);

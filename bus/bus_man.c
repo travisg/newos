@@ -91,7 +91,7 @@ static int bus_find_device_recurse(int *n, char *base_path, int base_fd, id_list
 		base_path[base_path_len] = 0;
 
 		strcat(base_path, leaf);
-		fd = sys_open(base_path, 0);
+		fd = sys_open(base_path, STREAM_TYPE_ANY, 0);
 		if(fd < 0)
 			continue;
 		err = sys_rstat(base_path, &stat);
@@ -141,13 +141,9 @@ int bus_find_device(int n, id_list *vendor_ids, id_list *device_ids, device *dev
 	char path[256];
 	bus *b;
 	int err = -1;
-	struct file_stat stat;
 
 	for(b = bus_list; b != NULL && err < 0; b = b->next) {	
-		err = sys_rstat(b->path, &stat);
-		if(err < 0 || stat.type != STREAM_TYPE_DIR)
-			continue;
-		base_fd = sys_open(b->path, 0);
+		base_fd = sys_open(b->path, STREAM_TYPE_DIR, 0);
 		if(base_fd < 0)
 			continue;
 

@@ -33,7 +33,7 @@ int syscall_dispatcher(unsigned long call_num, unsigned long arg0, unsigned long
 			*call_ret = user_sync();
 			break;
 		case SYSCALL_OPEN:
-			*call_ret = user_open((const char *)arg0, (int)arg1);
+			*call_ret = user_open((const char *)arg0, (stream_type)arg1, (int)arg2);
 			break;
 		case SYSCALL_CLOSE:
 			*call_ret = user_close((int)arg0);
