@@ -20,8 +20,8 @@ ifeq ($(HOSTTYPE),macintosh)
 	endif
 endif
 ifeq ($(ARCH),)
-ARCH := $(HOSTTYPE)
-#ARCH := i386
+#ARCH := $(HOSTTYPE)
+ARCH := i386
 #ARCH := sparc
 #ARCH := sh4
 #ARCH := alpha
@@ -37,7 +37,7 @@ HOST_STRIP := strip
 
 # setup echo
 ECHO := echo
-ifeq ($(shell uname),SunOS)
+ifeq ($(OSTYPE),SunOS)
 	ECHO := /usr/ucb/echo
 endif
 
