@@ -156,7 +156,11 @@ void i386_handle_trap(struct int_frame frame)
 		
 			asm volatile("movl %%cr2, %0;" : "=g" (cr2));
 			
-			int_enable_interrupts();
+			// get the old interrupt enable/disable state and restore to that
+			if(frame.flags & 0x200) {
+				dprintf("page_fault: enabling interrupts\n");
+				int_enable_interrupts();
+			}
 			ret = vm_page_fault(cr2, frame.eip,
 				(frame.error_code & 0x2) != 0,
 				(frame.error_code & 0x4) != 0);
