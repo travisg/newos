@@ -36,6 +36,18 @@ typedef struct tcp_pseudo_header {
 	uint16 tcp_length;
 } _PACKED tcp_pseudo_header;
 
+typedef struct tcp_mss_option {
+	uint8 kind; /* 0x2 */
+	uint8 len;  /* 0x4 */
+	uint16 mss;
+} _PACKED tcp_mss_option;
+
+typedef struct tcp_window_scale_option {
+	uint8 kind; /* 0x3 */
+	uint8 len;  /* 0x3 */
+	uint8 shift_count;
+} _PACKED tcp_window_scale_option;
+
 typedef enum tcp_state {
 	STATE_CLOSED,
 	STATE_LISTEN,
@@ -70,6 +82,8 @@ typedef struct tcp_socket {
 	uint16 local_port;
 	uint16 remote_port;
 
+	uint32 mss;
+
 	/* rx */
 	sem_id read_sem;
 	uint32 rx_win_size;
@@ -99,7 +113,7 @@ static int next_ephemeral_port = 1024;
 #define SYN_RETRANSMIT_TIMEOUT 1000000
 #define ACK_DELAY 500
 #define DEFAULT_RX_WINDOW_SIZE (32*1024)
-#define MAX_SEGMENT_SIZE 2048
+#define DEFAULT_MAX_SEGMENT_SIZE 1024
 
 #define SEQUENCE_GTE(a, b) ((int)((a) - (b)) >= 0)
 #define SEQUENCE_LTE(a, b) ((int)((a) - (b)) <= 0)
@@ -219,6 +233,7 @@ static tcp_socket *create_tcp_socket(void)
 	s->local_port = 0;
 	s->remote_addr = 0;
 	s->remote_port = 0;
+	s->mss = DEFAULT_MAX_SEGMENT_SIZE;
 	s->rx_win_size = DEFAULT_RX_WINDOW_SIZE;
 	s->rx_win_low = 0;
 	s->rx_win_high = 0;
@@ -334,7 +349,7 @@ int tcp_input(cbuf *buf, ifnet *i, ipv4_addr source_address, ipv4_addr target_ad
 	// check for out of window packets
 	if(!(packet_flags & PKT_SYN)) {
 		if(SEQUENCE_LT(ntohl(header->seq_num), s->rx_win_low)
-			|| SEQUENCE_GTE(ntohl(header->seq_num), s->rx_win_high)) {
+			|| SEQUENCE_GT(ntohl(header->seq_num), s->rx_win_high)) {
 			/* out of window, ack it */
 			send_ack(s);
 			goto ditch_packet;
@@ -476,6 +491,7 @@ int tcp_connect(void *prot_data, sockaddr *addr)
 	tcp_socket *s = prot_data;
 	int err;
 	int i;
+	tcp_mss_option mss_option;
 
 	inc_socket_ref(s);
 	mutex_lock(&s->lock);
@@ -505,11 +521,21 @@ int tcp_connect(void *prot_data, sockaddr *addr)
 	hash_insert(socket_table, s);
 	mutex_unlock(&socket_table_lock);
 
+	// figure out what the mss will be
+	err = ipv4_get_mss_for_dest(s->remote_addr, &s->mss);
+	if(err < 0)
+		s->mss = DEFAULT_MAX_SEGMENT_SIZE;
+
+	// set up the mss option
+	mss_option.kind = 0x2;
+	mss_option.len = 0x4;
+	mss_option.mss = htons(s->mss);
+
 	// welcome to the machine
 	s->state = STATE_SYN_SENT;
 	for(i=0; i < 3 && s->state != STATE_ESTABLISHED && s->state != STATE_CLOSED; i++) {
 		if(s->state == STATE_SYN_SENT)
-			tcp_socket_send(s, NULL, PKT_SYN, NULL, 0, s->tx_win_low);
+			tcp_socket_send(s, NULL, PKT_SYN, &mss_option, sizeof(mss_option), s->tx_win_low);
 		mutex_unlock(&s->lock);
 		sem_acquire_etc(s->read_sem, 1, SEM_FLAG_TIMEOUT, SYN_RETRANSMIT_TIMEOUT, NULL);
 		mutex_lock(&s->lock);
@@ -587,7 +613,7 @@ ssize_t tcp_recvfrom(void *prot_data, void *buf, ssize_t len, sockaddr *saddr, i
 	new_rx_win_size = s->rx_win_size - cbuf_get_len(s->read_buffer);
 
 	/* see if the window is opening, and needs an ack to be sent */
-	if(new_rx_win_size >= MAX_SEGMENT_SIZE && s->rx_win_high - s->rx_win_low < MAX_SEGMENT_SIZE)
+	if(new_rx_win_size >= s->mss && s->rx_win_high - s->rx_win_low < s->mss)
 		send_ack(s);
 
 out:
@@ -707,8 +733,35 @@ static void handle_data(tcp_socket *s, cbuf *buf)
 
 		sem_release(s->read_sem, 1);
 
-		// XXX see if any reassembly packets need to be dealt with
+		// see if any reassembly packets can now be dealt with
+		while(s->reassembly_q) {
+			tcp_header *q_header = (tcp_header *)cbuf_get_ptr(s->reassembly_q, 0);
+			int packet_header_len = ((ntohs(q_header->length_flags) >> 12) % 0xf) * 4;
+			uint32 packet_low = ntohl(q_header->seq_num);
+			uint32 packet_high = packet_low + cbuf_get_len(s->reassembly_q) - packet_header_len;
 
+			if(SEQUENCE_LT(packet_high, s->rx_win_low)) {
+				/* this packet is totally out of window */
+				cbuf *tmp = s->reassembly_q;
+				s->reassembly_q = tmp->packet_next;
+				cbuf_free_chain(tmp);
+			} else if(SEQUENCE_LTE(packet_low, s->rx_win_low)) {
+				/* a portion of this packet may be useful now */
+				cbuf *tmp = s->reassembly_q;
+				s->reassembly_q = tmp->packet_next;
+
+				tmp = cbuf_truncate_head(tmp, packet_header_len + (s->rx_win_low - packet_low));
+				s->rx_win_low += cbuf_get_len(tmp);
+
+				/* merge it with the read data */
+				if(s->read_buffer)
+					s->read_buffer = cbuf_merge_chains(s->read_buffer, tmp);
+				else
+					s->read_buffer = tmp;
+			} else {
+				break;
+			}
+		}
 
 		// set up a delayed ack
 		if((int)(s->rx_win_low + s->rx_win_size - s->rx_win_high) > (int)s->rx_win_size / 2) {
@@ -718,8 +771,30 @@ static void handle_data(tcp_socket *s, cbuf *buf)
 			inc_socket_ref(s);
 		}
 	} else {
-		// XXX packet out of order, deal with it
+		// packet is out of order, stick it on the reassembly queue
+		if(s->reassembly_q == NULL ||
+		   SEQUENCE_GT(ntohl(((tcp_header *)cbuf_get_ptr(s->reassembly_q, 0))->seq_num), seq_low)) {
+			// stick it on the head of the queue
+			buf = cbuf_truncate_head(buf, header_length);
 
+			buf->packet_next = NULL;
+			s->reassembly_q = buf;
+		} else {
+			// find the spot in the queue where we need to stick it
+			cbuf *last = s->reassembly_q;
+
+			for(; last; last = last->packet_next) {
+				cbuf *next = last->packet_next;
+				if(next == NULL || SEQUENCE_GT(ntohl(((tcp_header *)cbuf_get_ptr(next, 0))->seq_num), seq_low)) {
+					// we found a spot
+					buf->packet_next = next;
+					last->packet_next = buf;
+					break;
+				}
+			}
+		}
+
+		send_ack(s);
 	}
 }
 
@@ -773,7 +848,7 @@ static void tcp_socket_send(tcp_socket *s, cbuf *data, tcp_flags flags, const vo
 	ASSERT_LOCKED_MUTEX(&s->lock);
 
 	// calculate the new right edge of the rx window
-	rx_win_high = s->rx_win_low + s->rx_win_size - cbuf_get_len(s->read_buffer);
+	rx_win_high = s->rx_win_low + s->rx_win_size - cbuf_get_len(s->read_buffer) - 1;
 
 #if NET_CHATTY
 	dprintf("** s->rx_win_low %ud s->rx_win_size %ud read_buf_len %d, new win high %ud\n",

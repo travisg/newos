@@ -84,11 +84,27 @@ static int net_test_thread3(void *unused)
 	}
 }
 
+static uint64 transferred_data = 0;
+
+static int net_test_thread4_watcher(void *unused)
+{
+	uint64 old_transferred_data =0;
+	uint64 now;
+
+	for(;;) {
+		thread_snooze(1000000);
+		now = transferred_data;
+		dprintf("moved %Ld bytes in the last second (%Ld total)\n", now - old_transferred_data, now);
+		old_transferred_data = now;
+	}
+}
+
 static int net_test_thread4(void *unused)
 {
 	sock_id id;
 	sockaddr addr;
 	char buf[64];
+	int err;
 
 	thread_snooze(2000000);
 
@@ -98,17 +114,25 @@ static int net_test_thread4(void *unused)
 	memset(&addr, 0, sizeof(addr));
 	addr.addr.len = 4;
 	addr.addr.type = ADDR_TYPE_IP;
-	addr.port = 19;
-	NETADDR_TO_IPV4(addr.addr) = IPV4_DOTADDR_TO_ADDR(192,168,0,70);
+	addr.port = 1900;
+	NETADDR_TO_IPV4(addr.addr) = IPV4_DOTADDR_TO_ADDR(192,168,0,3);
 
-	socket_connect(id, &addr);
+retry:
+	err = socket_connect(id, &addr);
+	if(err < 0) {
+		dprintf("net_test_thread: error %d opening socket, retrying...\n", err);
+		thread_snooze(5000000);
+		goto retry;
+	}
 
 	for(;;) {
 		char buf2[1024];
 		ssize_t len;
 
 		len = socket_recvfrom(id, buf2, sizeof(buf2), NULL);
-		dprintf("*** net test 4: len %d\n", len);
+//		dprintf("*** net test 4: len %d\n", len);
+		transferred_data += len;
+#if 0
 		len = socket_recvfrom(id, buf2, sizeof(buf2), NULL);
 		dprintf("*** net test 4: len %d\n", len);
 		len = socket_recvfrom(id, buf2, sizeof(buf2), NULL);
@@ -117,6 +141,7 @@ static int net_test_thread4(void *unused)
 		dprintf("*** net test 4: len %d\n", len);
 
 		thread_snooze(4000000);
+#endif
 	}
 
 	return 0;
@@ -237,6 +262,8 @@ int net_init_postdev(kernel_args *ka)
 	thread_id id;
 
 	id = thread_create_kernel_thread("net tester 4", &net_test_thread4, NULL);
+	thread_resume_thread(id);
+	id = thread_create_kernel_thread("net tester 4 watcher", &net_test_thread4_watcher, NULL);
 	thread_resume_thread(id);
 }
 #endif

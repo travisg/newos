@@ -207,7 +207,7 @@ static int ipv4_route_match(ipv4_addr ip_addr, if_id *interface_num, ipv4_addr *
 		*interface_num = -1;
 		*target_addr = 0;
 		*if_addr = 0;
-		err = ERR_NET_GENERAL;
+		err = ERR_NET_NO_ROUTE;
 	}
 	mutex_unlock(&route_table_mutex);
 
@@ -220,6 +220,27 @@ int ipv4_lookup_srcaddr_for_dest(ipv4_addr dest_addr, ipv4_addr *src_addr)
 	ipv4_addr target_addr;
 
 	return ipv4_route_match(dest_addr, &id, &target_addr, src_addr);
+}
+
+int ipv4_get_mss_for_dest(ipv4_addr dest_addr, uint32 *mss)
+{
+	if_id id;
+	ifnet *i;
+	ipv4_addr target_addr;
+	ipv4_addr src_addr;
+	int err;
+
+	err = ipv4_route_match(dest_addr, &id, &target_addr, &src_addr);
+	if(err < 0)
+		return err;
+
+	i = if_id_to_ifnet(id);
+	if(i == NULL)
+		return ERR_NET_NO_ROUTE;
+
+	*mss = i->mtu;
+
+	return NO_ERROR;
 }
 
 static void ipv4_arp_callback(int arp_code, void *args, ifnet *i, netaddr *link_addr)

@@ -24,6 +24,7 @@ int ipv4_route_add(ipv4_addr network_addr, ipv4_addr netmask, ipv4_addr if_addr,
 int ipv4_route_add_gateway(ipv4_addr network_addr, ipv4_addr netmask, ipv4_addr if_addr, if_id interface_num, ipv4_addr gw_addr);
 
 int ipv4_lookup_srcaddr_for_dest(ipv4_addr dest_addr, ipv4_addr *src_addr);
+int ipv4_get_mss_for_dest(ipv4_addr dest_addr, uint32 *mss);
 
 int ipv4_input(cbuf *buf, ifnet *i);
 int ipv4_output(cbuf *buf, ipv4_addr target_addr, int protocol);

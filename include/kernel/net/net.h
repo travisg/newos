@@ -24,7 +24,7 @@ typedef struct netaddr {
 	uint8 addr[12];
 } netaddr;
 
-#define NET_CHATTY 1
+#define NET_CHATTY 0
 
 #endif
 
