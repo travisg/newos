@@ -67,7 +67,7 @@ struct thread *thread_dequeue_run_q(int priority);
 
 void thread_resched();
 void thread_start_threading();
-void thread_snooze(long long time);
+void thread_snooze(time_t time);
 int thread_init(kernel_args *ka);
 void thread_kthread_exit();
 struct thread *thread_get_current_thread();

@@ -1,27 +1,35 @@
 #ifndef _STAGE2_H
 #define _STAGE2_H
 
-#include <boot.h>
+// must match SMP_MAX_CPUS in arch_smp.h
+#define MAX_BOOT_CPUS 1
+
+#define MAX_PHYS_MEM_ADDR_RANGE 4
+#define MAX_VIRT_ALLOC_ADDR_RANGE 4
+#define MAX_PHYS_ALLOC_ADDR_RANGE 4
+
+typedef struct {
+	unsigned int start;
+	unsigned int size;
+} addr_range;
 
 // kernel args
-struct kernel_args {
+typedef struct {
 	unsigned int cons_line;
-	unsigned int mem_size;
 	char *str;
-	const boot_entry *bootdir;
-	unsigned int bootdir_size;
-	unsigned int kernel_seg0_base;
-	unsigned int kernel_seg0_size;
-	unsigned int kernel_seg1_base;
-	unsigned int kernel_seg1_size;
-	unsigned int phys_alloc_range_low;
-	unsigned int phys_alloc_range_high;
-	unsigned int virt_alloc_range_low;
-	unsigned int virt_alloc_range_high;
-	unsigned int stack_start;
-	unsigned int stack_end;
+	addr_range bootdir_addr;
+	addr_range kernel_seg0_addr;	
+	addr_range kernel_seg1_addr;	
+	unsigned int num_phys_mem_ranges;
+	addr_range phys_mem_range[MAX_PHYS_MEM_ADDR_RANGE];
+	unsigned int num_phys_alloc_ranges;
+	addr_range phys_alloc_range[MAX_PHYS_ALLOC_ADDR_RANGE];
+	unsigned int num_virt_alloc_ranges;
+	addr_range virt_alloc_range[MAX_VIRT_ALLOC_ADDR_RANGE];
+	unsigned int num_cpus;
+	addr_range cpu_kstack[MAX_BOOT_CPUS];
 	// architecture specific
-};
+} kernel_args;
 
 #endif
 

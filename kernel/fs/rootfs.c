@@ -256,7 +256,7 @@ int rootfs_mount(void **fs_cookie, void *flags, void *covered_vnode, fs_id id, v
 		}
 	}
 	
-	fs->vnode_list_hash = hash_init(ROOTFS_HASH_SIZE, (int)&v->all_next - (int)v,
+	fs->vnode_list_hash = hash_init(ROOTFS_HASH_SIZE, (addr)&v->all_next - (addr)v,
 		NULL, &rootfs_vnode_hash_func);
 	if(fs->vnode_list_hash == NULL) {
 		err = -1;

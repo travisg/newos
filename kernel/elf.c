@@ -81,10 +81,10 @@ int elf_load(const char *path, struct proc *p, int flags, addr *entry)
 		
 		sprintf(area_name, "%s_seg%d", path, i);
 		
-		area_addr = (char *)pheaders[i].p_vaddr;
+		area_addr = (char *)(addr)pheaders[i].p_vaddr;
 		a = vm_create_area(p->aspace, area_name, (void **)&area_addr, AREA_EXACT_ADDRESS,
 			ROUNDUP(pheaders[i].p_memsz, PAGE_SIZE), LOCK_RW);
-		if(a == NULL) {
+		if(a < 0) {
 			dprintf("error allocating area!\n");
 			err = -1;
 			goto error;

@@ -77,9 +77,9 @@ static unsigned int vnode_hash(void *_v, void *key, int range)
 	struct vnode *v = _v;
 	
 	if(v != NULL)
-		return (((unsigned int)v->priv_vnode >> 3) % range);
+		return (((addr)v->priv_vnode >> 3) % range);
 	else
-		return (((unsigned int)key >> 3) % range);
+		return (((addr)key >> 3) % range);
 }
 
 static int init_vnode(struct vnode *v)
@@ -246,7 +246,7 @@ int vfs_init(kernel_args *ka)
 
 	{
 		struct vnode *v;
-		vnode_table = hash_init(VNODE_HASH_TABLE_SIZE, (int)&v->next - (int)v,
+		vnode_table = hash_init(VNODE_HASH_TABLE_SIZE, (addr)&v->next - (addr)v,
 			&vnode_compare, &vnode_hash);
 		if(vnode_table == NULL)
 			panic("vfs_init: error creating vnode hash table\n");

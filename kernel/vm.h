@@ -9,8 +9,8 @@ struct aspace {
 	struct aspace *next;
 	aspace_id id;
 	char *name;
-	unsigned int base;
-	unsigned int size;
+	addr base;
+	addr size;
 	struct area *area_list;
 	int area_count;
 };	
@@ -20,8 +20,8 @@ struct area {
 	struct area *next;
 	area_id id;
 	char *name;
-	unsigned int base;
-	unsigned int size;
+	addr base;
+	addr size;
 	int lock;
 };
 
