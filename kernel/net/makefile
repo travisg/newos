@@ -11,4 +11,5 @@ MY_OBJS += \
 	$(KERNEL_NET_DIR)/misc.o \
 	$(KERNEL_NET_DIR)/net.o \
 	$(KERNEL_NET_DIR)/socket.o \
-	$(KERNEL_NET_DIR)/udp.o
+	$(KERNEL_NET_DIR)/udp.o \
+	$(KERNEL_NET_DIR)/tcp.o

@@ -697,6 +697,8 @@ int ipv4_input(cbuf *buf, ifnet *i)
 	switch(header->protocol) {
 		case IP_PROT_ICMP:
 			return icmp_input(buf, i, ntohl(header->src));
+		case IP_PROT_TCP:
+			return tcp_input(buf, i, ntohl(header->src), ntohl(header->dest));
 		case IP_PROT_UDP:
 			return udp_input(buf, i, ntohl(header->src), ntohl(header->dest));
 		default:

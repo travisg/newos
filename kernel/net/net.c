@@ -15,6 +15,7 @@
 #include <kernel/net/arp.h>
 #include <kernel/net/ipv4.h>
 #include <kernel/net/udp.h>
+#include <kernel/net/tcp.h>
 #include <kernel/net/socket.h>
 #include <kernel/net/misc.h>
 #include <boot/stage2.h>
@@ -119,6 +120,7 @@ int net_init(kernel_args *ka)
 	ipv4_init();
 	loopback_init();
 	udp_init();
+	tcp_init();
 	socket_init();
 
 	return 0;
@@ -159,18 +161,18 @@ int net_init_postdev(kernel_args *ka)
 	address = kmalloc(sizeof(ifaddr));
 	address->addr.len = 4;
 	address->addr.type = ADDR_TYPE_IP;
-	NETADDR_TO_IPV4(&address->addr) = IPV4_DOTADDR_TO_ADDR(192,168,0,99); // 192.168.0.99
+	NETADDR_TO_IPV4(&address->addr) = IPV4_DOTADDR_TO_ADDR(192,168,1,99); // 192.168.0.99
 	address->netmask.len = 4;
 	address->netmask.type = ADDR_TYPE_IP;
 	NETADDR_TO_IPV4(&address->netmask) = IPV4_DOTADDR_TO_ADDR(255,255,255,0); // 255.255.255.0
 	address->broadcast.len = 4;
 	address->broadcast.type = ADDR_TYPE_IP;
-	NETADDR_TO_IPV4(&address->broadcast) = IPV4_DOTADDR_TO_ADDR(192,168,0,255); // 192.168.0.255
+	NETADDR_TO_IPV4(&address->broadcast) = IPV4_DOTADDR_TO_ADDR(192,168,1,255); // 192.168.0.255
 	if_bind_address(i, address);
 
 	// set up an initial routing table
-	ipv4_route_add(IPV4_DOTADDR_TO_ADDR(192,168,0,0), IPV4_DOTADDR_TO_ADDR(255,255,255,0), IPV4_DOTADDR_TO_ADDR(192,168,0,99), i->id);
-	ipv4_route_add_gateway(0x00000000, 0x00000000, IPV4_DOTADDR_TO_ADDR(192,168,0,99), i->id, IPV4_DOTADDR_TO_ADDR(192,168,0,1));
+	ipv4_route_add(IPV4_DOTADDR_TO_ADDR(192,168,1,0), IPV4_DOTADDR_TO_ADDR(255,255,255,0), IPV4_DOTADDR_TO_ADDR(192,168,1,99), i->id);
+	ipv4_route_add_gateway(0x00000000, 0x00000000, IPV4_DOTADDR_TO_ADDR(192,168,1,99), i->id, IPV4_DOTADDR_TO_ADDR(192,168,1,1));
 
 	sys_close(net_fd);
 

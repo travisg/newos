@@ -253,8 +253,8 @@ static void rtl8139_resetrx(rtl8139 *rtl)
 	rtl8139_stop(rtl);
 
 	// reset the rx pointers
-	RTL_WRITE_16(rtl, RT_RXBUFTAIL, 0);
-	RTL_WRITE_16(rtl, RT_RXBUFHEAD, TAIL_TO_TAILREG(0));
+	RTL_WRITE_16(rtl, RT_RXBUFTAIL, TAIL_TO_TAILREG(0));
+	RTL_WRITE_16(rtl, RT_RXBUFHEAD, 0);
 
 	// start it back up
 	RTL_WRITE_16(rtl, RT_INTRMASK, MYRT_INTS);
@@ -498,7 +498,7 @@ static int rtl8139_int(void* data)
 			dprintf("buf 0x%x, head 0x%x, tail 0x%x\n",
 				RTL_READ_32(rtl, RT_RXBUF), RTL_READ_16(rtl, RT_RXBUFHEAD), RTL_READ_16(rtl, RT_RXBUFTAIL));
 			RTL_WRITE_32(rtl, RT_RXMISSED, 0);
-			RTL_WRITE_16(rtl, RT_RXBUFTAIL, TAILREG_TO_TAIL(RTL_READ_16(rtl, RT_RXBUFHEAD)));
+			RTL_WRITE_16(rtl, RT_RXBUFTAIL, TAIL_TO_TAILREG(RTL_READ_16(rtl, RT_RXBUFHEAD)));
 		}
 		if(status & RT_INT_RXFIFO_OVERFLOW) {
 			dprintf("RX fifo overflow!\n");

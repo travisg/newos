@@ -12,6 +12,7 @@ typedef uint32 ipv4_addr;
 
 enum {
 	IP_PROT_ICMP = 1,
+	IP_PROT_TCP = 6,
 	IP_PROT_UDP = 17,
 };
 

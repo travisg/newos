@@ -8,6 +8,7 @@
 #include <kernel/heap.h>
 #include <kernel/arch/cpu.h>
 #include <kernel/net/udp.h>
+#include <kernel/net/tcp.h>
 #include <kernel/net/socket.h>
 
 typedef struct netsocket {
@@ -65,6 +66,9 @@ sock_id socket_create(int type, int flags, sockaddr *addr)
 		case SOCK_PROTO_UDP:
 			err = udp_open(&addr->addr, addr->port, &prot_data);
 			break;
+		case SOCK_PROTO_TCP:
+			err = tcp_open(&addr->addr, addr->port, &prot_data);
+			break;
 		default:
 			prot_data = NULL;
 			err = ERR_INVALID_ARGS;
@@ -96,6 +100,9 @@ err:
 	switch(type) {
 		case SOCK_PROTO_UDP:
 			udp_close(prot_data);
+			break;
+		case SOCK_PROTO_TCP:
+			tcp_close(prot_data);
 			break;
 	}
 	return err;

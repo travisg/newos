@@ -606,7 +606,7 @@ cbuf *cbuf_merge_chains(cbuf *chain1, cbuf *chain2)
 size_t cbuf_get_len(cbuf *buf)
 {
 	if(!buf)
-		return ERR_INVALID_ARGS;
+		return 0;
 
 	if(buf->flags & CBUF_FLAG_CHAIN_HEAD) {
 		return buf->total_len;
@@ -649,15 +649,14 @@ int cbuf_is_contig_region(cbuf *buf, size_t start, size_t end)
 	return 0;
 }
 
-uint16 cbuf_ones_cksum16(cbuf *buf, size_t offset, size_t len)
+static uint16 _cbuf_ones_cksum16(cbuf *buf, size_t offset, size_t len, uint16 sum)
 {
-	uint16 sum = 0;
 	int swapped = 0;
 
 	if(!buf)
-		return 0;
+		return sum;
 	if((buf->flags & CBUF_FLAG_CHAIN_HEAD) == 0)
-		return 0;
+		return sum;
 
 	// find the start ptr
 	while(buf) {
@@ -691,7 +690,18 @@ uint16 cbuf_ones_cksum16(cbuf *buf, size_t offset, size_t len)
 	if (swapped)
 		sum = ((sum & 0xff) << 8) | ((sum >> 8) & 0xff);
 
-	return ~sum;
+	return sum;
+}
+
+uint16 cbuf_ones_cksum16(cbuf *buf, size_t offset, size_t len)
+{
+	return ~_cbuf_ones_cksum16(buf, offset, len, 0);
+}
+
+uint16 cbuf_ones_cksum16_2(cbuf *buf, void *buff, int len1, size_t offset, size_t len2)
+{
+	uint16 sum = ones_sum16(0, buff, len1);
+	return ~_cbuf_ones_cksum16(buf, offset, len2, sum);
 }
 
 int cbuf_truncate_head(cbuf *buf, size_t trunc_bytes)
