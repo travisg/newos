@@ -28,7 +28,6 @@ vfs:
  getcwd
  attributes
  detach close/freecookie
- implement *dir commands (opendir/readdir/closedir)
 VM:
  cache layer
  better region creation args (range of virtual addresses, etc)
@@ -37,10 +36,9 @@ VM:
  page out
 Improved bus managers (BeOS style)
 Fully relocatable kernel, stage2 relocates
-signals:
- posix
- more generic signalling system
 disk based filesystem
+ FAT
+ native
 RLD
  lazy binding
  so initialization
@@ -53,11 +51,14 @@ better kernel ASSERTS
 improved module bootup calls (int_module(ka, initialization level))
 system info syscall, centralize storage
 better solution for user space heap growth
+IO manager
+ block devices register with this, /dev node for user space only?
+network driver register with stack directly?
+ improve network stack -> nic interaction
 
 In Progress:
 
 ppc port (mac, pegasos)
-x86 floppy driver
 nfs
 GUI
 
@@ -70,3 +71,6 @@ Fix:
 Random reboot on heavy fibo usage
 SH-4 ELF relocation
 tty - entering too long a line hangs read
+fix network drivers to detect multiple cards
+ rtl8139
+ pcnet32

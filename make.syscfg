@@ -85,6 +85,20 @@ ifeq ($(ARCH),i386)
 	TOOLCHAIN_ARCH = i386
 endif
 
+ifeq ($(ARCH),x86_64)
+	CC = x86_64-elf-gcc
+	LD = x86_64-elf-ld
+	AS = x86_64-elf-as
+	AR = x86_64-elf-ar
+	OBJCOPY = x86_64-elf-objcopy
+	STRIP = x86_64-elf-strip
+	GLOBAL_CFLAGS = -O2 -g
+	KERNEL_CFLAGS = -fno-pic
+	USER_CFLAGS = -fpic
+	GLOBAL_LDFLAGS = -g
+	TOOLCHAIN_ARCH = x86_64
+endif
+
 ifeq ($(ARCH),sh4)
 	CC = sh-elf-gcc
 	LD = sh-elf-ld
