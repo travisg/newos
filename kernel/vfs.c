@@ -549,8 +549,9 @@ static struct vnode *get_vnode_from_fd(struct ioctx *ioctx, int fd)
 	struct vnode *v;
 
 	f = get_fd(ioctx, fd);
-	if(!f)
+	if(!f) {
 		return NULL;
+	}
 
 	v = f->vnode;
 	if(!v)
@@ -615,7 +616,7 @@ static int path_to_vnode(char *path, struct vnode **v, bool kernel)
 	}
 
 	for(;;) {
-//		dprintf("path_to_vnode: top of loop. p 0x%x, *p = %c, p = '%s'\n", p, *p, p);
+		dprintf("path_to_vnode: top of loop. p 0x%x, *p = %c, p = '%s'\n", p, *p, p);
 
 		// done?
 		if(*p == '\0') {
@@ -727,6 +728,9 @@ void *vfs_new_ioctx()
 	ioctx->cwd = root_vnode;
 	ioctx->table_size = NEW_FD_TABLE_SIZE;
 
+	if(ioctx->cwd)
+		inc_vnode_ref_count(ioctx->cwd, false);
+
 	return ioctx;
 }
 
@@ -734,6 +738,9 @@ int vfs_free_ioctx(void *_ioctx)
 {
 	struct ioctx *ioctx = (struct ioctx *)_ioctx;
 	int i;
+
+	if(ioctx->cwd)
+		dec_vnode_ref_count(ioctx->cwd, true, false);
 
 	mutex_lock(&ioctx->io_mutex);
 
@@ -964,8 +971,10 @@ static int vfs_mount(char *path, const char *fs_name, bool kernel)
 		}
 
 		err = mount->fs->calls->fs_mount(&mount->fscookie, mount->id, NULL, &root_id);
-		if(err < 0)
+		if(err < 0) {
+			err = ERR_VFS_GENERAL;
 			goto err1;
+		}
 
 		mount->covers_vnode = NULL; // this is the root mount
 	} else {
@@ -980,11 +989,12 @@ static int vfs_mount(char *path, const char *fs_name, bool kernel)
 		}
 
 		// get the vnode this mount will cover
-		ioctx = get_current_ioctx(kernel);
+		ioctx = get_current_ioctx(true);
 		covered_vnode = get_vnode_from_fd(ioctx, fd);
 		sys_close(fd);
 
 		if(!covered_vnode) {
+			err = ERR_VFS_GENERAL;
 			goto err1;
 		}
 
@@ -1514,6 +1524,83 @@ ssize_t vfs_writepage(void *_v, iovecs *vecs, off_t pos)
 	return v->mount->fs->calls->fs_writepage(v->mount->fscookie, v->priv_vnode, vecs, pos);
 }
 
+int vfs_get_cwd(char* buf, size_t size, bool kernel)
+{
+	// Get current working directory from io context
+	struct vnode* v = get_current_ioctx(kernel)->cwd;
+	int rc;
+
+#if MAKE_NOIZE
+	dprintf("vfs_get_cwd: buf 0x%x, 0x%x\n", buf, size);
+#endif
+	//TODO: parse cwd back into a full path
+	if (size >= 2) {
+		buf[0] = '.';
+		buf[1] = 0;
+
+		rc = 0;
+	} else {
+		rc = ERR_VFS_INSUFFICIENT_BUF;
+	}
+
+	// Tell caller all is ok
+	return rc;
+}
+
+int vfs_set_cwd(const char* path, bool kernel)
+{
+	struct ioctx* curr_ioctx;
+	struct vnode* v = NULL;
+	struct vnode* old_cwd;
+	struct file_stat stat;
+	int rc;
+
+#if MAKE_NOIZE
+	dprintf("vfs_set_cwd: path=\'%s\'\n", path);
+#endif
+
+	// Get vnode for passed path, and bail if it failed
+	rc = path_to_vnode(path, &v, kernel);
+	if (rc < 0) {
+		goto err;
+	}
+
+	rc = v->mount->fs->calls->fs_rstat(v->mount->fscookie, v->priv_vnode, &stat);
+	if(rc < 0) {
+		goto err1;
+	}
+
+	if(stat.type != STREAM_TYPE_DIR) {
+		// nope, can't cwd to here
+		rc = ERR_VFS_WRONG_STREAM_TYPE;
+		goto err1;
+	}
+
+	// Get current io context and lock
+	curr_ioctx = get_current_ioctx(kernel);
+	mutex_lock(&curr_ioctx->io_mutex);
+
+	// save the old cwd
+	old_cwd = curr_ioctx->cwd;
+
+	// Set the new vnode
+	curr_ioctx->cwd = v;
+
+	// Unlock the ioctx
+	mutex_unlock(&curr_ioctx->io_mutex);
+
+	// Decrease ref count of previous working dir (as the ref is being replaced)
+	if (old_cwd)
+		dec_vnode_ref_count(old_cwd, true, false);
+
+	return NO_ERROR;
+
+err1:
+	dec_vnode_ref_count(v, true, false);
+err:
+	return rc;
+}
+
 int sys_mount(const char *path, const char *fs_name)
 {
 	char buf[SYS_MAX_PATH_LEN+1];
@@ -1631,6 +1718,42 @@ int sys_wstat(const char *path, struct file_stat *stat, int stat_mask)
 	buf[SYS_MAX_PATH_LEN] = 0;
 
 	return vfs_wstat(buf, stat, stat_mask, true);
+}
+
+char* sys_getcwd(char *buf, size_t size)
+{
+	char path[SYS_MAX_PATH_LEN];
+	int rc;
+
+#if MAKE_NOIZE
+	dprintf("sys_getcwd: buf 0x%x, 0x%x\n", buf, size);
+#endif
+
+	// Call vfs to get current working directory
+	rc = vfs_get_cwd(path,SYS_MAX_PATH_LEN-1,true);
+	path[SYS_MAX_PATH_LEN-1] = 0;
+
+	// Copy back the result
+	strncpy(buf,path,size);
+
+	// Return either NULL or the buffer address to indicate failure or success
+	return  (rc < 0) ? NULL : buf;
+}
+
+int sys_setcwd(const char* _path)
+{
+	char path[SYS_MAX_PATH_LEN];
+
+#if MAKE_NOIZE
+	dprintf("sys_setcwd: path=0x%x\n", _path);
+#endif
+
+	// Copy new path to kernel space
+	strncpy(path, _path, SYS_MAX_PATH_LEN-1);
+	path[SYS_MAX_PATH_LEN-1] = 0;
+
+	// Call vfs to set new working directory
+	return vfs_set_cwd(path,true);
 }
 
 int user_mount(const char *upath, const char *ufs_name)
@@ -1839,3 +1962,49 @@ int user_wstat(const char *upath, struct file_stat *ustat, int stat_mask)
 	return vfs_wstat(path, &stat, stat_mask, false);
 }
 
+char* user_getcwd(char *buf, size_t size)
+{
+	char path[SYS_MAX_PATH_LEN];
+	int rc;
+
+#if MAKE_NOIZE
+	dprintf("user_getcwd: buf 0x%x, 0x%x\n", buf, size);
+#endif
+
+	// Check if userspace address is inside "shared" kernel space
+	if((addr)buf >= KERNEL_BASE && (addr)buf <= KERNEL_TOP)
+		return NULL; //ERR_VM_BAD_USER_MEMORY;
+
+	// Call vfs to get current working directory
+	rc = vfs_get_cwd(path,size,false);
+
+	// Copy back the result
+	user_strncpy(buf,path,size);
+
+	// Return either NULL or the buffer address to indicate failure or success
+	return  (rc < 0) ? NULL : buf;
+}
+
+int user_setcwd(const char* upath)
+{
+	char path[SYS_MAX_PATH_LEN];
+	int rc;
+
+#if MAKE_NOIZE
+	dprintf("user_setcwd: path=0x%x\n", upath);
+#endif
+
+	// Check if userspace address is inside "shared" kernel space
+	if((addr)upath >= KERNEL_BASE && (addr)upath <= KERNEL_TOP)
+		return ERR_VM_BAD_USER_MEMORY;
+
+	// Copy new path to kernel space
+	rc = user_strncpy(path, upath, SYS_MAX_PATH_LEN-1);
+	if (rc < 0) {
+		return rc;
+	}
+	path[SYS_MAX_PATH_LEN-1] = 0;
+
+	// Call vfs to set new working directory
+	return vfs_set_cwd(path,false);
+}

@@ -45,7 +45,9 @@ enum {
 	SYSCALL_THREAD_SUSPEND_THREAD,
 	SYSCALL_THREAD_RESUME_THREAD,
 	SYSCALL_PROC_KILL_PROC,
-	SYSCALL_GET_CURRENT_PROC_ID /* 39 */
+	SYSCALL_GET_CURRENT_PROC_ID,
+	SYSCALL_GETCWD, /* 40 */
+	SYSCALL_SETCWD
 };
 
 int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_ret);

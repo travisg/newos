@@ -163,6 +163,8 @@ SYSCALL1(sys_thread_suspend_thread, 36);
 SYSCALL1(sys_thread_resume_thread, 37);
 SYSCALL1(sys_proc_kill_proc, 38);
 SYSCALL0(sys_get_current_proc_id, 39);
+SYSCALL2(sys_getcwd, 40);
+SYSCALL1(sys_setcwd, 41);
 
 /* we will optimize by just passing a ptr to the place where the caller
 ** would have dumped the args */

@@ -84,6 +84,8 @@ int sys_unlink(const char *path);
 int sys_rename(const char *oldpath, const char *newpath);
 int sys_rstat(const char *path, struct file_stat *stat);
 int sys_wstat(const char *path, struct file_stat *stat, int stat_mask);
+int sys_getcwd(char* buf, size_t size);
+int sys_setcwd(const char* path);
 
 time_t sys_system_time();
 int sys_snooze(time_t time);

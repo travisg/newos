@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -34,7 +34,7 @@ typedef struct iovecs {
 	size_t num;
 	size_t total_len;
 	iovec vec[0];
-} iovecs;	
+} iovecs;
 
 /* macro to allocate a iovec array on the stack */
 #define IOVECS(name, size) \
@@ -119,6 +119,8 @@ ssize_t vfs_readpage(void *vnode, iovecs *vecs, off_t pos);
 ssize_t vfs_writepage(void *vnode, iovecs *vecs, off_t pos);
 void *vfs_get_cache_ptr(void *vnode);
 int vfs_set_cache_ptr(void *vnode, void *cache);
+int vfs_get_cwd(char* buf, size_t size, bool kernel);
+int vfs_set_cwd(const char* buf, bool kernel);
 
 /* calls kernel code should make for file I/O */
 int sys_mount(const char *path, const char *fs_name);
@@ -136,6 +138,7 @@ int sys_unlink(const char *path);
 int sys_rename(const char *oldpath, const char *newpath);
 int sys_rstat(const char *path, struct file_stat *stat);
 int sys_wstat(const char *path, struct file_stat *stat, int stat_mask);
+int sys_setcwd(const char* path);
 
 /* calls the syscall dispatcher should use for user file I/O */
 int user_mount(const char *path, const char *fs_name);
@@ -153,6 +156,8 @@ int user_unlink(const char *path);
 int user_rename(const char *oldpath, const char *newpath);
 int user_rstat(const char *path, struct file_stat *stat);
 int user_wstat(const char *path, struct file_stat *stat, int stat_mask);
+char* user_getcwd(char *buf, size_t size);
+int user_setcwd(const char* path);
 
 #endif
 

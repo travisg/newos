@@ -84,6 +84,12 @@ int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_re
 		case SYSCALL_WSTAT:
 			*call_ret = user_wstat((const char *)arg0, (struct file_stat *)arg1, (int)arg2);
 			break;
+		case SYSCALL_GETCWD:
+			*call_ret = (uint64)user_getcwd((char*)arg0, (size_t)arg1);
+			break;
+		case SYSCALL_SETCWD:
+			*call_ret = user_setcwd((const char*)arg0);
+			break;
 		case SYSCALL_SYSTEM_TIME:
 			*call_ret = system_time();
 			break;

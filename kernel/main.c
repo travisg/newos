@@ -17,6 +17,7 @@
 #include <kernel/fs/rootfs.h>
 #include <kernel/fs/bootfs.h>
 #include <kernel/fs/devfs.h>
+#include <kernel/fs/isofs.h>
 #include <kernel/dev.h>
 #include <kernel/net/net.h>
 #include <kernel/cbuf.h>
@@ -106,6 +107,8 @@ static int main2()
 	if(err < 0)
 		panic("error mounting rootfs!\n");
 
+	sys_setcwd("/");
+
 	// bootstrap the bootfs
 	bootstrap_bootfs();
 
@@ -142,6 +145,8 @@ static int main2()
 #if 0
 	panic("debugger_test\n");
 #endif
+
+	bootstrap_isofs();
 
 	// start the init process
 	{

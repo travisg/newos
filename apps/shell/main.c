@@ -20,8 +20,15 @@ struct command {
 struct command cmds[] = {
 	{"exit", &cmd_exit, 0},
 	{"exec", &cmd_exec, 1},
-	{"ls", &cmd_ls, 1},
+	{"ls", &cmd_ls, 0},
 	{"stat", &cmd_stat, 1},
+	{"mount", &cmd_mount, 1},
+	{"unmount", &cmd_unmount, 1},
+	{"mkdir", &cmd_mkdir, 1},
+	{"cat", &cmd_cat, 1},
+	{"cd", &cmd_cd, 1},
+	{"pwd", &cmd_pwd, 0},
+	{"help", &cmd_help, 0},
 	{NULL, NULL, 0}
 };
 
@@ -64,10 +71,12 @@ int shell_parse(char *buf, int len)
 				printf("command requires arguments\n");
 			} else {
 				// call the command handler function
-				int j;
+				int j, k;
 				for(j = strlen(cmds[i].cmd_text); isspace(buf[j]); j++);
-					if(cmds[i].cmd_handler(&buf[j]) != 0)
-						return -1;
+				for(k = strlen(&buf[j]); isspace(buf[j+k]); k--);
+
+				if(cmds[i].cmd_handler(&buf[j]) != 0)
+					return -1;
 			}
 			found_command = true;
 			break;
