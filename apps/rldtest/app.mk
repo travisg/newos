@@ -11,9 +11,9 @@ RLDTESTAPP = $(RLDTESTAPP_OBJ_DIR)/rldtest
 RLDTESTLIB = $(RLDTESTAPP_OBJ_DIR)/librldtest.so
 
 $(RLDTESTAPP): $(RLDTESTAPP_OBJS) $(LIBS) $(GLUE) $(RLDTESTLIB)
-	$(LD) -shared -dynamic -dN --script=$(APPS_LDSCRIPT) -L $(LIBGCC_PATH) -L$(RLDTESTAPP_OBJ_DIR) -o $@ $(GLUE) $(RLDTESTAPP_OBJS) -lrldtest $(LINK_LIBS) $(LIBGCC)
+	$(LD) -shared -dynamic --script=$(APPS_LDSCRIPT) -L $(LIBGCC_PATH) -L$(RLDTESTAPP_OBJ_DIR) -o $@ $(GLUE) $(RLDTESTAPP_OBJS) -lrldtest $(LINK_LIBS) $(LIBGCC)
 $(RLDTESTLIB): $(RLDTESTLIB_OBJS) $(LIBS) $(GLUE)
-	$(LD) -shared -dynamic -dN --script=$(APPS_LDSCRIPT) -L $(LIBGCC_PATH) -o $@ $(RLDTESTLIB_OBJS) 
+	$(LD) -shared -dynamic --script=$(APPS_LDSCRIPT) -L $(LIBGCC_PATH) -o $@ $(RLDTESTLIB_OBJS) 
 
 rldtestappclean:
 	rm -f $(RLDTESTAPP_OBJS) $(RLDTESTAPP) $(RLDTESTLIB)

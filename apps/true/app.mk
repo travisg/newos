@@ -8,7 +8,7 @@ DEPS += $(TRUEAPP_OBJS:.o=.d)
 TRUEAPP = $(TRUEAPP_OBJ_DIR)/true
 
 $(TRUEAPP): $(TRUEAPP_OBJS) $(LIBS) $(GLUE)
-	$(LD) -dN --script=$(APPS_LDSCRIPT) -L $(LIBGCC_PATH) -o $@ $(GLUE) $(TRUEAPP_OBJS) $(LINK_LIBS) $(LIBGCC)
+	$(LD) --script=$(APPS_LDSCRIPT) -L $(LIBGCC_PATH) -o $@ $(GLUE) $(TRUEAPP_OBJS) $(LINK_LIBS) $(LIBGCC)
 
 trueappclean:
 	rm -f $(TRUEAPP_OBJS) $(TRUEAPP)

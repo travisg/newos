@@ -9,7 +9,7 @@ DEPS += $(SHELLAPP_OBJS:.o=.d)
 SHELLAPP = $(SHELLAPP_OBJ_DIR)/shell
 
 $(SHELLAPP): $(SHELLAPP_OBJS) $(LIBS) $(GLUE)
-	$(LD) -dN --script=$(APPS_LDSCRIPT) -L $(LIBGCC_PATH) -o $@ $(GLUE) $(SHELLAPP_OBJS) $(LINK_LIBS) $(LIBGCC)
+	$(LD) --script=$(APPS_LDSCRIPT) -L $(LIBGCC_PATH) -o $@ $(GLUE) $(SHELLAPP_OBJS) $(LINK_LIBS) $(LIBGCC)
 
 shellappclean:
 	rm -f $(SHELLAPP_OBJS) $(SHELLAPP)
