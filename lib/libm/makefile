@@ -1,5 +1,5 @@
-MY_TARGET := $(LIBS_BUILD_DIR)/libm/libm.so
-MY_STATIC_TARGET := $(LIBS_BUILD_DIR)/libm/libm.a
+MY_TARGET := $(LIBS_BUILD_DIR)/libm.so
+MY_STATIC_TARGET := $(LIBS_BUILD_DIR)/libm.a
 ifeq ($(call FINDINLIST,$(MY_TARGET),$(ALL)),1)
 
 MY_TARGETDIR := $(LIBS_BUILD_DIR)/libm

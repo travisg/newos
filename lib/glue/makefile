@@ -1,6 +1,6 @@
 # this file handles building glue.o and libglue.o
 
-MY_TARGET := $(LIBS_BUILD_DIR)/glue/glue.o
+MY_TARGET := $(LIBS_BUILD_DIR)/glue.o
 ifeq ($(call FINDINLIST,$(MY_TARGET),$(ALL)),1)
 
 MY_TARGETDIR := $(LIBS_BUILD_DIR)/glue
@@ -15,7 +15,7 @@ include templates/combined_object.mk
 
 endif
 
-MY_TARGET := $(LIBS_BUILD_DIR)/glue/libglue.o
+MY_TARGET := $(LIBS_BUILD_DIR)/libglue.o
 ifeq ($(call FINDINLIST,$(MY_TARGET),$(ALL)),1)
 
 MY_TARGETDIR := $(LIBS_BUILD_DIR)/glue

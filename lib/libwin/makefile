@@ -1,5 +1,5 @@
-MY_TARGET := $(LIBS_BUILD_DIR)/libwin/libwin.so
-MY_STATIC_TARGET := $(LIBS_BUILD_DIR)/libwin/libwin.a
+MY_TARGET := $(LIBS_BUILD_DIR)/libwin.so
+MY_STATIC_TARGET := $(LIBS_BUILD_DIR)/libwin.a
 
 MY_TARGETDIR := $(LIBS_BUILD_DIR)/libwin
 MY_SRCDIR := $(LIBS_DIR)/libwin

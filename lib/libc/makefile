@@ -1,6 +1,6 @@
 # main libc
-MY_TARGET := $(LIBS_BUILD_DIR)/libc/libc.so
-MY_STATIC_TARGET := $(LIBS_BUILD_DIR)/libc/libc.a
+MY_TARGET := $(LIBS_BUILD_DIR)/libc.so
+MY_STATIC_TARGET := $(LIBS_BUILD_DIR)/libc.a
 
 LIBC_EXTRA_CFLAGS := -D__STDC_VERSION__=199901
 
@@ -27,7 +27,7 @@ include $(addsuffix /makefile, $(addprefix $(MY_SRCDIR)/, \
 include templates/lib.mk
 
 # kernel libc
-MY_TARGET := $(LIBS_BUILD_DIR)/klibc/klibc.o
+MY_TARGET := $(LIBS_BUILD_DIR)/klibc.o
 
 MY_TARGETDIR := $(LIBS_BUILD_DIR)/klibc
 MY_SRCDIR := $(LIBS_DIR)/libc

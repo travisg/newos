@@ -1,5 +1,5 @@
-MY_TARGET := $(LIBS_BUILD_DIR)/libsupc++/libsupc++.so
-MY_STATIC_TARGET := $(LIBS_BUILD_DIR)/libsupc++/libsupc++.a
+MY_TARGET := $(LIBS_BUILD_DIR)/libsupc++.so
+MY_STATIC_TARGET := $(LIBS_BUILD_DIR)/libsupc++.a
 
 MY_TARGETDIR := $(LIBS_BUILD_DIR)/libsupc++
 MY_SRCDIR := $(LIBS_DIR)/libsupc++
