@@ -293,7 +293,7 @@ int ipv4_output(cbuf *buf, ipv4_addr target_addr, int protocol)
 		}
 		header = cbuf_get_ptr(header_buf, 0);
 
-		packet_len = min(i->mtu, len + header_len);
+		packet_len = min(i->mtu, (unsigned)(len + header_len));
 		packet_len = ROUNDOWN(packet_len - header_len, 8) + header_len;
 
 		header->version_length = 0x4 << 4 | 5;
@@ -581,6 +581,8 @@ done_frag_spot_search:
 		// add it to the list
 		hash_insert(frag_table, frag);
 	}
+
+	err= NO_ERROR;
 
 out:
 	mutex_unlock(&frag_table_mutex);
