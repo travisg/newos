@@ -63,10 +63,7 @@ static int pci_config_compare_func(void *_config, void *_key)
 	struct pci_config *config = _config;
 	char *key = _key;
 
-	if(!strcmp(config->full_path, key))
-		return 0;
-	else
-		return -1;
+	return strcmp(config->full_path, key);
 }	
 
 static int pci_open(const char *name, dev_cookie *_cookie)
