@@ -1,5 +1,5 @@
-#include <string.h>
-#include <ctype.h>
+#include <libc/string.h>
+#include <libc/ctype.h>
 
 char *strstr(const char *s1, const char *s2)
 {

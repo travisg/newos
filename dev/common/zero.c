@@ -2,7 +2,7 @@
 #include <boot/stage2.h>
 #include <kernel/vm.h>
 #include <kernel/vfs.h>
-#include <string.h>
+#include <libc/string.h>
 
 struct zero_fs {
 	fs_id id;

@@ -1,12 +1,14 @@
 #include <kernel/kernel.h>
 #include <kernel/elf.h>
-#include <elf32.h>
 #include <kernel/vfs.h>
 #include <kernel/thread.h>
-#include <string.h>
 #include <kernel/debug.h>
-#include <printf.h>
 #include <kernel/arch/cpu.h>
+
+#include <sys/elf32.h>
+
+#include <libc/string.h>
+#include <libc/printf.h>
 
 static int verify_eheader(struct Elf32_Ehdr *eheader)
 {

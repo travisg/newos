@@ -1,5 +1,5 @@
-#include <string.h>
-#include <ctype.h>
+#include <libc/string.h>
+#include <libc/ctype.h>
 
 char *___strtok = NULL;
 

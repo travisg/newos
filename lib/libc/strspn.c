@@ -1,5 +1,5 @@
-#include <string.h>
-#include <ctype.h>
+#include <libc/string.h>
+#include <libc/ctype.h>
 
 size_t strspn(const char *s, const char *accept)
 {

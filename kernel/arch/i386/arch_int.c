@@ -1,5 +1,4 @@
 #include <kernel/kernel.h>
-#include <string.h>
 #include <kernel/vm.h>
 #include <kernel/debug.h>
 #include <kernel/console.h>
@@ -19,6 +18,8 @@
 #include <kernel/arch/i386/vm.h>
 
 #include <boot/stage2.h>
+
+#include <libc/string.h>
 
 struct int_frame {
 	unsigned int edi;

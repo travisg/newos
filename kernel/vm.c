@@ -1,6 +1,3 @@
-#include <string.h>
-#include <ctype.h>
-#include <printf.h>
 #include <kernel/kernel.h>
 #include <kernel/vm.h>
 #include <kernel/vm_priv.h>
@@ -14,6 +11,10 @@
 #include <kernel/arch/cpu.h>
 #include <kernel/arch/pmap.h>
 #include <kernel/arch/vm.h>
+
+#include <libc/string.h>
+#include <libc/ctype.h>
+#include <libc/printf.h>
 
 static unsigned int first_free_page_index = 0;
 static unsigned int *free_page_table = NULL;

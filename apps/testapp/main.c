@@ -1,6 +1,6 @@
 #include <types.h>
-#include <string.h>
-#include <printf.h>
+#include <libc/string.h>
+#include <libc/printf.h>
 #include <libsys/syscalls.h>
 
 int a;

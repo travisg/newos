@@ -1,6 +1,3 @@
-#include <string.h>
-#include <printf.h>
-
 #include <kernel/kernel.h>
 #include <kernel/vfs.h>
 #include <kernel/debug.h>
@@ -13,6 +10,9 @@
 #include <kernel/fs/bootfs.h>
 
 #include <boot/bootdir.h>
+
+#include <libc/string.h>
+#include <libc/printf.h>
 
 static char *bootdir = NULL;
 static off_t bootdir_len = 0;

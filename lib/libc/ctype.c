@@ -1,4 +1,4 @@
-#include <ctype.h>
+#include <libc/ctype.h>
 
 #define _U	0x01	/* upper */
 #define _L	0x02	/* lower */

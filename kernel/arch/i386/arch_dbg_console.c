@@ -1,10 +1,10 @@
 #include <kernel/kernel.h>
-#include <string.h>
 #include <kernel/int.h>
-
 #include <kernel/arch/cpu.h>
 
 #include <boot/stage2.h>
+
+#include <libc/string.h>
 
 static const int dbg_baud_rate = 115200;
 

@@ -1,5 +1,5 @@
-#include <string.h>
-#include <ctype.h>
+#include <libc/string.h>
+#include <libc/ctype.h>
 
 int strncmp(const char *cs, const char *ct, size_t count)
 {

@@ -1,6 +1,3 @@
-#include <string.h>
-#include <ctype.h>
-
 #include <kernel/kernel.h>
 #include <boot/stage2.h>
 #include <kernel/vfs.h>
@@ -10,6 +7,9 @@
 #include <kernel/arch/cpu.h>
 
 #include <kernel/fs/rootfs.h>
+
+#include <libc/string.h>
+#include <libc/ctype.h>
 
 #define MAKE_NOIZE 0
 

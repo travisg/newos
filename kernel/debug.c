@@ -1,6 +1,3 @@
-#include <string.h>
-#include <ctype.h>
-
 #include <kernel/kernel.h>
 #include <kernel/debug.h>
 #include <kernel/int.h>
@@ -12,8 +9,11 @@
 #include <kernel/arch/debug.h>
 #include <kernel/arch/cpu.h>
 
-#include <stdarg.h>
-#include <printf.h>
+#include <libc/stdarg.h>
+#include <libc/printf.h>
+#include <libc/string.h>
+#include <libc/ctype.h>
+
 
 static bool serial_debug_on = false;
 static int dbg_spinlock = 0;

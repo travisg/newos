@@ -1,13 +1,12 @@
-#include <string.h>
-#include <printf.h>
 #include <kernel/kernel.h>
 #include <kernel/faults.h>
 #include <kernel/faults_priv.h>
 #include <kernel/debug.h>
-#include <boot/stage2.h>
 #include <kernel/int.h>
 #include <kernel/arch/faults.h>
-
+#include <boot/stage2.h>
+#include <libc/string.h>
+#include <libc/printf.h>
 
 int faults_init(kernel_args *ka)
 {

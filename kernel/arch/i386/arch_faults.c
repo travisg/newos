@@ -1,5 +1,4 @@
 #include <kernel/kernel.h>
-#include <string.h>
 #include <kernel/faults.h>
 #include <kernel/faults_priv.h>
 #include <kernel/vm.h>
@@ -13,6 +12,8 @@
 #include <kernel/arch/i386/interrupts.h>
 
 #include <boot/stage2.h>
+
+#include <libc/string.h>
 
 int arch_faults_init(kernel_args *ka)
 {

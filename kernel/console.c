@@ -6,8 +6,8 @@
 #include <kernel/sem.h>
 #include <kernel/vfs.h>
 
-#include <stdarg.h>
-#include <printf.h>
+#include <libc/stdarg.h>
+#include <libc/printf.h>
 
 // from con.h
 enum {

@@ -1,7 +1,7 @@
-#include <string.h>
 #include <kernel/vm.h>
 #include <kernel/khash.h>
 #include <kernel/debug.h>
+#include <libc/string.h>
 
 #define malloc kmalloc
 #define free kfree

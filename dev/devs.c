@@ -3,7 +3,7 @@
 #include <kernel/vfs.h>
 #include <kernel/debug.h>
 
-#include <string.h>
+#include <libc/string.h>
 
 #ifdef ARCH_i386
 #include <dev/arch/i386/pci/pci_bus.h>

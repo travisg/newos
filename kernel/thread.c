@@ -1,7 +1,4 @@
-#include <string.h>
-#include <printf.h>
 #include <kernel/kernel.h>
-#include <boot/stage2.h>
 #include <kernel/debug.h>
 #include <kernel/console.h>
 #include <kernel/thread.h>
@@ -15,6 +12,9 @@
 #include <kernel/sem.h>
 #include <kernel/vfs.h>
 #include <kernel/elf.h>
+#include <boot/stage2.h>
+#include <libc/string.h>
+#include <libc/printf.h>
 
 struct proc_key {
 	proc_id id;

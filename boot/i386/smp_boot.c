@@ -1,8 +1,8 @@
 #include <boot/stage2.h>
 #include "stage2_priv.h"
 
-#include <string.h>
-#include <printf.h>
+#include <libc/string.h>
+#include <libc/printf.h>
 
 #define NO_SMP 0
 

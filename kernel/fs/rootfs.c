@@ -1,6 +1,3 @@
-#include <string.h>
-#include <printf.h>
-
 #include <kernel/kernel.h>
 #include <kernel/vfs.h>
 #include <kernel/debug.h>
@@ -9,6 +6,9 @@
 #include <kernel/sem.h>
 
 #include <kernel/fs/rootfs.h>
+
+#include <libc/string.h>
+#include <libc/printf.h>
 
 struct rootfs_stream {
 	char *name;

@@ -1,5 +1,4 @@
 #include <kernel/kernel.h>
-#include <boot/stage2.h>
 #include <kernel/console.h>
 #include <kernel/debug.h>
 #include <kernel/thread.h>
@@ -7,6 +6,7 @@
 #include <kernel/smp.h>
 #include <kernel/vm.h>
 #include <kernel/timer.h>
+#include <boot/stage2.h>
 
 #include <kernel/arch/cpu.h>
 #include <kernel/arch/timer.h>

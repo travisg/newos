@@ -12,7 +12,7 @@
 #include <kernel/dev.h>
 #include <dev/devs.h>
 
-#include <string.h>
+#include <libc/string.h>
 
 #include <kernel/arch/cpu.h>
 

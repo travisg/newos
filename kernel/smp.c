@@ -1,5 +1,3 @@
-#include <string.h>
-
 #include <kernel/kernel.h>
 #include <kernel/console.h>
 #include <kernel/debug.h>
@@ -10,6 +8,8 @@
 #include <kernel/arch/cpu.h>
 #include <kernel/arch/smp.h>
 #include <kernel/arch/pmap.h>
+
+#include <libc/string.h>
 
 #define MSG_POOL_SIZE (SMP_MAX_CPUS * 4)
 

@@ -1,14 +1,11 @@
 // Huge sections stolen from OpenBLT
 // Will be redone later
-
 #include <boot/stage2.h>
 #include <kernel/kernel.h>
 #include <kernel/console.h>
 #include <kernel/debug.h>
 #include <kernel/vm.h>
 #include <kernel/kernel.h>
-#include <printf.h>
-#include <string.h>
 #include <kernel/int.h>
 #include <kernel/smp.h>
 #include <kernel/smp_priv.h>
@@ -19,6 +16,9 @@
 
 #include <kernel/arch/i386/smp_priv.h>
 #include <kernel/arch/i386/timer.h>
+
+#include <libc/printf.h>
+#include <libc/string.h>
 
 static int num_cpus = 1;
 static unsigned int *apic = NULL;

@@ -1,5 +1,3 @@
-#include <string.h>
-
 #include <kernel/kernel.h>
 #include <kernel/sem.h>
 #include <kernel/smp.h>
@@ -9,6 +7,8 @@
 #include <kernel/vm.h>
 
 #include <boot/stage2.h>
+
+#include <libc/string.h>
 
 static struct sem_entry *sems = NULL;
 static area_id sem_area = 0;

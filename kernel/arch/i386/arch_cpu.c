@@ -6,8 +6,8 @@
 
 #include <boot/stage2.h>
 
-#include <string.h>
-#include <printf.h>
+#include <libc/string.h>
+#include <libc/printf.h>
 
 static struct tss **tss;
 static int *tss_loaded;

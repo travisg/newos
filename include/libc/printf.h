@@ -1,7 +1,7 @@
 #ifndef _PRINTF_H_
 #define _PRINTF_H_
 
-#include <stdarg.h>
+#include <libc/stdarg.h>
 
 #ifdef __cplusplus
 extern "C" {

@@ -1,4 +1,3 @@
-#include <string.h>
 #include <kernel/kernel.h>
 
 #include <kernel/vm.h>
@@ -12,6 +11,8 @@
 #include <kernel/arch/int.h>
 
 #include <kernel/arch/i386/pmap.h>
+
+#include <libc/string.h>
 
 typedef struct ptentry {
 	unsigned int present:1;

@@ -1,7 +1,7 @@
-#include <stdarg.h>
 #include <types.h>
-#include <string.h>
-#include <ctype.h>
+#include <libc/stdarg.h>
+#include <libc/string.h>
+#include <libc/ctype.h>
 
 #if 0
 static unsigned long simple_strtoul(const char *cp,char **endp,unsigned int base)

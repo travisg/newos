@@ -2,7 +2,7 @@
 #include <kernel/debug.h>
 #include <kernel/int.h>
 #include <kernel/sem.h>
-#include <string.h>
+#include <libc/string.h>
 
 #include <kernel/arch/cpu.h>
 

@@ -9,8 +9,8 @@
 #include <kernel/arch/cpu.h>
 #include <kernel/arch/int.h>
 
-#include <string.h>
-#include <printf.h>
+#include <libc/string.h>
+#include <libc/printf.h>
 
 #include <dev/arch/i386/console/console_dev.h>
 #include "keyboard.h"
