@@ -4,6 +4,7 @@
 */
 #include <socket/socket.h>
 #include <unistd.h>
+#include <sys/syscalls.h>
 
 int socket_create(int proto, int flags)
 {
@@ -88,7 +89,7 @@ ssize_t socket_sendto(int fd, const void *buf, ssize_t len, sockaddr *addr)
 {
 	_socket_api_args_t args;
 
-	args.u.transfer.buf = buf;
+	args.u.transfer.buf = (void *)buf;
 	args.u.transfer.len = len;
 	args.u.transfer.flags = 0;
 	args.u.transfer.saddr = addr;

@@ -6,6 +6,7 @@
 #include <kernel/khash.h>
 #include <kernel/lock.h>
 #include <kernel/heap.h>
+#include <kernel/vm.h>
 #include <kernel/fs/devfs.h>
 #include <kernel/net/socket.h>
 #include <newos/socket_api.h>

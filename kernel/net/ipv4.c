@@ -1,5 +1,5 @@
 /*
-** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #include <kernel/kernel.h>
@@ -732,7 +732,7 @@ int ipv4_input(cbuf *buf, ifnet *i)
 
 		// see if the packet is too short
 		if(buf_len < packet_len) {
-			dprintf("ipv4 packet too short (buf_len %d, packet len %d)\n", buf_len, packet_len);
+			dprintf("ipv4 packet too short (buf_len %ld, packet len %d)\n", buf_len, packet_len);
 			err = ERR_NET_BAD_PACKET;
 			goto ditch_packet;
 		}
