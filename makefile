@@ -1,3 +1,6 @@
+ifeq ($(HOSTTYPE),i586)
+	HOSTTYPE = i386
+endif
 ifeq ($(ARCH), )
 ARCH = $(HOSTTYPE)
 #ARCH = i386
