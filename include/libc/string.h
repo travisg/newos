@@ -1,9 +1,9 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
-#ifndef _STRING_H_
-#define _STRING_H_
+#ifndef _LIBC_STRING_H_
+#define _LIBC_STRING_H_
 
 #include <types.h>	/* for size_t */
 

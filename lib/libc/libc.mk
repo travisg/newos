@@ -28,6 +28,8 @@ LIBC_OBJS = \
 
 DEPS += $(LIBC_OBJS:.o=.d)
 
+include $(LIBC_DIR)/arch/$(ARCH)/libc.mk
+
 LIBC = $(LIBC_OBJ_DIR)/libc.a
 
 $(LIBC): $(LIBC_OBJS)
