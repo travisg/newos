@@ -375,10 +375,12 @@ int dev_bootstrap(void)
 	if(err < 0)
 		panic("could not create master tty lock\n");
 
+	// create device node
+	devfs_publish_device("tty/master", NULL, &ttym_hooks);
+
 	// set up the individual tty nodes
 	for(i=0; i<NUM_TTYS; i++) {
 		thetty.ttys[i].inuse = false;
-		thetty.ttys[i].index = i;
 		thetty.ttys[i].ref_count = 0;
 		if(mutex_init(&thetty.ttys[i].lock, "tty lock") < 0)
 			panic("couldn't create tty lock\n");
@@ -402,16 +404,8 @@ int dev_bootstrap(void)
 			else if(j == ENDPOINT_MASTER_WRITE)
 				thetty.ttys[i].buf[j].flags = TTY_FLAG_DEFAULT_INPUT; // master writes into this one. do line editing and echo back
 		}
-	}
 
-	// create device node
-	devfs_publish_device("tty/master", NULL, &ttym_hooks);
-
-	for(i=0; i<NUM_TTYS; i++) {
-		char buf[128];
-
-		sprintf(buf, "tty/slave/%d", i);
-		devfs_publish_device(buf, &thetty.ttys[i], &ttys_hooks);
+		thetty.ttys[i].index = devfs_publish_indexed_device("tty/slave", &thetty.ttys[i], &ttys_hooks);
 	}
 
 	return 0;
