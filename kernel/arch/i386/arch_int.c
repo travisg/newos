@@ -128,15 +128,15 @@ int arch_int_disable_interrupts()
 void arch_int_restore_interrupts(int oldstate)
 {
 	int flags = oldstate ? 0x200 : 0;
-	int state = 0;
 
-	asm volatile("pushfl;\n"
+	asm (
+		"pushfl;\n"
 		"popl	%1;\n"
 		"andl	$0xfffffdff,%1;\n"
-		"orl		%0,%1;\n"
+		"orl	%0,%1;\n"
 		"pushl	%1;\n"
 		"popfl\n"
-		: "=g" (flags) : "r" (state), "0" (flags));
+		: : "r" (flags), "r" (0));
 }
 
 bool arch_int_is_interrupts_enabled()
