@@ -8,9 +8,9 @@
 #include <kernel/vm.h>
 #include <kernel/timer.h>
 
-#include <arch_cpu.h>
-#include <arch_timer.h>
-#include <arch_smp.h>
+#include <kernel/arch/cpu.h>
+#include <kernel/arch/timer.h>
+#include <kernel/arch/smp.h>
 
 static struct timer_event * volatile events[SMP_MAX_CPUS] = { NULL, };
 static int timer_spinlock[SMP_MAX_CPUS] = { 0, };

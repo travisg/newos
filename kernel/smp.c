@@ -7,9 +7,9 @@
 #include <kernel/smp.h>
 #include <kernel/vm.h>
 
-#include <arch_cpu.h>
-#include <arch_smp.h>
-#include <arch_pmap.h>
+#include <kernel/arch/cpu.h>
+#include <kernel/arch/smp.h>
+#include <kernel/arch/pmap.h>
 
 #define MSG_POOL_SIZE (SMP_MAX_CPUS * 4)
 

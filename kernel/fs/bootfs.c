@@ -8,7 +8,7 @@
 #include <kernel/vm.h>
 #include <kernel/sem.h>
 
-#include <arch_cpu.h>
+#include <kernel/arch/cpu.h>
 
 #include <kernel/fs/bootfs.h>
 

@@ -4,8 +4,8 @@
 #include <kernel/debug.h>
 #include <kernel/vm.h>
 #include <kernel/thread.h>
-#include <arch_thread.h>
-#include <arch_cpu.h>
+#include <kernel/arch/thread.h>
+#include <kernel/arch/cpu.h>
 
 int arch_proc_init_proc_struct(struct proc *p, bool kernel)
 {

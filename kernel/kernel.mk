@@ -17,7 +17,7 @@ KERNEL_OBJS = \
         $(KERNEL_OBJ_DIR)/vfs.o \
         $(KERNEL_OBJ_DIR)/vm.o
 
-KERNEL_INCLUDES = -Iinclude -Idev -Iboot/$(ARCH) -I$(KERNEL_ARCH_DIR)
+KERNEL_INCLUDES = -Iinclude -Idev -Iboot/$(ARCH)
 
 include $(KERNEL_DIR)/fs/fs_kernel.mk
 

@@ -1,7 +1,10 @@
-#ifndef _ARCH_SMP_PRIV_H
-#define _ARCH_SMP_PRIV_H
+#ifndef _I386_SMP_PRIV_H
+#define _I386_SMP_PRIV_H
 
-#define SMP_MAX_CPUS 4
+int i386_smp_interrupt(int vector);
+void arch_smp_ack_interrupt();
+int arch_smp_set_apic_timer(time_t relative_timeout);
+int arch_smp_clear_apic_timer();
 
 #define MP_FLT_SIGNATURE '_PM_'
 #define MP_CTH_SIGNATURE 'PCMP'

@@ -6,7 +6,7 @@
 #include <stage2.h>
 #include <kernel/vm.h>
 #include <kernel/smp.h>
-#include <arch_int.h>
+#include <kernel/arch/int.h>
 
 #define NUM_IO_HANDLERS 256
 

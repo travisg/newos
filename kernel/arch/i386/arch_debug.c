@@ -1,4 +1,4 @@
 #include <kernel/kernel.h>
-#include <arch_debug.h>
 #include <kernel/debug.h>
+#include <kernel/arch/debug.h>
 

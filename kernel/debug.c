@@ -8,9 +8,9 @@
 #include <kernel/console.h>
 #include <kernel/vm.h>
 
-#include <arch_dbg_console.h>
-#include <arch_debug.h>
-#include <arch_cpu.h>
+#include <kernel/arch/dbg_console.h>
+#include <kernel/arch/debug.h>
+#include <kernel/arch/cpu.h>
 
 #include <stdarg.h>
 #include <printf.h>

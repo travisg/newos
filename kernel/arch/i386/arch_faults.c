@@ -7,9 +7,10 @@
 #include <kernel/console.h>
 #include <kernel/int.h>
 
-#include <arch_cpu.h>
-#include <arch_interrupts.h>
-#include <arch_int.h>
+#include <kernel/arch/cpu.h>
+#include <kernel/arch/int.h>
+
+#include <kernel/arch/i386/interrupts.h>
 
 #include <stage2.h>
 

@@ -4,11 +4,12 @@
 #include <kernel/vm_priv.h>
 #include <kernel/debug.h>
 
-#include <arch_vm.h>
-#include <arch_interrupts.h>
-#include <arch_int.h>
-#include <arch_pmap.h>
-#include <arch_cpu.h>
+#include <kernel/arch/vm.h>
+#include <kernel/arch/int.h>
+#include <kernel/arch/pmap.h>
+#include <kernel/arch/cpu.h>
+
+#include <kernel/arch/i386/interrupts.h>
 
 unsigned int *gdt = 0;
 

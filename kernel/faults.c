@@ -5,7 +5,7 @@
 #include <kernel/debug.h>
 #include <stage2.h>
 #include <kernel/int.h>
-#include <arch_faults.h>
+#include <kernel/arch/faults.h>
 
 int faults_init(kernel_args *ka)
 {

@@ -13,11 +13,12 @@
 #include <kernel/smp.h>
 #include <kernel/smp_priv.h>
 
-#include <arch_cpu.h>
-#include <arch_vm.h>
-#include <arch_timer.h>
-#include <arch_smp.h>
-#include <arch_smp_priv.h>
+#include <kernel/arch/cpu.h>
+#include <kernel/arch/vm.h>
+#include <kernel/arch/smp.h>
+
+#include <kernel/arch/i386/smp_priv.h>
+#include <kernel/arch/i386/timer.h>
 
 static int num_cpus = 1;
 static unsigned int *apic = NULL;

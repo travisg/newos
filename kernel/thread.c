@@ -5,13 +5,13 @@
 #include <kernel/debug.h>
 #include <kernel/console.h>
 #include <kernel/thread.h>
-#include <arch_thread.h>
+#include <kernel/arch/thread.h>
 #include <kernel/khash.h>
 #include <kernel/int.h>
 #include <kernel/smp.h>
 #include <kernel/timer.h>
-#include <arch_cpu.h>
-#include <arch_int.h>
+#include <kernel/arch/cpu.h>
+#include <kernel/arch/int.h>
 #include <kernel/sem.h>
 #include <kernel/vfs.h>
 #include <kernel/elf.h>

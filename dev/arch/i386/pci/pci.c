@@ -6,8 +6,8 @@
 #include <kernel/sem.h>
 #include <kernel/vfs.h>
 
-#include <arch_cpu.h>
-#include <arch_int.h>
+#include <kernel/arch/cpu.h>
+#include <kernel/arch/int.h>
 
 #include <string.h>
 #include <printf.h>

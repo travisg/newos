@@ -6,7 +6,7 @@
 #include <kernel/debug.h>
 #include <kernel/khash.h>
 #include <kernel/sem.h>
-#include <arch_cpu.h>
+#include <kernel/arch/cpu.h>
 
 #include <kernel/fs/rootfs.h>
 

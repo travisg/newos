@@ -6,7 +6,7 @@
 #include <string.h>
 #include <kernel/debug.h>
 #include <printf.h>
-#include <arch_cpu.h>
+#include <kernel/arch/cpu.h>
 
 static int verify_eheader(struct Elf32_Ehdr *eheader)
 {

@@ -7,12 +7,15 @@
 #include <kernel/thread.h>
 #include <kernel/smp.h>
 
-#include <arch_cpu.h>
-#include <arch_interrupts.h>
-#include <arch_int.h>
-#include <arch_faults.h>
-#include <arch_vm.h>
-#include <arch_smp.h>
+#include <kernel/arch/cpu.h>
+#include <kernel/arch/int.h>
+#include <kernel/arch/faults.h>
+#include <kernel/arch/vm.h>
+#include <kernel/arch/smp.h>
+
+#include <kernel/arch/i386/interrupts.h>
+#include <kernel/arch/i386/faults.h>
+#include <kernel/arch/i386/vm.h>
 
 #include <stage2.h>
 

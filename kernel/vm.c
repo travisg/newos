@@ -11,9 +11,9 @@
 #include <kernel/smp.h>
 #include <kernel/sem.h>
 
-#include <arch_cpu.h>
-#include <arch_pmap.h>
-#include <arch_vm.h>
+#include <kernel/arch/cpu.h>
+#include <kernel/arch/pmap.h>
+#include <kernel/arch/vm.h>
 
 static unsigned int first_free_page_index = 0;
 static unsigned int *free_page_table = NULL;

@@ -2,7 +2,7 @@
 #include <string.h>
 #include <kernel/int.h>
 
-#include <arch_cpu.h>
+#include <kernel/arch/cpu.h>
 
 #include <stage2.h>
 

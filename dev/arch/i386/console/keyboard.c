@@ -4,7 +4,7 @@
 #include <kernel/sem.h>
 #include <string.h>
 
-#include <arch_cpu.h>
+#include <kernel/arch/cpu.h>
 
 #include "console_dev.h"
 #include "keyboard.h"

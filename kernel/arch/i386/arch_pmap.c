@@ -6,9 +6,9 @@
 #include <kernel/debug.h>
 #include <kernel/smp.h>
 
-#include <arch_cpu.h>
-#include <arch_pmap.h>
-#include <arch_int.h>
+#include <kernel/arch/cpu.h>
+#include <kernel/arch/pmap.h>
+#include <kernel/arch/int.h>
 
 typedef struct ptentry {
 	unsigned int present:1;
