@@ -8,7 +8,6 @@ BIN2ASM := $(TOOLS_DIR)/bin2asm
 
 TOOLS := \
 	$(BOOTMAKER) \
-	$(NETBOOT) \
 	$(BIN2H) \
 	$(BIN2ASM)
 
