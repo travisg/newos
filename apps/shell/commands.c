@@ -2,35 +2,59 @@
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
-#include <string.h>
-#include <unistd.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <ctype.h>
 #include <sys/syscalls.h>
+#include <stdio.h>
+#include <string.h>
+#include <ctype.h>
 
 #include "commands.h"
+#include "file_utils.h"
+#include "shell_defs.h"
 
-int cmd_exit(int argc, char *argv[])
-{
-	return -1;
-}
+struct command cmds[] = {
+	{"exec", &cmd_exec},
+	{"ls", &cmd_ls},
+	{"stat", &cmd_stat},
+	{"mount", &cmd_mount},
+	{"unmount", &cmd_unmount},
+	{"mkdir", &cmd_mkdir},
+	{"cat", &cmd_cat},
+	{"cd", &cmd_cd},
+	{"pwd", &cmd_pwd},
+	{"help", &cmd_help},
+	{NULL, NULL}
+};
+
 
 int cmd_exec(int argc, char *argv[])
 {
+	return cmd_create_proc(argc - 1,argv+1);
+}
+
+int cmd_create_proc(int argc,char *argv[])
+{
 	bool must_wait=true;
 	proc_id pid;
+
 	int  arg_len;
-	char *tmp = argv[argc - 1];
-	if(argc <= 1) {
+	char *tmp;
+	char filename[SCAN_SIZE+1];
+
+	if(argc  <1){
 		printf("not enough args to exec\n");
 		return 0;
 	}
 
-	printf("executing binary '%s'\n", argv[1]);
+	tmp =  argv[argc - 1];
+
+	if( !find_file_in_path(argv[0],filename,SCAN_SIZE)){
+		printf("can't find '%s' \n",argv[0]);
+		return 0;
+	}
+
 
 	// a hack to support the unix '&'
-	if(argc >= 2) {
+	if(argc >= 1) {
 		arg_len = strlen(tmp);
 		if(arg_len > 0){
 			tmp += arg_len -1;
@@ -45,17 +69,15 @@ int cmd_exec(int argc, char *argv[])
 		}
 	}
 
-	pid = sys_proc_create_proc(argv[1], argv[1], argv+1, argc - 1, 5);
+	pid = sys_proc_create_proc(filename,filename, argv, argc, 5);
 	if(pid >= 0) {
 		int retcode;
 
-		printf("spawned process pid=0x%x \n",pid);
 		if(must_wait) {
 			sys_proc_wait_on_proc(pid, &retcode);
-			printf("return code of process 0x%x = 0x%x\n", pid, retcode);
 		}
 	} else {
-		printf("Error: cannot execute '%s'\n", argv[1]);
+		printf("Error: cannot execute '%s'\n", filename);
 		return 0; // should be -1, but the shell would exit
 	}
 
@@ -132,21 +154,21 @@ int cmd_cat(int argc, char *argv[])
 		return 0;
 	}
 
-	fd = open(argv[1], STREAM_TYPE_FILE, 0);
+	fd = sys_open(argv[1], STREAM_TYPE_FILE, 0);
 	if(fd < 0) {
-		printf("cat: open() returned error: %s!\n", strerror(fd));
+		printf("cat: sys_open() returned error: %s!\n", strerror(fd));
 		goto done_cat;
 	}
 
 	for(;;) {
-		rc = read(fd, buf, sizeof(buf) -1);
+		rc = sys_read(fd, buf, -1, sizeof(buf) -1);
 		if(rc <= 0)
 			break;
 
 		buf[rc] = '\0';
 		printf("%s", buf);
 	}
-	close(fd);
+	sys_close(fd);
 
 done_cat:
 	return 0;
@@ -212,9 +234,9 @@ int cmd_ls(int argc, char *argv[])
 	int rc;
 	int count = 0;
 	struct file_stat stat;
-	char *arg = argv[1];
+	char *arg;
 
-	if(argc < 2) {
+	if(argc == 1) {
 		arg = ".";
 	} else {
 		arg = argv[1];
@@ -237,20 +259,20 @@ int cmd_ls(int argc, char *argv[])
 			char buf[1024];
 			int len;
 
-			fd = open(arg, STREAM_TYPE_DIR, 0);
+			fd = sys_open(arg, STREAM_TYPE_DIR, 0);
 			if(fd < 0) {
-				printf("ls: open() returned error: %s!\n", strerror(fd));
+				printf("ls: sys_open() returned error: %s!\n", strerror(fd));
 				goto done_ls;
 			}
 
 			for(;;) {
-				rc = read(fd, buf, sizeof(buf));
+				rc = sys_read(fd, buf, -1, sizeof(buf));
 				if(rc <= 0)
 					break;
 				printf("%s\n", buf);
 				count++;
 			}
-			close(fd);
+			sys_close(fd);
 			break;
 		}
 		default:
@@ -261,37 +283,6 @@ int cmd_ls(int argc, char *argv[])
 done_ls:
 	printf("%d files found\n", count);
 err_ls:
-	return 0;
-}
-
-int cmd_ps(int argc, char *argv[])
-{
-	char *proc_state[3] = { "normal","birth","death" };
-	const int maxprocess = 1024;
-	struct proc_info *pi = (struct proc_info *) malloc(sizeof(struct proc_info) * maxprocess);
-
-	int pidx;
-	int procs=sys_proc_get_table(pi, sizeof(struct proc_info) * maxprocess);
-	if (procs > 0) {
-		printf("process list\n\n");
-		printf("id\tstate\tthreads\tname\n");
-		for (pidx=0; pidx<procs; pidx++) {
-			printf("%d\t%s\t%d\t%s\n",pi->id,proc_state[pi->state],pi->num_threads,pi->name);
-			pi=pi+sizeof(struct proc_info);
-		}
-		printf("\n%d processes listed\n", procs);
-	} else {
-		printf("ps: sys_get_proc_table() returned error %s!\n",strerror(procs));
-	}
-	return 0;
-}
-
-int cmd_echo(int argc, char *argv[])
-{
-	int idx;
-	for (idx=1;idx<argc;idx++)
-		printf("%s ",argv[idx]);
-	printf("\n");
 	return 0;
 }
 
@@ -308,8 +299,6 @@ int cmd_help(int argc, char *argv[])
 	printf("cat <file> : dumps the file to stdout\n");
 	printf("mount <path> <device> <fsname> : tries to mount <device> at <path>\n");
 	printf("unmount <path> : tries to unmount at <path>\n");
-	printf("ps : process list\n");
-	printf("echo : echo text to stdio\n");
 
 	return 0;
 }

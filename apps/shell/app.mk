@@ -2,7 +2,13 @@ SHELLAPP_DIR = $(APPS_DIR)/shell
 SHELLAPP_OBJ_DIR = $(SHELLAPP_DIR)/$(OBJ_DIR)
 SHELLAPP_OBJS = \
 	$(SHELLAPP_OBJ_DIR)/commands.o \
-	$(SHELLAPP_OBJ_DIR)/main.o
+	$(SHELLAPP_OBJ_DIR)/main.o \
+	$(SHELLAPP_OBJ_DIR)/parse.o \
+	$(SHELLAPP_OBJ_DIR)/statements.o \
+	$(SHELLAPP_OBJ_DIR)/shell_vars.o \
+	$(SHELLAPP_OBJ_DIR)/file_utils.o \
+	$(SHELLAPP_OBJ_DIR)/script.o \
+	$(SHELLAPP_OBJ_DIR)/args.o
 
 DEPS += $(SHELLAPP_OBJS:.o=.d)
 
