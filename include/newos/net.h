@@ -6,6 +6,7 @@
 #define _NEWOS_NET_H
 
 #include <newos/types.h>
+#include <newos/drivers.h>
 
 /* contains common network stuff */
 
@@ -47,5 +48,36 @@ typedef uint32 ipv4_addr;
 #define IPV4_DOTADDR_TO_ADDR(a, b, c, d) \
 	(((ipv4_addr)(a) << 24) | (((ipv4_addr)(b) & 0xff) << 16) | (((ipv4_addr)(c) & 0xff) << 8) | ((ipv4_addr)(d) & 0xff))
 
+/* network control ioctls */
+enum {
+	IOCTL_NET_CONTROL_IF_CREATE = IOCTL_DEVFS_NETWORK_OPS_BASE,
+	IOCTL_NET_CONTROL_IF_DELETE,
+	IOCTL_NET_CONTROL_IF_ADDADDR,
+	IOCTL_NET_CONTROL_IF_RMADDR,
+	IOCTL_NET_CONTROL_IF_LIST,
+	IOCTL_NET_CONTROL_ROUTE_ADD,
+	IOCTL_NET_CONTROL_ROUTE_DELETE,
+	IOCTL_NET_CONTROL_ROUTE_LIST,
+	IOCTL_NET_IF_GET_ADDR,
+	IOCTL_NET_IF_GET_TYPE,
+};
+
+/* used in all of the IF control messages */
+struct _ioctl_net_if_control_struct {
+	char if_name[SYS_MAX_PATH_LEN];
+	netaddr if_addr;
+	netaddr mask_addr;
+	netaddr broadcast_addr;
+};
+
+/* used in all of the route control messages */
+struct _ioctl_net_route_struct {
+	netaddr net_addr;
+	netaddr mask_addr;
+	netaddr if_addr;
+	char if_name[SYS_MAX_PATH_LEN];
+};
+
+#define NET_CONTROL_DEV "/dev/net/ctrl"
 
 #endif

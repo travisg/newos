@@ -1,5 +1,11 @@
 # main newos boot script
 
+# configure the network
+exec /boot/bin/netcfg if create /dev/net/rtl8139/0
+exec /boot/bin/netcfg if addaddr /dev/net/rtl8139/0 ipv4 addr 192.168.0.99 mask 255.255.255.0 broadcast 192.168.0.255
+exec /boot/bin/netcfg route add net ipv4 addr 192.168.0.0 mask 255.255.255.0 if /dev/net/rtl8139/0 ipv4 addr 192.168.0.99
+exec /boot/bin/netcfg route add default ipv4 addr 192.168.0.1 if /dev/net/rtl8139/0 ipv4 addr 192.168.0.99
+
 # start network daemons
 exec /boot/bin/socketd 23 /boot/bin/telnetd /boot/bin/shell -s /boot/loginscript &
 exec /boot/bin/socketd 1900 /boot/bin/telnetd /boot/bin/shell -s /boot/loginscript &

@@ -19,6 +19,7 @@ include $(addsuffix /makefile, $(addprefix $(APPS_DIR)/, \
 	rm \
 	ps \
 	top \
+	netcfg \
 	nettest \
 	irc \
 	consoled \

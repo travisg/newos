@@ -62,7 +62,7 @@ static ssize_t rtl8139_write(dev_cookie cookie, const void *buf, off_t pos, ssiz
 static int rtl8139_ioctl(dev_cookie cookie, int op, void *buf, size_t len)
 {
 	rtl8139 *rtl = (rtl8139 *)cookie;
-	int err;
+	int err = NO_ERROR;
 
 	dprintf("rtl8139_ioctl: op %d, buf %p, len %Ld\n", op, buf, (long long)len);
 
@@ -70,10 +70,16 @@ static int rtl8139_ioctl(dev_cookie cookie, int op, void *buf, size_t len)
 		return ERR_IO_ERROR;
 
 	switch(op) {
-		case 10000: // get the ethernet MAC address
+		case IOCTL_NET_IF_GET_ADDR: // get the ethernet MAC address
 			if(len >= sizeof(rtl->mac_addr)) {
 				memcpy(buf, rtl->mac_addr, sizeof(rtl->mac_addr));
-				err = 0;
+			} else {
+				err = ERR_VFS_INSUFFICIENT_BUF;
+			}
+			break;
+		case IOCTL_NET_IF_GET_TYPE: // return the type of interface (ethernet, loopback, etc)
+			if(len >= sizeof(int)) {
+				*(int *)buf = IF_TYPE_ETHERNET;
 			} else {
 				err = ERR_VFS_INSUFFICIENT_BUF;
 			}

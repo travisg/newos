@@ -27,7 +27,8 @@
 #define LOSE_TX_PACKETS 0
 #define LOSE_TX_PERCENTAGE 5
 
-static void *iflist;
+static void *ifhash;
+static mutex ifhash_lock;
 static if_id next_id;
 
 static int if_compare_func(void *_i, const void *_key)
@@ -52,16 +53,63 @@ static unsigned int if_hash_func(void *_i, const void *_key, unsigned int range)
 
 ifnet *if_id_to_ifnet(if_id id)
 {
-	return hash_lookup(iflist, &id);
-}
-
-ifnet *if_register_interface(const char *path, int type)
-{
 	ifnet *i;
 
+	mutex_lock(&ifhash_lock);
+	i = hash_lookup(ifhash, &id);
+	mutex_unlock(&ifhash_lock);
+
+	return i;
+}
+
+ifnet *if_path_to_ifnet(const char *path)
+{
+	ifnet *i;
+	struct hash_iterator iter;
+
+	mutex_lock(&ifhash_lock);
+	hash_open(ifhash, &iter);
+	while((i = hash_next(ifhash, &iter)) != NULL) {
+		if(!strcmp(path, i->path))
+			break;
+	}
+	hash_close(ifhash, &iter, false);
+	mutex_unlock(&ifhash_lock);
+
+	return i;
+}
+
+int if_register_interface(const char *path, ifnet **_i)
+{
+	ifnet *i;
+	int type;
+	int err;
+	ifaddr *address;
+
 	i = kmalloc(sizeof(ifnet));
-	if(!i)
-		return NULL;
+	if(!i) {
+		err = ERR_NO_MEMORY;
+		goto err;
+	}
+	memset(i, 0, sizeof(ifnet));
+
+	/* open the device */
+	if(!strcmp(path, "loopback")) {
+		// the 'loopback' device is special
+		type = IF_TYPE_LOOPBACK;
+		i->fd = -1;
+	} else {
+		i->fd = sys_open(path, STREAM_TYPE_DEVICE, 0);
+		if(i->fd < 0) {
+			err = i->fd;
+			goto err1;
+		}
+		/* find the device's type */
+		err = sys_ioctl(i->fd, IOCTL_NET_IF_GET_TYPE, &type, sizeof(type));
+		if(err < 0) {
+			goto err1;
+		}
+	}
 
 	// find the appropriate function calls to the link layer drivers
 	switch(type) {
@@ -74,26 +122,51 @@ ifnet *if_register_interface(const char *path, int type)
 			i->link_input = &ethernet_input;
 			i->link_output = &ethernet_output;
 			i->mtu = ETHERNET_MAX_SIZE - ETHERNET_HEADER_SIZE;
+
+			/* bind the ethernet link address */
+			address = kmalloc(sizeof(ifaddr));
+			address->addr.len = 6;
+			address->addr.type = ADDR_TYPE_ETHERNET;
+			err = sys_ioctl(i->fd, IOCTL_NET_IF_GET_ADDR, &address->addr.addr[0], 6);
+			if(err < 0) {
+				kfree(address);
+				goto err1;
+			}
+			address->broadcast.len = 6;
+			address->broadcast.type = ADDR_TYPE_ETHERNET;
+			memset(&address->broadcast.addr[0], 0xff, 6);
+			address->netmask.type = ADDR_TYPE_NULL;
+			if_bind_link_address(i, address);
 			break;
 		default:
-			kfree(i);
-			return NULL;
+			err = ERR_NET_GENERAL;
+			goto err1;
 	}
+
 	i->id = atomic_add(&next_id, 1);
-	strcpy(i->path, path);
+	strlcpy(i->path, path, sizeof(i->path));
 	i->type = type;
-	i->addr_list = NULL;
-	i->link_addr = NULL;
-	i->fd = -1;
 	i->rx_thread = -1;
 	i->tx_thread = -1;
 	i->tx_queue_sem = sem_create(0, "tx_queue_sem");
 	mutex_init(&i->tx_queue_lock, "tx_queue_lock");
 	fixed_queue_init(&i->tx_queue, TX_QUEUE_SIZE);
 
-	hash_insert(iflist, i);
+	mutex_lock(&ifhash_lock);
+	hash_insert(ifhash, i);
+	mutex_unlock(&ifhash_lock);
 
-	return i;
+	/* start the rx and tx threads on this interface */
+	if_boot_interface(i);
+
+	*_i = i;
+
+	return NO_ERROR;
+
+err1:
+	kfree(i);
+err:
+	return err;
 }
 
 void if_bind_address(ifnet *i, ifaddr *addr)
@@ -165,6 +238,9 @@ static int if_tx_thread(void *args)
 
 			cbuf_free_chain(buf);
 
+#if NET_CHATTY
+		dprintf("if_tx_thread: sending packet size %Ld\n", (long long)len);
+#endif
 			sys_write(i->fd, i->tx_buf, 0, len);
 		}
 	}
@@ -200,8 +276,12 @@ static int if_rx_thread(void *args)
 #endif
 
 		// check to see if we have a link layer address attached to us
-		if(!i->link_addr)
+		if(!i->link_addr) {
+#if NET_CHATTY
+			dprintf("if_rx_thread: dumping packet because of no link address (%p)\n", i);
+#endif
 			continue;
+		}
 
 		// for now just move it over into a cbuf
 		b = cbuf_get_chain(len);
@@ -220,10 +300,6 @@ static int if_rx_thread(void *args)
 int if_boot_interface(ifnet *i)
 {
 	int err;
-
-	i->fd = sys_open(i->path, STREAM_TYPE_DEVICE, 0);
-	if(i->fd < 0)
-		return i->fd;
 
 	// create the receive thread
 	i->rx_thread = thread_create_kernel_thread("net_rx_thread", &if_rx_thread, i);
@@ -256,14 +332,18 @@ err1:
 
 int if_init(void)
 {
+	int err;
 	ifnet *i;
 
 	next_id = 0;
 
 	// create a hash table to store the interface list
-	iflist = hash_init(16, (addr)&i->next - (addr)i,
+	ifhash = hash_init(16, (addr)&i->next - (addr)i,
 		&if_compare_func, &if_hash_func);
+	err = mutex_init(&ifhash_lock, "if list lock");
+	if(err < 0)
+		return err;
 
-	return 0;
+	return NO_ERROR;
 }
 

@@ -47,9 +47,13 @@ int loopback_init(void)
 {
 	ifnet *i;
 	ifaddr *address;
+	int err;
 
 	// set up an initial device
-	i = if_register_interface("", IF_TYPE_LOOPBACK);
+	err = if_register_interface("loopback", &i);
+	if(err < 0)
+		return err;
+
 	address = kmalloc(sizeof(ifaddr));
 	address->addr.type = ADDR_TYPE_NULL;
 	address->broadcast.type = ADDR_TYPE_NULL;

@@ -9,6 +9,7 @@
 #include <kernel/cbuf.h>
 #include <kernel/heap.h>
 #include <kernel/net/net.h>
+#include <kernel/net/net_control.h>
 #include <kernel/net/net_timer.h>
 #include <kernel/net/if.h>
 #include <kernel/net/ethernet.h>
@@ -208,61 +209,14 @@ int net_init(kernel_args *ka)
 	udp_init();
 	tcp_init();
 	socket_init();
+	net_control_init();
 
 	return 0;
 }
 
 int net_init_postdev(kernel_args *ka)
 {
-	ifnet *i;
-	ifaddr *address;
-
 	dprintf("net_init_postdev: entry\n");
-
-	// open the network device
-	net_fd = sys_open("/dev/net/rtl8139/0", STREAM_TYPE_DEVICE, 0);
-	if(net_fd < 0) {
-		dprintf("net_init: no net devices\n");
-		return -1;
-	}
-
-	// register the net device with the stack
-	i = if_register_interface("/dev/net/rtl8139/0", IF_TYPE_ETHERNET);
-	if(!i) {
-		dprintf("error allocating interface structure\n");
-		return -1;
-	}
-	address = kmalloc(sizeof(ifaddr));
-	address->addr.len = 6;
-	address->addr.type = ADDR_TYPE_ETHERNET;
-	sys_ioctl(net_fd, 10000, &address->addr.addr[0], 6);
-	address->broadcast.len = 6;
-	address->broadcast.type = ADDR_TYPE_ETHERNET;
-	memset(&address->broadcast.addr[0], 0xff, 6);
-	address->netmask.type = ADDR_TYPE_NULL;
-	if_bind_link_address(i, address);
-
-	// set the ip address for this net interface
-	address = kmalloc(sizeof(ifaddr));
-	address->addr.len = 4;
-	address->addr.type = ADDR_TYPE_IP;
-	NETADDR_TO_IPV4(address->addr) = IPV4_DOTADDR_TO_ADDR(192,168,0,99); // 192.168.0.99
-	address->netmask.len = 4;
-	address->netmask.type = ADDR_TYPE_IP;
-	NETADDR_TO_IPV4(address->netmask) = IPV4_DOTADDR_TO_ADDR(255,255,255,0); // 255.255.255.0
-	address->broadcast.len = 4;
-	address->broadcast.type = ADDR_TYPE_IP;
-	NETADDR_TO_IPV4(address->broadcast) = IPV4_DOTADDR_TO_ADDR(192,168,0,255); // 192.168.0.255
-	if_bind_address(i, address);
-
-	// set up an initial routing table
-	ipv4_route_add(IPV4_DOTADDR_TO_ADDR(192,168,0,0), IPV4_DOTADDR_TO_ADDR(255,255,255,0), IPV4_DOTADDR_TO_ADDR(192,168,0,99), i->id);
-	ipv4_route_add_gateway(0x00000000, 0x00000000, IPV4_DOTADDR_TO_ADDR(192,168,0,99), i->id, IPV4_DOTADDR_TO_ADDR(192,168,0,1));
-
-	sys_close(net_fd);
-
-	if_boot_interface(i);
-
 
 #if NET_TEST
 	// start the test thread

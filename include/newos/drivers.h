@@ -1,7 +1,10 @@
 /*
 ** Copyright 2002, Thomas Kurschel. All rights reserved.
+** Copyright 2003, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
+#ifndef _NEWOS_DRIVERS_H
+#define _NEWOS_DRIVERS_H
 
 #include <newos/types.h>
 #include <newos/defines.h>
@@ -15,6 +18,9 @@ enum {
 	// framebuffer ops
 	IOCTL_DEVFS_GET_FRAMEBUFFER_INFO = 2000,
 	IOCTL_DEVFS_MAP_FRAMEBUFFER,
+
+	// network ops
+	IOCTL_DEVFS_NETWORK_OPS_BASE = 3000,
 };
 
 typedef struct devfs_partition_info {
@@ -48,4 +54,6 @@ typedef struct devfs_framebuffer_info {
 	int bit_depth;
 	int color_space;
 } devfs_framebuffer_info;
+
+#endif
 
