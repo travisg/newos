@@ -10,6 +10,7 @@
 #include <sys/syscalls.h>
 #include <libsys/stdio.h>
 #include <libc/printf.h>
+#include <kernel/arch/cpu.h>
 
 #include "rld_priv.h"
 
@@ -55,6 +56,7 @@ struct image_t {
 	 * image identification
 	 */
 	char     name[SYS_MAX_OS_NAME_LEN];
+	dynmodule_id imageid;
 
 	struct   image_t *next;
 	struct   image_t **prev;
@@ -94,6 +96,7 @@ struct image_queue_t {
 
 static image_queue_t loaded_images= { 0, 0 };
 static unsigned      loaded_image_count= 0;
+static unsigned      imageid_count= 0;
 
 
 
@@ -252,6 +255,7 @@ create_image(char const *name, int num_regions)
 	memset(retval, 0, alloc_size);
 
 	strlcpy(retval->name, name, sizeof(retval->name));
+	retval->imageid= atomic_add(&imageid_count, 1);
 	retval->num_regions= num_regions;
 
 	return retval;
@@ -755,7 +759,6 @@ load_container(char const *path, char const *name, bool fixed)
 	int      num_regions;
 	bool     map_success;
 	bool     dynamic_success;
-//	bool     relocate_success;
 	image_t *found;
 	image_t *image;
 
@@ -793,9 +796,6 @@ load_container(char const *path, char const *name, bool fixed)
 
 	dynamic_success= parse_dynamic_segment(image);
 	FATAL(!dynamic_success, "troubles handling dynamic section\n");
-
-//	relocate_success= relocate_image(image);
-//	FATAL(!relocate_success, "troubles relocating\n");
 
 	image->entry_point= eheader.e_entry + image->regions[0].delta;
 
@@ -844,7 +844,7 @@ load_dependencies(image_t *img)
 		}
 	}
 
-	FATAL((j!= img->num_needed), "Internal error at " __FUNCTION__);
+	FATAL((j!= img->num_needed), "Internal error at load_dependencies()");
 
 	return;
 }
@@ -869,14 +869,14 @@ topological_sort(image_t *img, unsigned slot, image_t **init_list)
 
 static
 void
-init_dependencies(image_t *img)
+init_dependencies(image_t *img, bool init_head)
 {
 	unsigned i;
 	unsigned slot;
 	image_t **init_list;
 
 	init_list= rldalloc(loaded_image_count*sizeof(image_t*));
-	FATAL((!init_list), "memory shortage in " __FUNCTION__ "\n");
+	FATAL((!init_list), "memory shortage in init_dependencies()");
 	memset(init_list, 0, loaded_image_count*sizeof(image_t*));
 
 	img->flags|= RFLAG_SORTED; /* make sure we don't visit this one */
@@ -885,6 +885,11 @@ init_dependencies(image_t *img)
 		if(!(img->needed[i]->flags & RFLAG_SORTED)) {
 			slot= topological_sort(img->needed[i], slot, init_list);
 		}
+	}
+
+	if(init_head) {
+		init_list[slot]= img;
+		slot+= 1;
 	}
 
 	for(i= 0; i< slot; i++) {
@@ -899,7 +904,7 @@ init_dependencies(image_t *img)
 	rldfree(init_list);
 }
 
-int
+dynmodule_id
 load_program(char const *path, void **entry)
 {
 	image_t *image;
@@ -925,8 +930,39 @@ load_program(char const *path, void **entry)
 		iter= iter->next;
 	};
 
-	init_dependencies(loaded_images.head);
+	init_dependencies(loaded_images.head, false);
 
 	*entry= (void*)(image->entry_point);
-	return 0;
+	return image->imageid;
+}
+
+dynmodule_id
+load_library(char const *path)
+{
+	image_t *image;
+	image_t *iter;
+
+
+	image = load_container(path, NEWOS_MAGIC_APPNAME, true);
+
+	iter= loaded_images.head;
+	while(iter) {
+		load_dependencies(iter);
+
+		iter= iter->next;
+	};
+
+	iter= loaded_images.head;
+	while(iter) {
+		bool relocate_success;
+
+		relocate_success= relocate_image(iter);
+		FATAL(!relocate_success, "troubles relocating\n");
+
+		iter= iter->next;
+	};
+
+	init_dependencies(loaded_images.head, true);
+
+	return image->imageid;
 }

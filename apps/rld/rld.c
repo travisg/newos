@@ -10,6 +10,25 @@
 
 
 
+static struct rld_export_t exports=
+{
+	/*
+	 * Unix like stuff
+	 */
+	export_dl_open,
+	export_dl_close,
+	export_dl_sym,
+
+
+	/*
+	 * BeOS like stuff
+	 */
+	export_load_addon,
+	export_unload_addon,
+	export_addon_symbol
+};
+
+
 int
 rldmain(void *arg)
 {
@@ -20,6 +39,8 @@ rldmain(void *arg)
 	rldheap_init();
 
 	entry= 0;
+
+	rld_args->rld_export= &exports;
 
 	load_program(rld_args->prog_path, (void**)&entry);
 

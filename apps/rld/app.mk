@@ -4,12 +4,16 @@ RLDAPP_OBJS = \
 	$(RLDAPP_OBJ_DIR)/rld0.o \
 	$(RLDAPP_OBJ_DIR)/rld.o \
 	$(RLDAPP_OBJ_DIR)/rldelf.o \
+	$(RLDAPP_OBJ_DIR)/rldunix.o \
+	$(RLDAPP_OBJ_DIR)/rldbeos.o \
 	$(RLDAPP_OBJ_DIR)/rldheap.o \
 	$(RLDAPP_OBJ_DIR)/rldaux.o
 
 DEPS += $(RLDAPP_OBJS:.o=.d)
 
 RLDAPP = $(RLDAPP_OBJ_DIR)/rld.so
+
+CFLAGS +=
 
 $(RLDAPP): $(RLDAPP_OBJS) $(LIBS) $(GLUE)
 	$(LD) --script=$(RLDAPP_DIR)/arch/$(ARCH)/rld.ld -L $(LIBGCC_PATH) -o $@ $(RLDAPP_OBJS) $(NULIBC_STATIC) $(LIBGCC)

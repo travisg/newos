@@ -11,11 +11,13 @@
 
 struct rld_export_t
 {
-	int (*dl_open )(char const *path);
-	int (*dl_close)(int lib);
-	int (*dl_sym  )(int lib, char const *sym);
+	int   (*dl_open )(char const *path, unsigned flags);
+	int   (*dl_close)(int lib, unsigned flags);
+	void *(*dl_sym  )(int lib, char const *sym, unsigned flags);
 
-	int (*load_addon)(char const *path);
+	int   (*load_addon)(char const *path, unsigned flags);
+	int   (*unload_addon)(int add_on, unsigned flags);
+	void *(*addon_symbol)(int lib, char const *sym, unsigned flags);
 };
 
 struct uspace_prog_args_t
