@@ -35,28 +35,26 @@ STAGE1_OBJS = \
 
 DEPS += $(STAGE1_OBJS:.o=.d)
 
-STAGE1 = $(BOOT_OBJ_DIR)/stage1
-
-$(STAGE1): $(STAGE1_OBJS)
-	$(LD) $(GLOBAL_LDFLAGS) -N -Ttext 0x8c000000 $(STAGE1_OBJS) -o $(STAGE1)
-
-$(STAGE1).bin: $(STAGE1)
-	$(OBJCOPY) -O binary $(STAGE1) $@1
-	dd if=/dev/zero of=$(STAGE1).bin bs=4096 count=1 2> /dev/null
-	dd if=$(STAGE1).bin1 of=$(STAGE1).bin conv=notrunc 2> /dev/null
-	rm $(STAGE1).bin1
-
-stage1clean:
-	rm -f $(STAGE1_OBJS) $(STAGE1) $(STAGE1).bin $(STAGE1).bin1
-
-CLEAN += stage1clean
-
 FINAL = $(BOOT_DIR)/final
 
-$(FINAL): $(SEMIFINAL) $(STAGE1).bin
-	cat $(STAGE1).bin $(SEMIFINAL) > $(FINAL)
+$(FINAL): $(STAGE1_OBJS)
+	$(LD) $(GLOBAL_LDFLAGS) -dN --script=$(BOOT_DIR)/stage1.ld $(STAGE1_OBJS) -o $@
+
+FINAL_ASMINCLUDE = $(BOOT_DIR)/final.asminclude
+
+$(FINAL_ASMINCLUDE): $(SEMIFINAL) tools
+	$(BIN2ASM) < $(SEMIFINAL) > $(FINAL_ASMINCLUDE)
+
+finalclean:
+	rm -f $(STAGE1_OBJS) $(FINAL) $(SEMIFINAL) $(FINAL_ASMINCLUDE)
+
+CLEAN += finalclean
 
 # 
+$(BOOT_OBJ_DIR)/stage1.o: $(BOOT_DIR)/stage1.S
+	@mkdir -p $(BOOT_OBJ_DIR)
+	$(CC) $(GLOBAL_CFLAGS) -I. -Iinclude -I$(BOOT_DIR) -c $< -o $@
+
 $(BOOT_OBJ_DIR)/%.o: $(BOOT_DIR)/%.c
 	@mkdir -p $(BOOT_OBJ_DIR)
 	$(CC) $(GLOBAL_CFLAGS) -Iinclude -I$(BOOT_DIR) -c $< -o $@
