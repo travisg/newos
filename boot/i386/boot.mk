@@ -49,7 +49,11 @@ floppy: $(STAGE2) $(KERNEL) $(APPS) tools $(MAKEFLOP)
 	rm -f ../../final.$(ARCH); ln -sf $(FINAL) ../../final.$(ARCH)
 
 disk: floppy
+ifeq ($(OSTYPE),cygwin)
+	rawrite -f $(FINAL) -d a:
+else
 	dd if=$(FINAL) of=/dev/disk/floppy/raw bs=18k
+endif
 
 ldisk: floppy
 	dd if=$(FINAL) of=/dev/fd0 bs=18k
