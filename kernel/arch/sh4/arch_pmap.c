@@ -1,5 +1,6 @@
 #include <kernel/kernel.h>
 #include <kernel/vm.h>
+#include <kernel/vm_priv.h>
 #include <kernel/debug.h>
 #include <string.h>
 

@@ -5,8 +5,8 @@
 #include <kernel/debug.h>
 #include <kernel/int.h>
 #include <kernel/thread.h>
-#include <kernel/vm.h>
-#include <kernel/faults.h>
+#include <kernel/vm_priv.h>
+#include <kernel/faults_priv.h>
 
 struct vector *vector_table;
 
