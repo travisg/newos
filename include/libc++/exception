@@ -13,7 +13,7 @@ namespace std
 	public:
 		exception() throw() {}
 		exception(const exception &other) throw() {}
-		exception &operator=(const exception &other) throw() {}
+		exception &operator=(const exception &other) throw() { return *this; }
 
 		virtual ~exception() throw();
 		virtual const char *what() const throw();
@@ -24,7 +24,7 @@ namespace std
 	public:
 		bad_exception() throw() {}
 		bad_exception(const bad_exception &other) throw() : exception(other) {}
-		bad_exception &operator=(const bad_exception &other) throw() {}
+		bad_exception &operator=(const bad_exception &other) throw() { return *this; }
 
 		virtual ~bad_exception() throw();
 		virtual const char *what() const throw();
