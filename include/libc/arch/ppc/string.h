@@ -5,5 +5,8 @@
 #ifndef _LIBC_ARCH_PPC_STRING_H_
 #define _LIBC_ARCH_PPC_STRING_H_
 
+#define _ASM_MEMCPY 1
+#define _ASM_MEMMOVE 1
+
 #endif
 
