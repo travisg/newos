@@ -12,7 +12,7 @@
 .globl _start
 _start:
 	lis		1,tempstack_end@ha		/* load the new stack */
-	ori		1,1,tempstack@l
+	ori		1,1,tempstack_end@l
 
 	/* load the base of the bootdir */
 	lis		3,BOOTDIR_BASE@ha

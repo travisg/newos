@@ -9,7 +9,8 @@ include apps/apps.mk
 # sh4 stage2 makefile
 BOOT_DIR = boot/$(ARCH)
 BOOT_OBJ_DIR = $(BOOT_DIR)/$(OBJ_DIR)
-STAGE2_OBJS = $(BOOT_OBJ_DIR)/stage2.o
+STAGE2_OBJS = $(BOOT_OBJ_DIR)/stage2.o \
+	$(BOOT_OBJ_DIR)/stage2_text.o
 
 DEPS += $(STAGE2_OBJS:.o=.d)
 
