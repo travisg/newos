@@ -51,7 +51,7 @@ ifeq ($(ARCH),i386)
 		OBJCOPY = i386-linux-objcopy
 	endif
 	GLOBAL_CFLAGS = -fno-pic -O
-	GLOBAL_LDFLAGS = 
+	GLOBAL_LDFLAGS =
 	LIBGCC = -lgcc
 	LIBGCC_PATH = lib/libgcc/$(ARCH)
 endif
@@ -67,7 +67,7 @@ ifeq ($(ARCH),sh4)
 	LIBGCC = -lgcc
 	LIBGCC_PATH = lib/libgcc/$(ARCH)/ml/m4-single-only
 endif
-	
+
 ifeq ($(ARCH),sparc64)
 	CC = sparc64-elf-gcc
 	LD = sparc64-elf-ld
@@ -79,7 +79,7 @@ ifeq ($(ARCH),sparc64)
 	LIBGCC = -lgcc
 	LIBGCC_PATH = lib/libgcc/$(ARCH)
 endif
-	
+
 ifeq ($(ARCH),sparc)
 	ifneq ($(HOSTTYPE),sparc)
 		CC = sparc-elf-gcc
@@ -93,7 +93,7 @@ ifeq ($(ARCH),sparc)
 	LIBGCC = -lgcc
 	LIBGCC_PATH = lib/libgcc/$(ARCH)
 endif
-	
+
 ifeq ($(ARCH),alpha)
 	ifneq ($(HOSTTYPE),alpha)
 		CC = alpha-elf-gcc
@@ -130,7 +130,7 @@ ifeq ($(ARCH),ppc)
 		AR = ppc-elf-ar
 		OBJCOPY = ppc-elf-objcopy
 	endif
-	GLOBAL_CFLAGS = -fno-pic
+	GLOBAL_CFLAGS = -fno-pic -O
 	GLOBAL_LDFLAGS =
 	LIBGCC = -lgcc
 	LIBGCC_PATH = lib/libgcc/$(ARCH)
@@ -143,7 +143,7 @@ GLOBAL_CFLAGS += -Wall -W -Wno-multichar -Wno-unused -nostdinc -fno-builtin -DAR
 # sub makefiles are responsible for adding to these
 DEPS =
 CLEAN =
-FINAL = 
+FINAL =
 
 final: final1
 
@@ -163,7 +163,7 @@ tools: $(NETBOOT) $(BOOTMAKER) $(BIN2H) $(BIN2ASM)
 
 $(BOOTMAKER): $(BOOTMAKER).c tools/sparcbootblock.h
 	$(HOST_CC) -O0 -g -o $@ $(BOOTMAKER).c
-	
+
 NETBOOT_LINK_ARGS =
 ifeq ($(OSTYPE),beos)
 	NETBOOT_LINK_ARGS = -lsocket -lnet
@@ -192,7 +192,7 @@ clean: $(CLEAN)
 
 depsclean:
 	rm -f $(DEPS)
-	
+
 allclean: depsclean clean toolsclean
 	rm -f `find . -type f -name '*.d'`
 	rm -f `find . -type f -name '*.o'`
