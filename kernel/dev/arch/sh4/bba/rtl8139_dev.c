@@ -38,8 +38,8 @@
 
 #define MYRT_INTS (RT_INT_PCIERR | RT_INT_RX_ERR | RT_INT_RX_OK | RT_INT_TX_ERR | RT_INT_TX_OK | RT_INT_RXBUF_OVERFLOW)
 
-#define RXBUFMASK 0x7fff
-#define RXBUFSIZE 0x8000
+#define RXBUFMASK 0x3fff
+#define RXBUFSIZE 0x4000
 
 #define ADDR_RXBUF 0x01840000
 #define ADDR_TXBUF0 0x01846000
@@ -194,7 +194,7 @@ int rtl8139_init(rtl8139 *rtl)
 
 #if 1
 	// Set Rx FIFO threashold to 1K, Rx size to  8k+16, 1024 byte DMA burst
-	RTL_WRITE_32(rtl, RT_RXCONFIG, 0x0000c600); /* ??? c680 -- WRAP mode? */
+	RTL_WRITE_32(rtl, RT_RXCONFIG, 0x0000ce00); /* ??? c680 -- WRAP mode? */
 #else
 	// Set Rx FIFO threashold to 1K, Rx size to 64k+16, 1024 byte DMA burst
 	RTL_WRITE_32(rtl, RT_RXCONFIG, 0x0000de00);
