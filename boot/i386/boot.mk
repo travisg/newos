@@ -19,7 +19,7 @@ DEPS += $(STAGE2_OBJS:.o=.d)
 STAGE2 = $(BOOT_OBJ_DIR)/stage2
 
 $(STAGE2): $(STAGE2_OBJS) $(KLIBS)
-	$(LD) -dN --script=$(BOOT_DIR)/stage2.ld -L $(LIBGCC_PATH) $(STAGE2_OBJS) $(KLIBS) $(LIBGCC) -o $@
+	$(LD) -dN --script=$(BOOT_DIR)/stage2.ld -L $(LIBGCC_PATH) $(STAGE2_OBJS) $(LINK_KLIBS) $(LIBGCC) -o $@
 
 stage2: $(STAGE2)
 
