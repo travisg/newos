@@ -5,7 +5,7 @@
 
 #include <dlfcn.h>
 #include <sys/syscalls.h>
-#include <kernel/user_runtime.h>
+#include <sys/user_runtime.h>
 
 
 static struct rld_export_t const *rld;

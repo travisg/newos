@@ -3,7 +3,7 @@
 ** Distributed under the terms of the NewOS License.
 */
 
-#include <kernel/user_runtime.h>
+#include <sys/user_runtime.h>
 
 
 extern void __init__dlfcn(struct uspace_prog_args_t const *uspa);

@@ -5,7 +5,7 @@
 
 #include <string.h>
 #include <sys/syscalls.h>
-#include <kernel/user_runtime.h>
+#include <newos/user_runtime.h>
 #include "rld_priv.h"
 
 

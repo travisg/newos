@@ -8,8 +8,8 @@
 #include <stdio.h>
 #include <newos/errors.h>
 #include <newos/elf32.h>
+#include <newos/user_runtime.h>
 #include <sys/syscalls.h>
-#include <kernel/user_runtime.h>
 #include <arch/cpu.h>
 
 #include "rld_priv.h"

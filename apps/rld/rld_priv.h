@@ -8,7 +8,7 @@
 
 
 #include <sys/types.h>
-#include <kernel/user_runtime.h>
+#include <newos/user_runtime.h>
 
 
 #define NEWOS_MAGIC_APPNAME	"__NEWOS_APP__"

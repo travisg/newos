@@ -4,7 +4,7 @@
 ** Distributed under the terms of the NewOS License.
 */
 
-#include <kernel/user_runtime.h>
+#include <newos/user_runtime.h>
 #include <sys/syscalls.h>
 
 extern void sys_exit(int retcode);

@@ -20,7 +20,7 @@
 #include <kernel/vfs.h>
 #include <kernel/elf.h>
 #include <kernel/heap.h>
-#include <kernel/user_runtime.h>
+#include <newos/user_runtime.h>
 #include <newos/errors.h>
 #include <boot/stage2.h>
 #include <nulibc/string.h>
