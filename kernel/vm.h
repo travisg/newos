@@ -22,6 +22,7 @@ struct area {
 	char *name;
 	unsigned int base;
 	unsigned int size;
+	int lock;
 };
 
 // args for the create_area funcs
@@ -30,6 +31,11 @@ enum {
 	AREA_EXACT_ADDRESS,
 	AREA_ALREADY_MAPPED
 };
+
+#define LOCK_RO        0
+#define LOCK_RW        1
+#define LOCK_KERNEL    2
+#define LOCK_MASK      3
 
 void vm_dump_areas(struct aspace *aspace);
 int vm_init(kernel_args *ka);

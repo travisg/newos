@@ -5,7 +5,7 @@
 
 int arch_pmap_init(kernel_args *ka);
 int arch_pmap_init2(kernel_args *ka);
-int pmap_map_page(addr paddr, addr vaddr);
+int pmap_map_page(addr paddr, addr vaddr, int lock);
 int pmap_unmap_page(addr vaddr);
 void arch_pmap_invl_page(addr vaddr);
 

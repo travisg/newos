@@ -172,7 +172,7 @@ static struct thread *create_kernel_thread(char *name, int (*func)(void), int pr
 
 	sprintf(stack_name, "%s_kstack", name);
 	vm_create_area(t->proc->aspace, stack_name, (void **)&kstack_addr,
-		AREA_ANY_ADDRESS, KSTACK_SIZE, 0);
+		AREA_ANY_ADDRESS, KSTACK_SIZE, LOCK_RW|LOCK_KERNEL);
 	t->kernel_stack_area = vm_find_area_by_name(t->proc->aspace, stack_name);
 	arch_thread_initialize_kthread_stack(t, func, &thread_entry);
 	

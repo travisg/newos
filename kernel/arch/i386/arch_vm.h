@@ -5,7 +5,7 @@
 
 int arch_vm_init(kernel_args *ka);
 int arch_vm_init2(kernel_args *ka);
-int map_page_into_kspace(addr paddr, addr kaddr);
+int map_page_into_kspace(addr paddr, addr kaddr, int lock);
 int i386_page_fault(int cr2reg, unsigned int fault_address);
 
 #endif

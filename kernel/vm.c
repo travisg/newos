@@ -105,13 +105,13 @@ struct area *_vm_create_area_struct(struct aspace *aspace, char *name, unsigned 
 {
 	struct area *area;
 	struct area *t, *last = NULL;
-	TOUCH(lock);
 	
 	// allocate an area struct to represent this area
 	area = (struct area *)kmalloc(sizeof(struct area));	
 	area->base = base;
 	area->size = size;
 	area->id = next_area_id++;
+	area->lock = lock;
 	area->name = (char *)kmalloc(strlen(name) + 1);
 	strcpy(area->name, name);
 	
@@ -165,6 +165,12 @@ static area_id _vm_create_area(struct aspace *aspace, char *name, void **addr, i
 	dprintf("_vm_create_area: '%s', *addr = 0x%p, addr_type = %d, size = %d, src_addr = 0x%x\n",
 		name, *addr, addr_type, size, src_addr);
 
+	// check validity of lock
+	if((lock & ~LOCK_MASK) != 0) {
+		// invalid lock
+		panic("_vm_create_area called with invalid lock %d\n", lock);
+	}
+	
 	switch(addr_type) {
 		case AREA_ANY_ADDRESS: {
 			struct area *a;
@@ -228,7 +234,7 @@ static area_id _vm_create_area(struct aspace *aspace, char *name, void **addr, i
 
 			for(i=0; i < PAGE_ALIGN(size) / PAGE_SIZE; i++) {
 				vm_get_free_page(&page);
-				pmap_map_page(page * PAGE_SIZE, base + i * PAGE_SIZE); 
+				pmap_map_page(page * PAGE_SIZE, base + i * PAGE_SIZE, lock); 
 			}
 			break;
 		}
@@ -237,7 +243,7 @@ static area_id _vm_create_area(struct aspace *aspace, char *name, void **addr, i
 			
 			vm_mark_page_range_inuse(src_addr / PAGE_SIZE, PAGE_ALIGN(size) / PAGE_SIZE);
 			for(i=0; i < PAGE_ALIGN(size) / PAGE_SIZE; i++) {
-				pmap_map_page(src_addr + i * PAGE_SIZE, base + i * PAGE_SIZE); 
+				pmap_map_page(src_addr + i * PAGE_SIZE, base + i * PAGE_SIZE, lock); 
 			}
 			break;
 		}
@@ -343,8 +349,6 @@ static void display_mem(int argc, char **argv)
 
 static void vm_dump_kspace_areas(int argc, char **argv)
 {
-	TOUCH(argc);TOUCH(argv);
-	
 	vm_dump_areas(vm_get_kernel_aspace());
 }
 
@@ -411,7 +415,7 @@ int vm_init(kernel_args *ka)
 	// map in this new table
 	ka->phys_alloc_range_high = PAGE_ALIGN(ka->phys_alloc_range_high);
 	for(i = 0; i < free_page_table_size/(PAGE_SIZE/sizeof(unsigned int)); i++) {
-		map_page_into_kspace(ka->phys_alloc_range_high, ka->virt_alloc_range_high);
+		map_page_into_kspace(ka->phys_alloc_range_high, ka->virt_alloc_range_high, LOCK_RW|LOCK_KERNEL);
 		ka->phys_alloc_range_high += PAGE_SIZE;
 		ka->virt_alloc_range_high += PAGE_SIZE;
 	}
@@ -427,7 +431,7 @@ int vm_init(kernel_args *ka)
 
 	// map in the new heap
 	for(i = HEAP_BASE; i < HEAP_BASE + HEAP_SIZE; i += PAGE_SIZE) {
-		map_page_into_kspace(ka->phys_alloc_range_high, i);
+		map_page_into_kspace(ka->phys_alloc_range_high, i, LOCK_RW | LOCK_KERNEL);
 		ka->phys_alloc_range_high += PAGE_SIZE;
 	}
 
@@ -446,15 +450,15 @@ int vm_init(kernel_args *ka)
 	arch_vm_init2(ka);
 
 	// allocate areas to represent stuff that already exists
-	_vm_create_area_struct(kernel_aspace, "kernel_heap", (unsigned int)HEAP_BASE, HEAP_SIZE, 0);
-	_vm_create_area_struct(kernel_aspace, "free_page_table", (unsigned int)free_page_table, free_page_table_size * sizeof(unsigned int), 0);
-	_vm_create_area_struct(kernel_aspace, "kernel_seg0", (unsigned int)ka->kernel_seg0_base, ka->kernel_seg0_size, 0);
-	_vm_create_area_struct(kernel_aspace, "kernel_seg1", (unsigned int)ka->kernel_seg1_base, ka->kernel_seg1_size, 0);
+	_vm_create_area_struct(kernel_aspace, "kernel_heap", (unsigned int)HEAP_BASE, HEAP_SIZE, LOCK_RW|LOCK_KERNEL);
+	_vm_create_area_struct(kernel_aspace, "free_page_table", (unsigned int)free_page_table, free_page_table_size * sizeof(unsigned int), LOCK_RW|LOCK_KERNEL);
+	_vm_create_area_struct(kernel_aspace, "kernel_seg0", (unsigned int)ka->kernel_seg0_base, ka->kernel_seg0_size, LOCK_RW|LOCK_KERNEL);
+	_vm_create_area_struct(kernel_aspace, "kernel_seg1", (unsigned int)ka->kernel_seg1_base, ka->kernel_seg1_size, LOCK_RW|LOCK_KERNEL);
 	for(i=0; i < ka->num_cpus; i++) {
 		char temp[64];
 		
 		sprintf(temp, "idle_thread%d_kstack", i);
-		_vm_create_area_struct(kernel_aspace, temp, (unsigned int)ka->cpu_kstack[i], ka->cpu_kstack_len[i], 0);
+		_vm_create_area_struct(kernel_aspace, temp, (unsigned int)ka->cpu_kstack[i], ka->cpu_kstack_len[i], LOCK_RW|LOCK_KERNEL);
 	}
 //	vm_dump_areas(kernel_aspace);
 
@@ -473,8 +477,6 @@ int vm_init(kernel_args *ka)
 
 int vm_init_postsem(kernel_args *ka)
 {
-	TOUCH(ka);
-	
 	heap_sem = sem_create(1, "heap_sem");
 	if(heap_sem < 0) {
 		panic("error creating heap semaphore\n");
@@ -664,8 +666,6 @@ static void dump_free_page_table(int argc, char **argv)
 	unsigned int free_start = END_OF_LIST;
 	unsigned int inuse_start = PAGE_INUSE;
 
-	TOUCH(argc);TOUCH(argv);
-	
 	dprintf("dump_free_page_table():\n");
 	dprintf("first_free_page_index = %d\n", first_free_page_index);
 

@@ -224,6 +224,6 @@ int arch_int_init(kernel_args *ka)
 int arch_int_init2(kernel_args *ka)
 {
 	idt = (desc_table *)ka->vir_idt;
-	vm_create_area(vm_get_kernel_aspace(), "idt", (void *)&idt, AREA_ALREADY_MAPPED, PAGE_SIZE, 0);
+	vm_create_area(vm_get_kernel_aspace(), "idt", (void *)&idt, AREA_ALREADY_MAPPED, PAGE_SIZE, LOCK_RW|LOCK_KERNEL);
 	return 0;
 }

@@ -27,14 +27,14 @@ int arch_vm_init2(kernel_args *ka)
 
 	// account for the segment descriptor
 	gdt = (unsigned int *)ka->vir_gdt;	
-	vm_create_area(vm_get_kernel_aspace(), "gdt", (void *)&gdt, AREA_ALREADY_MAPPED, PAGE_SIZE, 0);
+	vm_create_area(vm_get_kernel_aspace(), "gdt", (void *)&gdt, AREA_ALREADY_MAPPED, PAGE_SIZE, LOCK_RW|LOCK_KERNEL);
 	
 	return 0;
 }
 
-int map_page_into_kspace(addr paddr, addr kaddr)
+int map_page_into_kspace(addr paddr, addr kaddr, int lock)
 {
-	return pmap_map_page(paddr, kaddr);
+	return pmap_map_page(paddr, kaddr, lock);
 }
 
 int i386_page_fault(int cr2reg, unsigned int fault_address)

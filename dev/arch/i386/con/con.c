@@ -625,7 +625,7 @@ int console_dev_init(kernel_args *ka)
 
 	dprintf("con_init: mapping vid mem\n");
 	vm_map_physical_memory(vm_get_kernel_aspace(), "vid_mem", (void *)&origin, AREA_ANY_ADDRESS,
-		SCREEN_END - SCREEN_START, 0, SCREEN_START);
+		SCREEN_END - SCREEN_START, LOCK_RW|LOCK_KERNEL, SCREEN_START);
 	dprintf("con_init: mapped vid mem to virtual address 0x%x\n", origin);
 
 	pos = origin;
