@@ -104,6 +104,8 @@ void *vfs_new_ioctx();
 int vfs_free_ioctx(void *ioctx);
 int vfs_test();
 
+image_id vfs_load_fs_module(const char *path);
+
 /* calls needed by fs internals */
 int vfs_get_vnode(fs_id fsid, vnode_id vnid, fs_vnode *v);
 int vfs_put_vnode(fs_id fsid, vnode_id vnid);

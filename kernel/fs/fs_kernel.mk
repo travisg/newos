@@ -3,8 +3,7 @@ KERNEL_FS_OBJ_DIR = $(KERNEL_FS_DIR)/$(OBJ_DIR)
 KERNEL_OBJS += \
 		$(KERNEL_FS_OBJ_DIR)/rootfs.o \
 		$(KERNEL_FS_OBJ_DIR)/bootfs.o \
-		$(KERNEL_FS_OBJ_DIR)/devfs.o \
-		$(KERNEL_FS_OBJ_DIR)/isofs.o
+		$(KERNEL_FS_OBJ_DIR)/devfs.o
 
 KERNEL_FS_INCLUDES = $(KERNEL_INCLUDES)
 

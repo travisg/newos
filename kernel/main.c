@@ -17,7 +17,6 @@
 #include <kernel/fs/rootfs.h>
 #include <kernel/fs/bootfs.h>
 #include <kernel/fs/devfs.h>
-#include <kernel/fs/isofs.h>
 #include <kernel/dev.h>
 #include <kernel/net/net.h>
 #include <kernel/cbuf.h>
@@ -147,7 +146,7 @@ static int main2()
 	panic("debugger_test\n");
 #endif
 
-	bootstrap_isofs();
+	vfs_load_fs_module("/boot/iso9660fs");
 
 	// start the init process
 	{

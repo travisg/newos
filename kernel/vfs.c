@@ -13,6 +13,7 @@
 #include <kernel/thread.h>
 #include <kernel/heap.h>
 #include <kernel/arch/cpu.h>
+#include <kernel/elf.h>
 #include <sys/errors.h>
 
 #include <kernel/fs/rootfs.h>
@@ -2008,3 +2009,22 @@ int user_setcwd(const char* upath)
 	// Call vfs to set new working directory
 	return vfs_set_cwd(path,false);
 }
+
+image_id vfs_load_fs_module(const char *path)
+{
+	image_id id;
+	void (*bootstrap)();
+
+	id = elf_load_kspace(path);
+	if(id < 0)
+		return id;
+
+	bootstrap = elf_lookup_symbol(id, "fs_bootstrap");
+	if(!bootstrap)
+		return ERR_VFS_INVALID_FS;
+
+	bootstrap();
+
+	return id;
+}
+

@@ -65,6 +65,8 @@ kernelclean:
 
 CLEAN += kernelclean
 
+include $(KERNEL_DIR)/addons/addons.mk
+
 # build prototypes - this covers architecture dependant subdirs
 
 $(KERNEL_OBJ_DIR)/%.o: $(KERNEL_DIR)/%.c
