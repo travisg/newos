@@ -4,6 +4,7 @@
 #include <string.h>
 #include <win/Event.h>
 #include <win/protocol.h>
+#include <win/WindowFlags.h>
 
 using namespace os::gui;
 
@@ -48,7 +49,7 @@ WindowManager::WindowManager(Renderer *screenRenderer)
 
 	sys_thread_resume_thread(tid);
 
-	tid = sys_thread_create_thread("mouse_thread", StartInputThread, this);
+	tid = sys_thread_create_thread("input_thread", StartInputThread, this);
 	sys_thread_resume_thread(tid);
 }
 
@@ -57,7 +58,7 @@ WindowManager::~WindowManager()
 	sys_sem_delete(fCursorLock);
 }
 
-Window* WindowManager::CreateWindow(Window *parent, const Rect &rect, int eventPort)
+Window* WindowManager::CreateWindow(Window *parent, const Rect &rect, int eventPort, window_flags flags)
 {
 	while (fWindowArray[fNextWindowID % kMaxWindows] != 0)
 		fNextWindowID++;
@@ -66,7 +67,7 @@ Window* WindowManager::CreateWindow(Window *parent, const Rect &rect, int eventP
 	fWindowArray[fNextWindowID % kMaxWindows] = window;
 	fNextWindowID++;
 
-	parent->AddChild(rect, window);
+	parent->AddChild(rect, window, flags);
 	return window;
 }
 
@@ -74,7 +75,6 @@ void WindowManager::InvalidateMouseBoundries()
 {
 	fMouseBoundries.SetTo(-1, -1, -1, -1);
 }
-
 
 void WindowManager::DestroyWindow(Window *window)
 {
@@ -331,13 +331,14 @@ void WindowManager::DispatchThread()
 				rect.right = ReadInt32();
 				rect.bottom = ReadInt32();
 				long eventPort = ReadInt32();
+				window_flags flags = (window_flags)ReadInt32();
 				printf("WindowManager::DispatchThread: OP_CREATE_WINDOW, eventPort %d, responsePort %d, parentWindow %d\n", eventPort, responsePort, parentWindow);
 
 				Window *parent = LookupWindow(parentWindow);
 				int id = -1;
 				LockCursor();
 				if (parent)
-					id = CreateWindow(parent, rect, eventPort)->ID();
+					id = CreateWindow(parent, rect, eventPort, flags)->ID();
 				UnlockCursor();
 
 				Respond(responsePort, &id, sizeof(id));
@@ -507,16 +508,23 @@ void WindowManager::ProcessMouseEvent(const Event &event)
 		}
 
 		if (oldMouseFocus == fCurrentMouseFocus) {
-			// Post a mouse moved message to the current focus window
-			Rect screenFrame = fCurrentMouseFocus->LocalToScreen(
-				fCurrentMouseFocus->Bounds());
+			if(fCurrentMouseFocus->Flags() & WINDOW_FLAG_MOVABLE
+				 && last_buttons & MAIN_BUTTON && buttons & MAIN_BUTTON) {
+				// drag
+				if(fCurrentMouseFocus->GetTopLevelWindow())
+					fCurrentMouseFocus->GetTopLevelWindow()->MoveBy(delta_cx, delta_cy);
+			} else {
+				// Post a mouse moved message to the current focus window
+				Rect screenFrame = fCurrentMouseFocus->LocalToScreen(
+					fCurrentMouseFocus->Bounds());
 
-			Event evt;
-			evt.what = EVT_MOUSE_MOVED;
-			evt.target = fCurrentMouseFocus->ID();
-			evt.x = cx - screenFrame.left;
-			evt.y = cy - screenFrame.top;
-			fCurrentMouseFocus->PostEvent(&evt);
+				Event evt;
+				evt.what = EVT_MOUSE_MOVED;
+				evt.target = fCurrentMouseFocus->ID();
+				evt.x = cx - screenFrame.left;
+				evt.y = cy - screenFrame.top;
+				fCurrentMouseFocus->PostEvent(&evt);
+			}
 		} else {
 			// Inform the old window (if there is one), that the mouse is leaving
 			if (oldMouseFocus) {

@@ -3,6 +3,7 @@
 
 #include <win/Color.h>
 #include <win/Rect.h>
+#include <win/WindowFlags.h>
 
 namespace os {
 namespace gui {
@@ -17,7 +18,7 @@ public:
 	Canvas();
 	virtual ~Canvas();
 
-	void AddChild(Canvas *child, const Rect &childRect);
+	void AddChild(Canvas *child, const Rect &childRect, window_flags flags = WINDOW_FLAG_NONE);
 	void RemoveChild(Canvas *child);
 	void DrawLine(int x1, int y1, int x2, int y2);
 	void FillRect(const Rect &r);

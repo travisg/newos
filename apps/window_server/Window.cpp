@@ -12,6 +12,8 @@ Window::Window(int id, int eventPort, Renderer *renderer)
 		fPreviousSibling(0),
 		fChildList(0),
 		fParent(0),
+		fToplevelWindow(0),
+		fFlags(WINDOW_FLAG_NONE),
 		fIsVisible(false),
 		fEventPort(eventPort),
 		fPaintMsgSent(false),
@@ -93,10 +95,16 @@ void Window::UpdateClipRegion()
 	fGC.SetOrigin(myScreenFrame.left, myScreenFrame.top);
 }
 
-void Window::AddChild(const Rect &frame, Window *child)
+void Window::AddChild(const Rect &frame, Window *child, window_flags flags)
 {
 	child->fFrame = frame;
 	child->fGC.SetRenderer(fGC.GetRenderer());
+	child->fFlags = flags;
+
+	if(flags & WINDOW_FLAG_TOPLEVEL)
+		child->fToplevelWindow = child;
+	else
+		child->fToplevelWindow = fToplevelWindow;
 
 	child->fNextSibling = fChildList;
 	child->fPreviousSibling = &fChildList;
@@ -150,20 +158,23 @@ const Region& Window::ClipRegion() const
 void Window::MoveTo(long x, long y)
 {
 	fFrame.OffsetTo(x, y);
-	UpdateClipRegion();
+	if(fParent)
+		fParent->UpdateClipRegion();
 }
 
 void Window::MoveBy(long x, long y)
 {
 	fFrame.OffsetBy(x, y);
-	UpdateClipRegion();
+	if(fParent)
+		fParent->UpdateClipRegion();
 }
 
 void Window::ResizeTo(long width, long height)
 {
 	fFrame.right = fFrame.left + width;
 	fFrame.bottom = fFrame.top + height;
-	UpdateClipRegion();
+	if(fParent)
+		fParent->UpdateClipRegion();
 }
 
 void Window::Invalidate(const Region &region)

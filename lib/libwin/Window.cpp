@@ -1,10 +1,11 @@
 #include <sys/syscalls.h>
+#include <stdio.h>
+#include <string.h>
 #include <win/Window.h>
 #include <win/Canvas.h>
 #include <win/Event.h>
 #include <win/protocol.h>
 #include <win/Rect.h>
-#include <stdio.h>
 #include "Connection.h"
 
 namespace os {
@@ -42,6 +43,48 @@ void WindowBorderCanvas::Repaint(const Rect &dirtyRect)
 	DrawLine(bounds.left, bounds.top, bounds.left, bounds.bottom);
 }
 
+/* special canvas class that draws the title */
+class TitleBarCanvas : public Canvas {
+public:
+	TitleBarCanvas();
+	virtual ~TitleBarCanvas();
+	virtual void Repaint(const Rect &dirtyRect);
+	void SetTitle(const char *title);
+private:
+	char *fTitle;
+};
+
+TitleBarCanvas::TitleBarCanvas() : Canvas()
+{
+	fTitle = new char[1];
+	fTitle[0] = 0;
+}
+
+TitleBarCanvas::~TitleBarCanvas()
+{
+	delete fTitle;
+}
+
+void TitleBarCanvas::SetTitle(const char *title)
+{
+	char *temp = new char[strlen(title)+1];
+	char *old;
+
+	strcpy(temp, title);
+	old = fTitle;
+	fTitle = temp;
+	delete old;
+
+	Invalidate();
+}
+
+void TitleBarCanvas::Repaint(const Rect &dirtyRect)
+{
+	SetPenColor(0xffffff); // white
+
+	DrawString(5, 2, fTitle);
+}
+
 Window::Window(const Rect &loc)
 	:	fShowLevel(0),
 		fCanvasList(0)
@@ -65,6 +108,7 @@ Window::Window(const Rect &loc)
  	fConnection->WriteInt32(loc.right);
  	fConnection->WriteInt32(loc.bottom);
  	fConnection->WriteInt32(fEventPort);
+ 	fConnection->WriteInt32(WINDOW_FLAG_TOPLEVEL);
  	fConnection->Flush();
  	fID = fConnection->ReadInt32();
 
@@ -77,12 +121,28 @@ Window::Window(const Rect &loc)
 	fBorderCanvas = new WindowBorderCanvas();
 	Rect bounds = loc.Bounds();
 	AddBorderChild(fBorderCanvas, bounds);
+	fBorderCanvas->SetBackgroundColor(0x00c4c0b8);
+
+	/* create a titlebar canvas */
+	fTitleBarCanvas = new TitleBarCanvas();
+	bounds = loc.Bounds();
+	bounds.InsetBy(4, 4);
+	bounds.bottom = bounds.top + 12 - 1;
+	fBorderCanvas->AddChild(fTitleBarCanvas, bounds, WINDOW_FLAG_MOVABLE);
+	fTitleBarCanvas->SetBackgroundColor(0xa0); // dark blue
 
 	/* create a blank canvas to fill in the space in the middle of the window */
 	fBackgroundCanvas = new Canvas();
-	fBackgroundCanvas->SetBackgroundColor(0x00c4c0b8); // windows grey
-	bounds.InsetBy(2, 2);
+	bounds = loc.Bounds();
+	bounds.InsetBy(4, 4);
+	bounds.top += 14;
 	fBorderCanvas->AddChild(fBackgroundCanvas, bounds);
+	fBackgroundCanvas->SetBackgroundColor(0x00c4c0b8); // windows grey
+
+	/* invalidate all of the canvases we just built */
+	fTitleBarCanvas->Invalidate();
+	fBackgroundCanvas->Invalidate();
+	fBorderCanvas->Invalidate();
 }
 
 Window::~Window()
@@ -126,7 +186,7 @@ void Window::WaitEvent(Event *event)
 	printf("Window::WaitEvent: got something from port %d, error %d\n", fEventPort, err);
 }
 
-void Window::AddBorderChild(Canvas *child, const Rect &childRect)
+void Window::AddBorderChild(Canvas *child, const Rect &childRect, window_flags flags)
 {
 	fConnection->WriteInt8(OP_CREATE_WINDOW);
 	fConnection->WriteConnectionPort();
@@ -136,6 +196,7 @@ void Window::AddBorderChild(Canvas *child, const Rect &childRect)
 	fConnection->WriteInt32(childRect.right);
 	fConnection->WriteInt32(childRect.bottom);
 	fConnection->WriteInt32(fEventPort);
+	fConnection->WriteInt32(flags);
 	fConnection->Flush();
 	child->fID = fConnection->ReadInt32();
 	child->fWindow = this;
@@ -156,9 +217,9 @@ Canvas *Window::GetCanvas()
 	return fBackgroundCanvas;
 }
 
-void Window::AddChild(Canvas *child, const Rect &r)
+void Window::AddChild(Canvas *child, const Rect &r, window_flags flags)
 {
-	fBackgroundCanvas->AddChild(child, r);
+	fBackgroundCanvas->AddChild(child, r, flags);
 }
 
 void Window::RemoveChild(Canvas *child)
@@ -200,6 +261,11 @@ void Window::Show()
 		fConnection->WriteInt32(fID);
 		fConnection->Flush();
 	}
+}
+
+void Window::SetTitle(const char *title)
+{
+	static_cast<TitleBarCanvas *>(fTitleBarCanvas)->SetTitle(title);
 }
 
 Canvas* Window::FindChild(int id)

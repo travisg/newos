@@ -17,7 +17,7 @@ public:
 
 private:
 
-	Window* CreateWindow(Window *parent, const Rect &rect, int eventPort);
+	Window* CreateWindow(Window *parent, const Rect &rect, int eventPort, window_flags flags);
 	void DestroyWindow(Window *window);
 	Window* LookupWindow(int id);
 	Window* WindowAtPoint(int x, int y);

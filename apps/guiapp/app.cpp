@@ -39,6 +39,7 @@ void mycanvas::Repaint(const Rect &dirtyRect)
 {
 	printf("mycanvas::Repaint: dirtyRect = ");dirtyRect.Dump();printf("\n");
 
+#if 1
 	/* draw a red box around this canvas */
 	SetPenColor(0xff0000); // red
 	Rect bounds = GetBounds();
@@ -47,7 +48,7 @@ void mycanvas::Repaint(const Rect &dirtyRect)
 	DrawLine(bounds.right, bounds.top, bounds.right, bounds.bottom);
 	DrawLine(bounds.left, bounds.bottom, bounds.right, bounds.bottom);
 	DrawLine(bounds.left, bounds.top, bounds.left, bounds.bottom);
-
+#endif
 	SetPenColor(0); // black
 	char temp[128];
 	sprintf(temp, "%d, %d", fMouseX, fMouseY);
@@ -80,8 +81,8 @@ int main(int argc, char **argv)
 	for(int i = 0; i < kNumWindows; i++) {
 		left = rand() % 600;
 		top = rand() % 400;
-		width = rand() % (640 - left);
-		height = rand() % (480 - top);
+		width = (rand() % (600 - left)) + 40;
+		height = (rand() % (460 - top)) + 20;
 
 		Rect r;
 		r.SetToSize(left, top, width, height);
@@ -97,6 +98,7 @@ int main(int argc, char **argv)
 		canvas->AddChild(button, Rect(10, 10, 80, 20));
 		button->SetBackgroundColor(0x00c4c0b8); // windows grey
 
+		win->SetTitle("Test Title");
 		win->Show();
 		win->MakeFocus();
 

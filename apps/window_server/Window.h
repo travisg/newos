@@ -5,6 +5,7 @@
 #include "GraphicsContext.h"
 #include <sys/syscalls.h>
 #include <win/Event.h>
+#include <win/WindowFlags.h>
 
 using namespace os::gui;
 
@@ -13,7 +14,7 @@ public:
 
 	Window(int id, port_id eventPort, Renderer *renderer = 0);
 	~Window();
-	void AddChild(const Rect& frame, Window *window);
+	void AddChild(const Rect& frame, Window *window, window_flags flags = WINDOW_FLAG_NONE);
 	void RemoveChild(Window *window);
 	void MoveToFront();
 	inline int ID() const;
@@ -48,6 +49,9 @@ public:
 	void MoveBy(long, long);
 	void ResizeTo(long, long);
 
+	inline window_flags Flags() const;
+	inline Window *GetTopLevelWindow() const;
+
 private:
 	void UpdateClipRegion();
 
@@ -56,6 +60,8 @@ private:
 	Window **fPreviousSibling;
 	Window *fChildList;
 	Window *fParent;
+	Window *fToplevelWindow;
+	window_flags fFlags;
 
 	Region fInvalidRegion;
 	Region fCurrentRedrawRegion;
@@ -93,6 +99,16 @@ inline Rect Window::Bounds() const
 	Rect rect(fFrame);
 	rect.OffsetTo(0, 0);
 	return rect;
+}
+
+inline window_flags Window::Flags() const
+{
+	return fFlags;
+}
+
+inline Window *Window::GetTopLevelWindow() const
+{
+	return fToplevelWindow;
 }
 
 inline const Region& Window::InvalidRegion() const

@@ -164,7 +164,7 @@ void Canvas::EndPaint()
 	fWindow->fConnection->Flush();
 }
 
-void Canvas::AddChild(Canvas *child, const Rect &childRect)
+void Canvas::AddChild(Canvas *child, const Rect &childRect, window_flags flags)
 {
 	if (fWindow == 0)
 		return;
@@ -177,6 +177,7 @@ void Canvas::AddChild(Canvas *child, const Rect &childRect)
 	fWindow->fConnection->WriteInt32(childRect.right);
 	fWindow->fConnection->WriteInt32(childRect.bottom);
 	fWindow->fConnection->WriteInt32(fWindow->fEventPort);
+	fWindow->fConnection->WriteInt32(flags);
 	fWindow->fConnection->Flush();
 	child->fID = fWindow->fConnection->ReadInt32();
 	child->fWindow = fWindow;

@@ -52,7 +52,7 @@ void InputServer::PostEvent(const Event &event)
 {
 	sys_sem_acquire(mLock, 1);
 
-#if 1
+#if 0
 	printf("InputServer::PostEvent: what %d ", event.what);
 	switch(event.what) {
 		case EVT_KEY_DOWN:
