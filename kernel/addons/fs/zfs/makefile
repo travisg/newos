@@ -5,7 +5,10 @@ MY_TARGET :=  $(MY_TARGETDIR)/zfs
 ifeq ($(call FINDINLIST,$(MY_TARGET),$(ALL)),1)
 
 MY_OBJS := \
-	zfs.o
+	zfs.o \
+	zfs_dir.o \
+	zfs_file.o \
+	zfs_vnode.o
 
 MY_INCLUDES := -Iinclude
 MY_CFLAGS := $(KERNEL_CFLAGS)
