@@ -433,6 +433,7 @@ void makeboot(section *s, char *outfile)
     boot_dir bdir;
     int i,c;
     int nextpage = 0; /* page rel offset of next loaded object */
+	long outlen = 0;
 
     memset(fill,0,4096);
 
@@ -526,10 +527,14 @@ void makeboot(section *s, char *outfile)
 
     for(i=0;i<c;i++){
         write(fd, rawdata[i], rawsize[i]);
-        if(rawsize[i]%4096)
+		outlen += rawsize[i];
+        if(rawsize[i]%4096) {
             write(fd, fill, 4096 - (rawsize[i]%4096));
+			outlen += 4096 - (rawsize[i]%4096);
+		}
     }
     close(fd);
+	printf("wrote %ld bytes to output file %s\n", outlen, outfile);
 }
 
 int main(int argc, char **argv)
