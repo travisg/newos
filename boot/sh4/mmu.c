@@ -15,10 +15,10 @@ void mmu_map_page(unsigned int vaddr, unsigned int paddr)
 	struct ptent *pt;
 	int index;
 
-	dprintf("mmu_map_page: mapping 0x%x to 0x%x\r\n", paddr, vaddr);
+	dprintf("mmu_map_page: mapping 0x%x to 0x%x\n", paddr, vaddr);
 
 	if(vaddr < P1_AREA) {
-		dprintf("mmu_map_page: cannot map user space now!\r\n");
+		dprintf("mmu_map_page: cannot map user space now!\n");
 		for(;;);
 	}
 	
@@ -26,7 +26,7 @@ void mmu_map_page(unsigned int vaddr, unsigned int paddr)
 
 	index = vaddr >> 22;
 	if(pd[index].v == 0) {
-		dprintf("mmu_map_page: no page dir exists for this address\r\n");
+		dprintf("mmu_map_page: no page dir exists for this address\n");
 		for(;;);
 	}
 
@@ -49,7 +49,7 @@ void mmu_init(kernel_args *ka, unsigned int *next_paddr)
 	struct ptent *pt;
 	int index;
 
-	dprintf("mmu_init: entry\r\n");
+	dprintf("mmu_init: entry\n");
 
 	// allocate a kernel pgdir
 	ka->vcpu->kernel_pgdir = (unsigned int *)PHYS_ADDR_TO_P1(*next_paddr);
@@ -58,13 +58,13 @@ void mmu_init(kernel_args *ka, unsigned int *next_paddr)
 	pd = (struct pdent *)ka->vcpu->kernel_pgdir;
 	memset(pd, 0, sizeof(struct pdent) * 512);
 
-	dprintf("kernel_pgdir = 0x%x\r\n", ka->vcpu->kernel_pgdir);
+	dprintf("kernel_pgdir = 0x%x\n", ka->vcpu->kernel_pgdir);
 
 	// allocate an initial page table
 	pt = (struct ptent *)PHYS_ADDR_TO_P1(*next_paddr);
 	(*next_paddr) += PAGE_SIZE;		
 
-	dprintf("intial page table = 0x%x\r\n", pt);
+	dprintf("intial page table = 0x%x\n", pt);
 
 	index = (KERNEL_LOAD_ADDR & 0x7fffffff) >> 22;
 	pd[index].ppn = (unsigned int)pt >> 12;

@@ -20,8 +20,8 @@ void vcpu_dump_utlb_entry(int ent);
 
 static int default_vector(unsigned int ex_code, unsigned int pc, unsigned int trap)
 {
-	dprintf("default_vector: ex_code 0x%x, pc 0x%x, trap 0x%x\r\n", ex_code, pc, trap);
-	dprintf("spinning forever\r\n");
+	dprintf("default_vector: ex_code 0x%x, pc 0x%x, trap 0x%x\n", ex_code, pc, trap);
+	dprintf("spinning forever\n");
 	for(;;);
 	return 0;
 }
@@ -61,7 +61,7 @@ int vcpu_init(kernel_args *ka)
 	unsigned int sr;
 	unsigned int vbr;
 	
-	dprintf("vcpu_init: entry\r\n");
+	dprintf("vcpu_init: entry\n");
 
 	memset(&kernel_struct, 0, sizeof(kernel_struct));
 	for(i=0; i<256; i++) {
@@ -81,7 +81,7 @@ int vcpu_init(kernel_args *ka)
 
 	if((sr & 0x20000000) != 0) {
 		// we're using register bank 1 now
-		dprintf("using bank 1, switching register banks\r\n");
+		dprintf("using bank 1, switching register banks\n");
 		// this switches in the bottom 8 registers.
 		// dont have to do anything more, since the bottom 8 are
 		// not saved in the call.
@@ -109,12 +109,12 @@ static struct ptent *get_ptent(struct pdent *pd, unsigned int fault_address)
 	struct ptent *pt;
 
 #if CHATTY_TLB
-	dprintf("get_ptent: fault_address 0x%x\r\n", fault_address);
+	dprintf("get_ptent: fault_address 0x%x\n", fault_address);
 #endif
 
 	if((unsigned int)pd < P1_PHYS_MEM_START || (unsigned int)pd >= P1_PHYS_MEM_END) {
 #if CHATTY_TLB
-		dprintf("get_ptent: bad pdent 0x%x\r\n", pd);
+		dprintf("get_ptent: bad pdent 0x%x\n", pd);
 #endif
 		return 0;
 	}
@@ -125,7 +125,7 @@ static struct ptent *get_ptent(struct pdent *pd, unsigned int fault_address)
 		pt = 0;
 	}
 #if CHATTY_TLB
-	dprintf("get_ptent: found ptent 0x%x\r\n", pt);
+	dprintf("get_ptent: found ptent 0x%x\n", pt);
 #endif
 
 	return &pt[(fault_address >> 12) & 0x00000fff];
@@ -173,7 +173,7 @@ unsigned int tlb_miss(unsigned int excode, unsigned int pc)
 	unsigned int asid;
 
 #if CHATTY_TLB
-	dprintf("tlb_miss: excode 0x%x, pc 0x%x, fault_address 0x%x\r\n", excode, pc, fault_addr);
+	dprintf("tlb_miss: excode 0x%x, pc 0x%x, fault_address 0x%x\n", excode, pc, fault_addr);
 #endif
 	
 	if(fault_addr >= P1_AREA) {
@@ -192,7 +192,7 @@ unsigned int tlb_miss(unsigned int excode, unsigned int pc)
 	}	
 
 #if CHATTY_TLB
-	dprintf("found entry. vaddr 0x%x maps to paddr 0x%x\r\n",
+	dprintf("found entry. vaddr 0x%x maps to paddr 0x%x\n",
 		fault_addr, ent->ppn << 12);
 #endif
 
@@ -222,7 +222,7 @@ unsigned int tlb_initial_page_write(unsigned int excode, unsigned int pc)
 	unsigned int asid;
 
 #if CHATTY_TLB
-	dprintf("tlb_initial_page_write: excode 0x%x, pc 0x%x, fault_address 0x%x\r\n", 
+	dprintf("tlb_initial_page_write: excode 0x%x, pc 0x%x, fault_address 0x%x\n", 
 		excode, pc, fault_addr);
 #endif
 
@@ -241,7 +241,7 @@ unsigned int tlb_initial_page_write(unsigned int excode, unsigned int pc)
 		// if we're here, the page table is
 		// out of sync with the tlb cache. 
 		// time to die.
-		dprintf("tlb_ipw exception called but no page table ent exists!\r\n");
+		dprintf("tlb_ipw exception called but no page table ent exists!\n");
 		for(;;);
 	}	
 
@@ -254,8 +254,8 @@ unsigned int tlb_initial_page_write(unsigned int excode, unsigned int pc)
 
 		// inspect this tlb entry to make sure it's the right one
 		if(asid != a->asid || (ent->ppn << 2) != da1->ppn || ((fault_addr >> 12) << 2) != a->vpn) {
-			dprintf("tlb_ipw exception found that the page table out of sync with tlb\r\n");
-			dprintf("page_table entry: 0x%x\r\n", *(unsigned int *)ent);
+			dprintf("tlb_ipw exception found that the page table out of sync with tlb\n");
+			dprintf("page_table entry: 0x%x\n", *(unsigned int *)ent);
 			vcpu_dump_utlb_entry(ent->tlb_ent);
 			for(;;);
 		}
@@ -274,11 +274,11 @@ void vcpu_dump_itlb_entry(int ent)
 	*(int *)&data.da1 = *((int *)(ITLB1 | (ent << ITLB_ADDR_SHIFT)));
 	*(int *)&data.da2 = *((int *)(ITLB2 | (ent << ITLB_ADDR_SHIFT)));
 	
-	dprintf("itlb[%d] = \r\n", ent);
-	dprintf(" asid = %d\r\n", data.a.asid);
-	dprintf(" valid = %d\r\n", data.a.valid);
-	dprintf(" vpn = 0x%x\r\n", data.a.vpn << 10);
-	dprintf(" ppn = 0x%x\r\n", data.da1.ppn << 10);
+	dprintf("itlb[%d] = \n", ent);
+	dprintf(" asid = %d\n", data.a.asid);
+	dprintf(" valid = %d\n", data.a.valid);
+	dprintf(" vpn = 0x%x\n", data.a.vpn << 10);
+	dprintf(" ppn = 0x%x\n", data.da1.ppn << 10);
 }
 
 void vcpu_clear_all_itlb_entries()
@@ -308,12 +308,12 @@ void vcpu_dump_utlb_entry(int ent)
 	*(int *)&data.da1 = *((int *)(UTLB1 | (ent << UTLB_ADDR_SHIFT)));
 	*(int *)&data.da2 = *((int *)(UTLB2 | (ent << UTLB_ADDR_SHIFT)));
 	
-	dprintf("utlb[%d] = \r\n", ent);
-	dprintf(" asid = %d\r\n", data.a.asid);
-	dprintf(" valid = %d\r\n", data.a.valid);
-	dprintf(" dirty = %d\r\n", data.a.dirty);
-	dprintf(" vpn = 0x%x\r\n", data.a.vpn << 10);
-	dprintf(" ppn = 0x%x\r\n", data.da1.ppn << 10);
+	dprintf("utlb[%d] = \n", ent);
+	dprintf(" asid = %d\n", data.a.asid);
+	dprintf(" valid = %d\n", data.a.valid);
+	dprintf(" dirty = %d\n", data.a.dirty);
+	dprintf(" vpn = 0x%x\n", data.a.vpn << 10);
+	dprintf(" ppn = 0x%x\n", data.da1.ppn << 10);
 }
 
 void vcpu_clear_all_utlb_entries()

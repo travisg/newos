@@ -27,7 +27,7 @@ int _start()
 
 	serial_init();
 
-	serial_puts("Stage 2 loader entry\r\n");
+	serial_puts("Stage 2 loader entry\n");
 
 	// look at the bootdir
 	bootdir_len = 0;
@@ -37,7 +37,7 @@ int _start()
 		bootdir_len += bootdir[i].be_size;
 	}
 
-	dprintf("bootdir is %d pages long\r\n", bootdir_len);
+	dprintf("bootdir is %d pages long\n", bootdir_len);
 	next_paddr = PHYS_ADDR_START + bootdir_len * PAGE_SIZE;	
 
 	// find a location for the kernel args
@@ -51,7 +51,7 @@ int _start()
 
 	// map the kernel text & data
 	kernel_size = bootdir[2].be_size;
-	dprintf("kernel is %d pages long\r\n", kernel_size);
+	dprintf("kernel is %d pages long\n", kernel_size);
 	next_vaddr = KERNEL_LOAD_ADDR;
 
 	for(i=0; i<kernel_size; i++) {
@@ -60,9 +60,9 @@ int _start()
 		next_vaddr += PAGE_SIZE;
 	}
 
-	dprintf("diffing the mapped memory\r\n");
-	dprintf("memcmp = %d\r\n", memcmp((void *)KERNEL_LOAD_ADDR, (void *)BOOTDIR + bootdir[2].be_offset * PAGE_SIZE, PAGE_SIZE)); 
-	dprintf("done diffing the memory\r\n");
+	dprintf("diffing the mapped memory\n");
+	dprintf("memcmp = %d\n", memcmp((void *)KERNEL_LOAD_ADDR, (void *)BOOTDIR + bootdir[2].be_offset * PAGE_SIZE, PAGE_SIZE)); 
+	dprintf("done diffing the memory\n");
 
 	// map in kernel bss
 	// XXX assume it's 64k
@@ -101,19 +101,19 @@ int _start()
 	ka->num_cpus = 0;
 
 	for(i=0; i<MAX_PHYS_ALLOC_ADDR_RANGE; i++) {
-		dprintf("prange %d start = 0x%x, size = 0x%x\r\n",
+		dprintf("prange %d start = 0x%x, size = 0x%x\n",
 			i, ka->phys_alloc_range[i].start, ka->phys_alloc_range[i].size);
 	}
 		
 	for(i=0; i<MAX_VIRT_ALLOC_ADDR_RANGE; i++) {
-		dprintf("vrange %d start = 0x%x, size = 0x%x\r\n",
+		dprintf("vrange %d start = 0x%x, size = 0x%x\n",
 			i, ka->virt_alloc_range[i].start, ka->virt_alloc_range[i].size);
 	}
 		
 	// force an intital page write tlb
 	*(int *)KERNEL_LOAD_ADDR = 4;
 
-	dprintf("switching stack to 0x%x and calling 0x%x\r\n", 
+	dprintf("switching stack to 0x%x and calling 0x%x\n", 
 		ka->cpu_kstack[0].start + ka->cpu_kstack[0].size - 4, KERNEL_LOAD_ADDR + 0xa0);
 	switch_stacks_and_call(ka->cpu_kstack[0].start + ka->cpu_kstack[0].size - 4, KERNEL_LOAD_ADDR + 0xa0, (unsigned int)ka, 0);
 	return 0;
