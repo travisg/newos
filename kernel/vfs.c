@@ -22,8 +22,10 @@ struct vnode {
 
 struct file_descriptor {
 	struct vnode *vnode;
+	int cookie_type;
 	void *cookie;
 	off_t pos;
+	int ref_count;
 };
 
 struct ioctx {
@@ -140,6 +142,60 @@ static int inc_vnode_ref_count(struct vnode *v, bool locked)
 	return 0;	
 }
 
+static int dec_fd_ref_count(struct ioctx *ioctx, int fd, bool locked)
+{
+	void *cookie = NULL;
+	struct vnode *v = NULL;
+	int cookie_type = -1;
+	int err = 0;
+
+	if(!locked)
+		sem_acquire(ioctx->io_sem, 1);
+
+	ioctx->fds[fd].ref_count--;
+	if(ioctx->fds[fd].ref_count == 0) {
+		cookie = ioctx->fds[fd].cookie;
+		cookie_type = ioctx->fds[fd].cookie_type;
+		v = ioctx->fds[fd].vnode;
+	
+		ioctx->fds[fd].vnode = NULL;
+		ioctx->fds[fd].cookie = NULL;
+	}
+
+	if(!locked)
+		sem_release(ioctx->io_sem, 1);
+		
+	if(cookie != NULL) {
+		// we need to free it
+		switch(cookie_type) {
+			case FILE_TYPE_DIR:
+				err = v->mount->fs->calls->fs_closedir(v->mount->cookie, v);
+				v->mount->fs->calls->fs_freedircookie(v->mount->cookie, cookie);
+				dec_vnode_ref_count(v, false, true);
+				break;
+			case FILE_TYPE_FILE:
+				// XXX finish here
+//				v->mount->fs->calls->fs_freecookie(v->mount->cookie, cookie);
+				break;
+			default:
+				dprintf("dec_fd_ref_count: unknown cookie type!\n"); 
+		}
+	}
+	return err;
+}
+
+static int inc_fd_ref_count(struct ioctx *ioctx, int fd, bool locked)
+{
+	if(!locked)
+		sem_acquire(ioctx->io_sem, 1);
+		
+	ioctx->fds[fd].ref_count++;		
+	
+	if(!locked)
+		sem_release(ioctx->io_sem, 1);
+	return 0;	
+}
+
 static struct fs_container *find_fs(const char *fs_name)
 {
 	struct fs_container *fs = fs_list;
@@ -237,14 +293,26 @@ int vfs_init(kernel_args *ka)
 int vfs_test()
 {
 	int fd;
+	int err;
 	
-	fd = vfs_opendir("/", NULL);
+	fd = vfs_opendir(NULL, "/");
+	dprintf("fd = %d\n", fd);
+	vfs_closedir(fd);
+
+	fd = vfs_opendir(NULL, "/");
 	dprintf("fd = %d\n", fd);
 
-	fd = vfs_opendir("/", NULL);
+	vfs_mkdir(NULL, "/boot");
+	vfs_mkdir(NULL, "/boot");
+
+	err = vfs_mount("/boot", "rootfs");
+	if(err < 0)
+		panic("failed mount test\n");
+
+	fd = vfs_opendir(NULL, "/boot");
 	dprintf("fd = %d\n", fd);
-
-
+	vfs_closedir(fd);
+	
 	return 0;
 }
 
@@ -336,30 +404,32 @@ int vfs_mount(const char *path, const char *fs_name)
 		if(err < 0)
 			goto err1;
 		
-		err = mount->fs->calls->fs_mount(&mount->cookie, 0, mount->id, &mount->root_vnode.priv_vnode);
+		err = mount->fs->calls->fs_mount(&mount->cookie, 0, NULL, mount->id, &mount->root_vnode.priv_vnode);
 		if(err < 0)
 			goto err1;
-		
-		dprintf("priv_vnode = 0x%x, root_vnode = 0x%x\n", mount->root_vnode.priv_vnode, &mount->root_vnode);
-			
-		root_vnode = &mount->root_vnode;
 	} else {
 		int fd;
 		struct ioctx *ioctx;
 		
-		fd = vfs_opendir(path, NULL);
+		fd = vfs_opendir(NULL, path);
 		if(fd < 0) {
 			err = fd;
 			goto err1;
 		}
-		
 		// get the vnode this mount will cover
 		ioctx = get_current_ioctx();
 		covered_vnode = ioctx->fds[fd].vnode;
 		inc_vnode_ref_count(covered_vnode, false);
 		
-		// XXX vfs_closedir(fd);
+		vfs_closedir(fd);
+
+		// mount it
+		err = mount->fs->calls->fs_mount(&mount->cookie, 0, covered_vnode, mount->id, &mount->root_vnode.priv_vnode);
+		if(err < 0)
+			goto err1;		
 	}
+
+	root_vnode = &mount->root_vnode;
 	
 	mount->root_vnode.id = next_vnode_id++;
 	mount->root_vnode.ref_count++;
@@ -383,6 +453,7 @@ int vfs_mount(const char *path, const char *fs_name)
 	}
 
 	sem_release(vfs_mount_sem, 1);
+
 	return 0;
 
 err1:
@@ -436,7 +507,17 @@ err:
 	return err;
 }
 
-int vfs_opendir(const char *path, void *_base_vnode)
+int vfs_opendir_loopback(void *_base_vnode, const char *path, void **vnode, void **dircookie)
+{
+	struct vnode *base_vnode = _base_vnode;
+	
+#if MAKE_NOIZE	
+	dprintf("vfs_opendir_loopback: entry. path = '%s', base_vnode 0x%x\n", path, base_vnode);
+#endif	
+	return base_vnode->mount->fs->calls->fs_opendir(base_vnode->mount->cookie, base_vnode->priv_vnode, path, vnode, dircookie);
+}
+
+int vfs_opendir(void *_base_vnode, const char *path)
 {
 	int fd;
 	struct ioctx *ioctx;
@@ -463,7 +544,7 @@ int vfs_opendir(const char *path, void *_base_vnode)
 	err = base_vnode->mount->fs->calls->fs_opendir(base_vnode->mount->cookie, base_vnode->priv_vnode, path, &v, &cookie);	
 	if(err < 0)
 		goto err;
-
+	
 	sem_acquire(vfs_vnode_sem, 1);
 
 	new_vnode = hash_lookup(vnode_table, v);
@@ -495,6 +576,9 @@ int vfs_opendir(const char *path, void *_base_vnode)
 
 	ioctx->fds[fd].vnode = new_vnode;
 	ioctx->fds[fd].cookie = cookie;
+	ioctx->fds[fd].cookie_type = FILE_TYPE_DIR;
+	ioctx->fds[fd].ref_count = 0;
+	inc_fd_ref_count(ioctx, fd, true);
 
 	sem_release(ioctx->io_sem, 1);
 
@@ -505,6 +589,42 @@ err2:
 err1:
 	// XXX insert fs_closedir here
 err:		
+	return err;
+}
+
+int vfs_closedir(int fd)
+{
+	struct ioctx *ioctx;
+
+	ioctx = get_current_ioctx();
+#if MAKE_NOIZE
+	dprintf("vfs_closedir: fd = %d, ioctx = 0x%x\n", fd, ioctx);
+#endif
+	return dec_fd_ref_count(ioctx, fd, false);
+}
+
+int vfs_mkdir(void *_base_vnode, const char *path)
+{
+	struct vnode *base_vnode = _base_vnode;
+	int err;
+
+	if(base_vnode == NULL) {
+		struct ioctx *ioctx;
+			
+		ioctx = get_current_ioctx();
+		sem_acquire(ioctx->io_sem, 1);
+	
+		base_vnode = ioctx->cwd;
+	
+		sem_release(ioctx->io_sem, 1);
+	}
+
+	inc_vnode_ref_count(base_vnode, false);
+	
+	err = base_vnode->mount->fs->calls->fs_mkdir(base_vnode->mount->cookie, base_vnode->priv_vnode, path);	
+
+	dec_vnode_ref_count(base_vnode, false, true);
+
 	return err;
 }
 

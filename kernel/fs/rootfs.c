@@ -26,6 +26,7 @@ struct rootfs {
 	fs_id id;
 	sem_id sem;
 	int next_vnode_id;
+	void *covered_vnode;
 	void *vnode_list_hash;
 	struct rootfs_vnode *root_vnode;
 };
@@ -84,14 +85,27 @@ static struct rootfs_vnode *rootfs_find_in_dir(struct rootfs_vnode *dir, const c
 
 	v = dir->dir_head;
 	while(v != NULL) {
+//		dprintf("rootfs_find_in_dir: looking at entry '%s'\n", v->name);
 		if(strncmp(v->name, &path[start], end - start) == 0) {
+//			dprintf("rootfs_find_in_dir: found it at 0x%x\n", v);
 			return v;
 		}
+		v = v->dir_next;
 	}
 	return NULL;
 }
 
-static struct rootfs_vnode *rootfs_get_vnode_from_path(struct rootfs *fs, struct rootfs_vnode *base, const char *path, int *start, bool *redir)
+static int rootfs_insert_in_dir(struct rootfs_vnode *dir, struct rootfs_vnode *v)
+{
+	v->dir_next = dir->dir_head;
+	dir->dir_head = v;
+	return 0;
+}
+
+// get the vnode this path represents, or sets the redir boolean to true if it hits a registered mountpoint
+// and returns the vnode containing the mountpoint
+static struct rootfs_vnode *
+rootfs_get_vnode_from_path(struct rootfs *fs, struct rootfs_vnode *base, const char *path, int *start, bool *redir)
 {
 	int end = 0;
 	struct rootfs_vnode *cur_vnode;
@@ -122,10 +136,51 @@ static struct rootfs_vnode *rootfs_get_vnode_from_path(struct rootfs *fs, struct
 		*start = end;
 	}
 
-	return NULL;
+	if(cur_vnode->redir_vnode != NULL)
+		*redir = true;
+	return cur_vnode;
 }
 
-int rootfs_mount(void **fs_cookie, void *flags, fs_id id, void **root_vnode)
+// get the vnode that would hold the last path entry. Same as above, but returns one path entry from the end
+static struct rootfs_vnode *
+rootfs_get_container_vnode_from_path(struct rootfs *fs, struct rootfs_vnode *base, const char *path, int *start, bool *redir)
+{
+	int last_start = 0;
+	int end = 0;
+	struct rootfs_vnode *cur_vnode;
+	struct rootfs_vnode *last_vnode = NULL;
+	
+	TOUCH(fs);
+	
+	*redir = false;
+
+	cur_vnode = base;
+	while(vfs_helper_getnext_in_path(path, start, &end) > 0) {
+		last_start = *start;
+
+		if(last_vnode != NULL && last_vnode->redir_vnode != NULL) {
+			// we are at a mountpoint, redirect here
+			*redir = true;
+			return last_vnode;
+		}	
+	
+		if(*start == end) {
+			// zero length path component, assume this means '.'
+			return last_vnode;
+		}
+		
+		last_vnode = cur_vnode;
+		if(cur_vnode == NULL || cur_vnode->type != FILE_TYPE_DIR)
+			return NULL;
+		cur_vnode = rootfs_find_in_dir(cur_vnode, path, *start, end);
+		*start = end;
+	}
+
+	*start = last_start;
+	return last_vnode;
+}
+
+int rootfs_mount(void **fs_cookie, void *flags, void *covered_vnode, fs_id id, void **root_vnode)
 {
 	struct rootfs *fs;
 	struct rootfs_vnode *v;
@@ -144,6 +199,7 @@ int rootfs_mount(void **fs_cookie, void *flags, fs_id id, void **root_vnode)
 		goto err;
 	}
 	
+	fs->covered_vnode = covered_vnode;
 	fs->id = id;
 	fs->next_vnode_id = 0;
 
@@ -213,7 +269,6 @@ int rootfs_unmount(void *_fs)
 	hash_close(fs->vnode_list_hash, hash_iterator);
 	
 	hash_uninit(fs->vnode_list_hash);
-	dprintf("rootfs_unmount: deleting sem 0x%x\n", fs->sem);
 	sem_delete(fs->sem);
 	kfree(fs);
 	
@@ -225,6 +280,8 @@ int rootfs_register_mountpoint(void *_fs, void *_v, void *redir_vnode)
 	struct rootfs_vnode *v = _v;
 	TOUCH(_fs);
 	
+	dprintf("rootfs_register_mountpoint: vnode 0x%x covered by 0x%x\n", v, redir_vnode);
+	
 	v->redir_vnode = redir_vnode;
 	
 	return 0;
@@ -235,6 +292,8 @@ int rootfs_unregister_mountpoint(void *_fs, void *_v)
 	struct rootfs_vnode *v = _v;
 	TOUCH(_fs);
 	
+	dprintf("rootfs_unregister_mountpoint: removing coverage at vnode 0x%x\n", v);
+
 	v->redir_vnode = NULL;
 	
 	return 0;
@@ -265,7 +324,7 @@ int rootfs_opendir(void *_fs, void *_base_vnode, const char *path, void **_vnode
 	struct rootfs_dircookie *cookie;
 	int err = 0;
 	bool redir;
-	int start;
+	int start = 0;
 
 	dprintf("rootfs_opendir: path '%s', base_vnode 0x%x\n", path, base);
 
@@ -279,7 +338,7 @@ int rootfs_opendir(void *_fs, void *_base_vnode, const char *path, void **_vnode
 	if(redir == true) {
 		// loop back into the vfs because the parse hit a mount point
 		sem_release(fs->sem, 1);
-		return vfs_opendir(&path[start], v);
+		return vfs_opendir_loopback(v->redir_vnode, &path[start], _vnode, _dircookie);
 	}
 	
 	cookie = kmalloc(sizeof(struct rootfs_dircookie));
@@ -314,6 +373,78 @@ int rootfs_rewinddir(void *_fs, void *_dir_vnode, void *_dircookie)
 	return 0;
 }
 
+int rootfs_closedir(void *_fs, void *_dir_vnode)
+{
+	TOUCH(_fs);
+
+	dprintf("rootfs_closedir: entry vnode 0x%x\n", _dir_vnode);
+
+	return 0;
+}
+
+int rootfs_freedircookie(void *_fs, void *_dircookie)
+{
+	struct rootfs_dircookie *cookie = _dircookie;
+	TOUCH(_fs);
+	
+	dprintf("rootfs_freedircookie: entry dircookie 0x%x\n", cookie);
+
+	kfree(cookie);
+	
+	return 0;
+}
+
+int rootfs_mkdir(void *_fs, void *_base_vnode, const char *path)
+{
+	struct rootfs *fs = _fs;
+	struct rootfs_vnode *base = _base_vnode;
+	struct rootfs_vnode *dir;
+	struct rootfs_vnode *new_vnode;
+	bool redir;
+	int start = 0;
+	int err;
+	
+	dprintf("rootfs_mkdir: base 0x%x, path = '%s'\n", base, path);
+	
+	sem_acquire(fs->sem, 1);
+	
+	dir = rootfs_get_container_vnode_from_path(fs, base, path, &start, &redir);
+	if(dir == NULL) {
+		err = -1;
+		goto err;
+	}
+	if(redir == true) {
+		sem_release(fs->sem, 1);
+		// XXXinsert vfs_mkdir here
+	}
+	
+	if(rootfs_find_in_dir(dir, path, start, strlen(path) - 1) == NULL) {
+		new_vnode = rootfs_create_vnode(fs);
+		if(new_vnode == NULL) {
+			err = -1;
+			goto err;
+		}
+		new_vnode->name = kmalloc(strlen(&path[start]) + 1);
+		if(new_vnode->name == NULL) {
+			err = -1;
+			goto err1;
+		}
+		strcpy(new_vnode->name, &path[start]);
+		new_vnode->type = FILE_TYPE_DIR;
+		new_vnode->parent = dir;
+		rootfs_insert_in_dir(dir, new_vnode);
+	}
+	sem_release(fs->sem, 1);
+	return 0;
+
+err1:
+	rootfs_delete_vnode(fs, new_vnode, false);
+err:
+	sem_release(fs->sem, 1);
+
+	return err;
+}
+
 struct fs_calls rootfs_calls = {
 	&rootfs_mount,
 	&rootfs_unmount,
@@ -322,6 +453,9 @@ struct fs_calls rootfs_calls = {
 	&rootfs_dispose_vnode,
 	&rootfs_opendir,
 	&rootfs_rewinddir,
+	&rootfs_closedir,
+	&rootfs_freedircookie,
+	&rootfs_mkdir,
 };
 
 // XXX
