@@ -85,7 +85,7 @@ endif
 floppy: floppy1
 
 ifeq ($(ARCH),i386)
-floppy1: $(KERNEL) $(STAGE2) tools
+floppy1: $(KERNEL) $(STAGE2) $(APPS) tools
 	$(BOOTMAKER) boot/config.ini --floppy -o $(FINAL)
 	ln -sf $(FINAL) final
 	ln -sf $(KERNEL) system
