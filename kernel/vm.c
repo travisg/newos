@@ -1,4 +1,5 @@
 #include <string.h>
+#include <ctype.h>
 #include <printf.h>
 #include <kernel.h>
 #include <vm.h>
@@ -264,6 +265,81 @@ int vm_map_physical_memory(struct aspace *aspace, char *name, void **addr, int a
 	return _vm_create_area(aspace, name, addr, addr_type, size, lock, phys_addr, SRC_ADDR_PHYSICAL);
 }
 
+static void display_mem(int argc, char **argv)
+{
+	int item_size;
+	int display_width;
+	int num = 1;
+	addr address;
+	int i;
+	int j;
+	
+	if(argc < 2) {
+		dprintf("not enough arguments\n");
+		return;
+	}
+	
+	address = atoul(argv[1]);
+	
+	if(argc >= 3) {
+		num = -1;
+		num = atoi(argv[2]);
+	}
+
+	// build the format string
+	if(strcmp(argv[0], "db") == 0) {
+		item_size = 1;
+		display_width = 16;
+	} else if(strcmp(argv[0], "ds") == 0) {
+		item_size = 2;
+		display_width = 8;
+	} else if(strcmp(argv[0], "dw") == 0) {
+		item_size = 4;
+		display_width = 4;
+	} else {
+		dprintf("display_mem called in an invalid way!\n");
+		return;
+	}
+
+	dprintf("[0x%x] '", address);
+	for(j=0; j<min(display_width, num) * item_size; j++) {
+		char c = *((char *)address + j);
+		if(!isalnum(c)) {
+			c = '.';
+		}
+		dprintf("%c", c);
+	}
+	dprintf("'");
+	for(i=0; i<num; i++) {	
+		if((i % display_width) == 0 && i != 0) {
+			dprintf("\n[0x%x] '", address + i * item_size);
+			for(j=0; j<min(display_width, (num-i)) * item_size; j++) {
+				char c = *((char *)address + i * item_size + j);
+				if(!isalnum(c)) {
+					c = '.';
+				}
+				dprintf("%c", c);
+			}
+			dprintf("'");
+		}
+		
+		switch(item_size) {
+			case 1:
+				dprintf(" 0x%02x", *((uint8 *)address + i));
+				break;
+			case 2:
+				dprintf(" 0x%04x", *((uint16 *)address + i));
+				break;
+			case 4:
+				dprintf(" 0x%08x", *((uint32 *)address + i));
+				break;
+			default:
+				dprintf("huh?\n");
+		}
+	}
+	dprintf("\n");
+}
+
 static void vm_dump_kspace_areas(int argc, char **argv)
 {
 	TOUCH(argc);TOUCH(argv);
@@ -384,6 +460,10 @@ int vm_init(kernel_args *ka)
 	// add some debugger commands
 	dbg_add_command(&vm_dump_kspace_areas, "area_dump_kspace", "Dump kernel space areas");
 	dbg_add_command(&dump_free_page_table, "free_pages", "Dump free page table list");	
+//	dbg_add_command(&display_mem, "dl", "dump memory long words (64-bit)");
+	dbg_add_command(&display_mem, "dw", "dump memory words (32-bit)");
+	dbg_add_command(&display_mem, "ds", "dump memory shorts (16-bit)");
+	dbg_add_command(&display_mem, "db", "dump memory bytes (8-bit)");
 
 	dprintf("vm_init: exit\n");
 

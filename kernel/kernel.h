@@ -7,7 +7,8 @@
 
 #define KSTACK_SIZE (PAGE_SIZE*2)
 
-#define min(a, b) ((a) > (b) ? (a) : (b))
+#define min(a, b) ((a) < (b) ? (a) : (b))
+#define max(a, b) ((a) > (b) ? (a) : (b))
 
 #define CHECK_BIT(a, b) ((a) & (1 << (b)))
 #define SET_BIT(a, b) ((a) | (1 << (b)))
