@@ -8,7 +8,6 @@
 #include <libc/arch/string.h>
 
 #if !_ASM_MEMCPY
-#error foo
 
 void *memcpy(void *dest, const void *src, size_t count)
 {

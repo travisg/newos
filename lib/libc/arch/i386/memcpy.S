@@ -10,11 +10,20 @@
 memcpy:
 	pushl	%esi
 	pushl	%edi
-	movl	12(%esp),%edi	/* source */
-	movl	16(%esp),%esi	/* dest */
+	movl	12(%esp),%edi	/* dest */
+	movl	%edi,%eax	/* save dest ptr as return address */
+	movl	16(%esp),%esi	/* source */
 	movl	20(%esp),%ecx	/* count */
-	movl	16(%esp),%eax	/* retval */
 	
+	/* move by words */
+	cld
+	shrl	$2,%ecx
+	rep
+	movsl
+
+	/* move any remaining data by bytes */
+	movl	20(%esp),%ecx
+	andl	$3,%ecx
 	rep
 	movsb
 	
