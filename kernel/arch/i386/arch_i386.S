@@ -102,10 +102,25 @@ FUNCTION(arch_cpu_global_TLB_invalidate):
 	movl	%eax,%cr3
 	ret
 
+/* void i386_fsave_swap(void *old_fpu_state, void *new_fpu_state); */
+FUNCTION(i386_fsave_swap):
+	movl	4(%esp),%eax
+	fsave	(%eax)
+	movl	8(%esp),%eax
+	frstor	(%eax)
+	ret
+
+/* void i386_fxsave_swap(void *old_fpu_state, void *new_fpu_state); */
+FUNCTION(i386_fxsave_swap):
+	movl	4(%esp),%eax
+	fxsave	(%eax)
+	movl	8(%esp),%eax
+	fxrstor	(%eax)
+	ret
+
 /* void i386_context_switch(unsigned int **old_esp, unsigned int *new_esp, addr new_pgdir); */
 FUNCTION(i386_context_switch):
-//	pushfl
-	pusha
+	pusha					/* pushes 8 words onto the stack */
 	movl	36(%esp),%eax
 	movl	%esp,(%eax)
 	movl	44(%esp),%eax	/* get possible new pgdir */
@@ -116,7 +131,6 @@ skip_pgdir_swap:
 	movl	40(%esp),%eax
 	movl	%eax,%esp
 	popa
-//	popfl
 	ret
 
 /* void i386_swap_pgdir(addr new_pgdir); */

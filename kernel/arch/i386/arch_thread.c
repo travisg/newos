@@ -9,7 +9,6 @@
 #include <kernel/heap.h>
 #include <kernel/thread.h>
 #include <kernel/arch/thread.h>
-#include <kernel/arch/cpu.h>
 #include <kernel/int.h>
 #include <nulibc/string.h>
 
@@ -21,6 +20,9 @@ int arch_proc_init_proc_struct(struct proc *p, bool kernel)
 int arch_thread_init_thread_struct(struct thread *t)
 {
 	t->arch_info.esp = NULL;
+
+	// set up an initial fpu state
+	memset(&t->arch_info.fpu_state[0], 0, sizeof(t->arch_info.fpu_state));
 
 	return 0;
 }
@@ -88,6 +90,12 @@ void arch_thread_context_switch(struct thread *t_from, struct thread *t_to)
 #endif
 	i386_set_kstack(t_to->kernel_stack_base + KSTACK_SIZE);
 
+#if 0
+{
+	int a = *(int *)(t_to->kernel_stack_base + KSTACK_SIZE - 4);
+}
+#endif
+
 	if(t_from->proc->aspace_id >= 0 && t_to->proc->aspace_id >= 0) {
 		// they are both uspace threads
 		if(t_from->proc->aspace_id == t_to->proc->aspace_id) {
@@ -110,6 +118,16 @@ void arch_thread_context_switch(struct thread *t_from, struct thread *t_to)
 	dprintf("new_pgdir is 0x%x\n", new_pgdir);
 #endif
 
+#if 0
+{
+	int a = *(int *)(t_to->arch_info.esp - 4);
+}
+#endif
+
+	if((new_pgdir % PAGE_SIZE) != 0)
+		panic("arch_thread_context_switch: bad pgdir 0x%x\n", new_pgdir);
+
+	i386_fsave_swap(t_from->arch_info.fpu_state, t_to->arch_info.fpu_state);
 	i386_context_switch(&t_from->arch_info.esp, t_to->arch_info.esp, new_pgdir);
 }
 
@@ -118,6 +136,7 @@ void arch_thread_dump_info(void *info)
 	struct arch_thread *at = (struct arch_thread *)info;
 
 	dprintf("\tesp: %p\n", at->esp);
+	dprintf("\tfpu_state at %p\n", at->fpu_state);
 }
 
 void arch_thread_enter_uspace(addr entry, void *args, addr ustack_top)
@@ -125,9 +144,13 @@ void arch_thread_enter_uspace(addr entry, void *args, addr ustack_top)
 	dprintf("arch_thread_entry_uspace: entry 0x%lx, args %p, ustack_top 0x%lx\n",
 		entry, args, ustack_top);
 
+	// make sure the fpu is in a good state
+	asm("fninit");
+
 	int_disable_interrupts();
 
 	i386_set_kstack(thread_get_current_thread()->kernel_stack_base + KSTACK_SIZE);
 
 	i386_enter_uspace(entry, args, ustack_top - 4);
 }
+

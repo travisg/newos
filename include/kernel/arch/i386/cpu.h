@@ -88,6 +88,8 @@ void i386_enter_uspace(addr entry, void *args, addr ustack_top);
 void i386_set_kstack(addr kstack);
 void i386_switch_stack_and_call(addr stack, void (*func)(void *), void *arg);
 void i386_swap_pgdir(addr new_pgdir);
+void i386_fsave_swap(void *old_fpu_state, void *new_fpu_state);
+void i386_fxsave_swap(void *old_fpu_state, void *new_fpu_state);
 
 #define read_dr3(value) \
 	__asm__("movl	%%dr3,%0" : "=r" (value))

@@ -24,6 +24,30 @@ static int test_thread(void *args)
 	return 0;
 }
 
+static int dummy_thread(void *args)
+{
+	return 1;
+}
+
+static int cpu_eater_thread(void *args)
+{
+	for(;;)
+		;
+}
+
+static int fpu_cruncher_thread(void *args)
+{
+	double y = *(double *)args;
+	double z;
+
+	for(;;) {
+		z = y * 1.47;
+		y = z / 1.47;
+		if(y != *(double *)args)
+			printf("error: y %f\n", y);
+	}
+}
+
 int main(int argc, char **argv)
 {
 	int fd;
@@ -250,7 +274,7 @@ int main(int argc, char **argv)
 			}
 		}
 
-		printf("opened %d files\n", i);		
+		printf("opened %d files\n", i);
 
 		rl.rlim_cur += 15;
 
@@ -278,6 +302,103 @@ int main(int argc, char **argv)
 		}
 
 		printf("opened a total of %d files\n", i);
+	}
+#endif
+#if 0
+	{
+		region_id rid;
+		void *ptr;
+
+		rid = sys_vm_map_file("netblock", &ptr, REGION_ADDR_ANY_ADDRESS, 16*1024, LOCK_RW,
+			REGION_NO_PRIVATE_MAP, "/dev/disk/netblock/0/raw", 0);
+		if(rid < 0) {
+			printf("error mmaping device\n");
+			return -1;
+		}
+
+		// play around with it
+		printf("mmaped device at %p\n", ptr);
+		printf("%d\n", *(int *)ptr);
+		printf("%d\n", *((int *)ptr + 1));
+		printf("%d\n", *((int *)ptr + 2));
+		printf("%d\n", *((int *)ptr + 3));
+	}
+#endif
+#if 0
+	{
+		int i;
+
+//		printf("spawning %d copies of true\n", 10000);
+
+		for(i=0; ; i++) {
+			proc_id id;
+			bigtime_t t;
+
+			printf("%d...", i);
+
+			t = sys_system_time();
+
+			id = sys_proc_create_proc("/boot/bin/true", "true", NULL, 0, 20);
+			if(id <= 0x2) {
+				printf("new proc returned 0x%x!\n", id);
+				return -1;
+			}
+			sys_proc_wait_on_proc(id, NULL);
+
+			printf("done (%Ld usecs)\n", sys_system_time() - t);
+		}
+	}
+#endif
+#if 0
+	{
+		int i;
+
+		printf("spawning two cpu eaters\n");
+
+//		sys_thread_resume_thread(sys_thread_create_thread("cpu eater 1", &cpu_eater_thread, 0));
+//		sys_thread_resume_thread(sys_thread_create_thread("cpu eater 2", &cpu_eater_thread, 0));
+
+		printf("spawning %d threads\n", 10000);
+
+		for(i=0; i<10000; i++) {
+			thread_id id;
+			bigtime_t t;
+
+			printf("%d...", i);
+
+			t = sys_system_time();
+
+			id = sys_thread_create_thread("testthread", &dummy_thread, 0);
+			sys_thread_resume_thread(id);
+			sys_thread_wait_on_thread(id, NULL);
+
+			printf("done (%Ld usecs)\n", sys_system_time() - t);
+		}
+	}
+#endif
+#if 1
+	{
+		thread_id id;
+		static double f[5] = { 2.43, 5.23, 342.34, 234123.2, 1.4 };
+
+		printf("spawning a few floating point crunchers\n");
+
+		id = sys_thread_create_thread("fpu thread0", &fpu_cruncher_thread, &f[0]);
+		sys_thread_resume_thread(id);
+
+		id = sys_thread_create_thread("fpu thread1", &fpu_cruncher_thread, &f[1]);
+		sys_thread_resume_thread(id);
+
+		id = sys_thread_create_thread("fpu thread2", &fpu_cruncher_thread, &f[2]);
+		sys_thread_resume_thread(id);
+
+		id = sys_thread_create_thread("fpu thread3", &fpu_cruncher_thread, &f[3]);
+		sys_thread_resume_thread(id);
+
+		id = sys_thread_create_thread("fpu thread4", &fpu_cruncher_thread, &f[4]);
+		sys_thread_resume_thread(id);
+
+		getc();
 	}
 #endif
 

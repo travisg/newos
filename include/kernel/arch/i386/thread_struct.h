@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -8,6 +8,8 @@
 // architecture specific thread info
 struct arch_thread {
 	unsigned int *esp;
+	// 512 byte floating point save point
+	uint8 fpu_state[512];
 };
 
 struct arch_proc {
