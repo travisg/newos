@@ -10,6 +10,7 @@
 #include <kernel/thread.h>
 #include <kernel/sem.h>
 #include <kernel/port.h>
+#include <kernel/vm.h>
 #include <kernel/cpu.h>
 #include <kernel/arch/cpu.h>
 #include <sys/resource.h>

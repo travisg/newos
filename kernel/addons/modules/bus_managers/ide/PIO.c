@@ -4,6 +4,10 @@
 */
 
 
+
+#include <kernel/kernel.h>
+#include <kernel/vm.h>
+
 #include "ide_internal.h"
 #include "PIO.h"
 

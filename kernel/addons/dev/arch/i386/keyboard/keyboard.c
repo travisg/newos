@@ -8,10 +8,11 @@
 #include <kernel/int.h>
 #include <kernel/sem.h>
 #include <kernel/module.h>
-#include <string.h>
 #include <kernel/lock.h>
+#include <kernel/vm.h>
 #include <kernel/fs/devfs.h>
 #include <kernel/arch/cpu.h>
+#include <string.h>
 #include <newos/errors.h>
 
 #include <newos/key_event.h>

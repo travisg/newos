@@ -17,6 +17,7 @@ typedef enum {
 struct timer_event {
 	struct timer_event *next;
 	timer_mode mode;
+	int scheduled_cpu;
 	bigtime_t sched_time;
 	bigtime_t periodic_time;
 	timer_callback func;

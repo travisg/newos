@@ -5,13 +5,16 @@
 
 
 #include <kernel/kernel.h>
-#include <kernel/generic/locked_pool.h>
+#include <kernel/ktypes.h>
 
 #include <kernel/lock.h>
 #include <kernel/sem.h>
+#include <kernel/vm.h>
 #include <kernel/heap.h>
-#include <string.h>
 #include <kernel/module.h>
+#include <kernel/debug.h>
+#include <kernel/generic/locked_pool.h>
+#include <string.h>
 
 #define debug_level_flow 0
 #define debug_level_error 3
@@ -19,7 +22,6 @@
 
 #define DEBUG_MSG_PREFIX "LOCKED_POOL -- "
 
-#include <kernel/debug.h>
 #include <kernel/debug_ext.h>
 
 

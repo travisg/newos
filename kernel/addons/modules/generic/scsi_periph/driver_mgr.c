@@ -3,10 +3,12 @@
 ** Distributed under the terms of the NewOS License.
 */
 
-#include "scsi_periph_int.h"
 
+#include <kernel/kernel.h>
 #include <kernel/heap.h>
 #include <kernel/debug.h>
+
+#include "scsi_periph_int.h"
 
 cam_periph_interface periph_interface = {
 	(void (*)( cam_periph_cookie, int, int, int, 

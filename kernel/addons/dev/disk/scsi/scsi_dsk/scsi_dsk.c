@@ -3,15 +3,16 @@
 ** Distributed under the terms of the NewOS License.
 */
 
-#include <kernel/bus/scsi/scsi_periph.h>
+#include <kernel/kernel.h>
 #include <kernel/debug.h>
 #include <kernel/arch/cpu.h>
 #include <kernel/heap.h>
+#include <kernel/dev/blkman.h>
+#include <kernel/module.h>
+#include <kernel/bus/scsi/scsi_periph.h>
 #include <stdio.h>
 #include <stddef.h>
 #include <string.h>
-#include <kernel/dev/blkman.h>
-#include <kernel/module.h>
 
 #define debug_level_flow 3
 #define debug_level_error 3

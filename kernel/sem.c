@@ -10,6 +10,7 @@
 #include <kernel/debug.h>
 #include <kernel/heap.h>
 #include <kernel/thread.h>
+#include <kernel/vm.h>
 #include <newos/errors.h>
 
 #include <boot/stage2.h>

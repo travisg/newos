@@ -13,8 +13,7 @@
  *	with each other
  */
 
-#include <kernel/thread.h>
-#include <kernel/sem.h>
+#include <boot/stage2.h>
 
 // PORT_FLAG_INTERRUPTABLE must be the same as SEM_FLAG_INTERRUPTABLE
 // PORT_FLAG_TIMEOUT       must be the same as SEM_FLAG_TIMEOUT

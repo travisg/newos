@@ -3,11 +3,13 @@
 ** Distributed under the terms of the NewOS License.
 */
 
+#include <kernel/kernel.h>
+#include <kernel/heap.h>
+#include <kernel/vm.h>
 #include "ide_internal.h"
 #include "device_mgr.h"
 
 #include <kernel/bus/scsi/endian.h>
-#include <kernel/heap.h>
 #include <string.h>
 
 #include "queuing.h"

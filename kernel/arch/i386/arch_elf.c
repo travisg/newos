@@ -3,6 +3,7 @@
 ** Distributed under the terms of the NewOS License.
 */
 #include <kernel/kernel.h>
+#include <kernel/debug.h>
 #include <kernel/elf.h>
 #include <newos/elf32.h>
 #include <kernel/arch/elf.h>

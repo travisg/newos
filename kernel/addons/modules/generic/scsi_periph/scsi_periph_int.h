@@ -6,8 +6,9 @@
 #ifndef __SCSI_PERIPH_INT_H__
 #define __SCSI_PERIPH_INT_H__
 
-#include <kernel/bus/scsi/scsi_periph.h>
 #include <kernel/lock.h>
+#include <kernel/debug.h>
+#include <kernel/bus/scsi/scsi_periph.h>
 
 #define debug_level_flow 3
 #define debug_level_error 3
@@ -15,7 +16,6 @@
 
 #define DEBUG_MSG_PREFIX "SCSI_PERIPH -- "
 
-#include <kernel/debug.h>
 #include <kernel/debug_ext.h>
 
 

@@ -3,12 +3,13 @@
 ** Distributed under the terms of the NewOS License.
 */
 
-#include <kernel/port.h>
 #include <kernel/kernel.h>
+#include <kernel/port.h>
 #include <kernel/sem.h>
 #include <kernel/int.h>
 #include <kernel/debug.h>
 #include <kernel/heap.h>
+#include <kernel/vm.h>
 #include <kernel/cbuf.h>
 #include <newos/errors.h>
 

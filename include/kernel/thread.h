@@ -6,9 +6,9 @@
 #define _KERNEL_THREAD_H
 
 #include <boot/stage2.h>
-#include <kernel/vm.h>
 #include <kernel/smp.h>
 #include <kernel/arch/thread_struct.h>
+#include <sys/resource.h>
 
 #define THREAD_IDLE_PRIORITY 0
 #define THREAD_NUM_PRIORITY_LEVELS 64
@@ -64,8 +64,8 @@ struct proc {
 	int pending_signals;
 	void *ioctx;
 	aspace_id aspace_id;
-	vm_address_space *aspace;
-	vm_address_space *kaspace;
+	struct vm_address_space *aspace;
+	struct vm_address_space *kaspace;
 	struct thread *main_thread;
 	struct thread *thread_list;
 	struct arch_proc arch_info;

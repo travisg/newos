@@ -6,6 +6,7 @@
 #define _CPU_H
 
 #include <boot/stage2.h>
+#include <kernel/thread.h>
 #include <kernel/smp.h>
 #include <kernel/timer.h>
 #include <kernel/arch/cpu.h>
@@ -19,11 +20,17 @@ typedef union cpu_ent {
 		// thread.c: used to force a reschedule at quantum expiration time
 		int preempted;
 		struct timer_event quantum_timer;
+
+		// timer.c: per-cpu timer queues
+		struct timer_event * volatile timer_events;
+		spinlock_t timer_spinlock;
+
+		// arch-specific stuff
+		struct arch_cpu_info arch;
 	} info;
 
-	struct arch_cpu_info arch_info;
-
-	uint32 align[16];
+	// make sure the structure uses up at least a cache line or two and is aligned
+	uint32 _align[16]; // 64 bytes
 } cpu_ent;
 
 extern cpu_ent cpu[MAX_BOOT_CPUS];
@@ -31,14 +38,11 @@ extern cpu_ent cpu[MAX_BOOT_CPUS];
 int cpu_preboot_init(kernel_args *ka);
 int cpu_init(kernel_args *ka);
 
-// XXX these seem to be deprecated. It's easier to find the local cpu structure by dereferencing
-// it from the current thread structure, which holds a pointer to the current cpu struct
-/*
 cpu_ent *get_curr_cpu_struct(void);
-extern inline cpu_ent *get_curr_cpu_struct(void) { return &cpu[smp_get_current_cpu()]; }
+extern inline cpu_ent *get_curr_cpu_struct(void) { return thread_get_current_thread()->cpu; }
+
 cpu_ent *get_cpu_struct(int cpu_num);
 extern inline cpu_ent *get_cpu_struct(int cpu_num) { return &cpu[cpu_num]; }
-*/
 
 /* manual implementations of the atomic_* ops */
 int user_atomic_add(int *val, int incr);

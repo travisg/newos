@@ -6,6 +6,7 @@
 
 #include "xpt_internal.h"
 #include "ccb_mgr.h"
+#include <kernel/vm.h>
 
 //locked_pool_cookie ccb_pool;
 

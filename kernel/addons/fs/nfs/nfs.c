@@ -8,6 +8,7 @@
 #include <kernel/debug.h>
 #include <kernel/lock.h>
 #include <kernel/sem.h>
+#include <kernel/vm.h>
 #include <kernel/net/misc.h>
 
 #include <newos/net.h>

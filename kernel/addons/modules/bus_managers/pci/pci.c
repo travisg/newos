@@ -11,6 +11,7 @@
 #include <kernel/heap.h>
 #include <kernel/thread.h>
 #include <kernel/module.h>
+#include <kernel/vm.h>
 #include <newos/errors.h>
 
 #include <string.h>

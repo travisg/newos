@@ -6,6 +6,7 @@
 #include <kernel/int.h>
 #include <kernel/debug.h>
 #include <kernel/cbuf.h>
+#include <kernel/vm.h>
 #include <kernel/net/misc.h> // for cksum16
 #include <kernel/arch/cpu.h>
 #include <newos/errors.h>

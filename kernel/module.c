@@ -11,7 +11,8 @@
 #include <kernel/module.h>
 #include <kernel/lock.h>
 #include <kernel/heap.h>
-#include <kernel/arch/cpu.h>
+#include <kernel/vm.h>
+#include <kernel/cpu.h>
 #include <kernel/debug.h>
 #include <kernel/khash.h>
 

@@ -5,6 +5,7 @@
 
 #include "xpt_internal.h"
 #include "sg_mgr.h"
+#include <kernel/vm.h>
 
 #include <string.h>
 

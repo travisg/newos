@@ -9,6 +9,7 @@
 #include <kernel/sem.h>
 #include <kernel/smp.h>
 #include <kernel/int.h>
+#include <kernel/vm.h>
 #include <kernel/module.h>
 #include <kernel/timer.h>
 #include <kernel/fs/devfs.h>
