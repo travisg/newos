@@ -842,6 +842,7 @@ static void _dump_thread_info(struct thread *t)
 	else
 		dprintf("\n");
 	dprintf("sig_pending:  0x%lx\n", t->sig_pending);
+	dprintf("sig_block_mask:  0x%lx\n", t->sig_block_mask);
 	dprintf("in_kernel:   %d\n", t->in_kernel);
 	dprintf("int_disable_level: %d\n", t->int_disable_level);
 	dprintf("sem_blocking:0x%x\n", t->sem_blocking);

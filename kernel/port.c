@@ -109,7 +109,7 @@ static void _dump_port_info(struct port_entry *port)
 	dprintf("tail: %d\n", port->tail);
  	sem_get_count(port->read_sem, &cnt);
  	dprintf("read_sem:  %d\n", cnt);
- 	sem_get_count(port->read_sem, &cnt);
+ 	sem_get_count(port->write_sem, &cnt);
 	dprintf("write_sem: %d\n", cnt);
 }
 
