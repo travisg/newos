@@ -9,6 +9,7 @@
 #include <kernel/smp.h>
 #include <kernel/debug.h>
 #include <kernel/gdb.h>
+#include <kernel/arch/dbg_console.h>
 
 
 enum { INIT= 0, CMDREAD, CKSUM1, CKSUM2, WAITACK, QUIT, GDBSTATES };
