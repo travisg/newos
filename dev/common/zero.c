@@ -60,6 +60,23 @@ static int zero_create(void *_fs, void *_base_vnode, const char *path, const cha
 	return -1;
 }
 
+static int zero_stat(void *_fs, void *_base_vnode, const char *path, const char *stream, stream_type stream_type, struct vnode_stat *stat, struct redir_struct *redir)
+{
+	struct zero_fs *fs = _fs;
+	void *redir_vnode = fs->redir_vnode;
+	
+	if(redir_vnode != NULL) {
+		// we were mounted on top of
+		redir->redir = true;
+		redir->vnode = redir_vnode;
+		redir->path = path;
+		return 0;
+	}
+
+	stat->size = 0;
+	return 0;
+}
+
 static int zero_read(void *_fs, void *_vnode, void *_cookie, void *buf, off_t pos, size_t *len)
 {
 	memset(buf, 0, *len);
@@ -139,6 +156,7 @@ static struct fs_calls zero_hooks = {
 	&zero_ioctl,
 	&zero_close,
 	&zero_create,
+	&zero_stat,
 };
 
 int zero_dev_init(kernel_args *ka)

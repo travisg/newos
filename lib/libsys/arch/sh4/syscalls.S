@@ -46,50 +46,55 @@ FUNC(sys_create)
 	rts
 	nop
 
-FUNC(sys_system_time)
+FUNC(sys_stat)
 	trapa	#8
 	rts
 	nop
 
-FUNC(sys_snooze)
+FUNC(sys_system_time)
 	trapa	#9
 	rts
 	nop
 
-FUNC(sys_sem_create)
+FUNC(sys_snooze)
 	trapa	#10
 	rts
 	nop
 
-FUNC(sys_sem_delete)
+FUNC(sys_sem_create)
 	trapa	#11
 	rts
 	nop
 
-FUNC(sys_sem_acquire)
+FUNC(sys_sem_delete)
 	trapa	#12
+	rts
+	nop
+
+FUNC(sys_sem_acquire)
+	trapa	#13
 	rts
 	nop
 
 
 FUNC(sys_sem_acquire_etc)
 	mov.l	@r15,r0
-	trapa	#13
-	rts
-	nop
-
-FUNC(sys_sem_release)
 	trapa	#14
 	rts
 	nop
 
-FUNC(sys_sem_release_etc)
+FUNC(sys_sem_release)
 	trapa	#15
 	rts
 	nop
 
-FUNC(sys_get_current_thread_id)
+FUNC(sys_sem_release_etc)
 	trapa	#16
+	rts
+	nop
+
+FUNC(sys_get_current_thread_id)
+	trapa	#17
 	rts
 	nop
 

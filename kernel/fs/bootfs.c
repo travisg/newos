@@ -635,6 +635,56 @@ int bootfs_create(void *_fs, void *_base_vnode, const char *path, const char *st
 	return -1;
 }
 
+int bootfs_stat(void *_fs, void *_base_vnode, const char *path, const char *stream, stream_type stream_type, struct vnode_stat *stat, struct redir_struct *redir)
+{
+	struct bootfs *fs = _fs;
+	struct bootfs_vnode *base = _base_vnode;
+	struct bootfs_vnode *v;
+	struct bootfs_stream *s;
+	int err = 0;
+	int start = 0;
+
+	dprintf("bootfs_stat: path '%s', stream '%s', stream_type %d, base_vnode 0x%x, stat 0x%x\n", path, stream, stream_type, base, stat);
+
+	mutex_lock(&fs->lock);
+
+	v = bootfs_get_vnode_from_path(fs, base, path, &start, &redir->redir);
+	if(v == NULL) {
+		err = -1;
+		goto err;
+	}
+	if(redir->redir == true) {
+		// loop back into the vfs because the parse hit a mount point
+		mutex_unlock(&fs->lock);
+		redir->vnode = v->redir_vnode;
+		redir->path = &path[start];
+		return 0;
+	}
+	
+	s = bootfs_get_stream_from_vnode(v, stream, stream_type);
+	if(s == NULL) {
+		err = -1;
+		goto err;
+	}
+
+	switch(stream_type) {
+		case STREAM_TYPE_DIR:
+			stat->size = 0;
+			break;
+		case STREAM_TYPE_FILE:
+			stat->size = s->u.file.len;
+			break;
+		default:
+			err = -1;
+			break;
+	}
+
+err:	
+	mutex_unlock(&fs->lock);
+
+	return err;
+}
+
 static struct fs_calls bootfs_calls = {
 	&bootfs_mount,
 	&bootfs_unmount,
@@ -648,6 +698,7 @@ static struct fs_calls bootfs_calls = {
 	&bootfs_ioctl,
 	&bootfs_close,
 	&bootfs_create,
+	&bootfs_stat
 };
 
 int bootstrap_bootfs()

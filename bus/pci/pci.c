@@ -479,6 +479,39 @@ err:
 	return err;
 }
 
+static int pci_stat(void *_fs, void *_base_vnode, const char *path, const char *stream, stream_type stream_type, struct vnode_stat *stat, struct redir_struct *redir)
+{
+	struct pcifs *fs = _fs;
+	struct pcifs_vnode *base = _base_vnode;
+	struct pcifs_vnode *v;
+	int err;
+	int start = 0;
+	
+	dprintf("pci_stat: entry path '%s'\n", path);
+
+	mutex_lock(&fs->lock);
+
+	v = pcifs_get_vnode_from_path(fs, base, path, &start, &redir->redir);
+	if(v == NULL) {
+		err = -1;
+		goto err;
+	}
+	if(redir->redir == true) {
+		// loop back into the vfs because the parse hit a mount point
+		mutex_unlock(&fs->lock);
+		redir->vnode = v->redir_vnode;
+		redir->path = &path[start];
+		return 0;
+	}
+
+	stat->size = 0;
+	err = 0;
+
+err:	
+	mutex_unlock(&fs->lock);
+	return err;	
+}
+
 static int pci_read(void *_fs, void *_vnode, void *_cookie, void *buf, off_t pos, size_t *len)
 {
 	struct pcifs *fs = _fs;
@@ -693,6 +726,7 @@ struct fs_calls pci_hooks = {
 	&pci_ioctl,
 	&pci_close,
 	&pci_create,
+	&pci_stat,
 };
 
 int pci_bus_init(kernel_args *ka)

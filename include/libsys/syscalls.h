@@ -21,6 +21,10 @@ typedef enum {
 	SEEK_END
 } seek_type;
 
+struct vnode_stat {
+	off_t size;
+};
+
 #define SEM_FLAG_NO_RESCHED 1
 #define SEM_FLAG_TIMEOUT 2
 
@@ -65,6 +69,7 @@ int sys_write(int fd, const void *buf, off_t pos, size_t *len);
 int sys_ioctl(int fd, int op, void *buf, size_t len);
 int sys_close(int fd);
 int sys_create(const char *path, const char *stream, stream_type stream_type);
+int sys_stat(const char *path, const char *stream, stream_type stream_type, struct vnode_stat *stat);
 time_t sys_system_time();
 int sys_snooze(time_t time);
 sem_id sys_sem_create(int count, const char *name);

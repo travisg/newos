@@ -780,6 +780,55 @@ err:
 	return err;	
 }
 
+int envfs_stat(void *_fs, void *_base_vnode, const char *path, const char *stream, stream_type stream_type, struct vnode_stat *stat, struct redir_struct *redir)
+{
+	struct envfs *fs = _fs;
+	struct envfs_vnode *base = _base_vnode;
+	struct envfs_vnode *dir;
+	struct envfs_vnode *v;
+	struct envfs_stream *s;
+	int err = 0;
+	int start = 0;
+	bool created_vnode = false;
+
+	dprintf("envfs_stat: path '%s', stream '%s', stream_type %d, base_vnode 0x%x\n", path, stream, stream_type, base);
+
+	mutex_lock(&fs->lock);
+
+	dir = envfs_get_container_vnode_from_path(fs, base, path, &start, &redir->redir);
+	if(dir == NULL) {
+		err = -1;
+		goto err;
+	}
+	if(redir->redir == true) {
+		// loop back into the vfs because the parse hit a mount point
+		mutex_unlock(&fs->lock);
+		redir->vnode = dir->redir_vnode;
+		redir->path = &path[start];
+		return 0;
+	}
+
+	// we only support stream types of STREAM_TYPE_STRING
+	if(stream_type != STREAM_TYPE_STRING) {
+		err = -1;
+		goto err;
+	}
+
+	v = envfs_find_in_dir(dir, path, start, strlen(path) - 1);
+	if(v) {
+		// we found it, size 0
+		stat->size = 0;
+		err = 0;
+	} else {
+		err = -1;
+	}
+
+err:
+	mutex_unlock(&fs->lock);
+
+	return err;
+}
+
 static struct fs_calls envfs_calls = {
 	&envfs_mount,
 	&envfs_unmount,
@@ -793,6 +842,7 @@ static struct fs_calls envfs_calls = {
 	&envfs_ioctl,
 	&envfs_close,
 	&envfs_create,
+	&envfs_stat,
 };
 
 int bootstrap_envfs()

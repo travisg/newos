@@ -46,6 +46,9 @@ int syscall_dispatcher(unsigned long call_num, unsigned long arg0, unsigned long
 		case SYSCALL_CREATE:
 			*call_ret = user_create((const char *)arg0, (const char *)arg1, (stream_type)arg2);
 			break;
+		case SYSCALL_STAT:
+			*call_ret = user_stat((const char *)arg0, (const char *)arg1, (stream_type)arg2, (struct vnode_stat *)arg3);
+			break;
 		case SYSCALL_SYSTEM_TIME:
 			*call_ret = system_time();
 			break;

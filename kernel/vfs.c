@@ -882,6 +882,31 @@ err:
 	return err;
 }
 
+static int vfs_stat(const char *path, const char *stream, stream_type stream_type, struct vnode_stat *stat, bool kernel)
+{
+	struct vnode *base_vnode;
+	struct redir_struct redir;
+	int err;
+
+	base_vnode = get_base_vnode(NULL, path, kernel);
+
+	redir.vnode = base_vnode;
+	redir.path = path;
+	do {
+		struct vnode *cur_base = redir.vnode;
+	
+		redir.redir = false;
+		err = cur_base->mount->fs->calls->fs_stat(cur_base->mount->cookie, cur_base->priv_vnode, redir.path, stream, stream_type, stat, &redir);	
+		if(err < 0)
+			goto err;
+	} while(redir.redir);
+	
+	dec_vnode_ref_count(base_vnode, false, true);
+
+err:
+	return err;
+}
+
 int vfs_helper_getnext_in_path(const char *path, int *start_pos, int *end_pos)
 {
 	int i;
@@ -960,6 +985,11 @@ int sys_create(const char *path, const char *stream, stream_type stream_type)
 	return vfs_create(path, stream, stream_type, true);
 }
 
+int sys_stat(const char *path, const char *stream, stream_type stream_type, struct vnode_stat *stat)
+{
+	return vfs_stat(path, stream, stream_type, stat, true);
+}
+
 int user_open(const char *path, const char *stream, stream_type stream_type)
 {
 	return vfs_open(path, stream, stream_type, false);
@@ -995,5 +1025,9 @@ int user_create(const char *path, const char *stream, stream_type stream_type)
 	return vfs_create(path, stream, stream_type, false);
 }
 
+int user_stat(const char *path, const char *stream, stream_type stream_type, struct vnode_stat *stat)
+{
+	return vfs_stat(path, stream, stream_type, stat, false);
+}
 
 

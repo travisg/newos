@@ -615,6 +615,48 @@ err:
 	return err;
 }
 
+int rootfs_stat(void *_fs, void *_base_vnode, const char *path, const char *stream, stream_type stream_type, struct vnode_stat *stat, struct redir_struct *redir)
+{
+	struct rootfs *fs = _fs;
+	struct rootfs_vnode *base = _base_vnode;
+	struct rootfs_vnode *v;
+	struct rootfs_stream *s;
+	int err = 0;
+	int start = 0;
+
+	dprintf("rootfs_stat: path '%s', stream '%s', stream_type %d, base_vnode 0x%x, stat 0x%x\n", path, stream, stream_type, base, stat);
+
+	mutex_lock(&fs->lock);
+
+	v = rootfs_get_vnode_from_path(fs, base, path, &start, &redir->redir);
+	if(v == NULL) {
+		err = -1;
+		goto err;
+	}
+	if(redir->redir == true) {
+		// loop back into the vfs because the parse hit a mount point
+		mutex_unlock(&fs->lock);
+		redir->vnode = v->redir_vnode;
+		redir->path = &path[start];
+		return 0;
+	}
+	
+	s = rootfs_get_stream_from_vnode(v, stream, stream_type);
+	if(s == NULL) {
+		err = -1;
+		goto err;
+	}
+
+	// stream exists, but we know to return size 0, since we can only hold directories
+	stat->size = 0;
+	err = 0;
+
+err:	
+	mutex_unlock(&fs->lock);
+
+	return err;
+}
+
 static struct fs_calls rootfs_calls = {
 	&rootfs_mount,
 	&rootfs_unmount,
@@ -628,6 +670,7 @@ static struct fs_calls rootfs_calls = {
 	&rootfs_ioctl,
 	&rootfs_close,
 	&rootfs_create,
+	&rootfs_stat,
 };
 
 int bootstrap_rootfs()

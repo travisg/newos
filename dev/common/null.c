@@ -59,6 +59,23 @@ static int null_create(void *_fs, void *_base_vnode, const char *path, const cha
 	return -1;
 }
 
+static int null_stat(void *_fs, void *_base_vnode, const char *path, const char *stream, stream_type stream_type, struct vnode_stat *stat, struct redir_struct *redir)
+{
+	struct null_fs *fs = _fs;
+	void *redir_vnode = fs->redir_vnode;
+	
+	if(redir_vnode != NULL) {
+		// we were mounted on top of
+		redir->redir = true;
+		redir->vnode = redir_vnode;
+		redir->path = path;
+		return 0;
+	}
+
+	stat->size = 0;
+	return 0;
+}
+	
 static int null_read(void *_fs, void *_vnode, void *_cookie, void *buf, off_t pos, size_t *len)
 {
 	*len = 0;
@@ -138,6 +155,7 @@ static struct fs_calls null_hooks = {
 	&null_ioctl,
 	&null_close,
 	&null_create,
+	&null_stat,
 };
 
 int null_dev_init(kernel_args *ka)

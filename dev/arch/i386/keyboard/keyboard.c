@@ -272,6 +272,26 @@ static int keyboard_create(void *_fs, void *_base_vnode, const char *path, const
 	return -1;
 }
 
+static int keyboard_stat(void *_fs, void *_base_vnode, const char *path, const char *stream, stream_type stream_type, struct vnode_stat *stat, struct redir_struct *redir)
+{
+	struct keyboard_fs *fs = _fs;
+	
+	mutex_lock(&fs->lock);
+	if(fs->redir_vnode != NULL) {
+		// we were mounted on top of
+		redir->redir = true;
+		redir->vnode = fs->redir_vnode;
+		redir->path = path;
+		mutex_unlock(&fs->lock);
+		return 0;
+	}
+	mutex_unlock(&fs->lock);
+
+	stat->size = 0;
+	
+	return 0;
+}
+
 static int keyboard_read(void *_fs, void *_vnode, void *_cookie, void *buf, off_t pos, size_t *len)
 {
 	char c;
@@ -369,6 +389,7 @@ struct fs_calls keyboard_hooks = {
 	&keyboard_ioctl,
 	&keyboard_close,
 	&keyboard_create,
+	&keyboard_stat,
 };
 
 int setup_keyboard()
