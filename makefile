@@ -19,7 +19,7 @@ ifeq ($(ARCH),i386)
 	LD = ld
 	AS = as
 	AR = ar
-	GLOBAL_CFLAGS = -fno-pic
+	GLOBAL_CFLAGS = -fno-pic -O
 	GLOBAL_LDFLAGS = 
 	LIBGCC = -lgcc
 	LIBGCC_PATH = lib/libgcc/$(ARCH)
@@ -58,6 +58,8 @@ ifeq ($(ARCH),alpha)
 	LIBGCC = -lgcc
 	LIBGCC_PATH = lib/libgcc/$(ARCH)
 endif
+
+OBJ_DIR = obj.$(ARCH)
 
 GLOBAL_CFLAGS += -Wall -W -Werror -Wno-multichar -Wno-unused -nostdinc -fno-builtin -DARCH_$(ARCH)
 
