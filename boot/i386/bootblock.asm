@@ -34,9 +34,9 @@
 ; ** applied by Michael Noisternig on 2001-09-02.
 ; */
 
-%define VESA_X_TARGET 800
-%define VESA_Y_TARGET 600
-%define VESA_BIT_DEPTH_TARGET 32
+%define VESA_X_TARGET 640
+%define VESA_Y_TARGET 480
+%define VESA_BIT_DEPTH_TARGET 16
 
 SECTION
 CODE16
@@ -96,6 +96,7 @@ unreal:
 	call	print
 	cli
 
+	; uncomment the next line to enable the VESA mode switch
 	; call	enable_vesa
 	mov		[in_vesa],al
 
@@ -325,6 +326,7 @@ mode_loop:
 	test	ax,0x1        ; test the supported bit
 	jz		next_mode
 	test	ax,0x08       ; test the linear frame mode bit
+	jz		next_mode
 	mov		ax,[es:di+18]
 	cmp		ax,VESA_X_TARGET       ; x
 	jne		next_mode
