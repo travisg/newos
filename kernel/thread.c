@@ -1727,7 +1727,8 @@ static void deliver_signal(struct thread *t, int signal)
 					thread_enqueue_run_q(t);				
 					break;
 				case THREAD_STATE_WAITING:
-					// XXX wake it up
+					sem_interrupt_thread(t);
+					break;
 				default:
 					;
 			}

@@ -16,13 +16,21 @@
 
 #include <libc/string.h>
 
+struct sem_entry {
+	sem_id    id;
+	int       count;
+	struct thread_queue q;
+	char      *name;
+	int       lock;
+};
+
+#define MAX_SEMS 4096
+
 static struct sem_entry *sems = NULL;
 static region_id sem_region = 0;
 static bool sems_active = false;
 
 static sem_id next_sem = 0;
-
-static const char *temp_sem_name = "temp sem";
 
 static int sem_spinlock = 0;
 #define GRAB_SEM_LIST_LOCK() acquire_spinlock(&sem_spinlock)
@@ -185,17 +193,20 @@ int sem_delete(sem_id id)
 
 int sem_delete_etc(sem_id id, int return_code)
 {
-	int slot = id % MAX_SEMS;
+	int slot;
 	int state;
 	int err = NO_ERROR;
 	struct thread *t;
-	int released_threads = 0;
+	int released_threads;
 	char *old_name;
+	struct thread_queue release_queue;
 
 	if(sems_active == false)
 		return ERR_SEM_NOT_ACTIVE;
 	if(id < 0)
 		return ERR_INVALID_HANDLE;
+
+	slot = id % MAX_SEMS;
 
 	state = int_disable_interrupts();
 	GRAB_SEM_LOCK(sems[slot]);
@@ -207,54 +218,37 @@ int sem_delete_etc(sem_id id, int return_code)
 		return ERR_INVALID_HANDLE;
 	}
 
+	released_threads = 0;
+	release_queue.head = release_queue.tail = NULL;
+
 	// free any threads waiting for this semaphore
-	// put them in the runq in batches, to keep the amount of time
-	// spent with the thread lock held down to a minimum
-	{
-		struct thread *ready_threads[READY_THREAD_CACHE_SIZE];
-		int ready_threads_count = 0;
-
-		while((t = thread_dequeue(&sems[slot].q)) != NULL) {
-			t->state = THREAD_STATE_READY;
-			t->sem_errcode = ERR_SEM_DELETED;
-			t->sem_deleted_retcode = return_code;
-			t->sem_count = 0;
-			ready_threads[ready_threads_count++] = t;
-			released_threads++;
-
-			if(ready_threads_count == READY_THREAD_CACHE_SIZE) {
-				// put a batch of em in the runq at once
-				GRAB_THREAD_LOCK();
-				for(; ready_threads_count > 0; ready_threads_count--)
-					thread_enqueue_run_q(ready_threads[ready_threads_count - 1]);
-				RELEASE_THREAD_LOCK();
-				// ready_threads_count is back to 0
-			}
-		}
-		// put any leftovers in the runq
-		if(ready_threads_count > 0) {
-			GRAB_THREAD_LOCK();
-			for(; ready_threads_count > 0; ready_threads_count--)
-				thread_enqueue_run_q(ready_threads[ready_threads_count - 1]);
-			RELEASE_THREAD_LOCK();
-		}
+	while((t = thread_dequeue(&sems[slot].q)) != NULL) {
+		t->state = THREAD_STATE_READY;
+		t->sem_errcode = ERR_SEM_DELETED;
+		t->sem_deleted_retcode = return_code;
+		t->sem_count = 0;
+		thread_enqueue(t, &release_queue);
+		released_threads++;
 	}
+
 	sems[slot].id = -1;
 	old_name = sems[slot].name;
 	sems[slot].name = NULL;
 
 	RELEASE_SEM_LOCK(sems[slot]);
 
-	if(old_name != temp_sem_name)
-		kfree(old_name);
-
 	if(released_threads > 0) {
 		GRAB_THREAD_LOCK();
+		while((t = thread_dequeue(&release_queue)) != NULL) {
+			thread_enqueue_run_q(t);
+		}
 		thread_resched();
 		RELEASE_THREAD_LOCK();
 	}
 
 	int_restore_interrupts(state);
+
+	kfree(old_name);
 
 	return err;
 }
@@ -288,14 +282,19 @@ static int sem_timeout(void *data)
 		sems[slot].count += args->sem_count;
 		t->state = THREAD_STATE_READY;
 		t->sem_errcode = ERR_SEM_TIMED_OUT;
-		GRAB_THREAD_LOCK();
-		thread_enqueue_run_q(t);
-		RELEASE_THREAD_LOCK();
 	}
 
 	// XXX handle possibly releasing more threads here
 
 	RELEASE_SEM_LOCK(sems[slot]);
+
+	if(t != NULL) {
+		// put the thread in the run q here to make sure we dont deadlock in sem_interrupt_thread
+		GRAB_THREAD_LOCK();
+		thread_enqueue_run_q(t);
+		RELEASE_THREAD_LOCK();
+	}
+
 	int_restore_interrupts(state);
 
 	return INT_RESCHEDULE;
@@ -344,6 +343,7 @@ int sem_acquire_etc(sem_id id, int count, int flags, time_t timeout, int *delete
 
 		t->next_state = THREAD_STATE_WAITING;
 		t->sem_blocking = id;
+		t->sem_total_count = count;
 		t->sem_count = min(-sems[slot].count, count); // store the count we need to restore upon release
 		t->sem_deleted_retcode = 0;
 		t->sem_errcode = NO_ERROR;
@@ -396,8 +396,7 @@ int sem_release_etc(sem_id id, int count, int flags)
 	int state;
 	int released_threads = 0;
 	int err = 0;
-	struct thread *ready_threads[READY_THREAD_CACHE_SIZE];
-	int ready_threads_count = 0;
+	struct thread_queue release_queue;
 
 	if(sems_active == false)
 		return ERR_SEM_NOT_ACTIVE;
@@ -417,6 +416,12 @@ int sem_release_etc(sem_id id, int count, int flags)
 		goto err;
 	}
 
+	// clear out a queue we will use to hold all of the threads that we will have to
+	// put back into the run list. This is done so the thread lock wont be held
+	// while this sems lock is held since the two locks are grabbed in the other
+	// order in sem_interrupt_thread.
+	release_queue.head = release_queue.tail = NULL; 
+
 	while(count > 0) {
 		int delta = count;
 		if(sems[slot].count < 0) {
@@ -427,32 +432,25 @@ int sem_release_etc(sem_id id, int count, int flags)
 			if(t->sem_count <= 0) {
 				// release this thread
 				t = thread_dequeue(&sems[slot].q);
+				thread_enqueue(t, &release_queue);
 				t->state = THREAD_STATE_READY;
-				ready_threads[ready_threads_count++] = t;
 				released_threads++;
 				t->sem_count = 0;
 				t->sem_deleted_retcode = 0;
 			}
-		}
-		if(ready_threads_count == READY_THREAD_CACHE_SIZE) {
-			// put a batch of em in the runq a once
-			GRAB_THREAD_LOCK();
-			for(; ready_threads_count > 0; ready_threads_count--)
-				thread_enqueue_run_q(ready_threads[ready_threads_count - 1]);
-			RELEASE_THREAD_LOCK();
-			// ready_threads_count is back to 0
 		}
 
 		sems[slot].count += delta;
 		count -= delta;
 	}
 	RELEASE_SEM_LOCK(sems[slot]);
+
+	// pull off any items in the release queue and put them in the run queue
 	if(released_threads > 0) {
-		// put any leftovers in the runq
+		struct thread *t;
 		GRAB_THREAD_LOCK();
-		if(ready_threads_count > 0) {
-			for(; ready_threads_count > 0; ready_threads_count--)
-				thread_enqueue_run_q(ready_threads[ready_threads_count - 1]);
+		while((t = thread_dequeue(&release_queue)) != NULL) {
+			thread_enqueue_run_q(t);
 		}
 		if((flags & SEM_FLAG_NO_RESCHED) == 0) {
 			thread_resched();
@@ -468,4 +466,44 @@ outnolock:
 
 	return err;
 }
+
+// Wake up a thread that's blocked on a semaphore
+// this function must be entered with interrupts disabled and THREADLOCK held
+int sem_interrupt_thread(struct thread *t)
+{
+	struct thread *t1;
+	int slot;
+	int state;
+
+	dprintf("sem_interrupt_thread: called on thread 0x%x (%d), blocked on sem 0x%x\n", t, t->id, t->sem_blocking);
+
+	if(t->state != THREAD_STATE_WAITING)
+		return ERR_INVALID_ARGS;
+	if(t->sem_blocking < 0)
+		return ERR_INVALID_ARGS;
+
+	slot = t->sem_blocking % MAX_SEMS;
+
+	GRAB_SEM_LOCK(sems[slot]);
+
+	if(sems[slot].id != t->sem_blocking) {
+		panic("sem_interrupt_thread: thread 0x%x sez it's blocking on sem 0x%x, but that sem doesn't exist!\n", t->id, t->sem_blocking);
+	}
+
+	t1 = thread_dequeue_id(&sems[slot].q, t->id);
+	if(t != t1)
+		panic("sem_interrupt_thread: thread 0x%x was not on sem 0x%x's queue\n", t->id, t->sem_blocking);
+	sems[slot].count += t->sem_total_count;
+	t->state = THREAD_STATE_READY;
+	t->sem_errcode = ERR_SEM_INTERRUPTED;
+
+	// XXX handle possibly releasing more threads here
+
+	RELEASE_SEM_LOCK(sems[slot]);
+
+	thread_enqueue_run_q(t);
+
+	return NO_ERROR;
+}
+
 

@@ -8,16 +8,6 @@
 #include <kernel/thread.h>
 #include <boot/stage2.h>
 
-struct sem_entry {
-	sem_id    id;
-	int       count;
-	struct thread_queue q;
-	char      *name;
-	int       lock;
-};
-
-#define MAX_SEMS 4096
-
 #define SEM_FLAG_NO_RESCHED 1
 #define SEM_FLAG_TIMEOUT 2
 
@@ -29,6 +19,8 @@ int sem_acquire(sem_id id, int count);
 int sem_acquire_etc(sem_id id, int count, int flags, time_t timeout, int *deleted_retcode);
 int sem_release(sem_id id, int count);
 int sem_release_etc(sem_id id, int count, int flags);
+
+int sem_interrupt_thread(struct thread *t);
 
 #endif
 

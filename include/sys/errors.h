@@ -28,6 +28,7 @@
 #define ERR_SEM_TIMED_OUT        ERR_SEM_GENERAL-2
 #define ERR_SEM_OUT_OF_SLOTS     ERR_SEM_GENERAL-3
 #define ERR_SEM_NOT_ACTIVE       ERR_SEM_GENERAL-4
+#define ERR_SEM_INTERRUPTED      ERR_SEM_GENERAL-5
 
 /* Tasker errors */
 #define ERR_TASK_GENERAL         -2048
