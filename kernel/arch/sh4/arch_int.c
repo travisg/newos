@@ -8,6 +8,8 @@
 #include <kernel/vm_priv.h>
 #include <kernel/faults_priv.h>
 
+#include <kernel/arch/sh4/cpu.h>
+
 struct vector *vector_table;
 
 void arch_int_enable_io_interrupt(int irq)
@@ -24,7 +26,9 @@ static int sh4_handle_exception(unsigned int code, unsigned int pc, unsigned int
 {
 	int ret;
 
-//	dprintf("sh4_handle_exception: entry code 0x%x, pc 0x%x, trap 0x%x, page_fault_addr 0x%x\n", code, pc, trap, page_fault_addr);
+	// NOTE: not safe to do anything that may involve the FPU before 
+	// it is certain it is not an fpu exception
+
 	switch(code) {
 		case 0:  // reset
 		case 1:  // manual reset
@@ -36,6 +40,39 @@ static int sh4_handle_exception(unsigned int code, unsigned int pc, unsigned int
 		case 12: // illegal instruction
 		case 13: // slot illegal instruction
 			ret = general_protection_fault(code);
+			break;
+		case 9: { // FPU exception
+			int fpscr = get_fpscr();	
+			int fpu_fault_code;
+			switch(fpscr & 0x0003f000) {
+				case 0x1000:
+					fpu_fault_code = FPU_FAULT_CODE_INEXACT;	
+					break;
+				case 0x2000:
+					fpu_fault_code = FPU_FAULT_CODE_UNDERFLOW;
+					break;
+				case 0x4000:
+					fpu_fault_code = FPU_FAULT_CODE_OVERFLOW;
+					break;
+				case 0x8000:
+					fpu_fault_code = FPU_FAULT_CODE_DIVBYZERO;
+					break;
+				case 0x10000:
+					fpu_fault_code = FPU_FAULT_CODE_INVALID_OP;
+					break;
+				case 0x20000:
+					fpu_fault_code = FPU_FAULT_CODE_UNKNOWN;
+					break;
+				default:
+					// XXX handle better
+					fpu_fault_code = FPU_FAULT_CODE_UNKNOWN;
+			}
+			ret = fpu_fault(fpu_fault_code);
+			break;
+		}
+		case 64: // FPU disable exception
+		case 65: // Slot FPU disable exception
+			ret = fpu_disable_fault();
 			break;
 		case EXCEPTION_PAGE_FAULT:
 			ret = vm_page_fault(page_fault_addr, pc);

@@ -40,7 +40,7 @@ int arch_thread_initialize_kthread_stack(struct thread *t, int (*start_func)(voi
 	*kstack_top = (unsigned int)entry_func;
 
 	// simulate the important registers being pushed
-	for(i=0; i<7; i++) {
+	for(i=0; i<7+5; i++) {
 		kstack_top--;
 		*kstack_top = 0;
 	}

@@ -1,4 +1,5 @@
 #include <kernel/kernel.h>
+#include <kernel/debug.h>
 #include <stage2.h>
 
 int arch_vm_init(kernel_args *ka)
@@ -13,6 +14,7 @@ int arch_vm_init2(kernel_args *ka)
 
 int map_page_into_kspace(addr paddr, addr kaddr, int lock)
 {
+	panic("map_page_into_kspace: XXX finish or dont use!\n");
 	return 0;
 }
 

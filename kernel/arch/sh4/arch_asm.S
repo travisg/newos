@@ -164,8 +164,18 @@ FUNC(get_sr)
 	rts
 	nop
 
+FUNC(get_fpscr)
+	sts	fpscr,r0
+	rts
+	nop
+
 // void sh4_context_switch(unsigned int **old_esp, unsigned int *new_esp);
 FUNC(sh4_context_switch)
+	fmov.s	fr12,@-r15
+	fmov.s	fr13,@-r15
+	fmov.s	fr14,@-r15
+	fmov.s	fr15,@-r15
+	sts.l	fpscr,@-r15
 	mov.l	r8,@-r15
 	mov.l	r9,@-r15
 	mov.l	r10,@-r15
@@ -186,6 +196,11 @@ FUNC(sh4_context_switch)
 	mov.l	@r15+,r10
 	mov.l	@r15+,r9
 	mov.l	@r15+,r8
+	lds.l	@r15+,fpscr
+	fmov.s	@r15+,fr15
+	fmov.s	@r15+,fr14
+	fmov.s	@r15+,fr13
+	fmov.s	@r15+,fr12
 
 	rts
 	nop

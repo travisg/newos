@@ -23,20 +23,44 @@ _tlb_ipw:
 	/* deal with inital page write exception */
 	/* we can stay on reg bank 1, switch to a tlb stack */
 	mov.l	tlb_stack_addr1,r15
-	sts.l	pr,@-r15		/* save the pr reg */
+
+	/* save some of the floating point registers */
+	/* they seem to be used by some of the libgcc stuff */
+	/* saving: fpscr, fpul, dr0, dr2, dr4 */
+	fmov.s	fr0,@-r15
+	fmov.s	fr1,@-r15
+	fmov.s	fr2,@-r15
+	fmov.s	fr3,@-r15
+	fmov.s	fr4,@-r15
+	fmov.s	fr5,@-r15
+	sts.l	fpul,@-r15
+	sts.l	fpscr,@-r15
+
 	mov	r0,r4			/* arg 1, excode */
 	shlr2	r4			/* shift arg 1 over two more bits */
 	mov.l	r4,@-r15		/* save the excode for after the call */
+	sts.l	pr,@-r15		/* save the pr reg */
 	stc	spc,r5			/* arg 2, spc */
 	mov.l	initial_page_write_handler,r1
 	jsr	@r1
 	nop
 
+	/* restore regs */
+	lds.l	@r15+,pr
+	mov.l	@r15+,r1
+	lds.l	@r15+,fpscr
+	lds.l	@r15+,fpul
+	fmov.s	@r15+,fr5
+	fmov.s	@r15+,fr4
+	fmov.s	@r15+,fr3
+	fmov.s	@r15+,fr2
+	fmov.s	@r15+,fr1
+	fmov.s	@r15+,fr0
+
 	/* see if the tlb handler returned another exception code */
 	/* if so, the tlb ipw just elevated to a page fault or other such */
 	/* 'soft' faults. */
-	mov.l	@r15+,r1
-	lds.l	@r15+,pr
+
 	cmp/eq	r0,r1
 	bf	_soft_fault
 	nop
@@ -73,8 +97,21 @@ TLB_miss_ent:
 	
 	/* we can stay on reg bank 1, switch to a tlb stack */
 	mov.l	tlb_stack_addr2,r15
-	sts.l	pr,@-r15		/* save the pr reg into r13 */
+
+	/* save some of the floating point registers */
+	/* they seem to be used by some of the libgcc stuff */
+	/* saving: fpscr, fpul, dr0, dr2, dr4 */
+	fmov.s	fr0,@-r15
+	fmov.s	fr1,@-r15
+	fmov.s	fr2,@-r15
+	fmov.s	fr3,@-r15
+	fmov.s	fr4,@-r15
+	fmov.s	fr5,@-r15
+	sts.l	fpul,@-r15
+	sts.l	fpscr,@-r15
+
 	mov.l	r4,@-r15		/* save the exception code into r12 */
+	sts.l	pr,@-r15		/* save the pr reg into r13 */
 
 	/* arg 1 is exception code already in r4 */
 	stc	spc,r5			/* arg 2, spc */
@@ -85,8 +122,19 @@ TLB_miss_ent:
 	/* see if the tlb miss handler returned another exception code */
 	/* if so, the tlb miss just elevated to a page fault or other such */
 	/* 'soft' faults. */
-	mov.l	@r15+,r1		/* restore the original exception code */	
 	lds.l	@r15+,pr		/* restore pr from r13 */
+	mov.l	@r15+,r1		/* restore the original exception code */	
+
+	/* restore the saved floating point registers */
+	lds.l	@r15+,fpscr
+	lds.l	@r15+,fpul
+	fmov.s	@r15+,fr5
+	fmov.s	@r15+,fr4
+	fmov.s	@r15+,fr3
+	fmov.s	@r15+,fr2
+	fmov.s	@r15+,fr1
+	fmov.s	@r15+,fr0
+
 	cmp/eq	r0,r1			/* check against the stored original exception code */
 	bf	_soft_fault1
 	nop
@@ -186,6 +234,51 @@ _have_set_stack:
 	mov.l	r7,@-r15
 
 _after_r0r7_save:
+	/* save the floating point registers */
+	/* XXX see about optimizing this later */
+	fmov.s	fr0,@-r15
+	fmov.s	fr1,@-r15
+	fmov.s	fr2,@-r15
+	fmov.s	fr3,@-r15
+	fmov.s	fr4,@-r15
+	fmov.s	fr5,@-r15
+	fmov.s	fr6,@-r15
+	fmov.s	fr7,@-r15
+	fmov.s	fr8,@-r15
+	fmov.s	fr9,@-r15
+	fmov.s	fr10,@-r15
+	fmov.s	fr11,@-r15
+	fmov.s	fr12,@-r15
+	fmov.s	fr13,@-r15
+	fmov.s	fr14,@-r15
+	fmov.s	fr15,@-r15
+	fmov	xd0,dr0
+	fmov	xd2,dr2
+	fmov	xd4,dr4
+	fmov	xd6,dr6
+	fmov	xd8,dr8
+	fmov	xd10,dr10
+	fmov	xd12,dr12
+	fmov	xd14,dr14
+	fmov.s	fr0,@-r15
+	fmov.s	fr1,@-r15
+	fmov.s	fr2,@-r15
+	fmov.s	fr3,@-r15
+	fmov.s	fr4,@-r15
+	fmov.s	fr5,@-r15
+	fmov.s	fr6,@-r15
+	fmov.s	fr7,@-r15
+	fmov.s	fr8,@-r15
+	fmov.s	fr9,@-r15
+	fmov.s	fr10,@-r15
+	fmov.s	fr11,@-r15
+	fmov.s	fr12,@-r15
+	fmov.s	fr13,@-r15
+	fmov.s	fr14,@-r15
+	fmov.s	fr15,@-r15
+	sts.l	fpul,@-r15
+	sts.l	fpscr,@-r15
+
 	/* can save most of the special registers we need in r8-r14 */
 	/* the abi we're working with saves r8-14 on function calls */
 	stc	gbr,r8
@@ -224,9 +317,54 @@ _after_r0r7_save:
 	lds	r10,macl
 	lds	r9,mach
 	ldc	r8,gbr	
+
+	mov.l	@r15+,r0		/* get the exception code */
+
+	/* restore the floating point registers */
+	lds.l	@r15+,fpscr
+	lds.l	@r15+,fpul
+	fmov.s	@r15+,fr15
+	fmov.s	@r15+,fr14
+	fmov.s	@r15+,fr13
+	fmov.s	@r15+,fr12
+	fmov.s	@r15+,fr11
+	fmov.s	@r15+,fr10
+	fmov.s	@r15+,fr9
+	fmov.s	@r15+,fr8
+	fmov.s	@r15+,fr7
+	fmov.s	@r15+,fr6
+	fmov.s	@r15+,fr5
+	fmov.s	@r15+,fr4
+	fmov.s	@r15+,fr3
+	fmov.s	@r15+,fr2
+	fmov.s	@r15+,fr1
+	fmov.s	@r15+,fr0
+	fmov	dr14,xd14
+	fmov	dr12,xd12
+	fmov	dr10,xd10
+	fmov	dr8,xd8
+	fmov	dr6,xd6
+	fmov	dr4,xd4
+	fmov	dr2,xd2
+	fmov	dr0,xd0
+	fmov.s	@r15+,fr15
+	fmov.s	@r15+,fr14
+	fmov.s	@r15+,fr13
+	fmov.s	@r15+,fr12
+	fmov.s	@r15+,fr11
+	fmov.s	@r15+,fr10
+	fmov.s	@r15+,fr9
+	fmov.s	@r15+,fr8
+	fmov.s	@r15+,fr7
+	fmov.s	@r15+,fr6
+	fmov.s	@r15+,fr5
+	fmov.s	@r15+,fr4
+	fmov.s	@r15+,fr3
+	fmov.s	@r15+,fr2
+	fmov.s	@r15+,fr1
+	fmov.s	@r15+,fr0
 	
 	/* see if we need to restore r0-r7 */
-	mov.l	@r15+,r0		/* get the exception code */
 	cmp/eq	#0x2c,r0
 	bt	_after_r0r7_restore
 	nop
