@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -90,10 +90,10 @@ static void _update_all_pgdirs(int index, pdentry e)
 	// XXX disable interrupts here?
 	unsigned int state;
 	vm_translation_map *entry;
-	
+
 	state = int_disable_interrupts();
 	acquire_spinlock(&tmap_list_lock);
-	
+
 	for(entry = tmap_list; entry != NULL; entry = entry->next)
 		entry->arch_data->pgdir_virt[index] = e;
 
@@ -109,7 +109,7 @@ static int lock_tmap(vm_translation_map *map)
 //		dprintf("clearing invalidated page count\n");
 		map->arch_data->num_invalidate_pages = 0;
 	}
-	
+
 	return 0;
 }
 
@@ -131,7 +131,7 @@ static int unlock_tmap(vm_translation_map *map)
 				map->arch_data->num_invalidate_pages, 0, NULL, SMP_MSG_FLAG_SYNC);
 		}
 		map->arch_data->num_invalidate_pages = 0;
-	}		
+	}
 	recursive_lock_unlock(&map->lock);
 	return 0;
 }
@@ -173,7 +173,7 @@ static void destroy_tmap(vm_translation_map *map)
 		for(i = VADDR_TO_PDENT(USER_BASE); i < VADDR_TO_PDENT(USER_BASE + (USER_SIZE - 1)); i++) {
 			addr pgtable_addr;
 			vm_page *page;
-			
+
 			if(map->arch_data->pgdir_virt[i].present == 1) {
 				pgtable_addr = ADDR_REVERSE_SHIFT(map->arch_data->pgdir_virt[i].addr);
 				page = vm_lookup_page(pgtable_addr);
@@ -203,6 +203,7 @@ static int map_tmap(vm_translation_map *map, addr va, addr pa, unsigned int attr
 	pdentry *pd;
 	ptentry *pt;
 	unsigned int index;
+	int err;
 
 #if CHATTY_TMAP
 	dprintf("map_tmap: entry pa 0x%x va 0x%x\n", pa, va);
@@ -235,12 +236,14 @@ static int map_tmap(vm_translation_map *map, addr va, addr pa, unsigned int attr
 		// update any other page directories, if it maps kernel space
 		if(index >= FIRST_KERNEL_PGDIR_ENT && index < (FIRST_KERNEL_PGDIR_ENT + NUM_KERNEL_PGDIR_ENTS))
 			_update_all_pgdirs(index, pd[index]);
-		
+
 		map->map_count++;
 	}
 
 	// now, fill in the pentry
-	vm_get_physical_page(ADDR_REVERSE_SHIFT(pd[index].addr), (addr *)&pt, PHYSICAL_PAGE_NO_WAIT);
+	do {
+		err = vm_get_physical_page(ADDR_REVERSE_SHIFT(pd[index].addr), (addr *)&pt, PHYSICAL_PAGE_NO_WAIT);
+	} while(err < 0);
 	index = VADDR_TO_PTENT(va);
 
 	init_ptentry(&pt[index]);
@@ -255,7 +258,7 @@ static int map_tmap(vm_translation_map *map, addr va, addr pa, unsigned int attr
 		map->arch_data->pages_to_invalidate[map->arch_data->num_invalidate_pages] = va;
 	}
 	map->arch_data->num_invalidate_pages++;
-	
+
 	map->map_count++;
 
 	return 0;
@@ -266,13 +269,14 @@ static int unmap_tmap(vm_translation_map *map, addr start, addr end)
 	ptentry *pt;
 	pdentry *pd = map->arch_data->pgdir_virt;
 	int index;
+	int err;
 
 	start = ROUNDOWN(start, PAGE_SIZE);
 	end = ROUNDUP(end, PAGE_SIZE);
 
 #if CHATTY_TMAP
 		dprintf("unmap_tmap: asked to free pages 0x%x to 0x%x\n", start, end);
-#endif	
+#endif
 
 restart:
 	if(start >= end)
@@ -285,9 +289,11 @@ restart:
 		goto restart;
 	}
 
-	vm_get_physical_page(ADDR_REVERSE_SHIFT(pd[index].addr), (addr *)&pt, PHYSICAL_PAGE_NO_WAIT);
+	do {
+		err = vm_get_physical_page(ADDR_REVERSE_SHIFT(pd[index].addr), (addr *)&pt, PHYSICAL_PAGE_NO_WAIT);
+	} while(err < 0);
 
-	for(index = VADDR_TO_PTENT(start); (index < 1024) && (start < end); index++, start += PAGE_SIZE) {	
+	for(index = VADDR_TO_PTENT(start); (index < 1024) && (start < end); index++, start += PAGE_SIZE) {
 		if(pt[index].present == 0) {
 			// page mapping not valid
 			continue;
@@ -314,6 +320,7 @@ static int query_tmap(vm_translation_map *map, addr va, addr *out_physical, unsi
 	ptentry *pt;
 	pdentry *pd = map->arch_data->pgdir_virt;
 	int index;
+	int err;
 
 	index = VADDR_TO_PDENT(va);
 	if(pd[index].present == 0) {
@@ -321,14 +328,16 @@ static int query_tmap(vm_translation_map *map, addr va, addr *out_physical, unsi
 		return ERR_VM_PAGE_NOT_PRESENT;
 	}
 
-	vm_get_physical_page(ADDR_REVERSE_SHIFT(pd[index].addr), (addr *)&pt, PHYSICAL_PAGE_NO_WAIT);
+	do {
+		err = vm_get_physical_page(ADDR_REVERSE_SHIFT(pd[index].addr), (addr *)&pt, PHYSICAL_PAGE_NO_WAIT);
+	} while(err < 0);
 	index = VADDR_TO_PTENT(va);
 	if(pt[index].present == 0) {
 		// page mapping not valid
 		vm_put_physical_page((addr)pt);
 		return ERR_VM_PAGE_NOT_PRESENT;
 	}
-	
+
 	*out_physical = ADDR_REVERSE_SHIFT(pt[index].addr);
 
 	// XXX fill this
@@ -338,7 +347,7 @@ static int query_tmap(vm_translation_map *map, addr va, addr *out_physical, unsi
 
 //	dprintf("query_tmap: returning pa 0x%x for va 0x%x\n", *out_physical, va);
 
-	return 0;	
+	return 0;
 }
 
 static addr get_mapped_size_tmap(vm_translation_map *map)
@@ -358,12 +367,12 @@ static int map_iospace_chunk(addr va, addr pa)
 	int i;
 	ptentry *pt;
 	addr ppn;
-	
+
 	pa &= ~(PAGE_SIZE - 1); // make sure it's page aligned
 	va &= ~(PAGE_SIZE - 1); // make sure it's page aligned
 	if(va < IOSPACE_BASE || va >= (IOSPACE_BASE + IOSPACE_SIZE))
 		panic("map_iospace_chunk: passed invalid va 0x%x\n", va);
-	
+
 	ppn = ADDR_SHIFT(pa);
 	pt = &iospace_pgtables[(va - IOSPACE_BASE)/PAGE_SIZE];
 	for(i=0; i<1024; i++) {
@@ -373,7 +382,7 @@ static int map_iospace_chunk(addr va, addr pa)
 		pt[i].rw = 1;
 		pt[i].present = 1;
 	}
-	
+
 	arch_cpu_invalidate_TLB_range(va, va + (IOSPACE_CHUNK_SIZE - PAGE_SIZE));
 	smp_send_broadcast_ici(SMP_MSG_INVL_PAGE_RANGE, va, va + (IOSPACE_CHUNK_SIZE - PAGE_SIZE), 0,
 		NULL, SMP_MSG_FLAG_SYNC);
@@ -385,11 +394,11 @@ static int get_physical_page_tmap(addr pa, addr *va, int flags)
 {
 	int index;
 	paddr_chunk_desc *replaced_pchunk;
-	
+
 restart:
 
 	mutex_lock(&iospace_mutex);
-	
+
 	// see if the page is already mapped
 	index = pa / IOSPACE_CHUNK_SIZE;
 	if(paddr_desc[index].va != 0) {
@@ -414,7 +423,7 @@ restart:
 		for(; first_free_vmapping < num_virtual_chunks; first_free_vmapping++) {
 			if(virtual_pmappings[first_free_vmapping] == NULL)
 				break;
-		}			
+		}
 
 		map_iospace_chunk(paddr_desc[index].va, index * IOSPACE_CHUNK_SIZE);
 		mutex_unlock(&iospace_mutex);
@@ -426,7 +435,9 @@ restart:
 	if(queue_peek(&mapped_paddr_lru) == NULL) {
 		// no free slots available
 		if(flags == PHYSICAL_PAGE_NO_WAIT) {
-			panic("get_physical_page_tmap: no more free iospace slots available!\n");
+			// punt back to the caller and let them handle this
+			mutex_unlock(&iospace_mutex);
+			return ERR_NO_MEMORY;
 		} else {
 			mutex_unlock(&iospace_mutex);
 			sem_acquire(iospace_full_sem, 1);
@@ -451,24 +462,24 @@ static int put_physical_page_tmap(addr va)
 	paddr_chunk_desc *desc;
 
 	mutex_lock(&iospace_mutex);
-	
+
 	desc = virtual_pmappings[va / IOSPACE_CHUNK_SIZE];
 	if(desc == NULL) {
 		mutex_unlock(&iospace_mutex);
 		return ERR_VM_GENERAL;
 	}
-	
+
 	if(--desc->ref_count == 0) {
 		// put it on the mapped lru list
 		queue_enqueue(&mapped_paddr_lru, desc);
 		// no sense rescheduling on this one, there's likely a race in the waiting
 		// thread to grab the iospace_mutex, which would block and eventually get back to
 		// this thread. waste of time.
-		sem_release_etc(iospace_full_sem, 1, SEM_FLAG_NO_RESCHED); 
+		sem_release_etc(iospace_full_sem, 1, SEM_FLAG_NO_RESCHED);
 	}
 
 	mutex_unlock(&iospace_mutex);
-	
+
 	return 0;
 }
 
@@ -489,7 +500,7 @@ int vm_translation_map_create(vm_translation_map *new_map, bool kernel)
 {
 	if(new_map == NULL)
 		return ERR_INVALID_ARGS;
-	
+
 	// initialize the new object
 	new_map->ops = &tmap_ops;
 	new_map->map_count = 0;
@@ -522,19 +533,19 @@ int vm_translation_map_create(vm_translation_map *new_map, bool kernel)
 
 	// zero out the bottom portion of the new pgdir
 	memset(new_map->arch_data->pgdir_virt + FIRST_USER_PGDIR_ENT, 0, NUM_USER_PGDIR_ENTS * sizeof(pdentry));
-	
+
 	// insert this new map into the map list
 	{
 		int state = int_disable_interrupts();
 		acquire_spinlock(&tmap_list_lock);
-		
+
 		// copy the top portion of the pgdir from the current one
 		memcpy(new_map->arch_data->pgdir_virt + FIRST_KERNEL_PGDIR_ENT, kernel_pgdir_virt + FIRST_KERNEL_PGDIR_ENT,
 			NUM_KERNEL_PGDIR_ENTS * sizeof(pdentry));
 
 		new_map->next = tmap_list;
 		tmap_list = new_map;
-	
+
 		release_spinlock(&tmap_list_lock);
 		int_restore_interrupts(state);
 	}
@@ -545,9 +556,9 @@ int vm_translation_map_create(vm_translation_map *new_map, bool kernel)
 int vm_translation_map_module_init(kernel_args *ka)
 {
 	int i;
-	
+
 	dprintf("vm_translation_map_module_init: entry\n");
-	
+
 	// page hole set up in stage2
 	page_hole = (ptentry *)ka->arch_args.page_hole;
 	// calculate where the pgdir would be
@@ -591,13 +602,13 @@ int vm_translation_map_module_init(kernel_args *ka)
 		addr phys_pgtable;
 		addr virt_pgtable;
 		pdentry *e;
-	
+
 		virt_pgtable = (addr)iospace_pgtables;
 		for(i = 0; i < (IOSPACE_SIZE / (PAGE_SIZE * 1024)); i++, virt_pgtable += PAGE_SIZE) {
 			vm_translation_map_quick_query(virt_pgtable, &phys_pgtable);
 			e = &page_hole_pgdir[(IOSPACE_BASE / (PAGE_SIZE * 1024)) + i];
 			put_pgtable_in_pgdir(e, phys_pgtable, LOCK_RW|LOCK_KERNEL);
-		}	
+		}
 	}
 
 	dprintf("vm_translation_map_module_init: done\n");
@@ -610,7 +621,7 @@ int vm_translation_map_module_init2(kernel_args *ka)
 	// now that the vm is initialized, create an region that represents
 	// the page hole
 	void *temp;
-	
+
 	dprintf("vm_translation_map_module_init2: entry\n");
 
 	mutex_init(&iospace_mutex, "iospace_mutex");
@@ -633,12 +644,12 @@ int vm_translation_map_module_init2(kernel_args *ka)
 	temp = (void *)virtual_pmappings;
 	vm_create_anonymous_region(vm_get_kernel_aspace_id(), "iospace_virtual_chunk_descriptors", &temp,
 		REGION_ADDR_EXACT_ADDRESS, ROUNDUP(sizeof(paddr_chunk_desc *) * num_virtual_chunks, PAGE_SIZE),
-		REGION_WIRING_WIRED_ALREADY, LOCK_RW|LOCK_KERNEL);	
+		REGION_WIRING_WIRED_ALREADY, LOCK_RW|LOCK_KERNEL);
 
 	temp = (void *)iospace_pgtables;
 	vm_create_anonymous_region(vm_get_kernel_aspace_id(), "iospace_pgtables", &temp,
 		REGION_ADDR_EXACT_ADDRESS, PAGE_SIZE * (IOSPACE_SIZE / (PAGE_SIZE * 1024)),
-		REGION_WIRING_WIRED_ALREADY, LOCK_RW|LOCK_KERNEL);	
+		REGION_WIRING_WIRED_ALREADY, LOCK_RW|LOCK_KERNEL);
 
 	dprintf("vm_translation_map_module_init2: creating iospace\n");
 	temp = (void *)IOSPACE_BASE;
@@ -713,10 +724,10 @@ static int vm_translation_map_quick_query(addr va, addr *out_physical)
 		// page mapping not valid
 		return ERR_VM_PAGE_NOT_PRESENT;
 	}
-	
+
 	*out_physical = pentry->addr << 12;
 
-	return 0;	
+	return 0;
 }
 
 addr vm_translation_map_get_pgdir(vm_translation_map *map)

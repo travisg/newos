@@ -105,7 +105,7 @@ void vm_test()
 		dprintf("vid_mem region = 0x%x\n", region);
 
 		region2 = vm_clone_region(vm_get_kernel_aspace_id(), "vid_mem2",
-			&ptr, REGION_ADDR_ANY_ADDRESS, region, LOCK_RW|LOCK_KERNEL);
+			&ptr, REGION_ADDR_ANY_ADDRESS, region, REGION_NO_PRIVATE_MAP, LOCK_RW|LOCK_KERNEL);
 		if(region2 < 0)
 			panic("vm_test 4: error cloning region 'vid_mem'\n");
 		dprintf("region2 = 0x%x, ptr = 0x%x\n", region2, ptr);
@@ -134,7 +134,7 @@ void vm_test()
 		dprintf("vid_mem region = 0x%x\n", region);
 
 		region2 = vm_clone_region(vm_get_kernel_aspace_id(), "vid_mem3",
-			&ptr, REGION_ADDR_ANY_ADDRESS, region, LOCK_RO|LOCK_KERNEL);
+			&ptr, REGION_ADDR_ANY_ADDRESS, region, REGION_NO_PRIVATE_MAP, LOCK_RO|LOCK_KERNEL);
 		if(region2 < 0)
 			panic("vm_test 5: error cloning region 'vid_mem'\n");
 		dprintf("region2 = 0x%x, ptr = 0x%x\n", region2, ptr);
@@ -169,7 +169,7 @@ void vm_test()
 		dprintf("memsetted the region\n");
 
 		region2 = vm_clone_region(vm_get_kernel_aspace_id(), "test_region2",
-			&ptr, REGION_ADDR_ANY_ADDRESS, region, LOCK_RW|LOCK_KERNEL);
+			&ptr, REGION_ADDR_ANY_ADDRESS, region, REGION_NO_PRIVATE_MAP, LOCK_RW|LOCK_KERNEL);
 		if(region2 < 0)
 			panic("vm_test 6: error cloning test region\n");
 		dprintf("region2 = 0x%x, ptr = 0x%x\n", region2, ptr);
@@ -198,10 +198,10 @@ void vm_test()
 		fd = sys_open("/boot/kernel", STREAM_TYPE_FILE, 0);
 
 		rid = vm_map_file(vm_get_kernel_aspace_id(), "mmap_test", &ptr, REGION_ADDR_ANY_ADDRESS,
-			PAGE_SIZE, LOCK_RW|LOCK_KERNEL, "/boot/kernel", 0, true);
+			PAGE_SIZE, LOCK_RW|LOCK_KERNEL, REGION_NO_PRIVATE_MAP, "/boot/kernel", 0, true);
 
 		rid2 = vm_map_file(vm_get_kernel_aspace_id(), "mmap_test2", &ptr2, REGION_ADDR_ANY_ADDRESS,
-			PAGE_SIZE, LOCK_RW|LOCK_KERNEL, "/boot/kernel", 0, true);
+			PAGE_SIZE, LOCK_RW|LOCK_KERNEL, REGION_NO_PRIVATE_MAP, "/boot/kernel", 0, true);
 
 		dprintf("diff %d\n", memcmp(ptr, ptr2, PAGE_SIZE));
 
@@ -214,9 +214,143 @@ void vm_test()
 
 		sys_close(fd);
 
-dprintf("vm_test 7: passed\n");
+		dprintf("vm_test 7: passed\n");
 	}
 #endif
+#if 1
+	dprintf("vm_test 8: creating anonymous region, cloning it with private mapping\n");
+	{
+		region_id region, region2;
+		void *region_addr;
+		void *ptr;
+		int rc;
 
+		dprintf("vm_test 8: creating test region...\n");
+
+		region = vm_create_anonymous_region(vm_get_kernel_aspace_id(), "test_region", &region_addr,
+			REGION_ADDR_ANY_ADDRESS, PAGE_SIZE * 16, REGION_WIRING_LAZY, LOCK_RW|LOCK_KERNEL);
+		if(region < 0)
+			panic("vm_test 8: error creating test region\n");
+		dprintf("region = 0x%x, addr = 0x%x\n", region, region_addr);
+
+		dprintf("vm_test 8: memsetting the first 2 pages\n");
+
+		memset(region_addr, 99, PAGE_SIZE * 2);
+
+		dprintf("vm_test 8: cloning test region with PRIVATE_MAP\n");
+
+		region2 = vm_clone_region(vm_get_kernel_aspace_id(), "test_region2",
+			&ptr, REGION_ADDR_ANY_ADDRESS, region, REGION_PRIVATE_MAP, LOCK_RW|LOCK_KERNEL);
+		if(region2 < 0)
+			panic("vm_test 8: error cloning test region\n");
+		dprintf("region2 = 0x%x, ptr = 0x%x\n", region2, ptr);
+
+		dprintf("vm_test 8: comparing first 2 pages, shoudld be identical\n");
+
+		rc = memcmp(region_addr, ptr, PAGE_SIZE * 2);
+		if(rc != 0)
+			panic("vm_test 8: regions are not identical\n");
+		else
+			dprintf("vm_test 8: comparison ok\n");
+
+		dprintf("vm_test 8: changing one page in the clone and comparing, should now differ\n");
+
+		memset(ptr, 1, 1);
+
+		rc = memcmp(region_addr, ptr, PAGE_SIZE);
+		if(rc != 0)
+			dprintf("vm_test 8: regions are not identical, good\n");
+		else
+			panic("vm_test 8: comparison shows not private mapping\n");
+
+		dprintf("vm_test 8: comparing untouched pages in source and clone, should be identical\n");
+
+		rc = memcmp((char *)region_addr + 2*PAGE_SIZE, (char *)ptr + 2*PAGE_SIZE, PAGE_SIZE * 1);
+		if(rc != 0)
+			panic("vm_test 8: regions are not identical\n");
+		else
+			dprintf("vm_test 8: comparison ok\n");
+
+		dprintf("vm_test 8: modifying source page and comparing, should be the same\n");
+
+		memset((char *)region_addr + 3*PAGE_SIZE, 2, 4);
+
+		rc = memcmp((char *)region_addr + 3*PAGE_SIZE, (char *)ptr + 3*PAGE_SIZE, PAGE_SIZE * 1);
+		if(rc != 0)
+			panic("vm_test 8: regions are not identical\n");
+		else
+			dprintf("vm_test 8: comparison ok\n");
+
+
+		dprintf("vm_test 8: modifying new page in clone, should not effect source, which is also untouched\n");
+
+		memset((char *)ptr + 4*PAGE_SIZE, 2, 4);
+
+		rc = memcmp((char *)region_addr + 4*PAGE_SIZE, (char *)ptr + 4*PAGE_SIZE, PAGE_SIZE * 1);
+		if(rc != 0)
+			dprintf("vm_test 8: regions are not identical, good\n");
+		else
+			panic("vm_test 8: comparison shows not private mapping\n");
+
+		if(vm_delete_region(vm_get_kernel_aspace_id(), region) < 0)
+			panic("vm_test 8: error deleting test region\n");
+
+		if(vm_delete_region(vm_get_kernel_aspace_id(), region2) < 0)
+			panic("vm_test 8: error deleting cloned region\n");
+	}
+#endif
+#if 1
+	dprintf("vm_test 9: mmaping a known file a few times, one with private mappings\n");
+	{
+		void *ptr, *ptr2;
+		region_id rid, rid2;
+		int err;
+
+		dprintf("vm_test 9: mapping /boot/kernel twice\n");
+
+		rid = vm_map_file(vm_get_kernel_aspace_id(), "mmap_test", &ptr, REGION_ADDR_ANY_ADDRESS,
+			PAGE_SIZE*4, LOCK_RW|LOCK_KERNEL, REGION_NO_PRIVATE_MAP, "/boot/kernel", 0, true);
+
+		rid2 = vm_map_file(vm_get_kernel_aspace_id(), "mmap_test2", &ptr2, REGION_ADDR_ANY_ADDRESS,
+			PAGE_SIZE*4, LOCK_RW|LOCK_KERNEL, REGION_PRIVATE_MAP, "/boot/kernel", 0, true);
+
+		err = memcmp(ptr, ptr2, PAGE_SIZE);
+		if(err)
+			panic("vm_test 9: two mappings are different\n");
+
+		dprintf("vm_test 9: modifying private mapping in section that has been referenced, should be different\n");
+
+		memset(ptr2, 0xaa, 4);
+
+		err = memcmp(ptr, ptr2, PAGE_SIZE);
+		if(!err)
+			panic("vm_test 9: two mappings still identical\n");
+
+		dprintf("vm_test 9: modifying private mapping in section that hasn't been touched, should be different\n");
+
+		memset((char *)ptr2 + PAGE_SIZE, 0xaa, 4);
+
+		err = memcmp((char *)ptr + PAGE_SIZE, (char *)ptr2 + PAGE_SIZE, PAGE_SIZE);
+		if(!err)
+			panic("vm_test 9: two mappings still identical\n");
+
+		dprintf("vm_test 9: modifying non-private mapping in section that hasn't been touched\n");
+
+		memset((char *)ptr + PAGE_SIZE*2, 0xaa, 4);
+
+		err = memcmp((char *)ptr + PAGE_SIZE*2, (char *)ptr2 + PAGE_SIZE*2, PAGE_SIZE);
+		if(err)
+			panic("vm_test 9: two mappings are different\n");
+
+		dprintf("vm_test 9: removing regions\n");
+
+		vm_delete_region(vm_get_kernel_aspace_id(), rid);
+		vm_delete_region(vm_get_kernel_aspace_id(), rid2);
+
+		dprintf("vm_test 9: regions deleted\n");
+
+		dprintf("vm_test 9: passed\n");
+	}
+#endif
 	dprintf("vm_test: done\n");
 }

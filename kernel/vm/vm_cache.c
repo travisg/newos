@@ -83,6 +83,7 @@ vm_cache *vm_cache_create(vm_store *store)
 
 	cache->page_list = NULL;
 	cache->ref = NULL;
+	cache->source = NULL;
 	cache->store = store;
 	if(store != NULL)
 		store->cache = cache;
@@ -142,15 +143,32 @@ void vm_cache_release_ref(vm_cache_ref *cache_ref)
 		page = cache_ref->cache->page_list;
 		while(page) {
 			vm_page *old_page = page;
+			int state;
+
 			page = page->cache_next;
-			dprintf("vm_cache_release_ref: freeing page 0x%x\n", old_page->ppn);
+
+			// remove it from the hash table
+			state = int_disable_interrupts();
+			acquire_spinlock(&page_cache_table_lock);
+
+			hash_remove(page_cache_table, old_page);
+
+			release_spinlock(&page_cache_table_lock);
+			int_restore_interrupts(state);
+
+//			dprintf("vm_cache_release_ref: freeing page 0x%x\n", old_page->ppn);
 			vm_page_set_state(old_page, PAGE_STATE_FREE);
 		}
 		vm_increase_max_commit(cache_ref->cache->virtual_size - store_committed_size);
 
+		// remove the ref to the source
+		if(cache_ref->cache->source)
+			vm_cache_release_ref(cache_ref->cache->source->ref);
+
 		mutex_destroy(&cache_ref->lock);
 		kfree(cache_ref->cache);
 		kfree(cache_ref);
+
 		return;
 	}
 	if(cache_ref->cache->store->ops->release_ref) {

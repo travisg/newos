@@ -55,7 +55,7 @@ static spinlock_t max_commit_lock;
 // function declarations
 static vm_region *_vm_create_region_struct(vm_address_space *aspace, const char *name, int wiring, int lock);
 static int map_backing_store(vm_address_space *aspace, vm_store *store, void **vaddr,
-	off_t offset, addr size, int addr_type, int wiring, int lock, vm_region **_region, const char *region_name);
+	off_t offset, addr size, int addr_type, int wiring, int lock, int mapping, vm_region **_region, const char *region_name);
 static int vm_soft_fault(addr address, bool is_write, bool is_user);
 static vm_region *vm_virtual_map_lookup(vm_virtual_map *map, addr address);
 static int vm_region_acquire_ref(vm_region *region);
@@ -282,11 +282,15 @@ static int find_and_insert_region_slot(vm_virtual_map *map, addr start, addr siz
 
 // a ref to the cache holding this store must be held before entering here
 static int map_backing_store(vm_address_space *aspace, vm_store *store, void **vaddr,
-	off_t offset, addr size, int addr_type, int wiring, int lock, vm_region **_region, const char *region_name)
+	off_t offset, addr size, int addr_type, int wiring, int lock, int mapping, vm_region **_region, const char *region_name)
 {
 	vm_cache *cache;
 	vm_cache_ref *cache_ref;
 	vm_region *region;
+	vm_cache *nu_cache;
+	vm_cache_ref *nu_cache_ref = NULL;
+	vm_store *nu_store;
+
 	int err;
 
 //	dprintf("map_backing_store: aspace 0x%x, store 0x%x, *vaddr 0x%x, offset 0x%x 0x%x, size %d, addr_type %d, wiring %d, lock %d, _region 0x%x, region_name '%s'\n",
@@ -298,6 +302,31 @@ static int map_backing_store(vm_address_space *aspace, vm_store *store, void **v
 
 	cache = store->cache;
 	cache_ref = cache->ref;
+
+	// if this is a private map, we need to create a new cache & store object
+	// pair to handle the private copies of pages as they are written to
+	if(mapping == REGION_PRIVATE_MAP) {
+		// create an anonymous store object
+		nu_store = vm_store_create_anonymous_noswap();
+		if(nu_store == NULL)
+			panic("map_backing_store: vm_create_store_anonymous_noswap returned NULL");
+		nu_cache = vm_cache_create(nu_store);
+		if(nu_cache == NULL)
+			panic("map_backing_store: vm_cache_create returned NULL");
+		nu_cache_ref = vm_cache_ref_create(nu_cache);
+		if(nu_cache_ref == NULL)
+			panic("map_backing_store: vm_cache_ref_create returned NULL");
+		nu_cache->temporary = 1;
+
+		nu_cache->source = cache;
+
+		// grab a ref to the cache object we're now linked to as a source
+		vm_cache_acquire_ref(cache_ref, true);
+
+		cache = nu_cache;
+		cache_ref = cache->ref;
+		store = nu_store;
+	}
 
 	mutex_lock(&cache_ref->lock);
 	if(store->committed_size < offset + size) {
@@ -314,7 +343,7 @@ static int map_backing_store(vm_address_space *aspace, vm_store *store, void **v
 					int_restore_interrupts(state);
 					mutex_unlock(&cache_ref->lock);
 					err = ERR_VM_WOULD_OVERCOMMIT;
-					goto err;
+					goto err1a;
 				}
 
 //				dprintf("map_backing_store: adding %d to max_commit\n",
@@ -327,7 +356,7 @@ static int map_backing_store(vm_address_space *aspace, vm_store *store, void **v
 			} else {
 				mutex_unlock(&cache_ref->lock);
 				err = ERR_NO_MEMORY;
-				goto err;
+				goto err1a;
 			}
 		}
 	}
@@ -349,12 +378,12 @@ static int map_backing_store(vm_address_space *aspace, vm_store *store, void **v
 			search_end = aspace->virtual_map.base + (aspace->virtual_map.size - 1);
 		} else {
 			err = ERR_INVALID_ARGS;
-			goto err2;
+			goto err1b;
 		}
 
 		err = find_and_insert_region_slot(&aspace->virtual_map, search_addr, size, search_end, addr_type, region);
 		if(err < 0)
-			goto err2;
+			goto err1b;
 		*vaddr = (addr *)region->base;
 	}
 
@@ -375,11 +404,17 @@ static int map_backing_store(vm_address_space *aspace, vm_store *store, void **v
 
 	return NO_ERROR;
 
-err2:
+err1b:
 	sem_release(aspace->virtual_map.sem, WRITE_COUNT);
-err1:
-	// releasing the cache ref twice should put us back to the proper cache count
 	vm_cache_release_ref(cache_ref);
+	goto err;
+err1a:
+	if(nu_cache_ref) {
+		// had never acquired it's initial ref, so acquire and then release it
+		// this should clean up all the objects it references
+		vm_cache_acquire_ref(cache_ref, true);
+		vm_cache_release_ref(cache_ref);
+	}
 err:
 	kfree(region->name);
 	kfree(region);
@@ -445,7 +480,7 @@ region_id vm_create_anonymous_region(aspace_id aid, char *name, void **address, 
 	cache->temporary = 1;
 
 	vm_cache_acquire_ref(cache_ref, true);
-	err = map_backing_store(aspace, store, address, 0, size, addr_type, wiring, lock, &region, name);
+	err = map_backing_store(aspace, store, address, 0, size, addr_type, wiring, lock, REGION_NO_PRIVATE_MAP, &region, name);
 	vm_cache_release_ref(cache_ref);
 	if(err < 0)
 		return err;
@@ -573,7 +608,7 @@ region_id vm_map_physical_memory(aspace_id aid, char *name, void **address, int 
 		panic("vm_map_physical_memory: vm_cache_ref_create returned NULL");
 
 	vm_cache_acquire_ref(cache_ref, true);
-	err = map_backing_store(aspace, store, address, 0, size, addr_type, 0, lock, &region, name);
+	err = map_backing_store(aspace, store, address, 0, size, addr_type, 0, lock, REGION_NO_PRIVATE_MAP, &region, name);
 	vm_cache_release_ref(cache_ref);
 	if(err < 0)
 		return err;
@@ -585,7 +620,7 @@ region_id vm_map_physical_memory(aspace_id aid, char *name, void **address, int 
 }
 
 region_id vm_map_file(aspace_id aid, char *name, void **address, int addr_type,
-	addr size, int lock, const char *path, off_t offset, bool kernel)
+	addr size, int lock, int mapping, const char *path, off_t offset, bool kernel)
 {
 	vm_region *region;
 	vm_cache *cache;
@@ -645,7 +680,7 @@ restart:
 	// below because we'll have to release it later anyway, since we grabbed a ref to the vnode at
 	// vfs_get_vnode_from_path(). This puts the ref counts in sync.
 	vm_cache_acquire_ref(cache_ref, false);
-	err = map_backing_store(aspace, store, address, 0, size, addr_type, 0, lock, &region, name);
+	err = map_backing_store(aspace, store, address, 0, size, addr_type, 0, lock, mapping, &region, name);
 	vm_cache_release_ref(cache_ref);
 	if(err < 0)
 		return err;
@@ -674,7 +709,7 @@ region_id user_vm_clone_region(aspace_id aid, char *uname, void **uaddress, int 
 	if(rc < 0)
 		return rc;
 
-	rc = vm_clone_region(aid, name, &address, addr_type, source_region, lock);
+	rc = vm_clone_region(aid, name, &address, addr_type, source_region, REGION_NO_PRIVATE_MAP, lock);
 	if(rc < 0)
 		return rc;
 
@@ -686,7 +721,7 @@ region_id user_vm_clone_region(aspace_id aid, char *uname, void **uaddress, int 
 }
 
 region_id vm_clone_region(aspace_id aid, char *name, void **address, int addr_type,
-	region_id source_region, int lock)
+	region_id source_region, int mapping, int lock)
 {
 	vm_region *new_region;
 	vm_region *src_region;
@@ -714,7 +749,7 @@ region_id vm_clone_region(aspace_id aid, char *name, void **address, int addr_ty
 		return ERR_VM_INVALID_REGION;
 
 	err = map_backing_store(aspace, src_region->cache_ref->cache->store, address, src_region->cache_offset, src_region->size,
-		addr_type, src_region->wiring, lock, &new_region, name);
+		addr_type, src_region->wiring, lock, mapping, &new_region, name);
 	vm_cache_release_ref(src_region->cache_ref);
 
 	// release the ref on the old region
@@ -1041,6 +1076,7 @@ static void dump_cache(int argc, char **argv)
 
 	dprintf("cache at 0x%x:\n", cache);
 	dprintf("cache_ref: 0x%x\n", cache->ref);
+	dprintf("source: 0x%x\n", cache->source);
 	dprintf("store: 0x%x\n", cache->store);
 	// XXX 64-bit
 	dprintf("virtual_size: 0x%x 0x%x\n", cache->virtual_size);
@@ -1048,8 +1084,13 @@ static void dump_cache(int argc, char **argv)
 	dprintf("page_list:\n");
 	for(page = cache->page_list; page != NULL; page = page->cache_next) {
 		// XXX offset is 64-bit
-		dprintf(" 0x%x ppn 0x%x offset 0x%x 0x%x type %d state %d (%s) ref_count %d\n",
-			page, page->ppn, page->offset, page->type, page->state, page_state_to_text(page->state), page->ref_count);
+		if(page->type == PAGE_TYPE_PHYSICAL)
+			dprintf(" 0x%x ppn 0x%x offset 0x%x 0x%x type %d state %d (%s) ref_count %d\n",
+				page, page->ppn, page->offset, page->type, page->state, page_state_to_text(page->state), page->ref_count);
+		else if(page->type == PAGE_TYPE_DUMMY)
+			dprintf(" 0x%x DUMMY PAGE state %d (%s)\n", page, page->state, page_state_to_text(page->state));
+		else
+			dprintf(" 0x%x UNKNOWN PAGE type %d\n", page, page->type);
 	}
 }
 
@@ -1473,15 +1514,25 @@ int vm_page_fault(addr address, addr fault_address, bool is_write, bool is_user,
 	return INT_NO_RESCHEDULE;
 }
 
+#define TRACE_PFAULT 0
+
+#if TRACE_PFAULT
+#define TRACE dprintf("in pfault at line %d\n", __LINE__)
+#else
+#define TRACE
+#endif
+
 static int vm_soft_fault(addr address, bool is_write, bool is_user)
 {
 	vm_address_space *aspace;
 	vm_virtual_map *map;
 	vm_region *region;
 	vm_cache_ref *cache_ref;
+	vm_cache_ref *last_cache_ref;
+	vm_cache_ref *top_cache_ref;
 	off_t cache_offset;
 	vm_page dummy_page;
-	vm_page *page;
+	vm_page *page = NULL;
 	int change_count;
 	int err;
 
@@ -1531,49 +1582,67 @@ static int vm_soft_fault(addr address, bool is_write, bool is_user)
 		return ERR_VM_PF_BAD_PERM; // BAD_PERMISSION
 	}
 
-	cache_ref = region->cache_ref;
+	TRACE;
+
+	top_cache_ref = region->cache_ref;
 	cache_offset = address - region->base + region->cache_offset;
-	vm_cache_acquire_ref(cache_ref, true);
+	vm_cache_acquire_ref(top_cache_ref, true);
 	change_count = map->change_count;
 	sem_release(map->sem, READ_COUNT);
 
 	// see if this cache has a fault handler
-	if(cache_ref->cache->store->ops->fault) {
-		int err = (*cache_ref->cache->store->ops->fault)(cache_ref->cache->store, aspace, cache_offset);
-		vm_cache_release_ref(cache_ref);
+	if(top_cache_ref->cache->store->ops->fault) {
+		int err = (*top_cache_ref->cache->store->ops->fault)(top_cache_ref->cache->store, aspace, cache_offset);
+		vm_cache_release_ref(top_cache_ref);
 		return err;
 	}
 
+	TRACE;
+
 	dummy_page.state = PAGE_STATE_INACTIVE;
+	dummy_page.type = PAGE_TYPE_DUMMY;
 
-	mutex_lock(&cache_ref->lock);
+	last_cache_ref = top_cache_ref;
+	for(cache_ref = top_cache_ref; cache_ref; cache_ref = (cache_ref->cache->source) ? cache_ref->cache->source->ref : NULL) {
+		mutex_lock(&cache_ref->lock);
 
-	for(;;) {
-		page = vm_cache_lookup_page(cache_ref, cache_offset);
-		if(page != NULL && page->state != PAGE_STATE_BUSY) {
-			vm_page_set_state(page, PAGE_STATE_BUSY);
+		TRACE;
+
+		for(;;) {
+			page = vm_cache_lookup_page(cache_ref, cache_offset);
+			if(page != NULL && page->state != PAGE_STATE_BUSY) {
+				vm_page_set_state(page, PAGE_STATE_BUSY);
+				mutex_unlock(&cache_ref->lock);
+				break;
+			}
+
+			if(page == NULL)
+				break;
+
+			// page must be busy
 			mutex_unlock(&cache_ref->lock);
-			break;
+			thread_snooze(20000);
+			mutex_lock(&cache_ref->lock);
 		}
 
-		if(page == NULL)
+		if(page != NULL)
 			break;
 
-		// page must be busy
-		mutex_unlock(&cache_ref->lock);
-		thread_snooze(20000);
-		mutex_lock(&cache_ref->lock);
-	}
+		TRACE;
 
-	if(page == NULL) {
-		// still havent found a page, insert the dummy page to lock it
-		dummy_page.state = PAGE_STATE_BUSY;
-		vm_cache_insert_page(cache_ref, &dummy_page, cache_offset);
+		// insert this dummy page here to keep other threads from faulting on the
+		// same address and chasing us ip the cache chain
+		if(cache_ref == top_cache_ref) {
+			dummy_page.state = PAGE_STATE_BUSY;
+			vm_cache_insert_page(cache_ref, &dummy_page, cache_offset);
+		}
 
 		// see if the vm_store has it
-		if(cache_ref->cache->store && cache_ref->cache->store->ops->has_page) {
+		if(cache_ref->cache->store->ops->has_page) {
 			if(cache_ref->cache->store->ops->has_page(cache_ref->cache->store, cache_offset)) {
 				IOVECS(vecs, 1);
+
+				TRACE;
 
 				mutex_unlock(&cache_ref->lock);
 
@@ -1589,60 +1658,146 @@ static int vm_soft_fault(addr address, bool is_write, bool is_user)
 
 				mutex_lock(&cache_ref->lock);
 
-				vm_cache_remove_page(cache_ref, &dummy_page);
-				dummy_page.state = PAGE_STATE_INACTIVE;
+				if(cache_ref == top_cache_ref) {
+					vm_cache_remove_page(cache_ref, &dummy_page);
+					dummy_page.state = PAGE_STATE_INACTIVE;
+				}
 				vm_cache_insert_page(cache_ref, page, cache_offset);
+				mutex_unlock(&cache_ref->lock);
+				break;
 			}
 		}
 		mutex_unlock(&cache_ref->lock);
+		last_cache_ref = cache_ref;
+		TRACE;
 	}
+
+	TRACE;
+
+	// we rolled off the end of the cache chain, so we need to decide which
+	// cache will get the new page we're about to create
+	if(!cache_ref) {
+		if(!is_write)
+			cache_ref = last_cache_ref; // put it in the deepest cache
+		else
+			cache_ref = top_cache_ref; // put it in the topmost cache
+	}
+
+	TRACE;
 
 	if(page == NULL) {
 		// still haven't found a page, so zero out a new one
 		page = vm_page_allocate_page(PAGE_STATE_CLEAR);
 		dprintf("vm_soft_fault: just allocated page 0x%x\n", page->ppn);
 		mutex_lock(&cache_ref->lock);
-		vm_cache_remove_page(cache_ref, &dummy_page);
+		if(dummy_page.state == PAGE_STATE_BUSY && dummy_page.cache_ref == cache_ref) {
+			vm_cache_remove_page(cache_ref, &dummy_page);
+			dummy_page.state = PAGE_STATE_INACTIVE;
+		}
 		vm_cache_insert_page(cache_ref, page, cache_offset);
 		mutex_unlock(&cache_ref->lock);
-		dummy_page.state = PAGE_STATE_INACTIVE;
+		if(dummy_page.state == PAGE_STATE_BUSY) {
+			vm_cache_ref *temp_cache = dummy_page.cache_ref;
+			mutex_lock(&temp_cache->lock);
+			vm_cache_remove_page(temp_cache, &dummy_page);
+			mutex_unlock(&temp_cache->lock);
+			dummy_page.state = PAGE_STATE_INACTIVE;
+		}
 	}
 
-	if(page->cache_ref != cache_ref && is_write) {
-		// XXX handle making private copy on write
-		panic("not done\n");
+	TRACE;
+
+	if(page->cache_ref != top_cache_ref && is_write) {
+		// now we have a page that has the data we want, but in the wrong cache object
+		// so we need to copy it and stick it into the top cache
+		vm_page *src_page = page;
+		void *src, *dest;
+
+		page = vm_page_allocate_page(PAGE_STATE_FREE);
+
+		// try to get a mapping for the src and dest page so we can copy it
+		for(;;) {
+			(*aspace->translation_map.ops->get_physical_page)(src_page->ppn * PAGE_SIZE, (addr *)&src, PHYSICAL_PAGE_CAN_WAIT);
+			err = (*aspace->translation_map.ops->get_physical_page)(page->ppn * PAGE_SIZE, (addr *)&dest, PHYSICAL_PAGE_NO_WAIT);
+			if(err == NO_ERROR)
+				break;
+
+			// it couldn't map the second one, so sleep and retry
+			// keeps an extremely rare deadlock from occuring
+			(*aspace->translation_map.ops->put_physical_page)((addr)src);
+			thread_snooze(5000);
+		}
+
+		memcpy(dest, src, PAGE_SIZE);
+		(*aspace->translation_map.ops->put_physical_page)((addr)src);
+		(*aspace->translation_map.ops->put_physical_page)((addr)dest);
+
+		vm_page_set_state(src_page, PAGE_STATE_ACTIVE);
+
+		mutex_lock(&top_cache_ref->lock);
+		if(dummy_page.state == PAGE_STATE_BUSY && dummy_page.cache_ref == top_cache_ref) {
+			vm_cache_remove_page(top_cache_ref, &dummy_page);
+			dummy_page.state = PAGE_STATE_INACTIVE;
+		}
+		vm_cache_insert_page(top_cache_ref, page, cache_offset);
+		mutex_unlock(&top_cache_ref->lock);
+
+		if(dummy_page.state == PAGE_STATE_BUSY) {
+			vm_cache_ref *temp_cache = dummy_page.cache_ref;
+			mutex_lock(&temp_cache->lock);
+			vm_cache_remove_page(temp_cache, &dummy_page);
+			mutex_unlock(&temp_cache->lock);
+			dummy_page.state = PAGE_STATE_INACTIVE;
+		}
 	}
+
+	TRACE;
 
 	err = 0;
 	sem_acquire(map->sem, READ_COUNT);
 	if(change_count != map->change_count) {
 		// something may have changed, see if the address is still valid
 		region = vm_virtual_map_lookup(map, address);
-		if(region == NULL || region->cache_ref != cache_ref || region->cache_offset != cache_offset) {
+		if(region == NULL || region->cache_ref != top_cache_ref || region->cache_offset != cache_offset) {
 			dprintf("vm_soft_fault: address space layout changed effecting ongoing soft fault\n");
 			err = ERR_VM_PF_BAD_ADDRESS; // BAD_ADDRESS
 		}
 	}
 
+	TRACE;
+
 	if(err == 0) {
+		int new_lock = region->lock;
+		if(page->cache_ref != top_cache_ref && !is_write)
+			new_lock &= ~LOCK_RW;
+
 		(*aspace->translation_map.ops->lock)(&aspace->translation_map);
 		(*aspace->translation_map.ops->map)(&aspace->translation_map, address,
-			page->ppn * PAGE_SIZE, region->lock);
+			page->ppn * PAGE_SIZE, new_lock);
 		(*aspace->translation_map.ops->unlock)(&aspace->translation_map);
 	}
 
+	TRACE;
+
 	sem_release(map->sem, READ_COUNT);
 
+	TRACE;
+
 	if(dummy_page.state == PAGE_STATE_BUSY) {
-		mutex_lock(&cache_ref->lock);
-		vm_cache_remove_page(cache_ref, &dummy_page);
-		mutex_unlock(&cache_ref->lock);
+		vm_cache_ref *temp_cache = dummy_page.cache_ref;
+		mutex_lock(&temp_cache->lock);
+		vm_cache_remove_page(temp_cache, &dummy_page);
+		mutex_unlock(&temp_cache->lock);
 		dummy_page.state = PAGE_STATE_INACTIVE;
 	}
 
+	TRACE;
+
 	vm_page_set_state(page, PAGE_STATE_ACTIVE);
 
-	vm_cache_release_ref(cache_ref);
+	vm_cache_release_ref(top_cache_ref);
+
+	TRACE;
 
 	return err;
 }

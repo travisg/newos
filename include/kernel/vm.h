@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -18,13 +18,13 @@ typedef struct vm_page {
 	struct vm_page *hash_next;
 
 	addr ppn; // physical page number
-	off_t offset;	
-	
+	off_t offset;
+
 	struct vm_cache_ref *cache_ref;
-	
+
 	struct vm_page *cache_prev;
 	struct vm_page *cache_next;
-	
+
 	unsigned int type : 2;
 	unsigned int state : 3;
 	unsigned int ref_count : 27;
@@ -51,7 +51,7 @@ enum {
 typedef struct vm_cache_ref {
 	struct vm_cache *cache;
 	mutex lock;
-	
+
 	struct vm_region *region_list;
 
 	int ref_count;
@@ -61,6 +61,7 @@ typedef struct vm_cache_ref {
 typedef struct vm_cache {
 	vm_page *page_list;
 	vm_cache_ref *ref;
+	struct vm_cache *source;
 	struct vm_store *store;
 	off_t virtual_size;
 	unsigned int temporary : 1;
@@ -86,9 +87,9 @@ typedef struct vm_region {
 	int lock;
 	int wiring;
 	int ref_count;
-	
+
 	struct vm_cache_ref *cache_ref;
-	off_t cache_offset;	
+	off_t cache_offset;
 
 	struct vm_address_space *aspace;
 	struct vm_region *aspace_next;
@@ -118,7 +119,7 @@ typedef struct vm_address_space {
 	int fault_count;
 	int working_set_size;
 	struct vm_address_space *hash_next;
-} vm_address_space;	
+} vm_address_space;
 
 // vm_store
 typedef struct vm_store {
@@ -144,6 +145,11 @@ typedef struct vm_store_ops {
 enum {
 	REGION_ADDR_ANY_ADDRESS = 0,
 	REGION_ADDR_EXACT_ADDRESS
+};
+
+enum {
+	REGION_NO_PRIVATE_MAP = 0,
+	REGION_PRIVATE_MAP
 };
 
 enum {
@@ -181,10 +187,10 @@ region_id vm_create_anonymous_region(aspace_id aid, char *name, void **address, 
 	addr size, int wiring, int lock);
 region_id vm_map_physical_memory(aspace_id aid, char *name, void **address, int addr_type,
 	addr size, int lock, addr phys_addr);
-region_id vm_map_file(aspace_id aid, char *name, void **address, int addr_type, 
-	addr size, int lock, const char *path, off_t offset, bool kernel);
+region_id vm_map_file(aspace_id aid, char *name, void **address, int addr_type,
+	addr size, int lock, int mapping, const char *path, off_t offset, bool kernel);
 region_id vm_clone_region(aspace_id aid, char *name, void **address, int addr_type,
-	region_id source_region, int lock);	
+	region_id source_region, int mapping, int lock);
 int vm_delete_region(aspace_id aid, region_id id);
 region_id vm_find_region_by_name(aspace_id aid, const char *name);
 int vm_get_region_info(region_id id, vm_region_info *info);
