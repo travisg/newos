@@ -8,8 +8,6 @@ PORTS:
  alpha port (DEC Multia)
 user-space loader
 disk based filesystem
-tty layer:
- maybe handle in input_server?
 kernel ports/pipes (IPC)
 arguments to new processes
 process environment variables
@@ -42,11 +40,17 @@ VM:
 
 In Progress:
 
+signals
+tty layer
 kernel module loading:
  modules
 VM:
  swap
  page out
+RLD
+ lazy binding
+ so initialization
+ dl_open() et load_addon()
 
 
 Finish:
