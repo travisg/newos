@@ -148,7 +148,7 @@ int thread_init(struct kernel_args *ka)
 	// allocate as many CUR_THREAD slots as there are cpus
 	cur_thread = (struct thread **)kmalloc(sizeof(struct thread *) * smp_get_num_cpus());
 	if(cur_thread == NULL)
-		return NULL;
+		return -1;
 	memset(cur_thread, 0, sizeof(struct thread *) * smp_get_num_cpus());
 
 	// set current thread

@@ -10,6 +10,7 @@
 #include "arch_int.h"
 #include "arch_faults.h"
 #include "arch_vm.h"
+#include "arch_smp.h"
 
 #include "stage2.h"
 
@@ -139,8 +140,11 @@ void i386_handle_trap(struct int_frame frame)
 		}
 		case 0x20: case 0x21: case 0x22: case 0x23: case 0x24: case 0x25: case 0x26: case 0x27:
 		case 0x28: case 0x29: case 0x2a: case 0x2b: case 0x2c: case 0x2d: case 0x2e: case 0x2f:
-			interrupt_ack(frame.vector);
+			interrupt_ack(frame.vector); // ack the 8239
 			ret = int_io_interrupt_handler(frame.vector - 0x20);
+			break;
+		case 0x254: case 0x255:
+			ret = i386_smp_interrupt(frame.vector);
 			break;
 		default:
 			kprintf("unhandled interrupt %d\n", frame.vector);

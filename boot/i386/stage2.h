@@ -3,6 +3,10 @@
 
 #include "boot.h"
 
+// must match SMP_MAX_CPUS in arch_smp.h
+#define MAX_BOOT_CPUS 2
+#define MAX_BOOT_PTABLES 4
+
 // kernel args
 struct kernel_args {
 	unsigned int cons_line;
@@ -22,12 +26,24 @@ struct kernel_args {
 	unsigned int stack_end;
 	// architecture specific
 	unsigned int pgdir;
-	unsigned int pgtable1;
+	unsigned int num_pgtables;
+	unsigned int pgtables[MAX_BOOT_PTABLES];
 	unsigned int phys_idt;
 	unsigned int vir_idt;
 	unsigned int phys_gdt;
 	unsigned int vir_gdt;
 	unsigned int page_hole;
+	// smp stuff
+	unsigned int num_cpus;
+	unsigned int apic_phys;
+	unsigned int *apic;
+	unsigned int ioapic_phys;
+	unsigned int *ioapic;
+	unsigned int cpu_apic_id[MAX_BOOT_CPUS];
+	unsigned int cpu_os_id[MAX_BOOT_CPUS];
+	unsigned int cpu_apic_version[MAX_BOOT_CPUS];
+	unsigned int cpu_kstack[MAX_BOOT_CPUS];
+	unsigned int cpu_kstack_len[MAX_BOOT_CPUS];
 };
 
 #endif

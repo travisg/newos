@@ -1,14 +1,10 @@
 #include "boot.h"
 #include "stage2.h"
+#include "stage2_priv.h"
 
-#define PAGE_SIZE 0x1000
-#define KERNEL_BASE 0x80000000
-#define STACK_SIZE 2
-#define DEFAULT_PAGE_FLAGS (1 | 2 | 256) // present/rw/global
-#define SCREEN_WIDTH 80
-#define SCREEN_HEIGHT 24
-
-#define _PACKED __attribute__((packed)) 	
+#include "string.h"
+#include "stdarg.h"
+#include "printf.h"
 
 const unsigned kBSSSize = 0x9000;
 #define BOOTDIR_ADDR 0x100000
@@ -23,18 +19,6 @@ unsigned short *kScreenBase = (unsigned short*) 0xb8000;
 unsigned screenOffset = 0;
 unsigned int line = 0;
 
-void put_uint_dec(unsigned int a);
-void put_uint_hex(unsigned int a);
-void clearscreen();
-void message(const char*);
-
-#define nmessage(a, b, c) \
-	message(a); \
-	message("0x"); \
-	put_uint_hex(b); \
-	message(c);
-
-#define ROUNDUP(a, b) (((a) + ((b) - 1)) & (~((b) - 1)))
 
 void _start(unsigned int mem, char *str)
 {
@@ -100,24 +84,24 @@ void _start(unsigned int mem, char *str)
 	nextAllocPage = BOOTDIR_ADDR + bootdir[2].be_offset * PAGE_SIZE;
 	next_vpage = KERNEL_BASE;
 
-	nmessage("kernel text & data mapped from ", next_vpage, "");
+	dprintf("kernel text & data mapped from 0x%x", next_vpage);
 	for (i = 0; i < kernelSize; i++) {
 		new_pgtable[i] = nextAllocPage | DEFAULT_PAGE_FLAGS;	// present, writable, global
 		nextAllocPage += PAGE_SIZE;
 		next_vpage += PAGE_SIZE;
 	}
-	nmessage(" to ", next_vpage, "\n");
+	dprintf(" to 0x%x\n", next_vpage);
 
 	nextAllocPage = BOOTDIR_ADDR + (bootdir_pages + 3) * PAGE_SIZE;	/* skip rest of boot dir and two pts */
 
 	/* Map and clear BSS */
-	nmessage("kernel BSS mapped from ", next_vpage, " ");
+	dprintf("kernel BSS mapped from 0x%x", next_vpage);
 	for (; i < kernelSize + ROUNDUP(kBSSSize, PAGE_SIZE) / PAGE_SIZE; i++) {
 		new_pgtable[i] = nextAllocPage | DEFAULT_PAGE_FLAGS;
 		nextAllocPage += PAGE_SIZE;
 		next_vpage += PAGE_SIZE;
 	}
-	nmessage("to ", next_vpage, "\n");
+	dprintf("to 0x%x\n", next_vpage);
 
 	/* map in an initial kernel stack */
 	for (; i < kernelSize + ROUNDUP(kBSSSize, PAGE_SIZE) / PAGE_SIZE + STACK_SIZE; i++) {
@@ -127,8 +111,7 @@ void _start(unsigned int mem, char *str)
 	}
 	new_stack = kernelSize * PAGE_SIZE + ROUNDUP(kBSSSize, PAGE_SIZE) + 2 * PAGE_SIZE + KERNEL_BASE;
 
-	nmessage("new stack at ", new_stack - STACK_SIZE * PAGE_SIZE, "");
-	nmessage("to ", new_stack, "\n");
+	dprintf("new stack at 0x%x to 0x%x\n", new_stack - STACK_SIZE * PAGE_SIZE, new_stack);
 
 	// set up a new idt
 	{
@@ -208,7 +191,8 @@ void _start(unsigned int mem, char *str)
 
 	// save the kernel args
 	ka->pgdir = (unsigned int)pgdir;
-	ka->pgtable1 = (unsigned int)new_pgtable;
+	ka->pgtables[0] = (unsigned int)new_pgtable;
+	ka->num_pgtables = 1;
 	ka->phys_idt = (unsigned int)idt;
 	ka->vir_idt = (unsigned int)next_vpage - PAGE_SIZE * 2;
 	ka->phys_gdt = (unsigned int)gdt;
@@ -228,33 +212,37 @@ void _start(unsigned int mem, char *str)
 	ka->page_hole = 0xffc00000;
 	ka->stack_start = new_stack - STACK_SIZE * PAGE_SIZE;
 	ka->stack_end = new_stack;
-			
-	nmessage("kernel args at ", (unsigned int)ka, ":\n");
-	nmessage("pgdir = ", (unsigned int)ka->pgdir, "\n");
-	nmessage("pgtable1 = ", (unsigned int)ka->pgtable1, "\n");
-	nmessage("phys_idt = ", (unsigned int)ka->phys_idt, "\n");
-	nmessage("vir_idt = ", (unsigned int)ka->vir_idt, "\n");
-	nmessage("phys_gdt = ", (unsigned int)ka->phys_gdt, "\n");
-	nmessage("vir_gdt = ", (unsigned int)ka->vir_gdt, "\n");
-	nmessage("mem_size = ", (unsigned int)ka->mem_size, "\n");
-	nmessage("str = ", (unsigned int)ka->str, "\n");
-	nmessage("bootdir = ", (unsigned int)ka->bootdir, "\n");
-	nmessage("bootdir_size = ", (unsigned int)ka->bootdir_size, "\n");
-	nmessage("phys_alloc_range_low = ", (unsigned int)ka->phys_alloc_range_low, "\n");
-	nmessage("phys_alloc_range_high = ", (unsigned int)ka->phys_alloc_range_high, "\n");
-	nmessage("virt_alloc_range_low = ", (unsigned int)ka->virt_alloc_range_low, "\n");
-	nmessage("virt_alloc_range_high = ", (unsigned int)ka->virt_alloc_range_high, "\n");
-	nmessage("page_hole = ", (unsigned int)ka->page_hole, "\n");
+#if 0			
+	dprintf("kernel args at 0x%x\n", ka);
+	dprintf("pgdir = 0x%x\n", ka->pgdir);
+	dprintf("pgtables[0] = 0x%x\n", ka->pgtables[0]);
+	dprintf("phys_idt = 0x%x\n", ka->phys_idt);
+	dprintf("vir_idt = 0x%x\n", ka->vir_idt);
+	dprintf("phys_gdt = 0x%x\n", ka->phys_gdt);
+	dprintf("vir_gdt = 0x%x\n", ka->vir_gdt);
+	dprintf("mem_size = 0x%x\n", ka->mem_size);
+	dprintf("str = 0x%x\n", ka->str);
+	dprintf("bootdir = 0x%x\n", ka->bootdir);
+	dprintf("bootdir_size = 0x%x\n", ka->bootdir_size);
+	dprintf("phys_alloc_range_low = 0x%x\n", ka->phys_alloc_range_low);
+	dprintf("phys_alloc_range_high = 0x%x\n", ka->phys_alloc_range_high);
+	dprintf("virt_alloc_range_low = 0x%x\n", ka->virt_alloc_range_low);
+	dprintf("virt_alloc_range_high = 0x%x\n", ka->virt_alloc_range_high);
+#endif
+	dprintf("page_hole = 0x%x\n", ka->page_hole);
+	dprintf("\nfinding and booting other cpus...\n");
+	smp_boot(ka);
 
-	message("\njumping into kernel at 0x80000080\n");
-
+	dprintf("jumping into kernel at 0x80000080\n");
+	
 	ka->cons_line = line;
 
 	asm("movl	%0, %%eax;	"			// move stack out of way
 		"movl	%%eax, %%esp; "
 		: : "m" (new_stack - 4));
-	asm("pushl 	%0;	"					// kernel args
-		"pushl 	$0;	"					// dummy retval for call to main
+	asm("pushl  $0x0; "					// we're the BSP cpu (0)
+		"pushl 	%0;	"					// kernel args
+		"pushl 	$0x0;"					// dummy retval for call to main
 		"pushl 	$0x80000080;	"		// this is the start address
 		"ret;		"					// jump.
 		: : "m" (ka));
@@ -275,7 +263,6 @@ void put_uint_dec(unsigned int a)
 	
 	message(&temp[i]);
 }
-*/
 
 void put_uint_hex(unsigned int a)
 {
@@ -296,6 +283,7 @@ void put_uint_hex(unsigned int a)
 	}	
 	message(&temp[i]);
 }
+*/
 
 void clearscreen()
 {
@@ -306,19 +294,67 @@ void clearscreen()
 	}
 }
 
+/*
+void nmessage(const char *str1, unsigned int a, const char *str2)
+{
+	message(str1);
+	message("0x");
+	put_uint_hex(a);
+	message(str2);
+}
+
+void nmessage2(const char *str1, unsigned int a, const char *str2, unsigned int b, const char *str3)
+{
+	message(str1);
+	message("0x");
+	put_uint_hex(a);
+	message(str2);
+	message("0x");
+	put_uint_hex(b);
+	message(str3);
+}
+*/
+static void scrup()
+{
+	int i;
+	memcpy(kScreenBase, kScreenBase + SCREEN_WIDTH,
+		SCREEN_WIDTH * SCREEN_HEIGHT * 2 - SCREEN_WIDTH * 2);
+	screenOffset = (SCREEN_HEIGHT - 1) * SCREEN_WIDTH;
+	for(i=0; i<SCREEN_WIDTH; i++)
+		kScreenBase[screenOffset + i] = 0x0720;
+	line = SCREEN_HEIGHT - 1;
+}
+
 void message(const char *str)
 {
 	while (*str) {
 		if (*str == '\n') {
 			line++;
-			screenOffset += SCREEN_WIDTH - (screenOffset % 80);
+			if(line > SCREEN_HEIGHT - 1)
+				scrup();
+			else
+				screenOffset += SCREEN_WIDTH - (screenOffset % 80);
 		} else {
 			kScreenBase[screenOffset++] = 0xf00 | *str;
 		}
 		if (screenOffset > SCREEN_WIDTH * SCREEN_HEIGHT)
-			screenOffset = 0;
+			scrup();
 			
 		str++;
 	}	
+}
+
+int dprintf(const char *fmt, ...)
+{
+	int ret;
+	va_list args;
+	char temp[256];
+
+	va_start(args, fmt);
+	ret = vsprintf(temp,fmt,args);
+	va_end(args);
+
+	message(temp);
+	return ret;
 }
 

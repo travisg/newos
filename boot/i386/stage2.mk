@@ -1,6 +1,8 @@
 # i386 stage2 makefile
 STAGE2_DIR = boot/$(ARCH)
-STAGE2_OBJS = $(STAGE2_DIR)/stage2.o
+STAGE2_OBJS = $(STAGE2_DIR)/stage2.o \
+			  $(STAGE2_DIR)/smp_boot.o \
+			  $(STAGE2_DIR)/smp_trampoline.o
 STAGE2_DEPS = $(STAGE2_OBJS:.o=.d)
 
 STAGE2 = boot/stage2
@@ -9,8 +11,8 @@ STAGE2_ARCH = boot/$(ARCH)/stage2
 $(STAGE2): $(STAGE2_ARCH)
 	ln -sf ../$< $@  
 
-$(STAGE2_ARCH): $(STAGE2_OBJS)
-	$(LD) -dN --script=$(STAGE2_DIR)/stage2.ld -L $(LIBGCC_PATH) $< $(LIBGCC) -o $@
+$(STAGE2_ARCH): $(STAGE2_OBJS) $(LIB)
+	$(LD) -dN --script=$(STAGE2_DIR)/stage2.ld -L $(LIBGCC_PATH) $(STAGE2_OBJS) $(LIB) $(LIBGCC) -o $@
 
 stage2clean:
 	rm -f $(STAGE2_OBJS) $(STAGE2_DIR)/stage2

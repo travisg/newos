@@ -11,12 +11,15 @@
 
 #include "stage2.h"
 
-int _start(struct kernel_args *oldka)
+int _start(struct kernel_args *oldka, int cpu)
 {
 	struct kernel_args ka;
 	
 	memcpy(&ka, oldka, sizeof(struct kernel_args));
 
+	// if we're not a boot cpu, spin here until someone wakes us up
+	smp_trap_non_boot_cpus(&ka, cpu);
+	
 	// setup debug output
 	dbg_init(&ka);
 	dbg_set_serial_debug(true);

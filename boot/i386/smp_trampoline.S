@@ -15,32 +15,12 @@
 smp_trampoline:
 	cli
 	
-	mov    $0x9e00,%ax      # load the data segment
+	mov    $0x9e00,%ax
 	mov    %ax,%ds
 
-	// display a 'a' to the serial console
-1:
-	mov    $0x3fd,%dx
-	inb    %dx,%al
-	test   $0x64,%al
-	je     1b
-	mov    $'a',%al
-	mov    $0x3f8,%dx
-	outb   %al,%dx
-
-.byte 0x66, 0x0f, 0x01, 0x15, 0x00, 0xe0, 0x09, 0x00
 //	lgdt   0x9e000          # load the gdt
-	
-	// display a 'b' to the serial console
-1:
-	mov    $0x3fd,%dx
-	inb    %dx,%al
-	test   $0x64,%al
-	je     1b
-	mov    $'b',%al
-	mov    $0x3f8,%dx
-	outb   %al,%dx
-	
+.byte 0x66, 0x0f, 0x01, 0x15, 0x00, 0xe0, 0x09, 0x00
+
 	movl   %cr0,%eax
 	orl    $0x01,%eax
 	movl   %eax,%cr0              # switch into protected mode
@@ -57,16 +37,6 @@ trampoline_32:
 	mov    %ax, %gs
 	mov    %ax, %ss
 
-	// display a 'c' to the serial console
-1:
-	mov    $0x3fd,%dx
-	inb    %dx,%al
-	test   $0x64,%al
-	je     1b
-	mov    $'c',%al
-	mov    $0x3f8,%dx
-	outb   %al,%dx
-
 	movl   $0x9eff8,%esp    # set up the stack pointer
 
 	popl   %eax             # get the page dir
@@ -75,38 +45,21 @@ trampoline_32:
 	popl   %eax             # get the final stack location
 	movl   %eax,%esp
 
-	// display a 'd' to the serial console
-1:
-	mov    $0x3fd,%dx
-	inb    %dx,%al
-	test   $0x64,%al
-	je     1b
-	mov    $'d',%al
-	mov    $0x3f8,%dx
-	outb   %al,%dx
-
+	// load an address for an indirect jump
 	movl   $trampoline_after_paging,%ecx
 
 	movl   %cr0,%eax
 	orl    $0x80000000,%eax
 	movl   %eax,%cr0          # enable paging
 
+	// jump to the address previously loaded. NOTE:
+	// this address is the address at which the code is originally linked,
+	// which is > 1MB. We will be out of the low memory at this point.
 	jmp    *%ecx
 trampoline_after_paging:
-	// display a 'e' to the serial console
-1:
-	mov    $0x3fd,%dx
-	inb    %dx,%al
-	test   $0x64,%al
-	je     1b
-	mov    $'e',%al
-	mov    $0x3f8,%dx
-	outb   %al,%dx
-
+	// just return, the bsp would have set the return address to the
+	// target function at the top of the passed stack
 	ret
-
-foo:
-	.byte 0x00,0x00,0x00,0x00,0x00,0x00
 
 smp_trampoline_end:
 
