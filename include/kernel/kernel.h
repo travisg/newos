@@ -8,6 +8,7 @@
 #include <kernel/ktypes.h>
 #include <kernel/arch/kernel.h>
 #include <newos/defines.h>
+#include <newos/compiler.h>
 #include <newos/errors.h>
 #include <boot/stage2.h>
 
@@ -20,8 +21,6 @@
 #define CHECK_BIT(a, b) ((a) & (1 << (b)))
 #define SET_BIT(a, b) ((a) | (1 << (b)))
 #define CLEAR_BIT(a, b) ((a) & (~(1 << (b))))
-
-#define _PACKED __attribute__((packed))
 
 #define TOUCH(x) ((void)(x))
 

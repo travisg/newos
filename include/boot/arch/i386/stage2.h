@@ -6,10 +6,9 @@
 #define _NEWOS_KERNEL_BOOT_ARCH_I386_STAGE2_H
 
 #include <boot/stage2_struct.h>
+#include <newos/compiler.h>
 
 #define MAX_BOOT_PTABLES 4
-
-#define _PACKED __attribute__((packed))
 
 #define IDT_LIMIT 0x800
 #define GDT_LIMIT 0x800

@@ -31,14 +31,14 @@ extern void dbg_make_register_file(unsigned int *file, const struct iframe *fram
 
 #if _ASSERT_LEVEL >= 1
 #define ASSERT(x) \
-	{ if(!(x)) panic("ASSERT FAILED (%s:%d): %s\n", __FILE__, __LINE__, #x); }
+	{ if(unlikely(!(x))) panic("ASSERT FAILED (%s:%d): %s\n", __FILE__, __LINE__, #x); }
 #else
 #define ASSERT(x)
 #endif
 
 #if _ASSERT_LEVEL >= 2
 #define ASSERT2(x) \
-	{ if(!(x)) panic("ASSERT2 FAILED (%s:%d): %s\n", __FILE__, __LINE__, #x); }
+	{ if(unlikely(!(x))) panic("ASSERT2 FAILED (%s:%d): %s\n", __FILE__, __LINE__, #x); }
 #else
 #define ASSERT2(x)
 #endif

@@ -30,7 +30,7 @@ struct heap_page {
 	unsigned short free_count : 9;
 	unsigned short cleaning : 1;
 	unsigned short in_use : 1;
-} PACKED;
+};
 
 static struct heap_page *heap_alloc_table;
 static addr_t heap_base_ptr;
