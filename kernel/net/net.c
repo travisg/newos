@@ -120,6 +120,8 @@ int net_init(kernel_args *ka)
 	loopback_init();
 	udp_init();
 	socket_init();
+
+	return 0;
 }
 
 int net_init_postdev(kernel_args *ka)
