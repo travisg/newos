@@ -44,9 +44,9 @@ static void initialize_cbuf(cbuf *buf)
 	buf->packet_next = 0;
 }
 
-#if VALIDATE_CBUFS
 static int validate_cbuf(cbuf *head)
 {
+#if VALIDATE_CBUFS
 	size_t counted_size;
 	cbuf *tail;
 	cbuf *buf;
@@ -92,12 +92,9 @@ static int validate_cbuf(cbuf *head)
 	/* make sure the added up size == the total size */
 	if(counted_size != head->total_len)
 		panic("validate_cbuf: cbuf %p has bad total_len %ld, counted %ld\n", head, head->total_len, counted_size);
-
+#endif
 	return 0;
 }
-#else
-#define validate_cbuf(x) ((int)0)
-#endif
 
 static void *_cbuf_alloc(size_t *size)
 {
