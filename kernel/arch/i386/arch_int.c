@@ -165,7 +165,7 @@ void i386_handle_trap(struct int_frame frame)
 			unsigned int cr2;
 			addr newip;
 
-			asm volatile("movl %%cr2, %0;" : "=g" (cr2));
+			asm ("movl %%cr2, %0" : "=r" (cr2) );
 
 			// get the old interrupt enable/disable state and restore to that
 			if(frame.flags & 0x200) {
