@@ -138,10 +138,15 @@ struct itlb_data {
 #define TCPR2	0xffd8002c
 
 // interrupt controller stuff
-#define ICR	0xffd00000
+#define ICR		0xffd00000
 #define IPRA	0xffd00004
 #define IPRB	0xffd00008
 #define IPRC	0xffd0000c
+
+// cache stuff
+#define CCR		0xff00001c
+#define QACR0	0xff000038
+#define QACR1	0xff00003c
 
 #endif
 
