@@ -72,14 +72,14 @@ static int vnode_compare(void *_v, void *key)
 		return -1;
 }
 
-static int vnode_hash(void *_v, void *key, int range)
+static unsigned int vnode_hash(void *_v, void *key, int range)
 {
 	struct vnode *v = _v;
 	
 	if(v != NULL)
-		return (((int)v->priv_vnode >> 3) % range);
+		return (((unsigned int)v->priv_vnode >> 3) % range);
 	else
-		return (((int)key >> 3) % range);
+		return (((unsigned int)key >> 3) % range);
 }
 
 static int init_vnode(struct vnode *v)
@@ -247,7 +247,7 @@ int vfs_init(kernel_args *ka)
 
 	{
 		struct vnode *v;
-		vnode_table = hash_init(VNODE_HASH_TABLE_SIZE, (int)&v->next - (int)&v,
+		vnode_table = hash_init(VNODE_HASH_TABLE_SIZE, (int)&v->next - (int)v,
 			&vnode_compare, &vnode_hash);
 		if(vnode_table == NULL)
 			panic("vfs_init: error creating vnode hash table\n");
@@ -268,7 +268,7 @@ int vfs_init(kernel_args *ka)
 	if(vfs_vnode_sem < 0)
 		panic("vfs_init: error allocating vfs_vnode lock\n");
 
-	// bootstrap a few filesystems
+	// bootstrap the root filesystem
 	bootstrap_rootfs();	
 
 	err = vfs_mount("/", "rootfs");
@@ -305,7 +305,6 @@ int vfs_test()
 	{
 		char buf[64];
 		int buf_len;
-		struct dirent *de = (struct dirent *)buf;
 
 		vfs_seek(fd, 0, SEEK_SET);
 		for(;;) {
@@ -314,7 +313,7 @@ int vfs_test()
 			if(err < 0)
 				panic("readdir returned %d\n", err);
 			if(buf_len > 0) 
-				dprintf("readdir returned name = '%s'\n", de->name);
+				dprintf("readdir returned name = '%s'\n", buf);
 			else
 				break;
 		}
@@ -338,7 +337,6 @@ int vfs_test()
 	{
 		char buf[64];
 		int buf_len;
-		struct dirent *de = (struct dirent *)buf;
 
 		vfs_seek(fd, 0, SEEK_SET);
 		for(;;) {
@@ -347,7 +345,7 @@ int vfs_test()
 			if(err < 0)
 				panic("readdir returned %d\n", err);
 			if(buf_len > 0) 
-				dprintf("readdir returned name = '%s'\n", de->name);
+				dprintf("readdir returned name = '%s'\n", buf);
 			else
 				break;
 		}

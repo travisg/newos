@@ -130,7 +130,7 @@ static struct thread *create_thread_struct(char *name)
 	if(t->name == NULL)
 		goto err1;
 	strcpy(t->name, name);
-	t->id = next_thread_id++;
+	t->id = atomic_add(&next_thread_id, 1);
 	t->proc = NULL;
 	t->kernel_stack_area = NULL;
 	t->user_stack_area = NULL;
@@ -155,6 +155,41 @@ err:
 	return NULL;
 }
 
+struct thread *thread_create_user_thread(char *name, struct proc *p, int priority)
+{
+	struct thread *t;
+	unsigned int *stack_addr;
+	int state;
+	char stack_name[64];
+	
+	t = create_thread_struct(name);
+	if(t == NULL)
+		return NULL;
+	t->proc = p;
+	t->priority = priority;
+	t->state = THREAD_STATE_READY;
+	t->next_state = THREAD_STATE_READY;
+
+	sprintf(stack_name, "%s_stack", name);
+	vm_create_area(t->proc->aspace, stack_name, (void **)&stack_addr,
+		AREA_ANY_ADDRESS, STACK_SIZE, LOCK_RW);
+	t->kernel_stack_area = vm_find_area_by_name(t->proc->aspace, stack_name);
+	
+	state = int_disable_interrupts();
+	GRAB_THREAD_LOCK();
+
+	// insert into global list
+	t->all_next = thread_list;
+	thread_list = t;
+
+	insert_thread_into_proc(t->proc, t);
+
+	RELEASE_THREAD_LOCK();
+	int_restore_interrupts(state);
+	
+	return t;
+}
+
 static struct thread *create_kernel_thread(char *name, int (*func)(void), int priority)
 {
 	struct thread *t;
@@ -171,9 +206,9 @@ static struct thread *create_kernel_thread(char *name, int (*func)(void), int pr
 	t->next_state = THREAD_STATE_READY;
 
 	sprintf(stack_name, "%s_kstack", name);
-	vm_create_area(t->proc->aspace, stack_name, (void **)&kstack_addr,
+	vm_create_area(t->proc->kaspace, stack_name, (void **)&kstack_addr,
 		AREA_ANY_ADDRESS, KSTACK_SIZE, LOCK_RW|LOCK_KERNEL);
-	t->kernel_stack_area = vm_find_area_by_name(t->proc->aspace, stack_name);
+	t->kernel_stack_area = vm_find_area_by_name(t->proc->kaspace, stack_name);
 	arch_thread_initialize_kthread_stack(t, func, &thread_entry);
 	
 	state = int_disable_interrupts();
@@ -415,7 +450,7 @@ int thread_init(kernel_args *ka)
 		t->state = THREAD_STATE_RUNNING;
 		t->next_state = THREAD_STATE_READY;
 		sprintf(temp, "idle_thread%d_kstack", i);
-		t->kernel_stack_area = vm_find_area_by_name(t->proc->aspace, temp);		
+		t->kernel_stack_area = vm_find_area_by_name(t->proc->kaspace, temp);		
 		t->all_next = thread_list;
 		thread_list = t;
 		insert_thread_into_proc(t->proc, t);
@@ -552,6 +587,24 @@ int test_thread_starter_thread()
 	return 0;	
 }
 
+int test_thread3()
+{
+	int fd;
+	char buf[1024];
+	size_t len;
+
+	kprintf("\n\n\n");
+	fd = vfs_open(NULL, "/boot/testfile", "", STREAM_TYPE_FILE);
+	if(fd < 0)
+		panic("could not open /boot/testfile\n");
+	len = sizeof(buf);
+	vfs_read(fd, buf, 0, &len);
+	vfs_write(0, buf, 0, &len);
+	vfs_close(fd);
+
+	return 0;
+}
+
 int test_thread2()
 {
 	while(1) {
@@ -658,6 +711,9 @@ int thread_test()
 	thread_enqueue_run_q(t);
 
 	t = create_kernel_thread("test thread 2", &test_thread2, 5);
+	thread_enqueue_run_q(t);
+
+	t = create_kernel_thread("test thread 3", &test_thread3, 5);
 	thread_enqueue_run_q(t);
 
 //	t = create_kernel_thread("panic thread", &panic_thread, THREAD_MAX_PRIORITY);

@@ -23,7 +23,6 @@ struct rootfs_vnode {
 	struct rootfs_vnode *all_next;
 	int id;
 	char *name;
-	bool vfs_has;
 	void *redir_vnode;
 	struct rootfs_vnode *parent;
 	struct rootfs_vnode *dir_next;
@@ -46,7 +45,7 @@ struct rootfs_cookie {
 };
 
 #define ROOTFS_HASH_SIZE 16
-static int rootfs_vnode_hash_func(void *_v, void *_key, int range)
+static unsigned int rootfs_vnode_hash_func(void *_v, void *_key, int range)
 {
 	struct rootfs_vnode *v = _v;
 	struct rootfs_vnode *key = _key;
@@ -155,8 +154,6 @@ rootfs_get_vnode_from_path(struct rootfs *fs, struct rootfs_vnode *base, const c
 	struct rootfs_vnode *cur_vnode;
 	struct rootfs_stream *s;
 	
-	TOUCH(fs);
-	
 	*redir = false;
 
 	cur_vnode = base;
@@ -195,8 +192,6 @@ rootfs_get_container_vnode_from_path(struct rootfs *fs, struct rootfs_vnode *bas
 	int end = 0;
 	struct rootfs_vnode *cur_vnode;
 	struct rootfs_vnode *last_vnode = NULL;
-	
-	TOUCH(fs);
 	
 	*redir = false;
 
@@ -238,11 +233,6 @@ int rootfs_mount(void **fs_cookie, void *flags, void *covered_vnode, fs_id id, v
 	struct rootfs_vnode *v;
 	int err;
 
-	TOUCH(fs_cookie);
-	TOUCH(flags);
-	TOUCH(id);
-	TOUCH(root_vnode);
-
 	dprintf("rootfs_mount: entry\n");
 
 	fs = kmalloc(sizeof(struct rootfs));
@@ -266,7 +256,7 @@ int rootfs_mount(void **fs_cookie, void *flags, void *covered_vnode, fs_id id, v
 		}
 	}
 	
-	fs->vnode_list_hash = hash_init(ROOTFS_HASH_SIZE, (int)&v->all_next - (int)&v,
+	fs->vnode_list_hash = hash_init(ROOTFS_HASH_SIZE, (int)&v->all_next - (int)v,
 		NULL, &rootfs_vnode_hash_func);
 	if(fs->vnode_list_hash == NULL) {
 		err = -1;
@@ -288,7 +278,6 @@ int rootfs_mount(void **fs_cookie, void *flags, void *covered_vnode, fs_id id, v
 		goto err4;
 	}
 	strcpy(v->name, "");
-	v->vfs_has = true;
 	
 	// create a dir stream for it to hold
 	v->stream.name = kmalloc(strlen("") + 1);
@@ -299,8 +288,9 @@ int rootfs_mount(void **fs_cookie, void *flags, void *covered_vnode, fs_id id, v
 	strcpy(v->stream.name, "");
 	v->stream.type = STREAM_TYPE_DIR;
 	v->stream.dir.dir_head = NULL;
-
 	fs->root_vnode = v;
+	hash_insert(fs->vnode_list_hash, v);
+
 	*root_vnode = v;
 	*fs_cookie = fs;
 	
@@ -343,7 +333,6 @@ int rootfs_unmount(void *_fs)
 int rootfs_register_mountpoint(void *_fs, void *_v, void *redir_vnode)
 {
 	struct rootfs_vnode *v = _v;
-	TOUCH(_fs);
 	
 	dprintf("rootfs_register_mountpoint: vnode 0x%x covered by 0x%x\n", v, redir_vnode);
 	
@@ -355,7 +344,6 @@ int rootfs_register_mountpoint(void *_fs, void *_v, void *redir_vnode)
 int rootfs_unregister_mountpoint(void *_fs, void *_v)
 {
 	struct rootfs_vnode *v = _v;
-	TOUCH(_fs);
 	
 	dprintf("rootfs_unregister_mountpoint: removing coverage at vnode 0x%x\n", v);
 
@@ -366,17 +354,8 @@ int rootfs_unregister_mountpoint(void *_fs, void *_v)
 
 int rootfs_dispose_vnode(void *_fs, void *_v)
 {
-	struct rootfs *fs = _fs;
-	struct rootfs_vnode *v = _v;
-
 	dprintf("rootfs_dispose_vnode: entry\n");
 
-	sem_acquire(fs->sem, 1);
-
-	v->vfs_has = false;
-	
-	sem_release(fs->sem, 1);
-	
 	// since vfs vnode == rootfs vnode, we can't dispose of it
 	return 0;
 }
@@ -455,7 +434,7 @@ int rootfs_seek(void *_fs, void *_vnode, void *_cookie, off_t pos, seek_type see
 						err = -1;
 					}
 					break;
-				case SEEK_START:
+				case SEEK_CUR:
 				case SEEK_END:
 				default:
 					err = -1;
@@ -483,23 +462,20 @@ int rootfs_read(void *_fs, void *_vnode, void *_cookie, void *buf, off_t pos, si
 	
 	switch(cookie->s->type) {
 		case STREAM_TYPE_DIR: {
-			struct dirent *de = buf;
-
 			// only type really supported by rootfs
 			if(cookie->ptr == NULL) {
 				*len = 0;
 				goto err;
 			}
 
-			if(sizeof(struct dirent) + strlen(cookie->ptr->name) + 1 > *len) {
+			if(strlen(cookie->ptr->name) + 1 > *len) {
 				*len = 0;
 				err = -1;
 				goto err;
 			}
 			
-			strcpy(de->name, cookie->ptr->name);
-			de->name_len = strlen(cookie->ptr->name) + 1;
-			*len = sizeof(struct dirent) + de->name_len;
+			strcpy(buf, cookie->ptr->name);
+			*len = strlen(cookie->ptr->name) + 1;
 			
 			cookie->ptr = cookie->ptr->dir_next;
 			break;
@@ -517,8 +493,6 @@ err:
 
 int rootfs_write(void *_fs, void *_vnode, void *_cookie, const void *buf, off_t pos, size_t *len)
 {
-	TOUCH(_fs);TOUCH(_vnode);TOUCH(_cookie);TOUCH(buf);TOUCH(pos);TOUCH(len);
-	
 	return -1;
 }
 
@@ -532,8 +506,6 @@ int rootfs_close(void *_fs, void *_vnode, void *_cookie)
 	struct rootfs *fs = _fs;
 	struct rootfs_vnode *v = _vnode;
 	struct rootfs_cookie *cookie = _cookie;
-
-	TOUCH(fs);
 
 	dprintf("rootfs_close: entry vnode 0x%x, cookie 0x%x\n", v, cookie);
 
@@ -592,6 +564,8 @@ int rootfs_create(void *_fs, void *_base_vnode, const char *path, const char *st
 		strcpy(new_vnode->name, &path[start]);
 		new_vnode->parent = dir;
 		rootfs_insert_in_dir(dir, new_vnode);
+
+		hash_insert(fs->vnode_list_hash, new_vnode);
 		
 		s = &new_vnode->stream;
 	} else {
@@ -656,7 +630,6 @@ struct fs_calls rootfs_calls = {
 	&rootfs_create,
 };
 
-// XXX
 int bootstrap_rootfs()
 {
 	dprintf("bootstrap_rootfs: entry\n");

@@ -63,6 +63,8 @@ thread_id thread_get_current_thread_id();
 struct thread *thread_get_thread_struct(thread_id id);
 struct thread *thread_get_thread_struct_locked(thread_id id);
 
+struct thread *thread_create_user_thread(char *name, struct proc *p, int priority);
+
 #if 1
 // XXX remove later
 int thread_test();

@@ -4,11 +4,6 @@
 #include <kernel.h>
 #include <stage2.h>
 
-struct dirent {
-	int name_len;
-	char name[0];
-};
-
 typedef enum {
 	STREAM_TYPE_NULL = 0,
 	STREAM_TYPE_FILE,
@@ -18,7 +13,7 @@ typedef enum {
 
 typedef enum {
 	SEEK_SET = 0,
-	SEEK_START,
+	SEEK_CUR,
 	SEEK_END
 } seek_type;
 

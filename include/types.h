@@ -24,7 +24,7 @@ typedef int bool;
 
 typedef uint32              size_t;
 typedef int32               ssize_t;
-typedef uint64              off_t;
+typedef int64              off_t;
 
 typedef unsigned char		u_char;
 typedef unsigned short		u_short;

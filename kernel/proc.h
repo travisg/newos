@@ -12,6 +12,7 @@ struct proc {
 	char *name;
 	void *ioctx;
 	void *cwd;
+	struct aspace *kaspace;
 	struct aspace *aspace;
 	struct thread *thread_list;
 };
@@ -22,6 +23,7 @@ struct proc_key {
 
 int proc_init(kernel_args *ka);
 struct proc *proc_get_kernel_proc();
+struct proc *proc_create_user_proc(const char *name, struct proc *parent, int priority);
 
 #endif
 

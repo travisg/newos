@@ -14,9 +14,6 @@
 #include <arch_pmap.h>
 #include <arch_vm.h>
 
-#define KERNEL_BASE 0x80000000
-#define KERNEL_SIZE 0x80000000
-
 static unsigned int first_free_page_index = 0;
 static unsigned int *free_page_table = NULL;
 static unsigned int free_page_table_size = 0;
@@ -28,7 +25,7 @@ static void dump_free_page_table(int argc, char **argv);
 
 // heap stuff
 // ripped mostly from nujeffos
-#define HEAP_BASE	0x80400000
+#define HEAP_BASE	(KERNEL_BASE + 0x400000)
 #define HEAP_SIZE	0x00400000
 
 struct heap_page {
@@ -459,6 +456,11 @@ int vm_init(kernel_args *ka)
 		
 		sprintf(temp, "idle_thread%d_kstack", i);
 		_vm_create_area_struct(kernel_aspace, temp, (unsigned int)ka->cpu_kstack[i], ka->cpu_kstack_len[i], LOCK_RW|LOCK_KERNEL);
+	}
+	{
+		void *null;
+		vm_map_physical_memory(kernel_aspace, "bootdir", &null, AREA_ANY_ADDRESS,
+			ka->bootdir_size, LOCK_RO|LOCK_KERNEL, (unsigned int)ka->bootdir);
 	}
 //	vm_dump_areas(kernel_aspace);
 

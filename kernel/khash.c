@@ -15,7 +15,7 @@ struct hash_table {
 	int num_elems;
 	int flags;
 	int (*compare_func)(void *e, void *key);
-	int (*hash_func)(void *e, void *key, int range);
+	unsigned int (*hash_func)(void *e, void *key, int range);
 };
 
 struct hash_iterator {
@@ -30,7 +30,7 @@ struct hash_iterator {
 
 void *hash_init(int table_size, int next_ptr_offset,
 	int compare_func(void *e, void *key),
-	int hash_func(void *e, void *key, int range))
+	unsigned int hash_func(void *e, void *key, int range))
 {
 	struct hash_table *t;
 	int i;
@@ -49,6 +49,9 @@ void *hash_init(int table_size, int next_ptr_offset,
 	t->num_elems = 0;
 	t->compare_func = compare_func;
 	t->hash_func = hash_func;
+
+//	dprintf("hash_init: created table 0x%x, next_ptr_offset %d, compare_func 0x%x, hash_func 0x%x\n",
+//		t, next_ptr_offset, compare_func, hash_func);
 
 	return t;
 }
@@ -72,7 +75,9 @@ int hash_uninit(void *_hash_table)
 int hash_insert(void *_hash_table, void *e)
 {
 	struct hash_table *t = _hash_table;
-	int hash;
+	unsigned int hash;
+
+//	dprintf("hash_insert: table 0x%x, element 0x%x\n", t, e);
 
 	hash = t->hash_func(e, NULL, t->table_size);
 	PUT_IN_NEXT(t, e, t->table[hash]);

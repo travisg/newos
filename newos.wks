@@ -29,6 +29,8 @@ AddFile "smp_trampoline.S" "/build/newos/boot/i386/smp_trampoline.S"
 AddFile "stage2.mk" "/build/newos/boot/i386/stage2.mk"
 EndFileGroup "x86-boot"
 AddFileGroup "fs" "/build/newos/kernel/fs" -nomake
+AddFile "bootfs.c" "/build/newos/kernel/fs/bootfs.c"
+AddFile "bootfs.h" "/build/newos/kernel/fs/bootfs.h"
 AddFile "rootfs.c" "/build/newos/kernel/fs/rootfs.c"
 AddFile "rootfs.h" "/build/newos/kernel/fs/rootfs.h"
 AddFile "fs_kernel.mk" "/build/newos/kernel/fs/fs_kernel.mk"
