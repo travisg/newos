@@ -1,8 +1,10 @@
 ifeq ($(ARCH), )
-ARCH = i386
+ARCH = $(HOSTTYPE)
+#ARCH = i386
 #ARCH = sparc
 #ARCH = sh4
 #ARCH = alpha
+#ARCH = sparc64
 endif
 
 HOST_CC = gcc
@@ -11,14 +13,27 @@ HOST_AS = as
 HOST_AR = ar
 HOST_OBJCOPY = objcopy
 
+# setup echo
+ECHO = echo
+ifeq ($(shell uname),SunOS)
+	ECHO = /usr/ucb/echo
+endif
+
 BOOTMAKER = tools/bootmaker
 NETBOOT = tools/netboot
 
+CC = $(HOST_CC)
+LD = $(HOST_LD)
+AS = $(HOST_AS)
+AR = $(HOST_AR)
+
 ifeq ($(ARCH),i386)
-	CC = gcc
-	LD = ld
-	AS = as
-	AR = ar
+	ifneq ($(HOSTTYPE),i386)
+		CC = i386-elf-gcc
+		LD = i386-elf-ld
+		AS = i386-elf-as
+		AR = i386-elf-ar
+	endif
 	GLOBAL_CFLAGS = -fno-pic -O
 	GLOBAL_LDFLAGS = 
 	LIBGCC = -lgcc
@@ -37,11 +52,24 @@ ifeq ($(ARCH),sh4)
 	LIBGCC_PATH = lib/libgcc/$(ARCH)/ml/m4-single-only
 endif
 	
+ifeq ($(ARCH),sparc64)
+	CC = sparc64-elf-gcc
+	LD = sparc64-elf-ld
+	AS = sparc64-elf-as
+	AR = sparc64-elf-ar
+	GLOBAL_CFLAGS =
+	GLOBAL_LDFLAGS =
+	LIBGCC = -lgcc
+	LIBGCC_PATH = lib/libgcc/$(ARCH)
+endif
+	
 ifeq ($(ARCH),sparc)
-	CC = sparc-elf-gcc
-	LD = sparc-elf-ld
-	AS = sparc-elf-as
-	AR = sparc-elf-ar
+	ifneq ($(HOSTTYPE),sparc)
+		CC = sparc-elf-gcc
+		LD = sparc-elf-ld
+		AS = sparc-elf-as
+		AR = sparc-elf-ar
+	endif
 	GLOBAL_CFLAGS =
 	GLOBAL_LDFLAGS =
 	LIBGCC = -lgcc
@@ -49,10 +77,12 @@ ifeq ($(ARCH),sparc)
 endif
 	
 ifeq ($(ARCH),alpha)
-	CC = gcc
-	LD = ld
-	AS = as
-	AR = ar
+	ifneq ($(HOSTTYPE),alpha)
+		CC = alpha-elf-gcc
+		LD = alpha-elf-ld
+		AS = alpha-elf-as
+		AR = alpha-elf-ar
+	endif
 	GLOBAL_CFLAGS =
 	GLOBAL_LDFLAGS =
 	LIBGCC = -lgcc

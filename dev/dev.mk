@@ -31,12 +31,12 @@ $(DEV_OBJ_DIR)/%.o: $(DEV_DIR)/%.c
 $(DEV_OBJ_DIR)/%.d: $(DEV_DIR)/%.c
 	@mkdir -p $(DEV_OBJ_DIR)
 	@echo "making deps for $<..."
-	@(echo -n $(dir $@); $(CC) $(GLOBAL_CFLAGS) $(DEV_INCLUDES) $(DEV_SUB_INCLUDES) -M -MG $<) > $@
+	@($(ECHO) -n $(dir $@); $(CC) $(GLOBAL_CFLAGS) $(DEV_INCLUDES) $(DEV_SUB_INCLUDES) -M -MG $<) > $@
 
 $(DEV_OBJ_DIR)/%.d: $(DEV_DIR)/%.S
 	@mkdir -p $(DEV_OBJ_DIR)
 	@echo "making deps for $<..."
-	@(echo -n $(dir $@);$(CC) $(GLOBAL_CFLAGS) $(DEV_INCLUDES) $(DEV_SUB_INCLUDES) -M -MG $<) > $@
+	@($(ECHO) -n $(dir $@);$(CC) $(GLOBAL_CFLAGS) $(DEV_INCLUDES) $(DEV_SUB_INCLUDES) -M -MG $<) > $@
 
 $(DEV_OBJ_DIR)/%.o: $(DEV_DIR)/%.S
 	@mkdir -p $(DEV_OBJ_DIR)

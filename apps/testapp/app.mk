@@ -24,4 +24,4 @@ $(TESTAPP_OBJ_DIR)/%.o: $(TESTAPP_DIR)/%.c
 $(TESTAPP_OBJ_DIR)/%.d: $(TESTAPP_DIR)/%.c
 	@mkdir -p $(TESTAPP_OBJ_DIR)
 	@echo "making deps for $<..."
-	@(echo -n $(dir $@); $(CC) $(GLOBAL_CFLAGS) $(APPS_INCLUDES) -M -MG $<) > $@
+	@($(ECHO) -n $(dir $@); $(CC) $(GLOBAL_CFLAGS) $(APPS_INCLUDES) -M -MG $<) > $@

@@ -48,12 +48,12 @@ $(KERNEL_OBJ_DIR)/%.o: $(KERNEL_DIR)/%.c
 $(KERNEL_OBJ_DIR)/%.d: $(KERNEL_DIR)/%.c
 	@mkdir -p $(KERNEL_OBJ_DIR)
 	@echo "making deps for $<..."
-	@(echo -n $(dir $@); $(CC) $(GLOBAL_CFLAGS) $(KERNEL_INCLUDES) -M -MG $<) > $@
+	@($(ECHO) -n $(dir $@); $(CC) $(GLOBAL_CFLAGS) $(KERNEL_INCLUDES) -M -MG $<) > $@
 
 $(KERNEL_OBJ_DIR)/%.d: $(KERNEL_DIR)/%.S
 	@mkdir -p $(KERNEL_OBJ_DIR)
 	@echo "making deps for $<..."
-	@(echo -n $(dir $@);$(CC) $(GLOBAL_CFLAGS) $(KERNEL_INCLUDES) -M -MG $<) > $@
+	@($(ECHO) -n $(dir $@);$(CC) $(GLOBAL_CFLAGS) $(KERNEL_INCLUDES) -M -MG $<) > $@
 
 $(KERNEL_OBJ_DIR)/%.o: $(KERNEL_DIR)/%.S
 	@mkdir -p $(KERNEL_OBJ_DIR)

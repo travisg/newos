@@ -49,12 +49,12 @@ $(LIBC_OBJ_DIR)/%.o: $(LIBC_DIR)/%.c
 $(LIBC_OBJ_DIR)/%.d: $(LIBC_DIR)/%.c
 	@mkdir -p $(LIBC_OBJ_DIR)
 	@echo "making deps for $<..."
-	@(echo -n $(dir $@);$(CC) $(GLOBAL_CFLAGS) -Iinclude -M -MG $<) > $@
+	@($(ECHO) -n $(dir $@); $(CC) $(GLOBAL_CFLAGS) -Iinclude -M -MG $<) > $@
 
 $(LIBC_OBJ_DIR)/%.d: $(LIBC_DIR)/%.S
 	@mkdir -p $(LIBC_OBJ_DIR)
 	@echo "making deps for $<..."
-	@(echo -n $(dir $@);$(CC) $(GLOBAL_CFLAGS) -Iinclude -M -MG $<) > $@
+	@($(ECHO) -n $(dir $@);$(CC) $(GLOBAL_CFLAGS) -Iinclude -M -MG $<) > $@
 
 $(LIBC_OBJ_DIR)/%.o: $(LIBC_DIR)/%.S
 	@mkdir -p $(LIBC_OBJ_DIR)

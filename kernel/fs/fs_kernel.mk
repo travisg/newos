@@ -13,12 +13,12 @@ $(KERNEL_FS_OBJ_DIR)/%.o: $(KERNEL_FS_DIR)/%.c
 $(KERNEL_FS_OBJ_DIR)/%.d: $(KERNEL_FS_DIR)/%.c
 	@mkdir -p $(KERNEL_FS_OBJ_DIR)
 	@echo "making deps for $<..."
-	@(echo -n $(dir $@); $(CC) $(GLOBAL_CFLAGS) $(KERNEL_FS_INCLUDES) -M -MG $<) > $@
+	@($(ECHO) -n $(dir $@); $(CC) $(GLOBAL_CFLAGS) $(KERNEL_FS_INCLUDES) -M -MG $<) > $@
 
 $(KERNEL_FS_OBJ_DIR)/%.d: $(KERNEL_FS_DIR)/%.S
 	@mkdir -p $(KERNEL_FS_OBJ_DIR)
 	@echo "making deps for $<..."
-	@(echo -n $(dir $@);$(CC) $(GLOBAL_CFLAGS) $(KERNEL_FS_INCLUDES) -M -MG $<) > $@
+	@($(ECHO) -n $(dir $@);$(CC) $(GLOBAL_CFLAGS) $(KERNEL_FS_INCLUDES) -M -MG $<) > $@
 
 $(KERNEL_FS_OBJ_DIR)/%.o: $(KERNEL_FS_DIR)/%.S
 	@mkdir -p $(KERNEL_FS_OBJ_DIR)

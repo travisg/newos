@@ -14,12 +14,12 @@ $(COMMON_DEV_OBJ_DIR)/%.o: $(COMMON_DEV_DIR)/%.c
 $(COMMON_DEV_OBJ_DIR)/%.d: $(COMMON_DEV_DIR)/%.c
 	@mkdir -p $(COMMON_DEV_OBJ_DIR)
 	@echo "making deps for $<..."
-	@(echo -n $(dir $@); $(CC) $(GLOBAL_CFLAGS) $(DEV_INCLUDES) -M -MG $<) > $@
+	@($(ECHO) -n $(dir $@); $(CC) $(GLOBAL_CFLAGS) $(DEV_INCLUDES) -M -MG $<) > $@
 
 $(COMMON_DEV_OBJ_DIR)/%.d: $(COMMON_DEV_DIR)/%.S
 	@mkdir -p $(COMMON_DEV_OBJ_DIR)
 	@echo "making deps for $<..."
-	@(echo -n $(dir $@);$(CC) $(GLOBAL_CFLAGS) $(DEV_INCLUDES) -M -MG $<) > $@
+	@($(ECHO) -n $(dir $@);$(CC) $(GLOBAL_CFLAGS) $(DEV_INCLUDES) -M -MG $<) > $@
 
 $(COMMON_DEV_OBJ_DIR)/%.o: $(COMMON_DEV_DIR)/%.S
 	@mkdir -p $(COMMON_DEV_OBJ_DIR)

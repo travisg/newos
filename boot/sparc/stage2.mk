@@ -28,36 +28,31 @@ boot/$(ARCH)/libsa/%.o: boot/$(ARCH)/libsa/%.c
 	$(CC) $(LIBSACFLAGS) -c $< -o $@
 
 boot/$(ARCH)/libsa/%.d: boot/$(ARCH)/libsa/%.c
-	$(CC) $(LIBSACFLAGS) -M -MG $< -o $@.1
-	@echo -n $(dir $@) > $@; cat $@.1 >> $@; rm $@.1
+	@($(ECHO) -n $(dir $@);$(CC) $(LIBSACFLAGS) -M -MG $<) > $@
 
 boot/$(ARCH)/libkern/%.o: boot/$(ARCH)/libkern/%.c
 	$(CC) $(LIBKERNCFLAGS) -c $< -o $@
 
 boot/$(ARCH)/libkern/%.d: boot/$(ARCH)/libkern/%.c
-	$(CC) $(LIBKERNCFLAGS) -M -MG $< -o $@.1
-	@echo -n $(dir $@) > $@; cat $@.1 >> $@; rm $@.1
+	@($(ECHO) -n $(dir $@);$(CC) $(LIBKERNCFLAGS) -M -MG $<) > $@
 
 boot/$(ARCH)/libkern/%.o: boot/$(ARCH)/libkern/%.S
 	$(CC) $(LIBKERNCFLAGS) -c $< -o $@
 
 boot/$(ARCH)/libkern/%.d: boot/$(ARCH)/libkern/%.S
-	$(CC) $(LIBKERNCFLAGS) -M -MG $< -o $@.1
-	@echo -n $(dir $@) > $@; cat $@.1 >> $@; rm $@.1
+	@($(ECHO) -n $(dir $@);$(CC) $(LIBKERNCFLAGS) -M -MG $<) > $@
 
 boot/$(ARCH)/%.o: boot/$(ARCH)/%.S
 	$(CC) $(CFLAGS) -D_LOCORE -c $< -o $@
 
 boot/$(ARCH)/%.d: boot/$(ARCH)/%.S
-	$(CC) $(CFLAGS) -D_LOCORE -M -MG $< -o $@.1
-	@echo -n $(dir $@) > $@; cat $@.1 >> $@; rm $@.1
+	@($(ECHO) -n $(dir $@);$(CC) $(CFLAGS) -D_LOCORE -M -MG $<) > $@
 
 boot/$(ARCH)/%.o: boot/$(ARCH)/%.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 boot/$(ARCH)/%.d: boot/$(ARCH)/%.c
-	$(CC) $(CFLAGS) -M -MG $< -o $@.1
-	@echo -n $(dir $@) > $@; cat $@.1 >> $@; rm $@.1
+	@($(ECHO) -n $(dir $@);$(CC) $(CFLAGS) -M -MG $<) > $@
 
 stage2clean:
 	rm -f $(STAGE2_OBJS) boot/$(ARCH)/stage2 boot/$(ARCH)/a.out
