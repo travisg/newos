@@ -29,7 +29,7 @@ int devs_init(kernel_args *ka)
 	null_dev_init(ka);
 	zero_dev_init(ka);
 #ifdef ARCH_i386
-//	ide_bus_init(ka);
+	ide_bus_init(ka);
 	keyboard_dev_init(ka);
 	console_dev_init(ka);
 	rtl8139_dev_init(ka);

@@ -23,10 +23,12 @@
 
 #include <kernel/arch/cpu.h>
 
+static kernel_args ka;
+
+static int main2();
+
 int _start(kernel_args *oldka, int cpu)
 {
-	kernel_args ka;
-
 	memcpy(&ka, oldka, sizeof(kernel_args));
 
 	smp_set_num_cpus(ka.num_cpus);
@@ -66,12 +68,36 @@ int _start(kernel_args *oldka, int cpu)
 		vfs_init(&ka);
 		thread_init(&ka);
 		vm_init_postthread(&ka);
-		dev_init(&ka);
-		bus_init(&ka);
-		devs_init(&ka);
-		con_init(&ka);
 
-		net_init(&ka);
+		// start a thread to finish initializing the rest of the system
+		{
+			thread_id tid;
+			tid = thread_create_kernel_thread("main2", &main2, 20);
+			thread_resume_thread(tid);
+		}
+
+		smp_wake_up_all_non_boot_cpus();
+		smp_enable_ici(); // ici's were previously being ignored
+		thread_start_threading();
+	}
+	int_enable_interrupts();
+
+	dprintf("main: done... begin idle loop on cpu %d\n", cpu);
+	for(;;);
+
+	return 0;
+}
+
+static int main2()
+{
+	dprintf("start of main2: initializing devices\n");
+
+	dev_init(&ka);
+	bus_init(&ka);
+	devs_init(&ka);
+	con_init(&ka);
+	net_init(&ka);
+
 #if 0
 		// XXX remove
 		vfs_test();
@@ -83,32 +109,17 @@ int _start(kernel_args *oldka, int cpu)
 #if 0
 		vm_test();
 #endif
-
-		smp_wake_up_all_non_boot_cpus();
-		smp_enable_ici(); // ici's were previously being ignored
-		thread_start_threading();
-	}
-	int_enable_interrupts();
-
 #if 0
-	if(cpu == 0) {
-		vm_test();
-	}
+	panic("debugger_test\n");
 #endif
 
 	// start the init process
-	if(cpu == 0) {
+	{
 		proc_id pid;
 		pid = proc_create_proc("/boot/init", "init", 5);
 		if(pid < 0)
 			kprintf("error starting 'init'\n");
 	}
-
-#if 0
-	panic("debugger_test\n");
-#endif
-	dprintf("main: done... spinning forever on cpu %d\n", cpu);
-	for(;;);
 
 	return 0;
 }
