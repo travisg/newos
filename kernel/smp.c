@@ -60,7 +60,7 @@ void acquire_spinlock(spinlock_t *lock)
 {
 	if(smp_num_cpus > 1) {
 		int curr_cpu = smp_get_current_cpu();
-		if(int_is_interrupts_enabled())
+		if(int_are_interrupts_enabled())
 			panic("acquire_spinlock: attempt to acquire lock %p with interrupts enabled\n", lock);
 		while(1) {
 			while(*lock != 0)
@@ -90,24 +90,22 @@ void release_spinlock(spinlock_t *lock)
 
 // finds a free message and gets it
 // NOTE: has side effect of disabling interrupts
-// return value is interrupt state
-static int find_free_message(struct smp_msg **msg)
+static void find_free_message(struct smp_msg **msg)
 {
-	int state;
 
 //	dprintf("find_free_message: entry\n");
 
 retry:
 	while(free_msg_count <= 0)
 		;
-	state = int_disable_interrupts();
+	int_disable_interrupts();
 	acquire_spinlock(&free_msg_spinlock);
 
 	if(free_msg_count <= 0) {
 		// someone grabbed one while we were getting the lock,
 		// go back to waiting for it
 		release_spinlock(&free_msg_spinlock);
-		int_restore_interrupts(state);
+		int_restore_interrupts();
 		goto retry;
 	}
 
@@ -118,8 +116,6 @@ retry:
 	release_spinlock(&free_msg_spinlock);
 
 //	dprintf("find_free_message: returning msg 0x%x\n", *msg);
-
-	return state;
 }
 
 static void return_free_message(struct smp_msg *msg)
@@ -303,16 +299,15 @@ void smp_send_ici(int target_cpu, int message, unsigned long data, unsigned long
 //		target_cpu, message, data, data2, data3, data_ptr, flags);
 
 	if(ici_enabled) {
-		int state;
 		int curr_cpu;
 
 		// find_free_message leaves interrupts disabled
-		state = find_free_message(&msg);
+		find_free_message(&msg);
 
 		curr_cpu = smp_get_current_cpu();
 		if(target_cpu == curr_cpu) {
 			return_free_message(msg);
-			int_restore_interrupts(state);
+			int_restore_interrupts();
 			return; // nope, cant do that
 		}
 
@@ -345,7 +340,7 @@ void smp_send_ici(int target_cpu, int message, unsigned long data, unsigned long
 			return_free_message(msg);
 		}
 
-		int_restore_interrupts(state);
+		int_restore_interrupts();
 	}
 }
 
@@ -357,11 +352,10 @@ void smp_send_broadcast_ici(int message, unsigned long data, unsigned long data2
 //		smp_get_current_cpu(), message, data, data2, data3, data_ptr, flags);
 
 	if(ici_enabled) {
-		int state;
 		int curr_cpu;
 
 		// find_free_message leaves interrupts disabled
-		state = find_free_message(&msg);
+		find_free_message(&msg);
 
 		curr_cpu = smp_get_current_cpu();
 
@@ -400,7 +394,7 @@ void smp_send_broadcast_ici(int message, unsigned long data, unsigned long data2
 			return_free_message(msg);
 		}
 
-		int_restore_interrupts(state);
+		int_restore_interrupts();
 	}
 //	dprintf("smp_send_broadcast_ici: done\n");
 }

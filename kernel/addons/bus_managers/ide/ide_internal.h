@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2002, Thomas Kurschel. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -53,49 +53,49 @@ typedef struct ide_device_info {
 	uint8 CQ_enabled : 1;
 	uint8 DMA_supported : 1;
 	uint8 DMA_enabled : 1;
-	
+
 	uint8 queue_depth;
-	
+
 	int DMA_failures;
 	int CQ_failures;
 	struct ide_bus_info *bus;
 	struct ide_qrequest *qreq_array;
-	
-	uint32 combined_sense;	
+
+	uint32 combined_sense;
 	struct ide_qrequest *free_qrequests;
 	int num_running_reqs;
-	
+
 	void (*exec_io)( struct ide_device_info *device, struct ide_qrequest *qrequest );
-	
+
 	int is_device1;
 	int target_id;
-	
+
 	ide_task_file tf;
 	ide_reg_mask tf_param_mask;
-	
+
 	struct {
 		uint8 packet_irq : 1;
 		bigtime_t packet_irq_timeout;
 	} atapi;
-	
+
 	bool no_reconnect_timeout;
-	
+
 	struct timer_event reconnect_timer;
 	ide_synced_pc reconnect_timeout_synced_pc;
 	xpt_dpc_cookie reconnect_timeout_dpc;
-	
+
 	struct ide_device_info *other_device;
 
 	int left_sg_elem;
 	struct sg_elem *cur_sg_elem;
 	int cur_sg_ofs;
-	
+
 	int left_blocks;
-	
+
 	uint8 packet[12];
-	
+
 	int device_type;
-	
+
 	struct sg_elem *saved_sg_list;
 	uint16 saved_sglist_cnt;
 	uint32 saved_dxfer_len;
@@ -103,11 +103,11 @@ typedef struct ide_device_info {
 	char *buffer;
 	struct sg_elem *buffer_sg_list;
 	size_t buffer_sglist_cnt;
-	size_t buffer_size;	
+	size_t buffer_size;
 
 	uint64 total_sectors;
 	ide_device_infoblock infoblock;
-	
+
 	bool has_odd_byte;
 	int odd_byte;
 } ide_device_info;
@@ -138,7 +138,6 @@ struct ide_bus_info {
 	ide_controller_interface *controller;
 	ide_channel_cookie channel;
 	xpt_bus_cookie xpt_cookie;
-	int prev_irq_state;
 	ide_qrequest *active_qrequest;
 	int wait_id, dpc_id;
 	struct timer_event timer;
@@ -149,31 +148,29 @@ struct ide_bus_info {
 	ide_device_info *active_device;
 	sem_id sync_wait_sem;
 	bool sync_wait_timeout;
-	
+
 	ide_device_info *devices[2];
-	
+
 	ide_synced_pc scan_bus_syncinfo;
 	sem_id scan_device_sem;
-	
+
 	ide_synced_pc disconnect_syncinfo;
-	
+
 	ide_device_info *first_device;
-	
+
 	char controller_name[HBA_ID];
 	ide_controller_params controller_params;
 	uchar path_id;
 };
 
 #define IDE_LOCK( bus ) { \
-	int prev_irq_state = int_disable_interrupts(); \
+	int_disable_interrupts(); \
 	acquire_spinlock( &bus->lock ); \
-	bus->prev_irq_state = prev_irq_state; \
 }
 
 #define IDE_UNLOCK( bus ) { \
-	int prev_irq_state = bus->prev_irq_state; \
 	release_spinlock( &bus->lock ); \
-	int_restore_interrupts( prev_irq_state ); \
+	int_restore_interrupts(); \
 }
 
 #endif

@@ -31,12 +31,11 @@ void i386_selector_init( void *gdt )
 selector_id i386_selector_add( selector_type type )
 {
 	static int spinlock;
-	int state;
 	uint32 mask;
 	selector_id id = 0;
 	unsigned i;
 
-	state = int_disable_interrupts();
+	int_disable_interrupts();
 	acquire_spinlock( &spinlock );
 
 	for ( i = 0; i < ENTRIES; i++ )
@@ -53,7 +52,7 @@ selector_id i386_selector_add( selector_type type )
 		}
 
 	release_spinlock( &spinlock );
-	int_restore_interrupts( state );
+	int_restore_interrupts();
 
 	if ( id ) {
 		asm("lgdt	%0;"

@@ -7,6 +7,7 @@
 #include <kernel/debug.h>
 #include <kernel/heap.h>
 #include <kernel/smp.h>
+#include <kernel/thread.h>
 #include <kernel/arch/int.h>
 #include <newos/errors.h>
 #include <boot/stage2.h>
@@ -63,12 +64,12 @@ int int_set_io_interrupt_handler(int vector, int (*func)(void*), void* data)
 	io->func = func;
 	io->data = data;
 
-	state = int_disable_interrupts();
+	int_disable_interrupts();
 	acquire_spinlock(&io_vectors[vector].vector_lock);
 	io->next = io_vectors[vector].handler_list;
 	io_vectors[vector].handler_list = io;
 	release_spinlock(&io_vectors[vector].vector_lock);
-	int_restore_interrupts(state);
+	int_restore_interrupts();
 
 	arch_int_enable_io_interrupt(vector);
 
@@ -78,13 +79,12 @@ int int_set_io_interrupt_handler(int vector, int (*func)(void*), void* data)
 int int_remove_io_interrupt_handler(int vector, int (*func)(void*), void* data)
 {
 	struct io_handler *io, *prev = NULL;
-	int state;
 
 	if(vector < 0 || vector >= NUM_IO_VECTORS)
 		return ERR_INVALID_ARGS;
 
 	// lock the structures down so it is not modified while we search
-	state = int_disable_interrupts();
+	int_disable_interrupts();
 	acquire_spinlock(&io_vectors[vector].vector_lock);
 
 	// start at the beginning
@@ -112,7 +112,7 @@ int int_remove_io_interrupt_handler(int vector, int (*func)(void*), void* data)
 
 	// release our lock as we're done with the vector
 	release_spinlock(&io_vectors[vector].vector_lock);
-	int_restore_interrupts(state);
+	int_restore_interrupts();
 
 	// and disable the IRQ if nothing left
 	if (io != NULL) {
@@ -149,5 +149,48 @@ int int_io_interrupt_handler(int vector)
 	release_spinlock(&io_vectors[vector].vector_lock);
 
 	return ret;
+}
+
+void int_enable_interrupts(void)
+{
+	arch_int_enable_interrupts();
+}
+
+// increase the interrupt disable count in the current thread structure.
+// if we go from 0 to 1, disable interrupts
+void int_disable_interrupts(void)
+{
+	struct thread *t = thread_get_current_thread();
+	if(!t)
+		return;
+
+	ASSERT(t->int_disable_level >= 0);
+
+	t->int_disable_level++;
+	if(t->int_disable_level == 1) {
+		// we just crossed from 0 -> 1
+		arch_int_disable_interrupts();
+	}
+}
+
+// decrement the interrupt disable count. If we hit zero, re-enable interrupts
+void int_restore_interrupts(void)
+{
+	struct thread *t = thread_get_current_thread();
+	if(!t)
+		return;
+
+	t->int_disable_level--;
+
+	ASSERT(t->int_disable_level >= 0);
+	if(t->int_disable_level == 0) {
+		// we just hit 0
+		arch_int_enable_interrupts();
+	}
+}
+
+bool int_are_interrupts_enabled(void)
+{
+	return arch_int_are_interrupts_enabled();
 }
 

@@ -105,22 +105,20 @@ int arch_smp_init(kernel_args *ka)
 void arch_smp_send_broadcast_ici(void)
 {
 	int config;
-	int state;
 
-	state = int_disable_interrupts();
+	int_disable_interrupts();
 
 	config = apic_read(APIC_ICR1) & APIC_ICR1_WRITE_MASK;
 	apic_write(APIC_ICR1, config | 0xfd | APIC_ICR1_DELMODE_FIXED | APIC_ICR1_DESTMODE_PHYS | APIC_ICR1_DEST_ALL_BUT_SELF);
 
-	int_restore_interrupts(state);
+	int_restore_interrupts();
 }
 
 void arch_smp_send_ici(int target_cpu)
 {
 	int config;
-	int state;
 
-	state = int_disable_interrupts();
+	int_disable_interrupts();
 
 	config = apic_read(APIC_ICR2) & APIC_ICR2_MASK;
 	apic_write(APIC_ICR2, config | cpu_apic_id[target_cpu] << 24);
@@ -128,7 +126,7 @@ void arch_smp_send_ici(int target_cpu)
 	config = apic_read(APIC_ICR1) & APIC_ICR1_WRITE_MASK;
 	apic_write(APIC_ICR1, config | 0xfd | APIC_ICR1_DELMODE_FIXED | APIC_ICR1_DESTMODE_PHYS | APIC_ICR1_DEST_FIELD);
 
-	int_restore_interrupts(state);
+	int_restore_interrupts();
 }
 
 void arch_smp_ack_interrupt(void)
@@ -141,7 +139,6 @@ void arch_smp_ack_interrupt(void)
 int arch_smp_set_apic_timer(bigtime_t relative_timeout)
 {
 	unsigned int config;
-	int state;
 	unsigned int ticks;
 
 	if(apic == NULL)
@@ -153,7 +150,7 @@ int arch_smp_set_apic_timer(bigtime_t relative_timeout)
 	// calculation should be ok, since it's going to be 64-bit
 	ticks = ((relative_timeout * apic_timer_tics_per_sec) / 1000000);
 
-	state = int_disable_interrupts();
+	int_disable_interrupts();
 
 	config = apic_read(APIC_LVTT) | APIC_LVTT_M; // mask the timer
 	apic_write(APIC_LVTT, config);
@@ -165,7 +162,7 @@ int arch_smp_set_apic_timer(bigtime_t relative_timeout)
 
 	apic_write(APIC_ICRT, ticks); // start it up
 
-	int_restore_interrupts(state);
+	int_restore_interrupts();
 
 	return 0;
 }
@@ -173,19 +170,18 @@ int arch_smp_set_apic_timer(bigtime_t relative_timeout)
 int arch_smp_clear_apic_timer(void)
 {
 	unsigned int config;
-	int state;
 
 	if(apic == NULL)
 		return -1;
 
-	state = int_disable_interrupts();
+	int_disable_interrupts();
 
 	config = apic_read(APIC_LVTT) | APIC_LVTT_M; // mask the timer
 	apic_write(APIC_LVTT, config);
 
 	apic_write(APIC_ICRT, 0); // zero out the timer
 
-	int_restore_interrupts(state);
+	int_restore_interrupts();
 
 	return 0;
 }

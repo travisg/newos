@@ -385,12 +385,12 @@ static int map_backing_store(vm_address_space *aspace, vm_store *store, void **v
 		off_t commitment = (store->ops->commit)(store, offset + size);
 		if(commitment < offset + size) {
 			if(cache->temporary) {
-				int state = int_disable_interrupts();
+				int_disable_interrupts();
 				acquire_spinlock(&max_commit_lock);
 
 				if(max_commit - old_store_commitment + commitment < offset + size) {
 					release_spinlock(&max_commit_lock);
-					int_restore_interrupts(state);
+					int_restore_interrupts();
 					mutex_unlock(&cache_ref->lock);
 					err = ERR_VM_WOULD_OVERCOMMIT;
 					goto err1a;
@@ -402,7 +402,7 @@ static int map_backing_store(vm_address_space *aspace, vm_store *store, void **v
 				max_commit += (commitment - old_store_commitment) - (offset + size - cache->virtual_size);
 				cache->virtual_size = offset + size;
 				release_spinlock(&max_commit_lock);
-				int_restore_interrupts(state);
+				int_restore_interrupts();
 			} else {
 				mutex_unlock(&cache_ref->lock);
 				err = ERR_NO_MEMORY;
@@ -2205,16 +2205,14 @@ int vm_put_physical_page(addr vaddr)
 
 void vm_increase_max_commit(addr delta)
 {
-	int state;
-
 //	dprintf("vm_increase_max_commit: delta 0x%x\n", delta);
 
-	state = int_disable_interrupts();
+	int_disable_interrupts();
 	acquire_spinlock(&max_commit_lock);
 	max_commit += delta;
 	vm_info.committed_mem += delta;
 	release_spinlock(&max_commit_lock);
-	int_restore_interrupts(state);
+	int_restore_interrupts();
 }
 
 int user_memcpy(void *to, const void *from, size_t size)

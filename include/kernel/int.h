@@ -14,10 +14,10 @@ int int_io_interrupt_handler(int vector);
 int int_set_io_interrupt_handler(int vector, int (*func)(void*), void* data);
 int int_remove_io_interrupt_handler(int vector, int (*func)(void*), void* data);
 
-#define int_enable_interrupts	arch_int_enable_interrupts
-#define int_disable_interrupts	arch_int_disable_interrupts
-#define int_restore_interrupts	arch_int_restore_interrupts
-#define int_is_interrupts_enabled arch_int_is_interrupts_enabled
+void int_enable_interrupts(void);
+void int_disable_interrupts(void);
+void int_restore_interrupts(void);
+bool int_are_interrupts_enabled(void);
 
 enum {
 	INT_NO_RESCHEDULE,

@@ -287,7 +287,6 @@ void rtl8139_xmit(rtl8139 *rtl, const char *ptr, ssize_t len)
 {
 	int i;
 	int txbn;
-	int state;
 
 restart:
 	sem_acquire(rtl->tx_sem, 1);
@@ -305,7 +304,7 @@ restart:
 	dprintf("\n");
 #endif
 
-	state = int_disable_interrupts();
+	int_disable_interrupts();
 	acquire_spinlock(&rtl->reg_spinlock);
 
 #if 0
@@ -314,7 +313,7 @@ restart:
 		dprintf("rtl8139_xmit: no txbuf free\n");
 		rtl8139_dumptxstate(rtl);
 		release_spinlock(&rtl->reg_spinlock);
-		int_restore_interrupts(state);
+		int_restore_interrupts();
 		mutex_unlock(&rtl->lock);
 		sem_release(rtl->tx_sem, 1);
 		goto restart;
@@ -330,7 +329,7 @@ restart:
 		rtl->txbn = 0;
 
 	release_spinlock(&rtl->reg_spinlock);
-	int_restore_interrupts(state);
+	int_restore_interrupts();
 
 	mutex_unlock(&rtl->lock);
 }
@@ -347,7 +346,6 @@ ssize_t rtl8139_rx(rtl8139 *rtl, char *buf, ssize_t buf_len)
 	uint32 tail;
 	uint16 len;
 	int rc;
-	int state;
 	bool release_sem = false;
 
 //	dprintf("rtl8139_rx: entry\n");
@@ -359,21 +357,21 @@ restart:
 	sem_acquire(rtl->rx_sem, 1);
 	mutex_lock(&rtl->lock);
 
-	state = int_disable_interrupts();
+	int_disable_interrupts();
 	acquire_spinlock(&rtl->reg_spinlock);
 
 	tail = TAILREG_TO_TAIL(RTL_READ_16(rtl, RT_RXBUFTAIL));
 //	dprintf("tailreg = 0x%x, actual tail 0x%x\n", RTL_READ_16(rtl, RT_RXBUFTAIL), tail);
 	if(tail == RTL_READ_16(rtl, RT_RXBUFHEAD)) {
 		release_spinlock(&rtl->reg_spinlock);
-		int_restore_interrupts(state);
+		int_restore_interrupts();
 		mutex_unlock(&rtl->lock);
 		goto restart;
 	}
 
 	if(RTL_READ_8(rtl, RT_CHIPCMD) & RT_CMD_RX_BUF_EMPTY) {
 		release_spinlock(&rtl->reg_spinlock);
-		int_restore_interrupts(state);
+		int_restore_interrupts();
 		mutex_unlock(&rtl->lock);
 		goto restart;
 	}
@@ -386,7 +384,7 @@ restart:
 	// see if it's an unfinished buffer
 	if(entry->len == 0xfff0) {
 		release_spinlock(&rtl->reg_spinlock);
-		int_restore_interrupts(state);
+		int_restore_interrupts();
 		mutex_unlock(&rtl->lock);
 		goto restart;
 	}
@@ -399,7 +397,7 @@ restart:
 		// error, lets reset the card
 		rtl8139_resetrx(rtl);
 		release_spinlock(&rtl->reg_spinlock);
-		int_restore_interrupts(state);
+		int_restore_interrupts();
 		mutex_unlock(&rtl->lock);
 		goto restart;
 	}
@@ -435,7 +433,7 @@ restart:
 
 out:
 	release_spinlock(&rtl->reg_spinlock);
-	int_restore_interrupts(state);
+	int_restore_interrupts();
 
 	if(release_sem)
 		sem_release(rtl->rx_sem, 1);

@@ -27,6 +27,8 @@
 
 #define MAX_ARGS 16
 
+#define SYSCALL_VECTOR 99
+
 static desc_table *idt = NULL;
 
 static void interrupt_ack(int n)
@@ -99,6 +101,12 @@ void arch_int_enable_interrupts(void)
 	asm("sti");
 }
 
+void arch_int_disable_interrupts(void)
+{
+	asm("cli");
+}
+
+#if 0
 int arch_int_disable_interrupts(void)
 {
 	int flags;
@@ -122,8 +130,9 @@ void arch_int_restore_interrupts(int oldstate)
 		"popfl\n"
 		: : "r" (flags), "r" (0));
 }
+#endif
 
-bool arch_int_is_interrupts_enabled(void)
+bool arch_int_are_interrupts_enabled(void)
 {
 	int flags;
 
@@ -136,10 +145,16 @@ void i386_handle_trap(struct iframe frame); /* keep the compiler happy, this fun
 void i386_handle_trap(struct iframe frame)
 {
 	int ret = INT_NO_RESCHEDULE;
+	bool adjust_int_disable_count = false;
 	struct thread *t = thread_get_current_thread();
 
-	if(t)
+	if(t) {
 		i386_push_iframe(t, &frame);
+		if(frame.vector != SYSCALL_VECTOR) {
+			adjust_int_disable_count = true;
+			t->int_disable_level++; // make it look like the ints were disabled
+		}
+	}
 
 //	if(frame.vector != 0x20)
 //		dprintf("i386_handle_trap: vector 0x%x, ip 0x%x, cpu %d\n", frame.vector, frame.eip, smp_get_current_cpu());
@@ -157,11 +172,17 @@ void i386_handle_trap(struct iframe frame)
 			asm ("movl %%cr2, %0" : "=r" (cr2) );
 
 			if(!kernel_startup && (frame.flags & 0x200) == 0) {
-				// ints are were disabled, that is very bad
+				// ints are were disabled when the page fault was taken, that is very bad
 				panic("i386_handle_trap: page fault at 0x%x, ip 0x%x, write %d with ints disabled\n",
 					cr2, frame.eip, (frame.error_code & 0x2) != 0);
 			}
-			int_enable_interrupts();
+
+			if(!kernel_startup) {
+				int_restore_interrupts(); // should enable the interrupts
+				adjust_int_disable_count = false;
+				ASSERT(int_are_interrupts_enabled());
+			}
+
 
 			ret = vm_page_fault(cr2, frame.eip,
 				(frame.error_code & 0x2) != 0,
@@ -174,7 +195,7 @@ void i386_handle_trap(struct iframe frame)
 			}
 			break;
 		}
-		case 99: {
+		case SYSCALL_VECTOR: {
 			uint64 retcode;
 			unsigned int args[MAX_ARGS];
 			int rc;
@@ -229,20 +250,23 @@ void i386_handle_trap(struct iframe frame)
 	}
 
 	if(ret == INT_RESCHEDULE) {
-		int state = int_disable_interrupts();
+		int_disable_interrupts();
 		GRAB_THREAD_LOCK();
 		thread_resched();
 		RELEASE_THREAD_LOCK();
-		int_restore_interrupts(state);
+		int_restore_interrupts();
 	}
 
-	if(frame.cs == USER_CODE_SEG || frame.vector == 99) {
+	if(frame.cs == USER_CODE_SEG || frame.vector == SYSCALL_VECTOR) {
 		thread_atkernel_exit();
 	}
 //	dprintf("0x%x cpu %d!\n", thread_get_current_thread_id(), smp_get_current_cpu());
 
-	if(t)
+	if(t) {
 		i386_pop_iframe(t);
+		if(adjust_int_disable_count)
+			t->int_disable_level--; // keep the count in sync
+	}
 }
 
 int arch_int_init(kernel_args *ka)
@@ -298,7 +322,7 @@ int arch_int_init(kernel_args *ka)
 	set_intr_gate(46,  &trap46);
 	set_intr_gate(47,  &trap47);
 
-	set_system_gate(99, &trap99);
+	set_system_gate(SYSCALL_VECTOR, &trap99);
 
 	set_intr_gate(251, &trap251);
 	set_intr_gate(252, &trap252);

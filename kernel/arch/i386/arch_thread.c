@@ -159,10 +159,10 @@ void arch_thread_dump_info(void *info)
 	dprintf("\tfpu_state at %p\n", at->fpu_state);
 }
 
-void arch_thread_enter_uspace(addr entry, void *args, addr ustack_top)
+void arch_thread_enter_uspace(struct thread *t, addr entry, void *args, addr ustack_top)
 {
-	dprintf("arch_thread_entry_uspace: entry 0x%lx, args %p, ustack_top 0x%lx\n",
-		entry, args, ustack_top);
+	dprintf("arch_thread_entry_uspace: thread 0x%x, entry 0x%lx, args %p, ustack_top 0x%lx\n",
+		t->id, entry, args, ustack_top);
 
 	// make sure the fpu is in a good state
 	asm("fninit");
@@ -177,7 +177,10 @@ void arch_thread_enter_uspace(addr entry, void *args, addr ustack_top)
 
 	int_disable_interrupts();
 
-	i386_set_kstack(thread_get_current_thread()->kernel_stack_base + KSTACK_SIZE);
+	i386_set_kstack(t->kernel_stack_base + KSTACK_SIZE);
+
+	// set the interrupt disable count to zero, since we'll have ints enabled as soon as we enter user space
+	t->int_disable_level = 0;
 
 	i386_enter_uspace(entry, args, ustack_top - 4);
 }

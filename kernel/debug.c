@@ -237,11 +237,10 @@ int panic(const char *fmt, ...)
 	int ret = 0;
 	va_list args;
 	char temp[128];
-	int state;
 
 	dbg_set_serial_debug(true);
 
-	state = int_disable_interrupts();
+	int_disable_interrupts();
 
 	va_start(args, fmt);
 	ret = vsprintf(temp, fmt, args);
@@ -259,7 +258,7 @@ int panic(const char *fmt, ...)
 
 	kernel_debugger();
 
-	int_restore_interrupts(state);
+	int_restore_interrupts();
 	return ret;
 }
 
@@ -284,13 +283,13 @@ char dbg_putch(char c)
 	char ret;
 
 	if(serial_debug_on) {
-		int flags = int_disable_interrupts();
+		int_disable_interrupts();
 		acquire_spinlock(&dbg_spinlock);
 
 		ret = arch_dbg_con_putch(c);
 
 		release_spinlock(&dbg_spinlock);
-		int_restore_interrupts(flags);
+		int_restore_interrupts();
 	} else {
 		ret = c;
 	}
@@ -301,13 +300,13 @@ char dbg_putch(char c)
 void dbg_puts(const char *s)
 {
 	if(serial_debug_on) {
-		int flags = int_disable_interrupts();
+		int_disable_interrupts();
 		acquire_spinlock(&dbg_spinlock);
 
 		arch_dbg_con_puts(s);
 
 		release_spinlock(&dbg_spinlock);
-		int_restore_interrupts(flags);
+		int_restore_interrupts();
 	}
 }
 
@@ -316,13 +315,13 @@ ssize_t dbg_write(const void *buf, ssize_t len)
 	ssize_t ret;
 
 	if(serial_debug_on) {
-		int flags = int_disable_interrupts();
+		int_disable_interrupts();
 		acquire_spinlock(&dbg_spinlock);
 
 		ret = arch_dbg_con_write(buf, len);
 
 		release_spinlock(&dbg_spinlock);
-		int_restore_interrupts(flags);
+		int_restore_interrupts();
 	} else {
 		ret = len;
 	}
@@ -342,14 +341,14 @@ int dbg_add_command(void (*func)(int, char **), const char *name, const char *de
 	cmd->cmd = name;
 	cmd->description = desc;
 
-	flags = int_disable_interrupts();
+	int_disable_interrupts();
 	acquire_spinlock(&dbg_spinlock);
 
 	cmd->next = commands;
 	commands = cmd;
 
 	release_spinlock(&dbg_spinlock);
-	int_restore_interrupts(flags);
+	int_restore_interrupts();
 
 	return NO_ERROR;
 }

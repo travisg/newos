@@ -115,7 +115,6 @@ void timer_setup_timer(timer_callback func, void *data, struct timer_event *even
 
 int timer_set_event(bigtime_t relative_time, timer_mode mode, struct timer_event *event)
 {
-	int state;
 	int curr_cpu;
 
 	if(event == NULL)
@@ -136,7 +135,7 @@ int timer_set_event(bigtime_t relative_time, timer_mode mode, struct timer_event
 	if(event->mode == TIMER_MODE_PERIODIC)
 		event->periodic_time = relative_time;
 
-	state = int_disable_interrupts();
+	int_disable_interrupts();
 
 	curr_cpu = smp_get_current_cpu();
 
@@ -150,7 +149,7 @@ int timer_set_event(bigtime_t relative_time, timer_mode mode, struct timer_event
 	}
 
 	release_spinlock(&timer_spinlock[curr_cpu]);
-	int_restore_interrupts(state);
+	int_restore_interrupts();
 
 	return 0;
 }
@@ -205,7 +204,6 @@ int local_timer_cancel_event(struct timer_event *event)
 
 int timer_cancel_event(struct timer_event *event)
 {
-	int state;
 	struct timer_event *last = NULL;
 	struct timer_event *e;
 	bool foundit = false;
@@ -216,7 +214,7 @@ int timer_cancel_event(struct timer_event *event)
 	if(event->sched_time == 0)
 		return 0; // it's not scheduled
 
-	state = int_disable_interrupts();
+	int_disable_interrupts();
 	curr_cpu = smp_get_current_cpu();
 
 	// walk through all of the cpu's timer queues
@@ -225,7 +223,7 @@ int timer_cancel_event(struct timer_event *event)
 	// a cheap match. If this fails, we start harassing
 	// other cpus.
 	//
-	if(_local_timer_cancel_event(curr_cpu, event) == 0) 
+	if(_local_timer_cancel_event(curr_cpu, event) == 0)
 		foundit = true;
 	else {
 		for(cpu = 0; cpu < num_cpus; cpu++) {
@@ -257,8 +255,8 @@ done:
 			event->sched_time = 0;
 		}
 	}
-	
-	int_restore_interrupts(state);
+
+	int_restore_interrupts();
 
 	return (foundit ? 0 : ERR_GENERAL);
 }

@@ -98,7 +98,6 @@ static int validate_cbuf(cbuf *head)
 
 static void *_cbuf_alloc(size_t *size)
 {
-	int state;
 	void *buf;
 	int i;
 	int start;
@@ -106,7 +105,7 @@ static void *_cbuf_alloc(size_t *size)
 
 //	dprintf("cbuf_alloc: asked to allocate size %d\n", *size);
 
-	state = int_disable_interrupts();
+	int_disable_interrupts();
 	acquire_spinlock(&cbuf_lowlevel_spinlock);
 
 	// scan through the allocation bitmap, looking for the first free block
@@ -144,7 +143,7 @@ static void *_cbuf_alloc(size_t *size)
 	}
 
 	release_spinlock(&cbuf_lowlevel_spinlock);
-	int_restore_interrupts(state);
+	int_restore_interrupts();
 
 	return buf;
 }
@@ -213,7 +212,6 @@ static void _clear_chain(cbuf *head, cbuf **tail)
 void cbuf_free_chain_noblock(cbuf *buf)
 {
 	cbuf *head, *last;
-	int state;
 
 	if(buf == NULL)
 		return;
@@ -221,14 +219,14 @@ void cbuf_free_chain_noblock(cbuf *buf)
 	head = buf;
 	_clear_chain(head, &last);
 
-	state = int_disable_interrupts();
+	int_disable_interrupts();
 	acquire_spinlock(&noblock_spin);
 
 	last->next = cbuf_free_noblock_list;
 	cbuf_free_noblock_list = head;
 
 	release_spinlock(&noblock_spin);
-	int_restore_interrupts(state);
+	int_restore_interrupts();
 }
 
 void cbuf_free_chain(cbuf *buf)
@@ -307,16 +305,15 @@ cbuf *cbuf_get_chain_noblock(size_t len)
 	cbuf *tail = NULL;
 	cbuf *temp;
 	size_t chain_len = 0;
-	int state;
 
-	state = int_disable_interrupts();
+	int_disable_interrupts();
 	acquire_spinlock(&noblock_spin);
 
 	while(chain_len < len) {
 		if(cbuf_free_noblock_list == NULL) {
 			dprintf("cbuf_get_chain_noblock: not enough cbufs\n");
 			release_spinlock(&noblock_spin);
-			int_restore_interrupts(state);
+			int_restore_interrupts();
 
 			if(chain != NULL)
 				cbuf_free_chain_noblock(chain);
@@ -334,7 +331,7 @@ cbuf *cbuf_get_chain_noblock(size_t len)
 		chain_len += chain->len;
 	}
 	release_spinlock(&noblock_spin);
-	int_restore_interrupts(state);
+	int_restore_interrupts();
 
 	// now we have a chain, fixup the first and last entry
 	chain->total_len = len;
@@ -1069,6 +1066,7 @@ int cbuf_init()
 	// initialize the bitmap
 	for(i=0; i<CBUF_BITMAP_SIZE/8; i++)
 		cbuf_bitmap[i] = 0;
+
 #if 0
 	buf = allocate_cbuf_mem(ALLOCATE_CHUNK);
 	if(buf == NULL)
@@ -1078,6 +1076,7 @@ int cbuf_init()
 	buf = allocate_cbuf_mem(ALLOCATE_CHUNK);
 	if(buf == NULL)
 		return ERR_NO_MEMORY;
+
 	cbuf_free_chain(buf);
 
 	return NO_ERROR;

@@ -105,7 +105,7 @@ int _start(kernel_args *oldka, int cpu_num)
 	}
 
 	kernel_startup = false;
-	int_enable_interrupts();
+	int_restore_interrupts(); // idle threads were prestarted with interrupts off
 
 	dprintf("main: done... begin idle loop on cpu %d\n", cpu_num);
 	for(;;)

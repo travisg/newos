@@ -78,12 +78,16 @@ struct thread {
 	union cpu_ent *cpu;
 	int pending_signals;
 	bool in_kernel;
+
+	int int_disable_level;
+
 	sem_id sem_blocking;
 	int sem_count;
 	int sem_acquire_count;
 	int sem_deleted_retcode;
 	int sem_errcode;
 	int sem_flags;
+
 	addr fault_handler;
 	addr entry;
 	void *args;
