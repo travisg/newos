@@ -1,9 +1,9 @@
 /*
-** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
-#ifndef _DEBUG_H
-#define _DEBUG_H
+#ifndef _KERNEL_DEBUG_H
+#define _KERNEL_DEBUG_H
 
 #include <sys/cdefs.h>
 #include <kernel/kernel.h>

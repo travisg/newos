@@ -1,10 +1,11 @@
 /*
-** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
-#ifndef _SH4_CPU_H
-#define _SH4_CPU_H
+#ifndef _NEWOS_KERNEL_ARCH_SH4_CPU_H
+#define _NEWOS_KERNEL_ARCH_SH4_CPU_H
 
+#include <arch/cpu.h>
 #include <arch/sh4/sh4.h>
 
 unsigned int get_fpscr();

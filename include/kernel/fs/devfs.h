@@ -1,9 +1,9 @@
 /*
-** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
-#ifndef _DEVFS_H
-#define _DEVFS_H
+#ifndef _NEWOS_KERNEL_FS_DEVFS_H
+#define _NEWOS_KERNEL_FS_DEVFS_H
 
 #include <kernel/vfs.h>
 

@@ -1,10 +1,10 @@
 /*
-** Copyright 2001, Thomas Kurschel. All rights reserved.
+** Copyright 2001-2002, Thomas Kurschel. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 
-#ifndef __MODULE_H__
-#define __MODULE_H__
+#ifndef _KERNEL_MODULE_H
+#define _KERNEL_MODULE_H
 
 #include <kernel/kernel.h>
 #include <boot/stage2.h>

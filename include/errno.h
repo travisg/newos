@@ -1,5 +1,5 @@
 #ifndef __newos__errno__hh__
-#define __newos__errnon_hh__
+#define __newos__errno_hh__
 
 
 #ifdef __cplusplus

@@ -31,7 +31,7 @@
 
 #define PHYS_ADDR_SIZE     (0x1fffffff+1)
 
-#define PAGE_SIZE	4096
+//#define PAGE_SIZE	4096
 #define PAGE_SIZE_1K	0
 #define PAGE_SIZE_4K	1
 #define PAGE_SIZE_64K	2

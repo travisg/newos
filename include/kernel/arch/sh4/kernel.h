@@ -1,9 +1,9 @@
 /*
-** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
-#ifndef _SH4_KERNEL_H
-#define _SH4_KERNEL_H
+#ifndef _NEWOS_KERNEL_ARCH_SH4_KERNEL_H
+#define _NEWOS_KERNEL_ARCH_SH4_KERNEL_H
 
 #include <arch/sh4/sh4.h>
 

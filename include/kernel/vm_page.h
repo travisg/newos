@@ -1,9 +1,9 @@
 /* 
-** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
-#ifndef _VM_PAGE_H
-#define _VM_PAGE_H
+#ifndef _KERNEL_VM_PAGE_H
+#define _KERNEL_VM_PAGE_H
 
 #include <kernel/kernel.h>
 #include <boot/stage2.h>

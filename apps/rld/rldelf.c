@@ -10,7 +10,7 @@
 #include <sys/elf32.h>
 #include <sys/syscalls.h>
 #include <kernel/user_runtime.h>
-#include <kernel/arch/cpu.h>
+#include <arch/cpu.h>
 
 #include "rld_priv.h"
 

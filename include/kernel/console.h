@@ -1,9 +1,9 @@
 /* 
-** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
-#ifndef _CONSOLE_H
-#define _CONSOLE_H
+#ifndef _KERNEL_CONSOLE_H
+#define _KERNEL_CONSOLE_H
 
 #include <sys/cdefs.h>
 #include <boot/stage2.h>

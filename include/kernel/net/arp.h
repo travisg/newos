@@ -1,9 +1,9 @@
 /*
-** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
-#ifndef _ARP_H
-#define _ARP_H
+#ifndef _NEWOS_KERNEL_NET_ARP_H
+#define _NEWOS_KERNEL_NET_ARP_H
 
 #include <kernel/net/if.h>
 #include <kernel/net/ipv4.h>

@@ -1,9 +1,9 @@
 /*
-** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
-#ifndef _IF_H
-#define _IF_H
+#ifndef _NEWOS_KERNEL_NET_IF_H
+#define _NEWOS_KERNEL_NET_IF_H
 
 #include <types.h>
 #include <kernel/cbuf.h>

@@ -1,9 +1,9 @@
 /*
-** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
-#ifndef _SYSCALLS_H
-#define _SYSCALLS_H
+#ifndef _KERNEL_SYSCALLS_H
+#define _KERNEL_SYSCALLS_H
 
 enum {
 	SYSCALL_NULL = 0,

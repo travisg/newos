@@ -1,13 +1,14 @@
-/* 
+/*
 ** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
-#ifndef _KERNEL_FAULTS_H
-#define _KERNEL_FAULTS_H
+#ifndef _NEWOS_ARCH_SH4_CPU_H
+#define _NEWOS_ARCH_SH4_CPU_H
 
-#include <boot/stage2.h>
+#define PAGE_SIZE 4096
 
-int faults_init(kernel_args *ka);
+#define _BIG_ENDIAN 0
+#define _LITTLE_ENDIAN 1
 
 #endif
 

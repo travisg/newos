@@ -1,10 +1,10 @@
 /* 
-** Copyright 2001, Mark-Jan Bastian. All rights reserved.
+** Copyright 2001-2002, Mark-Jan Bastian. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 
-#ifndef _PORT_H
-#define _PORT_H
+#ifndef _KERNEL_PORT_H
+#define _KERNEL_PORT_H
 
 /*
  *	beos-style kernel ports

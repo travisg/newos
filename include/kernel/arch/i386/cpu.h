@@ -1,11 +1,11 @@
 /*
-** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
-#ifndef _I386_CPU_H
-#define _I386_CPU_H
+#ifndef _NEWOS_KERNEL_ARCH_I386_CPU_H
+#define _NEWOS_KERNEL_ARCH_I386_CPU_H
 
-#define PAGE_SIZE 4096
+#include <arch/cpu.h>
 
 #define KERNEL_CODE_SEG 0x8
 #define KERNEL_DATA_SEG 0x10

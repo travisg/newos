@@ -1,9 +1,9 @@
 /*
-** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
-#ifndef _CBUF_H
-#define _CBUF_H
+#ifndef _KERNEL_CBUF_H
+#define _KERNEL_CBUF_H
 
 #include <kernel/kernel.h>
 

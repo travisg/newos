@@ -1,9 +1,9 @@
 /* 
-** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
-#ifndef _ARCH_KTYPES_H
-#define _ARCH_KTYPES_H
+#ifndef _NEWOS_KERNEL_ARCH_KTYPES_H
+#define _NEWOS_KERNEL_ARCH_KTYPES_H
 
 #ifdef ARCH_i386
 #include <kernel/arch/i386/ktypes.h>

@@ -1,9 +1,9 @@
 /*
-** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
-#ifndef _ELF_H
-#define _ELF_H
+#ifndef _KERNEL_ELF_H
+#define _KERNEL_ELF_H
 
 #include <kernel/thread.h>
 

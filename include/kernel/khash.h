@@ -1,9 +1,9 @@
 /* 
-** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
-#ifndef _KHASH_H
-#define _KHASH_H
+#ifndef _KERNEL_KHASH_H
+#define _KERNEL_KHASH_H
 
 struct hash_iterator {
 	void *ptr;

@@ -1,9 +1,9 @@
 /* 
-** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
-#ifndef _HEAP_H
-#define _HEAP_H
+#ifndef _KERNEL_HEAP_H
+#define _KERNEL_HEAP_H
 
 #include <kernel/kernel.h>
 #include <boot/stage2.h>

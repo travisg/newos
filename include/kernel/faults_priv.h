@@ -1,9 +1,9 @@
 /* 
-** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
-#ifndef _FAULTS_PRIV_H
-#define _FAULTS_PRIV_H
+#ifndef _KERNEL_FAULTS_PRIV_H
+#define _KERNEL_FAULTS_PRIV_H
 
 int general_protection_fault(int errorcode);
 

@@ -26,8 +26,8 @@
 ** THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef _BOOT_H_
-#define _BOOT_H_
+#ifndef _NEWOS_BOOT_H_
+#define _NEWOS_BOOT_H_
 
 #define BOOTDIR_NAMELEN         32
 #define BOOTDIR_MAX_ENTRIES     64

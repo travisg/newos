@@ -1,9 +1,9 @@
 /*
-** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
-#ifndef _SEM_H
-#define _SEM_H
+#ifndef _KERNEL_SEM_H
+#define _KERNEL_SEM_H
 
 #include <kernel/thread.h>
 #include <boot/stage2.h>

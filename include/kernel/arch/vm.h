@@ -1,9 +1,9 @@
 /*
-** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
-#ifndef _ARCH_VM_H
-#define _ARCH_VM_H
+#ifndef _NEWOS_KERNEL_ARCH_VM_H
+#define _NEWOS_KERNEL_ARCH_VM_H
 
 #include <boot/stage2.h>
 #include <kernel/vm.h>
