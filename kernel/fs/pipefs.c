@@ -203,7 +203,6 @@ static int pipefs_delete_vnode(struct pipefs *fs, struct pipefs_vnode *v, bool f
 	return 0;
 }
 
-#if 0
 static void insert_cookie_in_jar(struct pipefs_vnode *dir, struct pipefs_cookie *cookie)
 {
 	ASSERT(dir->stream.type == STREAM_TYPE_DIR);
@@ -228,7 +227,6 @@ static void remove_cookie_from_jar(struct pipefs_vnode *dir, struct pipefs_cooki
 
 	cookie->u.dir.prev = cookie->u.dir.next = NULL;
 }
-#endif
 
 /* makes sure none of the dircookies point to the vnode passed in */
 static void update_dircookies(struct pipefs_vnode *dir, struct pipefs_vnode *v)
@@ -518,6 +516,125 @@ static int pipefs_removevnode(fs_cookie _fs, fs_vnode _v, bool r)
 	return err;
 }
 
+static int pipefs_opendir(fs_cookie _fs, fs_vnode _v, dir_cookie *_cookie)
+{
+	struct pipefs *fs = (struct pipefs *)_fs;
+	struct pipefs_vnode *v = (struct pipefs_vnode *)_v;
+	struct pipefs_cookie *cookie;
+	int err = 0;
+
+	TOUCH(fs);
+
+	TRACE(("pipefs_opendir: vnode 0x%x\n", v));
+
+	if(v->stream.type != STREAM_TYPE_DIR)
+		return ERR_VFS_NOT_DIR;
+
+	cookie = kmalloc(sizeof(struct pipefs_cookie));
+	if(cookie == NULL)
+		return ERR_NO_MEMORY;
+
+	mutex_lock(&v->stream.u.dir.dir_lock);
+
+	cookie->s = &v->stream;
+	cookie->u.dir.ptr = v->stream.u.dir.dir_head;
+
+	insert_cookie_in_jar(v, cookie);
+
+	*_cookie = cookie;
+
+	mutex_unlock(&v->stream.u.dir.dir_lock);
+	return err;
+}
+
+static int pipefs_closedir(fs_cookie _fs, fs_vnode _v, dir_cookie _cookie)
+{
+	struct pipefs *fs = _fs;
+	struct pipefs_vnode *v = _v;
+	struct pipefs_cookie *cookie = _cookie;
+
+	TOUCH(fs);TOUCH(v);TOUCH(cookie);
+
+	TRACE(("pipefs_closedir: entry vnode 0x%x, cookie 0x%x\n", v, cookie));
+
+	if(v->stream.type != STREAM_TYPE_DIR)
+		return ERR_VFS_NOT_DIR;
+
+	mutex_lock(&v->stream.u.dir.dir_lock);
+
+	if(cookie) {
+		remove_cookie_from_jar(v, cookie);
+		kfree(cookie);
+	}
+
+	mutex_unlock(&v->stream.u.dir.dir_lock);
+
+	return 0;
+}
+
+static int pipefs_rewinddir(fs_cookie _fs, fs_vnode _v, dir_cookie _cookie)
+{
+	struct pipefs *fs = _fs;
+	struct pipefs_vnode *v = _v;
+	struct pipefs_cookie *cookie = _cookie;
+	int err = 0;
+
+	TOUCH(v);TOUCH(fs);
+
+	TRACE(("pipefs_rewinddir: vnode 0x%x, cookie 0x%x\n", v, cookie));
+
+	if(v->stream.type != STREAM_TYPE_DIR)
+		return ERR_VFS_NOT_DIR;
+
+	mutex_lock(&v->stream.u.dir.dir_lock);
+
+	cookie->u.dir.ptr = cookie->s->u.dir.dir_head;
+
+	mutex_unlock(&v->stream.u.dir.dir_lock);
+
+	return err;
+}
+
+static int pipefs_readdir(fs_cookie _fs, fs_vnode _v, dir_cookie _cookie, void *buf, size_t len)
+{
+	struct pipefs *fs = _fs;
+	struct pipefs_vnode *v = _v;
+	struct pipefs_cookie *cookie = _cookie;
+	int err = 0;
+
+	TOUCH(fs);TOUCH(v);
+
+	TRACE(("pipefs_readdir: vnode 0x%x, cookie 0x%x, len 0x%x\n", v, cookie, len));
+
+	if(v->stream.type != STREAM_TYPE_DIR)
+		return ERR_VFS_NOT_DIR;
+
+	mutex_lock(&v->stream.u.dir.dir_lock);
+
+	if(cookie->u.dir.ptr == NULL) {
+		err = 0;
+		goto err;
+	}
+
+	if(strlen(cookie->u.dir.ptr->name) + 1 > len) {
+		err = ERR_VFS_INSUFFICIENT_BUF;
+		goto err;
+	}
+
+	err = user_strcpy(buf, cookie->u.dir.ptr->name);
+	if(err < 0)
+		goto err;
+
+	err = strlen(cookie->u.dir.ptr->name) + 1;
+
+	cookie->u.dir.ptr = cookie->u.dir.ptr->dir_next;
+
+err:
+	mutex_unlock(&v->stream.u.dir.dir_lock);
+
+	return err;
+}
+
 static int pipefs_open(fs_cookie _fs, fs_vnode _v, file_cookie *_cookie, stream_type st, int oflags)
 {
 	struct pipefs_vnode *v = _v;
@@ -526,10 +643,8 @@ static int pipefs_open(fs_cookie _fs, fs_vnode _v, file_cookie *_cookie, stream_
 
 	TRACE(("pipefs_open: vnode 0x%x, oflags 0x%x\n", v, oflags));
 
-	if(st != STREAM_TYPE_ANY && st != v->stream.type) {
-		err = ERR_VFS_WRONG_STREAM_TYPE;
-		goto err;
-	}
+	if(v->stream.type == STREAM_TYPE_DIR)
+		return ERR_VFS_IS_DIR;
 
 	cookie = kmalloc(sizeof(struct pipefs_cookie));
 	if(cookie == NULL) {
@@ -538,22 +653,13 @@ static int pipefs_open(fs_cookie _fs, fs_vnode _v, file_cookie *_cookie, stream_
 	}
 
 	cookie->s = &v->stream;
-	switch(v->stream.type) {
-		case STREAM_TYPE_DIR:
-			cookie->u.dir.ptr = v->stream.u.dir.dir_head;
-			break;
-		case STREAM_TYPE_PIPE:
-			mutex_lock(&v->stream.u.pipe.lock);
-			// XXX right now always RDWR
-			v->stream.u.pipe.read_count++;
-			v->stream.u.pipe.write_count++;
-			v->stream.u.pipe.open_count++;
-			mutex_unlock(&v->stream.u.pipe.lock);
- 			break;
-		default:
-			err = ERR_VFS_WRONG_STREAM_TYPE;
-			kfree(cookie);
-	}
+
+	mutex_lock(&v->stream.u.pipe.lock);
+	// XXX right now always RDWR
+	v->stream.u.pipe.read_count++;
+	v->stream.u.pipe.write_count++;
+	v->stream.u.pipe.open_count++;
+	mutex_unlock(&v->stream.u.pipe.lock);
 
 	*_cookie = cookie;
 
@@ -569,29 +675,28 @@ static int pipefs_close(fs_cookie _fs, fs_vnode _v, file_cookie _cookie)
 
 	TRACE(("pipefs_close: entry vnode 0x%x, cookie 0x%x\n", v, cookie));
 
+	if(v->stream.type == STREAM_TYPE_DIR)
+		return ERR_VFS_IS_DIR;
+
 	ASSERT(cookie->s == &v->stream);
 
-	switch(v->stream.type) {
-		case STREAM_TYPE_PIPE:
-			mutex_lock(&v->stream.u.pipe.lock);
-			// XXX right now always RDWR
-			v->stream.u.pipe.read_count--;
-			v->stream.u.pipe.write_count--;
-			v->stream.u.pipe.open_count--;
+	mutex_lock(&v->stream.u.pipe.lock);
+	// XXX right now always RDWR
+	v->stream.u.pipe.read_count--;
+	v->stream.u.pipe.write_count--;
+	v->stream.u.pipe.open_count--;
 
-			if(v->stream.u.pipe.flags & PIPE_FLAGS_ANONYMOUS) {
-				if(v->stream.u.pipe.open_count < 2) {
-					// we just closed the other side of the pipe, delete the writer sem
-					// this will wake up any writers
-					sem_delete(v->stream.u.pipe.write_sem);
-					v->stream.u.pipe.write_sem = -1;
-					sem_delete(v->stream.u.pipe.read_sem);
-					v->stream.u.pipe.read_sem = -1;
-				}
-			}
-			mutex_unlock(&v->stream.u.pipe.lock);
-			break;
+	if(v->stream.u.pipe.flags & PIPE_FLAGS_ANONYMOUS) {
+		if(v->stream.u.pipe.open_count < 2) {
+			// we just closed the other side of the pipe, delete the writer sem
+			// this will wake up any writers
+			sem_delete(v->stream.u.pipe.write_sem);
+			v->stream.u.pipe.write_sem = -1;
+			sem_delete(v->stream.u.pipe.read_sem);
+			v->stream.u.pipe.read_sem = -1;
+		}
 	}
+	mutex_unlock(&v->stream.u.pipe.lock);
 
 	return err;
 }
@@ -602,6 +707,9 @@ static int pipefs_freecookie(fs_cookie _fs, fs_vnode _v, file_cookie _cookie)
 	struct pipefs_cookie *cookie = _cookie;
 
 	TRACE(("pipefs_freecookie: entry vnode 0x%x, cookie 0x%x\n", v, cookie));
+
+	if(cookie->s->type == STREAM_TYPE_DIR)
+		return ERR_VFS_IS_DIR;
 
 	ASSERT(cookie->s == &v->stream);
 
@@ -623,122 +731,90 @@ static ssize_t pipefs_read(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, void
 	struct pipefs_cookie *cookie = _cookie;
 	ssize_t err = 0;
 	ssize_t read_len = 0;
+	ssize_t data_len;
 
 	TRACE(("pipefs_read: vnode 0x%x, cookie 0x%x, pos 0x%Lx, len 0x%x\n", v, cookie, pos, len));
 
+	if(v->stream.type == STREAM_TYPE_DIR)
+		return ERR_VFS_IS_DIR;
+
 	ASSERT(cookie->s == &v->stream);
 
-	switch(cookie->s->type) {
-		case STREAM_TYPE_DIR: {
-			mutex_lock(&v->stream.u.dir.dir_lock);
+	if(v == fs->anon_vnode) {
+		err = ERR_NOT_ALLOWED;
+		goto err;
+	}
+	if(len < 0) {
+		err = ERR_INVALID_ARGS;
+		goto err;
+	}
+	if(len == 0) {
+		err = 0;
+		goto err;
+	}
 
-			if(cookie->u.dir.ptr == NULL) {
-				mutex_unlock(&v->stream.u.dir.dir_lock);
-				err = 0;
-				break;
-			}
+	// wait for data in the buffer
+	err = sem_acquire_etc(v->stream.u.pipe.read_sem, 1, SEM_FLAG_INTERRUPTABLE, 0, NULL);
+	if(err == ERR_SEM_INTERRUPTED)
+		goto err;
 
-			if((ssize_t)strlen(cookie->u.dir.ptr->name) + 1 > len) {
-				mutex_unlock(&v->stream.u.dir.dir_lock);
-				err = ERR_VFS_INSUFFICIENT_BUF;
-				goto err;
-			}
+	mutex_lock(&v->stream.u.pipe.lock);
 
-			err = user_strcpy(buf, cookie->u.dir.ptr->name);
-			if(err < 0) {
-				mutex_unlock(&v->stream.u.dir.dir_lock);
-				goto err;
-			}
-
-			err = strlen(cookie->u.dir.ptr->name) + 1;
-
-			cookie->u.dir.ptr = cookie->u.dir.ptr->dir_next;
-			mutex_unlock(&v->stream.u.dir.dir_lock);
-			break;
+	// see if the other endpoint is active
+	if(v->stream.u.pipe.flags & PIPE_FLAGS_ANONYMOUS) {
+		// this is an anonymous pipe, check the overall open count
+		// and make sure it's >1, otherwise we're the only one holding it open
+		if(v->stream.u.pipe.open_count < 2) {
+			err = ERR_PIPE_WIDOW;
+			goto done_pipe;
 		}
-		case STREAM_TYPE_PIPE: {
-			ssize_t data_len;
+	}
 
-			if(v == fs->anon_vnode) {
-				err = ERR_NOT_ALLOWED;
-				goto err;
-			}
-			if(len < 0) {
-				err = ERR_INVALID_ARGS;
-				goto err;
-			}
-			if(len == 0) {
-				err = 0;
-				goto err;
-			}
+	ASSERT(v->stream.u.pipe.head < v->stream.u.pipe.buf_len);
+	ASSERT(v->stream.u.pipe.tail < v->stream.u.pipe.buf_len);
 
-			// wait for data in the buffer
-			err = sem_acquire_etc(v->stream.u.pipe.read_sem, 1, SEM_FLAG_INTERRUPTABLE, 0, NULL);
-			if(err == ERR_SEM_INTERRUPTED)
-				goto err;
+	// read data
+	if(v->stream.u.pipe.head >= v->stream.u.pipe.tail)
+		data_len = v->stream.u.pipe.head - v->stream.u.pipe.tail;
+	else
+		data_len = (v->stream.u.pipe.head + v->stream.u.pipe.buf_len) - v->stream.u.pipe.tail;
+	len = min(data_len, len);
 
-			mutex_lock(&v->stream.u.pipe.lock);
+	ASSERT(len > 0);
 
-			// see if the other endpoint is active
-			if(v->stream.u.pipe.flags & PIPE_FLAGS_ANONYMOUS) {
-				// this is an anonymous pipe, check the overall open count
-				// and make sure it's >1, otherwise we're the only one holding it open
-				if(v->stream.u.pipe.open_count < 2) {
-					err = ERR_PIPE_WIDOW;
-					goto done_pipe;
-				}
-			}
+	while(len > 0) {
+		ssize_t copy_len = len;
 
-			ASSERT(v->stream.u.pipe.head < v->stream.u.pipe.buf_len);
-			ASSERT(v->stream.u.pipe.tail < v->stream.u.pipe.buf_len);
+		if(v->stream.u.pipe.tail + copy_len > v->stream.u.pipe.buf_len) {
+			copy_len = v->stream.u.pipe.buf_len - v->stream.u.pipe.tail;
+		}
 
-			// read data
-			if(v->stream.u.pipe.head >= v->stream.u.pipe.tail)
-				data_len = v->stream.u.pipe.head - v->stream.u.pipe.tail;
-			else
-				data_len = (v->stream.u.pipe.head + v->stream.u.pipe.buf_len) - v->stream.u.pipe.tail;
-			len = min(data_len, len);
+		err = user_memcpy((char *)buf + read_len, v->stream.u.pipe.buf + v->stream.u.pipe.tail, copy_len);
+		if(err < 0) {
+			sem_release(v->stream.u.pipe.read_sem, 1);
+			goto done_pipe;
+		}
 
-			ASSERT(len > 0);
+		// update the buffer pointers
+		v->stream.u.pipe.tail += copy_len;
+		if(v->stream.u.pipe.tail == v->stream.u.pipe.buf_len)
+			v->stream.u.pipe.tail = 0;
+		len -= copy_len;
+		read_len += copy_len;
+	}
 
-			while(len > 0) {
-				ssize_t copy_len = len;
+	// is there more data available?
+	if(read_len < data_len)
+		sem_release(v->stream.u.pipe.read_sem, 1);
 
-				if(v->stream.u.pipe.tail + copy_len > v->stream.u.pipe.buf_len) {
-					copy_len = v->stream.u.pipe.buf_len - v->stream.u.pipe.tail;
-				}
+	// did it used to be full?
+	if(data_len == v->stream.u.pipe.buf_len - 1)
+		sem_release(v->stream.u.pipe.write_sem, 1);
 
-				err = user_memcpy((char *)buf + read_len, v->stream.u.pipe.buf + v->stream.u.pipe.tail, copy_len);
-				if(err < 0) {
-					sem_release(v->stream.u.pipe.read_sem, 1);
-					goto done_pipe;
-				}
-
-				// update the buffer pointers
-				v->stream.u.pipe.tail += copy_len;
-				if(v->stream.u.pipe.tail == v->stream.u.pipe.buf_len)
-					v->stream.u.pipe.tail = 0;
-				len -= copy_len;
-				read_len += copy_len;
-			}
-
-			// is there more data available?
-			if(read_len < data_len)
-				sem_release(v->stream.u.pipe.read_sem, 1);
-
-			// did it used to be full?
-			if(data_len == v->stream.u.pipe.buf_len - 1)
-				sem_release(v->stream.u.pipe.write_sem, 1);
-
-			err = read_len;
+	err = read_len;
 
 done_pipe:
-			mutex_unlock(&v->stream.u.pipe.lock);
-			break;
-		}
-		default:
-			err = ERR_VFS_WRONG_STREAM_TYPE;
-	}
+	mutex_unlock(&v->stream.u.pipe.lock);
 err:
 	return err;
 }
@@ -750,102 +826,97 @@ static ssize_t pipefs_write(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, con
 	struct pipefs_cookie *cookie = _cookie;
 	int err = 0;
 	ssize_t written = 0;
+	ssize_t free_space;
 
 	TRACE(("pipefs_write: vnode 0x%x, cookie 0x%x, pos 0x%Lx, len 0x%x\n", v, cookie, pos, len));
 
+	if(v->stream.type == STREAM_TYPE_DIR)
+		return ERR_VFS_IS_DIR;
+
 	ASSERT(cookie->s == &v->stream);
 
-	switch(v->stream.type) {
-		case STREAM_TYPE_PIPE: {
-			ssize_t free_space;
+	if(v == fs->anon_vnode) {
+		err = ERR_NOT_ALLOWED;
+		goto err;
+	}
+	if(len < 0) {
+		err = ERR_INVALID_ARGS;
+		goto err;
+	}
+	if(len == 0) {
+		err = 0;
+		goto err;
+	}
 
-			if(v == fs->anon_vnode) {
-				err = ERR_NOT_ALLOWED;
-				goto err;
-			}
-			if(len < 0) {
-				err = ERR_INVALID_ARGS;
-				goto err;
-			}
-			if(len == 0) {
-				err = 0;
-				goto err;
-			}
+	// wait on space in the circular buffer
+	err = sem_acquire_etc(v->stream.u.pipe.write_sem, 1, SEM_FLAG_INTERRUPTABLE, 0, NULL);
+	if(err == ERR_SEM_INTERRUPTED)
+		goto err;
 
-			// wait on space in the circular buffer
-			err = sem_acquire_etc(v->stream.u.pipe.write_sem, 1, SEM_FLAG_INTERRUPTABLE, 0, NULL);
-			if(err == ERR_SEM_INTERRUPTED)
-				goto err;
+	mutex_lock(&v->stream.u.pipe.lock);
 
-			mutex_lock(&v->stream.u.pipe.lock);
+	// see if the other endpoint is active
+	if(v->stream.u.pipe.flags & PIPE_FLAGS_ANONYMOUS) {
+		// this is an anonymous pipe, check the overall open count
+		// and make sure it's >1, otherwise we're the only one holding it open
+		if(v->stream.u.pipe.open_count < 2) {
+			// XXX deliver real SIGPIPE when we get it
+			proc_kill_proc(proc_get_current_proc_id());
+			err = ERR_PIPE_WIDOW;
+			goto done_pipe;
+		}
+	}
 
-			// see if the other endpoint is active
-			if(v->stream.u.pipe.flags & PIPE_FLAGS_ANONYMOUS) {
-				// this is an anonymous pipe, check the overall open count
-				// and make sure it's >1, otherwise we're the only one holding it open
-				if(v->stream.u.pipe.open_count < 2) {
-					// XXX deliver real SIGPIPE when we get it
-					proc_kill_proc(proc_get_current_proc_id());
-					err = ERR_PIPE_WIDOW;
-					goto done_pipe;
-				}
-			}
+	ASSERT(v->stream.u.pipe.head < v->stream.u.pipe.buf_len);
+	ASSERT(v->stream.u.pipe.tail < v->stream.u.pipe.buf_len);
 
-			ASSERT(v->stream.u.pipe.head < v->stream.u.pipe.buf_len);
-			ASSERT(v->stream.u.pipe.tail < v->stream.u.pipe.buf_len);
-
-			// figure out how much data we can write to it
-			if(v->stream.u.pipe.head >= v->stream.u.pipe.tail)
-				free_space = v->stream.u.pipe.buf_len - (v->stream.u.pipe.head - v->stream.u.pipe.tail);
-			else
-				free_space = v->stream.u.pipe.buf_len - ((v->stream.u.pipe.head + v->stream.u.pipe.buf_len) - v->stream.u.pipe.tail);
-			free_space = min(free_space, v->stream.u.pipe.buf_len - 1); // can't completely fill it
-			len = min(free_space, len);
+	// figure out how much data we can write to it
+	if(v->stream.u.pipe.head >= v->stream.u.pipe.tail)
+		free_space = v->stream.u.pipe.buf_len - (v->stream.u.pipe.head - v->stream.u.pipe.tail);
+	else
+		free_space = v->stream.u.pipe.buf_len - ((v->stream.u.pipe.head + v->stream.u.pipe.buf_len) - v->stream.u.pipe.tail);
+	free_space = min(free_space, v->stream.u.pipe.buf_len - 1); // can't completely fill it
+	len = min(free_space, len);
 
 #if PIPEFS_TRACE
-			dprintf("pipefs_write: buffer free space %d, len to write %d, head %d, tail %d\n", free_space, len, v->stream.u.pipe.head, v->stream.u.pipe.tail);
+	dprintf("pipefs_write: buffer free space %d, len to write %d, head %d, tail %d\n", free_space, len, v->stream.u.pipe.head, v->stream.u.pipe.tail);
 #endif
 
-			ASSERT(len > 0);
+	ASSERT(len > 0);
 
-			while(len > 0) {
-				ssize_t copy_len = len;
+	while(len > 0) {
+		ssize_t copy_len = len;
 
-				if(v->stream.u.pipe.head + copy_len > v->stream.u.pipe.buf_len) {
-					copy_len = v->stream.u.pipe.buf_len - v->stream.u.pipe.head;
-				}
+		if(v->stream.u.pipe.head + copy_len > v->stream.u.pipe.buf_len) {
+			copy_len = v->stream.u.pipe.buf_len - v->stream.u.pipe.head;
+		}
 
-				err = user_memcpy(v->stream.u.pipe.buf + v->stream.u.pipe.head, (char *)buf + written, copy_len);
-				if(err < 0) {
-					sem_release(v->stream.u.pipe.write_sem, 1);
-					goto done_pipe;
-				}
+		err = user_memcpy(v->stream.u.pipe.buf + v->stream.u.pipe.head, (char *)buf + written, copy_len);
+		if(err < 0) {
+			sem_release(v->stream.u.pipe.write_sem, 1);
+			goto done_pipe;
+		}
 
-				// update the buffer pointers
-				v->stream.u.pipe.head += copy_len;
-				if(v->stream.u.pipe.head == v->stream.u.pipe.buf_len)
-					v->stream.u.pipe.head = 0;
-				len -= copy_len;
-				written += copy_len;
-			}
+		// update the buffer pointers
+		v->stream.u.pipe.head += copy_len;
+		if(v->stream.u.pipe.head == v->stream.u.pipe.buf_len)
+			v->stream.u.pipe.head = 0;
+		len -= copy_len;
+		written += copy_len;
+	}
 
-			// is there more space available?
-			if(written < free_space)
-				sem_release(v->stream.u.pipe.write_sem, 1);
+	// is there more space available?
+	if(written < free_space)
+		sem_release(v->stream.u.pipe.write_sem, 1);
 
-			// did it used to be empty?
-			if(free_space == v->stream.u.pipe.buf_len - 1)
-				sem_release(v->stream.u.pipe.read_sem, 1);
+	// did it used to be empty?
+	if(free_space == v->stream.u.pipe.buf_len - 1)
+		sem_release(v->stream.u.pipe.read_sem, 1);
 
-			err = written;
+	err = written;
 
 done_pipe:
-			mutex_unlock(&v->stream.u.pipe.lock);
-			break;
-		}
-		default:
-			err = ERR_VFS_WRONG_STREAM_TYPE;
-	}
+	mutex_unlock(&v->stream.u.pipe.lock);
 
 err:
 	return err;
@@ -1055,6 +1126,11 @@ static struct fs_calls pipefs_calls = {
 	&pipefs_getvnode,
 	&pipefs_putvnode,
 	&pipefs_removevnode,
+
+	&pipefs_opendir,
+	&pipefs_closedir,
+	&pipefs_rewinddir,
+	&pipefs_readdir,
 
 	&pipefs_open,
 	&pipefs_close,

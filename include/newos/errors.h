@@ -23,6 +23,7 @@
 #define ERR_NOT_FOUND            (ERR_GENERAL-12)
 #define ERR_NOT_IMPLEMENTED      (ERR_GENERAL-13)
 #define ERR_OUT_OF_RANGE         (ERR_GENERAL-14)
+#define ERR_BAD_SYSCALL          (ERR_GENERAL-15)
 
 /* Semaphore errors */
 #define ERR_SEM_GENERAL          (-1024)
@@ -54,6 +55,7 @@
 #define ERR_VFS_NOT_DIR          (ERR_VFS_GENERAL-11)
 #define ERR_VFS_WRONG_STREAM_TYPE   (ERR_VFS_GENERAL-12)
 #define ERR_VFS_ALREADY_MOUNTPOINT (ERR_VFS_GENERAL-13)
+#define ERR_VFS_IS_DIR           (ERR_VFS_GENERAL-14)
 
 /* VM errors */
 #define ERR_VM_GENERAL           (-4096)

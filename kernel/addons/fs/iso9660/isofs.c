@@ -501,20 +501,123 @@ static int isofs_fsync(fs_cookie _fs, fs_vnode _v)
 }
 
 //--------------------------------------------------------------------------------
-static int isofs_open(fs_cookie _fs, fs_vnode _v, file_cookie *_cookie, stream_type st, int oflags)
+static int isofs_opendir(fs_cookie _fs, fs_vnode _v, dir_cookie *_cookie)
+{
+	struct isofs *fs = (struct isofs *)_fs;
+	struct isofs_vnode *v = (struct isofs_vnode *)_v;
+	struct isofs_cookie *cookie;
+	int err = 0;
+
+	TRACE(("isofs_opendir: vnode 0x%x\n", v));
+
+	if(v->stream.type != STREAM_TYPE_DIR)
+		return ERR_VFS_NOT_DIR;
+
+	cookie = kmalloc(sizeof(struct isofs_cookie));
+	if(cookie == NULL)
+		return ERR_NO_MEMORY;
+
+	mutex_lock(&fs->lock);
+
+	iso_scan_dir(fs, v);
+	cookie->u.dir.ptr = v->stream.dir_head;
+
+	*_cookie = cookie;
+
+	mutex_unlock(&fs->lock);
+	return err;
+}
+
+//--------------------------------------------------------------------------------
+static int isofs_closedir(fs_cookie _fs, fs_vnode _v, dir_cookie _cookie)
 {
 	struct isofs *fs = _fs;
+	struct isofs_vnode *v = _v;
+	struct isofs_cookie *cookie = _cookie;
+
+	TOUCH(fs);TOUCH(v);TOUCH(cookie);
+
+	TRACE(("isofs_closedir: entry vnode 0x%x, cookie 0x%x\n", v, cookie));
+
+	if(v->stream.type != STREAM_TYPE_DIR)
+		return ERR_VFS_NOT_DIR;
+
+	if(cookie) {
+		kfree(cookie);
+	}
+
+	return 0;
+}
+
+//--------------------------------------------------------------------------------
+static int isofs_rewinddir(fs_cookie _fs, fs_vnode _v, dir_cookie _cookie)
+{
+	struct isofs_vnode *v = _v;
+	struct isofs_cookie *cookie = _cookie;
+	int err = 0;
+
+	TOUCH(v);
+
+	TRACE(("isofs_rewinddir: vnode 0x%x, cookie 0x%x\n", v, cookie));
+
+	if(v->stream.type != STREAM_TYPE_DIR)
+		return ERR_VFS_NOT_DIR;
+
+	cookie->u.dir.ptr = cookie->s->dir_head;
+
+	return err;
+}
+
+//--------------------------------------------------------------------------------
+static int isofs_readdir(fs_cookie _fs, fs_vnode _v, dir_cookie _cookie, void *buf, size_t len)
+{
+	struct isofs *fs = _fs;
+	struct isofs_vnode *v = _v;
+	struct isofs_cookie *cookie = _cookie;
+	int err = 0;
+
+	TOUCH(v);
+
+	TRACE(("isofs_readdir: vnode 0x%x, cookie 0x%x, len 0x%x\n", v, cookie, len));
+
+	if(v->stream.type != STREAM_TYPE_DIR)
+		return ERR_VFS_NOT_DIR;
+
+	if(cookie->u.dir.ptr == NULL)
+		return 0;
+
+	mutex_lock(&fs->lock);
+
+	if(strlen(cookie->u.dir.ptr->name) + 1 > len) {
+		err = ERR_VFS_INSUFFICIENT_BUF;
+		goto err;
+	}
+
+	err = user_strcpy(buf, cookie->u.dir.ptr->name);
+	if(err < 0)
+		goto err;
+
+	err = strlen(cookie->u.dir.ptr->name) + 1;
+
+	cookie->u.dir.ptr = cookie->u.dir.ptr->dir_next;
+
+err:
+	mutex_unlock(&fs->lock);
+
+	return err;
+}
+
+//--------------------------------------------------------------------------------
+static int isofs_open(fs_cookie _fs, fs_vnode _v, file_cookie *_cookie, stream_type st, int oflags)
+{
 	struct isofs_vnode *v = _v;
 	struct isofs_cookie *cookie;
 	int err = 0;
 
 	TRACE(("isofs_open: vnode 0x%x, stream_type %d, oflags 0x%x\n", v, st, oflags));
 
-	// Check stream type
-	if(st != STREAM_TYPE_ANY && st != v->stream.type) {
-		err = ERR_VFS_WRONG_STREAM_TYPE;
-		goto err;
-	}
+	if(v->stream.type == STREAM_TYPE_DIR)
+		return ERR_VFS_IS_DIR;
 
 	// Allocate our cookie for storage of position
 	cookie = kmalloc(sizeof(struct isofs_cookie));
@@ -523,30 +626,12 @@ static int isofs_open(fs_cookie _fs, fs_vnode _v, file_cookie *_cookie, stream_t
 		goto err;
 	}
 
-	mutex_lock(&fs->lock);
-
 	// Setup our cookie to start of stream data
 	cookie->s = &v->stream;
-	switch(v->stream.type) {
-		case STREAM_TYPE_DIR:
-			iso_scan_dir(fs, v);
-			cookie->u.dir.ptr = v->stream.dir_head;
-			break;
-
-		case STREAM_TYPE_FILE:
-			cookie->u.file.pos = 0;
-			break;
-
-		default:
-			err = ERR_VFS_WRONG_STREAM_TYPE;
-			kfree(cookie);
-			cookie = NULL;
-	}
+	cookie->u.file.pos = 0;
 
 	// Give cookie to caller
 	*_cookie = cookie;
-
-	mutex_unlock(&fs->lock);
 err:
 	return err;
 }
@@ -561,6 +646,9 @@ static int isofs_close(fs_cookie _fs, fs_vnode _v, file_cookie _cookie)
 
 	TRACE(("isofs_close: entry vnode 0x%x, cookie 0x%x\n", v, cookie));
 
+	if(v->stream.type == STREAM_TYPE_DIR)
+		return ERR_VFS_IS_DIR;
+
 	return 0;
 }
 
@@ -573,6 +661,9 @@ static int isofs_freecookie(fs_cookie _fs, fs_vnode _v, file_cookie _cookie)
 	TOUCH(v); TOUCH(cookie);
 
 	TRACE(("isofs_freecookie: entry vnode 0x%x, cookie 0x%x\n", v, cookie));
+
+	if(v->stream.type == STREAM_TYPE_DIR)
+		return ERR_VFS_IS_DIR;
 
 	if (cookie)
 		kfree(cookie);
@@ -596,89 +687,58 @@ static ssize_t isofs_read(fs_cookie _fs, fs_vnode _v, file_cookie _cookie,
 
 	TRACE(("isofs_read: vnode 0x%x, cookie 0x%x, pos 0x%x 0x%x, len 0x%x\n", v, cookie, pos, len));
 
+	if(v->stream.type == STREAM_TYPE_DIR)
+		return ERR_VFS_IS_DIR;
+
+	// If size is negative, forget it
+	if(len <= 0)
+		return 0;
+
 	mutex_lock(&fs->lock);
 
-	switch(cookie->s->type) {
-		case STREAM_TYPE_DIR: {
-			// If at end of entries, bail out
-			if(cookie->u.dir.ptr == NULL) {
-				err = 0;
-				break;
-			}
-
-			// If buffer is too small, bail out
-			if ((ssize_t)strlen(cookie->u.dir.ptr->name) + 1 > len) {
-				err = ERR_VFS_INSUFFICIENT_BUF;
-				goto error;
-			}
-
-			// Copy name to buffer
-			err = user_strcpy(buf, cookie->u.dir.ptr->name);
-			if(err < 0)
-				goto error;
-
-			// Return length of name
-			err = strlen(cookie->u.dir.ptr->name) + 1;
-
-			// Move to next entry
-			cookie->u.dir.ptr = cookie->u.dir.ptr->dir_next;
-			break;
-		}
-
-		case STREAM_TYPE_FILE:
-			// If size is negative, forget it
-			if(len <= 0) {
-				err = 0;
-				break;
-			}
-
-			// If position is negative, we'll read from current pos
-			if (pos < 0) {
-				// we'll read where the cookie is at
-				pos = cookie->u.file.pos;
-			}
-
-
-			// If position is past filelength, forget it
-			if (pos >= cookie->s->data_len) {
-				err = 0;
-				break;
-			}
-
-			// If read goes partially beyond EOF
-			if (pos + len > cookie->s->data_len) {
-				// trim the read
-				len = cookie->s->data_len - pos;
-			}
-
-			tempbuf= kmalloc(READ_CHUNK);
-			if(!tempbuf) {
-				goto error;
-			}
-
-			while (len) {
-				ssize_t to_read= (READ_CHUNK< len) ? READ_CHUNK : len;
-				err = sys_read(fs->fd, tempbuf, cookie->s->data_pos + pos, to_read);
-				if(err <= 0) {
-					goto error;
-				}
-				user_memcpy(buf, tempbuf, err);
-				pos += err;
-				len -= err;
-				buf = ((char*)buf)+err;
-				totread += err;
-
-				// Move to next bit of the file
-			}
-			kfree(tempbuf);
-			tempbuf = 0;
-			err = totread;
-			cookie->u.file.pos = pos;
-			break;
-
-		default:
-			err = ERR_INVALID_ARGS;
+	// If position is negative, we'll read from current pos
+	if (pos < 0) {
+		// we'll read where the cookie is at
+		pos = cookie->u.file.pos;
 	}
+
+
+	// If position is past filelength, forget it
+	if (pos >= cookie->s->data_len) {
+		err = 0;
+		goto error;
+	}
+
+	// If read goes partially beyond EOF
+	if (pos + len > cookie->s->data_len) {
+		// trim the read
+		len = cookie->s->data_len - pos;
+	}
+
+	tempbuf= kmalloc(READ_CHUNK);
+	if(!tempbuf) {
+		goto error;
+	}
+
+	while (len) {
+		ssize_t to_read= (READ_CHUNK< len) ? READ_CHUNK : len;
+		err = sys_read(fs->fd, tempbuf, cookie->s->data_pos + pos, to_read);
+		if(err <= 0) {
+			goto error;
+		}
+		user_memcpy(buf, tempbuf, err);
+		pos += err;
+		len -= err;
+		buf = ((char*)buf)+err;
+		totread += err;
+
+		// Move to next bit of the file
+	}
+	kfree(tempbuf);
+	tempbuf = 0;
+	err = totread;
+	cookie->u.file.pos = pos;
+
 error:
 	mutex_unlock(&fs->lock);
 	if(tempbuf)
@@ -688,9 +748,14 @@ error:
 }
 
 //--------------------------------------------------------------------------------
-static ssize_t isofs_write(fs_cookie fs, fs_vnode v, file_cookie cookie, const void *buf, off_t pos, ssize_t len)
+static ssize_t isofs_write(fs_cookie fs, fs_vnode _v, file_cookie cookie, const void *buf, off_t pos, ssize_t len)
 {
+	struct isofs_vnode *v = _v;
+
 	TRACE(("isofs_write: vnode 0x%x, cookie 0x%x, pos 0x%x 0x%x, len 0x%x\n", v, cookie, pos, len));
+
+	if(v->stream.type == STREAM_TYPE_DIR)
+		return ERR_VFS_IS_DIR;
 
 	return ERR_VFS_READONLY_FS;
 }
@@ -707,58 +772,38 @@ static int isofs_seek(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, off_t pos
 
 	TRACE(("isofs_seek: vnode 0x%x, cookie 0x%x, pos 0x%x 0x%x, seek_type %d\n", v, cookie, pos, st));
 
+	if(v->stream.type == STREAM_TYPE_DIR)
+		return ERR_VFS_IS_DIR;
+
 	mutex_lock(&fs->lock);
 
-	switch(cookie->s->type) {
-		case STREAM_TYPE_DIR:
-			switch(st) {
-				// only valid args are seek_type _SEEK_SET, pos 0.
-				// this rewinds to beginning of directory
-				case _SEEK_SET:
-					if(pos == 0) {
-						cookie->u.dir.ptr = cookie->s->dir_head;
-					} else {
-						err = ERR_INVALID_ARGS;
-					}
-					break;
-				case _SEEK_CUR:
-				case _SEEK_END:
-				default:
-					err = ERR_INVALID_ARGS;
-			}
+	switch(st) {
+		case _SEEK_SET:
+			if(pos < 0)
+				pos = 0;
+			if(pos > cookie->s->data_len)
+				pos = cookie->s->data_len;
+			cookie->u.file.pos = pos;
 			break;
-		case STREAM_TYPE_FILE:
-			switch(st) {
-				case _SEEK_SET:
-					if(pos < 0)
-						pos = 0;
-					if(pos > cookie->s->data_len)
-						pos = cookie->s->data_len;
-					cookie->u.file.pos = pos;
-					break;
-				case _SEEK_CUR:
-					if(pos + cookie->u.file.pos > cookie->s->data_len)
-						cookie->u.file.pos = cookie->s->data_len;
-					else if(pos + cookie->u.file.pos < 0)
-						cookie->u.file.pos = 0;
-					else
-						cookie->u.file.pos += pos;
-					break;
-				case _SEEK_END:
-					if(pos > 0)
-						cookie->u.file.pos = cookie->s->data_len;
-					else if(pos + cookie->s->data_len < 0)
-						cookie->u.file.pos = 0;
-					else
-						cookie->u.file.pos = pos + cookie->s->data_len;
-					break;
-				default:
-					err = ERR_INVALID_ARGS;
-
-			}
+		case _SEEK_CUR:
+			if(pos + cookie->u.file.pos > cookie->s->data_len)
+				cookie->u.file.pos = cookie->s->data_len;
+			else if(pos + cookie->u.file.pos < 0)
+				cookie->u.file.pos = 0;
+			else
+				cookie->u.file.pos += pos;
+			break;
+		case _SEEK_END:
+			if(pos > 0)
+				cookie->u.file.pos = cookie->s->data_len;
+			else if(pos + cookie->s->data_len < 0)
+				cookie->u.file.pos = 0;
+			else
+				cookie->u.file.pos = pos + cookie->s->data_len;
 			break;
 		default:
 			err = ERR_INVALID_ARGS;
+
 	}
 
 	mutex_unlock(&fs->lock);
@@ -879,6 +924,11 @@ static struct fs_calls isofs_calls = {
 	&isofs_getvnode,	// getvnode
 	&isofs_putvnode,	// putvnode
 	&isofs_removevnode,	// removevnode
+
+	&isofs_opendir,		// opendir
+	&isofs_closedir,	// closedir
+	&isofs_rewinddir,	// rewinddir
+	&isofs_readdir,		// readdir
 
 	&isofs_open,		// open
 	&isofs_close,		// close

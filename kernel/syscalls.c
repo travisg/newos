@@ -270,8 +270,20 @@ int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_re
 		case SYSCALL_THREAD_SET_PRIORITY:
 			*call_ret = user_thread_set_priority((thread_id)arg0, (int)arg1);
 			break;
+		case SYSCALL_OPENDDIR:
+			*call_ret = user_opendir((const char *)arg0);
+			break;
+		case SYSCALL_CLOSEDIR:
+			*call_ret = user_closedir((int)arg0);
+			break;
+		case SYSCALL_REWINDDIR:
+			*call_ret = user_rewinddir((int)arg0);
+			break;
+		case SYSCALL_READDIR:
+			*call_ret = user_readdir((int)arg0, (void *)arg1, (size_t)arg2);
+			break;
 		default:
-			*call_ret = -1;
+			*call_ret = ERR_BAD_SYSCALL;
 	}
 
 //	dprintf("syscall_dispatcher: done with syscall 0x%x\n", call_num);

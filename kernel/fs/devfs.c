@@ -564,6 +564,121 @@ static int devfs_removevnode(fs_cookie _fs, fs_vnode _v, bool r)
 	return err;
 }
 
+static int devfs_opendir(fs_cookie _fs, fs_vnode _v, dir_cookie *_cookie)
+{
+	struct devfs *fs = (struct devfs *)_fs;
+	struct devfs_vnode *v = (struct devfs_vnode *)_v;
+	struct devfs_cookie *cookie;
+	int err = 0;
+
+	TRACE(("devfs_opendir: vnode 0x%x\n", v));
+
+	if(v->stream.type != STREAM_TYPE_DIR)
+		return ERR_VFS_NOT_DIR;
+
+	cookie = kmalloc(sizeof(struct devfs_cookie));
+	if(cookie == NULL)
+		return ERR_NO_MEMORY;
+
+	mutex_lock(&fs->lock);
+
+	cookie->s = &v->stream;
+	cookie->u.dir.ptr = v->stream.u.dir.dir_head;
+
+	*_cookie = cookie;
+
+	mutex_unlock(&fs->lock);
+	return err;
+}
+
+static int devfs_closedir(fs_cookie _fs, fs_vnode _v, dir_cookie _cookie)
+{
+	struct devfs *fs = _fs;
+	struct devfs_vnode *v = _v;
+	struct devfs_cookie *cookie = _cookie;
+
+	TOUCH(fs);TOUCH(v);TOUCH(cookie);
+
+	TRACE(("devfs_closedir: entry vnode 0x%x, cookie 0x%x\n", v, cookie));
+
+	if(v->stream.type != STREAM_TYPE_DIR)
+		return ERR_VFS_NOT_DIR;
+
+	mutex_lock(&fs->lock);
+
+	if(cookie) {
+		kfree(cookie);
+	}
+
+	mutex_unlock(&fs->lock);
+
+	return 0;
+}
+
+static int devfs_rewinddir(fs_cookie _fs, fs_vnode _v, dir_cookie _cookie)
+{
+	struct devfs *fs = _fs;
+	struct devfs_vnode *v = _v;
+	struct devfs_cookie *cookie = _cookie;
+	int err = 0;
+
+	TOUCH(v);
+
+	TRACE(("devfs_rewinddir: vnode 0x%x, cookie 0x%x\n", v, cookie));
+
+	if(v->stream.type != STREAM_TYPE_DIR)
+		return ERR_VFS_NOT_DIR;
+
+	mutex_lock(&fs->lock);
+
+	cookie->u.dir.ptr = cookie->s->u.dir.dir_head;
+
+	mutex_unlock(&fs->lock);
+
+	return err;
+}
+
+static int devfs_readdir(fs_cookie _fs, fs_vnode _v, dir_cookie _cookie, void *buf, size_t len)
+{
+	struct devfs *fs = _fs;
+	struct devfs_vnode *v = _v;
+	struct devfs_cookie *cookie = _cookie;
+	int err = 0;
+
+	TOUCH(v);
+
+	TRACE(("devfs_readdir: vnode 0x%x, cookie 0x%x, len 0x%x\n", v, cookie, len));
+
+	if(v->stream.type != STREAM_TYPE_DIR)
+		return ERR_VFS_NOT_DIR;
+
+	mutex_lock(&fs->lock);
+
+	if(cookie->u.dir.ptr == NULL) {
+		err = 0;
+		goto err;
+	}
+
+	if(strlen(cookie->u.dir.ptr->name) + 1 > len) {
+		err = ERR_VFS_INSUFFICIENT_BUF;
+		goto err;
+	}
+
+	err = user_strcpy(buf, cookie->u.dir.ptr->name);
+	if(err < 0)
+		goto err;
+
+	err = strlen(cookie->u.dir.ptr->name) + 1;
+
+	cookie->u.dir.ptr = cookie->u.dir.ptr->dir_next;
+
+err:
+	mutex_unlock(&fs->lock);
+
+	return err;
+}
+
+
 static int devfs_open(fs_cookie _fs, fs_vnode _v, file_cookie *_cookie, stream_type st, int oflags)
 {
 	struct devfs *fs = _fs;
@@ -573,10 +688,8 @@ static int devfs_open(fs_cookie _fs, fs_vnode _v, file_cookie *_cookie, stream_t
 
 	TRACE(("devfs_open: vnode 0x%x, oflags 0x%x\n", v, oflags));
 
-	if(st != STREAM_TYPE_ANY && st != v->stream.type) {
-		err = ERR_VFS_WRONG_STREAM_TYPE;
-		goto err;
-	}
+	if(v->stream.type == STREAM_TYPE_DIR)
+		return ERR_VFS_IS_DIR;
 
 	cookie = kmalloc(sizeof(struct devfs_cookie));
 	if(cookie == NULL) {
@@ -617,6 +730,9 @@ static int devfs_close(fs_cookie _fs, fs_vnode _v, file_cookie _cookie)
 
 	TRACE(("devfs_close: entry vnode 0x%x, cookie 0x%x\n", v, cookie));
 
+	if(v->stream.type == STREAM_TYPE_DIR)
+		return ERR_VFS_IS_DIR;
+
 	if(v->stream.type == STREAM_TYPE_DEVICE) {
 		// pass the call through to the underlying device
 		err = v->stream.u.dev.calls->dev_close(cookie->u.dev.dcookie);
@@ -633,6 +749,9 @@ static int devfs_freecookie(fs_cookie _fs, fs_vnode _v, file_cookie _cookie)
 	struct devfs_cookie *cookie = _cookie;
 
 	TRACE(("devfs_freecookie: entry vnode 0x%x, cookie 0x%x\n", v, cookie));
+
+	if(cookie->s->type == STREAM_TYPE_DIR)
+		return ERR_VFS_IS_DIR;
 
 	if(v->stream.type == STREAM_TYPE_DEVICE) {
 		// pass the call through to the underlying device
@@ -655,35 +774,13 @@ static ssize_t devfs_read(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, void 
 	struct devfs *fs = _fs;
 	struct devfs_vnode *v = _v;
 	struct devfs_cookie *cookie = _cookie;
-	bool is_locked = false;
 	ssize_t err = 0;
+
+	TOUCH(fs);
 
 	TRACE(("devfs_read: vnode 0x%x, cookie 0x%x, pos 0x%x 0x%x, len 0x%x\n", v, cookie, pos, len));
 
 	switch(cookie->s->type) {
-		case STREAM_TYPE_DIR: {
-			mutex_lock(&fs->lock);
-			is_locked = true;
-
-			if(cookie->u.dir.ptr == NULL) {
-				err = 0;
-				break;
-			}
-
-			if((ssize_t)strlen(cookie->u.dir.ptr->name) + 1 > len) {
-				err = ERR_VFS_INSUFFICIENT_BUF;
-				goto err;
-			}
-
-			err = user_strcpy(buf, cookie->u.dir.ptr->name);
-			if(err < 0)
-				goto err;
-
-			err = strlen(cookie->u.dir.ptr->name) + 1;
-
-			cookie->u.dir.ptr = cookie->u.dir.ptr->dir_next;
-			break;
-		}
 		case STREAM_TYPE_DEVICE: {
 			struct devfs_part_map *part_map = v->stream.u.dev.part_map;
 
@@ -705,9 +802,6 @@ static ssize_t devfs_read(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, void 
 		default:
 			err = ERR_INVALID_ARGS;
 	}
-err:
-	if(is_locked)
-		mutex_unlock(&fs->lock);
 
 	return err;
 }
@@ -955,6 +1049,11 @@ static struct fs_calls devfs_calls = {
 	&devfs_getvnode,
 	&devfs_putvnode,
 	&devfs_removevnode,
+
+	&devfs_opendir,
+	&devfs_closedir,
+	&devfs_rewinddir,
+	&devfs_readdir,
 
 	&devfs_open,
 	&devfs_close,

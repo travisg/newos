@@ -54,7 +54,6 @@ struct rootfs_cookie {
 	struct rootfs_cookie *next;
 	struct rootfs_cookie *prev;
 	struct rootfs_vnode *ptr;
-	int oflags;
 };
 
 #define ROOTFS_HASH_SIZE 16
@@ -120,7 +119,6 @@ static void insert_cookie_in_jar(struct rootfs_vnode *dir, struct rootfs_cookie 
 }
 
 // unused
-#if 0
 static void remove_cookie_from_jar(struct rootfs_vnode *dir, struct rootfs_cookie *cookie)
 {
 	if(cookie->next)
@@ -132,7 +130,6 @@ static void remove_cookie_from_jar(struct rootfs_vnode *dir, struct rootfs_cooki
 
 	cookie->prev = cookie->next = NULL;
 }
-#endif
 
 /* makes sure none of the dircookies point to the vnode passed in */
 static void update_dircookies(struct rootfs_vnode *dir, struct rootfs_vnode *v)
@@ -386,19 +383,14 @@ static int rootfs_removevnode(fs_cookie _fs, fs_vnode _v, bool r)
 	return err;
 }
 
-static int rootfs_open(fs_cookie _fs, fs_vnode _v, file_cookie *_cookie, stream_type st, int oflags)
+static int rootfs_opendir(fs_cookie _fs, fs_vnode _v, dir_cookie *_cookie)
 {
 	struct rootfs *fs = (struct rootfs *)_fs;
 	struct rootfs_vnode *v = (struct rootfs_vnode *)_v;
 	struct rootfs_cookie *cookie;
 	int err = 0;
 
-	TRACE(("rootfs_open: vnode 0x%x, stream_type %d, oflags 0x%x\n", v, st, oflags));
-
-	if(st != STREAM_TYPE_ANY && st != STREAM_TYPE_DIR) {
-		err = ERR_VFS_WRONG_STREAM_TYPE;
-		goto err;
-	}
+	TRACE(("rootfs_opendir: vnode 0x%x\n", v));
 
 	cookie = kmalloc(sizeof(struct rootfs_cookie));
 	if(cookie == NULL) {
@@ -409,7 +401,6 @@ static int rootfs_open(fs_cookie _fs, fs_vnode _v, file_cookie *_cookie, stream_
 	mutex_lock(&fs->lock);
 
 	cookie->ptr = v->stream.dir.dir_head;
-	cookie->oflags = oflags;
 
 	insert_cookie_in_jar(v, cookie);
 
@@ -420,7 +411,7 @@ err:
 	return err;
 }
 
-static int rootfs_close(fs_cookie _fs, fs_vnode _v, file_cookie _cookie)
+static int rootfs_closedir(fs_cookie _fs, fs_vnode _v, dir_cookie _cookie)
 {
 	struct rootfs *fs = _fs;
 	struct rootfs_vnode *v = _v;
@@ -428,33 +419,39 @@ static int rootfs_close(fs_cookie _fs, fs_vnode _v, file_cookie _cookie)
 
 	TOUCH(fs);TOUCH(v);TOUCH(cookie);
 
-	TRACE(("rootfs_close: entry vnode 0x%x, cookie 0x%x\n", v, cookie));
+	TRACE(("rootfs_closedir: entry vnode 0x%x, cookie 0x%x\n", v, cookie));
 
-	return 0;
-}
+	mutex_lock(&fs->lock);
 
-static int rootfs_freecookie(fs_cookie _fs, fs_vnode _v, file_cookie _cookie)
-{
-	struct rootfs *fs = _fs;
-	struct rootfs_vnode *v = _v;
-	struct rootfs_cookie *cookie = _cookie;
-
-	TOUCH(fs);TOUCH(v);TOUCH(cookie);
-
-	TRACE(("rootfs_freecookie: entry vnode 0x%x, cookie 0x%x\n", v, cookie));
-
-	if(cookie)
+	if(cookie) {
+		remove_cookie_from_jar(v, cookie);
 		kfree(cookie);
+	}
+
+	mutex_unlock(&fs->lock);
 
 	return 0;
 }
 
-static int rootfs_fsync(fs_cookie _fs, fs_vnode _v)
+static int rootfs_rewinddir(fs_cookie _fs, fs_vnode _v, dir_cookie _cookie)
 {
-	return 0;
+	struct rootfs *fs = _fs;
+	struct rootfs_vnode *v = _v;
+	struct rootfs_cookie *cookie = _cookie;
+	int err = 0;
+
+	TRACE(("rootfs_rewinddir: vnode 0x%x, cookie 0x%x\n", v, cookie));
+
+	mutex_lock(&fs->lock);
+
+	cookie->ptr = v->stream.dir.dir_head;
+
+	mutex_unlock(&fs->lock);
+
+	return err;
 }
 
-static ssize_t rootfs_read(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, void *buf, off_t pos, ssize_t len)
+static int rootfs_readdir(fs_cookie _fs, fs_vnode _v, dir_cookie _cookie, void *buf, size_t len)
 {
 	struct rootfs *fs = _fs;
 	struct rootfs_vnode *v = _v;
@@ -463,7 +460,7 @@ static ssize_t rootfs_read(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, void
 
 	TOUCH(v);
 
-	TRACE(("rootfs_read: vnode 0x%x, cookie 0x%x, pos 0x%x 0x%x, len 0x%x\n", v, cookie, pos, len));
+	TRACE(("rootfs_readdir: vnode 0x%x, cookie 0x%x, len 0x%x\n", v, cookie, len));
 
 	mutex_lock(&fs->lock);
 
@@ -472,7 +469,7 @@ static ssize_t rootfs_read(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, void
 		goto err;
 	}
 
-	if((ssize_t)strlen(cookie->ptr->name) + 1 > len) {
+	if(strlen(cookie->ptr->name) + 1 > len) {
 		err = ERR_VFS_INSUFFICIENT_BUF;
 		goto err;
 	}
@@ -491,43 +488,39 @@ err:
 	return err;
 }
 
+static int rootfs_open(fs_cookie _fs, fs_vnode _v, file_cookie *_cookie, stream_type st, int oflags)
+{
+	return ERR_VFS_WRONG_STREAM_TYPE;
+}
+
+static int rootfs_close(fs_cookie _fs, fs_vnode _v, file_cookie _cookie)
+{
+	return NO_ERROR;
+}
+
+static int rootfs_freecookie(fs_cookie _fs, fs_vnode _v, file_cookie _cookie)
+{
+	return NO_ERROR;
+}
+
+static int rootfs_fsync(fs_cookie _fs, fs_vnode _v)
+{
+	return 0;
+}
+
+static ssize_t rootfs_read(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, void *buf, off_t pos, ssize_t len)
+{
+	return ERR_NOT_ALLOWED;
+}
+
 static ssize_t rootfs_write(fs_cookie fs, fs_vnode v, file_cookie cookie, const void *buf, off_t pos, ssize_t len)
 {
-	TRACE(("rootfs_write: vnode 0x%x, cookie 0x%x, pos 0x%x 0x%x, len 0x%x\n", v, cookie, pos, len));
-
 	return ERR_NOT_ALLOWED;
 }
 
 static int rootfs_seek(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, off_t pos, seek_type st)
 {
-	struct rootfs *fs = _fs;
-	struct rootfs_vnode *v = _v;
-	struct rootfs_cookie *cookie = _cookie;
-	int err = 0;
-
-	TRACE(("rootfs_seek: vnode 0x%x, cookie 0x%x, pos 0x%x 0x%x, seek_type %d\n", v, cookie, pos, st));
-
-	mutex_lock(&fs->lock);
-
-	switch(st) {
-		// only valid args are seek_type _SEEK_SET, pos 0.
-		// this rewinds to beginning of directory
-		case _SEEK_SET:
-			if(pos == 0) {
-				cookie->ptr = v->stream.dir.dir_head;
-			} else {
-				err = ERR_INVALID_ARGS;
-			}
-			break;
-		case _SEEK_CUR:
-		case _SEEK_END:
-		default:
-			err = ERR_INVALID_ARGS;
-	}
-
-	mutex_unlock(&fs->lock);
-
-	return err;
+	return ERR_NOT_ALLOWED;
 }
 
 static int rootfs_ioctl(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, int op, void *buf, size_t len)
@@ -754,6 +747,11 @@ static struct fs_calls rootfs_calls = {
 	&rootfs_getvnode,
 	&rootfs_putvnode,
 	&rootfs_removevnode,
+
+	&rootfs_opendir,
+	&rootfs_closedir,
+	&rootfs_rewinddir,
+	&rootfs_readdir,
 
 	&rootfs_open,
 	&rootfs_close,

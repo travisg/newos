@@ -23,16 +23,16 @@ int dev_scan_drivers(kernel_args *ka)
 {
 	int fd;
 
-	fd = sys_open("/boot/addons/dev", STREAM_TYPE_DIR, 0);
+	fd = sys_opendir("/boot/addons/dev");
 	if(fd >= 0) {
 		ssize_t len;
 		char buf[SYS_MAX_NAME_LEN];
 
-		while((len = sys_read(fd, buf, 0, sizeof(buf))) > 0) {
+		while((len = sys_readdir(fd, buf, sizeof(buf))) > 0) {
 			dprintf("loading '%s' dev module\n", buf);
 			dev_load_driver(buf);
 		}
-		sys_close(fd);
+		sys_closedir(fd);
 	}
 	return NO_ERROR;
 }

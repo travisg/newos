@@ -80,6 +80,10 @@ enum {
 	SYSCALL_PROC_GET_PROC_INFO,
 	SYSCALL_PROC_GET_NEXT_PROC_INFO,
 	SYSCALL_THREAD_SET_PRIORITY,
+	SYSCALL_OPENDDIR,
+	SYSCALL_CLOSEDIR,
+	SYSCALL_REWINDDIR,
+	SYSCALL_READDIR,
 };
 
 int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_ret);

@@ -69,7 +69,7 @@ static int do_ls(const char *arg)
 			char filename[1024];
 			bool done_dot, done_dotdot;
 
-			fd = _kern_open(arg, STREAM_TYPE_DIR, 0);
+			fd = _kern_opendir(arg);
 			if(fd < 0) {
 				//printf("ls: _kern_open() returned error: %s!\n", strerror(fd));
 				break;
@@ -95,7 +95,7 @@ static int do_ls(const char *arg)
 					strlcpy(filename, "..", sizeof(filename));
 					done_dotdot = true;
 				} else {
-					rc = read(fd, filename, sizeof(filename));
+					rc = _kern_readdir(fd, filename, sizeof(filename));
 					if(rc <= 0)
 						break;
 				}
@@ -113,7 +113,7 @@ static int do_ls(const char *arg)
 				}
 				count++;
 			}
-			close(fd);
+			_kern_closedir(fd);
 
 			printf("%d files found\n", count);
 			break;

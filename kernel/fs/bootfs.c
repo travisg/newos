@@ -541,6 +541,120 @@ static int bootfs_removevnode(fs_cookie _fs, fs_vnode _v, bool r)
 	return err;
 }
 
+static int bootfs_opendir(fs_cookie _fs, fs_vnode _v, dir_cookie *_cookie)
+{
+	struct bootfs *fs = (struct bootfs *)_fs;
+	struct bootfs_vnode *v = (struct bootfs_vnode *)_v;
+	struct bootfs_cookie *cookie;
+	int err = 0;
+
+	TRACE(("bootfs_opendir: vnode 0x%x\n", v));
+
+	if(v->stream.type != STREAM_TYPE_DIR)
+		return ERR_VFS_NOT_DIR;
+
+	cookie = kmalloc(sizeof(struct bootfs_cookie));
+	if(cookie == NULL)
+		return ERR_NO_MEMORY;
+
+	mutex_lock(&fs->lock);
+
+	cookie->s = &v->stream;
+	cookie->u.dir.ptr = v->stream.u.dir.dir_head;
+
+	*_cookie = cookie;
+
+	mutex_unlock(&fs->lock);
+	return err;
+}
+
+static int bootfs_closedir(fs_cookie _fs, fs_vnode _v, dir_cookie _cookie)
+{
+	struct bootfs *fs = _fs;
+	struct bootfs_vnode *v = _v;
+	struct bootfs_cookie *cookie = _cookie;
+
+	TOUCH(fs);TOUCH(v);TOUCH(cookie);
+
+	TRACE(("bootfs_closedir: entry vnode 0x%x, cookie 0x%x\n", v, cookie));
+
+	if(v->stream.type != STREAM_TYPE_DIR)
+		return ERR_VFS_NOT_DIR;
+
+	mutex_lock(&fs->lock);
+
+	if(cookie) {
+		kfree(cookie);
+	}
+
+	mutex_unlock(&fs->lock);
+
+	return 0;
+}
+
+static int bootfs_rewinddir(fs_cookie _fs, fs_vnode _v, dir_cookie _cookie)
+{
+	struct bootfs *fs = _fs;
+	struct bootfs_vnode *v = _v;
+	struct bootfs_cookie *cookie = _cookie;
+	int err = 0;
+
+	TOUCH(v);
+
+	TRACE(("bootfs_rewinddir: vnode 0x%x, cookie 0x%x\n", v, cookie));
+
+	if(v->stream.type != STREAM_TYPE_DIR)
+		return ERR_VFS_NOT_DIR;
+
+	mutex_lock(&fs->lock);
+
+	cookie->u.dir.ptr = cookie->s->u.dir.dir_head;
+
+	mutex_unlock(&fs->lock);
+
+	return err;
+}
+
+static int bootfs_readdir(fs_cookie _fs, fs_vnode _v, dir_cookie _cookie, void *buf, size_t len)
+{
+	struct bootfs *fs = _fs;
+	struct bootfs_vnode *v = _v;
+	struct bootfs_cookie *cookie = _cookie;
+	int err = 0;
+
+	TOUCH(v);
+
+	TRACE(("bootfs_readdir: vnode 0x%x, cookie 0x%x, len 0x%x\n", v, cookie, len));
+
+	if(v->stream.type != STREAM_TYPE_DIR)
+		return ERR_VFS_NOT_DIR;
+
+	mutex_lock(&fs->lock);
+
+	if(cookie->u.dir.ptr == NULL) {
+		err = 0;
+		goto err;
+	}
+
+	if(strlen(cookie->u.dir.ptr->name) + 1 > len) {
+		err = ERR_VFS_INSUFFICIENT_BUF;
+		goto err;
+	}
+
+	err = user_strcpy(buf, cookie->u.dir.ptr->name);
+	if(err < 0)
+		goto err;
+
+	err = strlen(cookie->u.dir.ptr->name) + 1;
+
+	cookie->u.dir.ptr = cookie->u.dir.ptr->dir_next;
+
+err:
+	mutex_unlock(&fs->lock);
+
+	return err;
+}
+
 static int bootfs_open(fs_cookie _fs, fs_vnode _v, file_cookie *_cookie, stream_type st, int oflags)
 {
 	struct bootfs *fs = _fs;
@@ -548,12 +662,10 @@ static int bootfs_open(fs_cookie _fs, fs_vnode _v, file_cookie *_cookie, stream_
 	struct bootfs_cookie *cookie;
 	int err = 0;
 
-	TRACE(("bootfs_open: vnode 0x%x, stream_type %d, oflags 0x%x\n", v, st, oflags));
+	TRACE(("bootfs_open: vnode 0x%x, oflags 0x%x\n", v, oflags));
 
-	if(st != STREAM_TYPE_ANY && st != v->stream.type) {
-		err = ERR_VFS_WRONG_STREAM_TYPE;
-		goto err;
-	}
+	if(v->stream.type == STREAM_TYPE_DIR)
+		return ERR_VFS_IS_DIR;
 
 	cookie = kmalloc(sizeof(struct bootfs_cookie));
 	if(cookie == NULL) {
@@ -564,17 +676,7 @@ static int bootfs_open(fs_cookie _fs, fs_vnode _v, file_cookie *_cookie, stream_
 	mutex_lock(&fs->lock);
 
 	cookie->s = &v->stream;
-	switch(v->stream.type) {
-		case STREAM_TYPE_DIR:
-			cookie->u.dir.ptr = v->stream.u.dir.dir_head;
-			break;
-		case STREAM_TYPE_FILE:
-			cookie->u.file.pos = 0;
-			break;
-		default:
-			err = ERR_VFS_WRONG_STREAM_TYPE;
-			kfree(cookie);
-	}
+	cookie->u.file.pos = 0;
 
 	*_cookie = cookie;
 
@@ -592,6 +694,9 @@ static int bootfs_close(fs_cookie _fs, fs_vnode _v, file_cookie _cookie)
 	TOUCH(fs);TOUCH(v);TOUCH(cookie);
 
 	TRACE(("bootfs_close: entry vnode 0x%x, cookie 0x%x\n", v, cookie));
+
+	if(cookie->s->type == STREAM_TYPE_DIR)
+		return ERR_VFS_IS_DIR;
 
 	return 0;
 }
@@ -626,58 +731,32 @@ static ssize_t bootfs_read(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, void
 
 	TOUCH(v);
 
-	TRACE(("bootfs_read: vnode 0x%x, cookie 0x%x, pos 0x%x 0x%x, len 0x%x\n", v, cookie, pos, len));
+	TRACE(("bootfs_read: vnode %p, cookie %p, pos 0x%Lx, len 0x%x\n", v, cookie, pos, len));
+
+	if(len <= 0) {
+		return 0;
+	}
 
 	mutex_lock(&fs->lock);
 
-	switch(cookie->s->type) {
-		case STREAM_TYPE_DIR: {
-			if(cookie->u.dir.ptr == NULL) {
-				err = 0;
-				break;
-			}
-
-			if((ssize_t)strlen(cookie->u.dir.ptr->name) + 1 > len) {
-				err = ERR_VFS_INSUFFICIENT_BUF;
-				goto err;
-			}
-
-			err = user_strcpy(buf, cookie->u.dir.ptr->name);
-			if(err < 0)
-				goto err;
-
-			err = strlen(cookie->u.dir.ptr->name) + 1;
-
-			cookie->u.dir.ptr = cookie->u.dir.ptr->dir_next;
-			break;
-		}
-		case STREAM_TYPE_FILE:
-			if(len <= 0) {
-				err = 0;
-				break;
-			}
-			if(pos < 0) {
-				// we'll read where the cookie is at
-				pos = cookie->u.file.pos;
-			}
-			if(pos >= cookie->s->u.file.len) {
-				err = 0;
-				break;
-			}
-			if(pos + len > cookie->s->u.file.len) {
-				// trim the read
-				len = cookie->s->u.file.len - pos;
-			}
-			err = user_memcpy(buf, cookie->s->u.file.start + pos, len);
-			if(err < 0) {
-				goto err;
-			}
-			cookie->u.file.pos = pos + len;
-			err = len;
-			break;
-		default:
-			err = ERR_INVALID_ARGS;
+	if(pos < 0) {
+		// we'll read where the cookie is at
+		pos = cookie->u.file.pos;
 	}
+	if(pos >= cookie->s->u.file.len) {
+		err = 0;
+		goto err;
+	}
+	if(pos + len > cookie->s->u.file.len) {
+		// trim the read
+		len = cookie->s->u.file.len - pos;
+	}
+	err = user_memcpy(buf, cookie->s->u.file.start + pos, len);
+	if(err < 0) {
+		goto err;
+	}
+	cookie->u.file.pos = pos + len;
+	err = len;
 err:
 	mutex_unlock(&fs->lock);
 
@@ -700,60 +779,37 @@ static int bootfs_seek(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, off_t po
 
 	TOUCH(v);
 
-	TRACE(("bootfs_seek: vnode 0x%x, cookie 0x%x, pos 0x%x 0x%x, seek_type %d\n", v, cookie, pos, st));
+	TRACE(("bootfs_seek: vnode %p, cookie %p, pos 0x%Lx, seek_type %d\n", v, cookie, pos, st));
 
 	mutex_lock(&fs->lock);
 
-	switch(cookie->s->type) {
-		case STREAM_TYPE_DIR:
-			switch(st) {
-				// only valid args are seek_type _SEEK_SET, pos 0.
-				// this rewinds to beginning of directory
-				case _SEEK_SET:
-					if(pos == 0) {
-						cookie->u.dir.ptr = cookie->s->u.dir.dir_head;
-					} else {
-						err = ERR_INVALID_ARGS;
-					}
-					break;
-				case _SEEK_CUR:
-				case _SEEK_END:
-				default:
-					err = ERR_INVALID_ARGS;
-			}
+	switch(st) {
+		case _SEEK_SET:
+			if(pos < 0)
+				pos = 0;
+			if(pos > cookie->s->u.file.len)
+				pos = cookie->s->u.file.len;
+			cookie->u.file.pos = pos;
 			break;
-		case STREAM_TYPE_FILE:
-			switch(st) {
-				case _SEEK_SET:
-					if(pos < 0)
-						pos = 0;
-					if(pos > cookie->s->u.file.len)
-						pos = cookie->s->u.file.len;
-					cookie->u.file.pos = pos;
-					break;
-				case _SEEK_CUR:
-					if(pos + cookie->u.file.pos > cookie->s->u.file.len)
-						cookie->u.file.pos = cookie->s->u.file.len;
-					else if(pos + cookie->u.file.pos < 0)
-						cookie->u.file.pos = 0;
-					else
-						cookie->u.file.pos += pos;
-					break;
-				case _SEEK_END:
-					if(pos > 0)
-						cookie->u.file.pos = cookie->s->u.file.len;
-					else if(pos + cookie->s->u.file.len < 0)
-						cookie->u.file.pos = 0;
-					else
-						cookie->u.file.pos = pos + cookie->s->u.file.len;
-					break;
-				default:
-					err = ERR_INVALID_ARGS;
-
-			}
+		case _SEEK_CUR:
+			if(pos + cookie->u.file.pos > cookie->s->u.file.len)
+				cookie->u.file.pos = cookie->s->u.file.len;
+			else if(pos + cookie->u.file.pos < 0)
+				cookie->u.file.pos = 0;
+			else
+				cookie->u.file.pos += pos;
+			break;
+		case _SEEK_END:
+			if(pos > 0)
+				cookie->u.file.pos = cookie->s->u.file.len;
+			else if(pos + cookie->s->u.file.len < 0)
+				cookie->u.file.pos = 0;
+			else
+				cookie->u.file.pos = pos + cookie->s->u.file.len;
 			break;
 		default:
 			err = ERR_INVALID_ARGS;
+
 	}
 
 	mutex_unlock(&fs->lock);
@@ -887,6 +943,11 @@ static struct fs_calls bootfs_calls = {
 	&bootfs_getvnode,
 	&bootfs_putvnode,
 	&bootfs_removevnode,
+
+	&bootfs_opendir,
+	&bootfs_closedir,
+	&bootfs_rewinddir,
+	&bootfs_readdir,
 
 	&bootfs_open,
 	&bootfs_close,

@@ -27,6 +27,11 @@ int zfs_getvnode(fs_cookie fs, vnode_id id, fs_vnode *v, bool r);
 int zfs_putvnode(fs_cookie fs, fs_vnode v, bool r);
 int zfs_removevnode(fs_cookie fs, fs_vnode v, bool r);
 
+int zfs_opendir(fs_cookie fs, fs_vnode v, dir_cookie *cookie);
+int zfs_closedir(fs_cookie fs, fs_vnode v, dir_cookie cookie);
+int zfs_rewinddir(fs_cookie fs, fs_vnode v, dir_cookie cookie);
+int zfs_readdir(fs_cookie fs, fs_vnode v, dir_cookie cookie, void *buf, size_t buflen);
+
 int zfs_open(fs_cookie fs, fs_vnode v, file_cookie *cookie, stream_type st, int oflags);
 int zfs_close(fs_cookie fs, fs_vnode v, file_cookie cookie);
 int zfs_freecookie(fs_cookie fs, fs_vnode v, file_cookie cookie);

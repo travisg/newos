@@ -96,6 +96,11 @@ static struct fs_calls zfs_calls = {
 	&zfs_putvnode,
 	&zfs_removevnode,
 
+	&zfs_opendir,
+	&zfs_closedir,
+	&zfs_rewinddir,
+	&zfs_readdir,
+
 	&zfs_open,
 	&zfs_close,
 	&zfs_freecookie,

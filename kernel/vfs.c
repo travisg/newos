@@ -54,6 +54,7 @@ struct file_descriptor {
 	file_cookie cookie;
 	int ref_count;
 	bool coe;
+	bool dir;
 };
 
 struct ioctx {
@@ -470,6 +471,7 @@ static struct file_descriptor *alloc_fd(void)
 		f->cookie = NULL;
 		f->ref_count = 1;
 		f->coe = false;
+		f->dir = false;
 	}
 	return f;
 }
@@ -494,8 +496,12 @@ static struct file_descriptor *get_fd(struct ioctx *ioctx, int fd)
 
 static void free_fd(struct file_descriptor *f)
 {
-	f->vnode->mount->fs->calls->fs_close(f->vnode->mount->fscookie, f->vnode->priv_vnode, f->cookie);
-	f->vnode->mount->fs->calls->fs_freecookie(f->vnode->mount->fscookie, f->vnode->priv_vnode, f->cookie);
+	if(!f->dir) {
+		f->vnode->mount->fs->calls->fs_close(f->vnode->mount->fscookie, f->vnode->priv_vnode, f->cookie);
+		f->vnode->mount->fs->calls->fs_freecookie(f->vnode->mount->fscookie, f->vnode->priv_vnode, f->cookie);
+	} else {
+		f->vnode->mount->fs->calls->fs_closedir(f->vnode->mount->fscookie, f->vnode->priv_vnode, f->cookie);
+	}
 	dec_vnode_ref_count(f->vnode, true, false);
 	kfree(f);
 }
@@ -1219,6 +1225,136 @@ int vfs_sync(void)
 	return 0;
 }
 
+int vfs_opendir(char *path, bool kernel)
+{
+	struct vnode *v;
+	dir_cookie cookie;
+	int err;
+	int fd;
+	struct file_descriptor *f;
+
+#if MAKE_NOIZE
+	dprintf("vfs_opendir: entry. path = '%s', kernel %d\n", path, kernel);
+#endif
+
+	err = path_to_vnode(path, &v, kernel);
+	if(err < 0)
+		return err;
+
+	err = v->mount->fs->calls->fs_opendir(v->mount->fscookie, v->priv_vnode, &cookie);
+	if(err < 0)
+		goto err1;
+
+	// file is opened, create a fd
+	f = alloc_fd();
+	if(!f) {
+		// xxx leaks
+		err = ERR_NO_MEMORY;
+		goto err1;
+	}
+	f->vnode = v;
+	f->cookie = cookie;
+	f->coe = false;
+	f->dir = true;
+
+	fd = new_fd(get_current_ioctx(kernel), f);
+	if(fd < 0) {
+		err = ERR_VFS_FD_TABLE_FULL;
+		goto err2;
+	}
+
+	return fd;
+
+err2:
+	free_fd(f); // calls dec_vnode_ref_count
+	goto err;
+err1:
+	dec_vnode_ref_count(v, true, false);
+err:
+	return err;
+}
+
+int vfs_closedir(int fd, bool kernel)
+{
+	struct file_descriptor *f;
+	struct ioctx *ioctx;
+
+#if MAKE_NOIZE
+	dprintf("vfs_closedir: entry. fd %d, kernel %d\n", fd, kernel);
+#endif
+
+	ioctx = get_current_ioctx(kernel);
+
+	f = get_fd(ioctx, fd);
+	if(!f)
+		return ERR_INVALID_HANDLE;
+
+	if(!f->dir)
+		return ERR_VFS_NOT_DIR;
+
+	remove_fd(ioctx, fd);
+	put_fd(f);
+
+	return 0;
+}
+
+int vfs_rewinddir(int fd, bool kernel)
+{
+	struct vnode *v;
+	struct file_descriptor *f;
+	int err;
+
+#if MAKE_NOIZE
+	dprintf("vfs_rewinddir: fd = %d, kernel %d\n", fd, kernel);
+#endif
+
+	f = get_fd(get_current_ioctx(kernel), fd);
+	if(!f) {
+		err = ERR_INVALID_HANDLE;
+		goto err;
+	}
+
+	if(!f->dir)
+		return ERR_VFS_NOT_DIR;
+
+	v = f->vnode;
+	err = v->mount->fs->calls->fs_rewinddir(v->mount->fscookie, v->priv_vnode, f->cookie);
+
+	put_fd(f);
+
+err:
+	return err;
+
+}
+
+int vfs_readdir(int fd, void *buf, size_t len, bool kernel)
+{
+	struct vnode *v;
+	struct file_descriptor *f;
+	int err;
+
+#if MAKE_NOIZE
+	dprintf("vfs_readdir: fd = %d, buf 0x%x, len 0x%x, kernel %d\n", fd, buf, len, kernel);
+#endif
+
+	f = get_fd(get_current_ioctx(kernel), fd);
+	if(!f) {
+		err = ERR_INVALID_HANDLE;
+		goto err;
+	}
+
+	if(!f->dir)
+		return ERR_VFS_NOT_DIR;
+
+	v = f->vnode;
+	err = v->mount->fs->calls->fs_readdir(v->mount->fscookie, v->priv_vnode, f->cookie, buf, len);
+
+	put_fd(f);
+
+err:
+	return err;
+}
+
 static int _vfs_open(struct vnode *v, stream_type st, int omode, bool kernel)
 {
 	int fd;
@@ -1244,16 +1380,17 @@ static int _vfs_open(struct vnode *v, stream_type st, int omode, bool kernel)
 	fd = new_fd(get_current_ioctx(kernel), f);
 	if(fd < 0) {
 		err = ERR_VFS_FD_TABLE_FULL;
-		goto err1;
+		goto err2;
 	}
 
 	return fd;
 
-//err2:
-	free_fd(f);
+err2:
+	free_fd(f); // calls dec_vnode_ref_count
+	goto err;
 err1:
 	dec_vnode_ref_count(v, true, false);
-//err:
+err:
 	return err;
 }
 
@@ -1303,6 +1440,9 @@ int vfs_close(int fd, bool kernel)
 	f = get_fd(ioctx, fd);
 	if(!f)
 		return ERR_INVALID_HANDLE;
+
+	if(f->dir)
+		return ERR_VFS_IS_DIR;
 
 	remove_fd(ioctx, fd);
 	put_fd(f);
@@ -1405,7 +1545,6 @@ int vfs_seek(int fd, off_t pos, seek_type seek_type, bool kernel)
 
 err:
 	return err;
-
 }
 
 int vfs_ioctl(int fd, int op, void *buf, size_t len, bool kernel)
@@ -1824,6 +1963,31 @@ int sys_sync(void)
 	return vfs_sync();
 }
 
+int sys_opendir(const char *path)
+{
+	char buf[SYS_MAX_PATH_LEN+1];
+
+	strncpy(buf, path, SYS_MAX_PATH_LEN);
+	buf[SYS_MAX_PATH_LEN] = 0;
+
+	return vfs_opendir(buf, true);
+}
+
+int sys_closedir(int fd)
+{
+	return vfs_closedir(fd, true);
+}
+
+int sys_rewinddir(int fd)
+{
+	return vfs_rewinddir(fd, true);
+}
+
+int sys_readdir(int fd, void *buf, size_t len)
+{
+	return vfs_readdir(fd, buf, len, true);
+}
+
 int sys_open(const char *path, stream_type st, int omode)
 {
 	char buf[SYS_MAX_PATH_LEN+1];
@@ -2020,6 +2184,37 @@ int user_unmount(const char *upath)
 int user_sync(void)
 {
 	return vfs_sync();
+}
+
+int user_opendir(const char *upath)
+{
+	char path[SYS_MAX_PATH_LEN];
+	int rc;
+
+	if((addr_t)upath >= KERNEL_BASE && (addr_t)upath <= KERNEL_TOP)
+		return ERR_VM_BAD_USER_MEMORY;
+
+	rc = user_strncpy(path, upath, SYS_MAX_PATH_LEN-1);
+	if(rc < 0)
+		return rc;
+	path[SYS_MAX_PATH_LEN-1] = 0;
+
+	return vfs_opendir(path, false);
+}
+
+int user_closedir(int fd)
+{
+	return vfs_closedir(fd, false);
+}
+
+int user_rewinddir(int fd)
+{
+	return vfs_rewinddir(fd, false);
+}
+
+int user_readdir(int fd, void *buf, size_t len)
+{
+	return vfs_readdir(fd, buf, len, false);
 }
 
 int user_open(const char *upath, stream_type st, int omode)
@@ -2304,16 +2499,16 @@ int vfs_bootstrap_all_filesystems(void)
 	if(err < 0)
 		panic("error mounting pipefs\n");
 
-	fd = sys_open("/boot/addons/fs", STREAM_TYPE_DIR, 0);
+	fd = sys_opendir("/boot/addons/fs");
 	if(fd >= 0) {
 		ssize_t len;
 		char buf[SYS_MAX_NAME_LEN];
 
-		while((len = sys_read(fd, buf, 0, sizeof(buf))) > 0) {
+		while((len = sys_readdir(fd, buf, sizeof(buf))) > 0) {
 			dprintf("loading '%s' fs module\n", buf);
 			vfs_load_fs_module(buf);
 		}
-		sys_close(fd);
+		sys_closedir(fd);
 	}
 
 	return NO_ERROR;

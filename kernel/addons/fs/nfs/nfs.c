@@ -407,6 +407,145 @@ int nfs_removevnode(fs_cookie fs, fs_vnode _v, bool r)
 	return ERR_UNIMPLEMENTED;
 }
 
+static int nfs_opendir(fs_cookie _fs, fs_vnode _v, dir_cookie *_cookie)
+{
+	struct nfs_vnode *v = (struct nfs_vnode *)_v;
+	struct nfs_cookie *cookie;
+	int err = 0;
+
+	TRACE(("nfs_opendir: vnode 0x%x\n", v));
+
+	if(v->st != STREAM_TYPE_DIR)
+		return ERR_VFS_NOT_DIR;
+
+	cookie = kmalloc(sizeof(struct nfs_cookie));
+	if(cookie == NULL)
+		return ERR_NO_MEMORY;
+
+	cookie->v = v;
+	cookie->u.dir.nfscookie = 0;
+	cookie->u.dir.at_end = false;
+
+	*_cookie = cookie;
+
+	return err;
+}
+
+static int nfs_closedir(fs_cookie _fs, fs_vnode _v, dir_cookie _cookie)
+{
+	struct nfs_fs *fs = _fs;
+	struct nfs_vnode *v = _v;
+	struct nfs_cookie *cookie = _cookie;
+
+	TOUCH(fs);TOUCH(v);TOUCH(cookie);
+
+	TRACE(("nfs_closedir: entry vnode 0x%x, cookie 0x%x\n", v, cookie));
+
+	if(v->st != STREAM_TYPE_DIR)
+		return ERR_VFS_NOT_DIR;
+
+	if(cookie)
+		kfree(cookie);
+
+	return 0;
+}
+
+static int nfs_rewinddir(fs_cookie _fs, fs_vnode _v, dir_cookie _cookie)
+{
+	struct nfs_vnode *v = _v;
+	struct nfs_cookie *cookie = _cookie;
+	int err = 0;
+
+	TOUCH(v);
+
+	TRACE(("nfs_rewinddir: vnode 0x%x, cookie 0x%x\n", v, cookie));
+
+	if(v->st != STREAM_TYPE_DIR)
+		return ERR_VFS_NOT_DIR;
+
+	sem_acquire(v->sem, 1);
+
+	cookie->u.dir.nfscookie = 0;
+	cookie->u.dir.at_end = false;
+
+	sem_acquire(v->sem, 1);
+
+	return err;
+}
+
+#define READDIR_BUF_SIZE (MAXNAMLEN + 64)
+
+static ssize_t _nfs_readdir(nfs_fs *nfs, nfs_vnode *v, nfs_cookie *cookie, void *buf, ssize_t len)
+{
+	uint8 abuf[READDIR_BUF_SIZE];
+	nfs_readdirargs *args = (nfs_readdirargs *)abuf;
+	nfs_readdirres  *res  = (nfs_readdirres *)abuf;
+	ssize_t err = 0;
+	int i;
+	int namelen;
+
+	if(len < MAXNAMLEN)
+		return ERR_VFS_INSUFFICIENT_BUF; // XXX not quite accurate
+
+	/* see if we've already hit the end */
+	if(cookie->u.dir.at_end)
+		return 0;
+
+	/* put together the message */
+	memcpy(&args->dir, &v->nfs_handle, sizeof(args->dir));
+	args->cookie = cookie->u.dir.nfscookie;
+	args->count = htonl(min(len, READDIR_BUF_SIZE));
+
+	err = rpc_call(&nfs->rpc, NFSPROG, NFSVERS, NFSPROC_READDIR, args, sizeof(*args), abuf, sizeof(abuf));
+	if(err < 0)
+		return err;
+
+	/* get response */
+	if(ntohl(res->status) != NFS_OK)
+		return 0;
+
+	/* walk into the buffer, looking for the first entry */
+	if(ntohl(res->data[0]) == 0) {
+		// end of list
+		cookie->u.dir.at_end = true;
+		return 0;
+	}
+	i = ntohl(res->data[0]);
+
+	/* copy the data out of the first entry */
+	strlcpy(buf, (char const *)&res->data[i + 2], ntohl(res->data[i + 1]) + 1);
+
+	namelen = ROUNDUP(ntohl(res->data[i + 1]), 4);
+
+	/* update the cookie */
+	cookie->u.dir.nfscookie = res->data[i + namelen / 4 + 2];
+
+	return ntohl(res->data[i + 1]);
+}
+
+static int nfs_readdir(fs_cookie _fs, fs_vnode _v, dir_cookie _cookie, void *buf, size_t len)
+{
+	struct nfs_fs *fs = _fs;
+	struct nfs_vnode *v = _v;
+	struct nfs_cookie *cookie = _cookie;
+	int err = 0;
+
+	TOUCH(v);
+
+	TRACE(("nfs_readdir: vnode 0x%x, cookie 0x%x, len 0x%x\n", v, cookie, len));
+
+	if(v->st != STREAM_TYPE_DIR)
+		return ERR_VFS_NOT_DIR;
+
+	sem_acquire(v->sem, 1);
+
+	err = _nfs_readdir(fs, v, cookie, buf, len);
+
+	sem_acquire(v->sem, 1);
+
+	return err;
+}
+
 int nfs_open(fs_cookie fs, fs_vnode _v, file_cookie *_cookie, stream_type st, int oflags)
 {
 	nfs_fs *nfs = (nfs_fs *)fs;
@@ -544,56 +683,6 @@ static ssize_t nfs_readfile(nfs_fs *nfs, nfs_vnode *v, nfs_cookie *cookie, void 
 	return total_read;
 }
 
-#define READDIR_BUF_SIZE (MAXNAMLEN + 64)
-
-static ssize_t nfs_readdir(nfs_fs *nfs, nfs_vnode *v, nfs_cookie *cookie, void *buf, ssize_t len)
-{
-	uint8 abuf[READDIR_BUF_SIZE];
-	nfs_readdirargs *args = (nfs_readdirargs *)abuf;
-	nfs_readdirres  *res  = (nfs_readdirres *)abuf;
-	ssize_t err = 0;
-	int i;
-	int namelen;
-
-	if(len < MAXNAMLEN)
-		return ERR_VFS_INSUFFICIENT_BUF; // XXX not quite accurate
-
-	/* see if we've already hit the end */
-	if(cookie->u.dir.at_end)
-		return 0;
-
-	/* put together the message */
-	memcpy(&args->dir, &v->nfs_handle, sizeof(args->dir));
-	args->cookie = cookie->u.dir.nfscookie;
-	args->count = htonl(min(len, READDIR_BUF_SIZE));
-
-	err = rpc_call(&nfs->rpc, NFSPROG, NFSVERS, NFSPROC_READDIR, args, sizeof(*args), abuf, sizeof(abuf));
-	if(err < 0)
-		return err;
-
-	/* get response */
-	if(ntohl(res->status) != NFS_OK)
-		return 0;
-
-	/* walk into the buffer, looking for the first entry */
-	if(ntohl(res->data[0]) == 0) {
-		// end of list
-		cookie->u.dir.at_end = true;
-		return 0;
-	}
-	i = ntohl(res->data[0]);
-
-	/* copy the data out of the first entry */
-	strlcpy(buf, (char const *)&res->data[i + 2], ntohl(res->data[i + 1]) + 1);
-
-	namelen = ROUNDUP(ntohl(res->data[i + 1]), 4);
-
-	/* update the cookie */
-	cookie->u.dir.nfscookie = res->data[i + namelen / 4 + 2];
-
-	return ntohl(res->data[i + 1]);
-}
-
 ssize_t nfs_read(fs_cookie fs, fs_vnode _v, file_cookie _cookie, void *buf, off_t pos, ssize_t len)
 {
 	nfs_fs *nfs = (nfs_fs *)fs;
@@ -603,18 +692,12 @@ ssize_t nfs_read(fs_cookie fs, fs_vnode _v, file_cookie _cookie, void *buf, off_
 
 	TRACE("nfs_read: fsid 0x%x, vnid 0x%Lx, buf %p, pos 0x%Lx, len %ld\n", nfs->id, VNODETOVNID(v), buf, pos, len);
 
+	if(v->st == STREAM_TYPE_DIR)
+		return ERR_VFS_IS_DIR;
+
 	sem_acquire(v->sem, 1);
 
-	switch(v->st) {
-		case STREAM_TYPE_FILE:
-			err = nfs_readfile(nfs, v, cookie, buf, pos, len);
-			break;
-		case STREAM_TYPE_DIR:
-			err = nfs_readdir(nfs, v, cookie, buf, len);
-			break;
-		default:
-			err = ERR_GENERAL;
-	}
+	err = nfs_readfile(nfs, v, cookie, buf, pos, len);
 
 	sem_release(v->sem, 1);
 
@@ -935,6 +1018,11 @@ static struct fs_calls nfs_calls = {
 	&nfs_getvnode,
 	&nfs_putvnode,
 	&nfs_removevnode,
+
+	&nfs_opendir,
+	&nfs_closedir,
+	&nfs_rewinddir,
+	&nfs_readdir,
 
 	&nfs_open,
 	&nfs_close,
