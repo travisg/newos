@@ -139,14 +139,11 @@ ssize_t tty_read(tty_desc *tty, void *buf, ssize_t len, int endpoint)
 	ssize_t data_len;
 	int err;
 
-	if(len < 0) {
-		bytes_read = ERR_INVALID_ARGS;
-		goto err;
-	}
-	if(len == 0) {
-		bytes_read = 0;
-		goto err;
-	}
+	if(len < 0)
+		return ERR_INVALID_ARGS;
+
+	if(len == 0)
+		return 0;
 
 	ASSERT(endpoint == ENDPOINT_MASTER_READ || endpoint == ENDPOINT_SLAVE_READ);
 	lbuf = &tty->buf[endpoint];
@@ -213,14 +210,11 @@ ssize_t tty_write(tty_desc *tty, const void *buf, ssize_t len, int endpoint)
 	int err;
 	char c;
 
-	if(len < 0) {
-		bytes_written = ERR_INVALID_ARGS;
-		goto err;
-	}
-	if(len == 0) {
-		bytes_written = 0;
-		goto err;
-	}
+	if(len < 0)
+		return ERR_INVALID_ARGS;
+
+	if(len == 0)
+		return 0;
 
 	ASSERT(endpoint == ENDPOINT_MASTER_WRITE || endpoint == ENDPOINT_SLAVE_WRITE);
 	lbuf = &tty->buf[endpoint];
@@ -229,10 +223,8 @@ ssize_t tty_write(tty_desc *tty, const void *buf, ssize_t len, int endpoint)
 restart:
 	// wait on space in the circular buffer
 	err = sem_acquire_etc(lbuf->write_sem, 1, SEM_FLAG_INTERRUPTABLE, 0, NULL);
-	if(err == ERR_SEM_INTERRUPTED) {
-		bytes_written = err;
-		goto err;
-	}
+	if(err == ERR_SEM_INTERRUPTED)
+		return err;
 
 	mutex_lock(&tty->lock);
 	
