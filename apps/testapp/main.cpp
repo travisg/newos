@@ -14,6 +14,18 @@
 
 #include "tests.h"
 
+namespace {
+	struct testcdtors {
+		testcdtors() {
+			printf("(testing constructor)\n");
+		}
+		~testcdtors() {
+			printf("(testing destructor)\n");
+		}
+	};
+	testcdtors gtest;
+}
+
 struct test_option {
 	const char *command;
 	const char *name;
