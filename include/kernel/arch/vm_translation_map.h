@@ -8,9 +8,10 @@
 #include <kernel/kernel.h>
 #include <boot/stage2.h>
 #include <kernel/lock.h>
+#include <kernel/list.h>
 
 typedef struct vm_translation_map_struct {
-	struct vm_translation_map_struct *next;
+	struct list_node tmap_list_node;
 	struct vm_translation_map_ops_struct *ops;
 	recursive_lock lock;
 	int map_count;

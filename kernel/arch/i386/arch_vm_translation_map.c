@@ -15,6 +15,7 @@
 #include <kernel/lock.h>
 #include <kernel/sem.h>
 #include <kernel/queue.h>
+#include <kernel/list.h>
 #include <string.h>
 #include <boot/stage2.h>
 #include <newos/errors.h>
@@ -57,7 +58,7 @@ static pdentry *page_hole_pgdir = NULL;
 static pdentry *kernel_pgdir_phys = NULL;
 static pdentry *kernel_pgdir_virt = NULL;
 
-static vm_translation_map *tmap_list;
+static struct list_node tmap_list_head;
 static spinlock_t tmap_list_lock;
 
 #define CHATTY_TMAP 0
@@ -96,7 +97,7 @@ static void _update_all_pgdirs(int index, pdentry e)
 	int_disable_interrupts();
 	acquire_spinlock(&tmap_list_lock);
 
-	for(entry = tmap_list; entry != NULL; entry = entry->next)
+	list_for_every_entry(&tmap_list_head, entry, vm_translation_map, tmap_list_node)
 		entry->arch_data->pgdir_virt[index] = e;
 
 	release_spinlock(&tmap_list_lock);
@@ -129,8 +130,6 @@ static int unlock_tmap(vm_translation_map *map)
 
 static void destroy_tmap(vm_translation_map *map)
 {
-	vm_translation_map *entry;
-	vm_translation_map *last = NULL;
 	unsigned int i;
 
 	if(map == NULL)
@@ -140,23 +139,10 @@ static void destroy_tmap(vm_translation_map *map)
 	int_disable_interrupts();
 	acquire_spinlock(&tmap_list_lock);
 
-	entry = tmap_list;
-	while(entry != NULL) {
-		if(entry == map) {
-			if(last != NULL) {
-				last->next = entry->next;
-			} else {
-				tmap_list = entry->next;
-			}
-			break;
-		}
-		last = entry;
-		entry = entry->next;
-	}
+	list_delete(&map->tmap_list_node);
 
 	release_spinlock(&tmap_list_lock);
 	int_restore_interrupts();
-
 
 	if(map->arch_data->pgdir_virt != NULL) {
 		// cycle through and free all of the user space pgtables
@@ -618,8 +604,7 @@ int vm_translation_map_create(vm_translation_map *new_map, bool kernel)
 		memcpy(new_map->arch_data->pgdir_virt + FIRST_KERNEL_PGDIR_ENT, kernel_pgdir_virt + FIRST_KERNEL_PGDIR_ENT,
 			NUM_KERNEL_PGDIR_ENTS * sizeof(pdentry));
 
-		new_map->next = tmap_list;
-		tmap_list = new_map;
+		list_add_head(&tmap_list_head, &new_map->tmap_list_node);
 
 		release_spinlock(&tmap_list_lock);
 		int_restore_interrupts();
@@ -645,7 +630,7 @@ int vm_translation_map_module_init(kernel_args *ka)
 	kernel_pgdir_virt = (pdentry *)ka->arch_args.vir_pgdir;
 
 	tmap_list_lock = 0;
-	tmap_list = NULL;
+	list_initialize(&tmap_list_head);
 
 	// allocate some space to hold physical page mapping info
 	paddr_desc = (paddr_chunk_desc *)vm_alloc_from_ka_struct(ka,
