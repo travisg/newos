@@ -8,7 +8,7 @@
 #include <boot/stage2.h>
 #include <newos/types.h>
 
-extern void _start(unsigned int mem, int in_vesa, unsigned int vesa_ptr, unsigned int console_ptr);
+extern void _start(unsigned int mem, void *extended_mem_block, unsigned int extended_mem_count, int in_vesa, unsigned int vesa_ptr, unsigned int console_ptr);
 extern void clearscreen(void);
 extern void puts(const char *str);
 extern int dprintf(const char *fmt, ...);
@@ -35,7 +35,7 @@ void cpuid(unsigned int selector, unsigned int *data);
 #define STACK_SIZE 2
 #define DEFAULT_PAGE_FLAGS (1 | 2) // present/rw
 #define SCREEN_WIDTH 80
-#define SCREEN_HEIGHT 24
+#define SCREEN_HEIGHT 25
 #define ADDR_MASK 0xfffff000
 
 // SMP stuff

@@ -1,3 +1,7 @@
+/*
+** Copyright 2001-2004, Travis Geiselbrecht. All rights reserved.
+** Distributed under the terms of the NewOS License.
+*/
 #include <string.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -12,7 +16,7 @@ static unsigned screenOffset = 0;
 static unsigned int line = 0;
 
 #define SCREEN_WIDTH 80
-#define SCREEN_HEIGHT 24
+#define SCREEN_HEIGHT 25
 #define PAGE_SIZE 4096
 
 static unsigned char *heap_ptr = (unsigned char *)0x1000000;
@@ -20,11 +24,11 @@ static unsigned char *heap_ptr = (unsigned char *)0x1000000;
 extern void *_end;
 #define TARGET ((void *)0x400000)
 
-void _start(unsigned int mem, int in_vesa, unsigned int vesa_ptr)
+void _start(unsigned int mem, void *ext_mem_block, int ext_mem_count, int in_vesa, unsigned int vesa_ptr)
 {
 	unsigned long len;
 	boot_dir *bootdir = TARGET;
-	void (*stage2_entry)(unsigned int mem, int in_vesa, unsigned int vesa_ptr, int console_ptr);
+	void (*stage2_entry)(unsigned int mem, void *ext_mem_block, int ext_mem_count, int in_vesa, unsigned int vesa_ptr, int console_ptr);
 
 	clearscreen();
 
@@ -38,7 +42,7 @@ void _start(unsigned int mem, int in_vesa, unsigned int vesa_ptr)
 	dprintf("entry at %p\n", stage2_entry);
 
 	// jump into stage2
-	stage2_entry(mem, in_vesa, vesa_ptr, screenOffset);
+	stage2_entry(mem, ext_mem_block, ext_mem_count, in_vesa, vesa_ptr, screenOffset);
 }
 
 void *kmalloc(unsigned int size)
@@ -84,7 +88,7 @@ void puts(const char *str)
 		} else {
 			kScreenBase[screenOffset++] = 0xf00 | *str;
 		}
-		if (screenOffset > SCREEN_WIDTH * SCREEN_HEIGHT)
+		if (screenOffset >= SCREEN_WIDTH * SCREEN_HEIGHT)
 			scrup();
 
 		str++;

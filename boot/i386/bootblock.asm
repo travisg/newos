@@ -25,7 +25,7 @@
 ; ** THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ; /*
-; ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+; ** Copyright 2001-2004, Travis Geiselbrecht. All rights reserved.
 ; ** Distributed under the terms of the NewOS License.
 ; */
 
@@ -97,7 +97,9 @@ unreal:
 
 	; uncomment the next line to enable the VESA mode switch
 	; call	enable_vesa
-	mov		[in_vesa],al
+	; mov		[in_vesa],al
+
+	call	find_mem_size_real
 
 	; mov		ebx,[dword 0x100074] ; load dword at rel. address 0x74 from read-destination-buffer
 	; add		ebx,0x101000         ; for stage2 entry
@@ -127,16 +129,33 @@ BITS 32
 	mov		al,[in_vesa]
 	push	eax
 
-	call	find_mem_size
+	xor		eax,eax
+	mov		al,[ext_mem_count]
 	push	eax
 
+	xor		eax,eax
+	mov		eax,[ext_mem_info]
+	push	eax
+
+	cmp		al, 0x0
+	je		probe_mem
+
+	xor		eax,eax
+	push	eax				; should be loaded with zero
+	jmp		call_stage2
+
+probe_mem:
+	call	find_mem_size_probe
+	push	eax
+
+call_stage2:
 	mov		ebx,0x100000
 	call	ebx              ; jump to stage1 entry
 inf:jmp		short inf
 
 ; find memory size by testing
 ; OUT: eax = memory size
-find_mem_size:
+find_mem_size_probe:
 	mov		eax,0x31323738   ; test value
 	mov		esi,0x100ff0     ; start above conventional mem + HMA = 1 MB + 1024 Byte
 _fms_loop:
@@ -277,12 +296,42 @@ gdt:
 
 retrycnt	db 3
 in_vesa     db 0
-vesa_info	dw 0
+vesa_info	dd 0
+ext_mem_info 	dd 0
+ext_mem_count	db 0
 
 	times 510-($-$$) db 0  ; filler for boot sector
 	dw	0xaa55             ; magic number for boot sector
 
 ; Starting here is the second sector of the boot code
+
+BITS 16
+find_mem_size_real:
+	; use int 0x15, EAX=0xe820 to test for memory
+	; assumes es is null
+	
+	mov		ebx,0
+	mov		edi,0x7000		; the extended memory structures will go at 0x7000
+	mov		[ext_mem_info],edi
+
+find_mem_next:
+	mov		eax,0xe820
+	mov		edx,'PAMS'		; 'SMAP' in the correct order
+	mov		ecx,0x20
+
+	int		0x15
+	jc		done_mem_real	; if carry is set, it wasn't supported
+
+	inc		byte [ext_mem_count]	; increment the count of the number
+
+	cmp		ebx,0x0			; test if we're done
+	je		done_mem_real
+
+	add		edi,0x20		; increment the buffer by 0x20
+	jmp		find_mem_next
+	
+done_mem_real:
+	ret
 
 ; fool around with vesa mode
 enable_vesa:

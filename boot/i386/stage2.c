@@ -44,6 +44,15 @@ static void load_elf_image(void *data, unsigned int *next_paddr,
 static int mmu_init(kernel_args *ka, unsigned int *next_paddr);
 static void mmu_map_page(unsigned int vaddr, unsigned int paddr);
 static int check_cpu(kernel_args *ka);
+static void sort_addr_range(addr_range *range, int count);
+
+// memory structure returned by int 0x15, ax 0xe820
+struct emem_struct {
+	uint64 base_addr;
+	uint64 length;
+	uint64 type;
+	uint64 filler;
+};
 
 // called by the stage1 bootloader.
 // State:
@@ -51,7 +60,7 @@ static int check_cpu(kernel_args *ka);
 //   mmu disabled
 //   stack somewhere below 1 MB
 //   supervisor mode
-void _start(unsigned int mem, int in_vesa, unsigned int vesa_ptr, unsigned int console_ptr)
+void _start(unsigned int memsize, void *extended_mem_block, unsigned int extended_mem_count, int in_vesa, unsigned int vesa_ptr, unsigned int console_ptr)
 {
 	unsigned int *idt;
 	unsigned int *gdt;
@@ -65,7 +74,8 @@ void _start(unsigned int mem, int in_vesa, unsigned int vesa_ptr, unsigned int c
 
 	screenOffset = console_ptr;
 	dprintf("stage2 bootloader entry.\n");
-	dprintf("memsize = 0x%x, in_vesa %d, vesa_ptr 0x%x\n", mem, in_vesa, vesa_ptr);
+	dprintf("args: memsize 0x%x, emem_block %p, emem_count %d, in_vesa %d\n", 
+		memsize, extended_mem_block, extended_mem_count, in_vesa);
 
 	// verify we can run on this cpu
 	if(check_cpu(ka) < 0) {
@@ -74,6 +84,17 @@ void _start(unsigned int mem, int in_vesa, unsigned int vesa_ptr, unsigned int c
 		dprintf("\nPlease reset your computer to continue.");
 
 		for(;;);
+	}
+
+	if(extended_mem_count > 0) {
+ 		struct emem_struct *buf = (struct emem_struct *)extended_mem_block;
+		unsigned int i;
+
+		dprintf("extended memory info (from 0xe820):\n");
+		for(i=0; i<extended_mem_count; i++) {
+			dprintf("    base 0x%Lx, len 0x%Lx, type %Ld\n", 
+				buf[i].base_addr, buf[i].length, buf[i].type);
+		}
 	}
 
 	// calculate the conversion factor that translates rdtsc time to real microseconds
@@ -261,18 +282,94 @@ void _start(unsigned int mem, int in_vesa, unsigned int vesa_ptr, unsigned int c
 	ka->arch_args.vir_pgdir = next_vaddr;
 	next_vaddr += PAGE_SIZE;
 
-	// save the kernel args
-	ka->arch_args.system_time_cv_factor = cv_factor;
-	ka->phys_mem_range[0].start = 0;
-	ka->phys_mem_range[0].size = mem;
-	ka->num_phys_mem_ranges = 1;
-	ka->str = NULL;
+	// mark memory that we know is used
 	ka->phys_alloc_range[0].start = BOOTDIR_ADDR;
 	ka->phys_alloc_range[0].size = next_paddr - BOOTDIR_ADDR;
 	ka->num_phys_alloc_ranges = 1;
+
+	// figure out the memory map
+	if(extended_mem_count > 0) {
+		struct emem_struct *buf = (struct emem_struct *)extended_mem_block;
+		unsigned int i;
+
+		ka->num_phys_mem_ranges = 0;
+
+		for(i = 0; i < extended_mem_count; i++) {
+			if(buf[i].type == 1) {
+				// round everything up to page boundaries, exclusive of pages it partially occupies
+				buf[i].length -= (buf[i].base_addr % PAGE_SIZE) ? (PAGE_SIZE - (buf[i].base_addr % PAGE_SIZE)) : 0;
+				buf[i].base_addr = ROUNDUP(buf[i].base_addr, PAGE_SIZE);
+				buf[i].length = ROUNDOWN(buf[i].length, PAGE_SIZE);
+
+				// this is mem we can use
+				if(ka->num_phys_mem_ranges == 0) {
+					ka->phys_mem_range[0].start = (addr_t)buf[i].base_addr;
+					ka->phys_mem_range[0].size = (addr_t)buf[i].length;
+					ka->num_phys_mem_ranges++;
+				} else {
+					// we might have to extend the previous hole
+					addr_t previous_end = ka->phys_mem_range[ka->num_phys_mem_ranges-1].start + ka->phys_mem_range[ka->num_phys_mem_ranges-1].size;
+					if(previous_end <= buf[i].base_addr && 
+					  ((buf[i].base_addr - previous_end) < 0x100000)) {
+						// extend the previous buffer
+						ka->phys_mem_range[ka->num_phys_mem_ranges-1].size +=
+							(buf[i].base_addr - previous_end) +
+							buf[i].length;
+
+						// mark the gap between the two allocated ranges in use
+						ka->phys_alloc_range[ka->num_phys_alloc_ranges].start = previous_end;
+						ka->phys_alloc_range[ka->num_phys_alloc_ranges].size = buf[i].base_addr - previous_end;
+						ka->num_phys_alloc_ranges++;
+					}
+				}
+			}
+		}
+	} else {
+		// we dont have an extended map, assume memory is contiguously mapped at 0x0
+		ka->phys_mem_range[0].start = 0;
+		ka->phys_mem_range[0].size = memsize;
+		ka->num_phys_mem_ranges = 1;
+
+		// mark the bios area allocated
+		ka->phys_alloc_range[ka->num_phys_alloc_ranges].start = 0x9f000; // 640k - 1 page
+		ka->phys_alloc_range[ka->num_phys_alloc_ranges].size = 0x61000;
+		ka->num_phys_alloc_ranges++;
+	}
+
+	// save the memory we've virtually allocated (for the kernel and other stuff)
 	ka->virt_alloc_range[0].start = KERNEL_BASE;
 	ka->virt_alloc_range[0].size = next_vaddr - KERNEL_BASE;
 	ka->num_virt_alloc_ranges = 1;
+
+	// sort the address ranges
+	sort_addr_range(ka->phys_mem_range, ka->num_phys_mem_ranges);
+	sort_addr_range(ka->phys_alloc_range, ka->num_phys_alloc_ranges);
+	sort_addr_range(ka->virt_alloc_range, ka->num_virt_alloc_ranges);
+
+#if 1
+	{
+		unsigned int i;
+
+		dprintf("phys memory ranges:\n");
+		for(i=0; i < ka->num_phys_mem_ranges; i++) {
+			dprintf("    base 0x%08lx, length 0x%08lx\n", ka->phys_mem_range[i].start, ka->phys_mem_range[i].size);
+		}
+
+		dprintf("allocated phys memory ranges:\n");
+		for(i=0; i < ka->num_phys_alloc_ranges; i++) {
+			dprintf("    base 0x%08lx, length 0x%08lx\n", ka->phys_alloc_range[i].start, ka->phys_alloc_range[i].size);
+		}
+
+		dprintf("allocated virt memory ranges:\n");
+		for(i=0; i < ka->num_virt_alloc_ranges; i++) {
+			dprintf("    base 0x%08lx, length 0x%08lx\n", ka->virt_alloc_range[i].start, ka->virt_alloc_range[i].size);
+		}
+	}
+#endif
+
+	// save the kernel args
+	ka->arch_args.system_time_cv_factor = cv_factor;
+	ka->str = NULL;
 	ka->arch_args.page_hole = 0xffc00000;
 	ka->num_cpus = 1;
 #if 0
@@ -503,6 +600,25 @@ void sleep(uint64 time)
 		;
 }
 
+static void sort_addr_range(addr_range *range, int count)
+{
+	addr_range temp_range;
+	int i;
+	bool done;
+
+	do {
+		done = true;
+		for(i = 1; i < count; i++) {
+			if(range[i].start < range[i-1].start) {
+				done = false;
+				memcpy(&temp_range, &range[i], sizeof(temp_range));
+				memcpy(&range[i], &range[i-1], sizeof(temp_range));
+				memcpy(&range[i-1], &temp_range, sizeof(temp_range));
+			}
+		}
+	} while(!done);
+}
+
 #define outb(value,port) \
 	asm("outb %%al,%%dx"::"a" (value),"d" (port))
 
@@ -710,7 +826,7 @@ void puts(const char *str)
 		} else {
 			kScreenBase[screenOffset++] = 0xf00 | *str;
 		}
-		if (screenOffset > SCREEN_WIDTH * SCREEN_HEIGHT)
+		if (screenOffset >= SCREEN_WIDTH * SCREEN_HEIGHT)
 			scrup();
 
 		str++;
