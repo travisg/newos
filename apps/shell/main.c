@@ -166,6 +166,7 @@ static int launch(int (*cmd)(int, char **), int argc, char **argv, char *r_in, c
 	int new_in;
 	int new_out;
 	int retval= 0;
+	int err = 0;
 
 	if(strcmp(r_in, "")!= 0) {
 		new_in = sys_open(r_in, STREAM_TYPE_ANY, 0);
@@ -173,21 +174,30 @@ static int launch(int (*cmd)(int, char **), int argc, char **argv, char *r_in, c
 		new_in = sys_dup(0);
 	}
 	if(new_in < 0) {
-		printf("%s: %s\n", r_in, strerror(new_in));
-		goto err_1;
+		printf("cannot open redirection source %s: %s\n", r_in, strerror(new_in));
+		goto err;
 	}
 
 	if(strcmp(r_out, "")!= 0) {
 		new_out = sys_open(r_out, STREAM_TYPE_ANY, 0);
+
+		if(new_out < 0) {
+			err = sys_create(r_out,STREAM_TYPE_FILE);
+			if(err < 0) {
+				printf("cannot create redirection target %s: %s\n", r_out, strerror(err));
+				goto err;
+			}
+			new_out = sys_open(r_out,STREAM_TYPE_ANY, 0);
+		}
 	} else {
 		new_out = sys_dup(1);
 	}
+
 	if(new_out < 0) {
-		printf("%s: %s\n", r_out, strerror(new_out));
-		goto err_2;
+		err = new_out;
+		printf("cannot open redirection target %s: %s\n", r_out, strerror(err));
+		goto err;
 	}
-
-
 	saved_in = sys_dup(0);
 	saved_out= sys_dup(1);
 
@@ -205,9 +215,9 @@ static int launch(int (*cmd)(int, char **), int argc, char **argv, char *r_in, c
 
 	return retval;
 
-err_2:
+err:
 	sys_close(new_in);
-err_1:
+
 	return 0;
 }
 

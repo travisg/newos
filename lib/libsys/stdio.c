@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -26,13 +26,13 @@ int printf(const char *fmt, ...)
 	va_list args;
 	char buf[1024];
 	int i;
-	
+
 	va_start(args, fmt);
 	i = vsprintf(buf, fmt, args);
 	va_end(args);
-	
-	sys_write(1, buf, 0, strlen(buf));
-	
+
+	sys_write(1, buf, -1, strlen(buf));
+
 	return i;
 }
 
@@ -40,7 +40,7 @@ char getc(void)
 {
 	char c;
 	int len;
-	
+
 	sys_read(0, &c, 0, 1);
 	return c;
 }

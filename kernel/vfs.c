@@ -703,8 +703,12 @@ static int path_to_dir_vnode(char *path, struct vnode **v, char *filename, bool 
 	} else {
 		// replace the filename portion of the path with a '.'
 		strcpy(filename, p+1);
-		p[1] = '.';
-		p[2] = '\0';
+
+		if(p[1] != '\0'){
+			p[1] = '.';
+			p[2] = '\0';
+		}
+
 	}
 	return path_to_vnode(path, v, kernel);
 }
