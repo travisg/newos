@@ -1,7 +1,7 @@
 #ifndef _CONSOLE_H
 #define _CONSOLE_H
 
-#include <stage2.h>
+#include <boot/stage2.h>
 
 int con_init(kernel_args *ka);
 int kprintf(const char *fmt, ...);

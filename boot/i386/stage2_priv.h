@@ -1,7 +1,7 @@
 #ifndef _STAGE2_PRIV_H
 #define _STAGE2_PRIV_H
 
-#include <stage2.h>
+#include <boot/stage2.h>
 
 void clearscreen();
 int dprintf(const char *fmt, ...);
@@ -52,22 +52,22 @@ int smp_boot(kernel_args *ka);
 #define APIC_FOCUS         (~(1 << 9))
 #define APIC_SIV           (0xff)
 
-#define APIC_ID            ((unsigned int *) ((unsigned int) ka->apic + 0x020))
-#define APIC_VERSION       ((unsigned int *) ((unsigned int) ka->apic + 0x030))
-#define APIC_TPRI          ((unsigned int *) ((unsigned int) ka->apic + 0x080))
-#define APIC_EOI           ((unsigned int *) ((unsigned int) ka->apic + 0x0b0))
-#define APIC_LDR           ((unsigned int *) ((unsigned int) ka->apic + 0x0d0))
-#define APIC_SIVR          ((unsigned int *) ((unsigned int) ka->apic + 0x0f0))
-#define APIC_ESR           ((unsigned int *) ((unsigned int) ka->apic + 0x280))
-#define APIC_ICR1          ((unsigned int *) ((unsigned int) ka->apic + 0x300))
-#define APIC_ICR2          ((unsigned int *) ((unsigned int) ka->apic + 0x310))
-#define APIC_LVTT          ((unsigned int *) ((unsigned int) ka->apic + 0x320))
-#define APIC_LINT0         ((unsigned int *) ((unsigned int) ka->apic + 0x350))
-#define APIC_LINT1         ((unsigned int *) ((unsigned int) ka->apic + 0x360))
-#define APIC_LVT3          ((unsigned int *) ((unsigned int) ka->apic + 0x370))
-#define APIC_ICRT          ((unsigned int *) ((unsigned int) ka->apic + 0x380))
-#define APIC_CCRT          ((unsigned int *) ((unsigned int) ka->apic + 0x390))
-#define APIC_TDCR          ((unsigned int *) ((unsigned int) ka->apic + 0x3e0))
+#define APIC_ID            ((unsigned int *) ((unsigned int) ka->arch_args.apic + 0x020))
+#define APIC_VERSION       ((unsigned int *) ((unsigned int) ka->arch_args.apic + 0x030))
+#define APIC_TPRI          ((unsigned int *) ((unsigned int) ka->arch_args.apic + 0x080))
+#define APIC_EOI           ((unsigned int *) ((unsigned int) ka->arch_args.apic + 0x0b0))
+#define APIC_LDR           ((unsigned int *) ((unsigned int) ka->arch_args.apic + 0x0d0))
+#define APIC_SIVR          ((unsigned int *) ((unsigned int) ka->arch_args.apic + 0x0f0))
+#define APIC_ESR           ((unsigned int *) ((unsigned int) ka->arch_args.apic + 0x280))
+#define APIC_ICR1          ((unsigned int *) ((unsigned int) ka->arch_args.apic + 0x300))
+#define APIC_ICR2          ((unsigned int *) ((unsigned int) ka->arch_args.apic + 0x310))
+#define APIC_LVTT          ((unsigned int *) ((unsigned int) ka->arch_args.apic + 0x320))
+#define APIC_LINT0         ((unsigned int *) ((unsigned int) ka->arch_args.apic + 0x350))
+#define APIC_LINT1         ((unsigned int *) ((unsigned int) ka->arch_args.apic + 0x360))
+#define APIC_LVT3          ((unsigned int *) ((unsigned int) ka->arch_args.apic + 0x370))
+#define APIC_ICRT          ((unsigned int *) ((unsigned int) ka->arch_args.apic + 0x380))
+#define APIC_CCRT          ((unsigned int *) ((unsigned int) ka->arch_args.apic + 0x390))
+#define APIC_TDCR          ((unsigned int *) ((unsigned int) ka->arch_args.apic + 0x3e0))
 
 #define APIC_TDCR_2        0x00
 #define APIC_TDCR_4        0x01

@@ -2,7 +2,7 @@
 #define _VFS_H
 
 #include <kernel/kernel.h>
-#include <stage2.h>
+#include <boot/stage2.h>
 
 typedef enum {
 	STREAM_TYPE_NULL = 0,

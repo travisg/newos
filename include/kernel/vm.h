@@ -2,7 +2,7 @@
 #define _VM_H
 
 #include <kernel/kernel.h>
-#include <stage2.h>
+#include <boot/stage2.h>
 
 // address space
 struct aspace {

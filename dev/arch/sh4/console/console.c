@@ -6,7 +6,7 @@
 #include <string.h>
 #include <printf.h>
 
-#include "console_dev.h"
+#include <dev/arch/sh4/console/console_dev.h>
 #include "keyboard.h"
 #include "font.h"
 

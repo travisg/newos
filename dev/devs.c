@@ -1,19 +1,20 @@
 #include <kernel/kernel.h>
-#include <devs.h>
+#include <dev/devs.h>
 #include <kernel/vfs.h>
 #include <kernel/debug.h>
 
 #include <string.h>
 
 #ifdef ARCH_i386
-#include <pci_bus.h>
-#include <console_dev.h>
+#include <dev/arch/i386/pci/pci_bus.h>
+#include <dev/arch/i386/console/console_dev.h>
 #endif
 #ifdef ARCH_sh4
-#include <console_dev.h>
+#include <dev/arch/sh4/console/console_dev.h>
+#include <dev/arch/sh4/rtl8139/rtl8139_dev.h>
 #endif
-#include <null.h>
-#include <zero.h>
+#include <dev/common/null.h>
+#include <dev/common/zero.h>
 
 int devs_init(kernel_args *ka)
 {

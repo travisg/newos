@@ -2,7 +2,7 @@
 #define _ARCH_SMP_H
 
 #include <kernel/kernel.h>
-#include <stage2.h>
+#include <boot/stage2.h>
 
 // must match MAX_BOOT_CPUS in stage2.h
 #define SMP_MAX_CPUS MAX_BOOT_CPUS

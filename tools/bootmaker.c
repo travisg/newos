@@ -25,7 +25,7 @@
 ** (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 ** THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-#include "../include/boot.h"
+#include "../include/boot/bootdir.h"
 
 #include "bootblock.h"
 #include "sparcbootblock.h"

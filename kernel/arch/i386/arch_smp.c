@@ -1,7 +1,7 @@
 // Huge sections stolen from OpenBLT
 // Will be redone later
 
-#include <stage2.h>
+#include <boot/stage2.h>
 #include <kernel/kernel.h>
 #include <kernel/console.h>
 #include <kernel/debug.h>
@@ -77,12 +77,12 @@ int arch_smp_init(kernel_args *ka)
 	if(ka->num_cpus > 1) {
 		// setup some globals
 		num_cpus = ka->num_cpus;
-		apic = ka->apic;
-		ioapic = ka->ioapic;
-		memcpy(cpu_apic_id, ka->cpu_apic_id, sizeof(ka->cpu_apic_id));
-		memcpy(cpu_os_id, ka->cpu_os_id, sizeof(ka->cpu_os_id));
-		memcpy(cpu_apic_version, ka->cpu_apic_version, sizeof(ka->cpu_apic_version));
-		apic_timer_tics_per_sec = ka->apic_time_cv_factor;
+		apic = ka->arch_args.apic;
+		ioapic = ka->arch_args.ioapic;
+		memcpy(cpu_apic_id, ka->arch_args.cpu_apic_id, sizeof(ka->arch_args.cpu_apic_id));
+		memcpy(cpu_os_id, ka->arch_args.cpu_os_id, sizeof(ka->arch_args.cpu_os_id));
+		memcpy(cpu_apic_version, ka->arch_args.cpu_apic_version, sizeof(ka->arch_args.cpu_apic_version));
+		apic_timer_tics_per_sec = ka->arch_args.apic_time_cv_factor;
 	
 		// setup areas that represent the apic & ioapic
 		vm_create_area(vm_get_kernel_aspace(), "local_apic", (void *)&apic, AREA_ALREADY_MAPPED, PAGE_SIZE, LOCK_RW|LOCK_KERNEL);

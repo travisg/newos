@@ -2,7 +2,7 @@
 #define _DEV_H
 
 #include <kernel/kernel.h>
-#include <stage2.h>
+#include <boot/stage2.h>
 
 int dev_init(kernel_args *ka);
 

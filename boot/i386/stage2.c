@@ -1,6 +1,6 @@
-#include <boot.h>
-#include <stage2.h>
-#include <stage2_priv.h>
+#include <boot/bootdir.h>
+#include <boot/stage2.h>
+#include "stage2_priv.h"
 
 #include <string.h>
 #include <stdarg.h>
@@ -190,15 +190,15 @@ void _start(unsigned int mem, char *str)
 	pgdir[KERNEL_BASE/(4*1024*1024)] = (unsigned int)new_pgtable | DEFAULT_PAGE_FLAGS;
 
 	// save the kernel args
-	ka->system_time_cv_factor = cv_factor;
-	ka->phys_pgdir = (unsigned int)pgdir;
-	ka->vir_pgdir = (unsigned int)next_vpage - PAGE_SIZE;
-	ka->pgtables[0] = (unsigned int)new_pgtable;
-	ka->num_pgtables = 1;
-	ka->phys_idt = (unsigned int)idt;
-	ka->vir_idt = (unsigned int)next_vpage - PAGE_SIZE * 3;
-	ka->phys_gdt = (unsigned int)gdt;
-	ka->vir_gdt = (unsigned int)next_vpage - PAGE_SIZE * 2;
+	ka->arch_args.system_time_cv_factor = cv_factor;
+	ka->arch_args.phys_pgdir = (unsigned int)pgdir;
+	ka->arch_args.vir_pgdir = (unsigned int)next_vpage - PAGE_SIZE;
+	ka->arch_args.pgtables[0] = (unsigned int)new_pgtable;
+	ka->arch_args.num_pgtables = 1;
+	ka->arch_args.phys_idt = (unsigned int)idt;
+	ka->arch_args.vir_idt = (unsigned int)next_vpage - PAGE_SIZE * 3;
+	ka->arch_args.phys_gdt = (unsigned int)gdt;
+	ka->arch_args.vir_gdt = (unsigned int)next_vpage - PAGE_SIZE * 2;
 	ka->phys_mem_range[0].start = 0;
 	ka->phys_mem_range[0].size = mem;
 	ka->num_phys_mem_ranges = 1;
@@ -214,7 +214,7 @@ void _start(unsigned int mem, char *str)
 	ka->num_phys_alloc_ranges = 1;
 	ka->virt_alloc_range[0].start = KERNEL_BASE;
 	ka->virt_alloc_range[0].size = next_vpage - KERNEL_BASE;
-	ka->page_hole = 0xffc00000;
+	ka->arch_args.page_hole = 0xffc00000;
 	ka->cpu_kstack[0].start = new_stack - STACK_SIZE * PAGE_SIZE;
 	ka->cpu_kstack[0].size = STACK_SIZE * PAGE_SIZE;
 #if 0			

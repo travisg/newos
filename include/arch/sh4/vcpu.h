@@ -1,8 +1,8 @@
 #ifndef _VCPU_H
 #define _VCPU_H
 
-#include <stage2.h>
-#include <vcpu_struct.h>
+#include <boot/stage2.h>
+#include <arch/sh4/vcpu_struct.h>
 
 // page table structures
 struct pdent {

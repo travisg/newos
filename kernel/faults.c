@@ -4,7 +4,7 @@
 #include <kernel/faults.h>
 #include <kernel/faults_priv.h>
 #include <kernel/debug.h>
-#include <stage2.h>
+#include <boot/stage2.h>
 #include <kernel/int.h>
 #include <kernel/arch/faults.h>
 

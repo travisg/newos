@@ -1,7 +1,7 @@
 #ifndef _INT_H
 #define _INT_H
 
-#include <stage2.h>
+#include <boot/stage2.h>
 #include <kernel/arch/int.h>
 
 int int_init(kernel_args *ka);

@@ -1,9 +1,9 @@
-#include <vcpu.h>
-#include <vcpu_struct.h>
-#include <stage2.h>
-#include <serial.h>
+#include <arch/sh4/vcpu.h>
+#include <arch/sh4/vcpu_struct.h>
+#include <boot/stage2.h>
+#include "serial.h"
 #include <string.h>
-#include <sh4.h>
+#include <arch/sh4/sh4.h>
 
 #define CHATTY_TLB 0
 
@@ -101,7 +101,7 @@ int vcpu_init(kernel_args *ka)
 	sr &= 0xefffffff;
 	set_sr(sr);
 	
-	ka->vcpu = &kernel_struct;
+	ka->arch_args.vcpu = &kernel_struct;
 
 	// enable the mmu
 	vcpu_clear_all_itlb_entries();

@@ -1,6 +1,6 @@
-#include <stage2.h>
-#include <vcpu.h>
-#include <sh4.h>
+#include <boot/stage2.h>
+#include <arch/sh4/vcpu.h>
+#include <arch/sh4/sh4.h>
 
 #include <kernel/debug.h>
 #include <kernel/int.h>
@@ -95,7 +95,7 @@ int arch_int_init(kernel_args *ka)
 
 	dprintf("arch_int_init: entry\n");
 
-	vector_table = (struct vector *)ka->vcpu->vt;
+	vector_table = (struct vector *)ka->arch_args.vcpu->vt;
 	dprintf("arch_int_init: vector table 0x%x\n", vector_table);
 
 	// set up the vectors

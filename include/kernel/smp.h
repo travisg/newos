@@ -1,7 +1,7 @@
 #ifndef _SMP_H
 #define _SMP_H
 
-#include <stage2.h>
+#include <boot/stage2.h>
 
 // intercpu messages
 enum {

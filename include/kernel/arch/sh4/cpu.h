@@ -1,7 +1,7 @@
 #ifndef _SH4_CPU_H
 #define _SH4_CPU_H
 
-#include <sh4.h>
+#include <arch/sh4/sh4.h>
 
 unsigned int get_fpscr();
 unsigned int get_sr();

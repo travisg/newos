@@ -1,5 +1,5 @@
 #include <kernel/kernel.h>
-#include <stage2.h>
+#include <boot/stage2.h>
 
 #include <kernel/arch/dbg_console.h>
 

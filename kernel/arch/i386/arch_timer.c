@@ -1,4 +1,4 @@
-#include <stage2.h>
+#include <boot/stage2.h>
 #include <kernel/kernel.h>
 
 #include <kernel/arch/int.h>

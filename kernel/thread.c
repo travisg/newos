@@ -1,7 +1,7 @@
 #include <string.h>
 #include <printf.h>
 #include <kernel/kernel.h>
-#include <stage2.h>
+#include <boot/stage2.h>
 #include <kernel/debug.h>
 #include <kernel/console.h>
 #include <kernel/thread.h>
@@ -718,7 +718,7 @@ int test_thread()
 #if 0
 		thread_snooze(10000 * tid);
 #endif
-#if 1
+#if 0
 		sem_acquire(thread_test_sems[tid - thread_test_first_thid], 1);
 
 		// release the next semaphore
@@ -767,6 +767,7 @@ int thread_test()
 	int i;
 	char temp[64];
 	
+#if 1
 	for(i=0; i<NUM_TEST_THREADS; i++) {
 		sprintf(temp, "test_thread%d", i);
 //		t = create_kernel_thread(temp, &test_thread, i % THREAD_NUM_PRIORITY_LEVELS);
@@ -780,6 +781,7 @@ int thread_test()
 	}	
 	t = create_kernel_thread("test starter thread", &test_thread_starter_thread, THREAD_MAX_PRIORITY);
 	thread_enqueue_run_q(t);
+#endif
 
 	t = create_kernel_thread("test thread 2", &test_thread2, 5);
 	thread_enqueue_run_q(t);

@@ -6,9 +6,9 @@
 
 #include <kernel/arch/pmap.h>
 
-#include <stage2.h>
-#include <sh4.h>
-#include <vcpu.h>
+#include <boot/stage2.h>
+#include <arch/sh4/sh4.h>
+#include <arch/sh4/vcpu.h>
 
 #define CHATTY_PMAP 0
 
@@ -20,7 +20,7 @@ int arch_pmap_init(kernel_args *ka)
 {
 	dprintf("arch_pmap_init: entry\n");
 
-	vcpu = ka->vcpu;
+	vcpu = ka->arch_args.vcpu;
 	
 	dprintf("examining vcpu structure @ 0x%x:\n", vcpu);
 	dprintf("kernel_pgdir = 0x%x\n", vcpu->kernel_pgdir);

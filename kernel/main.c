@@ -1,3 +1,4 @@
+#include <boot/stage2.h>
 #include <kernel/kernel.h>
 #include <kernel/console.h>
 #include <kernel/debug.h>
@@ -9,13 +10,11 @@
 #include <kernel/sem.h>
 #include <kernel/vfs.h>
 #include <kernel/dev.h>
-#include <devs.h>
+#include <dev/devs.h>
 
 #include <string.h>
 
 #include <kernel/arch/cpu.h>
-
-#include <stage2.h>
 
 int _start(kernel_args *oldka, int cpu)
 {

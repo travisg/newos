@@ -50,9 +50,9 @@ int arch_pmap_init(kernel_args *ka)
 	dprintf("arch_pmap_init: entry\n");
 
 	// page hole set up in stage2
-	page_hole = (ptentry *)ka->page_hole;
+	page_hole = (ptentry *)ka->arch_args.page_hole;
 	// calculate where the pgdir would be
-	pgdir = (pdentry *)(((unsigned int)ka->page_hole) + (PAGE_SIZE * 1024 - PAGE_SIZE));
+	pgdir = (pdentry *)(((unsigned int)ka->arch_args.page_hole) + (PAGE_SIZE * 1024 - PAGE_SIZE));
 	// clear out the bottom 2 GB, unmap everything
 	memset(pgdir, 0, sizeof(unsigned int) * 512);
 
@@ -69,7 +69,7 @@ int arch_pmap_init2(kernel_args *ka)
 
 	temp = (void *)page_hole;
 	vm_create_area(vm_get_kernel_aspace(), "page_hole", &temp, AREA_ALREADY_MAPPED, PAGE_SIZE * 1024, LOCK_RW|LOCK_KERNEL);
-	temp = (void *)ka->vir_pgdir;
+	temp = (void *)ka->arch_args.vir_pgdir;
 	vm_create_area(vm_get_kernel_aspace(), "kernel_pgdir", &temp, AREA_ALREADY_MAPPED, PAGE_SIZE, LOCK_RW|LOCK_KERNEL);
 
 	return 0;

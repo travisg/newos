@@ -2,7 +2,7 @@
 #define _DEBUG_H
 
 #include <kernel/kernel.h>
-#include <stage2.h>
+#include <boot/stage2.h>
 
 int dbg_init(kernel_args *ka);
 int dbg_init2(kernel_args *ka);

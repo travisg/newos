@@ -1,6 +1,6 @@
 #include <kernel/kernel.h>
-#include <stage2.h>
-#include <sh4.h>
+#include <boot/stage2.h>
+#include <arch/sh4/sh4.h>
 #include <kernel/int.h>
 #include <kernel/debug.h>
 #include <kernel/timer.h>

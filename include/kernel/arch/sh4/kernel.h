@@ -1,7 +1,7 @@
 #ifndef _SH4_KERNEL_H
 #define _SH4_KERNEL_H
 
-#include <sh4.h>
+#include <arch/sh4/sh4.h>
 
 // memory layout
 #define KERNEL_BASE P3_AREA

@@ -1,9 +1,9 @@
 #include <kernel/arch/cpu.h>
-#include <stage2.h>
+#include <boot/stage2.h>
 
 int arch_cpu_init(kernel_args *ka)
 {
-	setup_system_time(ka->system_time_cv_factor);
+	setup_system_time(ka->arch_args.system_time_cv_factor);
 
 	return 0;
 }

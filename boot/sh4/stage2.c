@@ -1,12 +1,12 @@
-#include <boot.h>
-#include <stage2.h>
+#include <boot/bootdir.h>
+#include <boot/stage2.h>
 #include <string.h>
 #include <elf32.h>
 
-#include "sh4.h"
+#include <arch/sh4/sh4.h>
+#include <arch/sh4/vcpu.h>
 #include "serial.h"
 #include "mmu.h"
-#include "vcpu.h"
 
 #define BOOTDIR 0x8c001000
 #define P2_AREA 0x8c000000

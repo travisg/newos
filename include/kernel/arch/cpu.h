@@ -2,7 +2,7 @@
 #define _ARCH_CPU_H
 
 #include <kernel/kernel.h>
-#include <stage2.h>
+#include <boot/stage2.h>
 
 #ifdef ARCH_i386
 #include <kernel/arch/i386/cpu.h>

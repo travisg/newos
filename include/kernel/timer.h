@@ -1,7 +1,7 @@
 #ifndef _TIMER_H
 #define _TIMER_H
 
-#include <stage2.h>
+#include <boot/stage2.h>
 
 struct timer_event {
 	struct timer_event *next;

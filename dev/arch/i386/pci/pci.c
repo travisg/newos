@@ -12,7 +12,7 @@
 #include <string.h>
 #include <printf.h>
 
-#include "pci_bus.h"
+#include <dev/arch/i386/pci/pci_bus.h>
 
 #define CONFIG_ADDRESS 0xcf8
 #define CONFIG_DATA 0xcfc

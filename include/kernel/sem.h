@@ -2,7 +2,7 @@
 #define _SEM_H
 
 #include <kernel/thread.h>
-#include <stage2.h>
+#include <boot/stage2.h>
 
 struct sem_entry {
 	sem_id    id;

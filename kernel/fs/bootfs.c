@@ -12,7 +12,7 @@
 
 #include <kernel/fs/bootfs.h>
 
-#include <boot.h>
+#include <boot/bootdir.h>
 
 static char *bootdir = NULL;
 static off_t bootdir_len = 0;

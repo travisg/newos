@@ -1,10 +1,10 @@
 #include <string.h>
 
-#include "vcpu.h"
-#include "stage2.h"
+#include <boot/stage2.h>
+#include <arch/sh4/vcpu.h>
+#include <arch/sh4/sh4.h>
 #include "serial.h"
 #include "mmu.h"
-#include "sh4.h"
 
 #define KERNEL_LOAD_ADDR 0xc0000000
 
@@ -54,13 +54,13 @@ void mmu_init(kernel_args *ka, unsigned int *next_paddr)
 	dprintf("mmu_init: entry\n");
 
 	// allocate a kernel pgdir
-	ka->vcpu->kernel_pgdir = (unsigned int *)PHYS_ADDR_TO_P1(*next_paddr);
+	ka->arch_args.vcpu->kernel_pgdir = (unsigned int *)PHYS_ADDR_TO_P1(*next_paddr);
 	(*next_paddr) += PAGE_SIZE;
 
-	pd = (struct pdent *)ka->vcpu->kernel_pgdir;
+	pd = (struct pdent *)ka->arch_args.vcpu->kernel_pgdir;
 	memset(pd, 0, sizeof(struct pdent) * 512);
 
-	dprintf("kernel_pgdir = 0x%x\n", ka->vcpu->kernel_pgdir);
+	dprintf("kernel_pgdir = 0x%x\n", ka->arch_args.vcpu->kernel_pgdir);
 
 	// allocate an initial page table
 	pt = (struct ptent *)PHYS_ADDR_TO_P1(*next_paddr);

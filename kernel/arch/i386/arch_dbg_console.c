@@ -4,7 +4,7 @@
 
 #include <kernel/arch/cpu.h>
 
-#include <stage2.h>
+#include <boot/stage2.h>
 
 static const int dbg_baud_rate = 115200;
 

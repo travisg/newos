@@ -1,5 +1,5 @@
-#include <stage2.h>
-#include <stage2_priv.h>
+#include <boot/stage2.h>
+#include "stage2_priv.h"
 
 #include <string.h>
 #include <printf.h>
@@ -16,7 +16,7 @@ int smp_get_current_cpu(kernel_args *ka);
 static unsigned int map_page(kernel_args *ka, unsigned int paddr, unsigned int vaddr)
 {
 	unsigned int *pentry;
-	unsigned int *pgdir = (unsigned int *)(ka->page_hole + (4*1024*1024-PAGE_SIZE));
+	unsigned int *pgdir = (unsigned int *)(ka->arch_args.page_hole + (4*1024*1024-PAGE_SIZE));
 
 	// check to see if a page table exists for this range
 	if(pgdir[vaddr / PAGE_SIZE / 1024] == 0) {
@@ -24,16 +24,16 @@ static unsigned int map_page(kernel_args *ka, unsigned int paddr, unsigned int v
 		// we need to allocate a pgtable
 		pgtable = ka->phys_alloc_range[0].start + ka->phys_alloc_range[0].size;
 		ka->phys_alloc_range[0].size += PAGE_SIZE;
-		ka->pgtables[ka->num_pgtables++] = pgtable;
+		ka->arch_args.pgtables[ka->arch_args.num_pgtables++] = pgtable;
 		
 		// put it in the pgdir
 		pgdir[vaddr / PAGE_SIZE / 1024] = (pgtable & ADDR_MASK) | DEFAULT_PAGE_FLAGS;
 
 		// zero it out in it's new mapping
-		memset((unsigned int *)((unsigned int *)ka->page_hole + (vaddr / PAGE_SIZE / 1024) * PAGE_SIZE), 0, PAGE_SIZE);
+		memset((unsigned int *)((unsigned int *)ka->arch_args.page_hole + (vaddr / PAGE_SIZE / 1024) * PAGE_SIZE), 0, PAGE_SIZE);
 	}
 	// now, fill in the pentry
-	pentry = (unsigned int *)((unsigned int *)ka->page_hole + vaddr / PAGE_SIZE);
+	pentry = (unsigned int *)((unsigned int *)ka->arch_args.page_hole + vaddr / PAGE_SIZE);
 
 	*pentry = (paddr & ADDR_MASK) | DEFAULT_PAGE_FLAGS;
 
@@ -107,16 +107,16 @@ static void smp_do_config(kernel_args *ka)
 		ptr[20]);
 	dprintf("smp: base table has %d entries, extended section %d bytes\n",
 		mpc->num_entries, mpc->ext_len);
-	ka->apic_phys = (unsigned int)mpc->apic;
+	ka->arch_args.apic_phys = (unsigned int)mpc->apic;
 
 	ptr = (char *) ((unsigned int) mpc + sizeof (struct mp_config_table));
 	for (i = 0; i < mpc->num_entries; i++) {
 		switch (*ptr) {
 			case MP_EXT_PE:
 				pe = (struct mp_ext_pe *) ptr;
-				ka->cpu_apic_id[ka->num_cpus] = pe->apic_id;
-				ka->cpu_os_id[pe->apic_id] = ka->num_cpus;
-				ka->cpu_apic_version[ka->num_cpus] = pe->apic_version;
+				ka->arch_args.cpu_apic_id[ka->num_cpus] = pe->apic_id;
+				ka->arch_args.cpu_os_id[pe->apic_id] = ka->num_cpus;
+				ka->arch_args.cpu_apic_version[ka->num_cpus] = pe->apic_version;
 				dprintf ("smp: cpu#%d: %s, apic id %d, version %d%s\n",
 					ka->num_cpus, cpu_family[(pe->signature & 0xf00) >> 8],
 					pe->apic_id, pe->apic_version, (pe->cpu_flags & 0x2) ?
@@ -133,7 +133,7 @@ static void smp_do_config(kernel_args *ka)
 				break;
 			case MP_EXT_IO_APIC:
 				io = (struct mp_ext_ioapic *) ptr;
-				ka->ioapic_phys = (unsigned int)io->addr;
+				ka->arch_args.ioapic_phys = (unsigned int)io->addr;
 				dprintf("smp: found io apic with apic id %d, version %d\n",
 					io->ioapic_id, io->ioapic_version);
 				ptr += 8;
@@ -147,7 +147,7 @@ static void smp_do_config(kernel_args *ka)
 		}
 	}
 	dprintf("smp: apic @ 0x%x, i/o apic @ 0x%x, total %d processors detected\n",
-		(unsigned int)ka->apic_phys, (unsigned int)ka->ioapic_phys, ka->num_cpus);
+		(unsigned int)ka->arch_args.apic_phys, (unsigned int)ka->arch_args.ioapic_phys, ka->num_cpus);
 }
 
 struct smp_scan_spots_struct {
@@ -278,14 +278,14 @@ static int smp_cpu_ready()
 
 	// Set up the final idt
 	idt_descr.a = IDT_LIMIT - 1;
-	idt_descr.b = (unsigned int *)ka->vir_idt;
+	idt_descr.b = (unsigned int *)ka->arch_args.vir_idt;
 
 	asm("lidt	%0;"
 		: : "m" (idt_descr));
 
 	// Set up the final gdt
 	gdt_descr.a = GDT_LIMIT - 1;
-	gdt_descr.b = (unsigned int *)ka->vir_gdt;
+	gdt_descr.b = (unsigned int *)ka->arch_args.vir_gdt;
 
 	asm("lgdt	%0;"
 		: : "m" (gdt_descr));
@@ -354,23 +354,23 @@ static int smp_boot_all_cpus(kernel_args *ka)
 		*tramp_stack_ptr = ((unsigned int)final_stack) + STACK_SIZE * PAGE_SIZE - sizeof(unsigned int);
 		tramp_stack_ptr--;
 		// page dir
-		*tramp_stack_ptr = ka->phys_pgdir;
+		*tramp_stack_ptr = ka->arch_args.phys_pgdir;
 		tramp_stack_ptr--;
 
 		// put a gdt descriptor at the bottom of the stack
 		*((unsigned short *)trampoline_stack) = 0x18-1; // LIMIT
 		*((unsigned int *)(trampoline_stack + 2)) = trampoline_stack + 8;
 		// put the gdt at the bottom
-		memcpy(&((unsigned int *)trampoline_stack)[2], (void *)ka->vir_gdt, 6*4);
+		memcpy(&((unsigned int *)trampoline_stack)[2], (void *)ka->arch_args.vir_gdt, 6*4);
 
 		/* clear apic errors */
-		if(ka->cpu_apic_version[i] & 0xf0) {
+		if(ka->arch_args.cpu_apic_version[i] & 0xf0) {
 			apic_write(APIC_ESR, 0);
 			apic_read(APIC_ESR);
 		}
 
 		/* send (aka assert) INIT IPI */
-		config = (apic_read(APIC_ICR2) & 0x00ffffff) | (ka->cpu_apic_id[i] << 24);
+		config = (apic_read(APIC_ICR2) & 0x00ffffff) | (ka->arch_args.cpu_apic_id[i] << 24);
 		apic_write(APIC_ICR2, config); /* set target pe */
 		config = (apic_read(APIC_ICR1) & 0xfff00000) | 0x0000c500;
 		apic_write(APIC_ICR1, config);
@@ -379,7 +379,7 @@ static int smp_boot_all_cpus(kernel_args *ka)
 		while((apic_read(APIC_ICR1) & 0x00001000) == 0x00001000);
 
 		/* deassert INIT */
-		config = (apic_read(APIC_ICR2) & 0x00ffffff) | (ka->cpu_apic_id[i] << 24);
+		config = (apic_read(APIC_ICR2) & 0x00ffffff) | (ka->arch_args.cpu_apic_id[i] << 24);
 		apic_write(APIC_ICR2, config);
 		config = (apic_read(APIC_ICR1) & 0xfff00000) | 0x00008500;
 
@@ -391,13 +391,13 @@ static int smp_boot_all_cpus(kernel_args *ka)
 		sleep(10000);
 
 		/* is this a local apic or an 82489dx ? */
-		num_startups = (ka->cpu_apic_version[i] & 0xf0) ? 2 : 0;
+		num_startups = (ka->arch_args.cpu_apic_version[i] & 0xf0) ? 2 : 0;
 		for (j = 0; j < num_startups; j++) {
 			/* it's a local apic, so send STARTUP IPIs */
 			apic_write(APIC_ESR, 0);
 
 			/* set target pe */
-			config = (apic_read(APIC_ICR2) & 0xf0ffffff) | (ka->cpu_apic_id[i] << 24);
+			config = (apic_read(APIC_ICR2) & 0xf0ffffff) | (ka->arch_args.cpu_apic_id[i] << 24);
 			apic_write(APIC_ICR2, config);
 
 			/* send the IPI */
@@ -439,9 +439,9 @@ void calculate_apic_timer_conversion_factor(kernel_args *ka)
 
 	count = 0xffffffff - count;
 
-	ka->apic_time_cv_factor = (unsigned int)((1000000.0/(t2 - t1)) * count);
+	ka->arch_args.apic_time_cv_factor = (unsigned int)((1000000.0/(t2 - t1)) * count);
 	
-	dprintf("APIC ticks/sec = %d\n", ka->apic_time_cv_factor);
+	dprintf("APIC ticks/sec = %d\n", ka->arch_args.apic_time_cv_factor);
 }
 
 int smp_boot(kernel_args *ka)
@@ -454,20 +454,20 @@ int smp_boot(kernel_args *ka)
 //		dprintf("smp_boot: had found > 1 cpus\n");
 //		dprintf("post config:\n");
 //		dprintf("num_cpus = 0x%p\n", ka->num_cpus);
-//		dprintf("apic_phys = 0x%p\n", ka->apic_phys);
-//		dprintf("ioapic_phys = 0x%p\n", ka->ioapic_phys);
+//		dprintf("apic_phys = 0x%p\n", ka->arch_args.apic_phys);
+//		dprintf("ioapic_phys = 0x%p\n", ka->arch_args.ioapic_phys);
 
 		// map in the apic & ioapic
-		map_page(ka, ka->apic_phys, ka->virt_alloc_range[0].start + ka->virt_alloc_range[0].size);
-		ka->apic = (unsigned int *)(ka->virt_alloc_range[0].start + ka->virt_alloc_range[0].size);
+		map_page(ka, ka->arch_args.apic_phys, ka->virt_alloc_range[0].start + ka->virt_alloc_range[0].size);
+		ka->arch_args.apic = (unsigned int *)(ka->virt_alloc_range[0].start + ka->virt_alloc_range[0].size);
 		ka->virt_alloc_range[0].size += PAGE_SIZE;
 
-		map_page(ka, ka->ioapic_phys, ka->virt_alloc_range[0].start + ka->virt_alloc_range[0].size);
-		ka->ioapic = (unsigned int *)(ka->virt_alloc_range[0].start + ka->virt_alloc_range[0].size);
+		map_page(ka, ka->arch_args.ioapic_phys, ka->virt_alloc_range[0].start + ka->virt_alloc_range[0].size);
+		ka->arch_args.ioapic = (unsigned int *)(ka->virt_alloc_range[0].start + ka->virt_alloc_range[0].size);
 		ka->virt_alloc_range[0].size += PAGE_SIZE;
 
-//		dprintf("apic = 0x%p\n", ka->apic);
-//		dprintf("ioapic = 0x%p\n", ka->ioapic);
+//		dprintf("apic = 0x%p\n", ka->arch_args.apic);
+//		dprintf("ioapic = 0x%p\n", ka->arch_args.ioapic);
 	
 		// set up the apic
 		smp_setup_apic(ka);
@@ -487,8 +487,8 @@ int smp_boot(kernel_args *ka)
 
 int smp_get_current_cpu(kernel_args *ka)
 {
-	if(ka->apic == NULL)
+	if(ka->arch_args.apic == NULL)
 		return 0;
 	else
-		return ka->cpu_os_id[(apic_read(APIC_ID) & 0xffffffff) >> 24];
+		return ka->arch_args.cpu_os_id[(apic_read(APIC_ID) & 0xffffffff) >> 24];
 }

@@ -3,7 +3,7 @@ DEV_OBJ_DIR = $(DEV_DIR)/$(OBJ_DIR)
 DEV_OBJS = \
 	$(DEV_OBJ_DIR)/devs.o
 
-DEV_INCLUDES = -Iinclude -Iboot/$(ARCH) -I$(DEV_DIR)
+DEV_INCLUDES = -Iinclude
 DEV_SUB_INCLUDES =
 
 include $(DEV_DIR)/common/common.mk

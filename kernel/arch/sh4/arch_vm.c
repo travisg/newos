@@ -1,6 +1,6 @@
 #include <kernel/kernel.h>
 #include <kernel/debug.h>
-#include <stage2.h>
+#include <boot/stage2.h>
 
 int arch_vm_init(kernel_args *ka)
 {

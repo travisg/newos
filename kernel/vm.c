@@ -6,7 +6,7 @@
 #include <kernel/vm_priv.h>
 #include <kernel/debug.h>
 #include <kernel/console.h>
-#include <stage2.h>
+#include <boot/stage2.h>
 #include <kernel/int.h>
 #include <kernel/smp.h>
 #include <kernel/sem.h>

@@ -29,7 +29,7 @@ int arch_vm_init2(kernel_args *ka)
 	vm_mark_page_range_inuse(0xa0000 / PAGE_SIZE, (0x100000 - 0xa0000) / PAGE_SIZE);
 
 	// account for the segment descriptor
-	gdt = (unsigned int *)ka->vir_gdt;	
+	gdt = (unsigned int *)ka->arch_args.vir_gdt;	
 	vm_create_area(vm_get_kernel_aspace(), "gdt", (void *)&gdt, AREA_ALREADY_MAPPED, PAGE_SIZE, LOCK_RW|LOCK_KERNEL);
 
 	return 0;

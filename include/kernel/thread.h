@@ -1,7 +1,7 @@
 #ifndef _THREAD_H
 #define _THREAD_H
 
-#include <stage2.h>
+#include <boot/stage2.h>
 #include <kernel/vm.h>
 #include <kernel/smp.h>
 #include <kernel/arch/thread_struct.h>
