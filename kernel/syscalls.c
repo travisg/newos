@@ -16,8 +16,6 @@
 int syscall_dispatcher(unsigned long call_num, unsigned long arg0, unsigned long arg1,
 	unsigned long arg2, unsigned long arg3, unsigned long arg4, unsigned long arg5, uint64 *call_ret)
 {
-	int ret = INT_RESCHEDULE;
-
 //	dprintf("syscall_dispatcher: call 0x%x, arg0 0x%x, arg1 0x%x arg2 0x%x arg3 0x%x arg4 0x%x\n",
 //		call_num, arg0, arg1, arg2, arg3, arg4);
 
@@ -131,12 +129,29 @@ int syscall_dispatcher(unsigned long call_num, unsigned long arg0, unsigned long
 		case SYSCALL_VM_GET_REGION_INFO:
 			*call_ret = vm_get_region_info((region_id)arg0, (vm_region_info *)arg1);
 			break;
+		case SYSCALL_THREAD_CREATE_THREAD:
+			*call_ret = thread_create_user_thread((char *)arg0, thread_get_current_thread()->proc->id, (int)arg1, (addr)arg2);
+			break;
+		case SYSCALL_THREAD_KILL_THREAD:
+			*call_ret = thread_kill_thread((thread_id)arg0);
+			break;
+		case SYSCALL_THREAD_SUSPEND_THREAD:
+			*call_ret = thread_suspend_thread((thread_id)arg0);
+			break;
+		case SYSCALL_THREAD_RESUME_THREAD:
+			*call_ret = thread_resume_thread((thread_id)arg0);
+			break;
+		case SYSCALL_PROC_KILL_PROC:
+			*call_ret = proc_kill_proc((proc_id)arg0);
+			break;
+		case SYSCALL_GET_CURRENT_PROC_ID:
+			*call_ret = proc_get_current_proc_id();
+			break;
 		default:
 			*call_ret = -1;
-			ret = INT_NO_RESCHEDULE;
 	}
 
 //	dprintf("syscall_dispatcher: done with syscall 0x%x\n", call_num);
 
-	return ret;
+	return INT_RESCHEDULE;
 }

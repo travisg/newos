@@ -101,11 +101,12 @@ void thread_start_threading();
 void thread_snooze(time_t time);
 int thread_init(kernel_args *ka);
 void thread_exit(int retcode);
+int thread_kill_thread(thread_id id);
+int thread_kill_thread_nowait(thread_id id);
 struct thread *thread_get_current_thread();
 struct thread *thread_get_thread_struct(thread_id id);
 thread_id thread_get_current_thread_id();
 int thread_wait_on_thread(thread_id id, int *retcode);
-int proc_wait_on_proc(proc_id id, int *retcode);
 
 thread_id thread_create_user_thread(char *name, proc_id pid, int priority, addr entry);
 thread_id thread_create_kernel_thread(const char *name, int (*func)(void), int priority);
@@ -113,6 +114,8 @@ thread_id thread_create_kernel_thread(const char *name, int (*func)(void), int p
 struct proc *proc_get_kernel_proc();
 proc_id proc_create_proc(const char *path, const char *name, int priority);
 int proc_kill_proc(proc_id);
+int proc_wait_on_proc(proc_id id, int *retcode);
+proc_id proc_get_current_proc_id();
 
 #if 1
 // XXX remove later

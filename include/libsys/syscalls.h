@@ -81,7 +81,13 @@ int sys_sem_release_etc(sem_id id, int count, int flags);
 thread_id sys_get_current_thread_id();
 void sys_exit(int retcode);
 proc_id sys_proc_create_proc(const char *path, const char *name, int priority);
+thread_id sys_thread_create_thread(const char *name, int priority, addr entry);
 int sys_thread_wait_on_thread(thread_id tid, int *retcode);
+int sys_thread_suspend_thread(thread_id tid);
+int sys_thread_resume_thread(thread_id tid);
+int sys_thread_kill_thread(thread_id tid);
+int sys_proc_kill_proc(proc_id pid);
+proc_id sys_get_current_proc_id();
 int sys_proc_wait_on_proc(proc_id pid, int *retcode);
 region_id sys_vm_create_anonymous_region(char *name, void **address, int addr_type,
 	addr size, int wiring, int lock);

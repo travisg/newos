@@ -42,6 +42,8 @@ static void *proc_hash = NULL;
 static struct proc *kernel_proc = NULL;
 static proc_id next_proc_id = 0;
 static int proc_spinlock = 0;
+	// NOTE: PROC lock can be held over a THREAD lock acquisition, 
+	// but not the other way (to avoid deadlock)
 #define GRAB_PROC_LOCK() acquire_spinlock(&proc_spinlock)
 #define RELEASE_PROC_LOCK() release_spinlock(&proc_spinlock)
 
@@ -80,6 +82,7 @@ static struct thread *thread_get_thread_struct_locked(thread_id id);
 static struct proc *proc_get_proc_struct(proc_id id);
 static struct proc *proc_get_proc_struct_locked(proc_id id);
 static void thread_kthread_exit();
+static void deliver_signal(struct thread *t, int signal);
 
 // insert a thread onto the tail of a queue	
 void thread_enqueue(struct thread *t, struct thread_queue *q)
@@ -182,6 +185,7 @@ static void remove_thread_from_proc(struct proc *p, struct thread *t)
 			p->num_threads--;
 			break;
 		}
+		last = temp;
 	}
 }
 
@@ -266,6 +270,9 @@ static int _create_user_thread_kentry(void)
 	struct thread *t;
 
 	t = thread_get_current_thread();
+
+	// a signal may have been delivered here
+	thread_atkernel_exit();		
 
 	// jump to the entry point in user space
 	arch_thread_enter_uspace((addr)t->args, t->user_stack_base + STACK_SIZE);
@@ -392,7 +399,10 @@ int thread_suspend_thread(thread_id id)
 	}
 	
 	if(t != NULL) {
-		if(t->in_kernel == true && t->proc != kernel_proc) {
+		if(t->proc == kernel_proc) {
+			// no way
+			retval = ERR_NOT_ALLOWED;
+		} else if(t->in_kernel == true) {
 			t->pending_signals |= SIG_SUSPEND;
 		} else {
 			t->next_state = THREAD_STATE_SUSPENDED;
@@ -860,11 +870,6 @@ void thread_exit(int retcode)
 	
 	dprintf("thread 0x%x exiting w/return code 0x%x\n", t->id, retcode);
 
-	if(p->state == PROC_STATE_DEATH) {
-		// this process is already being deleted, just quit and let that code handle it
-		return;
-	}
-
 	// delete the user stack region first
 	if(p->aspace_id >= 0 && t->user_stack_region_id >= 0) {
 		region_id rid = t->user_stack_region_id;
@@ -880,8 +885,8 @@ void thread_exit(int retcode)
 		remove_thread_from_proc(p, t);
 		t->proc = kernel_proc;
 		insert_thread_into_proc(kernel_proc, t);
-		if(p->num_threads <= 0 || p->main_thread == t) {
-			// this was the last or main thread in this process
+		if(p->main_thread == t) {
+			// this was main thread in this process
 			delete_proc = true;
 			hash_remove(proc_hash, p);
 			p->state = PROC_STATE_DEATH;
@@ -900,7 +905,25 @@ void thread_exit(int retcode)
 	if(delete_proc) {
 		if(p->num_threads > 0) {
 			// there are other threads still in this process,
-			// XXX kill the process
+			// cycle through and signal kill on each of the threads
+			// XXX this can be optimized. There's got to be a better solution.
+			struct thread *temp_thread;
+			
+			state = int_disable_interrupts();
+			GRAB_PROC_LOCK();
+			// we can safely walk the list because of the lock. no new threads can be created
+			// because of the PROC_STATE_DEATH flag on the process
+			for(temp_thread = p->thread_list; temp_thread; temp_thread = temp_thread->proc_next) {
+				thread_kill_thread_nowait(temp_thread->id);
+			}
+			RELEASE_PROC_LOCK();
+			int_restore_interrupts(state);
+
+			// Now wait for all of the threads to die
+			// XXX block on a semaphore
+			while((volatile int)p->num_threads > 0) {
+				thread_snooze(10000); // 10 ms
+			}
 		}
 		vm_delete_aspace(p->aspace_id);
 		vfs_free_ioctx(p->ioctx);
@@ -937,6 +960,53 @@ void thread_exit(int retcode)
 	}
 
 	panic("never can get here\n");
+}
+
+static int _thread_kill_thread(thread_id id, bool wait_on)
+{
+	int state;
+	struct thread *t;
+	int rc;
+
+	dprintf("_thread_kill_thread: id %d, wait_on %d\n", id, wait_on);
+
+	state = int_disable_interrupts();
+	GRAB_THREAD_LOCK();
+
+	t = thread_get_thread_struct_locked(id);
+	if(t != NULL) {
+		if(t->proc == kernel_proc) {
+			// can't touch this
+			rc = ERR_NOT_ALLOWED;
+		} else {
+			deliver_signal(t, SIG_KILL);
+			rc = NO_ERROR;
+			if(t->id == CURR_THREAD->id)
+				wait_on = false; // can't wait on ourself
+		}
+	} else {
+		rc = ERR_INVALID_HANDLE;
+	}
+
+	RELEASE_THREAD_LOCK();
+	int_restore_interrupts(state);
+	if(rc < 0)
+		return rc;
+
+	if(wait_on)
+		thread_wait_on_thread(id, NULL);
+
+	return rc;
+}
+
+int thread_kill_thread(thread_id id)
+{
+	return _thread_kill_thread(id, true);
+}
+
+int thread_kill_thread_nowait(thread_id id)
+{
+	return _thread_kill_thread(id, false);
 }
 
 static void thread_kthread_exit()
@@ -1369,6 +1439,11 @@ struct proc *proc_get_kernel_proc()
 	return kernel_proc;
 }
 
+proc_id proc_get_current_proc_id()
+{
+	return CURR_THREAD->proc->id;
+}
+
 static struct proc *create_proc_struct(const char *name, bool kernel)
 {
 	struct proc *p;
@@ -1528,6 +1603,7 @@ int proc_kill_proc(proc_id id)
 	int state;
 	struct proc *p;
 	struct thread *t;
+	thread_id tid = -1;
 	int retval = 0;
 	
 	state = int_disable_interrupts();
@@ -1535,19 +1611,20 @@ int proc_kill_proc(proc_id id)
 	
 	p = proc_get_proc_struct_locked(id);
 	if(p != NULL) {
-		if(p->state != PROC_STATE_NORMAL) {
-			retval = -1;
-		} else {
-			p->state = PROC_STATE_DEATH;
-		}
+		tid = p->main_thread->id;
 	} else {
 		retval = ERR_INVALID_HANDLE;
 	}
-	hash_remove(proc_hash, p);
 
 	RELEASE_PROC_LOCK();
 	int_restore_interrupts(state);
+	if(retval < 0)
+		return retval;
 
+	// just kill the main thread in the process. The cleanup code there will
+	// take care of the process
+	return thread_kill_thread(tid);
+#if 0
 	// now suspend all of the threads in this process. It's safe to walk this process's
 	// thread list without the lock held because the state of this process is now DEATH
 	// so all of the operations that involve changing the thread list are blocked
@@ -1566,10 +1643,35 @@ int proc_kill_proc(proc_id id)
 	// will clean it up when it dies.
 
 	// XXX not finished
-	
+#endif
 	return retval;
 }
 
+// sets the pending signal flag on a thread and possibly does some work to wake it up, etc.
+// expects the thread lock to be held
+static void deliver_signal(struct thread *t, int signal)
+{
+	dprintf("deliver_signal: thread 0x%x (%d), signal %d\n", t, t->id, signal);
+	switch(signal) {
+		case SIG_KILL:
+			t->pending_signals |= SIG_KILL;
+			switch(t->state) {
+				case THREAD_STATE_SUSPENDED:
+					t->state = THREAD_STATE_READY;
+					t->next_state = THREAD_STATE_READY;
+
+					thread_enqueue_run_q(t);				
+					break;
+				case THREAD_STATE_WAITING:
+					// XXX wake it up
+				default:
+					;
+			}
+			break;
+		default:
+			t->pending_signals |= signal;
+	}
+}
 
 // expects the thread lock to be held
 static void _check_for_thread_sigs(struct thread *t, int state)

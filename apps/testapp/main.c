@@ -8,6 +8,17 @@
 #include <libsys/syscalls.h>
 #include <libsys/stdio.h>
 
+int test_thread()
+{
+	thread_id tid = sys_get_current_thread_id();
+
+	sys_snooze(1000000);
+	for(;;) {
+		printf("%c", 'a' + tid);
+	}
+	return 0;
+}
+
 int main()
 {
 	int fd;
@@ -34,7 +45,7 @@ int main()
 
 	for(;;);
 #endif
-#if 1
+#if 0
 	printf("waiting 5 seconds\n");
 	sys_snooze(5000000);
 #endif
@@ -98,7 +109,28 @@ int main()
 		sys_close(fd);		
 	}
 #endif
+#if 1
+	{
+		thread_id tids[10];
+		int i;
 
+		for(i=0; i<10; i++) {
+			tids[i] = sys_thread_create_thread("foo", 10, (addr)&test_thread);
+			sys_thread_resume_thread(tids[i]);
+		}
+	
+		sys_snooze(5000000);
+		sys_proc_kill_proc(sys_get_current_proc_id());
+/*
+		sys_snooze(3000000);
+		for(i=0; i<10; i++) {
+			sys_thread_kill_thread(tids[i]);
+		}
+		printf("thread_is dead\n");
+		sys_snooze(5000000);
+*/
+	}
+#endif
 	printf("exiting w/return code %d\n", rc);
 	return rc;
 }
