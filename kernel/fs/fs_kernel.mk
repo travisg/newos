@@ -1,6 +1,5 @@
 KERNEL_FS_DIR = $(KERNEL_DIR)/fs
 KERNEL_OBJS += \
-		$(KERNEL_FS_DIR)/devfs.o \
 		$(KERNEL_FS_DIR)/rootfs.o
 
 

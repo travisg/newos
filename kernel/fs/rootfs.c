@@ -10,16 +10,24 @@
 
 #include "rootfs.h"
 
+struct rootfs_stream {
+	char *name;
+	stream_type type;
+	// only type of stream supported by rootfs
+	struct stream_dir {
+		struct rootfs_vnode *dir_head;
+	} dir;
+};
+
 struct rootfs_vnode {
 	struct rootfs_vnode *all_next;
 	int id;
 	char *name;
-	file_type type;
 	bool vfs_has;
 	void *redir_vnode;
-	struct rootfs_vnode *dir_head;
 	struct rootfs_vnode *parent;
 	struct rootfs_vnode *dir_next;
+	struct rootfs_stream stream;
 };
 
 struct rootfs {
@@ -31,7 +39,9 @@ struct rootfs {
 	struct rootfs_vnode *root_vnode;
 };
 
-struct rootfs_dircookie {
+struct rootfs_cookie {
+	// dircookie, dirs are only types of streams supported by rootfs
+	struct rootfs_stream *s;
 	struct rootfs_vnode *ptr;
 };
 
@@ -65,13 +75,15 @@ static int rootfs_delete_vnode(struct rootfs *fs, struct rootfs_vnode *v, bool f
 {
 	// cant delete it if it's in a directory or is a directory
 	// and has children
-	if(!force_delete && (v->dir_head != NULL || v->dir_next != NULL)) {
+	if(!force_delete && ((v->stream.type == STREAM_TYPE_DIR && v->stream.dir.dir_head != NULL) || v->dir_next != NULL)) {
 		return -1;
 	}
 
 	// remove it from the global hash table
 	hash_remove(fs->vnode_list_hash, v);
 
+	if(v->stream.name != NULL)
+		kfree(v->stream.name);
 	if(v->name != NULL)
 		kfree(v->name);
 	kfree(v);
@@ -83,7 +95,10 @@ static struct rootfs_vnode *rootfs_find_in_dir(struct rootfs_vnode *dir, const c
 {
 	struct rootfs_vnode *v;
 
-	v = dir->dir_head;
+	if(dir->stream.type != STREAM_TYPE_DIR)
+		return NULL;
+
+	v = dir->stream.dir.dir_head;
 	while(v != NULL) {
 //		dprintf("rootfs_find_in_dir: looking at entry '%s'\n", v->name);
 		if(strncmp(v->name, &path[start], end - start) == 0) {
@@ -97,9 +112,38 @@ static struct rootfs_vnode *rootfs_find_in_dir(struct rootfs_vnode *dir, const c
 
 static int rootfs_insert_in_dir(struct rootfs_vnode *dir, struct rootfs_vnode *v)
 {
-	v->dir_next = dir->dir_head;
-	dir->dir_head = v;
+	if(dir->stream.type != STREAM_TYPE_DIR)
+		return -1;
+
+	v->dir_next = dir->stream.dir.dir_head;
+	dir->stream.dir.dir_head = v;
 	return 0;
+}
+
+static struct rootfs_stream *
+rootfs_get_stream_from_vnode(struct rootfs_vnode *v, const char *stream, stream_type stream_type)
+{
+	// rootfs only supports a single stream that is:
+	//   type STREAM_TYPE_DIR,
+	//   named ""
+//	dprintf("rootfs_get_stream_from_vnode: entry\n");
+
+	if(stream_type != STREAM_TYPE_DIR || stream[0] != '\0')
+		return NULL;
+	
+//	dprintf("1\n");
+	
+	if(v->stream.type != stream_type)
+		return NULL;
+
+//	dprintf("2\n");
+	
+	if(v->stream.name[0] != '\0')
+		return NULL;
+
+//	dprintf("rootfs_get_stream_from_vnode: returning 0x%x\n", &v->stream);
+		
+	return &v->stream;
 }
 
 // get the vnode this path represents, or sets the redir boolean to true if it hits a registered mountpoint
@@ -109,6 +153,7 @@ rootfs_get_vnode_from_path(struct rootfs *fs, struct rootfs_vnode *base, const c
 {
 	int end = 0;
 	struct rootfs_vnode *cur_vnode;
+	struct rootfs_stream *s;
 	
 	TOUCH(fs);
 	
@@ -116,7 +161,8 @@ rootfs_get_vnode_from_path(struct rootfs *fs, struct rootfs_vnode *base, const c
 
 	cur_vnode = base;
 	while(vfs_helper_getnext_in_path(path, start, &end) > 0) {
-		if(cur_vnode->type != FILE_TYPE_DIR)
+		s = rootfs_get_stream_from_vnode(cur_vnode, "", STREAM_TYPE_DIR);
+		if(s == NULL)
 			return NULL;
 
 		if(cur_vnode->redir_vnode != NULL) {
@@ -156,6 +202,9 @@ rootfs_get_container_vnode_from_path(struct rootfs *fs, struct rootfs_vnode *bas
 
 	cur_vnode = base;
 	while(vfs_helper_getnext_in_path(path, start, &end) > 0) {
+		dprintf("start = %d, end = %d\n", *start, end);
+		dprintf("cur = 0x%x, last = 0x%x\n", cur_vnode, last_vnode);
+
 		if(last_vnode != NULL && last_vnode->redir_vnode != NULL) {
 			// we are at a mountpoint, redirect here
 			*redir = true;
@@ -171,7 +220,7 @@ rootfs_get_container_vnode_from_path(struct rootfs *fs, struct rootfs_vnode *bas
 		}
 		
 		last_vnode = cur_vnode;
-		if(cur_vnode == NULL || cur_vnode->type != FILE_TYPE_DIR)
+		if(cur_vnode == NULL || rootfs_get_stream_from_vnode(cur_vnode, "", STREAM_TYPE_DIR) == NULL)
 			return NULL;
 		cur_vnode = rootfs_find_in_dir(cur_vnode, path, *start, end);
 		*start = end;
@@ -223,14 +272,16 @@ int rootfs_mount(void **fs_cookie, void *flags, void *covered_vnode, fs_id id, v
 		err = -1;
 		goto err2;
 	}
+
+	// create a vnode
 	v = rootfs_create_vnode(fs);
 	if(v == NULL) {
 		err = -1;
 		goto err3;
 	}
-	
+
+	// set it up	
 	v->parent = v;
-	v->type = FILE_TYPE_DIR;
 	v->name = kmalloc(strlen("") + 1);
 	if(v->name == NULL) {
 		err = -1;
@@ -239,6 +290,16 @@ int rootfs_mount(void **fs_cookie, void *flags, void *covered_vnode, fs_id id, v
 	strcpy(v->name, "");
 	v->vfs_has = true;
 	
+	// create a dir stream for it to hold
+	v->stream.name = kmalloc(strlen("") + 1);
+	if(v->stream.name == NULL) {
+		err = -1;
+		goto err4;
+	}
+	strcpy(v->stream.name, "");
+	v->stream.type = STREAM_TYPE_DIR;
+	v->stream.dir.dir_head = NULL;
+
 	fs->root_vnode = v;
 	*root_vnode = v;
 	*fs_cookie = fs;
@@ -320,40 +381,49 @@ int rootfs_dispose_vnode(void *_fs, void *_v)
 	return 0;
 }
 
-int rootfs_opendir(void *_fs, void *_base_vnode, const char *path, void **passthru, void **_vnode, void **_dircookie)
+int rootfs_open(void *_fs, void *_base_vnode, const char *path, const char *stream, stream_type stream_type, void **_vnode, void **_cookie, struct redir_struct *redir)
 {
 	struct rootfs *fs = _fs;
 	struct rootfs_vnode *base = _base_vnode;
 	struct rootfs_vnode *v;
-	struct rootfs_dircookie *cookie;
+	struct rootfs_cookie *cookie;
+	struct rootfs_stream *s;
 	int err = 0;
-	bool redir;
 	int start = 0;
 
-	dprintf("rootfs_opendir: path '%s', base_vnode 0x%x\n", path, base);
+	dprintf("rootfs_open: path '%s', stream '%s', stream_type %d, base_vnode 0x%x\n", path, stream, stream_type, base);
 
 	sem_acquire(fs->sem, 1);
 
-	v = rootfs_get_vnode_from_path(fs, base, path, &start, &redir);
+	v = rootfs_get_vnode_from_path(fs, base, path, &start, &redir->redir);
 	if(v == NULL) {
 		err = -1;
 		goto err;
 	}
-	if(redir == true) {
+	if(redir->redir == true) {
 		// loop back into the vfs because the parse hit a mount point
 		sem_release(fs->sem, 1);
-		return vfs_opendir_loopback(v->redir_vnode, &path[start], passthru, _vnode, _dircookie);
+		redir->vnode = v->redir_vnode;
+		redir->path = &path[start];
+		return 0;
 	}
 	
-	cookie = kmalloc(sizeof(struct rootfs_dircookie));
+	s = rootfs_get_stream_from_vnode(v, stream, stream_type);
+	if(s == NULL) {
+		err = -1;
+		goto err;
+	}
+	
+	cookie = kmalloc(sizeof(struct rootfs_cookie));
 	if(cookie == NULL) {
 		err = -1;
 		goto err;
 	}
 
-	cookie->ptr = v->dir_head;
+	cookie->s = s;
+	cookie->ptr = s->dir.dir_head;
 
-	*_dircookie = cookie;
+	*_cookie = cookie;
 	*_vnode = v;	
 
 err:	
@@ -362,64 +432,108 @@ err:
 	return err;
 }
 
-int rootfs_readdir(void *_fs, void *_dir_vnode, void *_dircookie, void *buf, unsigned int *buf_len)
+int rootfs_seek(void *_fs, void *_vnode, void *_cookie, off_t pos, seek_type seek_type)
 {
 	struct rootfs *fs = _fs;
-	struct rootfs_dircookie *cookie = _dircookie;
+	struct rootfs_vnode *v = _vnode;
+	struct rootfs_cookie *cookie = _cookie;
 	int err = 0;
-	struct dirent *de = buf;
 
-	TOUCH(_dir_vnode);
+	dprintf("rootfs_seek: vnode 0x%x, cookie 0x%x, pos 0x%x 0x%x, seek_type %d\n", v, cookie, pos, seek_type);
+	
+	sem_acquire(fs->sem, 1);
+	
+	switch(cookie->s->type) {
+		case STREAM_TYPE_DIR:
+			switch(seek_type) {
+				// only valid args are seek_type SEEK_SET, pos 0.
+				// this rewinds to beginning of directory
+				case SEEK_SET:
+					if(pos == 0) {
+						cookie->ptr = cookie->s->dir.dir_head;
+					} else {
+						err = -1;
+					}
+					break;
+				case SEEK_START:
+				case SEEK_END:
+				default:
+					err = -1;
+			}
+		case STREAM_TYPE_FILE:
+		default:
+			err = -1;
+	}
 
-	dprintf("rootfs_readdir: vnode 0x%x, cookie 0x%x\n", _dir_vnode, cookie);
+	sem_release(fs->sem, 1);
+
+	return err;
+}
+
+int rootfs_read(void *_fs, void *_vnode, void *_cookie, void *buf, off_t pos, size_t *len)
+{
+	struct rootfs *fs = _fs;
+	struct rootfs_vnode *v = _vnode;
+	struct rootfs_cookie *cookie = _cookie;
+	int err = 0;
+
+	dprintf("rootfs_read: vnode 0x%x, cookie 0x%x, pos 0x%x 0x%x, len 0x%x\n", v, cookie, pos, len);
 
 	sem_acquire(fs->sem, 1);
 	
-	if(cookie->ptr == NULL) {
-		*buf_len = 0;
-		goto err;
+	switch(cookie->s->type) {
+		case STREAM_TYPE_DIR: {
+			struct dirent *de = buf;
+
+			// only type really supported by rootfs
+			if(cookie->ptr == NULL) {
+				*len = 0;
+				goto err;
+			}
+
+			if(sizeof(struct dirent) + strlen(cookie->ptr->name) + 1 > *len) {
+				*len = 0;
+				err = -1;
+				goto err;
+			}
+			
+			strcpy(de->name, cookie->ptr->name);
+			de->name_len = strlen(cookie->ptr->name) + 1;
+			*len = sizeof(struct dirent) + de->name_len;
+			
+			cookie->ptr = cookie->ptr->dir_next;
+			break;
+		}
+		case STREAM_TYPE_FILE:
+		default:
+			err = -1;
 	}
-		
-	if(sizeof(struct dirent) + strlen(cookie->ptr->name) + 1 > *buf_len) {
-		*buf_len = 0;
-		err = -1;
-		goto err;
-	}
-	
-	strcpy(de->name, cookie->ptr->name);
-	de->name_len = strlen(cookie->ptr->name) + 1;
-	*buf_len = sizeof(struct dirent) + de->name_len;
-	
-	cookie->ptr = cookie->ptr->dir_next;
-	
+
 err:
 	sem_release(fs->sem, 1);
 
 	return err;
 }
 
-int rootfs_rewinddir(void *_fs, void *_dir_vnode, void *_dircookie)
+int rootfs_write(void *_fs, void *_vnode, void *_cookie, const void *buf, off_t pos, size_t *len)
 {
-	struct rootfs *fs = _fs;
-	struct rootfs_vnode *dir = _dir_vnode;
-	struct rootfs_dircookie *cookie = _dircookie;
+	TOUCH(_fs);TOUCH(_vnode);TOUCH(_cookie);TOUCH(buf);TOUCH(pos);TOUCH(len);
 	
-	dprintf("rootfs_rewinddir: entry vnode 0x%x, cookie 0x%x\n", dir, cookie);
-	
-	sem_acquire(fs->sem, 1);
-
-	cookie->ptr = dir->dir_head;
-
-	sem_release(fs->sem, 1);
-
-	return 0;
+	return -1;
 }
 
-int rootfs_closedir(void *_fs, void *_dir_vnode, void *_closedir)
+int rootfs_close(void *_fs, void *_vnode, void *_cookie)
 {
-	TOUCH(_fs);TOUCH(_closedir);
+	struct rootfs *fs = _fs;
+	struct rootfs_vnode *v = _vnode;
+	struct rootfs_cookie *cookie = _cookie;
 
-	dprintf("rootfs_closedir: entry vnode 0x%x\n", _dir_vnode);
+	TOUCH(fs);
+
+	dprintf("rootfs_close: entry vnode 0x%x, cookie 0x%x\n", v, cookie);
+
+	if(cookie)
+		kfree(cookie);
 
 	return 0;
 }
@@ -436,120 +550,102 @@ int rootfs_freedircookie(void *_fs, void *_vnode, void *_dircookie)
 	return 0;
 }
 
-int rootfs_mkdir(void *_fs, void *_base_vnode, const char *path)
+int rootfs_create(void *_fs, void *_base_vnode, const char *path, const char *stream, stream_type stream_type, struct redir_struct *redir)
 {
 	struct rootfs *fs = _fs;
 	struct rootfs_vnode *base = _base_vnode;
 	struct rootfs_vnode *dir;
 	struct rootfs_vnode *new_vnode;
-	bool redir;
+	struct rootfs_stream *s;
 	int start = 0;
 	int err;
-	
-	dprintf("rootfs_mkdir: base 0x%x, path = '%s'\n", base, path);
+	bool created_vnode = false;
+
+	dprintf("rootfs_create: base 0x%x, path = '%s', stream = '%s', stream_type = %d\n", base, path, stream, stream_type);
 	
 	sem_acquire(fs->sem, 1);
 	
-	dir = rootfs_get_container_vnode_from_path(fs, base, path, &start, &redir);
+	dir = rootfs_get_container_vnode_from_path(fs, base, path, &start, &redir->redir);
 	if(dir == NULL) {
 		err = -1;
 		goto err;
 	}
-	if(redir == true) {
+	if(redir->redir == true) {
 		sem_release(fs->sem, 1);
-		return vfs_mkdir_loopback(dir->redir_vnode, &path[start]);
+		redir->vnode = dir->redir_vnode;
+		redir->path = &path[start];
+		return 0;
 	}
-	dprintf("rootfs_mkdir: found container at 0x%x\n", dir);
-	
-	if(rootfs_find_in_dir(dir, path, start, strlen(path) - 1) == NULL) {
+	// we only support stream types of STREAM_TYPE_DIR, and an unnamed one at that
+	if(stream_type != STREAM_TYPE_DIR || stream[0] != '\0') {
+		err = -1;
+		goto err;
+	}		
+
+	new_vnode = rootfs_find_in_dir(dir, path, start, strlen(path) - 1);
+	if(new_vnode == NULL) {
+		dprintf("rootfs_create: creating new vnode\n");
 		new_vnode = rootfs_create_vnode(fs);
 		if(new_vnode == NULL) {
 			err = -1;
 			goto err;
 		}
+		created_vnode = true;
 		new_vnode->name = kmalloc(strlen(&path[start]) + 1);
 		if(new_vnode->name == NULL) {
 			err = -1;
 			goto err1;
 		}
 		strcpy(new_vnode->name, &path[start]);
-		new_vnode->type = FILE_TYPE_DIR;
 		new_vnode->parent = dir;
 		rootfs_insert_in_dir(dir, new_vnode);
+		
+		s = &new_vnode->stream;
+	} else {
+		// we found the vnode
+		dprintf("rootfs_create: found the vnode, possibly creating new stream\n");
+		
+		s = rootfs_get_stream_from_vnode(new_vnode, stream, stream_type);
+		if(s != NULL) {
+			// it already exists, so lets bail
+			err = -1;
+			goto err;
+		} else {
+			// we need to create it
+			
+			// It's already 'created', since it's statically stored in the vnode
+			// right now it's being unused, or we would have found it
+			s = &new_vnode->stream;
+		}
 	}
+	
+	// set up the new stream
+	s->name = kmalloc(strlen(stream) + 1);
+	if(s->name == NULL) {
+		err = -1;
+		goto err1;
+	}
+	strcpy(s->name, stream);
+	s->type = stream_type;
+	switch(s->type) {
+		case STREAM_TYPE_DIR:
+			s->dir.dir_head = NULL;
+			break;
+		case STREAM_TYPE_FILE:
+		default:
+			// not supported
+	}
+	
 	sem_release(fs->sem, 1);
 	return 0;
 
 err1:
-	rootfs_delete_vnode(fs, new_vnode, false);
+	if(created_vnode)
+		rootfs_delete_vnode(fs, new_vnode, false);
 err:
 	sem_release(fs->sem, 1);
 
 	return err;
-}
-
-int rootfs_open(void *_fs, void *_base_vnode, const char *path, void **passthru, void **_vnode, void **_cookie)
-{
-	struct rootfs *fs = _fs;
-	struct rootfs_vnode *base = _base_vnode;
-	struct rootfs_vnode *v;
-	int start = 0;
-	bool redir;
-	int err;
-	
-	TOUCH(_fs);TOUCH(_base_vnode);TOUCH(path);TOUCH(_vnode);TOUCH(_cookie);
-
-	sem_acquire(fs->sem, 1);
-
-	v = rootfs_get_vnode_from_path(fs, base, path, &start, &redir);
-	if(v == NULL) {
-		err = -1;
-		goto err;
-	}
-	if(redir == true) {
-		// loop back into the vfs because the parse hit a mount point
-		sem_release(fs->sem, 1);
-		return vfs_open_loopback(v->redir_vnode, &path[start], passthru, _vnode, _cookie);
-	}
-	// we can't open here
-	err = -1;
-
-err:
-	sem_release(fs->sem, 1);
-
-	return err;
-}
-
-int rootfs_read(void *_fs, void *_vnode, void *_cookie, void *buf, off_t pos, size_t *len)
-{
-	TOUCH(_fs);TOUCH(_vnode);TOUCH(_cookie);TOUCH(buf);TOUCH(pos);TOUCH(len);
-
-	dprintf("rootfs_read called\n");
-
-	return -1;
-}
-
-int rootfs_write(void *_fs, void *_vnode, void *_cookie, const void *buf, off_t pos, size_t *len)
-{
-	TOUCH(_fs);TOUCH(_vnode);TOUCH(_cookie);TOUCH(buf);TOUCH(pos);TOUCH(len);
-
-	dprintf("rootfs_write called\n");
-
-	return -1;
-}
-
-int rootfs_close(void *_fs, void *_vnode, void *_cookie)
-{
-	TOUCH(_fs);TOUCH(_vnode);TOUCH(_cookie);
-
-	return -1;
-}
-
-int rootfs_freecookie(void *_fs, void *_vnode, void *_cookie)
-{
-	TOUCH(_fs);TOUCH(_vnode);TOUCH(_cookie);
-
-	return -1;
 }
 
 struct fs_calls rootfs_calls = {
@@ -558,17 +654,12 @@ struct fs_calls rootfs_calls = {
 	&rootfs_register_mountpoint,
 	&rootfs_unregister_mountpoint,
 	&rootfs_dispose_vnode,
-	&rootfs_opendir,
-	&rootfs_readdir,
-	&rootfs_rewinddir,
-	&rootfs_closedir,
-	&rootfs_freedircookie,
-	&rootfs_mkdir,
 	&rootfs_open,
+	&rootfs_seek,
 	&rootfs_read,
 	&rootfs_write,
 	&rootfs_close,
-	&rootfs_freecookie,
+	&rootfs_create,
 };
 
 // XXX

@@ -9,9 +9,9 @@
 
 int devs_init(kernel_args *ka)
 {
-
+	TOUCH(ka);
+/*
 	console_dev_init(ka);
-
 
 	{
 		int fd;
@@ -47,7 +47,7 @@ int devs_init(kernel_args *ka)
 			vfs_write(fd, "foo", 0, &size);
 		}
 	}
-	
+*/	
 	
 
 	return 0;
