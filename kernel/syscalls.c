@@ -12,10 +12,10 @@
 int syscall_dispatcher(unsigned long call_num, unsigned long arg0, unsigned long arg1,
 	unsigned long arg2, unsigned long arg3, unsigned long arg4, uint64 *call_ret)
 {
-	int ret = INT_NO_RESCHEDULE;
+	int ret = INT_RESCHEDULE;
 
-	dprintf("syscall_dispatcher: call 0x%x, arg0 0x%x, arg1 0x%x arg2 0x%x arg3 0x%x arg4 0x%x\n",
-		call_num, arg0, arg1, arg2, arg3, arg4);
+//	dprintf("syscall_dispatcher: call 0x%x, arg0 0x%x, arg1 0x%x arg2 0x%x arg3 0x%x arg4 0x%x\n",
+//		call_num, arg0, arg1, arg2, arg3, arg4);
 
 	switch(call_num) {
 		case SYSCALL_NULL:
@@ -75,7 +75,7 @@ int syscall_dispatcher(unsigned long call_num, unsigned long arg0, unsigned long
 			ret = INT_NO_RESCHEDULE;
 	}
 
-	dprintf("syscall_dispatcher: done with syscall 0x%x\n", call_num);
+//	dprintf("syscall_dispatcher: done with syscall 0x%x\n", call_num);
 
 	return ret;
 }

@@ -67,8 +67,18 @@ TRAP(trap255, 255)
 .globl int_bottom
 int_bottom:
 	pusha
+	push	%ds
+	push	%es
+	push	%fs
+	push	%gs
+	movw	$0x10,%ax
+	movw	%ax,%ds
 	cld
 	call	i386_handle_trap
+	pop		%gs
+	pop		%fs
+	pop		%es
+	pop		%ds
 	popa
 	addl	$8,%esp
 	iret

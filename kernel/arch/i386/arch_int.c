@@ -22,6 +22,10 @@
 #include <libc/string.h>
 
 struct int_frame {
+	unsigned int gs;
+	unsigned int fs;
+	unsigned int es;
+	unsigned int ds;
 	unsigned int edi;
 	unsigned int esi;
 	unsigned int ebp;
@@ -169,10 +173,13 @@ void i386_handle_trap(struct int_frame frame)
 	}
 	
 	if(ret == INT_RESCHEDULE) {
+		int state = int_disable_interrupts();
 		GRAB_THREAD_LOCK();
 		thread_resched();
 		RELEASE_THREAD_LOCK();
-	}	
+		int_restore_interrupts(state);
+	}
+//	dprintf("0x%x cpu %d!\n", thread_get_current_thread_id(), smp_get_current_cpu());
 }
 
 int arch_int_init(kernel_args *ka)

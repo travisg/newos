@@ -9,7 +9,7 @@ DEPS += $(STAGE2_OBJS:.o=.d)
 
 STAGE2 = $(STAGE2_OBJ_DIR)/stage2
 
-$(STAGE2): $(STAGE2_OBJS) $(LIBS)
+$(STAGE2): $(STAGE2_OBJS) $(KLIBS)
 	$(LD) -dN --script=$(STAGE2_DIR)/stage2.ld -L $(LIBGCC_PATH) $(STAGE2_OBJS) $(KLIBS) $(LIBGCC) -o $@
 
 stage2clean:
