@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -38,7 +38,7 @@ int int_init2(kernel_args *ka)
 	io_handlers = (struct io_handler **)kmalloc(sizeof(struct io_handler *) * NUM_IO_HANDLERS);
 	if(io_handlers == NULL)
 		panic("int_init2: could not create io handler table!\n");
-	
+
 	memset(io_handlers, 0, sizeof(struct io_handler *) * NUM_IO_HANDLERS);
 
 	return arch_int_init2(ka);
@@ -47,7 +47,8 @@ int int_init2(kernel_args *ka)
 int int_set_io_interrupt_handler(int vector, int (*func)(void*), void* data)
 {
 	struct io_handler *io;
-	
+	int state;
+
 	// insert this io handler in the chain of interrupt
 	// handlers registered for this io interrupt
 
@@ -57,10 +58,12 @@ int int_set_io_interrupt_handler(int vector, int (*func)(void*), void* data)
 	io->func = func;
 	io->data = data;
 
+	state = int_disable_interrupts();
 	acquire_spinlock(&int_handler_list_spinlock);
 	io->next = io_handlers[vector];
 	io_handlers[vector] = io;
 	release_spinlock(&int_handler_list_spinlock);
+	int_restore_interrupts(state);
 
 	arch_int_enable_io_interrupt(vector);
 
@@ -70,24 +73,26 @@ int int_set_io_interrupt_handler(int vector, int (*func)(void*), void* data)
 int int_remove_io_interrupt_handler(int vector, int (*func)(void*), void* data)
 {
 	struct io_handler *io, *prev = NULL;
+	int state;
 
 	// lock the structures down so it is not modified while we search
+	state = int_disable_interrupts();
 	acquire_spinlock(&int_handler_list_spinlock);
-	
+
 	// start at the beginning
 	io = io_handlers[vector];
-	
+
 	// while not at end
 	while(io != NULL) {
 		// see if we match both the function & data
 		if (io->func == func && io->data == data)
 			break;
-		
+
 		// Store our backlink and move to next
 		prev = io;
 		io = io->next;
 	}
-	
+
 	// If we found it
 	if (io != NULL) {
 		// unlink it, taking care of the change it was the first in line
@@ -97,8 +102,9 @@ int int_remove_io_interrupt_handler(int vector, int (*func)(void*), void* data)
 			io_handlers[vector] = io->next;
 	}
 
-	// release our lock as we're done with the table	
+	// release our lock as we're done with the table
 	release_spinlock(&int_handler_list_spinlock);
+	int_restore_interrupts(state);
 
 	// and disable the IRQ if nothing left
 	if (io != NULL) {
@@ -115,12 +121,15 @@ int int_io_interrupt_handler(int vector)
 {
 	int ret = INT_NO_RESCHEDULE;
 
+	// XXX rare race condition here. The io_handlers list is not locked
+	// need to find a good way to solve that problem
+
 	if(io_handlers[vector] == NULL) {
 		dprintf("unhandled io interrupt %d\n", vector);
 	} else {
 		struct io_handler *io;
 		int temp_ret;
-		
+
 		io = io_handlers[vector];
 		while(io != NULL) {
 			temp_ret = io->func(io->data);
