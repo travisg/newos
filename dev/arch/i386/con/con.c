@@ -647,7 +647,7 @@ int console_dev_init(kernel_args *ka)
 	vfs_register_filesystem("console_dev_fs", &console_hooks);
 	vfs_create(NULL, "/dev", "", STREAM_TYPE_DIR);
 	vfs_create(NULL, "/dev/console", "", STREAM_TYPE_DIR);
-	vfs_mount("/dev/console", "consolefs");
+	vfs_mount("/dev/console", "console_dev_fs");
 
 	return 0;
 }
