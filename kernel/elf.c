@@ -587,7 +587,7 @@ int elf_load_uspace(const char *path, struct proc *p, int flags, addr *entry)
 				size_t bss_size;
 
 				bss_size=
-					ROUNDUP(pheaders[i].p_memsz+ (pheaders[i].p_vaddr % PAGE_SIZE), PAGE_SIZE),
+					ROUNDUP(pheaders[i].p_memsz+ (pheaders[i].p_vaddr % PAGE_SIZE), PAGE_SIZE)
 					- ROUNDUP(pheaders[i].p_filesz+ (pheaders[i].p_vaddr % PAGE_SIZE), PAGE_SIZE);
 
 				sprintf(region_name, "%s_bss%d", path, 'X');
