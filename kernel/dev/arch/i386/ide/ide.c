@@ -19,7 +19,7 @@
 #include <libc/string.h>
 #include <libc/printf.h>
 
-//#include <dev/arch/i386/ide/ide_bus.h>
+#include <kernel/dev/arch/i386/ide/ide_bus.h>
 
 #include <kernel/fs/devfs.h>
 
@@ -44,7 +44,7 @@ typedef struct
 } ide_ident;
 
 //--------------------------------------------------------------------------------
-int ide_open(dev_ident _ident, dev_cookie *cookie)
+static int ide_open(dev_ident _ident, dev_cookie *cookie)
 {
 	ide_ident* ident = (ide_ident*)_ident;
 	// We hold our 'ident' structure as cookie, as it contains all we need
@@ -54,13 +54,13 @@ int ide_open(dev_ident _ident, dev_cookie *cookie)
 }
 
 //--------------------------------------------------------------------------------
-int ide_close(dev_cookie _cookie)
+static int ide_close(dev_cookie _cookie)
 {
 	return NO_ERROR;
 }
 
 //--------------------------------------------------------------------------------
-int ide_freecookie(dev_cookie cookie)
+static int ide_freecookie(dev_cookie cookie)
 {
 	// We do not have anything to free here, as our cookie is our
 	//  dev_ident as well :)
@@ -68,7 +68,7 @@ int ide_freecookie(dev_cookie cookie)
 }
 
 //--------------------------------------------------------------------------------
-int ide_seek(dev_cookie cookie, off_t pos, seek_type st)
+static int ide_seek(dev_cookie cookie, off_t pos, seek_type st)
 {
 	return ERR_UNIMPLEMENTED;
 }
@@ -97,7 +97,7 @@ static int ide_get_geometry(ide_device* device, void *buf, size_t len)
 
 
 //--------------------------------------------------------------------------------
-int ide_ioctl(dev_cookie _cookie, int op, void *buf, size_t len)
+static int ide_ioctl(dev_cookie _cookie, int op, void *buf, size_t len)
 {
 	ide_ident* cookie = (ide_ident*)_cookie;
 	int err = 0;
@@ -144,7 +144,7 @@ int ide_ioctl(dev_cookie _cookie, int op, void *buf, size_t len)
 }
 
 //--------------------------------------------------------------------------------
-ssize_t ide_read(dev_cookie _cookie, void *buf, off_t pos, ssize_t len)
+static ssize_t ide_read(dev_cookie _cookie, void *buf, off_t pos, ssize_t len)
 {
 	ide_ident*	cookie = (ide_ident*)_cookie;
 	uint32		sectors;
@@ -197,7 +197,7 @@ ssize_t ide_read(dev_cookie _cookie, void *buf, off_t pos, ssize_t len)
 }
 
 //--------------------------------------------------------------------------------
-ssize_t ide_write(dev_cookie _cookie, const void *buf, off_t pos, ssize_t len)
+static ssize_t ide_write(dev_cookie _cookie, const void *buf, off_t pos, ssize_t len)
 {
 	int			block;
 	ide_ident*	cookie = _cookie;
@@ -248,25 +248,25 @@ ssize_t ide_write(dev_cookie _cookie, const void *buf, off_t pos, ssize_t len)
 }
 
 //--------------------------------------------------------------------------------
-int ide_canpage(dev_ident ident)
+static int ide_canpage(dev_ident ident)
 {
 	return false;
 }
 
 //--------------------------------------------------------------------------------
-ssize_t ide_readpage(dev_ident ident, iovecs *vecs, off_t pos)
+static ssize_t ide_readpage(dev_ident ident, iovecs *vecs, off_t pos)
 {
 	return ERR_UNIMPLEMENTED;
 }
 
 //--------------------------------------------------------------------------------
-ssize_t ide_writepage(dev_ident ident, iovecs *vecs, off_t pos)
+static ssize_t ide_writepage(dev_ident ident, iovecs *vecs, off_t pos)
 {
 	return ERR_UNIMPLEMENTED;
 }
 
 //--------------------------------------------------------------------------------
-struct dev_calls ide_hooks = {
+static struct dev_calls ide_hooks = {
 	ide_open,
 	ide_close,
 	ide_freecookie,
@@ -290,7 +290,7 @@ static int ide_interrupt_handler(void* data)
 }
 
 //--------------------------------------------------------------------------------
-ide_ident* ide_create_device_ident(ide_device* dev, int16 partition)
+static ide_ident* ide_create_device_ident(ide_device* dev, int16 partition)
 {
 	ide_ident* ident = kmalloc(sizeof(ide_ident));
 	if (ident != NULL) {

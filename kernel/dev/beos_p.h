@@ -63,7 +63,7 @@ typedef struct module_info module_info;
 
 struct bus_manager_info {
 	module_info		minfo;
-	status_t		(*rescan)();
+	status_t		(*rescan)(void);
 };
 typedef struct bus_manager_info bus_manager_info;
 
@@ -164,5 +164,26 @@ enum {
 
 	B_DEBUGGER_ALREADY_INSTALLED = B_OS_ERROR_BASE + 0x400
 };
+
+
+/*
+ * BeOS functions protypes, same functions as BeOS but with
+ * '_beos_' prepended to the names, the kernel loader
+ * handles the magick of matching the names
+ */
+int _beos_atomic_add(volatile int *val, int incr);
+int _beos_atomic_and(volatile int *val, int incr);
+int _beos_atomic_or(volatile int *val, int incr);
+int _beos_acquire_sem(sem_id id);
+int _beos_acquire_sem_etc(sem_id id, uint32 count, uint32 flags, time_t timeout);
+sem_id _beos_create_sem(uint32 count, const char *name);
+int _beos_delete_sem(sem_id id);
+int _beos_get_sem_count(sem_id id, int32 *count);
+int _beos_release_sem(sem_id id);
+int _beos_release_sem_etc(sem_id id, int32 count, uint32 flags);
+int _beos_strcmp(const char *cs, const char *ct);
+void _beos_spin(time_t microseconds);
+int _beos_get_module(const char *path, module_info **vec);
+int _beos_put_module(const char *path);
 
 #endif

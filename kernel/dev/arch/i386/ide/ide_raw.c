@@ -607,7 +607,7 @@ static void dumpHexLine(uint8 *buffer, int numberPerLine)
   dprintf("\n");
 }
 
-void dumpHexBuffer(uint8 *buffer, int size)
+static void dumpHexBuffer(uint8 *buffer, int size)
 {
   int	numberPerLine = 8;
   int	numberOfLines = size / numberPerLine;
@@ -621,7 +621,7 @@ void dumpHexBuffer(uint8 *buffer, int size)
     }
 }
 
-bool ide_get_partition_info(ide_device *device, tPartition *partition, uint32 position)
+static bool ide_get_partition_info(ide_device *device, tPartition *partition, uint32 position)
 {
 	char buffer[512];
 	uint8* partitionBuffer = buffer;		

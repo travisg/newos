@@ -7,6 +7,7 @@
 #include <kernel/heap.h>
 #include <kernel/fs/devfs.h>
 #include <kernel/vm.h>
+#include <kernel/dev/common/zero.h>
 #include <libc/string.h>
 #include <sys/errors.h>
 

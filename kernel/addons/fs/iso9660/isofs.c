@@ -276,7 +276,7 @@ static void iso_scan_dir(struct isofs* fs, struct isofs_vnode* dir)
 }
 
 //--------------------------------------------------------------------------------
-void iso_init_volume(struct isofs* fs)
+static void iso_init_volume(struct isofs* fs)
 {
 	iso_volume_descriptor voldesc;
 	iso_dir_entry* e;
@@ -362,7 +362,7 @@ err:
 }
 
 //--------------------------------------------------------------------------------
-int isofs_unmount(fs_cookie _fs)
+static int isofs_unmount(fs_cookie _fs)
 {
 	struct isofs *fs = _fs;
 	struct isofs_vnode *v;

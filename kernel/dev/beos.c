@@ -9,6 +9,7 @@
 #include <kernel/debug.h>
 #include <kernel/heap.h>
 #include <kernel/fs/devfs.h>
+#include <kernel/dev/beos.h>
 #include <libc/string.h>
 #include <libc/printf.h>
 
@@ -24,7 +25,7 @@ static uint16 read16(int port);
 static void write16(int port, uint16 data);
 static uint32 read32(int port);
 static void write32(int port, uint32 data);
-static void unhandled_isa_call();
+static void unhandled_isa_call(void);
 
 static int translation_open(dev_ident ident, dev_cookie *cookie);
 static int translation_close(dev_cookie cookie);
@@ -98,7 +99,7 @@ struct module {
 	{ NULL, NULL }
 };
 
-int beos_layer_init()
+int beos_layer_init(void)
 {
 	return 0;
 }
@@ -240,7 +241,7 @@ static void write32(int port, uint32 data)
 	out32(data, port);
 }
 
-static void unhandled_isa_call()
+static void unhandled_isa_call(void)
 {
 	panic("call into unhandled isa function\n");
 }
@@ -456,9 +457,9 @@ image_id beos_load_beos_driver(const char *name)
 	char **names;
 	int i;
 
-	int (*init_hardware)();
-	int (*init_driver)();
-	char **(*publish_devices)();
+	int (*init_hardware)(void);
+	int (*init_driver)(void);
+	char **(*publish_devices)(void);
 	beos_device_hooks *(*find_device)(const char *name);
 	int *api_version;
 
@@ -523,7 +524,7 @@ image_id beos_load_beos_driver(const char *name)
 }
 #else
 
-int beos_layer_init()
+int beos_layer_init(void)
 {
 	return 0;
 }
