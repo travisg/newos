@@ -6,10 +6,12 @@ include $(addsuffix /makefile, $(addprefix $(KERNEL_ADDONS_MODULES_DIR)/, \
 	generic/blkman \
 	generic/locked_pool \
 	generic/scsi_periph \
-	bus_managers/ide \
 	bus_managers/isa \
-	bus_managers/scsi \
 	bus_managers/pci \
+	bus_managers/ide \
 	busses/ide/ide_isa \
+	bus_managers/scsi \
+	bus_managers/usb \
+	busses/usb/ohci \
 	arch/$(ARCH) \
 ))

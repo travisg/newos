@@ -6,6 +6,8 @@ KERNEL_ADDONS += $(addprefix $(KERNEL_ADDONS_BUILD_DIR)/, \
 	modules/bus_managers/ide/ide \
 	modules/bus_managers/scsi/scsi \
 	modules/bus_managers/pci/pci \
+	modules/bus_managers/usb/usb \
+	modules/busses/usb/ohci/ohci \
 	modules/generic/locked_pool/locked_pool \
 	modules/generic/scsi_periph/scsi_periph \
 	modules/generic/blkman/blkman \
