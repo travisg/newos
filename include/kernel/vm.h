@@ -59,6 +59,8 @@ typedef struct vm_cache {
 	vm_page *page_list;
 	vm_cache_ref *ref;
 	struct vm_store *store;
+	off_t committed_size;
+	unsigned int temporary : 1;
 } vm_cache;
 
 // info about a region that external entities may want to know
@@ -117,6 +119,7 @@ typedef struct vm_store {
 	struct vm_store_ops *ops;
 	struct vm_cache *cache;
 	void *data;
+	off_t committed_size;
 } vm_store;
 
 // vm_store_ops

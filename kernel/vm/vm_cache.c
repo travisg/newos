@@ -4,6 +4,7 @@
 */
 #include <kernel/kernel.h>
 #include <kernel/vm.h>
+#include <kernel/vm_priv.h>
 #include <kernel/vm_cache.h>
 #include <kernel/vm_page.h>
 #include <kernel/heap.h>
@@ -26,6 +27,8 @@ vm_cache *vm_cache_create(vm_store *store)
 	cache->store = store;
 	if(store != NULL)
 		store->cache = cache;
+	cache->committed_size = 0;
+	cache->temporary = 0;
 
 	return cache;
 }
@@ -74,6 +77,7 @@ void vm_cache_release_ref(vm_cache_ref *cache_ref)
 			dprintf("vm_cache_release_ref: freeing page 0x%x\n", old_page->ppn);
 			vm_page_set_state(old_page, PAGE_STATE_FREE);
 		}
+		vm_increase_max_commit(cache_ref->cache->committed_size);
 
 		mutex_destroy(&cache_ref->lock);
 		kfree(cache_ref->cache);

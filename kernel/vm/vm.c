@@ -45,11 +45,13 @@ static aspace_id next_aspace_id;
 static void *aspace_table;
 static sem_id aspace_hash_sem;
 
+static int max_commit;
+static int max_commit_lock;
+
 // function declarations
-static vm_region *_vm_create_region_struct(vm_address_space *aspace, char *name, addr base,
-	addr size, int wiring, int lock);
-static vm_region *_vm_create_region(vm_address_space *aspace, char *name, void **address,
-	int addr_type, addr size, int wiring, int lock);
+static vm_region *_vm_create_region_struct(vm_address_space *aspace, const char *name, int wiring, int lock);
+static int map_backing_store(vm_address_space *aspace, vm_store *store, void **vaddr, 
+	off_t offset, addr size, int addr_type, int wiring, int lock, vm_region **_region, const char *region_name);
 static int vm_soft_fault(addr address, bool is_write, bool is_user);
 static vm_region *vm_virtual_map_lookup(vm_virtual_map *map, addr address);
 static int vm_region_acquire_ref(vm_region *region);
@@ -115,6 +117,7 @@ region_id vm_find_region_by_name(aspace_id aid, const char *name)
 {
 	vm_region *region = NULL;
 	vm_address_space *aspace;
+	region_id id = ERR_NOT_FOUND;
 	
 	aspace = vm_get_aspace_from_id(aid);
 	if(aspace == NULL)
@@ -124,212 +127,275 @@ region_id vm_find_region_by_name(aspace_id aid, const char *name)
 
 	region = aspace->virtual_map.region_list;
 	while(region != NULL) {
-		if(strcmp(region->name, name) == 0)
+		if(strcmp(region->name, name) == 0) {
+			id = region->id;
 			break;
+		}
 		region = region->aspace_next;
 	}
 
 	sem_release(aspace->virtual_map.sem, READ_COUNT);
-	return region->id;
+	return id;
 }
 
-// creates semi-initialized region struct and adds to aspace's region list
-static vm_region *_vm_create_region_struct(vm_address_space *aspace, char *name, addr base,
-	addr size, int wiring, int lock)
+static vm_region *_vm_create_region_struct(vm_address_space *aspace, const char *name, int wiring, int lock)
 {
 	vm_region *region = NULL;
-	vm_region *a, *last = NULL;
-	
-//	dprintf("_vm_create_region_struct: aspace 0x%x name '%s' base 0x%x, size 0x%x\n", aspace, name, base, size);
-	
-	// allocate a region struct to represent this region
-	region = (vm_region *)kmalloc(sizeof(vm_region));	
+
+	region = (vm_region *)kmalloc(sizeof(vm_region));
 	if(region == NULL)
-		goto error;
-	region->base = base;
-	region->size = size;
-	region->id = next_region_id++;
+		return NULL;
+	region->name = (char *)kmalloc(strlen(name) + 1);
+	if(region->name == NULL) {
+		kfree(region);
+		return NULL;
+	}
+	strcpy(region->name, name);
+	region->id = atomic_add(&next_region_id, 1);
+	region->base = 0;
+	region->size = 0;
 	region->lock = lock;
 	region->wiring = wiring;
 	region->ref_count = 1;
-	region->aspace = aspace;
-	region->map = &aspace->virtual_map;
-	region->name = (char *)kmalloc(strlen(name) + 1);
-	if(region->name == NULL)
-		goto error1;
-	strcpy(region->name, name);
-	
+
 	region->cache_ref = NULL;
 	region->cache_offset = 0;
-	region->cache_next = NULL;
-	region->cache_prev = NULL;
 
-	// insert it into the global hash table
+	region->aspace = aspace;
+	region->aspace_next = NULL;
+	region->map = &aspace->virtual_map;
+	region->cache_next = region->cache_prev = NULL;
+	region->hash_next = NULL;
+
+	return region;
+}
+
+// must be called with this address space's virtual_map.sem held
+static int find_and_insert_region_slot(vm_virtual_map *map, addr start, addr size, addr end, int addr_type, vm_region *region)
+{
+	vm_region *last_r = NULL;
+	vm_region *next_r;
+	bool foundspot = false;
+
+	dprintf("find_and_insert_region_slot: map 0x%x, start 0x%x, size %d, end 0x%x, addr_type %d, region 0x%x\n",
+		map, start, size, end, addr_type, region);
+	dprintf("map->base 0x%x, map->size 0x%x\n", map->base, map->size);
+
+	// do some sanity checking
+	if(start < map->base || size == 0 || (end - 1) > (map->base + (map->size - 1)) || start + size > end)
+		return ERR_VM_BAD_ADDRESS;
+
+	// walk up to the spot where we should start searching
+	next_r = map->region_list;
+	while(next_r) {
+		if(next_r->base >= start + size) {
+			// we have a winner
+			break;
+		}
+		last_r = next_r;
+		next_r = next_r->aspace_next;
+	}
+
+	dprintf("last_r 0x%x, next_r 0x%x\n", last_r, next_r);
+	if(last_r) dprintf("last_r->base 0x%x, last_r->size 0x%x\n", last_r->base, last_r->size);
+	if(next_r) dprintf("next_r->base 0x%x, next_r->size 0x%x\n", next_r->base, next_r->size);
+
+	switch(addr_type) {
+		case REGION_ADDR_ANY_ADDRESS:
+			// find a hole big enough for a new region
+			if(!last_r) {
+				// see if we can build it at the beginning of the virtual map
+				if(!next_r || (next_r->base >= map->base + size)) {
+					foundspot = true;
+					region->base = map->base;
+					break;
+				}
+				last_r = next_r;
+				next_r = next_r->aspace_next;
+			}
+			// keep walking
+			while(next_r) {
+				if(next_r->base >= last_r->base + last_r->size + size) {
+					// we found a spot
+					foundspot = true;
+					region->base = last_r->base + last_r->size;
+					break;
+				}
+				last_r = next_r;
+				next_r = next_r->aspace_next;
+			}
+			if((map->base + (map->size - 1)) >= (last_r->base + last_r->size + (size - 1))) {
+				// found a spot
+				foundspot = true;
+				region->base = last_r->base + last_r->size;
+				break;
+			}	
+			break;
+		case REGION_ADDR_EXACT_ADDRESS:
+			// see if we can create it exactly here
+			if(!last_r) {
+				if(!next_r || (next_r->base >= start + size)) {
+					foundspot = true;
+					region->base = start;
+					break;
+				}
+			} else {
+				if(next_r) {
+					if(last_r->base + last_r->size <= start && next_r->base >= start + size) {
+						foundspot = true;
+						region->base = start;
+						break;
+					}
+				} else {
+					if((last_r->base + (last_r->size - 1)) <= start - 1) {
+						foundspot = true;
+						region->base = start;
+					}
+				}
+			}
+			break;
+		default:
+			return ERR_INVALID_ARGS;
+	}
+
+	if(foundspot) {
+		region->size = size;
+		if(last_r) {
+			region->aspace_next = last_r->aspace_next;
+			last_r->aspace_next = region;
+		} else {
+			region->aspace_next = map->region_list;
+			map->region_list = region;
+		}
+		return NO_ERROR;
+	} else {
+		return ERR_VM_NO_REGION_SLOT;
+	}
+}
+
+// a ref to the cache holding this store must be held before entering here
+static int map_backing_store(vm_address_space *aspace, vm_store *store, void **vaddr, 
+	off_t offset, addr size, int addr_type, int wiring, int lock, vm_region **_region, const char *region_name)
+{
+	vm_cache *cache;
+	vm_cache_ref *cache_ref;
+	vm_region *region;
+	int err;
+
+//	dprintf("map_backing_store: aspace 0x%x, store 0x%x, *vaddr 0x%x, offset 0x%x 0x%x, size %d, addr_type %d, wiring %d, lock %d, _region 0x%x, region_name '%s'\n",
+//		aspace, store, *vaddr, offset, size, addr_type, wiring, lock, _region, region_name);
+
+	region = _vm_create_region_struct(aspace, region_name, wiring, lock);
+	if(!region)
+		return ERR_NO_MEMORY;
+
+	cache = store->cache;
+	cache_ref = cache->ref;
+
+	mutex_lock(&cache_ref->lock);
+	if(store->committed_size < offset + size) {
+		// try to commit more memory
+		off_t old_store_commitment = store->committed_size;
+		off_t commitment = (store->ops->commit)(store, offset + size);
+		if(commitment < offset + size) {
+			if(cache->temporary) {
+				int state = int_disable_interrupts();
+				acquire_spinlock(&max_commit_lock);
+
+				if(max_commit - old_store_commitment + commitment < offset + size) {
+					release_spinlock(&max_commit_lock);
+					int_restore_interrupts(state);
+					mutex_unlock(&cache_ref->lock);
+					err = ERR_VM_WOULD_OVERCOMMIT;
+					goto err;
+				}
+
+//				dprintf("map_backing_store: adding %d to max_commit\n", 
+//					(commitment - old_store_commitment) - (offset + size - cache->committed_size));
+
+				max_commit += (commitment - old_store_commitment) - (offset + size - cache->committed_size);
+				cache->committed_size = offset + size;
+				release_spinlock(&max_commit_lock);
+				int_restore_interrupts(state);
+			} else {
+				mutex_unlock(&cache_ref->lock);
+				err = ERR_NO_MEMORY;
+				goto err;
+			}
+		}
+	}
+
+	mutex_unlock(&cache_ref->lock);
+
+	vm_cache_acquire_ref(cache_ref);
+	
+	sem_acquire(aspace->virtual_map.sem, WRITE_COUNT);
+
+	{
+		addr search_addr, search_end;
+
+		if(addr_type == REGION_ADDR_EXACT_ADDRESS) {
+			search_addr = (addr)*vaddr;
+			search_end = (addr)*vaddr + size;
+		} else if(addr_type == REGION_ADDR_ANY_ADDRESS) {
+			search_addr = aspace->virtual_map.base;
+			search_end = aspace->virtual_map.base + (aspace->virtual_map.size - 1);
+		} else {
+			err = ERR_INVALID_ARGS;
+			goto err2;
+		}
+		
+		err = find_and_insert_region_slot(&aspace->virtual_map, search_addr, size, search_end, addr_type, region);
+		if(err < 0)
+			goto err2;
+		*vaddr = (addr *)region->base;
+	}
+
+	// attach the cache to the region
+	region->cache_ref = cache_ref;
+	region->cache_offset = offset;	
+	// point the cache back to the region
+	vm_cache_insert_region(cache_ref, region);
+
+	// insert the region in the global region hash table
 	sem_acquire(region_hash_sem, WRITE_COUNT);
 	hash_insert(region_table, region);
 	sem_release(region_hash_sem, WRITE_COUNT);
-
-	// insert into the list
-	// we'll need to search for the spot
-	// check for address overlaps
-	a = aspace->virtual_map.region_list;
-	while(a != NULL) {
-//		dprintf("_vm_create_region_struct: a = 0x%x. base = 0x%x, size = 0x%x\n", a, a->base, a->size);
-		if(a->base > base) {
-			if(base + size > a->base) {
-				// overlap
-				goto error3;
-			}
-			region->aspace_next = a;
-			if(last == NULL)
-				aspace->virtual_map.region_list = region;
-			else
-				last->aspace_next = region;
-			break;
-		}
-		last = a;
-		a = a->aspace_next;
-	}
-	if(a == NULL) {
-		region->aspace_next = NULL;
-		if(last == NULL)
-			aspace->virtual_map.region_list = region;
-		else
-			last->aspace_next = region;
-	}
-//	dprintf("_vm_create_region_struct: returning 0x%x\n", region);
-	return region;
-
-error3:
-	sem_acquire(region_hash_sem, WRITE_COUNT);
-	hash_remove(region_table, region);
-	sem_release(region_hash_sem, WRITE_COUNT);
-error2:
-	kfree(region->name);
-error1:
-	kfree(region);
-error:
-	return NULL;
-}
-
-// finds a place for a region in the address space and creates the initial structure
-static vm_region *_vm_create_region(vm_address_space *aspace, char *name, void **address,
-	int addr_type, addr size, int wiring, int lock)
-{
-	vm_region *region;
-	unsigned int base;
-
-	dprintf("_vm_create_region: '%s', *address = 0x%p, addr_type = %d, size = %d\n",
-		name, *address, addr_type, size);
-
-	// check validity of lock
-	if((lock & ~LOCK_MASK) != 0) {
-		// invalid lock
-		panic("_vm_create_region called with invalid lock %d\n", lock);
-		return ERR_INVALID_ARGS;
-	}
-
-	sem_acquire(aspace->virtual_map.sem, WRITE_COUNT);
-
-	region = NULL;
-	switch(addr_type) {
-		case REGION_ADDR_ANY_ADDRESS: {
-			vm_region *r;
-			vm_region *next_r = NULL;
-			bool foundspot = false;
-			// find a hole big enough for a new region
 	
-			r = aspace->virtual_map.region_list;
-			if(r == NULL) {
-				base = aspace->virtual_map.base;
-				foundspot = true;
-			} else if(r != NULL && r->base > aspace->virtual_map.base) {
-				// lets try to build the region at the beginning of the aspace
-				if(aspace->virtual_map.base + size > r->base) {
-					// if we built it here, it would overlap, so let the loop below
-					// find the right spot
-					next_r = r->aspace_next;
-				} else {
-					// otherwise, we're done.
-					base = aspace->virtual_map.base;
-					r = NULL;
-					foundspot = true;
-				}
-			} else {
-				next_r = r->aspace_next;
-			}
-			while(r != NULL) {
-//				dprintf("r = 0x%x. base = 0x%x, size = 0x%x\n", r, r->base, r->size);
-				if(next_r != NULL) {
-//					dprintf("next_r = 0x%x. base = 0x%x, size = 0x%x\n", next_r, next_r->base, next_r->size);
-					if(next_r->base - (r->base + r->size) >= size) {
-						// we have a spot
-						base = r->base + r->size;
-						foundspot = true;
-						break;
-					}
-				} else {
-					if((aspace->virtual_map.base + aspace->virtual_map.size) - (r->base + r->size) + 1 >= size) {
-						// we have a spot
-						base = r->base + r->size;
-						foundspot = true;
-						break;
-					}
-				}
-				r = next_r;
-				if(next_r != NULL)
-					next_r = next_r->aspace_next;
-			}
-			
-			if(!foundspot)
-				break; // didn't find a spot
-
-			*address = (void *)base;
-			region = _vm_create_region_struct(aspace, name, base, size, wiring, lock);
-			break;
-		}
-		case REGION_ADDR_EXACT_ADDRESS:
-			base = (unsigned int)*address;
-
-			if(base < aspace->virtual_map.base || (base - aspace->virtual_map.base) + size > (base - aspace->virtual_map.base) + aspace->virtual_map.size) {
-				dprintf("_vm_create_region: region asked to be created outside of aspace\n");
-				break;
-			}
-
-			region = _vm_create_region_struct(aspace, name, base, size, wiring, lock);
-			break;
-		default:
-			// whut?
-			panic("_vm_create_region: invalid addr_type flag passed %d\n", addr_type);
-	}
-
 	sem_release(aspace->virtual_map.sem, WRITE_COUNT);
 
-	return region;
+	*_region = region;
+
+	return NO_ERROR;
+
+err2:
+	sem_release(aspace->virtual_map.sem, WRITE_COUNT);
+err1:
+	// releasing the cache ref twice should put us back to the proper cache count
+	vm_cache_release_ref(cache_ref);
+err:
+	kfree(region->name);
+	kfree(region);
+	return err;
 }
 
 region_id vm_create_anonymous_region(aspace_id aid, char *name, void **address, int addr_type,
 	addr size, int wiring, int lock)
 {
+	int err;
 	vm_region *region;
 	vm_cache *cache;
-	vm_cache_ref *cache_ref;
 	vm_store *store;
 	vm_address_space *aspace;
+	vm_cache_ref *cache_ref;
 
 	aspace = vm_get_aspace_from_id(aid);
 	if(aspace == NULL)
 		return ERR_VM_INVALID_ASPACE;
 
 	size = PAGE_ALIGN(size);
-	
-	region = _vm_create_region(aspace, name, address, addr_type, size, wiring, lock);
-	if(region == NULL)
-		return ERR_NO_MEMORY;
 
-	// create a new cache
-
-	// anonymous store for this one
+	// create an anonymous store object
 	store = vm_store_create_anonymous_noswap();
 	if(store == NULL)
 		panic("vm_create_anonymous_region: vm_create_store_anonymous_noswap returned NULL");
@@ -339,13 +405,15 @@ region_id vm_create_anonymous_region(aspace_id aid, char *name, void **address, 
 	cache_ref = vm_cache_ref_create(cache);
 	if(cache_ref == NULL)
 		panic("vm_create_anonymous_region: vm_cache_ref_create returned NULL");
+	cache->temporary = 1;
 
 	vm_cache_acquire_ref(cache_ref);
-	
-	vm_cache_insert_region(cache_ref, region);
-	region->cache_ref = cache_ref;
-	region->cache_offset = 0;
+	err = map_backing_store(aspace, store, address, 0, size, addr_type, wiring, lock, &region, name);
+	vm_cache_release_ref(cache_ref);
+	if(err < 0)
+		return err;
 
+	cache_ref = store->cache->ref;
 	switch(wiring) {
 		case REGION_WIRING_LAZY:
 			break; // do nothing
@@ -442,6 +510,7 @@ region_id vm_map_physical_memory(aspace_id aid, char *name, void **address, int 
 	vm_cache_ref *cache_ref;
 	vm_store *store;
 	addr map_offset;
+	int err;
 	
 	vm_address_space *aspace = vm_get_aspace_from_id(aid);
 	if(aspace == NULL)
@@ -455,11 +524,7 @@ region_id vm_map_physical_memory(aspace_id aid, char *name, void **address, int 
 
 	size = PAGE_ALIGN(size);
 
-	region = _vm_create_region(aspace, name, address, addr_type, size, REGION_WIRING_WIRED_SPECIAL, lock);
-	if(region == NULL)
-		return ERR_NO_MEMORY;
-
-	// create a new cache
+	// create an device store object
 	store = vm_store_create_device(phys_addr);
 	if(store == NULL)
 		panic("vm_map_physical_memory: vm_store_create_device returned NULL");
@@ -471,10 +536,10 @@ region_id vm_map_physical_memory(aspace_id aid, char *name, void **address, int 
 		panic("vm_map_physical_memory: vm_cache_ref_create returned NULL");
 
 	vm_cache_acquire_ref(cache_ref);
-	
-	vm_cache_insert_region(cache_ref, region);
-	region->cache_ref = cache_ref;
-	region->cache_offset = 0;
+	err = map_backing_store(aspace, store, address, 0, size, addr_type, 0, lock, &region, name);
+	vm_cache_release_ref(cache_ref);
+	if(err < 0)
+		return err;
 
 	// modify the pointer returned to be offset back into the new region
 	// the same way the physical address in was offset
@@ -487,6 +552,7 @@ region_id vm_clone_region(aspace_id aid, char *name, void **address, int addr_ty
 {
 	vm_region *new_region;
 	vm_region *src_region;
+	int err;
 	
 	vm_address_space *aspace = vm_get_aspace_from_id(aid);
 	if(aspace == NULL)
@@ -506,23 +572,18 @@ region_id vm_clone_region(aspace_id aid, char *name, void **address, int addr_ty
 	if(src_region == NULL)
 		return ERR_VM_INVALID_REGION;	
 
-	// create the new region, with the src region's wiring
-	new_region = _vm_create_region(aspace, name, address, addr_type, src_region->size, src_region->wiring, lock);
-	if(new_region == NULL) {
-		vm_region_release_ref(src_region);
-		return ERR_NO_MEMORY;
-	}
-	
-	// attach the cache_ref of the src region to the new one
 	vm_cache_acquire_ref(src_region->cache_ref);
-	vm_cache_insert_region(src_region->cache_ref, new_region);
-	new_region->cache_ref = src_region->cache_ref;
-	new_region->cache_offset = src_region->cache_offset;
-	
+	err = map_backing_store(aspace, src_region->cache_ref->cache->store, address, src_region->cache_offset, src_region->size, 
+		addr_type, src_region->wiring, lock, &new_region, name);
+	vm_cache_release_ref(src_region->cache_ref);
+
 	// release the ref on the old region
 	vm_region_release_ref(src_region);
 
-	return new_region->id;
+	if(err < 0)
+		return err;
+	else
+		return new_region->id;
 }
 
 int vm_delete_region(aspace_id aid, region_id rid)
@@ -1035,6 +1096,14 @@ int vm_delete_aspace(aspace_id aid)
 	return 0;
 }
 
+int vm_thread_dump_max_commit()
+{
+	for(;;) {
+		thread_snooze(1000000);
+		dprintf("max_commit 0x%x\n", max_commit);
+	}
+}	
+
 int vm_init(kernel_args *ka)
 {
 	int err = 0;
@@ -1054,6 +1123,8 @@ int vm_init(kernel_args *ka)
 	region_hash_sem = -1;
 	next_aspace_id = 0;
 	aspace_hash_sem = -1;
+	max_commit = 0; // will be increased in vm_page_init
+	max_commit_lock = 0;
 
 	// map in the new heap and initialize it
 	heap_base = vm_alloc_from_ka_struct(ka, HEAP_SIZE, LOCK_KERNEL|LOCK_RW);
@@ -1135,7 +1206,7 @@ int vm_init(kernel_args *ka)
 	dbg_add_command(&display_mem, "db", "dump memory bytes (8-bit)");
 
 	dprintf("vm_init: exit\n");
-	
+
 	return err;
 }
 
@@ -1165,15 +1236,20 @@ int vm_init_postthread(kernel_args *ka)
 {
 	vm_page_init_postthread(ka);
 
+	{
+		thread_id tid = thread_create_kernel_thread("max_commit_thread", &vm_thread_dump_max_commit, 30);
+		thread_resume_thread(tid);
+	}	
+
 	return 0;
 }
 
 int vm_page_fault(addr address, addr fault_address, bool is_write, bool is_user)
 {
 	int err;
-	
+
 	dprintf("vm_page_fault: page fault at 0x%x, ip 0x%x\n", address, fault_address);
-	
+
 	err = vm_soft_fault(address, is_write, is_user);
 	if(err < 0) {
 		if(!is_user) {
@@ -1181,9 +1257,9 @@ int vm_page_fault(addr address, addr fault_address, bool is_write, bool is_user)
 			panic("vm_page_fault: unhandled page fault in kernel space at 0x%x, ip 0x%x\n",
 				address, fault_address);
 		} else {
-			// XXX kill the process
-			panic("vm_page_fault: insert process killing code here\n");
-		}			
+			dprintf("vm_page_fault: killing process 0x%x\n", thread_get_current_thread()->proc->id);
+			proc_kill_proc(thread_get_current_thread()->proc->id);
+		}
 	}
 
 	return INT_NO_RESCHEDULE;
@@ -1368,6 +1444,19 @@ int vm_get_physical_page(addr paddr, addr *vaddr, int flags)
 int vm_put_physical_page(addr vaddr)
 {
 	return (*kernel_aspace->translation_map.ops->put_physical_page)(vaddr);
+}
+
+void vm_increase_max_commit(addr delta)
+{
+	int state;
+
+//	dprintf("vm_increase_max_commit: delta 0x%x\n", delta); 
+
+	state = int_disable_interrupts();
+	acquire_spinlock(&max_commit_lock);
+	max_commit += delta;
+	release_spinlock(&max_commit_lock);
+	int_restore_interrupts(state);
 }
 
 

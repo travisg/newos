@@ -18,8 +18,7 @@ static void anonymous_destroy(struct vm_store *store)
 
 static off_t anonymous_commit(struct vm_store *store, off_t size)
 {
-	// XXX finish
-	return 0;
+	return 0; // no swap, so we commit no memory
 }
 
 static int anonymous_has_page(struct vm_store *store, off_t offset)
@@ -66,6 +65,7 @@ vm_store *vm_store_create_anonymous_noswap()
 	store->ops = &anonymous_ops;
 	store->cache = NULL;
 	store->data = NULL;
+	store->committed_size = 0;
 
 	return store;
 }

@@ -142,6 +142,9 @@ int vm_page_init(kernel_args *ka)
 			ka->phys_alloc_range[i].size / PAGE_SIZE);
 	}
 
+	// set the global max_commit variable
+	vm_increase_max_commit(num_pages*PAGE_SIZE);
+
 	dprintf("vm_page_init: exit\n");
 
 	return 0;

@@ -23,7 +23,8 @@ static void device_destroy(struct vm_store *store)
 
 static off_t device_commit(struct vm_store *store, off_t size)
 {
-	return 0;
+	store->committed_size = size;
+	return size;
 }
 
 static int device_has_page(struct vm_store *store, off_t offset)
@@ -102,6 +103,7 @@ vm_store *vm_store_create_device(addr base_addr)
 	store->ops = &device_ops;
 	store->cache = NULL;
 	store->data = (void *)((addr)store + sizeof(vm_store));
+	store->committed_size = 0;
 
 	d = (struct device_store_data *)store->data;
 	d->base_addr = base_addr;

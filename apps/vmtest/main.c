@@ -3,6 +3,7 @@
 ** Distributed under the terms of the NewOS License.
 */
 #include <types.h>
+#include <sys/errors.h>
 #include <libc/string.h>
 #include <libc/printf.h>
 #include <libsys/syscalls.h>
@@ -18,6 +19,10 @@ int main()
 	printf("VM test\n");
 
 	printf("my thread id is %d\n", sys_get_current_thread_id());
+#if 0
+	printf("writing to invalid page\n");
+	*(int *)0x30000000 = 5;
+#endif
 #if 1
 	printf("doing some region tests\n");
 	{
@@ -39,6 +44,37 @@ int main()
 		sys_vm_delete_region(region);
 		sys_vm_delete_region(region2);
 		printf("deleting both regions\n");
+	}
+#endif
+#if 1
+	printf("doing some commitment tests (will only be proper on 128Mb machines)\n");
+	{
+		region_id region;
+		region_id region2;
+		void *ptr, *ptr2;
+
+		region = sys_vm_create_anonymous_region("large", &ptr, REGION_ADDR_ANY_ADDRESS,
+			100*1024*1024, REGION_WIRING_LAZY, LOCK_RW);
+		if(region < 0) {
+			printf("error %d creating large region\n", region);
+		} else {
+			printf("region = 0x%x @ 0x%x\n", region, (unsigned int)ptr);
+		}
+
+		printf("pausing for 5 seconds...\n");
+		sys_snooze(5000000);
+		region2 = sys_vm_create_anonymous_region("large2", &ptr2, REGION_ADDR_ANY_ADDRESS,
+			64*1024*1024, REGION_WIRING_LAZY, LOCK_RW);
+		if(region2 < 0) {
+			printf("error %d creating large region\n", region2);
+			if(region2 == ERR_VM_WOULD_OVERCOMMIT)
+				printf("good, it failed because of overcommitting\n");
+		} else {
+			printf("region2 = 0x%x @ 0x%x\n", region2, (unsigned int)ptr2);
+		}
+
+		printf("pausing for 5 seconds...\n");
+		sys_snooze(5000000);
 	}
 #endif
 

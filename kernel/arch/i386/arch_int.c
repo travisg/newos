@@ -195,7 +195,7 @@ void i386_handle_trap(struct int_frame frame)
 		int_restore_interrupts(state);
 	}
 
-	if(frame.cs == USER_CODE_SEG && frame.vector == 99) {
+	if(frame.cs == USER_CODE_SEG || frame.vector == 99) {
 		thread_atkernel_exit();
 	}
 //	dprintf("0x%x cpu %d!\n", thread_get_current_thread_id(), smp_get_current_cpu());

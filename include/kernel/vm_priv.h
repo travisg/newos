@@ -9,6 +9,7 @@
 
 // Should only be used by vm internals
 int vm_page_fault(addr address, addr fault_address, bool is_write, bool is_user);
+void vm_increase_max_commit(addr delta);
 
 // allocates memory from the ka structure
 addr vm_alloc_from_ka_struct(kernel_args *ka, unsigned int size, int lock);
