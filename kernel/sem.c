@@ -355,7 +355,7 @@ int sem_acquire_etc(sem_id id, int count, int flags, time_t timeout, int *delete
 	if((sems[slot].count -= count) < 0) {
 		// we need to block
 		struct thread *t = thread_get_current_thread();
-		struct timer_event timer; // stick it on the heap, since we may be blocking here
+		struct timer_event timer; // stick it on the stack, since we may be blocking here
 		struct sem_timeout_args args;
 
 		// do a quick check to see if the thread has any pending kill signals
@@ -411,7 +411,7 @@ int sem_acquire_etc(sem_id id, int count, int flags, time_t timeout, int *delete
 		RELEASE_THREAD_LOCK();
 
 		if((flags & SEM_FLAG_TIMEOUT) != 0) {
-			if(t->sem_errcode < 0 && t->sem_errcode != ERR_SEM_TIMED_OUT) {
+			if(t->sem_errcode != ERR_SEM_TIMED_OUT) {
 				// cancel the timer event, the sem may have been deleted or interrupted
 				// with the timer still active
 				timer_cancel_event(&timer);
@@ -502,8 +502,8 @@ int sem_release_etc(sem_id id, int count, int flags)
 			thread_resched();
 		}
 		RELEASE_THREAD_LOCK();
-		goto outnolock;
 	}
+	goto outnolock;
 
 err:
 	RELEASE_SEM_LOCK(sems[slot]);
@@ -537,7 +537,7 @@ int sem_get_count(sem_id id, int32* thread_count)
 		dprintf("sem_get_count: invalid sem_id %d\n", id);
 		return ERR_INVALID_HANDLE;
 	}
-	
+
 	*thread_count = sems[slot].count;
 
 	RELEASE_SEM_LOCK(sems[slot]);
@@ -569,7 +569,7 @@ int sem_get_sem_info(sem_id id, struct sem_info *info)
 		dprintf("get_sem_info: invalid sem_id %d\n", id);
 		return ERR_INVALID_HANDLE;
 	}
-	
+
 	info->sem			= sems[slot].id;
 	info->proc			= sems[slot].owner;
 	strncpy(info->name, sems[slot].name, SYS_MAX_OS_NAME_LEN-1);
@@ -748,7 +748,7 @@ int sem_delete_owned_sems(proc_id owner)
 	int state;
 	int i;
 	int count = 0;
-	
+
 	if (owner < 0)
 		return ERR_INVALID_HANDLE;
 
