@@ -10,6 +10,7 @@ struct sem_entry {
 	struct thread_queue q;
 	thread_id holder_thread;
 	char      *name;
+	int       lock;
 };
 
 #define MAX_SEMS 4096

@@ -31,7 +31,7 @@ struct thread {
 	int state;
 	int next_state;
 	int sem_count;
-	int snooze_sem_id;
+	sem_id blocked_sem_id;
 	struct proc *proc;
 	struct area *kernel_stack_area;
 	struct area *user_stack_area;
@@ -55,9 +55,11 @@ struct thread *thread_dequeue_run_q(int priority);
 void thread_resched();
 void thread_snooze(long long time);
 int thread_init(kernel_args *ka);
-int thread_kthread_exit();
+void thread_kthread_exit();
 struct thread *thread_get_current_thread();
 thread_id thread_get_current_thread_id();
+struct thread *thread_get_thread_struct(thread_id id);
+struct thread *thread_get_thread_struct_locked(thread_id id);
 
 #if 1
 // XXX remove later

@@ -19,12 +19,13 @@
 // global
 int thread_spinlock = 0;
 
-static int next_thread_id = 0;
+static thread_id next_thread_id = 0;
 
 #define CURR_THREAD cur_thread[smp_get_current_cpu()]
-
 static struct thread **cur_thread = NULL;
 static struct thread *thread_list = NULL;
+
+static sem_id snooze_sem = -1;
 
 // thread queues
 static struct thread_queue run_q[THREAD_NUM_PRIORITY_LEVELS] = { { NULL, NULL }, };
@@ -117,7 +118,6 @@ static void insert_thread_into_proc(struct proc *p, struct thread *t)
 static struct thread *create_thread_struct(char *name)
 {
 	struct thread *t;
-	char sem_name[64];
 	
 	t = (struct thread *)kmalloc(sizeof(struct thread));
 	if(t == NULL)
@@ -134,19 +134,12 @@ static struct thread *create_thread_struct(char *name)
 	t->q_next = NULL;
 	t->priority = -1;
 
-	sprintf(sem_name, "%s_snooze_sem", name);
-	t->snooze_sem_id = sem_create(0, sem_name);
-	if(t->snooze_sem_id < 0)
-		goto err2;
-		
 	t->arch_info = arch_thread_create_thread_struct();
 	if(t->arch_info == NULL)
-		goto err3;
+		goto err2;
 	
 	return t;
 
-err3:
-	sem_delete(t->snooze_sem_id);
 err2:
 	kfree(t->name);
 err1:
@@ -252,7 +245,6 @@ static void _dump_thread_info(struct thread *t)
 	dprintf("state:      %s\n", state_to_text(t->state));
 	dprintf("next_state: %s\n", state_to_text(t->next_state));
 	dprintf("sem_count:  0x%x\n", t->sem_count);
-	dprintf("snooze_sem_id: 0x%x\n", t->snooze_sem_id);
 	dprintf("proc:       0x%x\n", t->proc);
 	dprintf("kernel_stack_area: 0x%x\n", t->kernel_stack_area);
 	dprintf("user_stack_area:   0x%x\n", t->user_stack_area);
@@ -320,9 +312,18 @@ int thread_init(kernel_args *ka)
 
 	// allocate as many CUR_THREAD slots as there are cpus
 	cur_thread = (struct thread **)kmalloc(sizeof(struct thread *) * smp_get_num_cpus());
-	if(cur_thread == NULL)
+	if(cur_thread == NULL) {
+		panic("error allocating cur_thread slots\n");
 		return -1;
+	}
 	memset(cur_thread, 0, sizeof(struct thread *) * smp_get_num_cpus());
+
+	// allocate a snooze sem
+	snooze_sem = sem_create(0, "snooze sem");
+	if(snooze_sem < 0) {
+		panic("error creating snooze sem\n");
+		return -1;
+	}
 
 	// create an idle thread for each cpu
 	for(i=0; i<ka->num_cpus; i++) {
@@ -330,6 +331,10 @@ int thread_init(kernel_args *ka)
 		
 		sprintf(temp, "idle_thread%d", i);
 		t = create_thread_struct(temp);
+		if(t == NULL) {
+			panic("error creating idle thread struct\n");
+			return -1;
+		}
 		t->proc = proc_get_kernel_proc();
 		t->priority = THREAD_IDLE_PRIORITY;
 		t->state = THREAD_STATE_READY;
@@ -344,6 +349,10 @@ int thread_init(kernel_args *ka)
 
 	// create a worker thread to kill other ones
 	t = create_kernel_thread("manny", &thread_killer, THREAD_MAX_PRIORITY);
+	if(t == NULL) {
+		panic("error creating Manny the thread killer\n");
+		return -1;
+	}
 	thread_enqueue_run_q(t);
 
 	// set up a periodic timer (10ms)
@@ -358,7 +367,7 @@ int thread_init(kernel_args *ka)
 
 void thread_snooze(time_t time)
 {
-	sem_acquire_etc(thread_get_current_thread()->snooze_sem_id, 1, SEM_FLAG_TIMEOUT, time);
+	sem_acquire_etc(snooze_sem, 1, SEM_FLAG_TIMEOUT, time);
 }
 
 // this function gets run by a new thread before anything else
@@ -370,7 +379,7 @@ static void thread_entry(void)
 	int_enable_interrupts();
 }
 
-int thread_kthread_exit()
+void thread_kthread_exit()
 {
 	int state;
 	struct thread *t = CURR_THREAD;
@@ -386,10 +395,7 @@ int thread_kthread_exit()
 	
 	thread_resched();
 
-	// never make it here
-//	RELEASE_THREAD_LOCK();
-//	int_restore_interrupts(state);
-	return 0;
+	// will never make it here
 }
 
 thread_id thread_get_current_thread_id()
@@ -400,6 +406,37 @@ thread_id thread_get_current_thread_id()
 struct thread *thread_get_current_thread()
 {
 	return CURR_THREAD;
+}
+
+struct thread *thread_get_thread_struct(thread_id id)
+{
+	struct thread *t;
+	int state;
+	
+	state = int_disable_interrupts();
+	GRAB_THREAD_LOCK();
+
+	t = thread_get_thread_struct_locked(id);
+	
+	RELEASE_THREAD_LOCK();
+	int_restore_interrupts(state);
+	
+	return t;
+}
+		
+struct thread *thread_get_thread_struct_locked(thread_id id)
+{
+	struct thread *t;
+	
+	// XXX use hashtable
+	t = thread_list;
+	while(t != NULL) {
+		if(t->id == id) {
+			return t;
+		}
+		t = t->all_next;
+	}
+	return NULL;
 }
 
 static void thread_context_switch(struct thread *t_from, struct thread *t_to)

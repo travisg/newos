@@ -15,6 +15,17 @@ static area_id sem_area = 0;
 
 static sem_id next_sem = 0;
 
+static const char *temp_sem_name = "temp sem";
+
+static int sem_spinlock = 0;
+#define GRAB_SEM_LIST_LOCK() acquire_spinlock(&sem_spinlock)
+#define RELEASE_SEM_LIST_LOCK() release_spinlock(&sem_spinlock)
+#define GRAB_SEM_LOCK(s) acquire_spinlock(&(s).lock)
+#define RELEASE_SEM_LOCK(s) release_spinlock(&(s).lock)
+
+// used in functions that may put a bunch of threads in the run q at once
+#define READY_THREAD_CACHE_SIZE 16
+
 struct sem_timeout {
 	sem_id     id;
 	thread_id  thr_id;
@@ -101,9 +112,11 @@ sem_id sem_create(int count, char *name)
 {
 	int i;
 	int state;
+	sem_id retval = -1;
+	char *temp_name;
 	
 	state = int_disable_interrupts();
-	GRAB_THREAD_LOCK();
+	GRAB_SEM_LIST_LOCK();
 	
 	// find the first empty spot
 	for(i=0; i<MAX_SEMS; i++) {
@@ -114,25 +127,45 @@ sem_id sem_create(int count, char *name)
 				next_sem += i - (next_sem % MAX_SEMS);
 			}
 			sems[i].id = next_sem++;
-
+			
+			sems[i].lock = 0;
+			GRAB_SEM_LOCK(sems[i]);
+			RELEASE_SEM_LIST_LOCK();
+			
 			sems[i].count = count;
-			sems[i].name = (char *)kmalloc(strlen(name)+1);
-			if(sems[i].name == NULL) {
-				sems[i].id = -1;
-				return -1;
+			sems[i].name = (char *)temp_sem_name;
+			retval = sems[i].id;
+			RELEASE_SEM_LOCK(sems[i]);
+						
+			temp_name = (char *)kmalloc(strlen(name)+1);
+			if(temp_name == NULL) {
+				sem_delete(retval);
+				retval = -1;
+				goto err;
+			}		
+			strcpy(temp_name, name);
+
+			GRAB_SEM_LOCK(sems[i]);
+			if(sems[i].id == retval) {
+				sems[i].name = temp_name;
+				RELEASE_SEM_LOCK(sems[i]);
+			} else {
+				// the sem must have been deleted and possibly reused,
+				// our string is now worthless
+				RELEASE_SEM_LOCK(sems[i]);
+				kfree(temp_name);
+				retval = -1;							
 			}
-			strcpy(sems[i].name, name);
-
-			RELEASE_THREAD_LOCK();
-			int_restore_interrupts(state);
-
-			return sems[i].id;
+			break;
 		}
 	}
-	RELEASE_THREAD_LOCK();
+	if(i >= MAX_SEMS)
+		RELEASE_SEM_LIST_LOCK();
+
+err:
 	int_restore_interrupts(state);
 
-	return -1;
+	return retval;
 }
 
 int sem_delete(sem_id id)
@@ -142,59 +175,90 @@ int sem_delete(sem_id id)
 	int err = 0;
 	struct thread *t;
 	int released_threads = 0;
+	char *old_name;
 	
 	state = int_disable_interrupts();
-	GRAB_THREAD_LOCK();
+	GRAB_SEM_LOCK(sems[slot]);
 
 	if(sems[slot].id != id) {
+		RELEASE_SEM_LOCK(sems[slot]);
+		int_restore_interrupts(state);
 		dprintf("sem_delete: invalid sem_id %d\n", id);
-		err = -1;
-		goto err;
+		return -1;
 	}
 	
 	// free any threads waiting for this semaphore
-	while((t = thread_dequeue(&sems[slot].q)) != NULL) {
-		t->state = THREAD_STATE_READY;
-		thread_enqueue_run_q(t);
-		released_threads++;
+	// put them in the runq in batches, to keep the amount of time
+	// spent with the thread lock held down to a minimum
+	{
+		struct thread *ready_threads[READY_THREAD_CACHE_SIZE];
+		int ready_threads_count = 0;
+			
+		while((t = thread_dequeue(&sems[slot].q)) != NULL) {
+			t->state = THREAD_STATE_READY;
+			ready_threads[ready_threads_count++] = t;
+			released_threads++;
+			
+			if(ready_threads_count == READY_THREAD_CACHE_SIZE) {
+				// put a batch of em in the runq a once				
+				GRAB_THREAD_LOCK();
+				for(; ready_threads_count > 0; ready_threads_count--)
+					thread_enqueue_run_q(ready_threads[ready_threads_count - 1]);
+				RELEASE_THREAD_LOCK();
+				// ready_threads_count is back to 0
+			}
+		}
+		// put any leftovers in the runq
+		if(ready_threads_count > 0) {
+			GRAB_THREAD_LOCK();
+			for(; ready_threads_count > 0; ready_threads_count--)
+				thread_enqueue_run_q(ready_threads[ready_threads_count - 1]);
+			RELEASE_THREAD_LOCK();
+		}
+	}
+	sems[slot].id = -1;
+	old_name = sems[slot].name;
+	sems[slot].name = NULL;
+	
+	RELEASE_SEM_LOCK(sems[slot]);
+
+	if(old_name != temp_sem_name)
+		kfree(old_name);
+
+	if(released_threads > 0) {
+		GRAB_THREAD_LOCK();
+		thread_resched();
+		RELEASE_THREAD_LOCK();
 	}
 
-	sems[slot].id = -1;
-	kfree(sems[slot].name);
-	
-	if(released_threads > 0)
-		thread_resched();
-
-err:
-	RELEASE_THREAD_LOCK();
 	int_restore_interrupts(state);
-
+	
 	return err;
 }
 
 // Called from a timer handler. Wakes up a semaphore
 static void sem_timeout(void *data)
 {
-	struct sem_timeout *to = (struct sem_timeout *)data;
-	int slot = to->id % MAX_SEMS;
+	struct thread *t = (struct thread *)data;
+	int slot = t->blocked_sem_id % MAX_SEMS;
 	int state;
-	struct thread *t;
 	
 	state = int_disable_interrupts();
-	GRAB_THREAD_LOCK();
+	GRAB_SEM_LOCK(sems[slot]);
 	
 //	dprintf("sem_timeout: called on 0x%x sem %d, tid %d\n", to, to->sem_id, to->thread_id);
-		
-	t = thread_dequeue_id(&sems[slot].q, to->thr_id);
+	
+	t = thread_dequeue_id(&sems[slot].q, t->id);
 	if(t != NULL) {
+		sems[slot].count += t->sem_count;
 		t->state = THREAD_STATE_READY;
+		GRAB_THREAD_LOCK();
 		thread_enqueue_run_q(t);
+		RELEASE_THREAD_LOCK();
 	}
 
-	RELEASE_THREAD_LOCK();
+	RELEASE_SEM_LOCK(sems[slot]);
 	int_restore_interrupts(state);
-
-	kfree(to);
 }
 
 int sem_acquire(sem_id id, int count)
@@ -209,7 +273,7 @@ int sem_acquire_etc(sem_id id, int count, int flags, long long timeout)
 	int err = 0;
 	
 	state = int_disable_interrupts();
-	GRAB_THREAD_LOCK();
+	GRAB_SEM_LOCK(sems[slot]);
 	
 	if(sems[slot].id != id) {
 		dprintf("sem_acquire_etc: invalid sem_id %d\n", id);
@@ -223,30 +287,26 @@ int sem_acquire_etc(sem_id id, int count, int flags, long long timeout)
 		
 		t->next_state = THREAD_STATE_WAITING;
 		t->sem_count = count;
+		t->blocked_sem_id = id;
 		thread_enqueue(t, &sems[slot].q);
 	
 		if((flags & SEM_FLAG_TIMEOUT) != 0) {
-			struct sem_timeout *to;
-			
-			to = kmalloc(sizeof(struct sem_timeout));
-			if(to == NULL) {
-				sems[slot].count += count;
-				err = -1; // ENOMEM
-				goto err;
-			}
-			to->id = id;
-			to->thr_id = t->id;
-			
-//			dprintf("sem_acquire_etc: setting timeout sem for %d %d usecs, semid %d, tid %d, 0x%x\n",
-//				timeout, sem_id, t->id, to);
-			timer_set_event(timeout, TIMER_MODE_ONESHOT, &sem_timeout, to);
+//			dprintf("sem_acquire_etc: setting timeout sem for %d %d usecs, semid %d, tid %d\n",
+//				timeout, sem_id, t->id);
+			// set up an event to go off, with the thread struct as the data
+			timer_set_event(timeout, TIMER_MODE_ONESHOT, &sem_timeout, (void *)t);
 		}
-	
+
+		GRAB_THREAD_LOCK();
+		RELEASE_SEM_LOCK(sems[slot]);
 		thread_resched();
+		RELEASE_THREAD_LOCK();
+		int_restore_interrupts(state);
+		return 0;		
 	}
 	
 err:
-	RELEASE_THREAD_LOCK();
+	RELEASE_SEM_LOCK(sems[slot]);
 	int_restore_interrupts(state);
 
 	return err;
@@ -263,9 +323,11 @@ int sem_release_etc(sem_id id, int count, int flags)
 	int state;
 	int released_threads = 0;
 	int err = 0;
+	struct thread *ready_threads[READY_THREAD_CACHE_SIZE];
+	int ready_threads_count = 0;
 	
 	state = int_disable_interrupts();
-	GRAB_THREAD_LOCK();
+	GRAB_SEM_LOCK(sems[slot]);
 
 	if(sems[slot].id != id) {
 		dprintf("sem_release_etc: invalid sem_id %d\n", id);
@@ -284,20 +346,40 @@ int sem_release_etc(sem_id id, int count, int flags)
 				// release this thread
 				t = thread_dequeue(&sems[slot].q);
 				t->state = THREAD_STATE_READY;
-				thread_enqueue_run_q(t);
+				ready_threads[ready_threads_count++] = t;
 				released_threads++;
 			}
 		}
-		
+		if(ready_threads_count == READY_THREAD_CACHE_SIZE) {
+			// put a batch of em in the runq a once				
+			GRAB_THREAD_LOCK();
+			for(; ready_threads_count > 0; ready_threads_count--)
+				thread_enqueue_run_q(ready_threads[ready_threads_count - 1]);
+			RELEASE_THREAD_LOCK();
+			// ready_threads_count is back to 0
+		}
+					
 		sems[slot].count += delta;
 		count -= delta;
 	}
-
-	if(released_threads > 0 && (flags & SEM_FLAG_NO_RESCHED) == 0)
-		thread_resched();
+	if(released_threads > 0) {
+		GRAB_THREAD_LOCK();
+		// put any leftovers in the runq
+		if(ready_threads_count > 0) {
+			for(; ready_threads_count > 0; ready_threads_count--)
+				thread_enqueue_run_q(ready_threads[ready_threads_count - 1]);
+		}
+		if((flags & SEM_FLAG_NO_RESCHED) == 0) {
+			RELEASE_SEM_LOCK(sems[slot]);
+			thread_resched();
+		}
+		RELEASE_THREAD_LOCK();
+		goto outnolock;			
+	}
 
 err:
-	RELEASE_THREAD_LOCK();
+	RELEASE_SEM_LOCK(sems[slot]);
+outnolock:
 	int_restore_interrupts(state);
 
 	return err;
