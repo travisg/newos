@@ -736,7 +736,7 @@ restart:
 	// below because we'll have to release it later anyway, since we grabbed a ref to the vnode at
 	// vfs_get_vnode_from_path(). This puts the ref counts in sync.
 	vm_cache_acquire_ref(cache_ref, false);
-	err = map_backing_store(aspace, store, address, 0, size, addr_type, 0, lock, mapping, &region, name);
+	err = map_backing_store(aspace, store, address, offset, size, addr_type, 0, lock, mapping, &region, name);
 	vm_cache_release_ref(cache_ref);
 	vm_put_aspace(aspace);
 	if(err < 0)
