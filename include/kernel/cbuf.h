@@ -34,3 +34,4 @@ int cbuf_truncate_head(cbuf *chain, int trunc_bytes);
 int cbuf_truncate_tail(cbuf *chain, int trunc_bytes);
 
 #endif
+

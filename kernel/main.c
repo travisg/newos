@@ -18,6 +18,7 @@
 #include <kernel/net/net.h>
 #include <kernel/cbuf.h>
 #include <kernel/elf.h>
+#include <kernel/dev/beos.h>
 #include <kernel/dev/devs.h>
 #include <kernel/bus/bus.h>
 
@@ -106,8 +107,11 @@ static int main2()
 	con_init(&ka);
 	net_init(&ka);
 
+	/* remove this later, just a hack for right now */
+#ifdef ARCH_i386
 	beos_layer_init();
 	beos_load_beos_driver("speaker");
+#endif
 
 #if 0
 		// XXX remove

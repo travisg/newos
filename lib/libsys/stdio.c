@@ -49,7 +49,6 @@ char getc()
 	char c;
 	int len;
 	
-	len = 1;
-	sys_read(infd, &c, 0, &len);
+	sys_read(infd, &c, 0, 1);
 	return c;
 }

@@ -158,7 +158,7 @@ int user_unlink(const char *path);
 int user_rename(const char *oldpath, const char *newpath);
 int user_rstat(const char *path, struct file_stat *stat);
 int user_wstat(const char *path, struct file_stat *stat, int stat_mask);
-char* user_getcwd(char *buf, size_t size);
+int user_getcwd(char *buf, size_t size);
 int user_setcwd(const char* path);
 
 #endif

@@ -149,7 +149,7 @@ int cmd_stat(char *args)
 		printf("stat of file '%s': \n", args);
 		printf("vnid 0x%x\n", (unsigned int)stat.vnid);
 		printf("type %d\n", stat.type);
-		printf("size %d\n", stat.size);
+		printf("size %d\n", (int)stat.size);
 	} else {
 		printf("stat failed for file '%s'\n", args);
 	}
@@ -175,7 +175,7 @@ int cmd_ls(char *args)
 	switch(stat.type) {
 		case STREAM_TYPE_FILE:
 		case STREAM_TYPE_DEVICE:
-			printf("%s    %d bytes\n", args, stat.size);
+			printf("%s    %d bytes\n", args, (int)stat.size);
 			count++;
 			break;
 		case STREAM_TYPE_DIR: {

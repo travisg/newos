@@ -62,7 +62,7 @@ $(LINKHACK): $(KERNEL_DIR)/linkhack.c
 DEPS += $(KERNEL_OBJ_DIR)/linkhack.d
 
 kernelclean:
-	rm -f $(KERNEL_OBJS) $(LINKHACK)
+	rm -f $(KERNEL_OBJS) $(LINKHACK) $(KERNEL) $(LIBKERNEL)
 
 CLEAN += kernelclean
 

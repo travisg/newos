@@ -119,9 +119,9 @@ int arch_int_disable_interrupts()
 {
 	int flags;
 
-	asm("pushfl;
-		popl %0;
-		cli" : "=g" (flags));
+	asm("pushfl;\n"
+		"popl %0;\n"
+		"cli" : "=g" (flags));
 	return flags & 0x200 ? 1 : 0;
 }
 
@@ -130,18 +130,18 @@ void arch_int_restore_interrupts(int oldstate)
 	int flags = oldstate ? 0x200 : 0;
 	int state = 0;
 
-	asm volatile("pushfl;
-		popl	%1;
-		andl	$0xfffffdff,%1;
-		orl		%0,%1;
-		pushl	%1;
-		popfl"
+	asm volatile("pushfl;\n"
+		"popl	%1;\n"
+		"andl	$0xfffffdff,%1;\n"
+		"orl		%0,%1;\n"
+		"pushl	%1;\n"
+		"popfl\n"
 		: "=g" (flags) : "r" (state), "0" (flags));
 }
 
 void i386_handle_trap(struct int_frame frame)
 {
-	int ret;
+	int ret = INT_NO_RESCHEDULE;
 
 //	if(frame.vector != 0x20)
 //		dprintf("i386_handle_trap: vector 0x%x, ip 0x%x, cpu %d\n", frame.vector, frame.eip, smp_get_current_cpu());

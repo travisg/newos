@@ -64,7 +64,6 @@ static void pci_write_data(uint8 bus, uint8 unit, uint8 function, int reg, uint3
 		case 4:
 			out32(data, CONFIG_DATA + (reg & 3));
 			break;
-		default:
 	}
 	return;
 }

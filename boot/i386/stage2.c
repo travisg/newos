@@ -380,75 +380,75 @@ void mmu_map_page(unsigned int vaddr, unsigned int paddr)
 }
 
 long long rdtsc();
-asm("
-rdtsc:
-	rdtsc
-	ret
-");
+asm(
+"rdtsc:\n"
+"	rdtsc\n"
+"	ret\n"
+);
 
 //void execute_n_instructions(int count);
-asm("
-.global execute_n_instructions
-execute_n_instructions:
-	movl	4(%esp), %ecx
-	shrl	$4, %ecx		/* divide count by 16 */
-.again:
-	xorl	%eax, %eax
-	xorl	%eax, %eax
-	xorl	%eax, %eax
-	xorl	%eax, %eax
-	xorl	%eax, %eax
-	xorl	%eax, %eax
-	xorl	%eax, %eax
-	xorl	%eax, %eax
-	xorl	%eax, %eax
-	xorl	%eax, %eax
-	xorl	%eax, %eax
-	xorl	%eax, %eax
-	xorl	%eax, %eax
-	xorl	%eax, %eax
-	xorl	%eax, %eax
-	loop	.again
-	ret
-");
+asm(
+".global execute_n_instructions\n"
+"execute_n_instructions:\n"
+"	movl	4(%esp), %ecx\n"
+"	shrl	$4, %ecx\n"		/* divide count by 16 */
+".again:\n"
+"	xorl	%eax, %eax\n"
+"	xorl	%eax, %eax\n"
+"	xorl	%eax, %eax\n"
+"	xorl	%eax, %eax\n"
+"	xorl	%eax, %eax\n"
+"	xorl	%eax, %eax\n"
+"	xorl	%eax, %eax\n"
+"	xorl	%eax, %eax\n"
+"	xorl	%eax, %eax\n"
+"	xorl	%eax, %eax\n"
+"	xorl	%eax, %eax\n"
+"	xorl	%eax, %eax\n"
+"	xorl	%eax, %eax\n"
+"	xorl	%eax, %eax\n"
+"	xorl	%eax, %eax\n"
+"	loop	.again\n"
+"	ret\n"
+);
 
 void system_time_setup(long a);
-asm("
-system_time_setup:
+asm(
+"system_time_setup:\n"
 	/* First divide 1M * 2^32 by proc_clock */
-	movl	$0x0F4240, %ecx
-	movl	%ecx, %edx
-	subl	%eax, %eax
-	movl	4(%esp), %ebx
-	divl	%ebx, %eax		/* should be 64 / 32 */
-	movl	%eax, cv_factor
-	ret
-");
+"	movl	$0x0F4240, %ecx\n"
+"	movl	%ecx, %edx\n"
+"	subl	%eax, %eax\n"
+"	movl	4(%esp), %ebx\n"
+"	divl	%ebx, %eax\n"		/* should be 64 / 32 */
+"	movl	%eax, cv_factor\n"
+"	ret\n"
+);
 
 // long long system_time();
-asm("
-.global system_time
-system_time:
+asm(
+".global system_time\n"
+"system_time:\n"
 	/* load 64-bit factor into %eax (low), %edx (high) */
 	/* hand-assemble rdtsc -- read time stamp counter */
-	rdtsc		/* time in %edx,%eax */
+"	rdtsc\n"		/* time in %edx,%eax */
 
-	pushl	%ebx
-	pushl	%ecx
-	movl	cv_factor, %ebx
-	movl	%edx, %ecx	/* save high half */
-	mull	%ebx 		/* truncate %eax, but keep %edx */
-	movl	%ecx, %eax
-	movl	%edx, %ecx	/* save high half of low */
-	mull	%ebx /*, %eax*/
+"	pushl	%ebx\n"
+"	pushl	%ecx\n"
+"	movl	cv_factor, %ebx\n"
+"	movl	%edx, %ecx\n"	/* save high half */
+"	mull	%ebx\n" 		/* truncate %eax, but keep %edx */
+"	movl	%ecx, %eax\n"
+"	movl	%edx, %ecx\n"	/* save high half of low */
+"	mull	%ebx\n"			/*, %eax*/
 	/* now compute  [%edx, %eax] + [%ecx], propagating carry */
-	subl	%ebx, %ebx	/* need zero to propagate carry */
-	addl	%ecx, %eax
-	adc		%ebx, %edx
-	popl	%ecx
-	popl	%ebx
-	ret
-");
+"	subl	%ebx, %ebx\n"	/* need zero to propagate carry */
+"	addl	%ecx, %eax\n"
+"	adc		%ebx, %edx\n"
+"	popl	%ecx\n"
+"	popl	%ebx\n"
+"	ret\n"
+);
 
 void sleep(long long time)
 {

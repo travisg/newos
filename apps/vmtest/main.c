@@ -99,26 +99,26 @@ int main()
 			64*1024*1024, REGION_WIRING_LAZY, LOCK_RW);
 		t = sys_system_time() - t;
 
-		printf("took %d microseconds to create large region (lazy wiring)\n", (long)t);
+		printf("took %d microseconds to create large region (lazy wiring)\n", (int)t);
 
 		t = sys_system_time();
 		sys_vm_delete_region(region);
 		t = sys_system_time() - t;
 
-		printf("took %d microseconds to delete it (with no pages allocated)\n", (long)t);
+		printf("took %d microseconds to delete it (with no pages allocated)\n", (int)t);
 
 		t = sys_system_time();
 		region = sys_vm_create_anonymous_region("large", &ptr, REGION_ADDR_ANY_ADDRESS,
 			64*1024*1024, REGION_WIRING_WIRED, LOCK_RW);
 		t = sys_system_time() - t;
 
-		printf("took %d microseconds to create large region (wired)\n", (long)t);
+		printf("took %d microseconds to create large region (wired)\n", (int)t);
 
 		t = sys_system_time();
 		sys_vm_delete_region(region);
 		t = sys_system_time() - t;
 
-		printf("took %d microseconds to delete it (with all allocated)\n", (long)t);
+		printf("took %d microseconds to delete it (with all allocated)\n", (int)t);
 	}
 #endif
 

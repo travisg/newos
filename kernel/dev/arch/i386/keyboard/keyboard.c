@@ -128,7 +128,8 @@ static void insert_in_buf(char c)
 	unsigned int temp_tail = tail;
 
  	// see if the next char will collide with the head
-	temp_tail = ++temp_tail % sizeof(keyboard_buf);
+	temp_tail++;
+	temp_tail %= sizeof(keyboard_buf);
 	if(temp_tail == head) {
 		// buffer overflow, ditch this char
 		return;

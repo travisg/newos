@@ -1991,10 +1991,10 @@ int user_wstat(const char *upath, struct file_stat *ustat, int stat_mask)
 	return vfs_wstat(path, &stat, stat_mask, false);
 }
 
-char* user_getcwd(char *buf, size_t size)
+int user_getcwd(char *buf, size_t size)
 {
 	char path[SYS_MAX_PATH_LEN];
-	int rc;
+	int rc, rc2;
 
 #if MAKE_NOIZE
 	dprintf("user_getcwd: buf 0x%x, 0x%x\n", buf, size);
@@ -2005,13 +2005,16 @@ char* user_getcwd(char *buf, size_t size)
 		return NULL; //ERR_VM_BAD_USER_MEMORY;
 
 	// Call vfs to get current working directory
-	rc = vfs_get_cwd(path,size,false);
+	rc = vfs_get_cwd(path, SYS_MAX_PATH_LEN-1, false);
+	if(rc < 0)
+		return rc;
 
 	// Copy back the result
-	user_strncpy(buf,path,size);
+	rc2 = user_strncpy(buf, path, size);
+	if(rc2 < 0)
+		return rc2;
 
-	// Return either NULL or the buffer address to indicate failure or success
-	return  (rc < 0) ? NULL : buf;
+	return rc;
 }
 
 int user_setcwd(const char* upath)
