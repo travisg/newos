@@ -9,7 +9,7 @@
 
 
 #include <stddef.h>
-#include <libc/arch/string.h>
+#include <arch/string.h>
 
 #ifdef __cplusplus
 namespace std

@@ -7,7 +7,7 @@
 
 #include <newos/types.h>
 
-#include INC_ARCH(libc/arch,string.h)
+#include INC_ARCH(arch,string.h)
 
 #endif
 
