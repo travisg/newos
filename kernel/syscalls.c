@@ -90,18 +90,18 @@ int syscall_dispatcher(unsigned long call_num, unsigned long arg0, unsigned long
 		case SYSCALL_THREAD_WAIT_ON_THREAD: {
 			int retcode;
 			*call_ret = thread_wait_on_thread((thread_id)arg0, &retcode);
-			if(arg2 != 0) {
+			if(arg1 != 0) {
 				// XXX protect the copy
-				*(int *)arg2 = retcode;
+				*(int *)arg1 = retcode;
 			}
 			break;
 		}
 		case SYSCALL_PROC_WAIT_ON_PROC: {
 			int retcode;
 			*call_ret = proc_wait_on_proc((proc_id)arg0, &retcode);
-			if(arg2 != 0) {
+			if(arg1 != 0) {
 				// XXX protect the copy
-				*(int *)arg2 = retcode;
+				*(int *)arg1 = retcode;
 			}
 			break;
 		}

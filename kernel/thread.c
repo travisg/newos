@@ -869,7 +869,7 @@ void thread_exit(int retcode)
 	bool delete_proc = false;
 	vm_region *death_stack;
 	
-	dprintf("thread 0x%x exiting\n", t->id);
+	dprintf("thread 0x%x exiting w/return code 0x%x\n", t->id, retcode);
 
 	if(p->state == PROC_STATE_DEATH) {
 		// this process is already being deleted, just quit and let that code handle it

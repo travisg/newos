@@ -4,17 +4,19 @@
 */
 extern int __stdio_init();
 extern int __stdio_deinit();
-extern void sys_exit();
+extern void sys_exit(int retcode);
 
 extern int main();
 
 int _start()
 {
+	int retcode;
+	
 	__stdio_init();
 	
-	main();
+	retcode = main();
 	
 	__stdio_deinit();
-	sys_exit();
+	sys_exit(retcode);
 	return 0;	
 }
