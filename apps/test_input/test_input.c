@@ -9,7 +9,7 @@
 #define D_VAL 0x40000000
 #define O_VAL 0xfffffff8
 #define X_VAL 0xfffffff0
-#define S_VAL "45"
+#define S_VAL "345"
 
 static char c_val[] = { '1', '2', '3', '4', '5', (const char)10, '1', '2', '3', (const char)0};
 

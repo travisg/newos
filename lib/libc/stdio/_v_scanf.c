@@ -16,10 +16,10 @@
 #define read(fd, buf, size) sys_read(fd, buf, -1, size)
 #endif
 
-int _v_scanf( int (*_read)(void*), void (*_push)(void*, unsigned char),  void* arg, const unsigned char *, va_list);
+int _v_scanf( int (*_read)(void*), void (*_push)(void*, unsigned char),	 void* arg, const unsigned char *, va_list);
 
 /**********************************************************/
-/* sscanf functions                                       */
+/* sscanf functions					  */
 /**********************************************************/
 
 struct _sscanf_struct
@@ -58,8 +58,8 @@ static int _sscanf_read(void* p)
 
     if((ch = val->str[val->pos++]) == 0)
     {
-        val->pos--;
-        return 0;
+	val->pos--;
+	return 0;
     }
     val->count++;
 	return ch;
@@ -67,17 +67,20 @@ static int _sscanf_read(void* p)
 
 int vsscanf(char const *str, char const *format, va_list arg_ptr)
 {
+    int ret_val;
     struct _sscanf_struct *val = (struct _sscanf_struct*)malloc(sizeof(struct _sscanf_struct));
 
-	val->unget = -1;
+    val->unget = -1;
     val->count = 0;
-	val->pos = 0;
+    val->pos = 0;
     val->str = str;
-    return _v_scanf(_sscanf_read, _sscanf_push, val, format, arg_ptr);
+    ret_val = _v_scanf(_sscanf_read, _sscanf_push, val, format, arg_ptr);
+	free(val);
+	return ret_val;
 }
 
 /**********************************************************/
-/* fscanf functions                                       */
+/* fscanf functions					  */
 /**********************************************************/
 
 struct _fscanf_struct
@@ -119,19 +122,19 @@ static int _fscanf_read(void *p)
     
 	if (stream->rpos >= stream->buf_pos)
     {
-        int len = read(stream->fd, stream->buf, stream->buf_size);
-        if (len==0)
-        {
-            stream->flags |= _STDIO_EOF;
-            return EOF;
-        }
-        else if (len < 0)
-        {
-            stream->flags |= _STDIO_ERROR;
-            return EOF;
-        }
-        stream->rpos=0;
-        stream->buf_pos=len;
+	int len = read(stream->fd, stream->buf, stream->buf_size);
+	if (len==0)
+	{
+	    stream->flags |= _STDIO_EOF;
+	    return EOF;
+	}
+	else if (len < 0)
+	{
+	    stream->flags |= _STDIO_ERROR;
+	    return EOF;
+	}
+	stream->rpos=0;
+	stream->buf_pos=len;
     }
 	c = stream->buf[stream->rpos++];
 
@@ -141,15 +144,18 @@ static int _fscanf_read(void *p)
 
 int vfscanf( FILE *stream, char const *format, va_list arg_ptr)
 {
+	int ret_val;
 	struct _fscanf_struct *val = (struct _fscanf_struct*)malloc(sizeof(struct _fscanf_struct));
 
 	val->count = 0;
 	val->stream = stream;
-    return _v_scanf(_fscanf_read, _fscanf_push, val, format, arg_ptr);
+    ret_val = _v_scanf(_fscanf_read, _fscanf_push, val, format, arg_ptr);
+	free(val);
+	return ret_val;
 }
 
 /**********************************************************/
-/* value size determination functions                     */
+/* value size determination functions			  */
 /**********************************************************/
 
 typedef enum
@@ -179,7 +185,7 @@ static valSize _getValSize(char c, int (*_read)(void*), void* arg)
 }
 */
 /**********************************************************/
-/* utility functions                                      */
+/* utility functions					  */
 /**********************************************************/
 /*
 static bool _isIntegralType(char c)
@@ -346,9 +352,9 @@ finish:
 
 
 /**********************************************************/
-/* the function                                           */
+/* the function						  */
 /**********************************************************/
-int _v_scanf( int (*_read)(void*), void (*_push)(void*, unsigned char),  void* arg, const unsigned char *format, va_list arg_ptr)
+int _v_scanf( int (*_read)(void*), void (*_push)(void*, unsigned char),	 void* arg, const unsigned char *format, va_list arg_ptr)
 {
 	unsigned int fieldsRead = 0;
 	unsigned char fch;
@@ -359,9 +365,9 @@ int _v_scanf( int (*_read)(void*), void (*_push)(void*, unsigned char),  void* a
 		long long temp = 0;
 		fch = *format++;
 
-    	if(isspace(fch))
-    	{
-		 	if(isspace(_read(arg)))
+	if(isspace(fch))
+	{
+			if(isspace(_read(arg)))
 			{
 				break;
 			}
