@@ -34,6 +34,9 @@ enum {
 	CONSOLE_OP_WRITEXY = 2376
 };
 
+#define TAB_SIZE 8
+#define TAB_MASK 7
+
 struct console_desc {
 	// describe the framebuffer
 	addr fb;
@@ -225,6 +228,15 @@ static char console_putch(const char c)
  	return c;
 }
 
+static void tab(void)
+{
+	console.x = (console.x + TAB_SIZE) & ~TAB_MASK;
+	if (console.x >= console.columns) {
+		console.x -= console.columns;
+		lf();
+	}
+}
+
 static int console_open(dev_ident ident, dev_cookie *cookie)
 {
 	return 0;
@@ -271,6 +283,9 @@ static ssize_t _console_write(const void *buf, size_t len)
 				break;
 			case 0x8: // backspace
 				del();
+				break;
+			case '\t': // tab
+				tab();
 				break;
 			case '\0':
 				break;

@@ -27,6 +27,8 @@ static unsigned int origin = 0;
 #define LINES 25
 #define COLUMNS 80
 #define NPAR 16
+#define TAB_SIZE 8
+#define TAB_MASK 7
 
 #define TEXT_INDEX 0x3d4
 #define TEXT_DATA  0x3d5
@@ -138,6 +140,16 @@ static char console_putch(const char c)
 	return c;
 }
 
+static void tab(void)
+{
+	x = (x + TAB_SIZE) & ~TAB_MASK;
+	if (x>=COLUMNS) {
+		x -= COLUMNS;
+		lf();
+	}
+	pos=origin+((y*columns+x)<<1);
+}
+
 static int console_open(dev_ident ident, dev_cookie *cookie)
 {
 	return 0;
@@ -184,6 +196,9 @@ static ssize_t _console_write(const void *buf, size_t len)
 				break;
 			case 0x8: // backspace
 				del();
+				break;
+			case '\t':
+				tab();
 				break;
 			case '\0':
 				break;
