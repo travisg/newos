@@ -86,7 +86,7 @@ void _start(unsigned int mem, int in_vesa, unsigned int vesa_ptr, unsigned int c
 	// calculate how big the bootdir is so we know where we can start grabbing pages
 	{
 		int entry;
-		for (entry = 0; entry < 64; entry++) {
+		for (entry = 0; entry < BOOTDIR_MAX_ENTRIES; entry++) {
 			if (bootdir[entry].be_type == BE_TYPE_NONE)
 				break;
 
