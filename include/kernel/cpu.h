@@ -1,5 +1,5 @@
 /*
-** Copyright 2002, Travis Geiselbrecht. All rights reserved.
+** Copyright 2002-2004, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #ifndef _CPU_H
@@ -21,6 +21,11 @@ typedef union cpu_ent {
 		// thread.c: used to force a reschedule at quantum expiration time
 		int preempted;
 		struct timer_event quantum_timer;
+
+		// remember which thread's fpu state we hold
+		// NULL means we dont hold any state
+		struct thread *fpu_state_thread;
+		bool fpu_active;
 
 		// timer.c: per-cpu timer queues
 		struct timer_event * volatile timer_events;

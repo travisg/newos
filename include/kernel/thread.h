@@ -88,6 +88,14 @@ struct proc {
 	struct arch_proc arch_info;
 };
 
+// tracks the state of the fpu state for each thread
+enum {
+	FPU_STATE_UNINITIALIZED = 0,	// initial state
+	FPU_STATE_ACTIVE,				// active and on the current cpu
+	FPU_STATE_SAVED,				// saved in the thread structure
+	FPU_STATE_UNSAVED				// resident in one of the cpus, not active
+};
+
 struct thread {
 	struct thread *next;
 	thread_id id;
@@ -100,6 +108,9 @@ struct thread {
 	int next_state;
 	union cpu_ent *cpu;
 	bool in_kernel;
+
+	union cpu_ent *fpu_cpu; // this cpu holds our fpu state
+	int fpu_state;
 
 	int int_disable_level;
 
@@ -181,7 +192,10 @@ int thread_init_percpu(int cpu_num);
 void thread_exit(int retcode);
 int thread_kill_thread(thread_id id);
 int thread_kill_thread_nowait(thread_id id);
-#define thread_get_current_thread arch_thread_get_current_thread
+struct thread *thread_get_current_thread(void);
+extern inline struct thread *thread_get_current_thread(void) {
+	return arch_thread_get_current_thread();
+}
 struct thread *thread_get_thread_struct(thread_id id);
 struct thread *thread_get_thread_struct_locked(thread_id id);
 thread_id thread_get_current_thread_id(void);

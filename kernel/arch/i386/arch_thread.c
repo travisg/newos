@@ -102,9 +102,8 @@ void arch_thread_switch_kstack_and_call(addr_t new_kstack, void (*func)(void *),
 	i386_switch_stack_and_call(new_kstack, func, arg);
 }
 
-void arch_thread_context_switch(struct thread *t_from, struct thread *t_to)
+void arch_thread_context_switch(struct thread *t_from, struct thread *t_to, struct vm_translation_map_struct *new_tmap)
 {
-	addr_t new_pgdir;
 #if 0
 	int i;
 
@@ -114,50 +113,23 @@ void arch_thread_context_switch(struct thread *t_from, struct thread *t_to)
 		t_from->arch_info.current_stack.ss, t_from->arch_info.current_stack.esp,
 		t_to->arch_info.current_stack.ss, t_to->arch_info.current_stack.esp);
 #endif
-#if 0
-	for(i=0; i<11; i++)
-		dprintf("*esp[%d] (0x%x) = 0x%x\n", i, ((unsigned int *)new_at->esp + i), *((unsigned int *)new_at->esp + i));
-#endif
+
+	// if we're switching to a new translation map, look up the page directory
+	// and switch to it.
+	if(new_tmap) {
+		addr_t new_pgdir = vm_translation_map_get_pgdir(new_tmap);
+
+		if((new_pgdir % PAGE_SIZE) != 0)
+			panic("arch_thread_context_switch: bad pgdir %p\n", (void*)new_pgdir);
 
 #if 0
-{
-	int a = *(int *)(t_to->kernel_stack_base + KSTACK_SIZE - 4);
-}
+		dprintf("new_pgdir is 0x%x\n", new_pgdir);
 #endif
 
-	if(t_from->proc->aspace_id >= 0 && t_to->proc->aspace_id >= 0) {
-		// they are both uspace threads
-		if(t_from->proc->aspace_id == t_to->proc->aspace_id) {
-			// dont change the pgdir, same address space
-			new_pgdir = NULL;
-		} else {
-			// switching to a new address space
-			new_pgdir = vm_translation_map_get_pgdir(&t_to->proc->aspace->translation_map);
-		}
-	} else if(t_from->proc->aspace_id < 0 && t_to->proc->aspace_id < 0) {
-		// they must both be kspace threads
-		new_pgdir = NULL;
-	} else if(t_to->proc->aspace_id < 0) {
-		// the one we're switching to is kspace
-		new_pgdir = vm_translation_map_get_pgdir(&t_to->proc->kaspace->translation_map);
-	} else {
-		new_pgdir = vm_translation_map_get_pgdir(&t_to->proc->aspace->translation_map);
-	}
-#if 0
-	dprintf("new_pgdir is 0x%x\n", new_pgdir);
-#endif
-
-#if 0
-{
-	int a = *(int *)(t_to->arch_info.current_stack.esp - 4);
-}
-#endif
-
-	if((new_pgdir % PAGE_SIZE) != 0)
-		panic("arch_thread_context_switch: bad pgdir %p\n", (void*)new_pgdir);
-
-	if(new_pgdir)
 		i386_swap_pgdir(new_pgdir);
+	}
+
+
 	i386_set_kstack(t_to->kernel_stack_base + KSTACK_SIZE);
 	fsave_swap_func(t_from->arch_info.fpu_state, t_to->arch_info.fpu_state);
 	i386_context_switch(&t_from->arch_info, &t_to->arch_info);

@@ -299,6 +299,8 @@ static struct thread *create_thread_struct(const char *name)
 	t->id = atomic_add(&next_thread_id, 1);
 	t->proc = NULL;
 	t->cpu = NULL;
+	t->fpu_cpu = NULL;
+	t->fpu_state = FPU_STATE_UNINITIALIZED;
 	t->sem_blocking = -1;
 	t->fault_handler = 0;
 	t->kernel_stack_region_id = -1;
@@ -1610,20 +1612,43 @@ static struct proc *proc_get_proc_struct_locked(proc_id id)
 
 static void thread_context_switch(struct thread *t_from, struct thread *t_to)
 {
-	bigtime_t now;
+	vm_translation_map *new_tmap;
 
 	// track kernel time
-	now = system_time();
+	bigtime_t now = system_time();
 	if(t_from->last_time_type == KERNEL_TIME)
 		t_from->kernel_time += now - t_from->last_time;
 	else
 		t_from->user_time += now - t_from->last_time;
 	t_to->last_time = now;
 
+	// set the current cpu and thread pointer
 	t_to->cpu = t_from->cpu;
 	arch_thread_set_current_thread(t_to);
 	t_from->cpu = NULL;
-	arch_thread_context_switch(t_from, t_to);
+
+	// decide if we need to switch to a new mmu context
+	if(t_from->proc->aspace_id >= 0 && t_to->proc->aspace_id >= 0) {
+		// they are both uspace threads
+		if(t_from->proc->aspace_id == t_to->proc->aspace_id) {
+			// same address space
+			new_tmap = NULL;
+		} else {
+			// switching to a new address space
+			new_tmap = &t_to->proc->aspace->translation_map;
+		}
+	} else if(t_from->proc->aspace_id < 0 && t_to->proc->aspace_id < 0) {
+		// they must both be kspace threads
+		new_tmap = NULL;
+	} else if(t_to->proc->aspace_id < 0) {
+		// the one we're switching to is kspace
+		new_tmap = &t_to->proc->kaspace->translation_map;
+	} else {
+		new_tmap = &t_to->proc->aspace->translation_map;
+	}
+
+	// do the architecture specific context switch
+	arch_thread_context_switch(t_from, t_to, new_tmap);
 }
 
 static int _rand(void)
