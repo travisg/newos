@@ -28,7 +28,7 @@ static int i386_ici_interrupt()
 	// gin-u-wine inter-cpu interrupt
 	dprintf("inter-cpu interrupt on cpu %d\n", arch_smp_get_current_cpu());
 	arch_smp_ack_interrupt();
-	return INT_RESCHEDULE;
+	return INT_NO_RESCHEDULE;
 }
 
 static int i386_spurious_interrupt()

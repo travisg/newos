@@ -14,7 +14,7 @@
 
 static long long periodic_timer_rate = 10000; // us
 
-static void set_hardware_timer(long long relative_timeout)
+static void set_isa_hardware_timer(long long relative_timeout)
 {
 	unsigned short next_event_clocks;
 
@@ -30,10 +30,10 @@ static void set_hardware_timer(long long relative_timeout)
 	outb((next_event_clocks >> 8) & 0xff, 0x40);
 }
 
-static int i386_timer_interrupt()
+static int isa_timer_interrupt()
 {
 	// handle setting it up for the next shot
-	set_hardware_timer(periodic_timer_rate);		
+	set_isa_hardware_timer(periodic_timer_rate);		
 
 	return timer_interrupt();
 }
@@ -42,6 +42,7 @@ static int apic_timer_interrupt()
 {
 	// XXX reset timer
 	
+	
 	return timer_interrupt();
 }
 
@@ -49,7 +50,7 @@ int arch_init_timer(struct kernel_args *ka)
 {
 	dprintf("arch_init_timer: entry\n");
 	
-	int_set_io_interrupt_handler(0x20, &i386_timer_interrupt);
+	int_set_io_interrupt_handler(0x20, &isa_timer_interrupt);
 	int_set_io_interrupt_handler(0xfb, &apic_timer_interrupt);
 
 	return 0;

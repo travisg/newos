@@ -19,6 +19,7 @@ unsigned short *kScreenBase = (unsigned short*) 0xb8000;
 unsigned screenOffset = 0;
 unsigned int line = 0;
 
+double calculate_cpu_clock();
 
 void _start(unsigned int mem, char *str)
 {
@@ -236,6 +237,78 @@ void _start(unsigned int mem, char *str)
 		"pushl 	$0x80000080;	"		// this is the start address
 		"ret;		"					// jump.
 		: : "m" (ka));
+}
+
+long long get_time_base();
+asm("
+get_time_base:
+	rdtsc
+	ret
+");
+
+void execute_n_instructions(int count);
+asm("
+execute_n_instructions:
+	movl	4(%esp), %ecx
+	shrl	$4, %ecx		/* divide count by 16 */
+.again:
+	xorl	%eax, %eax
+	xorl	%eax, %eax
+	xorl	%eax, %eax
+	xorl	%eax, %eax
+	xorl	%eax, %eax
+	xorl	%eax, %eax
+	xorl	%eax, %eax
+	xorl	%eax, %eax
+	xorl	%eax, %eax
+	xorl	%eax, %eax
+	xorl	%eax, %eax
+	xorl	%eax, %eax
+	xorl	%eax, %eax
+	xorl	%eax, %eax
+	xorl	%eax, %eax
+	loop	.again
+	ret
+");
+
+#define outb(value,port) \
+	asm("outb %%al,%%dx"::"a" (value),"d" (port))
+
+
+#define inb(port) ({ \
+	unsigned char _v; \
+	asm volatile("inb %%dx,%%al":"=a" (_v):"d" (port)); \
+	_v; \
+	})
+
+#define TIMER_CLKNUM_HZ 1193167
+
+double calculate_cpu_clock() 
+{
+	unsigned char	low, high;
+	unsigned long	expired;
+	long long		t1, t2;
+	double			timer_usecs, time_base_ticks;
+
+	/* program the timer to count down mode */
+    outb(0x43, 0x34);              
+
+	outb(0x40, 0xff);		/* low and then high */
+	outb(0x40, 0xff);
+	t1 = get_time_base();
+
+	execute_n_instructions(16*20000);
+
+	t2 = get_time_base();
+	outb(0x43, 0x00); /* latch counter value */
+	low = inb(0x40);
+	high = inb(0x40);
+
+	expired = (ulong)0xffff - ((((ulong)high) << 8) + low);
+	
+	timer_usecs = (expired * 1.0) / (TIMER_CLKNUM_HZ/1000000.0);
+	time_base_ticks = t2 -t1;
+	return (timer_usecs /(t2-t1)); 
 }
 
 /*

@@ -88,6 +88,7 @@ static void smp_do_config(struct kernel_args *ka)
 	struct mp_config_table *mpc;
 	struct mp_ext_pe *pe;
 	struct mp_ext_ioapic *io;
+	struct mp_ext_bus *bus;
 	const char *cpu_family[] = { "", "", "", "", "Intel 486",
 		"Intel Pentium", "Intel Pentium Pro", "Intel Pentium II" };
 
@@ -128,6 +129,10 @@ static void smp_do_config(struct kernel_args *ka)
 				ka->num_cpus++;
 				break;
 			case MP_EXT_BUS:
+				bus = (struct mp_ext_bus *)ptr;
+				dprintf("smp: bus%d: %c%c%c%c%c%c\n", bus->bus_id,
+					bus->name[0], bus->name[1], bus->name[2], bus->name[3],
+					bus->name[4], bus->name[5]);
 				ptr += 8;
 				break;
 			case MP_EXT_IO_APIC:

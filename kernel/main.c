@@ -92,12 +92,12 @@ int _start(struct kernel_args *oldka, int cpu)
 		dprintf("%d cr4 = 0x%x\n", cpu, foo);
 	}
 #endif
-/*	
-	if(cpu == 0) {
+#if 0
+	if(cpu == 1) {
 		dprintf("sending intercpu interrupt\n");
-		smp_send_ici(1);
+		smp_send_ici(0);
 	}
-*/
+#endif
 	kprintf("main: done... spinning forever on cpu %d\n", cpu);
 	dprintf("main: done... spinning forever on cpu %d\n", cpu);
 	for(;;);

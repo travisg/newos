@@ -128,7 +128,7 @@ void i386_handle_trap(struct int_frame frame)
 {
 	int ret;
 
-//	if(frame.vector != 0x20)
+	if(frame.vector != 0x20)
 		dprintf("i386_handle_trap: vector 0x%x, cpu %d\n", frame.vector, smp_get_current_cpu());
 	switch(frame.vector) {
 		case 8:
@@ -208,6 +208,7 @@ int arch_int_init(struct kernel_args *ka)
 	set_intr_gate(46,  &trap46);
 	set_intr_gate(47,  &trap47);
 
+	set_intr_gate(253, &trap253);
 	set_intr_gate(254, &trap254);
 	set_intr_gate(255, &trap255);
 

@@ -172,5 +172,12 @@ struct mp_ext_ioapic
 	unsigned int *addr;
 };
 
+struct mp_ext_bus
+{
+	unsigned char type;
+	unsigned char bus_id;
+	char          name[6];
+};
+
 #endif
 

@@ -55,6 +55,7 @@ TRAP(trap45, 45)
 TRAP(trap46, 46)
 TRAP(trap47, 47)
 
+TRAP(trap253, 253)
 TRAP(trap254, 254)
 TRAP(trap255, 255)
 
