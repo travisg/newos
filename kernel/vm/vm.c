@@ -29,7 +29,7 @@
 #include <nulibc/string.h>
 #include <nulibc/ctype.h>
 #include <nulibc/stdlib.h>
-#include <libc/printf.h>
+#include <nulibc/stdio.h>
 
 #define HEAP_SIZE	0x00400000
 

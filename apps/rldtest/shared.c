@@ -3,7 +3,7 @@
 ** Distributed under the terms of the NewOS License.
 */
 
-#include <libsys/stdio.h>
+#include <stdio.h>
 
 int fib(int);
 int shared_hello(void);

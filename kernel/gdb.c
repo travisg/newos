@@ -2,9 +2,9 @@
 ** Copyright 2002, Manuel J. Petit. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
-#include <libc/string.h>
-#include <libc/stdarg.h>
-#include <libc/printf.h>
+#include <nulibc/string.h>
+#include <nulibc/stdarg.h>
+#include <nulibc/stdio.h>
 #include <kernel/vm.h>
 #include <kernel/smp.h>
 #include <kernel/debug.h>

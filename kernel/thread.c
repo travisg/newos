@@ -22,8 +22,8 @@
 #include <kernel/user_runtime.h>
 #include <sys/errors.h>
 #include <boot/stage2.h>
-#include <libc/string.h>
-#include <libc/printf.h>
+#include <nulibc/string.h>
+#include <nulibc/stdio.h>
 
 struct proc_key {
 	proc_id id;

@@ -10,8 +10,8 @@
 #include <kernel/sem.h>
 #include <kernel/vfs.h>
 
-#include <libc/stdarg.h>
-#include <libc/printf.h>
+#include <nulibc/stdarg.h>
+#include <nulibc/stdio.h>
 
 // from con.h
 enum {

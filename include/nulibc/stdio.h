@@ -9,7 +9,7 @@
 
 
 #include <types.h>
-#include <stdarg.h>
+#include <nulibc/stdarg.h>
 
 
 #ifdef __cplusplus
@@ -18,6 +18,7 @@ extern "C"
 #endif
 
 struct FILE;	/* declare as opaque type */
+typedef struct FILE FILE;
 
 extern FILE *stdin;
 extern FILE *stdout;

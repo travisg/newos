@@ -15,8 +15,8 @@
 
 #include <kernel/fs/devfs.h>
 
-#include <libc/string.h>
-#include <libc/printf.h>
+#include <nulibc/string.h>
+#include <nulibc/stdio.h>
 
 #define DEVFS_TRACE 0
 

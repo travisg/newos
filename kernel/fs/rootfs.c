@@ -13,8 +13,8 @@
 
 #include <kernel/fs/rootfs.h>
 
-#include <libc/string.h>
-#include <libc/printf.h>
+#include <nulibc/string.h>
+#include <nulibc/stdio.h>
 
 #define ROOTFS_TRACE 0
 

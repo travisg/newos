@@ -5,10 +5,9 @@
 #include <types.h>
 #include <string.h>
 #include <unistd.h>
-#include <libc/printf.h>
 #include <ctype.h>
+#include <stdio.h>
 #include <sys/syscalls.h>
-#include <libsys/stdio.h>
 
 #include "commands.h"
 

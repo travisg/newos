@@ -4,9 +4,8 @@
 */
 #include <types.h>
 #include <string.h>
-#include <libc/printf.h>
+#include <stdio.h>
 #include <sys/syscalls.h>
-#include <libsys/stdio.h>
 #include <sys/errors.h>
 
 static void port_test(void);

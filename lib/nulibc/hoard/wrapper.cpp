@@ -32,7 +32,7 @@
   ========================================================================
 */
 
-#include <libc/string.h>
+#include <string.h>
 #include "config.h"
 
 #if USE_PRIVATE_HEAPS

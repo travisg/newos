@@ -63,20 +63,20 @@ ldisk: floppy
 # 
 $(BOOT_OBJ_DIR)/%.o: $(BOOT_DIR)/%.c 
 	@mkdir -p $(BOOT_OBJ_DIR)
-	$(CC) -c $< $(GLOBAL_CFLAGS) $(KERNEL_CFLAGS) -Iinclude -I$(BOOT_DIR) -o $@
+	$(CC) -c $< $(GLOBAL_CFLAGS) $(KERNEL_CFLAGS) -Iinclude -Iinclude/nulibc -I$(BOOT_DIR) -o $@
 
 $(BOOT_OBJ_DIR)/%.d: $(BOOT_DIR)/%.c
 	@mkdir -p $(BOOT_OBJ_DIR)
 	@echo "making deps for $<..."
-	@($(ECHO) -n $(dir $@);$(CC) $(GLOBAL_CFLAGS) $(KERNEL_CFLAGS) -Iinclude -I$(BOOT_DIR) -M -MG $<) > $@
+	@($(ECHO) -n $(dir $@);$(CC) $(GLOBAL_CFLAGS) $(KERNEL_CFLAGS) -Iinclude -Iinclude/nulibc -I$(BOOT_DIR) -M -MG $<) > $@
 
 $(BOOT_OBJ_DIR)/%.d: $(BOOT_DIR)/%.S
 	@mkdir -p $(BOOT_OBJ_DIR)
 	@echo "making deps for $<..."
-	@($(ECHO) -n $(dir $@);$(CC) $(GLOBAL_CFLAGS) $(KERNEL_CFLAGS) -Iinclude -I$(BOOT_DIR) -M -MG $<) > $@
+	@($(ECHO) -n $(dir $@);$(CC) $(GLOBAL_CFLAGS) $(KERNEL_CFLAGS) -Iinclude -Iinclude/nulibc -I$(BOOT_DIR) -M -MG $<) > $@
 
 $(BOOT_OBJ_DIR)/%.o: $(BOOT_DIR)/%.S
 	@mkdir -p $(BOOT_OBJ_DIR)
-	$(CC) -c $< $(GLOBAL_CFLAGS) $(KERNEL_CFLAGS) -Iinclude -I$(BOOT_DIR) -o $@
+	$(CC) -c $< $(GLOBAL_CFLAGS) $(KERNEL_CFLAGS) -Iinclude -Iinclude/nulibc -I$(BOOT_DIR) -o $@
 
 endif

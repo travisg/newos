@@ -35,8 +35,8 @@
 
 #include "config.h"
 
-#include <libsys/stdio.h>
-//#include <stdlib.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #include "arch-specific.h"
 #include "heap.h"

@@ -5,8 +5,7 @@
 #include <boot/stage2.h>
 #include "stage2_priv.h"
 
-#include <libc/string.h>
-#include <libc/printf.h>
+#include <string.h>
 
 #define NO_SMP 0
 #define CHATTY_SMP 0

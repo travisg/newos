@@ -3,10 +3,10 @@
 ** Distributed under the terms of the NewOS License.
 */
 #include <types.h>
-#include <libc/stdarg.h>
-#include <libc/string.h>
+#include <stdarg.h>
+#include <string.h>
 #include <ctype.h>
-#include <libc/printf.h>
+#include <stdio.h>
 
 #if 0
 static unsigned long simple_strtoul(const char *cp,char **endp,unsigned int base)

@@ -9,7 +9,7 @@
 #include <kernel/debug.h>
 #include <kernel/elf.h>
 
-#include <libc/printf.h>
+#include <nulibc/stdio.h>
 
 int dev_init(kernel_args *ka)
 {

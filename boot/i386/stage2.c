@@ -7,9 +7,9 @@
 #include "stage2_priv.h"
 #include "vesa.h"
 
-#include <libc/string.h>
-#include <libc/stdarg.h>
-#include <libc/printf.h>
+#include <string.h>
+#include <stdarg.h>
+#include <stdio.h>
 #include <sys/elf32.h>
 
 const unsigned kBSSSize = 0x9000;

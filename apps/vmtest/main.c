@@ -4,10 +4,9 @@
 */
 #include <types.h>
 #include <string.h>
+#include <stdio.h>
 #include <sys/errors.h>
-#include <libc/printf.h>
 #include <sys/syscalls.h>
-#include <libsys/stdio.h>
 
 int main(void)
 {

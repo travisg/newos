@@ -3,8 +3,8 @@
 ** Distributed under the terms of the NewOS License.
 */
 #include <unistd.h>
+#include <stdio.h>
 #include <sys/syscalls.h>
-#include <libsys/stdio.h>
 
 static void setup_io()
 {

@@ -22,7 +22,7 @@
 #include <kernel/fs/rootfs.h>
 
 #include <nulibc/string.h>
-#include <libc/printf.h>
+#include <nulibc/stdio.h>
 #include <nulibc/ctype.h>
 
 #define MAKE_NOIZE 0

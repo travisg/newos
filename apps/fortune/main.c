@@ -1,7 +1,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
-#include <libsys/stdio.h>
+#include <stdio.h>
 #include <sys/syscalls.h>
 
 #define FORTUNES "/boot/etc/fortunes"

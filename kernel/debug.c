@@ -15,8 +15,8 @@
 #include <kernel/arch/debug.h>
 #include <kernel/arch/cpu.h>
 
-#include <libc/stdarg.h>
-#include <libc/printf.h>
+#include <nulibc/stdarg.h>
+#include <nulibc/stdio.h>
 #include <nulibc/string.h>
 #include <nulibc/ctype.h>
 

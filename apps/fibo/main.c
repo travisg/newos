@@ -5,8 +5,7 @@
 
 #include <string.h>
 #include <stdlib.h>
-#include <libc/printf.h>
-#include <libsys/stdio.h>
+#include <stdio.h>
 #include <sys/syscalls.h>
 
 static

@@ -3,8 +3,7 @@
 ** Distributed under the terms of the NewOS License.
 */
 #include <string.h>
-#include <libc/printf.h>
-#include <libsys/stdio.h>
+#include <stdio.h>
 #include <sys/syscalls.h>
 
 int printf(const char *fmt, ...)

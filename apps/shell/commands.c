@@ -4,10 +4,10 @@
 */
 #include <string.h>
 #include <unistd.h>
-#include <sys/syscalls.h>
-#include <libsys/stdio.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <sys/syscalls.h>
 
 #include "commands.h"
 

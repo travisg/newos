@@ -17,8 +17,8 @@
 
 #include <boot/bootdir.h>
 
-#include <libc/string.h>
-#include <libc/printf.h>
+#include <nulibc/string.h>
+#include <nulibc/stdio.h>
 
 #define BOOTFS_TRACE 0
 

@@ -31,7 +31,7 @@
 */
 
 //#include <new.h>
-#include <libc/string.h>
+#include <string.h>
 
 #include "arch-specific.h"
 #include "config.h"

@@ -22,7 +22,7 @@
 
 #include "config.h"
 
-#include <libc/string.h>
+#include <string.h>
 
 #include "heap.h"
 

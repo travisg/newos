@@ -3,7 +3,7 @@
 ** Distributed under the terms of the NewOS License.
 */
 
-#include <libsys/stdio.h>
+#include <stdio.h>
 
 extern int fib(int);
 extern void shared_hello(void);

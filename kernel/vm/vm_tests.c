@@ -9,7 +9,7 @@
 
 #include <nulibc/string.h>
 #include <nulibc/ctype.h>
-#include <libc/printf.h>
+#include <nulibc/stdio.h>
 
 void vm_test()
 {

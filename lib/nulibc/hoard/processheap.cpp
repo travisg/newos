@@ -17,8 +17,8 @@
 //
 //////////////////////////////////////////////////////////////////////////////
 
-#include <libc/string.h>
-#include <libsys/stdio.h>
+#include <string.h>
+#include <stdio.h>
 
 #include "config.h"
 

@@ -5,11 +5,10 @@
 */
 
 #include <string.h>
+#include <stdio.h>
 #include <sys/errors.h>
 #include <sys/elf32.h>
 #include <sys/syscalls.h>
-#include <libsys/stdio.h>
-#include <libc/printf.h>
 #include <kernel/arch/cpu.h>
 
 #include "rld_priv.h"

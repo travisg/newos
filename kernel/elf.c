@@ -16,7 +16,7 @@
 #include <sys/elf32.h>
 
 #include <nulibc/string.h>
-#include <libc/printf.h>
+#include <nulibc/stdio.h>
 
 struct elf_region {
 	region_id id;
