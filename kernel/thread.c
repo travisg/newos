@@ -1224,7 +1224,6 @@ static void thread_entry(void)
 struct thread_exit_args {
 	struct thread *t;
 	region_id old_kernel_stack;
-	int int_state;
 	unsigned int death_stack;
 };
 
@@ -1237,7 +1236,7 @@ static void thread_exit2(void *_args)
 	memcpy(&args, _args, sizeof(struct thread_exit_args));
 
 	// restore the interrupts
-	int_restore_interrupts(args.int_state);
+	int_enable_interrupts();
 
 //	dprintf("thread_exit2, running on death stack 0x%lx\n", args.t->kernel_stack_base);
 
@@ -1276,6 +1275,9 @@ void thread_exit(int retcode)
 	unsigned int death_stack;
 
 	dprintf("thread 0x%x exiting w/return code 0x%x\n", t->id, retcode);
+
+	if(!kernel_startup && !int_is_interrupts_enabled())
+		panic("thread_exit called with ints disabled\n");
 
 	// boost our priority to get this over with
 	thread_set_priority(t->id, THREAD_HIGH_PRIORITY);
@@ -1351,6 +1353,7 @@ void thread_exit(int retcode)
 		sem_delete_etc(s, retcode);
 	}
 
+	// get_death_stack leaves interrupts disabled
 	death_stack = get_death_stack();
 	{
 		struct thread_exit_args args;
@@ -1358,9 +1361,6 @@ void thread_exit(int retcode)
 		args.t = t;
 		args.old_kernel_stack = t->kernel_stack_region_id;
 		args.death_stack = death_stack;
-
-		// disable the interrupts. Must remain disabled until the kernel stack pointer can be officially switched
-		args.int_state = int_disable_interrupts();
 
 		// set the new kernel stack officially to the death stack, wont be really switched until
 		// the next function is called. This bookkeeping must be done now before a context switch

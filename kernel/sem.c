@@ -336,6 +336,9 @@ int sem_acquire_etc(sem_id id, int count, int flags, bigtime_t timeout, int *del
 	if(count <= 0)
 		return ERR_INVALID_ARGS;
 
+	if(!kernel_startup && !int_is_interrupts_enabled())
+		panic("sem_acquire_etc: sem attempted to be acquired with interrupts disabled\n");
+
 	state = int_disable_interrupts();
 	GRAB_SEM_LOCK(sems[slot]);
 
