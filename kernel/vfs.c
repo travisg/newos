@@ -616,7 +616,7 @@ static int path_to_vnode(char *path, struct vnode **v, bool kernel)
 	}
 
 	for(;;) {
-		dprintf("path_to_vnode: top of loop. p 0x%x, *p = %c, p = '%s'\n", p, *p, p);
+//		dprintf("path_to_vnode: top of loop. p 0x%x, *p = %c, p = '%s'\n", p, *p, p);
 
 		// done?
 		if(*p == '\0') {
