@@ -237,7 +237,9 @@ int vsprintf(char *buf, const char *fmt, va_list args)
 				field_width = 2*sizeof(void *);
 				flags |= ZEROPAD;
 			}
-			str = number(str,
+			str[0]= '0';
+			str[1]= 'x';
+			str = number(str+2,
 				(unsigned long) va_arg(args, void *), 16,
 				field_width, precision, flags);
 			continue;
