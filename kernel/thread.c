@@ -629,7 +629,6 @@ static void _dump_proc_info(struct proc *p)
 	dprintf("state:       %d\n", p->state);
 	dprintf("pending_signals: 0x%x\n", p->pending_signals);
 	dprintf("ioctx:       %p\n", p->ioctx);
-	dprintf("proc_creation_sem: 0x%x\n", p->proc_creation_sem);
 	dprintf("aspace_id:   0x%x\n", p->aspace_id);
 	dprintf("aspace:      %p\n", p->aspace);
 	dprintf("kaspace:     %p\n", p->kaspace);
@@ -1579,17 +1578,12 @@ static struct proc *create_proc_struct(const char *name, bool kernel)
 	p->main_thread = NULL;
 	p->state = PROC_STATE_BIRTH;
 	p->pending_signals = SIG_NONE;
-	p->proc_creation_sem = sem_create(0, "proc_creation_sem");
-	if(p->proc_creation_sem < 0)
-		goto error1;
 
 	if(arch_proc_init_proc_struct(p, kernel) < 0)
-		goto error2;
+		goto error1;
 
 	return p;
 
-error2:
-	sem_delete(p->proc_creation_sem);
 error1:
 	kfree(p);
 error:
@@ -1598,8 +1592,6 @@ error:
 
 static void delete_proc_struct(struct proc *p)
 {
-	if(p->proc_creation_sem >= 0)
-		sem_delete(p->proc_creation_sem);
 	kfree(p);
 }
 
@@ -1644,7 +1636,6 @@ static int proc_create_proc2(void *args)
 		REGION_ADDR_EXACT_ADDRESS, tot_top_size, REGION_WIRING_LAZY, LOCK_RW);
 	if(t->user_stack_region_id < 0) {
 		panic("proc_create_proc2: could not create default user stack region\n");
-		sem_delete_etc(p->proc_creation_sem, -1);
 		return t->user_stack_region_id;
 	}
 
@@ -1676,7 +1667,6 @@ static int proc_create_proc2(void *args)
 	err = elf_load_uspace("/boot/libexec/rld.so", p, 0, &entry);
 	if(err < 0){
 		// XXX clean up proc
-		sem_delete_etc(p->proc_creation_sem, -1);
 		return err;
 	}
 
@@ -1687,11 +1677,6 @@ static int proc_create_proc2(void *args)
 	dprintf("proc_create_proc2: loaded elf. entry = 0x%lx\n", entry);
 
 	p->state = PROC_STATE_NORMAL;
-
-	// this will wake up the thread that initially created us, with the process id
-	// as the return code
-	sem_delete_etc(p->proc_creation_sem, p->id);
-	p->proc_creation_sem = -1;
 
 	// jump to the entry point in user space
 	arch_thread_enter_uspace(entry, uspa, t->user_stack_base + STACK_SIZE);
@@ -1704,6 +1689,7 @@ proc_id proc_create_proc(const char *path, const char *name, char **args, int ar
 {
 	struct proc *p;
 	thread_id tid;
+	proc_id pid;
 	int err;
 	unsigned int state;
 	int sem_retcode;
@@ -1714,6 +1700,8 @@ proc_id proc_create_proc(const char *path, const char *name, char **args, int ar
 	p = create_proc_struct(name, false);
 	if(p == NULL)
 		return ERR_NO_MEMORY;
+
+	pid = p->id;
 
 	state = int_disable_interrupts();
 	GRAB_PROC_LOCK();
@@ -1759,14 +1747,7 @@ proc_id proc_create_proc(const char *path, const char *name, char **args, int ar
 
 	thread_resume_thread(tid);
 
-	// XXX race condition
-	// acquire this semaphore, which will exist throughout the creation of the process
-	// by the new thread in the new process. At the end of creation, the semaphore will
-	// be deleted, with the return code being the process id, or an error.
-	sem_acquire_etc(p->proc_creation_sem, 1, 0, 0, &sem_retcode);
-
-	// this will either contain the process id, or an error code
-	return sem_retcode;
+	return pid;
 
 err5:
 	vm_put_aspace(p->aspace);
