@@ -331,7 +331,7 @@ static int map_backing_store(vm_address_space *aspace, vm_store *store, void **v
 		if(nu_cache_ref == NULL)
 			panic("map_backing_store: vm_cache_ref_create returned NULL");
 		nu_cache->temporary = 1;
-		nu_cache->scan_skip = 0;
+		nu_cache->scan_skip = cache->scan_skip;
 
 		nu_cache->source = cache;
 
@@ -489,6 +489,17 @@ region_id vm_create_anonymous_region(aspace_id aid, char *name, void **address, 
 
 	dprintf("create_anonymous_region: size 0x%lx\n", size);
 
+	if(addr_type != REGION_ADDR_ANY_ADDRESS && addr_type != REGION_ADDR_EXACT_ADDRESS)
+		return ERR_INVALID_ARGS;
+	switch(wiring) {
+		case REGION_WIRING_WIRED:
+		case REGION_WIRING_WIRED_ALREADY:
+		case REGION_WIRING_WIRED_CONTIG:
+		case REGION_WIRING_LAZY:
+			break;
+		default:
+			return ERR_INVALID_ARGS;
+	}
 	aspace = vm_get_aspace_by_id(aid);
 	if(aspace == NULL)
 		return ERR_VM_INVALID_ASPACE;
@@ -506,7 +517,17 @@ region_id vm_create_anonymous_region(aspace_id aid, char *name, void **address, 
 	if(cache_ref == NULL)
 		panic("vm_create_anonymous_region: vm_cache_ref_create returned NULL");
 	cache->temporary = 1;
-	cache->scan_skip = 0;
+
+	switch(wiring) {
+		case REGION_WIRING_WIRED:
+		case REGION_WIRING_WIRED_ALREADY:
+		case REGION_WIRING_WIRED_CONTIG:
+			cache->scan_skip = 1;
+			break;
+		case REGION_WIRING_LAZY:
+			cache->scan_skip = 0;
+			break;
+	}
 
 	dprintf("create_anonymous_region: calling map_backing store\n");
 
@@ -680,13 +701,13 @@ region_id vm_create_null_region(aspace_id aid, char *name, void **address, int a
 	// create an null store object
 	store = vm_store_create_null();
 	if(store == NULL)
-		panic("vm_map_physical_memory: vm_store_create_null returned NULL");
+		panic("vm_create_null_region: vm_store_create_null returned NULL");
 	cache = vm_cache_create(store);
 	if(cache == NULL)
-		panic("vm_map_physical_memory: vm_cache_create returned NULL");
+		panic("vm_create_null_region: vm_cache_create returned NULL");
 	cache_ref = vm_cache_ref_create(cache);
 	if(cache_ref == NULL)
-		panic("vm_map_physical_memory: vm_cache_ref_create returned NULL");
+		panic("vm_create_null_region: vm_cache_ref_create returned NULL");
 	// tell the page scanner to skip over this region, no pages will be mapped here
 	cache->scan_skip = 1;
 
@@ -1205,13 +1226,11 @@ static void dump_cache(int argc, char **argv)
 	dprintf("cache_ref: %p\n", cache->ref);
 	dprintf("source: %p\n", cache->source);
 	dprintf("store: %p\n", cache->store);
-	// XXX 64-bit
 	dprintf("virtual_size: 0x%Lx\n", cache->virtual_size);
 	dprintf("temporary: %d\n", cache->temporary);
 	dprintf("scan_skip: %d\n", cache->scan_skip);
 	dprintf("page_list:\n");
 	for(page = cache->page_list; page != NULL; page = page->cache_next) {
-		// XXX offset is 64-bit
 		if(page->type == PAGE_TYPE_PHYSICAL)
 			dprintf(" %p ppn 0x%lx offset 0x%Lx type %d state %d (%s) ref_count %d\n",
 				page, page->ppn, page->offset, page->type, page->state, page_state_to_text(page->state), page->ref_count);
@@ -1233,7 +1252,6 @@ static void _dump_region(vm_region *region)
 	dprintf("wiring: 0x%x\n", region->wiring);
 	dprintf("ref_count: %d\n", region->ref_count);
 	dprintf("cache_ref: %p\n", region->cache_ref);
-	// XXX 64-bit
 	dprintf("cache_offset: 0x%Lx\n", region->cache_offset);
 	dprintf("cache_next: %p\n", region->cache_next);
 	dprintf("cache_prev: %p\n", region->cache_prev);
