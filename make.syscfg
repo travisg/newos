@@ -180,6 +180,20 @@ ifeq ($(ARCH),ppc)
 	TOOLCHAIN_ARCH = ppc
 endif
 
+ifeq ($(ARCH),arm)
+	ifneq ($(HOSTTYPE),arm)
+		CC = arm-elf-gcc
+		LD = arm-elf-ld
+		AS = arm-elf-as
+		AR = arm-elf-ar
+		OBJCOPY = arm-elf-objcopy
+		STRIP = arm-elf-strip
+	endif
+	GLOBAL_CFLAGS = -fno-pic -O2
+	GLOBAL_LDFLAGS =
+	TOOLCHAIN_ARCH = arm
+endif
+
 # try to detect if the user has ARCH-newos-gcc installed
 #
 #  NOTE:

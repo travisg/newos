@@ -22,6 +22,9 @@
 #ifdef ARCH_m68k
 #include "arch/m68k/syscalls.inc"
 #endif
+#ifdef ARCH_arm
+#include "arch/arm/syscalls.inc"
+#endif
 
 
 
