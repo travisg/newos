@@ -1012,6 +1012,8 @@ int vfs_mount(char *path, const char *device, const char *fs_name, void *args, b
 		goto err;
 	}
 
+	memset(mount, 0, sizeof(struct fs_mount));
+
 	mount->mount_point = kstrdup(path);
 	if(mount->mount_point == NULL) {
 		err = ERR_NO_MEMORY;
