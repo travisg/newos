@@ -11,8 +11,8 @@
 
 #define LSHIFT  42
 #define RSHIFT  54
-#define SCRLOCK 46
-#define NUMLOCK 45
+#define SCRLOCK 70
+#define NUMLOCK 69
 #define CAPS    58
 #define SYSREQ  55
 #define F12     88
