@@ -1,93 +1,73 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 
 .text
 
-// int atomic_add(int *val, int incr)
+/* int atomic_add(int *val, int incr) */
 .global atomic_add
 atomic_add:
 	movl	4(%esp),%edx
-	
-_atomic_add1:
-	movl	8(%esp),%ecx
-	movl	(%edx),%eax
-	addl	%eax,%ecx
-	
+	movl	8(%esp),%eax
 	lock
-	cmpxchgl	%ecx,(%edx)
-	
-	jnz		_atomic_add1
-	
+	xaddl	%eax,(%edx)
 	ret
 
-// int atomic_and(int *val, int incr)
+/* int atomic_and(int *val, int incr) */
 .global atomic_and
 atomic_and:
 	movl	4(%esp),%edx
-	
+
 _atomic_and1:
 	movl	8(%esp),%ecx
 	movl	(%edx),%eax
 	andl	%eax,%ecx
-	
+
 	lock
 	cmpxchgl	%ecx,(%edx)
-	
+
 	jnz		_atomic_and1
-	
+
 	ret
 
-// int atomic_or(int *val, int incr)
+/* int atomic_or(int *val, int incr) */
 .global atomic_or
 atomic_or:
 	movl	4(%esp),%edx
-	
+
 _atomic_or1:
 	movl	8(%esp),%ecx
 	movl	(%edx),%eax
 	orl		%eax,%ecx
-	
+
 	lock
 	cmpxchgl	%ecx,(%edx)
-	
+
 	jnz		_atomic_or1
-	
+
 	ret
 
-// int test_and_set(int *val, int set_to)
+/* int test_and_set(int *val, int set_to) */
 .global test_and_set
 test_and_set:
-    movl     4(%esp),%edx     /* load address of variable into edx */
+	movl	4(%esp),%edx
+	movl	8(%esp),%eax
+	xchg	%eax,(%edx)
+	ret
 
-_test_and_set1:
-    movl     8(%esp),%ecx    /* load the value to set the lock to */
-    movl     (%edx),%eax      /* load the value of variable into eax */
-
-    cmpl     $0, %eax         /* see if someone else got it */
-    jnz      _test_and_set2   /* if so, bail out */
-
-    lock
-    cmpxchg  %ecx,(%edx)
-
-    jnz      _test_and_set1   /* if zf = 0, cmpxchng failed so redo it */
-
-_test_and_set2:
-    ret
-
-// saves the conversion factor needed for system_time
+/* saves the conversion factor needed for system_time */
 .global cv_factor
 cv_factor:
 	.word 0
-			
+
 .global setup_system_time
 setup_system_time:
 	movl	4(%esp),%eax
 	movl	%eax,cv_factor
 	ret
-	
-// long long system_time();
+
+/* long long system_time(); */
 .global system_time
 system_time:
 	/* load 64-bit factor into %eax (low), %edx (high) */
@@ -109,14 +89,14 @@ system_time:
 	popl	%ebx
 	ret
 
-// void arch_cpu_global_TLB_invalidate();
+/* void arch_cpu_global_TLB_invalidate(); */
 .global arch_cpu_global_TLB_invalidate
 arch_cpu_global_TLB_invalidate:
 	movl	%cr3,%eax
 	movl	%eax,%cr3
 	ret
 
-// void i386_context_switch(unsigned int **old_esp, unsigned int *new_esp, addr new_pgdir);
+/* void i386_context_switch(unsigned int **old_esp, unsigned int *new_esp, addr new_pgdir); */
 .global i386_context_switch
 i386_context_switch:
 //	pushfl
@@ -134,7 +114,7 @@ skip_pgdir_swap:
 //	popfl
 	ret
 
-// void i386_enter_uspace(addr entry, addr ustack_top);
+/* void i386_enter_uspace(addr entry, addr ustack_top); */
 .global i386_enter_uspace
 i386_enter_uspace:
 	movl	4(%esp),%eax	// get entry point
@@ -152,13 +132,13 @@ i386_enter_uspace:
 	pushl	%eax			// user IP
 	iret
 
-// void i386_switch_stack_and_call(addr stack, void (*func)(void *), void *arg);
+/* void i386_switch_stack_and_call(addr stack, void (*func)(void *), void *arg); */
 .global i386_switch_stack_and_call
 i386_switch_stack_and_call:
 	movl	4(%esp),%eax	// new stack
 	movl	8(%esp),%ecx	// func
 	movl	12(%esp),%edx	// args
-	
+
 	movl	%eax,%esp		// switch the stack
 	pushl	%edx			// push the argument
 	call	*%ecx			// call the target function
