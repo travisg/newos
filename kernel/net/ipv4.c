@@ -4,16 +4,21 @@
 */
 #include <kernel/kernel.h>
 #include <kernel/debug.h>
+#include <kernel/arch/cpu.h>
 #include <kernel/net/misc.h>
 #include <kernel/net/ethernet.h>
 #include <kernel/net/ipv4.h>
+#include <kernel/net/icmp.h>
+#include <kernel/net/udp.h>
+#include <kernel/net/arp.h>
+#include <libc/string.h>
 
 typedef struct ipv4_header {
 	uint8 version_length;
 	uint8 tos;
 	uint16 total_length;
 	uint16 identification;
-	uint16 flags_frag_offfset;
+	uint16 flags_frag_offset;
 	uint8 ttl;
 	uint8 protocol;
 	uint16 header_checksum;
@@ -21,99 +26,123 @@ typedef struct ipv4_header {
 	ipv4_addr dest;
 } _PACKED ipv4_header;
 
-#define MIN_ARP_SIZE 28
+static uint32 curr_identification = 0xbeef;
 
-typedef struct arp_packet {
-	uint16 hard_type;
-	uint16 prot_type;
-	uint8  hard_size;
-	uint8  prot_size;
-	uint16 op;
-	ethernet_addr sender_ethernet;
-	ipv4_addr sender_ipv4;
-	ethernet_addr target_ethernet;
-	ipv4_addr target_ipv4;
-} _PACKED arp_packet;
-
-enum {
-	ARP_OP_REQUEST = 1,
-	ARP_OP_REPLY,
-	ARP_OP_RARP_REQUEST,
-	ARP_OP_RARP_REPLY
-};
-
-static ipv4_addr station_address = 0;
-
+// expects hosts order
 void dump_ipv4_addr(ipv4_addr addr)
 {
 	uint8 *nuaddr = (uint8 *)&addr;
 
-	dprintf("%d.%d.%d.%d", nuaddr[0], nuaddr[1], nuaddr[2], nuaddr[3]);
+	dprintf("%d.%d.%d.%d", nuaddr[3], nuaddr[2], nuaddr[1], nuaddr[0]);
 }
 
 static void dump_ipv4_header(ipv4_header *head)
 {
 	dprintf("ipv4 header: src ");
-	dump_ipv4_addr(head->src);
+	dump_ipv4_addr(ntohl(head->src));
 	dprintf(" dest ");
-	dump_ipv4_addr(head->dest);
-	dprintf(" cksum 0x%x, len 0x%x\n",
-		ntohs(head->header_checksum), ntohs(head->total_length));
-}	
-
-void ipv4_set_station_address(ipv4_addr address)
-{
-	station_address = ntohl(address);
-	dprintf("ipv4_set_station_address: address set to ");
-	dump_ipv4_addr(station_address);
-	dprintf("\n");
+	dump_ipv4_addr(ntohl(head->dest));
+	dprintf(" prot %d, cksum 0x%x, len 0x%x, ident 0x%x, frag offset 0x%x\n",
+		head->protocol, ntohs(head->header_checksum), ntohs(head->total_length), ntohs(head->identification), ntohs(head->flags_frag_offset & 0x1fff));
 }
 
-int ipv4_receive(uint8 *buf, int offset, size_t len)
+int ipv4_output(cbuf *buf, ifnet *i, ipv4_addr target_addr, ipv4_addr if_addr, int protocol)
 {
+	cbuf *header_buf;
 	ipv4_header *header;
+	ethernet_addr eaddr;
 
-	header = (ipv4_header *)(buf + offset);
-	
-	dump_ipv4_header(header);
+	header_buf = cbuf_get_chain(sizeof(ipv4_header));
+	if(!header_buf) {
+		cbuf_free_chain(buf);
+		return ERR_NO_MEMORY;
+	}
+	header = cbuf_get_ptr(header_buf, 0);
 
+	header->version_length = 0x4 << 4 | 5;
+	header->tos = 0;
+	header->total_length = htons(cbuf_get_len(buf) + cbuf_get_len(header_buf));
+	header->identification = htons(atomic_add(&curr_identification, 1));
+	header->flags_frag_offset = htons(0x2 << 13 | 0); // dont fragment bit
+	header->ttl = 255;
+	header->protocol = protocol;
+	header->header_checksum = 0;
+	header->src = htonl(if_addr);
+	header->dest = htonl(target_addr);
 
-	return 0;
-}
+	// calculate the checksum
+	header->header_checksum = cksum16(header, (header->version_length & 0xf) * 4);
 
-static void dump_arp_packet(arp_packet *arp)
-{
-	dprintf("arp packet: src ");
-	dump_ethernet_addr(arp->sender_ethernet);
-	dprintf(" ");
-	dump_ipv4_addr(arp->sender_ipv4);
-	dprintf(" dest ");
-	dump_ethernet_addr(arp->target_ethernet);
-	dprintf(" ");
-	dump_ipv4_addr(arp->target_ipv4);
-	dprintf(" op 0x%x\n", ntohs(arp->op));
-}
+	buf = cbuf_merge_chains(header_buf, buf);
 
-int arp_receive(uint8 *buf, int offset, size_t len)
-{
-	arp_packet *arp;
-
-	arp = (arp_packet *)(buf + offset);
-
-	if(len < MIN_ARP_SIZE)
-		return -1;
-
-	dump_arp_packet(arp);
-
-	switch(ntohs(arp->op)) {
-		case ARP_OP_REQUEST:
-				
-			break;
-		default:
-			dprintf("arp_receive: unhandled arp request type 0x%x\n", ntohs(arp->op));
+	// do the arp thang
+	if(arp_lookup(i, if_addr, target_addr, eaddr) < 0) {
+		dprintf("ipv4_output: failed arp lookup\n");
+		cbuf_free_chain(buf);
+		return ERR_NET_FAILED_ARP;
 	}
 
-	return 0;
+	// send the packet
+	return ethernet_output(buf, i, eaddr, PROT_TYPE_IPV4);
 }
 
+int ipv4_receive(cbuf *buf, ifnet *i)
+{
+	int err;
+	ipv4_header *header;
+	ifaddr *iaddr;
+	ifaddr ifaddr;
+
+	header = (ipv4_header *)cbuf_get_ptr(buf, 0);
+
+	dump_ipv4_header(header);
+
+	if(((header->version_length >> 4) & 0xf) != 4) {
+		dprintf("ipv4 packet has bad version\n");
+		err = ERR_NET_BAD_PACKET;
+		goto ditch_packet;
+	}
+
+	if(cksum16(header, (header->version_length & 0xf) * 4) != 0) {
+		dprintf("ipv4 packet failed cksum\n");
+		err = ERR_NET_BAD_PACKET;
+		goto ditch_packet;
+	}
+
+	// verify that this packet is for us
+	for(iaddr = i->addr_list; iaddr; iaddr = iaddr->next) {
+		if(iaddr->addr.type == ADDR_TYPE_IP) {
+			if(ntohl(header->dest) == *(ipv4_addr *)&iaddr->addr.addr[0])
+				break;
+		}
+	}
+	if(!iaddr) {
+		dprintf("ipv4 packet for someone else\n");
+		err = NO_ERROR;
+		goto ditch_packet;
+	}
+	memcpy(&ifaddr, iaddr, sizeof(ifaddr));
+
+	// strip off the ip header
+	cbuf_truncate_head(buf, (header->version_length & 0xf) * 4);
+
+	// demultiplex and hand to the proper module
+	switch(header->protocol) {
+		case IP_PROT_ICMP:
+			return icmp_receive(buf, i, ntohl(header->src), &ifaddr);
+		case IP_PROT_UDP:
+			return udp_receive(buf, i, &ifaddr);
+		default:
+			dprintf("ipv4_receive: packet with unknown protocol (%d)\n");
+			err = ERR_NET_BAD_PACKET;
+			goto ditch_packet;
+	}
+
+	err = NO_ERROR;
+
+ditch_packet:
+	cbuf_free_chain(buf);
+
+	return err;
+}
 

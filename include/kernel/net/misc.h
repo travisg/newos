@@ -5,6 +5,8 @@
 #ifndef _NET_MISC_H
 #define _NET_MISC_H
 
+#include <kernel/net/net.h>
+
 #define ntohs(n) \
 	((((uint16)(n) & 0xff) << 8) | ((uint16)(n) >> 8))
 #define htons(h) \
@@ -13,6 +15,9 @@
 	(((uint32)(n) << 24) | (((uint32)(n) & 0xff00) << 8) |(((uint32)(n) & 0x00ff0000) >> 8) | ((uint32)(n) >> 24))
 #define htonl(n) \
 	(((uint32)(n) << 24) | (((uint32)(n) & 0xff00) << 8) |(((uint32)(n) & 0x00ff0000) >> 8) | ((uint32)(n) >> 24))
+
+uint16 cksum16(void *buf, int len);
+int cmp_netaddr(netaddr *addr1, netaddr *addr2);
 
 #endif
 

@@ -243,7 +243,17 @@ restart:
 	sem_acquire(rtl->tx_sem, 1);
 	mutex_lock(&rtl->lock);
 
-//	dprintf("XMIT %d %x (%d)\n",rtl->txbn, ptr, len);
+#if 0
+	dprintf("XMIT %d %x (%d)\n",rtl->txbn, ptr, len);
+
+	dprintf("dumping packet:");
+	for(i=0; i<len; i++) {
+		if(i%8 == 0)
+			dprintf("\n");
+		dprintf("0x%02x ", ptr[i]);
+	}
+	dprintf("\n");
+#endif
 
 	/* wait for clear-to-send */
 	if(!(RTL_READ_32(rtl, RT_TXSTATUS0 + rtl->txbn*4) & RT_TX_HOST_OWNS)) {

@@ -9,5 +9,16 @@
 
 int net_init(kernel_args *ka);
 
+enum {
+	ADDR_TYPE_ETHERNET = 0,
+	ADDR_TYPE_IP
+};
+
+typedef struct netaddr {
+	uint8 len;
+	uint8 type;
+	uint8 addr[14];
+} netaddr;
+
 #endif
 

@@ -82,4 +82,9 @@
 #define ERR_PORT_INTERRUPTED      ERR_PORT_GENERAL-6
 #define ERR_PORT_NOT_FOUND	      ERR_PORT_GENERAL-7
 
+/* Net errors */
+#define ERR_NET_GENERAL           -7168
+#define ERR_NET_FAILED_ARP        ERR_NET_GENERAL-1
+#define ERR_NET_BAD_PACKET        ERR_NET_GENERAL-2
+
 #endif

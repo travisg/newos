@@ -5,15 +5,18 @@
 #ifndef _IPV4_H
 #define _IPV4_H
 
-// for the ethernet module
-#define PROT_TYPE_IPV4 0x0800
-#define PROT_TYPE_ARP  0x0806
+#include <kernel/net/if.h>
+#include <kernel/cbuf.h>
 
 typedef uint32 ipv4_addr;
 
-void ipv4_set_station_address(ipv4_addr address);
-int ipv4_receive(uint8 *buf, int offset, size_t len);
-int arp_receive(uint8 *buf, int offset, size_t len);
+enum {
+	IP_PROT_ICMP = 1,
+	IP_PROT_UDP = 17,
+};
+
+int ipv4_receive(cbuf *buf, ifnet *i);
+int ipv4_output(cbuf *buf, ifnet *i, ipv4_addr target_addr, ipv4_addr if_addr, int protocol);
 
 void dump_ipv4_addr(ipv4_addr addr);
 
