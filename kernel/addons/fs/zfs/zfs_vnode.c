@@ -43,7 +43,7 @@ ssize_t zfs_writepage(fs_cookie fs, fs_vnode v, iovecs *vecs, off_t pos)
 	return ERR_NOT_IMPLEMENTED;
 }
 
-int zfs_create(fs_cookie fs, fs_vnode dir, const char *name, stream_type st, void *create_args, vnode_id *new_vnid)
+int zfs_create(fs_cookie fs, fs_vnode dir, const char *name, void *create_args, vnode_id *new_vnid)
 {
 	return ERR_NOT_IMPLEMENTED;
 }

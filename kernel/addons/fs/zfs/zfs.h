@@ -32,7 +32,7 @@ int zfs_closedir(fs_cookie fs, fs_vnode v, dir_cookie cookie);
 int zfs_rewinddir(fs_cookie fs, fs_vnode v, dir_cookie cookie);
 int zfs_readdir(fs_cookie fs, fs_vnode v, dir_cookie cookie, void *buf, size_t buflen);
 
-int zfs_open(fs_cookie fs, fs_vnode v, file_cookie *cookie, stream_type st, int oflags);
+int zfs_open(fs_cookie fs, fs_vnode v, file_cookie *cookie, int oflags);
 int zfs_close(fs_cookie fs, fs_vnode v, file_cookie cookie);
 int zfs_freecookie(fs_cookie fs, fs_vnode v, file_cookie cookie);
 int zfs_fsync(fs_cookie fs, fs_vnode v);
@@ -46,9 +46,12 @@ int zfs_canpage(fs_cookie fs, fs_vnode v);
 ssize_t zfs_readpage(fs_cookie fs, fs_vnode v, iovecs *vecs, off_t pos);
 ssize_t zfs_writepage(fs_cookie fs, fs_vnode v, iovecs *vecs, off_t pos);
 
-int zfs_create(fs_cookie fs, fs_vnode dir, const char *name, stream_type st, void *create_args, vnode_id *new_vnid);
+int zfs_create(fs_cookie fs, fs_vnode dir, const char *name, void *create_args, vnode_id *new_vnid);
 int zfs_unlink(fs_cookie fs, fs_vnode dir, const char *name);
 int zfs_rename(fs_cookie fs, fs_vnode olddir, const char *oldname, fs_vnode newdir, const char *newname);
+
+int zfs_mkdir(fs_cookie _fs, fs_vnode _base_dir, const char *name);
+int zfs_rmdir(fs_cookie _fs, fs_vnode _base_dir, const char *name);
 
 int zfs_rstat(fs_cookie fs, fs_vnode v, struct file_stat *stat);
 int zfs_wstat(fs_cookie fs, fs_vnode v, struct file_stat *stat, int stat_mask);

@@ -59,7 +59,7 @@ int nfs_getvnode(fs_cookie fs, vnode_id id, fs_vnode *v, bool r);
 int nfs_putvnode(fs_cookie fs, fs_vnode v, bool r);
 int nfs_removevnode(fs_cookie fs, fs_vnode v, bool r);
 
-int nfs_open(fs_cookie fs, fs_vnode v, file_cookie *cookie, stream_type st, int oflags);
+int nfs_open(fs_cookie fs, fs_vnode v, file_cookie *cookie, int oflags);
 int nfs_close(fs_cookie fs, fs_vnode v, file_cookie cookie);
 int nfs_freecookie(fs_cookie fs, fs_vnode v, file_cookie cookie);
 int nfs_fsync(fs_cookie fs, fs_vnode v);
@@ -73,9 +73,12 @@ int nfs_canpage(fs_cookie fs, fs_vnode v);
 ssize_t nfs_readpage(fs_cookie fs, fs_vnode v, iovecs *vecs, off_t pos);
 ssize_t nfs_writepage(fs_cookie fs, fs_vnode v, iovecs *vecs, off_t pos);
 
-int nfs_create(fs_cookie fs, fs_vnode dir, const char *name, stream_type st, void *create_args, vnode_id *new_vnid);
+int nfs_create(fs_cookie fs, fs_vnode dir, const char *name, void *create_args, vnode_id *new_vnid);
 int nfs_unlink(fs_cookie fs, fs_vnode dir, const char *name);
 int nfs_rename(fs_cookie fs, fs_vnode olddir, const char *oldname, fs_vnode newdir, const char *newname);
+
+int nfs_mkdir(fs_cookie _fs, fs_vnode _base_dir, const char *name);
+	int nfs_rmdir(fs_cookie _fs, fs_vnode _base_dir, const char *name);
 
 int nfs_rstat(fs_cookie fs, fs_vnode v, struct file_stat *stat);
 int nfs_wstat(fs_cookie fs, fs_vnode v, struct file_stat *stat, int stat_mask);

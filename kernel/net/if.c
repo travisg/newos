@@ -99,7 +99,7 @@ int if_register_interface(const char *path, ifnet **_i)
 		type = IF_TYPE_LOOPBACK;
 		i->fd = -1;
 	} else {
-		i->fd = sys_open(path, STREAM_TYPE_DEVICE, 0);
+		i->fd = sys_open(path, 0);
 		if(i->fd < 0) {
 			err = i->fd;
 			goto err1;

@@ -194,7 +194,7 @@ void vm_test()
 		region_id rid, rid2;
 		int fd;
 
-		fd = sys_open("/boot/kernel", STREAM_TYPE_FILE, 0);
+		fd = sys_open("/boot/kernel", 0);
 
 		rid = vm_map_file(vm_get_kernel_aspace_id(), "mmap_test", &ptr, REGION_ADDR_ANY_ADDRESS,
 			PAGE_SIZE, LOCK_RW|LOCK_KERNEL, REGION_NO_PRIVATE_MAP, "/boot/kernel", 0);

@@ -38,7 +38,7 @@ int zfs_mount(fs_cookie *fs, fs_id id, const char *device, void *args, vnode_id 
 
 	zfs->id = id;
 
-	zfs->fd = sys_open(device, STREAM_TYPE_ANY, 0);
+	zfs->fd = sys_open(device, 0);
 	if(zfs->fd < 0) {
 		err = zfs->fd;
 		goto err1;
@@ -118,6 +118,9 @@ static struct fs_calls zfs_calls = {
 	&zfs_create,
 	&zfs_unlink,
 	&zfs_rename,
+
+	&zfs_mkdir,
+	&zfs_rmdir,
 
 	&zfs_rstat,
 	&zfs_wstat

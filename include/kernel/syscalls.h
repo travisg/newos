@@ -84,6 +84,8 @@ enum {
 	SYSCALL_CLOSEDIR,
 	SYSCALL_REWINDDIR,
 	SYSCALL_READDIR,
+	SYSCALL_MKDIR,
+	SYSCALL_RMDIR,
 };
 
 int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_ret);

@@ -321,7 +321,7 @@ static int isofs_mount(fs_cookie *_fs, fs_id id, const char *device, void *args,
 	fs->next_vnode_id = 0;
 
 	// Try to open the ISO file to read
-	fs->fd = sys_open(device, STREAM_TYPE_ANY, 0);
+	fs->fd = sys_open(device, 0);
 	if (fs->fd < 0) {
 		err = fs->fd;
 		goto err1;
@@ -608,13 +608,13 @@ err:
 }
 
 //--------------------------------------------------------------------------------
-static int isofs_open(fs_cookie _fs, fs_vnode _v, file_cookie *_cookie, stream_type st, int oflags)
+static int isofs_open(fs_cookie _fs, fs_vnode _v, file_cookie *_cookie, int oflags)
 {
 	struct isofs_vnode *v = _v;
 	struct isofs_cookie *cookie;
 	int err = 0;
 
-	TRACE(("isofs_open: vnode 0x%x, stream_type %d, oflags 0x%x\n", v, st, oflags));
+	TRACE(("isofs_open: vnode 0x%x, oflags 0x%x\n", v, oflags));
 
 	if(v->stream.type == STREAM_TYPE_DIR)
 		return ERR_VFS_IS_DIR;
@@ -844,7 +844,7 @@ static ssize_t isofs_readpage(fs_cookie _fs, fs_vnode _v, iovecs *vecs, off_t po
 }
 
 //--------------------------------------------------------------------------------
-static int isofs_create(fs_cookie _fs, fs_vnode _dir, const char *name, stream_type st, void *create_args, vnode_id *new_vnid)
+static int isofs_create(fs_cookie _fs, fs_vnode _dir, const char *name, void *create_args, vnode_id *new_vnid)
 {
 	return ERR_VFS_READONLY_FS;
 }
@@ -857,6 +857,18 @@ static int isofs_unlink(fs_cookie _fs, fs_vnode _dir, const char *name)
 
 //--------------------------------------------------------------------------------
 static int isofs_rename(fs_cookie _fs, fs_vnode _olddir, const char *oldname, fs_vnode _newdir, const char *newname)
+{
+	return ERR_VFS_READONLY_FS;
+}
+
+//--------------------------------------------------------------------------------
+static int isofs_mkdir(fs_cookie _fs, fs_vnode _base_dir, const char *name)
+{
+	return ERR_VFS_READONLY_FS;
+}
+
+//--------------------------------------------------------------------------------
+static int isofs_rmdir(fs_cookie _fs, fs_vnode _base_dir, const char *name)
 {
 	return ERR_VFS_READONLY_FS;
 }
@@ -947,6 +959,9 @@ static struct fs_calls isofs_calls = {
 	&isofs_create,		// create
 	&isofs_unlink,		// unlink
 	&isofs_rename,		// rename
+
+	&isofs_mkdir,		// mkdir
+	&isofs_rmdir,		// rmdir
 
 	&isofs_rstat,		// rstat
 	&isofs_wstat		// wstat

@@ -497,9 +497,9 @@ static int launch(int (*cmd)(int, char **), int argc, char **argv, char *r_in, c
    int err;
 
 	if(strcmp(r_in, "")!= 0) {
-		new_in = _kern_open(r_in, STREAM_TYPE_ANY, 0);
+		new_in = _kern_open(r_in, 0);
 		if(new_in < 0) {
-			new_in = _kern_create(r_in,STREAM_TYPE_FILE);
+			new_in = _kern_create(r_in);
 		}
 	} else {
 		new_in = dup(0);
@@ -510,9 +510,9 @@ static int launch(int (*cmd)(int, char **), int argc, char **argv, char *r_in, c
 	}
 
 	if(strcmp(r_out, "")!= 0) {
-		new_out = _kern_open(r_out, STREAM_TYPE_ANY, 0);
+		new_out = _kern_open(r_out, 0);
 		if(new_out < 0){
-			new_out = _kern_create(r_out,STREAM_TYPE_FILE);
+			new_out = _kern_create(r_out);
 		}
 	} else {
 		new_out = dup(1);

@@ -488,9 +488,9 @@ err:
 	return err;
 }
 
-static int rootfs_open(fs_cookie _fs, fs_vnode _v, file_cookie *_cookie, stream_type st, int oflags)
+static int rootfs_open(fs_cookie _fs, fs_vnode _v, file_cookie *_cookie, int oflags)
 {
-	return ERR_VFS_WRONG_STREAM_TYPE;
+	return ERR_VFS_IS_DIR;
 }
 
 static int rootfs_close(fs_cookie _fs, fs_vnode _v, file_cookie _cookie)
@@ -545,100 +545,15 @@ static ssize_t rootfs_writepage(fs_cookie _fs, fs_vnode _v, iovecs *vecs, off_t 
 	return ERR_NOT_ALLOWED;
 }
 
-static int rootfs_create(fs_cookie _fs, fs_vnode _dir, const char *name, stream_type st, void *create_args, vnode_id *new_vnid)
+static int rootfs_create(fs_cookie _fs, fs_vnode _dir, const char *name, void *create_args, vnode_id *new_vnid)
 {
-	struct rootfs *fs = _fs;
-	struct rootfs_vnode *dir = _dir;
-	struct rootfs_vnode *new_vnode;
-	struct rootfs_stream *s;
-	int err;
-	bool created_vnode = false;
-
-	TRACE(("rootfs_create: dir 0x%x, name = '%s', stream_type = %d\n", dir, name, st));
-
-	// we only support stream types of STREAM_TYPE_DIR
-	if(st != STREAM_TYPE_DIR) {
-		err = ERR_NOT_ALLOWED;
-		goto err;
-	}
-
-	mutex_lock(&fs->lock);
-
-	new_vnode = rootfs_find_in_dir(dir, name);
-	if(new_vnode == NULL) {
-		dprintf("rootfs_create: creating new vnode\n");
-		new_vnode = rootfs_create_vnode(fs);
-		if(new_vnode == NULL) {
-			err = ERR_NO_MEMORY;
-			goto err;
-		}
-		created_vnode = true;
-		new_vnode->name = kstrdup(name);
-		if(new_vnode->name == NULL) {
-			err = ERR_NO_MEMORY;
-			goto err1;
-		}
-		new_vnode->parent = dir;
-		rootfs_insert_in_dir(dir, new_vnode);
-
-		hash_insert(fs->vnode_list_hash, new_vnode);
-
-		s = &new_vnode->stream;
-	} else {
-		// we found the vnode
-		err = ERR_VFS_ALREADY_EXISTS;
-		goto err;
-	}
-
-	new_vnode->stream.dir.dir_head = NULL;
-	new_vnode->stream.dir.jar_head = NULL;
-
-	mutex_unlock(&fs->lock);
-	return 0;
-
-err1:
-	if(created_vnode)
-		rootfs_delete_vnode(fs, new_vnode, false);
-err:
-	mutex_unlock(&fs->lock);
-
-	return err;
+	// no files allowed
+	return ERR_NOT_ALLOWED;
 }
 
 static int rootfs_unlink(fs_cookie _fs, fs_vnode _dir, const char *name)
 {
-	struct rootfs *fs = _fs;
-	struct rootfs_vnode *dir = _dir;
-	struct rootfs_vnode *v;
-	int err;
-
-	TRACE(("rootfs_unlink: dir 0x%x (0x%x 0x%x), name '%s'\n", dir, dir->id, name));
-
-	mutex_lock(&fs->lock);
-
-	v = rootfs_find_in_dir(dir, name);
-	if(!v) {
-		err = ERR_VFS_PATH_NOT_FOUND;
-		goto err;
-	}
-
-	// do some checking to see if we can delete it
-	if(!rootfs_is_dir_empty(v)) {
-		err = ERR_VFS_DIR_NOT_EMPTY;
-		goto err;
-	}
-
-	rootfs_remove_from_dir(dir, v);
-
-	// schedule this vnode to be removed when it's ref goes to zero
-	vfs_remove_vnode(fs->id, v->id);
-
-	err = 0;
-
-err:
-	mutex_unlock(&fs->lock);
-
-	return err;
+	return ERR_NOT_ALLOWED;
 }
 
 static int rootfs_rename(fs_cookie _fs, fs_vnode _olddir, const char *oldname, fs_vnode _newdir, const char *newname)
@@ -711,6 +626,97 @@ err:
 	return err;
 }
 
+static int rootfs_mkdir(fs_cookie _fs, fs_vnode _base_dir, const char *name)
+{
+	struct rootfs *fs = _fs;
+	struct rootfs_vnode *dir = _base_dir;
+	struct rootfs_vnode *new_vnode;
+	struct rootfs_stream *s;
+	int err;
+	bool created_vnode = false;
+
+	TRACE(("rootfs_create: dir 0x%x, name = '%s'\n", dir, name));
+
+	mutex_lock(&fs->lock);
+
+	new_vnode = rootfs_find_in_dir(dir, name);
+	if(new_vnode == NULL) {
+		dprintf("rootfs_create: creating new vnode\n");
+		new_vnode = rootfs_create_vnode(fs);
+		if(new_vnode == NULL) {
+			err = ERR_NO_MEMORY;
+			goto err;
+		}
+		created_vnode = true;
+		new_vnode->name = kstrdup(name);
+		if(new_vnode->name == NULL) {
+			err = ERR_NO_MEMORY;
+			goto err1;
+		}
+		new_vnode->parent = dir;
+		rootfs_insert_in_dir(dir, new_vnode);
+
+		hash_insert(fs->vnode_list_hash, new_vnode);
+
+		s = &new_vnode->stream;
+	} else {
+		// we found the vnode
+		err = ERR_VFS_ALREADY_EXISTS;
+		goto err;
+	}
+
+	new_vnode->stream.dir.dir_head = NULL;
+	new_vnode->stream.dir.jar_head = NULL;
+
+	mutex_unlock(&fs->lock);
+	return 0;
+
+err1:
+	if(created_vnode)
+		rootfs_delete_vnode(fs, new_vnode, false);
+err:
+	mutex_unlock(&fs->lock);
+
+	return err;
+}
+
+static int rootfs_rmdir(fs_cookie _fs, fs_vnode _base_dir, const char *name)
+{
+	struct rootfs *fs = _fs;
+	struct rootfs_vnode *dir = _base_dir;
+	struct rootfs_vnode *v;
+	int err;
+
+	TRACE(("rootfs_unlink: dir 0x%x (0x%Lx), name '%s'\n", dir, dir->id, name));
+
+	mutex_lock(&fs->lock);
+
+	v = rootfs_find_in_dir(dir, name);
+	if(!v) {
+		err = ERR_VFS_PATH_NOT_FOUND;
+		goto err;
+	}
+
+	// do some checking to see if we can delete it
+	if(!rootfs_is_dir_empty(v)) {
+		err = ERR_VFS_DIR_NOT_EMPTY;
+		goto err;
+	}
+
+	rootfs_remove_from_dir(dir, v);
+
+	// schedule this vnode to be removed when it's ref goes to zero
+	vfs_remove_vnode(fs->id, v->id);
+
+	err = 0;
+
+err:
+	mutex_unlock(&fs->lock);
+
+	return err;
+}
+
+
 static int rootfs_rstat(fs_cookie _fs, fs_vnode _v, struct file_stat *stat)
 {
 	struct rootfs_vnode *v = _v;
@@ -770,6 +776,9 @@ static struct fs_calls rootfs_calls = {
 	&rootfs_create,
 	&rootfs_unlink,
 	&rootfs_rename,
+
+	&rootfs_mkdir,
+	&rootfs_rmdir,
 
 	&rootfs_rstat,
 	&rootfs_wstat,

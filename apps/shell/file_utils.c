@@ -34,7 +34,7 @@ bool combine_path(const char *path1,const char *path2,char *out,unsigned int max
 
 bool exists_file(const char *file_name)
 {
-	int handle = _kern_open(file_name,STREAM_TYPE_FILE,0);
+	int handle = _kern_open(file_name,0);
 	bool exists;
 	exists =( handle >= 0);
 	if(exists) close(handle);
@@ -96,7 +96,7 @@ int read_file_in_buffer(const char *filename,char **buffer)
 	*buffer = malloc(stat.size+1);
 	if(*buffer == NULL) return ERR_NO_MEMORY;
 
-	file_no = _kern_open(filename,STREAM_TYPE_FILE,0);
+	file_no = _kern_open(filename,0);
 
 	if(file_no < 0){
 		free(*buffer);

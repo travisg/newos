@@ -52,7 +52,7 @@ int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_re
 			*call_ret = user_sync();
 			break;
 		case SYSCALL_OPEN:
-			*call_ret = user_open((const char *)arg0, (stream_type)arg1, (int)arg2);
+			*call_ret = user_open((const char *)arg0, (int)arg1);
 			break;
 		case SYSCALL_CLOSE:
 			*call_ret = user_close((int)arg0);
@@ -73,7 +73,7 @@ int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_re
 			*call_ret = user_ioctl((int)arg0, (int)arg1, (void *)arg2, (size_t)arg3);
 			break;
 		case SYSCALL_CREATE:
-			*call_ret = user_create((const char *)arg0, (stream_type)arg1);
+			*call_ret = user_create((const char *)arg0);
 			break;
 		case SYSCALL_UNLINK:
 			*call_ret = user_unlink((const char *)arg0);
@@ -281,6 +281,12 @@ int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_re
 			break;
 		case SYSCALL_READDIR:
 			*call_ret = user_readdir((int)arg0, (void *)arg1, (size_t)arg2);
+			break;
+		case SYSCALL_MKDIR:
+			*call_ret = user_mkdir((const char *)arg0);
+			break;
+		case SYSCALL_RMDIR:
+			*call_ret = user_rmdir((const char *)arg0);
 			break;
 		default:
 			*call_ret = ERR_BAD_SYSCALL;

@@ -1355,14 +1355,14 @@ err:
 	return err;
 }
 
-static int _vfs_open(struct vnode *v, stream_type st, int omode, bool kernel)
+static int _vfs_open(struct vnode *v, int omode, bool kernel)
 {
 	int fd;
 	file_cookie cookie;
 	struct file_descriptor *f;
 	int err;
 
-	err = v->mount->fs->calls->fs_open(v->mount->fscookie, v->priv_vnode, &cookie, st, omode);
+	err = v->mount->fs->calls->fs_open(v->mount->fscookie, v->priv_vnode, &cookie, omode);
 	if(err < 0)
 		goto err1;
 
@@ -1394,7 +1394,7 @@ err:
 	return err;
 }
 
-int vfs_open(char *path, stream_type st, int omode, bool kernel)
+int vfs_open(char *path, int omode, bool kernel)
 {
 	struct vnode *v;
 	int err;
@@ -1407,10 +1407,10 @@ int vfs_open(char *path, stream_type st, int omode, bool kernel)
 	if(err < 0)
 		return err;
 
-	return _vfs_open(v, st, omode, kernel);
+	return _vfs_open(v, omode, kernel);
 }
 
-int vfs_open_vnid(fs_id fsid, vnode_id vnid, stream_type st, int omode, bool kernel)
+int vfs_open_vnid(fs_id fsid, vnode_id vnid, int omode, bool kernel)
 {
 	struct vnode *v;
 	int err;
@@ -1423,7 +1423,7 @@ int vfs_open_vnid(fs_id fsid, vnode_id vnid, stream_type st, int omode, bool ker
 	if(err < 0)
 		return err;
 
-	return _vfs_open(v, st, omode, kernel);
+	return _vfs_open(v, omode, kernel);
 }
 
 int vfs_close(int fd, bool kernel)
@@ -1572,7 +1572,7 @@ err:
 	return err;
 }
 
-int vfs_create(char *path, stream_type stream_type, void *args, bool kernel)
+int vfs_create(char *path, void *args, bool kernel)
 {
 	int err;
 	struct vnode *v;
@@ -1587,7 +1587,7 @@ int vfs_create(char *path, stream_type stream_type, void *args, bool kernel)
 	if(err < 0)
 		goto err;
 
-	err = v->mount->fs->calls->fs_create(v->mount->fscookie, v->priv_vnode, filename, stream_type, args, &vnid);
+	err = v->mount->fs->calls->fs_create(v->mount->fscookie, v->priv_vnode, filename, args, &vnid);
 
 	dec_vnode_ref_count(v, true, false);
 err:
@@ -1641,6 +1641,48 @@ err2:
 	dec_vnode_ref_count(v2, true, false);
 err1:
 	dec_vnode_ref_count(v1, true, false);
+err:
+	return err;
+}
+
+int vfs_mkdir(char *path, bool kernel)
+{
+	int err;
+	struct vnode *v;
+	char filename[SYS_MAX_NAME_LEN];
+
+#if MAKE_NOIZE
+	dprintf("vfs_mkdir: path '%s', kernel %d\n", path, kernel);
+#endif
+
+	err = path_to_dir_vnode(path, &v, filename, kernel);
+	if(err < 0)
+		goto err;
+
+	err = v->mount->fs->calls->fs_mkdir(v->mount->fscookie, v->priv_vnode, filename);
+
+	dec_vnode_ref_count(v, true, false);
+err:
+	return err;
+}
+
+int vfs_rmdir(char *path, bool kernel)
+{
+	int err;
+	struct vnode *v;
+	char filename[SYS_MAX_NAME_LEN];
+
+#if MAKE_NOIZE
+	dprintf("vfs_rmdir: path '%s', kernel %d\n", path, kernel);
+#endif
+
+	err = path_to_dir_vnode(path, &v, filename, kernel);
+	if(err < 0)
+		goto err;
+
+	err = v->mount->fs->calls->fs_rmdir(v->mount->fscookie, v->priv_vnode, filename);
+
+	dec_vnode_ref_count(v, true, false);
 err:
 	return err;
 }
@@ -1988,14 +2030,14 @@ int sys_readdir(int fd, void *buf, size_t len)
 	return vfs_readdir(fd, buf, len, true);
 }
 
-int sys_open(const char *path, stream_type st, int omode)
+int sys_open(const char *path, int omode)
 {
 	char buf[SYS_MAX_PATH_LEN+1];
 
 	strncpy(buf, path, SYS_MAX_PATH_LEN);
 	buf[SYS_MAX_PATH_LEN] = 0;
 
-	return vfs_open(buf, st, omode, true);
+	return vfs_open(buf, omode, true);
 }
 
 int sys_close(int fd)
@@ -2028,14 +2070,14 @@ int sys_ioctl(int fd, int op, void *buf, size_t len)
 	return vfs_ioctl(fd, op, buf, len, true);
 }
 
-int sys_create(const char *path, stream_type stream_type)
+int sys_create(const char *path)
 {
 	char buf[SYS_MAX_PATH_LEN+1];
 
 	strncpy(buf, path, SYS_MAX_PATH_LEN);
 	buf[SYS_MAX_PATH_LEN] = 0;
 
-	return vfs_create(buf, stream_type, NULL, true);
+	return vfs_create(buf, NULL, true);
 }
 
 int sys_unlink(const char *path)
@@ -2060,6 +2102,26 @@ int sys_rename(const char *oldpath, const char *newpath)
 	buf2[SYS_MAX_PATH_LEN] = 0;
 
 	return vfs_rename(buf1, buf2, true);
+}
+
+int sys_mkdir(const char *path)
+{
+	char buf[SYS_MAX_PATH_LEN+1];
+
+	strncpy(buf, path, SYS_MAX_PATH_LEN);
+	buf[SYS_MAX_PATH_LEN] = 0;
+
+	return vfs_mkdir(buf, true);
+}
+
+int sys_rmdir(const char *path)
+{
+	char buf[SYS_MAX_PATH_LEN+1];
+
+	strncpy(buf, path, SYS_MAX_PATH_LEN);
+	buf[SYS_MAX_PATH_LEN] = 0;
+
+	return vfs_rmdir(buf, true);
 }
 
 int sys_rstat(const char *path, struct file_stat *stat)
@@ -2217,7 +2279,7 @@ int user_readdir(int fd, void *buf, size_t len)
 	return vfs_readdir(fd, buf, len, false);
 }
 
-int user_open(const char *upath, stream_type st, int omode)
+int user_open(const char *upath, int omode)
 {
 	char path[SYS_MAX_PATH_LEN];
 	int rc;
@@ -2230,7 +2292,7 @@ int user_open(const char *upath, stream_type st, int omode)
 		return rc;
 	path[SYS_MAX_PATH_LEN-1] = 0;
 
-	return vfs_open(path, st, omode, false);
+	return vfs_open(path, omode, false);
 }
 
 int user_close(int fd)
@@ -2271,7 +2333,7 @@ int user_ioctl(int fd, int op, void *buf, size_t len)
 	return vfs_ioctl(fd, op, buf, len, false);
 }
 
-int user_create(const char *upath, stream_type stream_type)
+int user_create(const char *upath)
 {
 	char path[SYS_MAX_PATH_LEN];
 	int rc;
@@ -2284,7 +2346,7 @@ int user_create(const char *upath, stream_type stream_type)
 		return rc;
 	path[SYS_MAX_PATH_LEN-1] = 0;
 
-	return vfs_create(path, stream_type, NULL, false);
+	return vfs_create(path, NULL, false);
 }
 
 int user_unlink(const char *upath)
@@ -2326,6 +2388,38 @@ int user_rename(const char *uoldpath, const char *unewpath)
 	newpath[SYS_MAX_PATH_LEN] = 0;
 
 	return vfs_rename(oldpath, newpath, false);
+}
+
+int user_mkdir(const char *upath)
+{
+	char path[SYS_MAX_PATH_LEN];
+	int rc;
+
+	if((addr_t)upath >= KERNEL_BASE && (addr_t)upath <= KERNEL_TOP)
+		return ERR_VM_BAD_USER_MEMORY;
+
+	rc = user_strncpy(path, upath, SYS_MAX_PATH_LEN-1);
+	if(rc < 0)
+		return rc;
+	path[SYS_MAX_PATH_LEN-1] = 0;
+
+	return vfs_mkdir(path, false);
+}
+
+int user_rmdir(const char *upath)
+{
+	char path[SYS_MAX_PATH_LEN+1];
+	int rc;
+
+	if((addr_t)upath >= KERNEL_BASE && (addr_t)upath <= KERNEL_TOP)
+		return ERR_VM_BAD_USER_MEMORY;
+
+	rc = user_strncpy(path, upath, SYS_MAX_PATH_LEN);
+	if(rc < 0)
+		return rc;
+	path[SYS_MAX_PATH_LEN] = 0;
+
+	return vfs_rmdir(path, false);
 }
 
 int user_rstat(const char *upath, struct file_stat *ustat)
@@ -2478,7 +2572,7 @@ int vfs_bootstrap_all_filesystems(void)
 	// bootstrap the bootfs
 	bootstrap_bootfs();
 
-	sys_create("/boot", STREAM_TYPE_DIR);
+	sys_mkdir("/boot");
 	err = sys_mount("/boot", NULL, "bootfs", NULL);
 	if(err < 0)
 		panic("error mounting bootfs\n");
@@ -2486,7 +2580,7 @@ int vfs_bootstrap_all_filesystems(void)
 	// bootstrap the devfs
 	bootstrap_devfs();
 
-	sys_create("/dev", STREAM_TYPE_DIR);
+	sys_mkdir("/dev");
 	err = sys_mount("/dev", NULL, "devfs", NULL);
 	if(err < 0)
 		panic("error mounting devfs\n");
@@ -2494,7 +2588,7 @@ int vfs_bootstrap_all_filesystems(void)
 	// bootstrap the pipefs
 	bootstrap_pipefs();
 
-	sys_create("/pipe", STREAM_TYPE_DIR);
+	sys_mkdir("/pipe");
 	err = sys_mount("/pipe", NULL, "pipefs", NULL);
 	if(err < 0)
 		panic("error mounting pipefs\n");

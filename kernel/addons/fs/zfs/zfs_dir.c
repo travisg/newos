@@ -38,4 +38,13 @@ int zfs_readdir(fs_cookie fs, fs_vnode v, dir_cookie cookie, void *buf, size_t b
 	return ERR_NOT_IMPLEMENTED;
 }
 
+int zfs_mkdir(fs_cookie _fs, fs_vnode _base_dir, const char *name)
+{
+	return ERR_NOT_IMPLEMENTED;
+}
+
+int zfs_rmdir(fs_cookie _fs, fs_vnode _base_dir, const char *name)
+{
+	return ERR_NOT_IMPLEMENTED;
+}
 

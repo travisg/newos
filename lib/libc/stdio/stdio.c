@@ -105,7 +105,7 @@ static int __delete_FILE_struct(int fd)
 	/* Wait for the lock */
 	sid = fNode->sid;
 	_kern_sem_acquire(sid, 1);
-    
+
 	/* free the FILE space/semaphore*/
     close(fNode->fd);
     free(fNode->buf);
@@ -178,7 +178,7 @@ FILE *fopen(const char *filename, const char *mode)
     int flags;
     int fd;
 
-	if(_set_open_flags(mode, &sys_flags, &flags) || (fd = _kern_open(filename, 0, sys_flags)) < 0)
+	if(_set_open_flags(mode, &sys_flags, &flags) || (fd = _kern_open(filename, sys_flags)) < 0)
 	{
 		return (FILE*)0;
 	}
@@ -198,12 +198,12 @@ FILE *freopen(const char *filename, const char *mode, FILE *stream)
     int flags;
     int fd;
 
-	if(_set_open_flags(mode, &sys_flags, &flags) || (fd = _kern_open(filename, 0, sys_flags)) < 0)
+	if(_set_open_flags(mode, &sys_flags, &flags) || (fd = _kern_open(filename, sys_flags)) < 0)
 	{
 		return (FILE*)0;
 	}
- 
-	_kern_sem_acquire(stream->sid, 1);	
+
+	_kern_sem_acquire(stream->sid, 1);
 	_flush(stream);
 	close(stream->fd);
 	stream->fd = fd;
@@ -262,18 +262,18 @@ long ftell(FILE* stream)
 	_kern_sem_acquire(stream->sid, 1);
 	p = _ftell(stream);
 	_kern_sem_release(stream->sid, 1);
-	
+
 	return p;
 }
 
 static long _ftell(FILE* stream)
 {
 	fpos_t p;
-	
+
 	_flush(stream);
 
 	p = lseek(stream->fd, 0, _SEEK_CUR) - ((stream->flags & _STDIO_UNGET) ? 1 : 0);
-	
+
 	if(p < 0)
 	{
 		errno = EIO;
@@ -474,7 +474,7 @@ size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream)
 		for(; j > 0; j--)
 		{
 			int ch = _fputc(*tmp++, stream);
-			
+
 			if(ch < 0)
 			{
 				_kern_sem_release(stream->sid, 1);
@@ -484,7 +484,7 @@ size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream)
 		j = size;
     }
     _kern_sem_release(stream->sid, 1);
-	
+
 	return nmemb - i;
 }
 
@@ -500,7 +500,7 @@ size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream)
 	{
 		return 0;
 	}
-    
+
 	for(;i > 0; i--)
     {
 		for(; j > 0; j--)
@@ -511,13 +511,13 @@ size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream)
 				_kern_sem_release(stream->sid, 1);
 				return nmemb - i;
 			}
-			
+
 			*tmp++ = c;
 		}
 		j = size;
     }
     _kern_sem_release(stream->sid, 1);
-	
+
 	return nmemb - i;
 }
 
@@ -538,7 +538,7 @@ char* fgets(char* str, int n, FILE * stream)
         {
             break;
         }
-		
+
 		c = _fgetc(stream);
 
 		if(c < 0)

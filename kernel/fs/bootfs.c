@@ -655,7 +655,7 @@ err:
 	return err;
 }
 
-static int bootfs_open(fs_cookie _fs, fs_vnode _v, file_cookie *_cookie, stream_type st, int oflags)
+static int bootfs_open(fs_cookie _fs, fs_vnode _v, file_cookie *_cookie, int oflags)
 {
 	struct bootfs *fs = _fs;
 	struct bootfs_vnode *v = _v;
@@ -875,7 +875,7 @@ static ssize_t bootfs_writepage(fs_cookie _fs, fs_vnode _v, iovecs *vecs, off_t 
 	return ERR_NOT_ALLOWED;
 }
 
-static int bootfs_create(fs_cookie _fs, fs_vnode _dir, const char *name, stream_type st, void *create_args, vnode_id *new_vnid)
+static int bootfs_create(fs_cookie _fs, fs_vnode _dir, const char *name, void *create_args, vnode_id *new_vnid)
 {
 	return ERR_VFS_READONLY_FS;
 }
@@ -886,6 +886,16 @@ static int bootfs_unlink(fs_cookie _fs, fs_vnode _dir, const char *name)
 }
 
 static int bootfs_rename(fs_cookie _fs, fs_vnode _olddir, const char *oldname, fs_vnode _newdir, const char *newname)
+{
+	return ERR_VFS_READONLY_FS;
+}
+
+static int bootfs_mkdir(fs_cookie _fs, fs_vnode _base_dir, const char *name)
+{
+	return ERR_VFS_READONLY_FS;
+}
+
+static int bootfs_rmdir(fs_cookie _fs, fs_vnode _base_dir, const char *name)
 {
 	return ERR_VFS_READONLY_FS;
 }
@@ -966,6 +976,9 @@ static struct fs_calls bootfs_calls = {
 	&bootfs_create,
 	&bootfs_unlink,
 	&bootfs_rename,
+
+	&bootfs_mkdir,
+	&bootfs_rmdir,
 
 	&bootfs_rstat,
 	&bootfs_wstat,

@@ -13,7 +13,7 @@
 
 #include "zfs.h"
 
-int zfs_open(fs_cookie fs, fs_vnode v, file_cookie *cookie, stream_type st, int oflags)
+int zfs_open(fs_cookie fs, fs_vnode v, file_cookie *cookie, int oflags)
 {
 	return ERR_NOT_IMPLEMENTED;
 }

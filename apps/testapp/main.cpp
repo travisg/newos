@@ -476,7 +476,7 @@ int foo(int argc, char **argv)
 
 		printf("mounting nfs filesystem\n");
 
-		_kern_create("/nfs", STREAM_TYPE_DIR);
+		_kern_mkdir("/nfs");
 		err = _kern_mount("/nfs", "192.168.0.4:/disk", "nfs", NULL);
 		printf("mount returns %d\n", err);
 
@@ -485,11 +485,11 @@ int foo(int argc, char **argv)
 			int fd;
 			char buf[1024];
 
-			fd = _kern_open("/nfs", STREAM_TYPE_DIR, 0);
+			fd = _kern_opendir("/nfs");
 
 			for(i=0; i<16; i++) {
 				memset(buf, 0, sizeof(buf));
-				err = read(fd, buf, sizeof(buf));
+				err = _kern_readdir(fd, buf, sizeof(buf));
 				printf("read returns %d '%s'\n", err, buf);
 			}
 		}

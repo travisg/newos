@@ -101,7 +101,7 @@ static int socket_dev_ioctl(dev_cookie cookie, int op, void *buf, size_t len)
 
 				// we have the new id, open a new file descriptor in user space
 				strcpy(socket_dev_path, "/dev/net/socket");
-				fd = vfs_open(socket_dev_path, STREAM_TYPE_ANY, 0, false);
+				fd = vfs_open(socket_dev_path, 0, false);
 				if(fd < 0) {
 					socket_close(id);
 					err = fd;

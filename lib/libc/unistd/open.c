@@ -12,7 +12,7 @@ open(char const *path, int omode, ...)
 {
 	int retval;
 
-	retval= _kern_open(path, STREAM_TYPE_ANY , omode);
+	retval= _kern_open(path, omode);
 
 	if(retval< 0) {
 		errno = retval;

@@ -91,7 +91,7 @@ int cmd_mkdir(int argc, char *argv[])
 		return 0;
 	}
 
-	rc = _kern_create(argv[1], STREAM_TYPE_DIR);
+	rc = _kern_mkdir(argv[1]);
 	if (rc < 0) {
 		printf("_kern_mkdir() returned error: %s\n", strerror(rc));
 	} else {
@@ -112,7 +112,7 @@ int cmd_cat(int argc, char *argv[])
 		return 0;
 	}
 
-	fd = _kern_open(argv[1], STREAM_TYPE_FILE, 0);
+	fd = _kern_open(argv[1], 0);
 	if(fd < 0) {
 		printf("cat: _kern_open() returned error: %s!\n", strerror(fd));
 		goto done_cat;

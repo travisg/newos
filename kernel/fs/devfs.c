@@ -679,7 +679,7 @@ err:
 }
 
 
-static int devfs_open(fs_cookie _fs, fs_vnode _v, file_cookie *_cookie, stream_type st, int oflags)
+static int devfs_open(fs_cookie _fs, fs_vnode _v, file_cookie *_cookie, int oflags)
 {
 	struct devfs *fs = _fs;
 	struct devfs_vnode *v = _v;
@@ -700,24 +700,13 @@ static int devfs_open(fs_cookie _fs, fs_vnode _v, file_cookie *_cookie, stream_t
 	mutex_lock(&fs->lock);
 
 	cookie->s = &v->stream;
-	switch(v->stream.type) {
-		case STREAM_TYPE_DIR:
-			cookie->u.dir.ptr = v->stream.u.dir.dir_head;
-			break;
-		case STREAM_TYPE_DEVICE:
-			// call the device call, but unlock the devfs first
-			mutex_unlock(&fs->lock);
-			err = v->stream.u.dev.calls->dev_open(v->stream.u.dev.ident, &cookie->u.dev.dcookie);
-			mutex_lock(&fs->lock);
-			break;
-		default:
-			err = ERR_VFS_WRONG_STREAM_TYPE;
-			kfree(cookie);
-	}
+
+	// call the device call, but unlock the devfs first
+	mutex_unlock(&fs->lock);
+	err = v->stream.u.dev.calls->dev_open(v->stream.u.dev.ident, &cookie->u.dev.dcookie);
 
 	*_cookie = cookie;
 
-	mutex_unlock(&fs->lock);
 err:
 	return err;
 }
@@ -970,7 +959,7 @@ static ssize_t devfs_writepage(fs_cookie _fs, fs_vnode _v, iovecs *vecs, off_t p
 	}
 }
 
-static int devfs_create(fs_cookie _fs, fs_vnode _dir, const char *name, stream_type st, void *create_args, vnode_id *new_vnid)
+static int devfs_create(fs_cookie _fs, fs_vnode _dir, const char *name, void *create_args, vnode_id *new_vnid)
 {
 	return ERR_VFS_READONLY_FS;
 }
@@ -1009,6 +998,16 @@ err:
 }
 
 static int devfs_rename(fs_cookie _fs, fs_vnode _olddir, const char *oldname, fs_vnode _newdir, const char *newname)
+{
+	return ERR_VFS_READONLY_FS;
+}
+
+static int devfs_mkdir(fs_cookie _fs, fs_vnode _base_dir, const char *name)
+{
+	return ERR_VFS_READONLY_FS;
+}
+
+static int devfs_rmdir(fs_cookie _fs, fs_vnode _base_dir, const char *name)
 {
 	return ERR_VFS_READONLY_FS;
 }
@@ -1072,6 +1071,9 @@ static struct fs_calls devfs_calls = {
 	&devfs_create,
 	&devfs_unlink,
 	&devfs_rename,
+
+	&devfs_mkdir,
+	&devfs_rmdir,
 
 	&devfs_rstat,
 	&devfs_wstat,

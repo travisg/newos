@@ -546,7 +546,7 @@ static int nfs_readdir(fs_cookie _fs, fs_vnode _v, dir_cookie _cookie, void *buf
 	return err;
 }
 
-int nfs_open(fs_cookie fs, fs_vnode _v, file_cookie *_cookie, stream_type st, int oflags)
+int nfs_open(fs_cookie fs, fs_vnode _v, file_cookie *_cookie, int oflags)
 {
 	nfs_fs *nfs = (nfs_fs *)fs;
 	nfs_vnode *v = (nfs_vnode *)_v;
@@ -555,10 +555,10 @@ int nfs_open(fs_cookie fs, fs_vnode _v, file_cookie *_cookie, stream_type st, in
 
 	TOUCH(nfs);
 
-	TRACE("nfs_open: fsid 0x%x, vnid 0x%Lx, stream_type %d, oflags 0x%x\n", nfs->id, VNODETOVNID(v), st, oflags);
+	TRACE("nfs_open: fsid 0x%x, vnid 0x%Lx, oflags 0x%x\n", nfs->id, VNODETOVNID(v), oflags);
 
-	if(st != STREAM_TYPE_ANY && st != v->st) {
-		err = ERR_VFS_WRONG_STREAM_TYPE;
+	if(v->st == STREAM_TYPE_DIR) {
+		err = ERR_VFS_IS_DIR;
 		goto err;
 	}
 
@@ -569,15 +569,8 @@ int nfs_open(fs_cookie fs, fs_vnode _v, file_cookie *_cookie, stream_type st, in
 	}
 	cookie->v = v;
 
-	switch(v->st) {
-		case STREAM_TYPE_FILE:
-			cookie->u.file.pos = 0;
-			cookie->u.file.oflags = oflags;
-			break;
-		case STREAM_TYPE_DIR:
-			cookie->u.dir.nfscookie = 0;
-			cookie->u.dir.at_end = false;
-	}
+	cookie->u.file.pos = 0;
+	cookie->u.file.oflags = oflags;
 
 	*_cookie = (file_cookie)cookie;
 	err = NO_ERROR;
@@ -911,14 +904,14 @@ ssize_t nfs_writepage(fs_cookie fs, fs_vnode _v, iovecs *vecs, off_t pos)
 	return ERR_UNIMPLEMENTED;
 }
 
-int nfs_create(fs_cookie fs, fs_vnode _dir, const char *name, stream_type st, void *create_args, vnode_id *new_vnid)
+int nfs_create(fs_cookie fs, fs_vnode _dir, const char *name, void *create_args, vnode_id *new_vnid)
 {
 	nfs_fs *nfs = (nfs_fs *)fs;
 	nfs_vnode *dir = (nfs_vnode *)_dir;
 
 	TOUCH(nfs);TOUCH(dir);
 
-	TRACE("nfs_create: fsid 0x%x, vnid 0x%Lx, name '%s', stream_type %d\n", nfs->id, VNODETOVNID(dir), name, st);
+	TRACE("nfs_create: fsid 0x%x, vnid 0x%Lx, name '%s'\n", nfs->id, VNODETOVNID(dir), name);
 
 	return ERR_UNIMPLEMENTED;
 }
@@ -944,6 +937,30 @@ int nfs_rename(fs_cookie fs, fs_vnode _olddir, const char *oldname, fs_vnode _ne
 	TOUCH(nfs);TOUCH(olddir);TOUCH(newdir);
 
 	TRACE("nfs_rename: fsid 0x%x, vnid 0x%Lx, oldname '%s', newdir 0x%Lx, newname '%s'\n", nfs->id, VNODETOVNID(olddir), oldname, VNODETOVNID(newdir), newname);
+
+	return ERR_UNIMPLEMENTED;
+}
+
+int nfs_mkdir(fs_cookie _fs, fs_vnode _base_dir, const char *name)
+{
+	nfs_fs *nfs = (nfs_fs *)_fs;
+	nfs_vnode *dir = (nfs_vnode *)_base_dir;
+
+	TOUCH(nfs);TOUCH(dir);
+
+	TRACE("nfs_mkdir: fsid 0x%x, vnid 0x%Lx, name '%s'\n", nfs->id, VNODETOVNID(dir), name);
+
+	return ERR_UNIMPLEMENTED;
+}
+
+int nfs_rmdir(fs_cookie _fs, fs_vnode _base_dir, const char *name)
+{
+	nfs_fs *nfs = (nfs_fs *)_fs;
+	nfs_vnode *dir = (nfs_vnode *)_base_dir;
+
+	TOUCH(nfs);TOUCH(dir);
+
+	TRACE("nfs_rmdir: fsid 0x%x, vnid 0x%Lx, name '%s'\n", nfs->id, VNODETOVNID(dir), name);
 
 	return ERR_UNIMPLEMENTED;
 }
@@ -1041,6 +1058,9 @@ static struct fs_calls nfs_calls = {
 	&nfs_create,
 	&nfs_unlink,
 	&nfs_rename,
+
+	&nfs_mkdir,
+	&nfs_rmdir,
 
 	&nfs_rstat,
 	&nfs_wstat

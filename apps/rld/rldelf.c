@@ -778,7 +778,7 @@ load_container(char const *path, char const *name, bool fixed)
 	printf("rld: load_container: path '%s', name '%s' entry\n", path, name);
 #endif
 
-	fd= _kern_open(path, STREAM_TYPE_FILE, 0);
+	fd= _kern_open(path, 0);
 	FATAL((fd< 0), "cannot open file %s\n", path);
 
 	len= _kern_read(fd, &eheader, 0, sizeof(eheader));

@@ -635,7 +635,7 @@ err:
 	return err;
 }
 
-static int pipefs_open(fs_cookie _fs, fs_vnode _v, file_cookie *_cookie, stream_type st, int oflags)
+static int pipefs_open(fs_cookie _fs, fs_vnode _v, file_cookie *_cookie, int oflags)
 {
 	struct pipefs_vnode *v = _v;
 	struct pipefs_cookie *cookie;
@@ -1001,14 +1001,14 @@ static int pipefs_ioctl(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, int op,
 					mutex_unlock(&fs->hash_lock);
 
 					// open the two endpoints
-					new_fds[0] = vfs_open_vnid(fs->id, new_v->id, STREAM_TYPE_PIPE, 0, false);
+					new_fds[0] = vfs_open_vnid(fs->id, new_v->id, 0, false);
 					if(new_fds[0] < 0) {
 						// XXX may leak vnode
 						err = new_fds[0];
 						goto err;
 					}
 
-					new_fds[1] = vfs_open_vnid(fs->id, new_v->id, STREAM_TYPE_PIPE, 0, false);
+					new_fds[1] = vfs_open_vnid(fs->id, new_v->id, 0, false);
 					if(new_fds[1] < 0) {
 						// XXX may leak vnode
 						vfs_close(new_fds[0], false);
@@ -1046,7 +1046,7 @@ static ssize_t pipefs_writepage(fs_cookie _fs, fs_vnode _v, iovecs *vecs, off_t 
 	return ERR_NOT_ALLOWED;
 }
 
-static int pipefs_create(fs_cookie _fs, fs_vnode _dir, const char *name, stream_type st, void *create_args, vnode_id *new_vnid)
+static int pipefs_create(fs_cookie _fs, fs_vnode _dir, const char *name, void *create_args, vnode_id *new_vnid)
 {
 	// XXX handle named pipes
 	return ERR_VFS_READONLY_FS;
@@ -1054,38 +1054,20 @@ static int pipefs_create(fs_cookie _fs, fs_vnode _dir, const char *name, stream_
 
 static int pipefs_unlink(fs_cookie _fs, fs_vnode _dir, const char *name)
 {
-	struct pipefs *fs = _fs;
-	struct pipefs_vnode *dir = _dir;
-	struct pipefs_vnode *v;
-	int res = NO_ERROR;
-
-	if(dir->stream.type != STREAM_TYPE_DIR)
-		return ERR_VFS_NOT_DIR;
-
-	mutex_lock(&dir->stream.u.dir.dir_lock);
-
-	v = pipefs_find_in_dir(dir, name);
-	if(!v) {
-		res = ERR_NOT_FOUND;
-		goto err;
-	}
-
-	// XXX make sure it's not the anonymous node
 	return ERR_NOT_ALLOWED;
-
-	res = pipefs_remove_from_dir(v->parent, v);
-	if( res )
-		goto err;
-
-	res = vfs_remove_vnode(fs->id, v->id);
-
-err:
-	mutex_unlock(&dir->stream.u.dir.dir_lock);
-
-	return res;
 }
 
 static int pipefs_rename(fs_cookie _fs, fs_vnode _olddir, const char *oldname, fs_vnode _newdir, const char *newname)
+{
+	return ERR_NOT_ALLOWED;
+}
+
+static int pipefs_mkdir(fs_cookie _fs, fs_vnode _base_dir, const char *name)
+{
+	return ERR_NOT_ALLOWED;
+}
+
+static int pipefs_rmdir(fs_cookie _fs, fs_vnode _base_dir, const char *name)
 {
 	return ERR_NOT_ALLOWED;
 }
@@ -1149,6 +1131,9 @@ static struct fs_calls pipefs_calls = {
 	&pipefs_create,
 	&pipefs_unlink,
 	&pipefs_rename,
+
+	&pipefs_mkdir,
+	&pipefs_rmdir,
 
 	&pipefs_rstat,
 	&pipefs_wstat,
