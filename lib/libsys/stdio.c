@@ -31,7 +31,7 @@ int printf(const char *fmt, ...)
 	i = vsprintf(buf, fmt, args);
 	va_end(args);
 	
-	sys_write(0, buf, 0, strlen(buf));
+	sys_write(1, buf, 0, strlen(buf));
 	
 	return i;
 }
@@ -41,6 +41,6 @@ char getc(void)
 	char c;
 	int len;
 	
-	sys_read(1, &c, 0, 1);
+	sys_read(0, &c, 0, 1);
 	return c;
 }
