@@ -28,6 +28,7 @@ vfs:
  getcwd
  attributes
  detach close/freecookie
+ implement *dir commands (opendir/readdir/closedir)
 VM:
  cache layer
  better region creation args (range of virtual addresses, etc)

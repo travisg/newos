@@ -17,48 +17,31 @@
   <h4>You'll Need:</h4>
   <li>GNU C</li>
   <li>GNU gmake</li>
-  </ul>
-  Building the x86 version of the OS should be relatively easy if you have 
-  a x86 host running the GNU C toolchain <b>that builds elf binaries</b>. 
-  This means the default cygwin installation will not build NewOS correctly, 
-  since the default toolchain makes windows binaries. I've managed to manually 
-  build gcc and binutils for cygwin, though, and you can get it 
-  <a href="http://www.newos.org/snapshots/cygwin_toolchain-i386-linux.tar.gz">here</a>, 
-  though it may or may not work on your cygwin setup. I've personally built it 
-  on Cywgin, BeOS, FreeBSD, Linux, and Solaris 8 (SPARC).
-  <br><br>
-
-  To make a floppy image (pretty much what you'll always want to do):<br>
-  type <b>make floppy</b>. It will put the final disk image in <b>boot/i386/final</b>. 
-  This is the file you want to write to a floppy to boot.
-  <br><br>
-
-  NOTE: you need to be running the GNU make. On some systems (FreeBSD), GNU make is 
-  called gmake. So, if you get a bunch of make errors and it bails really quickly, 
-  try <b>gmake</b> instead of <b>make</b>.
-  <br><br>
-
-  The first time you run it may spit out a ton of warnings about missing .d files, 
-  this is normal.  The make system hasn't built all of the dependency files yet. 
-  When it sees one is missing, it'll build it.
-  <br><br>
-
-  Sometimes the make system will get confused if it has a bad .d file or something 
-  along those lines. In that case try running <b>make allclean</b>, this will take the 
-  system back to it's default state.  <b>make clean</b> removes all the compiled code 
-  and targets, but not the .d files.
-  <br><br>
-
-  Building non-native ports are a bit more involved. To build them, you need a 
-  GNU C toolchain compiled for the target processor. I compiled them all as arch-elf, 
-  where arch is defined as the target architecture.  For example, on my Sparc Solaris box, 
-  I have a toolchain installed at /usr/local/i386-elf/, /usr/local/sh-elf/, etc. I placed 
-  /usr/local/arch-elf/bin in the path and set the environment variable ARCH to be the 
-  architecture.  Valid ones are 'i386','sh'. Hopefully should work. The build system 
-  will be looking for files like sh-elf-gcc and sh-elf-ld. It may be confused for 
-  whatever reason and not find the proper target, in which case please email me at 
-  <a href="mailto:geist@newos.org">geist@newos.org</a> and I'll try to fix the make 
-  system to recognize your case.
+  <br>
+  <br>
+  <p>To build newos, you need to grab a special toolchain (gcc + binutils) that I've compiled for most
+  popular host OS's (and some less popular as well). The only supported build toolchain are the ones I've made, but
+  you may or may not be able to pull it off if your host computer is x86 and has an ELF producing toolchain
+  already installed. Go to <a href="http://newos.sourceforge.net/download.php">here</a> to download and install a toolchain.
+  <p>To make a floppy image (pretty much what you'll always want to do):
+  type <b>make</b>. It will put the final disk image in <b>build/i386/final</b>. This is the
+  file you want to write to a floppy to boot.
+  <p>NOTE: you need to be running the GNU make. On some systems (FreeBSD), GNU make is called gmake. So, if you get
+  a bunch of make errors and it bails really quickly, try <b>gmake</b> instead of <b>make</b>.
+  <p>The first time you run it may spit out a ton of warnings about missing .d files, this is normal.
+  The make system hasn't built all of the dependency files yet. When it sees one is missing, it'll build it.
+  <p>Sometimes the make system will get confused if it has a bad .d file or something along those lines. In
+  that case try running <b>make allclean</b>, this will take the system back to it's default state.
+  <b>make clean</b> removes all the compiled code and targets, but not the .d files.
+  <br>
+  <p>Building non-native ports are a bit more involved. To build them, you need a GNU C toolchain compiled
+  for the target processor. I compiled them all as arch-elf, where arch is defined as the target architecture.
+  For example, on my Sparc Solaris box, I have a toolchain installed at /usr/local/i386-elf/, /usr/local/sh-elf/,
+  etc. I placed /usr/local/arch-elf/bin in the path and set the environment variable ARCH to be the architecture.
+  Valid ones are 'i386','sh'. Hopefully should work. The build system will be looking for files like
+  sh-elf-gcc and sh-elf-ld. It may be confused for whatever reason and not find the proper target, in which case
+  please email me at <a href="mailto:geist@newos.org">geist@newos.org</a> and I'll try to fix the make system to
+  recognize your case.
   </td>
  </tr>
 </table>
