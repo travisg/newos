@@ -16,7 +16,7 @@ extern "C" {
 #endif
 
 
-int	      atoi(char const *); 
+int	      atoi(char const *);
 unsigned int  atoui(const char *num);
 long          atol(const char *num);
 unsigned long atoul(const char *num);
@@ -56,9 +56,11 @@ void  srand(unsigned);
 long  random(void);
 void  srandom(unsigned long);
 
+#if !KERNEL
+void abort(void);
 void exit(int);
 void _exit(int);
-
+#endif
 
 #ifdef __cplusplus
 } /* extern "C" */

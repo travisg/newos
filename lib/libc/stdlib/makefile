@@ -2,9 +2,11 @@
 LIBC_STDLIB_DIR := stdlib
 
 MY_OBJS += \
+	$(LIBC_STDLIB_DIR)/abort.o \
 	$(LIBC_STDLIB_DIR)/assert.o \
 	$(LIBC_STDLIB_DIR)/atoi.o \
 	$(LIBC_STDLIB_DIR)/bsearch.o \
+	$(LIBC_STDLIB_DIR)/exit.o \
 	$(LIBC_STDLIB_DIR)/heapsort.o \
 	$(LIBC_STDLIB_DIR)/merge.o \
 	$(LIBC_STDLIB_DIR)/qsort.o \
