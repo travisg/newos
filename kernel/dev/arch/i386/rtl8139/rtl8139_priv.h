@@ -7,6 +7,7 @@
 
 #include <kernel/kernel.h>
 #include <kernel/vm.h>
+#include <kernel/smp.h>
 
 typedef struct rtl8139 {
 	int irq;
@@ -25,6 +26,7 @@ typedef struct rtl8139 {
 	addr txbuf;
 	sem_id tx_sem;
 	mutex lock;
+	spinlock_t reg_spinlock;
 } rtl8139;
 
 int rtl8139_detect(rtl8139 **rtl);

@@ -115,6 +115,8 @@ int rtl8139_init(rtl8139 *rtl)
 	int err = -1;
 	addr temp;
 
+	dprintf("rtl8139_init: rtl %p\n", rtl);
+
 	rtl->region = vm_map_physical_memory(vm_get_kernel_aspace_id(), "rtl8139_region", (void **)&rtl->virt_base,
 		REGION_ADDR_ANY_ADDRESS, rtl->phys_size, LOCK_KERNEL|LOCK_RW, rtl->phys_base);
 	if(rtl->region < 0) {
@@ -147,6 +149,7 @@ int rtl8139_init(rtl8139 *rtl)
 	rtl->txbn = 0;
 	rtl->last_txbn = 0;
 	rtl->rx_sem = sem_create(0, "rtl8139_rxsem");
+	rtl->reg_spinlock = 0;
 
 	// set up the interrupt handler
 	int_set_io_interrupt_handler(rtl->irq + 0x20, &rtl8139_int, rtl);
@@ -255,9 +258,14 @@ restart:
 	dprintf("\n");
 #endif
 
+	state = int_disable_interrupts();
+	acquire_spinlock(&rtl->reg_spinlock);
+
 	/* wait for clear-to-send */
 	if(!(RTL_READ_32(rtl, RT_TXSTATUS0 + rtl->txbn*4) & RT_TX_HOST_OWNS)) {
 		dprintf("rtl8139_xmit: no txbuf free\n");
+		release_spinlock(&rtl->reg_spinlock);
+		int_restore_interrupts(state);
 		mutex_unlock(&rtl->lock);
 		sem_release(rtl->tx_sem, 1);
 		goto restart;
@@ -267,12 +275,11 @@ restart:
 	if(len < 60)
 		len = 60;
 
-	state = int_disable_interrupts();
-
-	RTL_WRITE_32(rtl, RT_TXSTATUS0 + (rtl->txbn)*4, len | 0x80000);
+	RTL_WRITE_32(rtl, RT_TXSTATUS0 + rtl->txbn*4, len | 0x80000);
 	if(++rtl->txbn >= 4)
 		rtl->txbn = 0;
 
+	release_spinlock(&rtl->reg_spinlock);
 	int_restore_interrupts(state);
 
 	mutex_unlock(&rtl->lock);
@@ -294,6 +301,8 @@ ssize_t rtl8139_rx(rtl8139 *rtl, char *buf, ssize_t buf_len)
 	rx_entry *entry;
 	uint32 tail;
 	int rc;
+	int state;
+	bool release_sem = false;
 
 //	dprintf("rtl8139_rx: entry\n");
 
@@ -304,9 +313,14 @@ restart:
 	sem_acquire(rtl->rx_sem, 1);
 	mutex_lock(&rtl->lock);
 
+	state = int_disable_interrupts();
+	acquire_spinlock(&rtl->reg_spinlock);
+
 	tail = TAILREG_TO_TAIL(RTL_READ_16(rtl, RT_RXBUFTAIL));
 //	dprintf("tailreg = 0x%x, actual tail 0x%x\n", RTL_READ_16(rtl, RT_RXBUFTAIL), tail);
 	if(tail == RTL_READ_16(rtl, RT_RXBUFHEAD)) {
+		release_spinlock(&rtl->reg_spinlock);
+		int_restore_interrupts(state);
 		mutex_unlock(&rtl->lock);
 		goto restart;
 	}
@@ -320,9 +334,9 @@ restart:
 	if(entry->len > buf_len) {
 		dprintf("rtl8139_rx: packet too large for buffer\n");
 		RTL_WRITE_16(rtl, RT_RXBUFTAIL, TAILREG_TO_TAIL(RTL_READ_16(rtl, RT_RXBUFHEAD)));
-		mutex_unlock(&rtl->lock);
-		sem_release(rtl->rx_sem, 1);
-		return -1;
+		rc = ERR_TOO_BIG;
+		release_sem = true;
+		goto out;
 	}
 	if(tail + entry->len > 0xffff) {
 		int pos = 0;
@@ -344,8 +358,15 @@ restart:
 
 	if(tail != RTL_READ_16(rtl, RT_RXBUFHEAD)) {
 		// we're at last one more packet behind
-		sem_release(rtl->rx_sem, 1);
+		release_sem = true;
 	}
+
+out:
+	release_spinlock(&rtl->reg_spinlock);
+	int_restore_interrupts(state);
+
+	if(release_sem)
+		sem_release(rtl->rx_sem, 1);
 	mutex_unlock(&rtl->lock);
 
 	return rc;
@@ -365,6 +386,7 @@ static int rtl8139_rxint(rtl8139 *rtl, uint16 int_status)
 		sem_release_etc(rtl->rx_sem, 1, SEM_FLAG_NO_RESCHED);
 		rc = INT_RESCHEDULE;
 	}
+
 	return rc;
 }
 
@@ -378,7 +400,7 @@ static int rtl8139_txint(rtl8139 *rtl, uint16 int_status)
 //	dprintf("tx\n");
 
 	for(i=0; i<4; i++) {
-		if(rtl->last_txbn == rtl->txbn)
+		if(i > 0 && rtl->last_txbn == rtl->txbn)
 			break;
 		txstat = RTL_READ_32(rtl, RT_TXSTATUS0 + rtl->last_txbn*4);
 //		dprintf("txstat[%d] = 0x%x\n", rtl->last_txbn, txstat);
@@ -393,6 +415,7 @@ static int rtl8139_txint(rtl8139 *rtl, uint16 int_status)
 		sem_release_etc(rtl->tx_sem, 1, SEM_FLAG_NO_RESCHED);
 		rc = INT_RESCHEDULE;
 	}
+
 	return rc;
 }
 
@@ -400,6 +423,8 @@ static int rtl8139_int(void* data)
 {
 	int rc = INT_NO_RESCHEDULE;
 	rtl8139 *rtl = (rtl8139 *)data;
+
+	acquire_spinlock(&rtl->reg_spinlock);
 
 	// Disable interrupts
 	RTL_WRITE_16(rtl, RT_INTRMASK, 0);
@@ -436,6 +461,8 @@ static int rtl8139_int(void* data)
 
 	// reenable interrupts
 	RTL_WRITE_16(rtl, RT_INTRMASK, MYRT_INTS);
+
+	release_spinlock(&rtl->reg_spinlock);
 
 	return rc;
 }
