@@ -1,5 +1,11 @@
+/*
+** Copyright 2002, Manuel J. Petit. All rights reserved.
+** Distributed under the terms of the NewOS License.
+*/
+
+#include <string.h>
+#include <stdlib.h>
 #include <libc/printf.h>
-#include <libc/string.h>
 #include <libsys/stdio.h>
 #include <libsys/syscalls.h>
 

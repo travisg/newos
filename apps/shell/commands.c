@@ -2,10 +2,10 @@
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
+#include <string.h>
 #include <libsys/syscalls.h>
 #include <libsys/stdio.h>
 #include <libsys/malloc.h>
-#include <libc/string.h>
 #include <libc/ctype.h>
 
 #include "commands.h"

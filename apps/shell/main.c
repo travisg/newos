@@ -3,7 +3,7 @@
 ** Distributed under the terms of the NewOS License.
 */
 #include <types.h>
-#include <libc/string.h>
+#include <string.h>
 #include <libc/printf.h>
 #include <libc/ctype.h>
 #include <libsys/syscalls.h>

@@ -4,11 +4,11 @@
 ** Distributed under the terms of the NewOS License.
 */
 
+#include <string.h>
 #include <sys/errors.h>
 #include <sys/elf32.h>
 #include <libsys/syscalls.h>
 #include <libsys/stdio.h>
-#include <libc/string.h>
 #include <libc/printf.h>
 
 #include "rld_priv.h"

@@ -2,7 +2,7 @@ APPS_DIR = apps
 
 APPS =
 APPS_CLEAN =
-APPS_INCLUDES = -Iinclude
+APPS_INCLUDES = -Iinclude -Iinclude/nulibc
 
 APPS_LDSCRIPT = $(APPS_DIR)/ldscripts/$(ARCH)/app.ld
 

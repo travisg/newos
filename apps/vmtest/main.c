@@ -3,13 +3,13 @@
 ** Distributed under the terms of the NewOS License.
 */
 #include <types.h>
+#include <string.h>
 #include <sys/errors.h>
-#include <libc/string.h>
 #include <libc/printf.h>
 #include <libsys/syscalls.h>
 #include <libsys/stdio.h>
 
-int main()
+int main(void)
 {
 	int fd;
 	size_t len;
