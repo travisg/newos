@@ -10,7 +10,7 @@ MOUNTAPP = $(MOUNTAPP_OBJ_DIR)/mount
 $(MOUNTAPP): $(MOUNTAPP_OBJS) $(LIBS) $(GLUE)
 	$(LD) --script=$(APPS_LDSCRIPT) -L $(LIBGCC_PATH) -o $@ $(GLUE) $(MOUNTAPP_OBJS) $(LINK_LIBS) $(LIBGCC)
 
-mountppclean:
+mountappclean:
 	rm -f $(MOUNTAPP_OBJS) $(MOUNTAPP)
 
 APPS += $(MOUNTAPP)

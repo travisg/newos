@@ -70,13 +70,22 @@ int main(int argc, char *argv[])
 			}
 
 			for(;;) {
+				char buf2[1024];
+
 				rc = sys_read(fd, buf, -1, sizeof(buf));
 				if(rc <= 0)
 					break;
 
-				rc2 = sys_rstat(buf, &stat);
+				buf2[0] = 0;
+				if(strcmp(arg, ".") != 0) {
+					strlcpy(buf2, arg, sizeof(buf2));
+					strlcat(buf2, "/", sizeof(buf2));
+				}
+				strlcat(buf2, buf, sizeof(buf2));
+
+				rc2 = sys_rstat(buf2, &stat);
 				if(rc2 >= 0) {
-					(*disp_func)(buf, &stat);
+					(*disp_func)(buf2, &stat);
 				}
 				count++;
 			}
