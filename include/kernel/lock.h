@@ -17,6 +17,7 @@ int recursive_lock_create(recursive_lock *lock);
 void recursive_lock_destroy(recursive_lock *lock);
 bool recursive_lock_lock(recursive_lock *lock);
 bool recursive_lock_unlock(recursive_lock *lock);
+int recursive_lock_get_recursion(recursive_lock *lock);
 
 typedef struct mutex {
 	int count;

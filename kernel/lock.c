@@ -9,6 +9,17 @@
 #include <kernel/arch/cpu.h>
 #include <sys/errors.h>
 
+int recursive_lock_get_recursion(recursive_lock *lock)
+{
+	thread_id thid = thread_get_current_thread_id();
+
+	if(lock->holder == thid) {
+		return lock->recursion;
+	} else {
+		return -1;
+	}
+}
+
 int recursive_lock_create(recursive_lock *lock)
 {
 	if(lock == NULL)

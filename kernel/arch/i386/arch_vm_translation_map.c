@@ -116,8 +116,9 @@ static int lock_tmap(vm_translation_map *map)
 static int unlock_tmap(vm_translation_map *map)
 {
 //	dprintf("unlock_tmap: map 0x%x\n", map);
-	if(recursive_lock_unlock(&map->lock) == true) {
-		// we were the last one to release the lock
+
+	if(recursive_lock_get_recursion(&map->lock) == 1) {
+		// we're about to release it for the last time
 		if(map->arch_data->num_invalidate_pages > PAGE_INVALIDATE_CACHE_SIZE) {
 			// invalidate all pages
 //			dprintf("unlock_tmap: %d pages to invalidate, doing global invalidation\n", map->arch_data->num_invalidate_pages);
@@ -130,7 +131,8 @@ static int unlock_tmap(vm_translation_map *map)
 				map->arch_data->num_invalidate_pages, 0, NULL, SMP_MSG_FLAG_SYNC);
 		}
 		map->arch_data->num_invalidate_pages = 0;
-	}
+	}		
+	recursive_lock_unlock(&map->lock);
 	return 0;
 }
 
