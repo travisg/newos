@@ -4,6 +4,9 @@ endif
 ifeq ($(HOSTTYPE),i686)
 	HOSTTYPE = i386
 endif
+ifeq ($(HOSTTYPE), )
+	HOSTTYPE = i386
+endif
 ifeq ($(ARCH), )
 ARCH = $(HOSTTYPE)
 #ARCH = i386
