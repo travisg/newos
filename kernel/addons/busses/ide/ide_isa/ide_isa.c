@@ -22,8 +22,8 @@
 #include <kernel/debug_ext.h>
 
 
-isa_bus_manager *isa;
-ide_bus_manager_interface *ide;
+static isa_bus_manager *isa;
+static ide_bus_manager_interface *ide;
 
 typedef struct channel_info {
 	uint16	command_block_base;
@@ -41,7 +41,7 @@ static int channel_count;
 
 extern ide_controller_interface isa_controller_interface;
 
-ide_controller_params isa_controller_params = {
+static ide_controller_params isa_controller_params = {
 	dma_alignment : 0,		// requiring even addresses would improve PIO, but's
 							// not necessary as the bus manager can handle odd addresses
 	dma_boundary : 0,
@@ -355,7 +355,7 @@ err:
 }
 
 
-ide_controller_interface isa_controller_interface = {
+static ide_controller_interface isa_controller_interface = {
 	(int (*)(ide_channel_cookie,
 		ide_task_file*,ide_reg_mask))					&write_command_block_regs,
 	(int (*)(ide_channel_cookie,
@@ -378,9 +378,9 @@ ide_controller_interface isa_controller_interface = {
 #define IDE_ISA_MODULE_NAME "busses/ide/ide_isa"
 
 // add an empty entry to make module handler happy
-int dummy_interface[] = { 0 };
+static int dummy_interface[] = { 0 };
 
-module_header ide_isa_module = {
+static module_header ide_isa_module = {
 	IDE_ISA_MODULE_NAME,
 	MODULE_CURR_VERSION,
 	0,
