@@ -30,4 +30,4 @@ strnicmp(char const *s1, char const *s2, size_t len)
 	}
 	return (int)c1 - (int)c2;
 }
-#pragma weak "strncasecmp"="strnicmp"
+#pragma weak strncasecmp=strnicmp
