@@ -73,6 +73,7 @@ int   feof(FILE *);
 int   ferror(FILE *);
 void  clearerr(FILE *);
 
+int fputs(const char *str, FILE *stream);
 
 FILE *freopen(const char *filename, const char *mode, FILE *stream);
 char*  fgets(char *, int, FILE *);
@@ -125,7 +126,7 @@ using ::std::fgets;
 using ::std::fopen;
 using ::std::fprintf;
 using ::std::fputc;
-//using ::std::fputs;
+using ::std::fputs;
 using ::std::fread;
 using ::std::freopen;
 using ::std::fscanf;

@@ -5,6 +5,31 @@ void testFormatting(FILE* f);
 void testLongLine(FILE* f);
 void test(FILE* f);
 
+char* longString = "To fully test the TTY, one should lower the line buffer size to less than 512.  A very long line:  asdlaskd sdflsdkjh dsadlfjh fsdlfajdsfh \
+    sdfalasdjkfsdaf sdflsdajkfhsdf sdflasdjfhsdf ds fsdljfhdsaf sdafljksdfhsdlfkjsdfhsd \
+    sdalkfjsdfh dslfjksdafhsda fsdlafjksdafh sdaflsdafjsdhf asdflsdfjkasdhf dsflasdjkfsdhf sdf sdafjhsdaf sdaflsdjf sdalfjdsfh we flsdjfhsdf sdlafjsdf sd \
+    sdalkfjsdfh dslfjksdafhsda fsdlafjksdafh sdaflsdafjsdhf asdflsdfjkasdhf dsflasdjkfsdhf sdf sdafjhsdaf sdaflsdjf sdalfjdsfh we flsdjfhsdf sdlafjsdf sd \
+    sdalkfjsdfh dslfjksdafhsda fsdlafjksdafh sdaflsdafjsdhf asdflsdfjkasdhf dsflasdjkfsdhf sdf sdafjhsdaf sdaflsdjf sdalfjdsfh we flsdjfhsdf sdlafjsdf sd \
+    sdalkfjsdfh dslfjksdafhsda fsdlafjksdafh sdaflsdafjsdhf asdflsdfjkasdhf dsflasdjkfsdhf sdf sdafjhsdaf sdaflsdjf sdalfjdsfh we flsdjfhsdf sdlafjsdf sd \
+    sdalkfjsdfh dslfjksdafhsda fsdlafjksdafh sdaflsdafjsdhf asdflsdfjkasdhf dsflasdjkfsdhf sdf sdafjhsdaf sdaflsdjf sdalfjdsfh we flsdjfhsdf sdlafjsdf sd \
+    sdalkfjsdfh dslfjksdafhsda fsdlafjksdafh sdaflsdafjsdhf asdflsdfjkasdhf dsflasdjkfsdhf sdf sdafjhsdaf sdaflsdjf sdalfjdsfh we flsdjfhsdf sdlafjsdf sd \
+    sdalkfjsdfh dslfjksdafhsda fsdlafjksdafh sdaflsdafjsdhf asdflsdfjkasdhf dsflasdjkfsdhf sdf sdafjhsdaf sdaflsdjf sdalfjdsfh we flsdjfhsdf sdlafjsdf sd \
+    sdalkfjsdfh dslfjksdafhsda fsdlafjksdafh sdaflsdafjsdhf asdflsdfjkasdhf dsflasdjkfsdhf sdf sdafjhsdaf sdaflsdjf sdalfjdsfh we flsdjfhsdf sdlafjsdf sd \
+    sdalkfjsdfh dslfjksdafhsda fsdlafjksdafh sdaflsdafjsdhf asdflsdfjkasdhf dsflasdjkfsdhf sdf sdafjhsdaf sdaflsdjf sdalfjdsfh we flsdjfhsdf sdlafjsdf sd \
+    sdalkfjsdfh dslfjksdafhsda fsdlafjksdafh sdaflsdafjsdhf asdflsdfjkasdhf dsflasdjkfsdhf sdf sdafjhsdaf sdaflsdjf sdalfjdsfh we flsdjfhsdf sdlafjsdf sd \
+    sdalkfjsdfh dslfjksdafhsda fsdlafjksdafh sdaflsdafjsdhf asdflsdfjkasdhf dsflasdjkfsdhf sdf sdafjhsdaf sdaflsdjf sdalfjdsfh we flsdjfhsdf sdlafjsdf sd \
+    sdalkfjsdfh dslfjksdafhsda fsdlafjksdafh sdaflsdafjsdhf asdflsdfjkasdhf dsflasdjkfsdhf sdf sdafjhsdaf sdaflsdjf sdalfjdsfh we flsdjfhsdf sdlafjsdf sd \
+    sdalkfjsdfh dslfjksdafhsda fsdlafjksdafh sdaflsdafjsdhf asdflsdfjkasdhf dsflasdjkfsdhf sdf sdafjhsdaf sdaflsdjf sdalfjdsfh we flsdjfhsdf sdlafjsdf sd \
+    sdalkfjsdfh dslfjksdafhsda fsdlafjksdafh sdaflsdafjsdhf asdflsdfjkasdhf dsflasdjkfsdhf sdf sdafjhsdaf sdaflsdjf sdalfjdsfh we flsdjfhsdf sdlafjsdf sd \
+    sdalkfjsdfh dslfjksdafhsda fsdlafjksdafh sdaflsdafjsdhf asdflsdfjkasdhf dsflasdjkfsdhf sdf sdafjhsdaf sdaflsdjf sdalfjdsfh we flsdjfhsdf sdlafjsdf sd\r\n";
+
+
+static char* getLongString()
+{
+	return longString;
+}
+
+
 void testFormatting(FILE* f)
 {
     int* ptr;
@@ -25,29 +50,19 @@ void testFormatting(FILE* f)
 
 void testLongLine(FILE* f)
 {
-    fprintf(f, "To fully test the TTY, one should lower the line buffer size to less than 512.  A very long line: asdlaskd sdflsdkjh dsadlfjh fsdlfajdsfh \
-    sdfalasdjkfsdaf sdflsdajkfhsdf sdflasdjfhsdf ds fsdljfhdsaf sdafljksdfhsdlfkjsdfhsd \
-    sdalkfjsdfh dslfjksdafhsda fsdlafjksdafh sdaflsdafjsdhf asdflsdfjkasdhf dsflasdjkfsdhf sdf sdafjhsdaf sdaflsdjf sdalfjdsfh we flsdjfhsdf sdlafjsdf sd \
-    sdalkfjsdfh dslfjksdafhsda fsdlafjksdafh sdaflsdafjsdhf asdflsdfjkasdhf dsflasdjkfsdhf sdf sdafjhsdaf sdaflsdjf sdalfjdsfh we flsdjfhsdf sdlafjsdf sd \
-    sdalkfjsdfh dslfjksdafhsda fsdlafjksdafh sdaflsdafjsdhf asdflsdfjkasdhf dsflasdjkfsdhf sdf sdafjhsdaf sdaflsdjf sdalfjdsfh we flsdjfhsdf sdlafjsdf sd \
-    sdalkfjsdfh dslfjksdafhsda fsdlafjksdafh sdaflsdafjsdhf asdflsdfjkasdhf dsflasdjkfsdhf sdf sdafjhsdaf sdaflsdjf sdalfjdsfh we flsdjfhsdf sdlafjsdf sd \
-    sdalkfjsdfh dslfjksdafhsda fsdlafjksdafh sdaflsdafjsdhf asdflsdfjkasdhf dsflasdjkfsdhf sdf sdafjhsdaf sdaflsdjf sdalfjdsfh we flsdjfhsdf sdlafjsdf sd \
-    sdalkfjsdfh dslfjksdafhsda fsdlafjksdafh sdaflsdafjsdhf asdflsdfjkasdhf dsflasdjkfsdhf sdf sdafjhsdaf sdaflsdjf sdalfjdsfh we flsdjfhsdf sdlafjsdf sd \
-    sdalkfjsdfh dslfjksdafhsda fsdlafjksdafh sdaflsdafjsdhf asdflsdfjkasdhf dsflasdjkfsdhf sdf sdafjhsdaf sdaflsdjf sdalfjdsfh we flsdjfhsdf sdlafjsdf sd \
-    sdalkfjsdfh dslfjksdafhsda fsdlafjksdafh sdaflsdafjsdhf asdflsdfjkasdhf dsflasdjkfsdhf sdf sdafjhsdaf sdaflsdjf sdalfjdsfh we flsdjfhsdf sdlafjsdf sd \
-    sdalkfjsdfh dslfjksdafhsda fsdlafjksdafh sdaflsdafjsdhf asdflsdfjkasdhf dsflasdjkfsdhf sdf sdafjhsdaf sdaflsdjf sdalfjdsfh we flsdjfhsdf sdlafjsdf sd \
-    sdalkfjsdfh dslfjksdafhsda fsdlafjksdafh sdaflsdafjsdhf asdflsdfjkasdhf dsflasdjkfsdhf sdf sdafjhsdaf sdaflsdjf sdalfjdsfh we flsdjfhsdf sdlafjsdf sd \
-    sdalkfjsdfh dslfjksdafhsda fsdlafjksdafh sdaflsdafjsdhf asdflsdfjkasdhf dsflasdjkfsdhf sdf sdafjhsdaf sdaflsdjf sdalfjdsfh we flsdjfhsdf sdlafjsdf sd \
-    sdalkfjsdfh dslfjksdafhsda fsdlafjksdafh sdaflsdafjsdhf asdflsdfjkasdhf dsflasdjkfsdhf sdf sdafjhsdaf sdaflsdjf sdalfjdsfh we flsdjfhsdf sdlafjsdf sd \
-    sdalkfjsdfh dslfjksdafhsda fsdlafjksdafh sdaflsdafjsdhf asdflsdfjkasdhf dsflasdjkfsdhf sdf sdafjhsdaf sdaflsdjf sdalfjdsfh we flsdjfhsdf sdlafjsdf sd \
-    sdalkfjsdfh dslfjksdafhsda fsdlafjksdafh sdaflsdafjsdhf asdflsdfjkasdhf dsflasdjkfsdhf sdf sdafjhsdaf sdaflsdjf sdalfjdsfh we flsdjfhsdf sdlafjsdf sd \
-    sdalkfjsdfh dslfjksdafhsda fsdlafjksdafh sdaflsdafjsdhf asdflsdfjkasdhf dsflasdjkfsdhf sdf sdafjhsdaf sdaflsdjf sdalfjdsfh we flsdjfhsdf sdlafjsdf sd\r\n");
+    fprintf(f, getLongString());
 }
 
 static void testPrintf(FILE* f)
 {
     testLongLine(f);
     testFormatting(f);
+}
+
+static void testFputs(FILE* f)
+{
+	fputs("\nfputs:\n\n\n", f);
+	fputs(getLongString(), f);
 }
 
 int main(int argc, char** argv)
@@ -70,6 +85,7 @@ int main(int argc, char** argv)
     if(f != (FILE*)0)
     {
         testPrintf(f);
+		testFputs(f);
     }
     else
     {

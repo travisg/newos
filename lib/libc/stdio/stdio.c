@@ -444,6 +444,22 @@ int fputc(int ch, FILE *stream)
     return ret_ch;
 }
 
+int fputs(const char *str, FILE *stream)
+{
+	_kern_sem_acquire(stream->sid, 1);
+	while(*str != '\0')
+	{
+		int ret_val;
+		if((ret_val = _fputc(*str++, stream)) < 0)
+		{
+			_kern_sem_release(stream->sid, 1);
+			return ret_val;
+		}
+	}
+	_kern_sem_release(stream->sid, 1);
+	return 1;
+}
+
 static int _fputc(int ch, FILE *stream)
 {
     if(stream->buf_pos >= stream->buf_size)
