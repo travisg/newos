@@ -78,6 +78,17 @@ static netsocket *create_netsocket(int type, void *prot_data)
 	return s;
 }
 
+static int destroy_netsocket(netsocket *s)
+{
+	mutex_lock(&sock_mutex);
+	hash_remove(sock_table, s);
+	mutex_unlock(&sock_mutex);
+	
+	kfree(s);
+
+	return 0;
+}
+
 sock_id socket_create(int type, int flags)
 {
 	netsocket *s;
@@ -297,6 +308,12 @@ int socket_close(sock_id id)
 		default:
 			err = ERR_INVALID_ARGS;
 	}
+
+	if(err >= 0) {
+		// free the socket
+		destroy_netsocket(s);
+	}
+	
 	return err;
 }
 

@@ -347,7 +347,8 @@ int ipv4_output(cbuf *buf, ipv4_addr target_addr, int protocol)
 
 //	dprintf("did route match, result iid %d, i 0x%x, transmit_addr 0x%x, if_addr 0x%x\n", iid, i, transmit_addr, if_addr);
 
-	identification = htons(atomic_add(&curr_identification, 1));
+	identification = atomic_add(&curr_identification, 1);
+	identification = htons(identification);
 
 	curr_offset = 0;
 	while(len > 0) {

@@ -163,11 +163,7 @@ int udp_input(cbuf *buf, ifnet *i, ipv4_addr source_address, ipv4_addr target_ad
 		pheader.protocol = IP_PROT_UDP;
 		pheader.udp_length = header->length;
 
-		if(ntohs(header->length) % 2) {
-			// make sure the pad byte is zero
-			((uint8 *)header)[ntohs(header->length)] = 0;
-		}
-		checksum = cksum16_2(&pheader, sizeof(pheader), header, ROUNDUP(ntohs(header->length), 2));
+		checksum = cbuf_ones_cksum16_2(buf, 0, ntohs(header->length), &pheader, sizeof(pheader));
 		if(checksum != 0) {
 #if NET_CHATTY
 			dprintf("udp_receive: packet failed checksum\n");
@@ -319,7 +315,11 @@ retry:
 		goto retry;
 
 	// we have the data, copy it out
-	cbuf_memcpy_from_chain(buf, qe->buf, 0, min(qe->len, len));
+	err = cbuf_user_memcpy_from_chain(buf, qe->buf, 0, min(qe->len, len));
+	if(err < 0) {
+		ret = err;
+		goto out;
+	}
 	ret = qe->len;
 
 	// copy the address out
@@ -330,6 +330,7 @@ retry:
 		saddr->port = qe->src_port;
 	}
 
+out:
 	// free this queue entry
 	cbuf_free_chain(qe->buf);
 	kfree(qe);
@@ -346,6 +347,7 @@ ssize_t udp_sendto(void *prot_data, const void *inbuf, ssize_t len, sockaddr *to
 	uint8 *bufptr;
 	udp_pseudo_header pheader;
 	ipv4_addr srcaddr;
+	int err;
 
 	// make sure the args make sense
 	if(len < 0 || len + sizeof(udp_header) > 0xffff)
@@ -360,7 +362,11 @@ ssize_t udp_sendto(void *prot_data, const void *inbuf, ssize_t len, sockaddr *to
 		return ERR_NO_MEMORY;
 
 	// copy the data to this new buffer
-	cbuf_memcpy_to_chain(buf, sizeof(udp_header), inbuf, len);
+	err = cbuf_user_memcpy_to_chain(buf, sizeof(udp_header), inbuf, len);
+	if(err < 0) {
+		cbuf_free_chain(buf);
+		return ERR_VM_BAD_USER_MEMORY;
+	}
 
 	// set up the udp pseudo header
 	if(ipv4_lookup_srcaddr_for_dest(NETADDR_TO_IPV4(toaddr->addr), &srcaddr) < 0) {
