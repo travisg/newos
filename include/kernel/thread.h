@@ -120,6 +120,7 @@ struct proc *proc_get_kernel_proc();
 proc_id proc_create_proc(const char *path, const char *name, int priority);
 int proc_kill_proc(proc_id);
 int proc_wait_on_proc(proc_id id, int *retcode);
+proc_id proc_get_kernel_proc_id();
 proc_id proc_get_current_proc_id();
 
 // used in syscalls.c

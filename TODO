@@ -32,7 +32,6 @@ improved kernel debugger support:
 rtl8139 driver - dreamcast
 TCP/IP stack
 kernel slab allocator
-user space heap
 vfs:
  vnode caching
  getcwd

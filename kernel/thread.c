@@ -1009,6 +1009,7 @@ void thread_exit(int retcode)
 			}
 		}
 		vm_delete_aspace(p->aspace_id);
+		sem_delete_owned_sems(p->id);
 		vfs_free_ioctx(p->ioctx);
 		kfree(p);
 	}
@@ -1560,6 +1561,14 @@ static unsigned int proc_struct_hash(void *_p, void *_key, int range)
 struct proc *proc_get_kernel_proc()
 {
 	return kernel_proc;
+}
+
+proc_id proc_get_kernel_proc_id()
+{
+	if(!kernel_proc)
+		return 0;
+	else
+		return kernel_proc->id;
 }
 
 proc_id proc_get_current_proc_id()

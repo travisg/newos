@@ -29,7 +29,7 @@ int user_sem_acquire_etc(sem_id id, int count, int flags, time_t timeout, int *d
 int user_sem_release(sem_id id, int count);
 int user_sem_release_etc(sem_id id, int count, int flags);
 
-
+int sem_delete_owned_sems(proc_id owner);
 int sem_interrupt_thread(struct thread *t);
 
 #endif

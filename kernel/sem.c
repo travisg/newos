@@ -22,6 +22,7 @@ struct sem_entry {
 	struct thread_queue q;
 	char      *name;
 	int       lock;
+	proc_id   owner;
 };
 
 #define MAX_SEMS 4096
@@ -64,6 +65,7 @@ static void _dump_sem_info(struct sem_entry *sem)
 {
 	dprintf("SEM:   0x%x\n", sem);
 	dprintf("name:  '%s'\n", sem->name);
+	dprintf("owner: 0x%x\n", sem->owner);
 	dprintf("count: 0x%x\n", sem->count);
 	dprintf("queue: head 0x%x tail 0x%x\n", sem->q.head, sem->q.tail);
 }
@@ -133,7 +135,7 @@ int sem_init(kernel_args *ka)
 	return 0;
 }
 
-sem_id sem_create(int count, const char *name)
+static sem_id sem_create_etc(int count, const char *name, proc_id owner)
 {
 	int i;
 	int state;
@@ -180,6 +182,7 @@ sem_id sem_create(int count, const char *name)
 			sems[i].q.head = NULL;
 			sems[i].count = count;
 			sems[i].name = temp_name;
+			sems[i].owner = owner;
 			retval = sems[i].id;
 
 			RELEASE_SEM_LOCK(sems[i]);
@@ -195,6 +198,11 @@ out:
 	int_restore_interrupts(state);
 
 	return retval;
+}
+
+sem_id sem_create(int count, const char *name)
+{
+	return sem_create_etc(count, name, proc_get_kernel_proc_id());	
 }
 
 int sem_delete(sem_id id)
@@ -572,6 +580,38 @@ static int remove_thread_from_sem(struct thread *t, struct sem_entry *sem, struc
 	return NO_ERROR;
 }
 
+/* this function cycles through the sem table, deleting all the sems that are owned by
+   the passed proc_id */
+int sem_delete_owned_sems(proc_id owner)
+{
+	int state;
+	int i;
+	int count = 0;
+
+	state = int_disable_interrupts();
+	GRAB_SEM_LIST_LOCK();
+
+	for(i=0; i<MAX_SEMS; i++) {
+		if(sems[i].id != -1 && sems[i].owner == owner) {
+			sem_id id = sems[i].id;
+
+			RELEASE_SEM_LIST_LOCK();			
+			int_restore_interrupts(state);
+
+			sem_delete_etc(id, 0);
+			count++;
+
+			state = int_disable_interrupts();
+			GRAB_SEM_LIST_LOCK();
+		}
+	}
+
+	RELEASE_SEM_LIST_LOCK();			
+	int_restore_interrupts(state);
+	
+	return count;
+}
+
 sem_id user_sem_create(int count, const char *uname)
 {
 	if(uname != NULL) {
@@ -586,9 +626,9 @@ sem_id user_sem_create(int count, const char *uname)
 			return rc;
 		name[SYS_MAX_OS_NAME_LEN-1] = 0;
 
-		return sem_create(count, name);
+		return sem_create_etc(count, name, proc_get_current_proc_id());
 	} else {
-		return sem_create(count, NULL);
+		return sem_create_etc(count, NULL, proc_get_current_proc_id());
 	}
 }
 
