@@ -67,8 +67,8 @@ strerror(int errnum)
 			return "Not found";
 		;
 
-		case ERR_NOT_IMPLEMENTED_YET:
-			return "Not implemented yet";
+		case ERR_NOT_IMPLEMENTED:
+			return "Not implemented";
 		;
 
 		/* Semaphore errors */

@@ -15,6 +15,6 @@
 
 int zfs_lookup(fs_cookie fs, fs_vnode dir, const char *name, vnode_id *id)
 {
-	return ERR_NOT_IMPLEMENTED_YET;
+	return ERR_NOT_IMPLEMENTED;
 }
 

@@ -717,7 +717,7 @@ resolve_symbol(image_t *image, struct Elf32_Sym *sym, addr *sym_addr)
 		case SHN_COMMON:
 			// XXX finish this
 			printf("elf_resolve_symbol: COMMON symbol, finish me!\n");
-			return ERR_NOT_IMPLEMENTED_YET;
+			return ERR_NOT_IMPLEMENTED;
 		default:
 			// standard symbol
 			*sym_addr = sym->st_value + image->regions[0].delta;
