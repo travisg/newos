@@ -4,7 +4,7 @@
 #include <boot.h>
 
 // must match SMP_MAX_CPUS in arch_smp.h
-#define MAX_BOOT_CPUS 2
+#define MAX_BOOT_CPUS 4
 #define MAX_BOOT_PTABLES 4
 
 // kernel args
@@ -36,6 +36,7 @@ typedef struct {
 	unsigned int vir_gdt;
 	unsigned int page_hole;
 	// smp stuff
+	unsigned int apic_time_cv_factor; // apic ticks per second
 	unsigned int apic_phys;
 	unsigned int *apic;
 	unsigned int ioapic_phys;

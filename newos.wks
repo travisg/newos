@@ -80,7 +80,6 @@ AddFile "arch_vm.h" "/build/newos/kernel/arch/i386/arch_vm.h"
 EndFileGroup "x86-kernel-headers"
 AddFileGroup "lib" "/build/newos/lib" -nomake
 AddFile "ctype.c" "/build/newos/lib/ctype.c"
-AddFile "string.c" "/build/newos/lib/string.c"
 AddFile "vsprintf.c" "/build/newos/lib/vsprintf.c"
 AddFile "lib.mk" "/build/newos/lib/lib.mk"
 EndFileGroup "lib"

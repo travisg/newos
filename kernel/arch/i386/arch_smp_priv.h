@@ -1,7 +1,7 @@
 #ifndef _ARCH_SMP_PRIV_H
 #define _ARCH_SMP_PRIV_H
 
-#define SMP_MAX_CPUS 2
+#define SMP_MAX_CPUS 4
 
 #define MP_FLT_SIGNATURE '_PM_'
 #define MP_CTH_SIGNATURE 'PCMP'

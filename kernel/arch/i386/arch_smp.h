@@ -5,7 +5,7 @@
 #include <stage2.h>
 
 // must match MAX_BOOT_CPUS in stage2.h
-#define SMP_MAX_CPUS 2
+#define SMP_MAX_CPUS 4
 
 int arch_smp_init(kernel_args *ka);
 int arch_smp_get_num_cpus();

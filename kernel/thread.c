@@ -566,7 +566,7 @@ int test_thread()
 #endif
 #if 1
 		switch(tid) {
-			case 3: case 6:
+			case 5: case 7:
 				if((a % 2048) == 0)
 					sem_release(thread_test_sem, 1);
 				break;

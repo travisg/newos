@@ -22,8 +22,6 @@ unsigned int line = 0;
 unsigned int cv_factor = 0;
 
 void calculate_cpu_conversion_factor();
-long long system_time();
-void execute_n_instructions(int count);
 
 void _start(unsigned int mem, char *str)
 {
@@ -256,6 +254,7 @@ get_time_base:
 
 //void execute_n_instructions(int count);
 asm("
+.global execute_n_instructions
 execute_n_instructions:
 	movl	4(%esp), %ecx
 	shrl	$4, %ecx		/* divide count by 16 */
@@ -294,6 +293,7 @@ system_time_setup:
 
 // long long system_time();
 asm("
+.global system_time
 system_time:
 	/* load 64-bit factor into %eax (low), %edx (high) */
 	/* hand-assemble rdtsc -- read time stamp counter */
@@ -352,7 +352,7 @@ void calculate_cpu_conversion_factor()
 
 	t1 = get_time_base();
 	
-	execute_n_instructions(64*20000);
+	execute_n_instructions(16*20000);
 
 	t2 = get_time_base();
 

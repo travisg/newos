@@ -232,6 +232,17 @@ static int smp_setup_apic(kernel_args *ka)
 	apic_write(APIC_LINT1, config);
 #endif
 
+	/* setup timer */
+	config = apic_read(APIC_LVTT) & ~APIC_LVTT_MASK;
+	config |= 0xfb | APIC_LVTT_M; // vector 0xfb, timer masked
+	apic_write(APIC_LVTT, config);
+	
+	apic_write(APIC_ICRT, 0); // zero out the clock
+	
+	config = apic_read(APIC_TDCR) & ~0x0000000f;
+	config |= APIC_TDCR_1; // clock division by 1
+	apic_write(APIC_TDCR, config);
+	
 	/* setup error vector to 0xfe */
 	config = (apic_read(APIC_LVT3) & 0xffffff00) | 0xfe;
 	apic_write(APIC_LVT3, config);
@@ -406,6 +417,35 @@ static int smp_boot_all_cpus(kernel_args *ka)
 	return 0;
 }
 
+void calculate_apic_timer_conversion_factor(kernel_args *ka)
+{
+	long long t1, t2;
+	unsigned int config;
+	unsigned int count;
+	
+	// setup the timer
+	config = apic_read(APIC_LVTT);
+	config = (config & ~APIC_LVTT_MASK) + APIC_LVTT_M; // timer masked, vector 0
+	apic_write(APIC_LVTT, config);
+	
+	config = (apic_read(APIC_TDCR) & ~0x0000000f) + 0xb; // divide clock by one
+	apic_write(APIC_TDCR, config);
+	
+	t1 = system_time();
+	apic_write(APIC_ICRT, 0xffffffff); // start the counter
+	
+	execute_n_instructions(128*20000);	
+
+	count = apic_read(APIC_CCRT);	
+	t2 = system_time();
+
+	count = 0xffffffff - count;
+
+	ka->apic_time_cv_factor = (unsigned int)((1000000.0/(t2 - t1)) * count);
+	
+	dprintf("APIC ticks/sec = %d\n", ka->apic_time_cv_factor);
+}
+
 int smp_boot(kernel_args *ka)
 {
 	dprintf("smp_boot: entry\n");
@@ -432,6 +472,9 @@ int smp_boot(kernel_args *ka)
 	
 		// set up the apic
 		smp_setup_apic(ka);
+	
+		// calculate how fast the apic timer is
+		calculate_apic_timer_conversion_factor(ka);
 	
 		dprintf("trampolining other cpus\n");
 		smp_boot_all_cpus(ka);
