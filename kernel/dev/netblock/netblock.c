@@ -259,7 +259,7 @@ static int netblock_ioctl(dev_cookie _cookie, int op, void *buf, size_t len)
 	struct netblock_cookie *cookie = _cookie;
 	int err;
 
-	TRACE(("netblock_ioctl: cookie %p, op %d, buf %p, len %ud\n", cookie, op, buf, (unsigned int)len));
+	TRACE(("netblock_ioctl: cookie %p, op %d, buf %p, len %lu\n", cookie, op, buf, (unsigned long)len));
 
 	mutex_lock(&cookie->dev->lock);
 
