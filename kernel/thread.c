@@ -816,8 +816,8 @@ static void _dump_thread_info(struct thread *t)
 	dprintf("THREAD: %p\n", t);
 	dprintf("id:          0x%x\n", t->id);
 	dprintf("name:        '%s'\n", t->name);
-	dprintf("all_next:    %p\nproc_node.prev:  %p\nproc_node.next:  %p\nq_node.prev:     %p\nq_node.next:     %p\n",
-		t->all_next, t->proc_node.prev, t->proc_node.next, t->q_node.prev, t->q_node.next);
+	dprintf("next:        %p\nproc_node.prev:  %p\nproc_node.next:  %p\nq_node.prev:     %p\nq_node.next:     %p\n",
+		t->next, t->proc_node.prev, t->proc_node.next, t->q_node.prev, t->q_node.next);
 	dprintf("priority:    0x%x\n", t->priority);
 	dprintf("state:       %s\n", state_to_text(t->state));
 	dprintf("next_state:  %s\n", state_to_text(t->next_state));
@@ -936,8 +936,8 @@ static void dump_next_thread_in_all_list(int argc, char **argv)
 	}
 
 	dprintf("next thread in global list after thread @ %p\n", t);
-	if(t->all_next != NULL) {
-		_dump_thread_info(t->all_next);
+	if(t->next != NULL) {
+		_dump_thread_info(t->next);
 	} else {
 		dprintf("NULL\n");
 	}
@@ -1056,7 +1056,7 @@ int thread_init(kernel_args *ka)
 	hash_insert(proc_hash, kernel_proc);
 
 	// create the thread hash table
-	thread_hash = hash_init(15, (addr_t)&t->all_next - (addr_t)t,
+	thread_hash = hash_init(15, (addr_t)&t->next - (addr_t)t,
 		&thread_struct_compare, &thread_struct_hash);
 
 	// zero out the run queues

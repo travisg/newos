@@ -73,10 +73,11 @@ struct proc {
 };
 
 struct thread {
-	struct thread *all_next;
+	struct thread *next;
 	thread_id id;
 	struct list_node proc_node;
 	struct list_node q_node;
+	struct proc *proc;
 	char name[SYS_MAX_OS_NAME_LEN];
 	int priority;
 	int state;
@@ -96,7 +97,6 @@ struct thread {
 	addr_t fault_handler;
 	addr_t entry;
 	void *args;
-	struct proc *proc;
 	sem_id return_code_sem;
 	region_id kernel_stack_region_id;
 	addr_t kernel_stack_base;
