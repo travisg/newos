@@ -187,11 +187,13 @@ int cmd_ls(int argc, char *argv[])
 	struct file_stat stat;
 	char *arg = argv[1];
 
-	if(!arg || !strcmp(argv[1], "")) {
+	if(argc < 2) {
 		arg = ".";
+	} else {
+		arg = argv[1];
 	}
 
-	rc = sys_rstat(argv[1], &stat);
+	rc = sys_rstat(arg, &stat);
 	if(rc < 0) {
 		printf("sys_rstat() returned error %d!\n", rc);
 		goto done_ls;
@@ -245,6 +247,8 @@ int cmd_help(int argc, char *argv[])
 	printf("stat <file> : gives detailed file statistics of <file>\n");
 	printf("help : this command\n");
 	printf("cat <file> : dumps the file to stdout\n");
+	printf("mount <path> <device> <fsname> : tries to mount <device> at <path>\n");
+	printf("unmount <path> : tries to unmount at <path>\n");
 
 	return 0;
 }
