@@ -863,14 +863,14 @@ static int get_death_stack(void)
 		i += 1;
 	}
 
-	dprintf("get_death_stack: returning 0x%lx\n", death_stacks[i].address);
+//	dprintf("get_death_stack: returning 0x%lx\n", death_stacks[i].address);
 
 	return i;
 }
 
 static void put_death_stack_and_reschedule(unsigned int index)
 {
-	dprintf("put_death_stack...: passed %d\n", index);
+//	dprintf("put_death_stack...: passed %d\n", index);
 
 	if(index >= num_death_stacks)
 		panic("put_death_stack: passed invalid stack index %d\n", index);
@@ -893,7 +893,7 @@ int thread_init(kernel_args *ka)
 	struct thread *t;
 	unsigned int i;
 
-	dprintf("thread_init: entry\n");
+//	dprintf("thread_init: entry\n");
 
 	// create the process hash table
 	proc_hash = hash_init(15, (addr)&kernel_proc->next - (addr)kernel_proc,
@@ -948,6 +948,7 @@ int thread_init(kernel_args *ka)
 	// create an idle thread for each cpu
 	for(i=0; i<ka->num_cpus; i++) {
 		char temp[64];
+		vm_region *region;
 
 		sprintf(temp, "idle_thread%d", i);
 		t = create_thread_struct(temp);
@@ -961,6 +962,12 @@ int thread_init(kernel_args *ka)
 		t->next_state = THREAD_STATE_READY;
 		sprintf(temp, "idle_thread%d_kstack", i);
 		t->kernel_stack_region_id = vm_find_region_by_name(vm_get_kernel_aspace_id(), temp);
+		region = vm_get_region_by_id(t->kernel_stack_region_id);
+		if(!region) {
+			panic("error finding idle kstack region\n");
+		}
+		t->kernel_stack_base = region->base;
+		vm_put_region(region);
 		hash_insert(thread_hash, t);
 		insert_thread_into_proc(t->proc, t);
 		cur_thread[i] = t;
@@ -1036,7 +1043,6 @@ void thread_start_threading(void)
 int user_thread_snooze(time_t time)
 {
 	thread_snooze(time);
-	dprintf("user_thread_snooze() exit\n");
 	return NO_ERROR;
 }
 
@@ -1073,13 +1079,13 @@ static void thread_exit2(void *_args)
 	// restore the interrupts
 	int_restore_interrupts(args.int_state);
 
-	dprintf("thread_exit2, running on death stack 0x%lx\n", args.t->kernel_stack_base);
+//	dprintf("thread_exit2, running on death stack 0x%lx\n", args.t->kernel_stack_base);
 
 	// delete the old kernel stack region
-	dprintf("thread_exit2: deleting old kernel stack id 0x%x for thread 0x%x\n", args.old_kernel_stack, args.t->id);
+//	dprintf("thread_exit2: deleting old kernel stack id 0x%x for thread 0x%x\n", args.old_kernel_stack, args.t->id);
 	vm_delete_region(vm_get_kernel_aspace_id(), args.old_kernel_stack);
 
-	dprintf("thread_exit2: removing thread 0x%x from global lists\n", args.t->id);
+//	dprintf("thread_exit2: removing thread 0x%x from global lists\n", args.t->id);
 
 	// remove this thread from all of the global lists
 	int_disable_interrupts();
@@ -1090,7 +1096,7 @@ static void thread_exit2(void *_args)
 	hash_remove(thread_hash, args.t);
 	RELEASE_THREAD_LOCK();
 
-	dprintf("thread_exit2: done removing thread from lists\n");
+//	dprintf("thread_exit2: done removing thread from lists\n");
 
 	// set the next state to be gone. Will return the thread structure to a ready pool upon reschedule
 	args.t->next_state = THREAD_STATE_FREE_ON_RESCHED;
@@ -1139,7 +1145,7 @@ void thread_exit(int retcode)
 		vm_aspace_swap(kernel_proc->kaspace);
 		int_restore_interrupts(state);
 
-		dprintf("thread_exit: thread 0x%x now a kernel thread!\n", t->id);
+//		dprintf("thread_exit: thread 0x%x now a kernel thread!\n", t->id);
 	}
 
 	// delete the process
@@ -1154,8 +1160,11 @@ void thread_exit(int retcode)
 			GRAB_PROC_LOCK();
 			// we can safely walk the list because of the lock. no new threads can be created
 			// because of the PROC_STATE_DEATH flag on the process
-			for(temp_thread = p->thread_list; temp_thread; temp_thread = temp_thread->proc_next) {
+			temp_thread = p->thread_list;
+			while(temp_thread) {
+				struct thread *next = temp_thread->proc_next;
 				thread_kill_thread_nowait(temp_thread->id);
+				temp_thread = next;
 			}
 			RELEASE_PROC_LOCK();
 			int_restore_interrupts(state);
@@ -1212,7 +1221,7 @@ static int _thread_kill_thread(thread_id id, bool wait_on)
 	struct thread *t;
 	int rc;
 
-	dprintf("_thread_kill_thread: id %d, wait_on %d\n", id, wait_on);
+//	dprintf("_thread_kill_thread: id %d, wait_on %d\n", id, wait_on);
 
 	state = int_disable_interrupts();
 	GRAB_THREAD_LOCK();
@@ -1882,8 +1891,7 @@ int proc_kill_proc(proc_id id)
 // expects the thread lock to be held
 static void deliver_signal(struct thread *t, int signal)
 {
-	int rc;
-	dprintf("deliver_signal: thread %p (%d), signal %d\n", t, t->id, signal);
+//	dprintf("deliver_signal: thread %p (%d), signal %d\n", t, t->id, signal);
 	switch(signal) {
 		case SIG_KILL:
 			t->pending_signals |= SIG_KILL;
@@ -1895,8 +1903,7 @@ static void deliver_signal(struct thread *t, int signal)
 					thread_enqueue_run_q(t);
 					break;
 				case THREAD_STATE_WAITING:
-					rc = sem_interrupt_thread(t);
-					dprintf("deliver_signal, sem_interrupt_thread ret %d\n", rc);
+					sem_interrupt_thread(t);
 					break;
 				default:
 					;

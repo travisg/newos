@@ -680,7 +680,7 @@ int sem_interrupt_thread(struct thread *t)
 	int state;
 	struct thread_queue wakeup_queue;
 
-	dprintf("sem_interrupt_thread: called on thread %p (%d), blocked on sem 0x%x\n", t, t->id, t->sem_blocking);
+//	dprintf("sem_interrupt_thread: called on thread %p (%d), blocked on sem 0x%x\n", t, t->id, t->sem_blocking);
 
 	if(t->state != THREAD_STATE_WAITING)
 		return ERR_INVALID_ARGS;
