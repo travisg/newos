@@ -1,0 +1,5 @@
+# override the all list in arm to exclude user space
+
+ALL_LIST := \
+	$(KERNEL) \
+	$(KERNEL_ADDONS)

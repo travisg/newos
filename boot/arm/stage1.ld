@@ -4,7 +4,7 @@ OUTPUT_ARCH(arm)
 ENTRY(_start)
 SECTIONS
 {
-	. = 0x20000000 + SIZEOF_HEADERS;
+	. = 0x00000000;
 
 	/* text/read-only data */
 	.text :	{ *(.text .gnu.linkonce.t.*) }

@@ -205,7 +205,9 @@ ifeq ($(ARCH),arm)
 		OBJCOPY = arm-elf-objcopy
 		STRIP = arm-elf-strip
 	endif
-	GLOBAL_CFLAGS = -fno-pic -O2
+	GLOBAL_CFLAGS = -O2 -g
+	KERNEL_CFLAGS = -fno-pic
+	USER_CFLAGS = -fpic
 	GLOBAL_LDFLAGS =
 	TOOLCHAIN_ARCH = arm
 endif
@@ -253,11 +255,12 @@ GLOBAL_ASFLAGS += -D__ASSEMBLY__
 # find libgcc
 LIBGCC := -lgcc
 LIBGCC_PATH := $(dir $(shell $(CC) $(GLOBAL_CFLAGS) -print-libgcc-file-name))
+ifeq ($(ARCH),arm)
+LIBGCC_PATH := /usr/local/arm-newos/lib/gcc-lib/arm-newos/3.3.3
+endif
 $(warning LIBGCC_PATH = $(LIBGCC_PATH))
 ifneq ($(ARCH),sh4)
 LIBGCC_INCLUDE += -I$(LIBGCC_PATH)/include
-else
-LIBGCC_INCLUDE += -I$(LIBGCC_PATH)/../../include
 endif
 
 
