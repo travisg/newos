@@ -63,12 +63,17 @@ FINAL = boot/final
 
 final: $(FINAL)
 
+# sub makefiles are responsible for adding to these
+DEPS =
+CLEAN =
+
 include lib/lib.mk
 include dev/dev.mk
 include kernel/kernel.mk
 include boot/$(ARCH)/stage2.mk
+include apps/apps.mk
 
-$(FINAL): $(KERNEL) $(STAGE2) tools
+$(FINAL): $(KERNEL) $(STAGE2) $(APPS) tools
 ifeq ($(ARCH),sparc)
 	$(BOOTMAKER) boot/config.ini -o $(FINAL) --sparc
 else
@@ -107,12 +112,16 @@ toolsclean:
 bootclean: stage2clean
 	rm -f $(STAGE2)
 
-clean: libclean kernelclean bootclean devclean
+CLEAN += toolsclean bootclean
+
+clean: $(CLEAN)
 	rm -f $(KERNEL) $(FINAL)
 
 depsclean:
-	rm -f $(KERNEL_DEPS) $(LIB_DEPS) $(STAGE2_DEPS)
+	rm -f $(DEPS)
 	
 allclean: depsclean clean toolsclean
 	rm -f `find . -type f -name '*.d'`
 	rm -f `find . -type f -name '*.o'`
+
+include $(DEPS)

@@ -21,12 +21,12 @@ include $(KERNEL_DIR)/fs/fs_kernel.mk
 KERNEL_ARCH_DIR = kernel/arch/$(ARCH)
 include $(KERNEL_ARCH_DIR)/arch_kernel.mk
 
-KERNEL_DEPS = $(KERNEL_OBJS:.o=.d)
+DEPS += $(KERNEL_OBJS:.o=.d)
 
 KERNEL = $(KERNEL_DIR)/system
 
 $(KERNEL): $(KERNEL_LIB) $(LIBS) $(DEV)
-	$(LD) -dN --script=$(KERNEL_ARCH_DIR)/kernel.ld -L $(LIBGCC_PATH) -o $@ $(KERNEL_LIB) $(LIBS) $(DEV) $(LIBGCC)
+	$(LD) -dN --script=$(KERNEL_ARCH_DIR)/kernel.ld -L $(LIBGCC_PATH) -o $@ $(KERNEL_LIB) $(KLIBS) $(DEV) $(LIBGCC)
 
 $(KERNEL_LIB): $(KERNEL_OBJS)
 	$(LD) $(GLOBAL_LDFLAGS) -r -o $@ $(KERNEL_OBJS)
@@ -34,7 +34,7 @@ $(KERNEL_LIB): $(KERNEL_OBJS)
 kernelclean:
 	rm -f $(KERNEL_OBJS) $(KERNEL_LIB)
 
-include $(KERNEL_DEPS)
+CLEAN += kernelclean
 
 # build prototypes - this covers architecture dependant subdirs
 KERNEL_INCLUDES = -Iinclude -Idev -Iboot/$(ARCH) -I$(KERNEL_DIR) -I$(KERNEL_ARCH_DIR)

@@ -19,7 +19,7 @@ STAGE2_OBJS =  boot/$(ARCH)/srt0.o \
 	boot/$(ARCH)/libkern/urem.o \
 	boot/$(ARCH)/libkern/__main.o
 
-STAGE2_DEPS = $(STAGE2_OBJS:.o=.d)
+DEPS += $(STAGE2_OBJS:.o=.d)
 
 boot/$(ARCH)/stage2: $(STAGE2_OBJS)
 	ld -dN -Ttext 0x381278 -e start $(STAGE2_OBJS) -o $@
@@ -61,5 +61,3 @@ boot/$(ARCH)/%.d: boot/$(ARCH)/%.c
 
 stage2clean:
 	rm -f $(STAGE2_OBJS) boot/$(ARCH)/stage2 boot/$(ARCH)/a.out
-
-include $(STAGE2_DEPS)

@@ -25,7 +25,7 @@ LIBC_OBJS = \
 	$(LIBC_DIR)/strtok.o \
 	$(LIBC_DIR)/vsprintf.o
 
-LIBC_DEPS = $(LIBC_OBJS:.o=.d)
+DEPS += $(LIBC_OBJS:.o=.d)
 
 LIBC = $(LIBC_DIR)/libc.a
 
@@ -33,13 +33,12 @@ $(LIBC): $(LIBC_OBJS)
 	$(AR) r $@ $(LIBC_OBJS)
 
 LIBS += $(LIBC) 
+KLIBS += $(LIBC) 
 
 libcclean:
 	rm -f $(LIBC_OBJS) $(LIBC)
 
 LIBS_CLEAN += libcclean 
-
-include $(LIBC_DEPS)
 
 # build prototypes
 $(LIBC_DIR)/%.o: $(LIBC_DIR)/%.c 

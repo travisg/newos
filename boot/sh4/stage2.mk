@@ -1,7 +1,7 @@
 # sh4 stage2 makefile
 STAGE2_DIR = boot/$(ARCH)
 STAGE2_OBJS = $(STAGE2_DIR)/stage2.o
-STAGE2_DEPS = $(STAGE2_OBJS:.o=.d)
+DEPS += $(STAGE2_OBJS:.o=.d)
 
 STAGE2 = boot/stage2
 STAGE2_ARCH = boot/$(ARCH)/stage2
@@ -14,8 +14,6 @@ $(STAGE2_ARCH): $(STAGE2_OBJS)
 
 stage2clean:
 	rm -f $(STAGE2_OBJS) $(STAGE2_DIR)/stage2
-
-include $(STAGE2_DEPS)
 
 # 
 $(STAGE2_DIR)/%.o: $(STAGE2_DIR)/%.c 

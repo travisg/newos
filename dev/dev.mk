@@ -7,7 +7,7 @@ DEV_OBJS = \
 DEV_ARCH_DIR = $(DEV_DIR)/arch/$(ARCH)
 include $(DEV_ARCH_DIR)/arch_dev.mk
 
-DEV_DEPS = $(DEV_OBJS:.o=.d)
+DEPS += $(DEV_OBJS:.o=.d)
 
 DEV = $(DEV_DIR)/dev.a
 
@@ -17,7 +17,7 @@ $(DEV): $(DEV_OBJS)
 devclean:
 	rm -f $(DEV_OBJS) $(DEV)
 
-include $(DEV_DEPS)
+CLEAN += devclean
 
 # build prototypes
 DEV_INCLUDES = -Iinclude -Iboot/$(ARCH) -I$(KERNEL_DIR) -I$(KERNEL_ARCH_DIR) -I$(DEV_DIR) -I$(DEV_DIR)/common $(DEV_ARCH_INCLUDES)
