@@ -1,5 +1,5 @@
 /*
-** Copyright 2002, Travis Geiselbrecht. All rights reserved.
+** Copyright 2002-2003, Travis Geiselbrecht. All rights reserved.
 ** Copyright 2002, Manuel J. Petit. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -20,8 +20,11 @@ int	      atoi(char const *);
 unsigned int  atoui(const char *num);
 long          atol(const char *num);
 unsigned long atoul(const char *num);
-long long strtoll(const char *, char **, int);
-unsigned long long strtoull(const char *, char **, int);
+
+long strtol(const char *nptr, char **endptr, int base);
+long long strtoll(const char *nptr, char **endptr, int base);
+unsigned long strtoul(const char *nptr, char **endptr, int base);
+unsigned long long strtoull(const char *nptr, char **endptr, int base);
 
 void * malloc(size_t);
 void   free(void *);

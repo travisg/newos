@@ -19,6 +19,9 @@ extern int main(int argc,char **argv);
 int _start(struct uspace_prog_args_t *);
 void _call_ctors(void);
 
+char *__progname = "";
+int errno = 0;
+
 int _start(struct uspace_prog_args_t *uspa)
 {
 	int retcode;
@@ -26,6 +29,14 @@ int _start(struct uspace_prog_args_t *uspa)
 
 	__stdio_init();
 
+	/* set up __progname */
+	if(uspa->argv[0] != NULL) {
+		char *temp;
+		__progname = uspa->argv[0];
+		for(temp = __progname; *temp != '\0'; temp++)
+			if(*temp == '/')
+				__progname = temp + 1;
+	}
 
 	retcode = main(uspa->argc, uspa->argv);
 

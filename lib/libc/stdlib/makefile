@@ -7,9 +7,15 @@ MY_OBJS += \
 	$(LIBC_STDLIB_DIR)/atoi.o \
 	$(LIBC_STDLIB_DIR)/bsearch.o \
 	$(LIBC_STDLIB_DIR)/exit.o \
+	$(LIBC_STDLIB_DIR)/getopt.o \
 	$(LIBC_STDLIB_DIR)/heapsort.o \
 	$(LIBC_STDLIB_DIR)/merge.o \
 	$(LIBC_STDLIB_DIR)/qsort.o \
 	$(LIBC_STDLIB_DIR)/radixsort.o \
 	$(LIBC_STDLIB_DIR)/rand.o \
-	$(LIBC_STDLIB_DIR)/random.o
+	$(LIBC_STDLIB_DIR)/random.o \
+	$(LIBC_STDLIB_DIR)/strtol.o \
+	$(LIBC_STDLIB_DIR)/strtoll.o \
+	$(LIBC_STDLIB_DIR)/strtoul.o \
+	$(LIBC_STDLIB_DIR)/strtoull.o
+

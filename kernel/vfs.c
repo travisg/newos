@@ -543,7 +543,7 @@ static int new_fd(struct ioctx *ioctx, struct file_descriptor *f)
 		}
 	}
 	if(fd < 0) {
-		fd = ERR_NOMORE_HANDLES;
+		fd = ERR_NO_MORE_HANDLES;
 		goto err;
 	}
 
