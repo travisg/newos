@@ -1,8 +1,8 @@
 
-BOOT_SRCDIR := boot/$(ARCH)
+BOOT_SRCDIR := $(GET_LOCAL_DIR)
 BOOT_TARGETDIR := $(call TOBUILDDIR, boot)
 
-STAGE2 = $(BOOT_TARGETDIR)/stage2
+STAGE2 := $(BOOT_TARGETDIR)/stage2
 
 ifeq ($(OSTYPE),cygwin)
 	BOOT_IMAGE_TARGET ?= a:

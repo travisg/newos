@@ -1,4 +1,5 @@
 
+# figure out a few things about the host build system
 ifeq ($(HOSTTYPE),)
 	HOSTTYPE := $(shell uname -m)
 endif
@@ -6,13 +7,13 @@ ifeq ($(OSTYPE),)
 	OSTYPE := $(shell uname -s | awk -F_ '{print $$1}' | tr A-Z a-z)
 endif
 ifeq ($(HOSTTYPE),i586)
-	HOSTTYPE = i386
+	HOSTTYPE := i386
 endif
 ifeq ($(HOSTTYPE),i686)
-	HOSTTYPE = i386
+	HOSTTYPE := i386
 endif
 ifeq ($(HOSTTYPE), )
-	HOSTTYPE = i386
+	HOSTTYPE := i386
 endif
 ifeq ($(findstring Macintosh,$(HOSTTYPE)),Macintosh)
 	HOSTTYPE := ppc
@@ -22,15 +23,33 @@ ifeq ($(HOSTTYPE),macintosh)
 		HOSTTYPE := ppc
 	endif
 endif
-ifeq ($(ARCH), )
-#ARCH = $(HOSTTYPE)
-ARCH = i386
-#ARCH = sparc
-#ARCH = sh4
-#ARCH = alpha
-#ARCH = sparc64
+
+# allow for a specific PLATFORM to override ARCH
+ifeq ($(PLATFORM),)
+	ifeq ($(ARCH),)
+		#	by default, build for a i386-pc
+		PLATFORM := pc
+	endif
 endif
 
+# some platforms only support one arch
+ifeq ($(PLATFORM),pegasos)
+ARCH := ppc
+endif
+ifeq ($(PLATFORM),mac)
+ARCH := ppc
+endif
+ifeq ($(PLATFORM),pc)
+ARCH := i386
+endif
+ifeq ($(PLATFORM),xbox)
+ARCH := i386
+endif
+
+# build the TARGET variable
+TARGET := $(ARCH)-$(PLATFORM)
+
+# HOST_* is for local targets (tools)
 HOST_CC := gcc
 HOST_LD := $(LD)
 HOST_AS := $(AS)
@@ -52,164 +71,10 @@ ifeq ($(findstring solaris,$(OSTYPE)),solaris)
 	AWK := gawk
 endif
 
-CC = $(HOST_CC)
-LD = $(HOST_LD)
-AS = $(HOST_AS)
-AR = $(HOST_AR)
-OBJCOPY = $(HOST_OBJCOPY)
-OBJDUMP = $(HOST_OBJDUMP)
-STRIP = $(HOST_STRIP)
-SIZE = $(HOST_SIZE)
-
-ifeq ($(ARCH),i386)
-	ifneq ($(HOSTTYPE),i386)
-		CC = i386-elf-gcc
-		LD = i386-elf-ld
-		AS = i386-elf-as
-		AR = i386-elf-ar
-		OBJCOPY = i386-elf-objcopy
-		STRIP = i386-elf-strip
-	endif
-	ifeq ($(OSTYPE),cygwin)
-		CC = i386-elf-gcc
-		LD = i386-elf-ld
-		AS = i386-elf-as
-		AR = i386-elf-ar
-		OBJCOPY = i386-elf-objcopy
-		STRIP = i386-elf-strip
-	endif
-	GLOBAL_CFLAGS = -O2 -g
-	KERNEL_CFLAGS = -fno-pic
-	USER_CFLAGS = -fpic
-	GLOBAL_LDFLAGS = -g
-	TOOLCHAIN_ARCH = i386
-endif
-
-ifeq ($(ARCH),x86_64)
-	CC = x86_64-elf-gcc
-	LD = x86_64-elf-ld
-	AS = x86_64-elf-as
-	AR = x86_64-elf-ar
-	OBJCOPY = x86_64-elf-objcopy
-	STRIP = x86_64-elf-strip
-	GLOBAL_CFLAGS = -O2 -g 
-	KERNEL_CFLAGS = -fpic
-	USER_CFLAGS = -fpic
-	GLOBAL_LDFLAGS = -g -m elf_x86_64
-	TOOLCHAIN_ARCH = x86_64
-endif
-
+# TOOLCHAIN_ARCH is usually ARCH, except in a few cases
+TOOLCHAIN_ARCH := $(ARCH)
 ifeq ($(ARCH),sh4)
-	CC = sh-elf-gcc
-	LD = sh-elf-ld
-	AS = sh-elf-as
-	AR = sh-elf-ar
-	OBJCOPY = sh-elf-objcopy
-	STRIP = sh-elf-strip
-	GLOBAL_CFLAGS = -ml -m4-single-only -mhitachi -O1
-	KERNEL_CFLAGS = -fno-pic
-	USER_CFLAGS = -fpic
-	GLOBAL_LDFLAGS = -EL
-	TOOLCHAIN_ARCH = sh
-endif
-
-ifeq ($(ARCH),sparc64)
-	CC = sparc64-elf-gcc
-	LD = sparc64-elf-ld
-	AS = sparc64-elf-as
-	AR = sparc64-elf-ar
-	OBJCOPY = sparc64-elf-objcopy
-	STRIP = sparc64-elf-strip
-	GLOBAL_CFLAGS =
-	GLOBAL_LDFLAGS =
-	TOOLCHAIN_ARCH = sparc64
-endif
-
-ifeq ($(ARCH),sparc)
-	ifneq ($(HOSTTYPE),sparc)
-		CC = sparc-elf-gcc
-		LD = sparc-elf-ld
-		AS = sparc-elf-as
-		AR = sparc-elf-ar
-		OBJCOPY = sparc-elf-objcopy
-		STRIP = sparc-elf-strip
-	endif
-	GLOBAL_CFLAGS =
-	GLOBAL_LDFLAGS =
-	TOOLCHAIN_ARCH = sparc
-endif
-
-ifeq ($(ARCH),m68k)
-	ifneq ($(HOSTTYPE),m68k)
-		CC = m68k-elf-gcc
-		LD = m68k-elf-ld
-		AS = m68k-elf-as
-		AR = m68k-elf-ar
-		OBJCOPY = m68k-elf-objcopy
-		STRIP = m68k-elf-strip
-		SIZE = m68k-elf-size
-	endif
-	GLOBAL_CFLAGS = -O0 -g -m68040
-	KERNEL_CFLAGS = -fno-pic
-	USER_CFLAGS = -fpic
-	GLOBAL_LDFLAGS = -g
-	TOOLCHAIN_ARCH = m68k
-endif
-
-ifeq ($(ARCH),alpha)
-	ifneq ($(HOSTTYPE),alpha)
-		CC = alpha-elf-gcc
-		LD = alpha-elf-ld
-		AS = alpha-elf-as
-		AR = alpha-elf-ar
-		OBJCOPY = alpha-elf-objcopy
-	endif
-	GLOBAL_CFLAGS =
-	GLOBAL_LDFLAGS =
-	TOOLCHAIN_ARCH = alpha
-endif
-
-ifeq ($(ARCH),mips)
-	ifneq ($(HOSTTYPE),mips)
-		CC = mips-elf-gcc
-		LD = mips-elf-ld
-		AS = mips-elf-as
-		AR = mips-elf-ar
-		OBJCOPY = mips-elf-objcopy
-	endif
-	GLOBAL_CFLAGS = -fno-pic -mips4 -meb -G 0
-	GLOBAL_LDFLAGS =
-	TOOLCHAIN_ARCH = mips
-endif
-
-ifeq ($(ARCH),ppc)
-	ifneq ($(HOSTTYPE),ppc)
-		CC = ppc-elf-gcc
-		LD = ppc-elf-ld
-		AS = ppc-elf-as
-		AR = ppc-elf-ar
-		OBJCOPY = ppc-elf-objcopy
-		STRIP = ppc-elf-strip
-	endif
-	GLOBAL_CFLAGS = -fno-pic -O -D__PPC__ -mregnames
-	GLOBAL_LDFLAGS =
-	TOOLCHAIN_ARCH = ppc
-endif
-
-ifeq ($(ARCH),arm)
-	ifneq ($(HOSTTYPE),arm)
-		CC = arm-elf-gcc
-		LD = arm-elf-ld
-		AS = arm-elf-as
-		AR = arm-elf-ar
-		OBJCOPY = arm-elf-objcopy
-		STRIP = arm-elf-strip
-	endif
-	GLOBAL_CFLAGS = -O2 -g
-	KERNEL_CFLAGS = -fno-pic
-	USER_CFLAGS = -fpic
-	GLOBAL_LDFLAGS =
-	TOOLCHAIN_ARCH = arm
+TOOLCHAIN_ARCH := sh
 endif
 
 # try to detect if the user has ARCH-newos-gcc installed
@@ -231,10 +96,86 @@ $(warning found newos toolchain!)
 	SIZE = $(TOOLCHAIN_ARCH)-newos-size
 else
 $(warning WARNING: custom newos toolchain not found!)
-$(warning download the appropriate toolchain for your build environment)
+$(warning This build will probably fail miserably)
+$(warning Download the appropriate toolchain for your build environment)
 $(warning at http://newos.sourceforge.net/download.php)
+CC = $(HOST_CC)
+LD = $(HOST_LD)
+AS = $(HOST_AS)
+AR = $(HOST_AR)
+OBJCOPY = $(HOST_OBJCOPY)
+OBJDUMP = $(HOST_OBJDUMP)
+STRIP = $(HOST_STRIP)
+SIZE = $(HOST_SIZE)
 endif
 
+# set up some particular options for various architectures
+ifeq ($(ARCH),i386)
+	GLOBAL_CFLAGS = -O2 -g
+	KERNEL_CFLAGS = -fno-pic
+	USER_CFLAGS = -fpic
+	GLOBAL_LDFLAGS = -g
+endif
+
+ifeq ($(ARCH),x86_64)
+	GLOBAL_CFLAGS = -O2 -g 
+	KERNEL_CFLAGS = -fpic
+	USER_CFLAGS = -fpic
+	GLOBAL_LDFLAGS = -g -m elf_x86_64
+endif
+
+ifeq ($(ARCH),ppc)
+	GLOBAL_CFLAGS = -fno-pic -O -D__PPC__ -mregnames
+	GLOBAL_LDFLAGS =
+endif
+
+ifeq ($(ARCH),ppc64)
+	GLOBAL_CFLAGS =
+	GLOBAL_LDFLAGS =
+endif
+
+ifeq ($(ARCH),arm)
+	GLOBAL_CFLAGS = -O2 -g
+	KERNEL_CFLAGS = -fno-pic
+	USER_CFLAGS = -fpic
+	GLOBAL_LDFLAGS =
+endif
+
+ifeq ($(ARCH),sh4)
+	GLOBAL_CFLAGS = -ml -m4-single-only -mhitachi -O1
+	KERNEL_CFLAGS = -fno-pic
+	USER_CFLAGS = -fpic
+	GLOBAL_LDFLAGS = -EL
+endif
+
+ifeq ($(ARCH),sparc64)
+	GLOBAL_CFLAGS =
+	GLOBAL_LDFLAGS =
+endif
+
+ifeq ($(ARCH),sparc)
+	GLOBAL_CFLAGS =
+	GLOBAL_LDFLAGS =
+endif
+
+ifeq ($(ARCH),m68k)
+	GLOBAL_CFLAGS = -O0 -g -m68040
+	KERNEL_CFLAGS = -fno-pic
+	USER_CFLAGS = -fpic
+	GLOBAL_LDFLAGS = -g
+endif
+
+ifeq ($(ARCH),alpha)
+	GLOBAL_CFLAGS =
+	GLOBAL_LDFLAGS =
+endif
+
+ifeq ($(ARCH),mips)
+	GLOBAL_CFLAGS = -fno-pic -mips4 -meb -G 0
+	GLOBAL_LDFLAGS =
+endif
+
+# check to see if we should use distcc and/or ccache
 ifneq ($(USE_DISTCC),)
 $(warning using distcc)
 	CC := distcc $(CC)
@@ -245,9 +186,13 @@ $(warning using ccache)
 	CC := ccache $(CC)
 endif
 
+# these options are on for all architectures
 GLOBAL_CFLAGS += -finline -fno-builtin
 GLOBAL_CFLAGS += -Wall -W -Wno-multichar -Wno-unused-parameter -Wmissing-prototypes
-GLOBAL_CFLAGS += -DARCH_$(ARCH) -DNEWOS=1 -D__ARCH__=$(ARCH) -U$(ARCH)
+GLOBAL_CFLAGS += -DNEWOS=1
+GLOBAL_CFLAGS += -DARCH_$(ARCH)=1 -D__ARCH__=$(ARCH) -U$(ARCH)
+GLOBAL_CFLAGS += -DPLATFORM_$(PLATFORM)=1
+
 GLOBAL_CPPFLAGS = $(GLOBAL_CFLAGS)
 
 GLOBAL_ASFLAGS += -D__ASSEMBLY__
@@ -266,9 +211,11 @@ endif
 
 # print some info
 $(warning ARCH = $(ARCH))
+$(warning PLATFORM = $(PLATFORM))
+$(warning TARGET = $(TARGET))
 
 # figure out where the build dir will be
-BUILD_DIR = build/$(ARCH)
+BUILD_DIR = build/$(TARGET)
 $(warning build dir will be $(BUILD_DIR))
 $(shell mkdir -p $(BUILD_DIR))
 
