@@ -23,6 +23,9 @@
 #ifdef ARCH_ppc
 #include <kernel/arch/ppc/thread_struct.h>
 #endif
+#ifdef ARCH_m68k
+#include <kernel/arch/m68k/thread_struct.h>
+#endif
 
 #endif
 

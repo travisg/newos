@@ -23,6 +23,9 @@
 #ifdef ARCH_ppc
 #include <arch/ppc/cpu.h>
 #endif
+#ifdef ARCH_m68k
+#include <arch/m68k/cpu.h>
+#endif
 
 #endif
 

@@ -26,6 +26,7 @@ ARCH := i386
 #ARCH := sh4
 #ARCH := alpha
 #ARCH := sparc64
+#ARCH := m68k
 endif
 
 HOST_CC := gcc
@@ -34,14 +35,18 @@ HOST_AS := $(AS)
 HOST_AR := $(AR)
 HOST_OBJCOPY := objcopy
 HOST_STRIP := strip
+HOST_SIZE := size
 
-# setup echo
+# setup some local commands
 ECHO := echo
+AWK := awk
 ifeq ($(OSTYPE),SunOS)
 	ECHO := /usr/ucb/echo
+	AWK := gawk
 endif
 ifeq ($(findstring solaris,$(OSTYPE)),solaris)
 	ECHO := /usr/ucb/echo
+	AWK := gawk
 endif
 
 BOOTMAKER = tools/bootmaker
@@ -55,6 +60,7 @@ AS = $(HOST_AS)
 AR = $(HOST_AR)
 OBJCOPY = $(HOST_OBJCOPY)
 STRIP = $(HOST_STRIP)
+SIZE = $(HOST_SIZE)
 
 ifeq ($(ARCH),i386)
 	ifneq ($(HOSTTYPE),i386)
@@ -135,6 +141,24 @@ ifeq ($(ARCH),alpha)
 	endif
 	GLOBAL_CFLAGS =
 	GLOBAL_LDFLAGS =
+	LIBGCC = -lgcc
+	LIBGCC_PATH = lib/libgcc/$(ARCH)
+endif
+
+ifeq ($(ARCH),m68k)
+	ifneq ($(HOSTTYPE),m68k)
+		CC = m68k-elf-gcc
+		LD = m68k-elf-ld
+		AS = m68k-elf-as
+		AR = m68k-elf-ar
+		OBJCOPY = m68k-elf-objcopy
+		STRIP = m68k-elf-strip
+		SIZE = m68k-elf-size
+	endif
+	GLOBAL_CFLAGS = -O0 -g
+	KERNEL_CFLAGS = -fno-pic
+	USER_CFLAGS = -fpic
+	GLOBAL_LDFLAGS = -g
 	LIBGCC = -lgcc
 	LIBGCC_PATH = lib/libgcc/$(ARCH)
 endif

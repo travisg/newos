@@ -23,6 +23,9 @@
 #ifdef ARCH_ppc
 #include <kernel/arch/ppc/ktypes.h>
 #endif
+#ifdef ARCH_m68k
+#include <kernel/arch/m68k/ktypes.h>
+#endif
 
 #endif
 

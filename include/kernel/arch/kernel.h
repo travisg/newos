@@ -23,6 +23,9 @@
 #ifdef ARCH_ppc
 #include <kernel/arch/ppc/kernel.h>
 #endif
+#ifdef ARCH_m68k
+#include <kernel/arch/m68k/kernel.h>
+#endif
 
 #define KSTACK_SIZE (PAGE_SIZE*2)
 #define STACK_SIZE  (PAGE_SIZE*16)

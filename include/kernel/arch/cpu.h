@@ -50,6 +50,9 @@ int arch_cpu_user_memset(void *s, char c, size_t count, addr *fault_handler);
 #ifdef ARCH_ppc
 #include <kernel/arch/ppc/cpu.h>
 #endif
+#ifdef ARCH_m68k
+#include <kernel/arch/m68k/cpu.h>
+#endif
 
 #endif
 

@@ -20,5 +20,8 @@
 #ifdef ARCH_ppc
 #include <boot/arch/ppc/stage2.h>
 #endif
+#ifdef ARCH_m68k
+#include <boot/arch/m68k/stage2.h>
+#endif
 
 #endif
