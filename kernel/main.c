@@ -29,8 +29,10 @@
 
 static kernel_args ka;
 
-static int main2();
+static int main2(void *);
 
+
+int _start(kernel_args *oldka, int cpu);	/* keep compiler happy */
 int _start(kernel_args *oldka, int cpu)
 {
 	memcpy(&ka, oldka, sizeof(kernel_args));
@@ -95,9 +97,11 @@ int _start(kernel_args *oldka, int cpu)
 	return 0;
 }
 
-static int main2()
+static int main2(void *unused)
 {
 	int err;
+
+	(void)(unused);
 
 	dprintf("start of main2: initializing devices\n");
 

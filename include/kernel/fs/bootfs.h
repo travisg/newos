@@ -5,6 +5,6 @@
 #ifndef _BOOTFS_H
 #define _BOOTFS_H
 
-int bootstrap_bootfs();
+int bootstrap_bootfs(void);
 
 #endif

@@ -303,7 +303,7 @@ err:
 	return err;
 }
 
-int devfs_unmount(fs_cookie _fs)
+static int devfs_unmount(fs_cookie _fs)
 {
 	struct devfs *fs = _fs;
 	struct devfs_vnode *v;
@@ -758,7 +758,7 @@ static struct fs_calls devfs_calls = {
 	&devfs_wstat,
 };
 
-int bootstrap_devfs()
+int bootstrap_devfs(void)
 {
 	region_id rid;
 	vm_region_info rinfo;

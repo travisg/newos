@@ -50,7 +50,7 @@ struct sem_timeout_args {
 	int sem_count;
 };
 
-void dump_sem_list(int argc, char **argv)
+static void dump_sem_list(int argc, char **argv)
 {
 	int i;
 

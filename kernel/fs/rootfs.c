@@ -773,7 +773,7 @@ static struct fs_calls rootfs_calls = {
 	&rootfs_wstat,
 };
 
-int bootstrap_rootfs()
+int bootstrap_rootfs(void)
 {
 	dprintf("bootstrap_rootfs: entry\n");
 

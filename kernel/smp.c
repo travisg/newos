@@ -6,6 +6,7 @@
 #include <kernel/console.h>
 #include <kernel/debug.h>
 #include <kernel/int.h>
+#include <kernel/smp_priv.h>
 #include <kernel/smp.h>
 #include <kernel/heap.h>
 #include <sys/errors.h>
@@ -278,7 +279,7 @@ static int smp_process_pending_ici(int curr_cpu)
 	return retval;
 }
 
-int smp_intercpu_int_handler()
+int smp_intercpu_int_handler(void)
 {
 	int retval;
 	int curr_cpu = smp_get_current_cpu();

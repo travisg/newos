@@ -1368,7 +1368,7 @@ static void dump_aspace_list(int argc, char **argv)
 	hash_close(aspace_table, &iter, false);
 }
 
-vm_address_space *vm_get_kernel_aspace()
+vm_address_space *vm_get_kernel_aspace(void)
 {
 	/* we can treat this one a little differently since it can't be deleted */
 	sem_acquire(aspace_hash_sem, READ_COUNT);
@@ -1377,17 +1377,17 @@ vm_address_space *vm_get_kernel_aspace()
 	return kernel_aspace;
 }
 
-aspace_id vm_get_kernel_aspace_id()
+aspace_id vm_get_kernel_aspace_id(void)
 {
 	return kernel_aspace->id;
 }
 
-vm_address_space *vm_get_current_user_aspace()
+vm_address_space *vm_get_current_user_aspace(void)
 {
 	return vm_get_aspace_from_id(vm_get_current_user_aspace_id());
 }
 
-aspace_id vm_get_current_user_aspace_id()
+aspace_id vm_get_current_user_aspace_id(void)
 {
 	struct thread *t = thread_get_current_thread();
 
@@ -1523,9 +1523,11 @@ vm_address_space *vm_aspace_walk_next(struct hash_iterator *i)
 	return aspace;
 }
 
-int vm_thread_dump_max_commit()
+static int vm_thread_dump_max_commit(void *unused)
 {
 	int oldmax = -1;
+
+	(void)(unused);
 
 	for(;;) {
 		thread_snooze(1000000);

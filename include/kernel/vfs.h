@@ -140,6 +140,7 @@ int sys_unlink(const char *path);
 int sys_rename(const char *oldpath, const char *newpath);
 int sys_rstat(const char *path, struct file_stat *stat);
 int sys_wstat(const char *path, struct file_stat *stat, int stat_mask);
+char *sys_getcwd(char *buf, size_t size);
 int sys_setcwd(const char* path);
 
 /* calls the syscall dispatcher should use for user file I/O */

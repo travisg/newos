@@ -101,7 +101,7 @@ void arch_cpu_global_TLB_invalidate()
 	int_restore_interrupts(state);
 }
 
-int arch_cpu_user_memcpy(void *to, void *from, size_t size, addr *fault_handler)
+int arch_cpu_user_memcpy(void *to, const void *from, size_t size, addr *fault_handler)
 {
 	char *tmp = (char *)to;
 	char *s = (char *)from;

@@ -16,9 +16,11 @@ int net_fd;
 
 uint8 buf[2048];
 
-int rx_thread()
+static int rx_thread(void *unused)
 {
 	int err;
+
+	(void)(unused);
 
 	if(net_fd < 0)
 		return -1;

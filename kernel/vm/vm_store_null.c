@@ -7,7 +7,7 @@
 #include <kernel/heap.h>
 #include <kernel/debug.h>
 #include <kernel/lock.h>
-#include <kernel/vm_store_vnode.h>
+#include <kernel/vm_store_null.h>
 #include <kernel/vfs.h>
 #include <sys/errors.h>
 
@@ -56,7 +56,7 @@ static vm_store_ops null_ops = {
 	NULL
 };
 
-vm_store *vm_store_create_null()
+vm_store *vm_store_create_null(void)
 {
 	vm_store *store;
 

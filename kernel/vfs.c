@@ -1582,7 +1582,7 @@ ssize_t vfs_writepage(void *_v, iovecs *vecs, off_t pos)
 	return v->mount->fs->calls->fs_writepage(v->mount->fscookie, v->priv_vnode, vecs, pos);
 }
 
-int vfs_get_cwd(char* buf, size_t size, bool kernel)
+static int vfs_get_cwd(char* buf, size_t size, bool kernel)
 {
 	// Get current working directory from io context
 	struct vnode* v = get_current_ioctx(kernel)->cwd;
@@ -1605,7 +1605,7 @@ int vfs_get_cwd(char* buf, size_t size, bool kernel)
 	return rc;
 }
 
-int vfs_set_cwd(char* path, bool kernel)
+static int vfs_set_cwd(char* path, bool kernel)
 {
 	struct ioctx* curr_ioctx;
 	struct vnode* v = NULL;

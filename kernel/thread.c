@@ -77,12 +77,12 @@ static spinlock_t death_stack_spinlock;
 static struct thread_queue run_q[THREAD_NUM_PRIORITY_LEVELS] = { { NULL, NULL }, };
 static struct thread_queue dead_q;
 
-static int _rand();
+static int _rand(void);
 static void thread_entry(void);
 static struct thread *thread_get_thread_struct_locked(thread_id id);
 static struct proc *proc_get_proc_struct(proc_id id);
 static struct proc *proc_get_proc_struct_locked(proc_id id);
-static void thread_kthread_exit();
+static void thread_kthread_exit(void);
 static void deliver_signal(struct thread *t, int signal);
 
 // insert a thread onto the tail of a queue
@@ -734,7 +734,7 @@ static void dump_next_thread_in_proc(int argc, char **argv)
 	}
 }
 
-int get_death_stack(void)
+static int get_death_stack(void)
 {
 	unsigned int i;
 	int state;
@@ -907,7 +907,7 @@ int thread_init(kernel_args *ka)
 
 // this starts the scheduler. Must be run under the context of
 // the initial idle thread.
-void thread_start_threading()
+void thread_start_threading(void)
 {
 	int state;
 
@@ -1158,7 +1158,7 @@ int thread_kill_thread_nowait(thread_id id)
 	return _thread_kill_thread(id, false);
 }
 
-static void thread_kthread_exit()
+static void thread_kthread_exit(void)
 {
 	thread_exit(0);
 }
@@ -1248,14 +1248,14 @@ int proc_wait_on_proc(proc_id id, int *retcode)
 	return thread_wait_on_thread(tid, retcode);
 }
 
-thread_id thread_get_current_thread_id()
+thread_id thread_get_current_thread_id(void)
 {
 	if(cur_thread == NULL)
 		return 0;
 	return CURR_THREAD->id;
 }
 
-struct thread *thread_get_current_thread()
+struct thread *thread_get_current_thread(void)
 {
 	if(cur_thread == NULL)
 		return 0;
@@ -1317,7 +1317,7 @@ static void thread_context_switch(struct thread *t_from, struct thread *t_to)
 	arch_thread_context_switch(t_from, t_to);
 }
 
-static int _rand()
+static int _rand(void)
 {
 	static int next = 0;
 
@@ -1336,7 +1336,7 @@ static int reschedule_event(void *unused)
 }
 
 // NOTE: expects thread_spinlock to be held
-void thread_resched()
+void thread_resched(void)
 {
 	struct thread *next_thread = NULL;
 	int last_thread_pri = -1;
@@ -1426,12 +1426,12 @@ static unsigned int proc_struct_hash(void *_p, void *_key, int range)
 		return (key->id % range);
 }
 
-struct proc *proc_get_kernel_proc()
+struct proc *proc_get_kernel_proc(void)
 {
 	return kernel_proc;
 }
 
-proc_id proc_get_kernel_proc_id()
+proc_id proc_get_kernel_proc_id(void)
 {
 	if(!kernel_proc)
 		return 0;
@@ -1439,7 +1439,7 @@ proc_id proc_get_kernel_proc_id()
 		return kernel_proc->id;
 }
 
-proc_id proc_get_current_proc_id()
+proc_id proc_get_current_proc_id(void)
 {
 	return CURR_THREAD->proc->id;
 }
@@ -1728,7 +1728,7 @@ static void _check_for_thread_sigs(struct thread *t, int state)
 }
 
 // called in the int handler code when a thread enters the kernel for any reason
-void thread_atkernel_entry()
+void thread_atkernel_entry(void)
 {
 	int state;
 	struct thread *t = CURR_THREAD;
@@ -1747,7 +1747,7 @@ void thread_atkernel_entry()
 }
 
 // called when a thread exits kernel space to user space
-void thread_atkernel_exit()
+void thread_atkernel_exit(void)
 {
 	int state;
 	struct thread *t = CURR_THREAD;

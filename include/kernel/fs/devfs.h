@@ -7,7 +7,7 @@
 
 #include <kernel/vfs.h>
 
-int bootstrap_devfs();
+int bootstrap_devfs(void);
 
 typedef void * dev_ident;
 typedef void * dev_cookie;

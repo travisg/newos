@@ -412,7 +412,7 @@ err:
 	return err;
 }
 
-int bootfs_unmount(fs_cookie _fs)
+static int bootfs_unmount(fs_cookie _fs)
 {
 	struct bootfs *fs = _fs;
 	struct bootfs_vnode *v;
@@ -901,7 +901,7 @@ static struct fs_calls bootfs_calls = {
 	&bootfs_wstat,
 };
 
-int bootstrap_bootfs()
+int bootstrap_bootfs(void)
 {
 	region_id rid;
 	vm_region_info rinfo;

@@ -44,7 +44,7 @@ void dump_page_stats(int argc, char **argv);
 void dump_free_page_table(int argc, char **argv);
 static int vm_page_set_state_nolock(vm_page *page, int page_state);
 static void clear_page(addr pa);
-static int page_scrubber();
+static int page_scrubber(void *);
 
 static vm_page *dequeue_page(page_queue *q)
 {
@@ -275,13 +275,15 @@ int vm_page_init_postthread(kernel_args *ka)
 	return 0;
 }
 
-static int page_scrubber()
+static int page_scrubber(void *unused)
 {
 #define SCRUB_SIZE 16
 	int state;
 	vm_page *page[SCRUB_SIZE];
 	int i;
 	int scrub_count;
+
+	(void)(unused);
 
 	dprintf("page_scrubber starting...\n");
 

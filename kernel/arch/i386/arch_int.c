@@ -110,12 +110,12 @@ static void set_system_gate(int n, void *addr)
 	_set_gate(&idt[n], (unsigned int)addr, 15, 3);
 }
 
-void arch_int_enable_interrupts()
+void arch_int_enable_interrupts(void)
 {
 	asm("sti");
 }
 
-int arch_int_disable_interrupts()
+int arch_int_disable_interrupts(void)
 {
 	int flags;
 
@@ -139,7 +139,7 @@ void arch_int_restore_interrupts(int oldstate)
 		: : "r" (flags), "r" (0));
 }
 
-bool arch_int_is_interrupts_enabled()
+bool arch_int_is_interrupts_enabled(void)
 {
 	int flags;
 
