@@ -242,43 +242,55 @@ static const char *state_to_text(int state)
 	}
 }
 
+static void _dump_thread_info(struct thread *t)
+{
+	dprintf("THREAD: 0x%x\n", t);
+	dprintf("name: %s\n", t->name);
+	dprintf("all_next:   0x%x\nproc_next:  0x%x\nq_next:     0x%x\n",
+		t->all_next, t->proc_next, t->q_next);
+	dprintf("id:         0x%x\n", t->id);
+	dprintf("state:      %s\n", state_to_text(t->state));
+	dprintf("next_state: %s\n", state_to_text(t->next_state));
+	dprintf("sem_count:  0x%x\n", t->sem_count);
+	dprintf("snooze_sem_id: 0x%x\n", t->snooze_sem_id);
+	dprintf("proc:       0x%x\n", t->proc);
+	dprintf("kernel_stack_area: 0x%x\n", t->kernel_stack_area);
+	dprintf("user_stack_area:   0x%x\n", t->user_stack_area);
+	dprintf("architecture dependant section:\n");
+	arch_thread_dump_info(t->arch_info);
+}
+
 static void dump_thread_info(int argc, char **argv)
 {
 	struct thread *t;
 	int id = -1;
+	unsigned long num;
 
 	if(argc < 2) {
 		dprintf("thread: not enough arguments\n");
 		return;
 	}
 
-retry:
+	// if the argument looks like a hex number, treat it as such
+	if(strlen(argv[1]) > 2 && argv[1][0] == '0' && argv[1][1] == 'x') {
+		num = atoul(argv[1]);
+		if(num > vm_get_kernel_aspace()->base) {
+			// XXX semi-hack
+			_dump_thread_info((struct thread *)num);
+			return;
+		} else {
+			id = num;
+		}
+	}
+	
+	// walk through the thread list, trying to match name or id
 	t = thread_list;
 	while(t != NULL) {
 		if(strcmp(argv[1], t->name) == 0 || t->id == id) {
-			dprintf("THREAD: 0x%x\n", t);
-			dprintf("name: %s\n", t->name);
-			dprintf("all_next:   0x%x\nproc_next:  0x%x\nq_next:     0x%x\n",
-				t->all_next, t->proc_next, t->q_next);
-			dprintf("id:         0x%x\n", t->id);
-			dprintf("state:      %s\n", state_to_text(t->state));
-			dprintf("next_state: %s\n", state_to_text(t->next_state));
-			dprintf("sem_count:  0x%x\n", t->sem_count);
-			dprintf("snooze_sem_id: 0x%x\n", t->snooze_sem_id);
-			dprintf("proc:       0x%x\n", t->proc);
-			dprintf("kernel_stack_area: 0x%x\n", t->kernel_stack_area);
-			dprintf("user_stack_area:   0x%x\n", t->user_stack_area);
-			dprintf("architecture dependant section:\n");
-			arch_thread_dump_info(t->arch_info);
+			_dump_thread_info(t);
 			return;
 		}
 		t = t->all_next;
-	}
-	if(id == -1) {
-		id = atoi(argv[1]);
-		if(id >= 0) {
-			goto retry;
-		}
 	}
 }
 
@@ -287,10 +299,11 @@ static void dump_thread_list(int argc, char **argv)
 	struct thread *t;
 	TOUCH(argc);TOUCH(argv);
 
+	dprintf("thread list head: 0x%x\n", thread_list);
 	t = thread_list;
 	while(t != NULL) {
-		dprintf("%32s\t0x%x\t%16s\t0x%x\n",
-			t->name, t->id, state_to_text(t->state), t->kernel_stack_area->base);
+		dprintf("0x%x\t%32s\t0x%x\t%16s\t0x%x\n",
+			t, t->name, t->id, state_to_text(t->state), t->kernel_stack_area->base);
 		t = t->all_next;
 	}
 }
@@ -410,7 +423,9 @@ int test_thread()
 	while(1) {
 //		a += tid;
 		a++;
+#if 1
 		kprintf_xy(0, tid-1, "thread%d - %d    - %d %d - cpu %d", tid, a, system_time(), smp_get_current_cpu());
+#endif
 #if 0
 		kprintf_xy(x, y, "%c", c++);
 		if(c > 'z')
@@ -440,19 +455,31 @@ int test_thread()
 	return 1;
 }
 
+int panic_thread()
+{
+	dprintf("panic thread starting\n");
+	
+	thread_snooze(5000000);
+	panic("gotcha!\n");
+	return 0;
+}
+
 int thread_test()
 {
 	struct thread *t;
 	int i;
 	char temp[64];
 	
-	for(i=0; i<21; i++) {
+	for(i=0; i<16; i++) {
 		sprintf(temp, "test_thread%d", i);
 //		t = create_kernel_thread(temp, &test_thread, i % THREAD_NUM_PRIORITY_LEVELS);
 		t = create_kernel_thread(temp, &test_thread, 5);
 		thread_enqueue_run_q(t);
 	}	
 
+	t = create_kernel_thread("panic thread", &panic_thread, THREAD_MAX_PRIORITY);
+	thread_enqueue_run_q(t);
+	
 	thread_test_sem = sem_create(1, "test");
 	return 0;
 }

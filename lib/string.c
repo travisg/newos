@@ -312,3 +312,53 @@ int atoi(const char *num)
 	return value;
 }
 
+unsigned int atoui(const char *num)
+{
+	int value = 0;
+	if (num[0] == '0' && num[1] == 'x') {
+		// hex
+		num += 2;
+		while (*num && isxdigit(*num))
+			value = value * 16 + hexval(*num++);
+	} else {
+		// decimal
+		while (*num && isdigit(*num))
+			value = value * 10 + *num++  - '0';
+	}
+
+	return value;
+}
+
+long atol(const char *num)
+{
+	int value = 0;
+	if (num[0] == '0' && num[1] == 'x') {
+		// hex
+		num += 2;
+		while (*num && isxdigit(*num))
+			value = value * 16 + hexval(*num++);
+	} else {
+		// decimal
+		while (*num && isdigit(*num))
+			value = value * 10 + *num++  - '0';
+	}
+
+	return value;
+}
+
+unsigned long atoul(const char *num)
+{
+	int value = 0;
+	if (num[0] == '0' && num[1] == 'x') {
+		// hex
+		num += 2;
+		while (*num && isxdigit(*num))
+			value = value * 16 + hexval(*num++);
+	} else {
+		// decimal
+		while (*num && isdigit(*num))
+			value = value * 10 + *num++  - '0';
+	}
+
+	return value;
+}

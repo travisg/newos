@@ -6,9 +6,13 @@
 #include "int.h"
 #include "timer.h"
 #include "debug.h"
+#include "vm.h"
+
 #include "stage2.h"
 
 static struct sem_entry *sems = NULL;
+static area_id sem_area = 0;
+
 static sem_id next_sem = 0;
 
 struct sem_timeout {
@@ -16,16 +20,79 @@ struct sem_timeout {
 	thread_id  thr_id;
 };
 
+void dump_sem_list(int argc, char **argv)
+{
+	int i;
+	
+	TOUCH(argc);TOUCH(argv);
+
+	for(i=0; i<MAX_SEMS; i++) {
+		if(sems[i].id >= 0) {
+			dprintf("0x%x\tid: 0x%x\tname: '%s'\n", &sems[i], sems[i].id, sems[i].name);
+		}
+	}
+}
+
+static void _dump_sem_info(struct sem_entry *sem)
+{
+	dprintf("SEM:   0x%x\n", sem);
+	dprintf("name:  '%s'\n", sem->name);
+	dprintf("count: 0x%x\n", sem->count);
+	dprintf("queue: 0x%x\n", sem->q);
+	dprintf("holder thread: 0x%x\n", sem->holder_thread);
+}
+
+static void dump_sem_info(int argc, char **argv)
+{
+	int i;
+
+	if(argc < 2) {
+		dprintf("sem: not enough arguments\n");
+		return;
+	}
+
+	// if the argument looks like a hex number, treat it as such
+	if(strlen(argv[1]) > 2 && argv[1][0] == '0' && argv[1][1] == 'x') {
+		unsigned long num = atoul(argv[1]);
+		
+		if(num > vm_get_kernel_aspace()->base) {
+			// XXX semi-hack
+			_dump_sem_info((struct sem_entry *)num);
+			return;
+		} else {
+			int slot = num % MAX_SEMS;
+			_dump_sem_info(&sems[slot]);
+			return;
+		}
+	}
+	
+	// walk through the sem list, trying to match name
+	for(i=0; i<MAX_SEMS; i++) {
+		if(strcmp(argv[1], sems[i].name) == 0) {
+			_dump_sem_info(&sems[i]);
+			return;
+		}
+	}
+}
+
 int sem_init(kernel_args *ka)
 {
 	int i;
 	TOUCH(ka);
 	
 	// create and initialize semaphore table
-	sems = (struct sem_entry *)kmalloc(sizeof(struct sem_entry *) * MAX_SEMS);
-	memset(sems, 0, sizeof(struct sem_entry *) * MAX_SEMS);
+	sem_area = vm_create_area(vm_get_kernel_aspace(), "sem_table", (void **)&sems,
+		AREA_ANY_ADDRESS, sizeof(struct sem_entry) * MAX_SEMS, 0);
+	if(sems == NULL) {
+		panic("unable to allocate semaphore table!\n");
+	}
+	memset(sems, 0, sizeof(struct sem_entry) * MAX_SEMS);
 	for(i=0; i<MAX_SEMS; i++)
 		sems[i].id = -1;
+
+	// add debugger commands
+	dbg_add_command(&dump_sem_list, "sems", "Dump a list of all active semaphores");
+	dbg_add_command(&dump_sem_info, "sem", "Dump info about a particular semaphore");
 
 	return 0;
 }
@@ -92,8 +159,8 @@ int sem_delete(sem_id id)
 		released_threads++;
 	}
 
-	kfree(sems[slot].name);
 	sems[slot].id = -1;
+	kfree(sems[slot].name);
 	
 	if(released_threads > 0)
 		thread_resched();

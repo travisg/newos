@@ -22,7 +22,7 @@ static unsigned int free_page_table_size = 0;
 #define END_OF_LIST 0xffffffff
 #define PAGE_INUSE  0xfffffffe
 
-static void dump_free_page_table();
+static void dump_free_page_table(int argc, char **argv);
 
 // heap stuff
 // ripped mostly from nujeffos
@@ -264,6 +264,13 @@ int vm_map_physical_memory(struct aspace *aspace, char *name, void **addr, int a
 	return _vm_create_area(aspace, name, addr, addr_type, size, lock, phys_addr, SRC_ADDR_PHYSICAL);
 }
 
+static void vm_dump_kspace_areas(int argc, char **argv)
+{
+	TOUCH(argc);TOUCH(argv);
+	
+	vm_dump_areas(vm_get_kernel_aspace());
+}
+
 void vm_dump_areas(struct aspace *aspace)
 {
 	struct area *area;
@@ -372,7 +379,11 @@ int vm_init(kernel_args *ka)
 		sprintf(temp, "idle_thread%d_kstack", i);
 		_vm_create_area_struct(kernel_aspace, temp, (unsigned int)ka->cpu_kstack[i], ka->cpu_kstack_len[i], 0);
 	}
-	vm_dump_areas(kernel_aspace);
+//	vm_dump_areas(kernel_aspace);
+
+	// add some debugger commands
+	dbg_add_command(&vm_dump_kspace_areas, "area_dump_kspace", "Dump kernel space areas");
+	dbg_add_command(&dump_free_page_table, "free_pages", "Dump free page table list");	
 
 	dprintf("vm_init: exit\n");
 
@@ -518,14 +529,14 @@ int vm_mark_page_range_inuse(unsigned int start_page, unsigned int len)
 	
 	if(i == END_OF_LIST || i > start_page) {
 		dprintf("vm_mark_page_range_inuse: could not find start_page (%d) in free_page_list\n", start_page);
-		dump_free_page_table();
+		dump_free_page_table(0, NULL);
 		return -1;
 	}
 				
 	for(j=i; j<(len + i); j++) {
 		if(free_page_table[j] == PAGE_INUSE) {
 			dprintf("vm_mark_page_range_inuse: found page inuse already\n");	
-			dump_free_page_table();
+			dump_free_page_table(0, NULL);
 		}
 		free_page_table[j] = PAGE_INUSE;
 	}
@@ -560,11 +571,13 @@ int vm_get_free_page(unsigned int *page)
 	return 0;
 }
 
-static void dump_free_page_table()
+static void dump_free_page_table(int argc, char **argv)
 {
 	unsigned int i = 0;
 	unsigned int free_start = END_OF_LIST;
 	unsigned int inuse_start = PAGE_INUSE;
+
+	TOUCH(argc);TOUCH(argv);
 	
 	dprintf("dump_free_page_table():\n");
 	dprintf("first_free_page_index = %d\n", first_free_page_index);
@@ -610,7 +623,8 @@ int vm_page_fault(int address, unsigned int fault_address)
 {
 	dprintf("PAGE FAULT: faulted on address 0x%x. ip = 0x%x. Killing system.\n", address, fault_address);
 	kprintf("PAGE FAULT: faulted on address 0x%x. ip = 0x%x. Killing system.\n", address, fault_address);
-	vm_dump_areas(vm_get_kernel_aspace());
+	
+	panic("page fault\n");
 //	cli();
 	for(;;);
 	return INT_NO_RESCHEDULE;

@@ -18,6 +18,7 @@
 
 static bool serial_debug_on = false;
 static int dbg_spinlock = 0;
+static int debugger_on_cpu = -1;
 
 struct debugger_command
 {
@@ -93,12 +94,15 @@ void kernel_debugger()
 	int_disable_interrupts();
 
 	dprintf("kernel debugger on cpu %d\n", smp_get_current_cpu());
+	debugger_on_cpu = smp_get_current_cpu();
 
 	while(1) {
 		dprintf(": ");
 		debug_read_line(line_buf, LINE_BUF_SIZE);		
 		debug_parse_line(line_buf, args, &argc, MAX_ARGS);
 		if(argc <= 0) continue;
+
+		debugger_on_cpu = smp_get_current_cpu();
 
 		cmd = commands;
 		while(cmd != NULL) {
@@ -124,8 +128,10 @@ int panic(const char *fmt, ...)
 		dbg_puts("PANIC: ");
 		dbg_puts(temp);
 		
-		// halt all of the other cpus
-		smp_send_broadcast_ici(SMP_MSG_CPU_HALT, 0, NULL);
+		if(debugger_on_cpu != smp_get_current_cpu()) {
+			// halt all of the other cpus
+			smp_send_broadcast_ici(SMP_MSG_CPU_HALT, 0, NULL);
+		}
 		
 		kernel_debugger();
 	}
@@ -218,7 +224,7 @@ static void cmd_help(int argc, char **argv)
 	dprintf("debugger commands:\n");
 	cmd = commands;
 	while(cmd != NULL) {
-		dprintf("%s\t\t%s\n", cmd->cmd, cmd->description);
+		dprintf("%-32s\t\t%s\n", cmd->cmd, cmd->description);
 		cmd = cmd->next;
 	}
 }
