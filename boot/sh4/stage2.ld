@@ -4,19 +4,19 @@ OUTPUT_ARCH(sh)
 ENTRY(__start)
 SECTIONS
 {
-	. = 0x101000 + SIZEOF_HEADERS;
+	. = 0x8c100000 + 0x1200 + SIZEOF_HEADERS;
 
 	/* text/read-only data */
 	.text :	{ *(.text .gnu.linkonce.t.*) }
-
-	__ctor_list = .;
-	.ctors : { *(.ctors) }
-	__ctor_end = .;
 
 	.rodata : { *(.rodata) }
 
 	/* writable data  */
 	. = ALIGN(0x1000);
+	__ctor_list = .;
+	.ctors : { *(.ctors) }
+	__ctor_end = .;
+
 	__data_start = .;
 	.data : { *(.data .gnu.linkonce.d.*) }
 

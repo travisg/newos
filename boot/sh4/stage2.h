@@ -3,8 +3,11 @@
 
 #include <boot.h>
 
+// must match SMP_MAX_CPUS in arch_smp.h
+#define MAX_BOOT_CPUS 1
+
 // kernel args
-struct kernel_args {
+typedef struct {
 	unsigned int cons_line;
 	unsigned int mem_size;
 	char *str;
@@ -18,14 +21,11 @@ struct kernel_args {
 	unsigned int phys_alloc_range_high;
 	unsigned int virt_alloc_range_low;
 	unsigned int virt_alloc_range_high;
-	unsigned int stack_start;
-	unsigned int stack_end;
+	unsigned int num_cpus;
+	unsigned int cpu_kstack[MAX_BOOT_CPUS];
+	unsigned int cpu_kstack_len[MAX_BOOT_CPUS];
 	// architecture specific
-	unsigned int pgdir;
-	unsigned int pgtable1;
-	unsigned int idt;
-	unsigned int page_hole;
-};
+} kernel_args;
 
 #endif
 

@@ -29,6 +29,7 @@
 
 #include "bootblock.h"
 #include "sparcbootblock.h"
+#include "sh4bootblock.h"
 
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -40,6 +41,7 @@
 
 static int make_floppy = 0;
 static int make_sparcboot = 0;
+static int make_sh4boot = 0;
 
 void die(char *s, char *a)
 {
@@ -73,6 +75,16 @@ void *loadfile(char *file, int *size)
     }
     *size = 0;
     return NULL;
+}
+
+int writesh4bootblock(FILE *fp, unsigned int blocks)
+{
+	unsigned char bb[0x200];
+
+	memset(bb, 0, sizeof(bb));
+	memcpy(bb, sh4bootblock, sizeof(sh4bootblock));
+
+	return fwrite(bb,sizeof(bb),1,fp);
 }
 
 // write a boot block to the head of the dir.
@@ -359,6 +371,10 @@ void makeboot(section *s, char *outfile)
         die("cannot write to \"%s\"",outfile);
     }
 
+    if(make_sh4boot) {
+        writesh4bootblock(fp, nextpage+1);
+    }
+    
     if(make_sparcboot) {
         writesparcbootblock(fp, nextpage+1);
     }
@@ -383,7 +399,7 @@ int main(int argc, char **argv)
     
     if(argc < 2){
 usage:
-        fprintf(stderr,"usage: %s [ --floppy | -f ] [ --sparc | -s ] [ <inifile> ... ] -o <bootfile>\n",argv[0]);
+        fprintf(stderr,"usage: %s [ --floppy | -f ] [ --sparc | -s ] [ --sh4 | -4 ] [ <inifile> ... ] -o <bootfile>\n",argv[0]);
         return 1;
     }
 
@@ -395,6 +411,8 @@ usage:
 			make_floppy = 1;
 		} if(!strcmp(*argv,"--sparc")) {
 			make_sparcboot = 1;
+		} if(!strcmp(*argv,"--sh4")) {
+			make_sh4boot = 1;
 		} else if(!strcmp(*argv,"-o")){
 			argc--;
 			argv++;
@@ -418,6 +436,9 @@ usage:
     }
     if((argc > 3) && !strcmp(argv[3],"-sparc")){
         make_sparcboot = 1;
+    }
+    if((argc > 3) && !strcmp(argv[3],"-sh4")){
+        make_sh4boot = 1;
     }
 
 	if(!file){
