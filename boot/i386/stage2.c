@@ -236,7 +236,7 @@ void _start(unsigned int mem, char *str)
 	dprintf("page_hole = 0x%x\n", ka->page_hole);
 #endif
 	dprintf("finding and booting other cpus...\n");
-	smp_boot(ka);
+	smp_boot(ka, kernel_entry);
 
 	dprintf("jumping into kernel at 0x%x\n", kernel_entry);
 	

@@ -43,7 +43,7 @@ struct gdt_idt_descr {
 } _PACKED;
 
 // SMP stuff
-int smp_boot(kernel_args *ka);
+int smp_boot(kernel_args *ka, unsigned int kernel_entry);
 
 #define MP_FLT_SIGNATURE '_PM_'
 #define MP_CTH_SIGNATURE 'PCMP'

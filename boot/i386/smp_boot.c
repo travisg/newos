@@ -14,6 +14,7 @@ static unsigned int mp_mem_phys = 0;
 static unsigned int mp_mem_virt = 0;
 static struct mp_flt_struct *mp_flt_ptr = NULL;
 static kernel_args *saved_ka = NULL;
+static unsigned int kernel_entry_point = 0;
 
 void smp_trampoline();
 void smp_trampoline_end();
@@ -303,9 +304,9 @@ static int smp_cpu_ready()
 	asm("pushl  %0; "					// push the cpu number
 		"pushl 	%1;	"					// kernel args
 		"pushl 	$0x0;"					// dummy retval for call to main
-		"pushl 	$0x80000080;	"		// this is the start address
+		"pushl 	%2;	"		// this is the start address
 		"ret;		"					// jump.
-		: : "r" (curr_cpu), "m" (ka));
+		: : "r" (curr_cpu), "m" (ka), "g" (kernel_entry_point));
 
 	// no where to return to
 	return 0;
@@ -454,10 +455,11 @@ void calculate_apic_timer_conversion_factor(kernel_args *ka)
 	dprintf("APIC ticks/sec = %d\n", ka->arch_args.apic_time_cv_factor);
 }
 
-int smp_boot(kernel_args *ka)
+int smp_boot(kernel_args *ka, unsigned int kernel_entry)
 {
 	dprintf("smp_boot: entry\n");
 
+	kernel_entry_point = kernel_entry;
 	saved_ka = ka;
 
 	if(smp_find_mp_config(ka) > 1) {
