@@ -89,8 +89,7 @@ int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_re
 			*call_ret = system_time();
 			break;
 		case SYSCALL_SNOOZE:
-			thread_snooze((time_t)INT32TOINT64(arg0, arg1));
-			*call_ret = 0;
+			*call_ret = user_thread_snooze((time_t)INT32TOINT64(arg0, arg1));
 			break;
 		case SYSCALL_SEM_CREATE:
 			*call_ret = user_sem_create((int)arg0, (const char *)arg1);
@@ -214,6 +213,18 @@ int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_re
 			break;
 		case SYSCALL_PORT_WRITE_ETC:
 			*call_ret = user_port_write_etc((port_id)arg0, (int32)arg1, (void *)arg2, (size_t)arg3, (uint32)arg4 | PORT_FLAG_INTERRUPTABLE, (time_t)INT32TOINT64(arg5, arg6));
+			break;
+		case SYSCALL_SEM_GET_COUNT:
+			*call_ret = user_sem_get_count((sem_id)arg0, (int32*)arg1);
+			break;
+		case SYSCALL_SEM_GET_SEM_INFO:
+			*call_ret = user_sem_get_sem_info((sem_id)arg0, (struct sem_info *)arg1);
+			break;
+		case SYSCALL_SEM_GET_NEXT_SEM_INFO:
+			*call_ret = user_sem_get_next_sem_info((proc_id)arg0, (uint32 *)arg1, (struct sem_info *)arg2);
+			break;
+		case SYSCALL_SEM_SET_SEM_OWNER:
+			*call_ret = user_set_sem_owner((sem_id)arg0, (proc_id)arg1);
 			break;
 		default:
 			*call_ret = -1;

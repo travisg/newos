@@ -61,7 +61,12 @@ enum {
 	SYSCALL_PORT_READ_ETC,
 	SYSCALL_PORT_SET_OWNER,
 	SYSCALL_PORT_WRITE,
-	SYSCALL_PORT_WRITE_ETC
+	SYSCALL_PORT_WRITE_ETC,
+	SYSCALL_SEM_GET_COUNT,
+	SYSCALL_SEM_GET_SEM_INFO,
+	SYSCALL_SEM_GET_NEXT_SEM_INFO,
+	SYSCALL_SEM_SET_SEM_OWNER  /* 59 */
+	/* 60 */
 };
 
 int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_ret);

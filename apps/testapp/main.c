@@ -204,8 +204,8 @@ void port_test()
 	printf("porttest: port_find()\n");
 	printf("'test port #1' has id %d (should be %d)\n", sys_port_find("test port #1"), test_p1);
 
-	printf("porttest: port_write() on 1, 2 and 3\n");
-	sys_port_write(test_p1, 1, &testdata, sizeof(testdata));
+	printf("porttest: port_write() on 2 and 3\n");
+
 	sys_port_write(test_p2, 666, &testdata, sizeof(testdata));
 	sys_port_write(test_p3, 999, &testdata, sizeof(testdata));
 	printf("porttest: port_count(test_p1) = %d\n", sys_port_count(test_p1));
@@ -213,7 +213,10 @@ void port_test()
 	printf("porttest: spawning thread for port 1\n");
 	t = sys_thread_create_thread("port_test", port_test_thread_func, NULL);
 	// resume thread
+	
+	printf("porttest: resuming thread %d\n", t);
 	sys_thread_resume_thread(t);
+
 	// now we can write more (no blocking)
 	printf("porttest: write #1\n");
 	sys_port_write(test_p1, 1, &testdata, sizeof(testdata));
@@ -222,8 +225,8 @@ void port_test()
 	printf("porttest: write #3\n");
 	sys_port_write(test_p1, 3, &testdata, sizeof(testdata));
 
-	printf("porttest: waiting on spawned thread\n");
-	sys_thread_wait_on_thread(t, NULL);
+//	printf("porttest: waiting on spawned thread\n");
+//	sys_thread_wait_on_thread(t, NULL);
 
 	printf("porttest: close p1\n");
 	sys_port_close(test_p2);
@@ -234,7 +237,10 @@ void port_test()
 	printf("porttest: testing delete p2\n");
 	sys_port_delete(test_p2);
 
-	printf("porttest: end test main thread\n");
+	printf("porttest: snoozing 10 sec\n");
+	sys_snooze(10000000);
+
+	printf("porttest: end test main thread - will exit proc\n");
 }
 
 int port_test_thread_func(void* arg)
@@ -243,25 +249,30 @@ int port_test_thread_func(void* arg)
 	int n;
 	char buf[6];
 
-	printf("porttest: port_test_thread_func()\n");
+	printf("porttest_t: port_test_thread_func() entry\n");
 	
 	buf[3] = '\0';
 	n = sys_port_read(test_p1, &msg_code, &buf, 3);
-	printf("port_read #1 code %d len %d buf %3s\n", msg_code, n, buf);
+	printf("porttest_t port_read #1 code %d len %d buf %3s\n", msg_code, n, buf);
 
 	buf[4] = '\0';
 	n = sys_port_read(test_p1, &msg_code, &buf, 4);
-	printf("port_read #1 code %d len %d buf %4s\n", msg_code, n, buf);
+	printf("porttest_t port_read #1 code %d len %d buf %4s\n", msg_code, n, buf);
 
 	buf[4] = 'X';
 	buf[5] = '\0';
 	n = sys_port_read(test_p1, &msg_code, &buf, 5);
-	printf("port_read #1 code %d len %d buf %5s\n", msg_code, n, buf);
+	printf("porttest_t port_read #1 code %d len %d buf %5s\n", msg_code, n, buf);
 
-	printf("porttest: testing delete p1 from other thread\n");
+	printf("porttest_t: testing delete p1 from other thread\n");
 	sys_port_delete(test_p1);
-	printf("porttest: end port_test_thread_func()\n");
+
+	printf("porttest_t: sys_snooze(1 sec)\n");
 	
+	sys_snooze(1000000);
+	
+	printf("porttest_t: end port_test_thread_func()\n");
+
 	return 0;
 }
 

@@ -136,6 +136,7 @@ int user_thread_wait_on_thread(thread_id id, int *uretcode);
 proc_id user_proc_create_proc(const char *path, const char *name, int priority);
 int user_proc_wait_on_proc(proc_id id, int *uretcode);
 thread_id user_thread_create_user_thread(char *uname, proc_id pid, addr entry, void *args);
+int user_thread_snooze(time_t time);
 
 #if 1
 // XXX remove later

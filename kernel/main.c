@@ -133,7 +133,7 @@ static int main2()
 #if 0
 	cbuf_test();
 #endif
-#if 1
+#if 0
 	port_test();
 #endif
 	// start the init process

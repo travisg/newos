@@ -42,6 +42,14 @@ typedef struct vm_region_info {
 	char name[SYS_MAX_OS_NAME_LEN];
 } vm_region_info;
 
+typedef struct sem_info {
+	sem_id		sem;
+	proc_id		proc;
+	char		name[SYS_MAX_OS_NAME_LEN];
+	int32		count;
+	thread_id	latest_holder;
+} sem_info;
+
 typedef struct port_info {
 	port_id id;
 	proc_id owner;
@@ -109,6 +117,10 @@ int sys_sem_acquire(sem_id id, int count);
 int sys_sem_acquire_etc(sem_id id, int count, int flags, time_t timeout);
 int sys_sem_release(sem_id id, int count);
 int sys_sem_release_etc(sem_id id, int count, int flags);
+int sys_sem_get_count(sem_id id, int32* thread_count);
+int sys_sem_get_sem_info(sem_id id, struct sem_info *info);
+int sys_sem_get_next_sem_info(proc_id proc, uint32 *cookie, struct sem_info *info);
+int sys_set_sem_owner(sem_id id, proc_id proc);
 
 thread_id sys_get_current_thread_id();
 void sys_exit(int retcode);

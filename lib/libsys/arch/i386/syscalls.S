@@ -187,6 +187,10 @@ SYSCALL7(sys_port_read_etc, 52)
 SYSCALL2(sys_port_set_owner, 53)
 SYSCALL4(sys_port_write, 54)
 SYSCALL7(sys_port_write_etc, 55)
+SYSCALL2(sys_sem_get_count, 56)
+SYSCALL2(sys_sem_get_sem_info, 57)
+SYSCALL3(sys_sem_get_next_sem_info, 58)
+SYSCALL2(sys_set_sem_owner, 59)
 
 /* we will optimize by just passing a ptr to the place where the caller
 ** would have dumped the args */

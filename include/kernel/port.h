@@ -16,6 +16,7 @@
 #include <kernel/thread.h>
 #include <kernel/sem.h>
 
+// PORT_FLAG_INTERRUPTABLE must be the same as SEM_FLAG_INTERRUPTABLE
 #define PORT_FLAG_TIMEOUT 2
 #define PORT_FLAG_INTERRUPTABLE 4
 #define PORT_FLAG_USE_USER_MEMCPY 0x80000000

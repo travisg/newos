@@ -512,8 +512,7 @@ outnolock:
 	return err;
 }
 
-int
-sem_get_count(sem_id id)
+int sem_get_count(sem_id id, int32* thread_count)
 {
 	int slot;
 	int state;
@@ -523,6 +522,8 @@ sem_get_count(sem_id id)
 		return ERR_SEM_NOT_ACTIVE;
 	if(id < 0)
 		return ERR_INVALID_HANDLE;
+	if (thread_count == NULL)
+		return ERR_INVALID_ARGS;
 
 	slot = id % MAX_SEMS;
 
@@ -536,14 +537,136 @@ sem_get_count(sem_id id)
 		return ERR_INVALID_HANDLE;
 	}
 	
-	count = sems[slot].count;
+	*thread_count = sems[slot].count;
 
 	RELEASE_SEM_LOCK(sems[slot]);
 	int_restore_interrupts(state);
 
-	return count;
+	return NO_ERROR;
 }
 
+int sem_get_sem_info(sem_id id, struct sem_info *info)
+{
+	int state;
+	int slot;
+
+	if(sems_active == false)
+		return ERR_SEM_NOT_ACTIVE;
+	if(id < 0)
+		return ERR_INVALID_HANDLE;
+	if (info == NULL)
+		return ERR_INVALID_ARGS;
+
+	slot = id % MAX_SEMS;
+
+	state = int_disable_interrupts();
+	GRAB_SEM_LOCK(sems[slot]);
+
+	if(sems[slot].id != id) {
+		RELEASE_SEM_LOCK(sems[slot]);
+		int_restore_interrupts(state);
+		dprintf("get_sem_info: invalid sem_id %d\n", id);
+		return ERR_INVALID_HANDLE;
+	}
+	
+	info->sem			= sems[slot].id;
+	info->proc			= sems[slot].owner;
+	strncpy(info->name, sems[slot].name, SYS_MAX_OS_NAME_LEN-1);
+	info->count			= sems[slot].count;
+	info->latest_holder	= sems[slot].q.head->id; // XXX not sure if this is correct
+
+	RELEASE_SEM_LOCK(sems[slot]);
+	int_restore_interrupts(state);
+
+	return NO_ERROR;
+}
+
+int sem_get_next_sem_info(proc_id proc, uint32 *cookie, struct sem_info *info)
+{
+	int state;
+	int slot;
+
+	if(sems_active == false)
+		return ERR_SEM_NOT_ACTIVE;
+
+	if (cookie == NULL)
+		return ERR_INVALID_ARGS;
+
+	if (*cookie == NULL) {
+		// return first found
+		slot = 0;
+	} else {
+		// start at index cookie, but check cookie against MAX_PORTS
+		slot = *cookie;
+		if (slot >= MAX_SEMS)
+			return ERR_INVALID_HANDLE;
+	}
+	// spinlock
+	state = int_disable_interrupts();
+	GRAB_SEM_LIST_LOCK();
+
+	while (slot < MAX_SEMS) {
+		GRAB_SEM_LOCK(sems[slot]);
+		if (sems[slot].id != -1)
+			if (sems[slot].owner == proc) {
+				// found one!
+				info->sem			= sems[slot].id;
+				info->proc			= sems[slot].owner;
+				strncpy(info->name, sems[slot].name, SYS_MAX_OS_NAME_LEN-1);
+				info->count			= sems[slot].count;
+				info->latest_holder	= sems[slot].q.head->id; // XXX not sure if this is the latest holder, or the next holder...
+
+				RELEASE_SEM_LOCK(sems[slot]);
+				slot++;
+				break;
+			}
+		RELEASE_SEM_LOCK(sems[slot]);
+		slot++;
+	}
+	RELEASE_SEM_LIST_LOCK();
+	int_restore_interrupts(state);
+
+	if (slot == MAX_SEMS)
+		return ERR_SEM_NOT_FOUND;
+	*cookie = slot;
+	return NO_ERROR;
+}
+
+int set_sem_owner(sem_id id, proc_id proc)
+{
+	int state;
+	int slot;
+
+	if(sems_active == false)
+		return ERR_SEM_NOT_ACTIVE;
+	if(id < 0)
+		return ERR_INVALID_HANDLE;
+	if (proc < NULL)
+		return ERR_INVALID_ARGS;
+
+	// XXX: todo check if proc exists
+//	if (proc_get_proc_struct(proc) == NULL)
+//		return ERR_INVALID_HANDLE; // proc_id doesn't exist right now
+
+	slot = id % MAX_SEMS;
+
+	state = int_disable_interrupts();
+	GRAB_SEM_LOCK(sems[slot]);
+
+	if(sems[slot].id != id) {
+		RELEASE_SEM_LOCK(sems[slot]);
+		int_restore_interrupts(state);
+		dprintf("set_sem_owner: invalid sem_id %d\n", id);
+		return ERR_INVALID_HANDLE;
+	}
+
+	sems[slot].owner = proc;
+
+	RELEASE_SEM_LOCK(sems[slot]);
+	int_restore_interrupts(state);
+
+	return NO_ERROR;
+}
 
 // Wake up a thread that's blocked on a semaphore
 // this function must be entered with interrupts disabled and THREADLOCK held
@@ -679,13 +802,15 @@ int user_sem_delete_etc(sem_id id, int return_code)
 
 int user_sem_acquire(sem_id id, int count)
 {
-	return sem_acquire(id, count);
+	return user_sem_acquire_etc(id, count, 0, 0, NULL);
 }
 
 int user_sem_acquire_etc(sem_id id, int count, int flags, time_t timeout, int *deleted_retcode)
 {
 	if(deleted_retcode != NULL && ((addr)deleted_retcode >= KERNEL_BASE && (addr)deleted_retcode <= KERNEL_TOP))
 		return ERR_VM_BAD_USER_MEMORY;
+
+	flags = flags | SEM_FLAG_INTERRUPTABLE;
 
 	if(deleted_retcode == NULL) {
 		return sem_acquire_etc(id, count, flags, timeout, deleted_retcode);
@@ -717,5 +842,58 @@ int user_sem_release(sem_id id, int count)
 int user_sem_release_etc(sem_id id, int count, int flags)
 {
 	return sem_release_etc(id, count, flags);
+}
+
+int user_sem_get_count(sem_id uid, int32* uthread_count)
+{
+	int32 thread_count;
+	int rc, rc2;
+	rc  = sem_get_count(uid, &thread_count);
+	rc2 = user_memcpy(uthread_count, &thread_count, sizeof(int32));
+	if(rc2 < 0)
+		return rc2;
+	return rc;
+}
+
+int user_sem_get_sem_info(sem_id uid, struct sem_info *uinfo)
+{
+	struct sem_info info;
+	int rc, rc2;
+
+	if((addr)uinfo >= KERNEL_BASE && (addr)uinfo <= KERNEL_TOP)
+		return ERR_VM_BAD_USER_MEMORY;
+
+	rc = sem_get_sem_info(uid, &info);
+	rc2 = user_memcpy(uinfo, &info, sizeof(struct sem_info));
+	if(rc2 < 0)
+		return rc2;
+	return rc;
+}
+
+int user_sem_get_next_sem_info(proc_id uproc, uint32 *ucookie, struct sem_info *uinfo)
+{
+	struct sem_info info;
+	uint32 cookie;
+	int rc, rc2;
+
+	if((addr)uinfo >= KERNEL_BASE && (addr)uinfo <= KERNEL_TOP)
+		return ERR_VM_BAD_USER_MEMORY;
+
+	rc2 = user_memcpy(&cookie, ucookie, sizeof(uint32));
+	if(rc2 < 0)
+		return rc2;
+	rc = user_sem_get_next_sem_info(uproc, &cookie, &info);
+	rc2 = user_memcpy(uinfo, &info, sizeof(struct sem_info));
+	if(rc2 < 0)
+		return rc2;
+	rc2 = user_memcpy(ucookie, &cookie, sizeof(uint32));
+	if(rc2 < 0)
+		return rc2;
+	return rc;
+}
+
+int user_set_sem_owner(sem_id uid, proc_id uproc)
+{
+	return set_sem_owner(uid, uproc);
 }
 
