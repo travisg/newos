@@ -24,8 +24,8 @@ int arch_thread_initialize_kthread_stack(struct thread *t, int (*start_func)(voi
 	struct arch_thread *at;
 	int i;
 
-	dprintf("arch_thread_initialize_stack: kstack 0x%p, kstack_size %d, kstack_top 0x%p\n",
-		kstack, kstack_size, kstack_top);
+//	dprintf("arch_thread_initialize_stack: kstack 0x%p, kstack_size %d, kstack_top 0x%p\n",
+//		kstack, kstack_size, kstack_top);
 
 	// clear the kernel stack
 	memset(kstack, 0, kstack_size);

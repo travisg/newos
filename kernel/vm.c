@@ -20,9 +20,7 @@ static unsigned int free_page_table_size = 0;
 #define END_OF_LIST 0xffffffff
 #define PAGE_INUSE  0xfffffffe
 
-#if 0
 static void dump_free_page_table();
-#endif
 
 // heap stuff
 // ripped mostly from nujeffos
@@ -215,7 +213,6 @@ static int _vm_create_area(struct aspace *aspace, char *name, void **addr, int a
 
 			for(i=0; i < PAGE_ALIGN(size) / PAGE_SIZE; i++) {
 				vm_get_free_page(&page);
-				vm_mark_page_inuse(page);
 				pmap_map_page(page * PAGE_SIZE, base + i * PAGE_SIZE); 
 			}
 			break;
@@ -321,8 +318,8 @@ int vm_init(struct kernel_args *ka)
 		ka->phys_alloc_range_high += PAGE_SIZE;
 		ka->virt_alloc_range_high += PAGE_SIZE;
 	}
-	dprintf("vm_init: putting free_page_table @ %p, # ents %d\n",
-		free_page_table, free_page_table_size);
+//	dprintf("vm_init: putting free_page_table @ %p, # ents %d\n",
+//		free_page_table, free_page_table_size);
 	
 	// initialize the free page table
 	for(i=0; i<free_page_table_size-1; i++) {
@@ -331,17 +328,16 @@ int vm_init(struct kernel_args *ka)
 	free_page_table[i] = END_OF_LIST;
 	first_free_page_index = 0;
 
+	// map in the new heap
+	for(i = HEAP_BASE; i < HEAP_BASE + HEAP_SIZE; i += PAGE_SIZE) {
+		map_page_into_kspace(ka->phys_alloc_range_high, i);
+		ka->phys_alloc_range_high += PAGE_SIZE;
+	}
+
 	// mark some of the page ranges inuse
 	vm_mark_page_range_inuse(ka->phys_alloc_range_low/PAGE_SIZE,
 		ka->phys_alloc_range_high/PAGE_SIZE - ka->phys_alloc_range_low/PAGE_SIZE);
 	
-	// map in the new heap
-	for(i = HEAP_BASE; i < HEAP_BASE + HEAP_SIZE; i += PAGE_SIZE) {
-		map_page_into_kspace(ka->phys_alloc_range_high, i);
-		vm_mark_page_inuse(ka->phys_alloc_range_high / PAGE_SIZE);
-		ka->phys_alloc_range_high += PAGE_SIZE;
-	}
-
 	// zero out the heap alloc table at the base of the heap
 	memset((void *)heap_alloc_table, 0, (HEAP_SIZE / PAGE_SIZE) * sizeof(struct heap_page));
 
@@ -472,7 +468,8 @@ int vm_mark_page_range_inuse(unsigned int start_page, unsigned int len)
 	unsigned int j;
 	
 #if 0
-	dprintf("vm_mark_page_range_inuse: entry. start_page %d len %d\n", start_page, len);
+	dprintf("vm_mark_page_range_inuse: entry. start_page %d len %d, first_free %d\n",
+		start_page, len, first_free_page_index);
 #endif
 	if(start_page + len >= free_page_table_size) {
 		dprintf("vm_mark_page_range_inuse: range would extend past free list\n");
@@ -488,13 +485,15 @@ int vm_mark_page_range_inuse(unsigned int start_page, unsigned int len)
 	}
 	
 	if(i == END_OF_LIST || i > start_page) {
-		dprintf("vm_mark_page_range_inuse: could not find start_page in free_page_list\n");
+		dprintf("vm_mark_page_range_inuse: could not find start_page (%d) in free_page_list\n", start_page);
+		dump_free_page_table();
 		return -1;
 	}
 				
 	for(j=i; j<(len + i); j++) {
 		if(free_page_table[j] == PAGE_INUSE) {
-			dprintf("vm_mark_page_range_inuse: found page inuse already\n");
+			dprintf("vm_mark_page_range_inuse: found page inuse already\n");	
+			dump_free_page_table();
 		}
 		free_page_table[j] = PAGE_INUSE;
 	}
@@ -517,7 +516,7 @@ int vm_get_free_page(unsigned int *page)
 {
 	int index = first_free_page_index;
 	
-	dprintf("vm_get_free_page entry\n");
+//	dprintf("vm_get_free_page entry\n");
 		
 	if(index == END_OF_LIST)
 		return -1;
@@ -525,17 +524,17 @@ int vm_get_free_page(unsigned int *page)
 	*page = index;
 	first_free_page_index = free_page_table[index];
 	free_page_table[index] = PAGE_INUSE;
-	dprintf("vm_get_free_page exit, returning page 0x%x\n", *page);
+//	dprintf("vm_get_free_page exit, returning page 0x%x\n", *page);
 	return 0;
 }
 
-#if 0
 static void dump_free_page_table()
 {
 	unsigned int i = 0;
 	unsigned int free_start = END_OF_LIST;
 	unsigned int inuse_start = PAGE_INUSE;
 	
+	dprintf("dump_free_page_table():\n");
 	dprintf("first_free_page_index = %d\n", first_free_page_index);
 
 	while(i < free_page_table_size) {
@@ -574,7 +573,6 @@ static void dump_free_page_table()
 	}
 */
 }
-#endif
 
 int vm_page_fault(int address, int errorcode)
 {

@@ -5,11 +5,17 @@
 #include "proc.h"
 #include "vm.h"
 
+#define THREAD_IDLE_PRIORITY 0
+#define THREAD_NUM_PRIORITY_LEVELS 64
+#define THREAD_MAX_PRIORITY (THREAD_NUM_PRIORITY_LEVELS - 1)
+
 struct thread {
 	struct thread *all_next;
-	struct thread *next;
+	struct thread *proc_next;
+	struct thread *q_next;
 	char *name;
 	int id;
+	int priority;
 	struct proc *proc;
 	struct area *kernel_stack_area;
 	struct area *user_stack_area;

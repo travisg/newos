@@ -45,7 +45,7 @@ int _start(struct kernel_args *oldka)
 #endif
 	kprintf("Welcome to the kernel!\n");
 
-//	int_enable_interrupts();
+	int_enable_interrupts();
 	
 	kprintf("main: done... spinning forever\n");
 	for(;;);
