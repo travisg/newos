@@ -88,6 +88,12 @@ int main()
 		void *ptr, *ptr2;
 		time_t t;
 
+		printf("running some timing tests on region creation/deletion.\n");
+		printf("you'll want to make sure serial debugging is off or the test will take forever,\n");
+		printf(" use the scroll lock key to toggle it on or off.\n");
+		printf("pausing for 2 seconds...\n");
+		sys_snooze(2000000);
+
 		t = sys_system_time();
 		region = sys_vm_create_anonymous_region("large", &ptr, REGION_ADDR_ANY_ADDRESS,
 			64*1024*1024, REGION_WIRING_LAZY, LOCK_RW);
