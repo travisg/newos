@@ -59,12 +59,12 @@ static int pci_close(dev_cookie cookie)
 	return 0;
 }
 
-static int pci_read(dev_cookie cookie, void *buf, off_t pos, ssize_t len)
+static ssize_t pci_read(dev_cookie cookie, void *buf, off_t pos, ssize_t len)
 {
 	return ERR_NOT_ALLOWED;
 }
 
-static int pci_write(dev_cookie cookie, const void *buf, off_t pos, ssize_t len)
+static ssize_t pci_write(dev_cookie cookie, const void *buf, off_t pos, ssize_t len)
 {
 	return ERR_NOT_ALLOWED;
 }

@@ -40,7 +40,7 @@ static ssize_t vnode_read(struct vm_store *store, off_t offset, iovecs *vecs)
 	return vfs_readpage(STORE_DATA(store)->vn, vecs, offset);
 }
 
-static int vnode_write(struct vm_store *store, off_t offset, iovecs *vecs)
+static ssize_t vnode_write(struct vm_store *store, off_t offset, iovecs *vecs)
 {
 	return vfs_writepage(STORE_DATA(store)->vn, vecs, offset);
 }

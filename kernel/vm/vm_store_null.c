@@ -34,7 +34,7 @@ static ssize_t null_read(struct vm_store *store, off_t offset, iovecs *vecs)
 	return -1;
 }
 
-static int null_write(struct vm_store *store, off_t offset, iovecs *vecs)
+static ssize_t null_write(struct vm_store *store, off_t offset, iovecs *vecs)
 {
 	return -1;
 }
