@@ -6,8 +6,8 @@ STAGE2 = $(BOOT_TARGETDIR)/stage2
 
 ifeq ($(OSTYPE),cygwin)
 	BOOT_IMAGE_TARGET ?= a:
-else
-	BOOT_IMAGE_TARGET ?= /dev/disk/floppy/raw
+else ifeq ($(OSTYPE),linux)
+	BOOT_IMAGE_TARGET ?= /dev/fd0
 endif
 
 # make a rule for the stage2
