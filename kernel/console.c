@@ -2,7 +2,7 @@
 #include <console.h>
 #include <debug.h>
 #include <int.h>
-#include <spinlock.h>
+#include <smp.h>
 #include <sem.h>
 
 #include <arch_console.h>

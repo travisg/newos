@@ -13,7 +13,6 @@
 #include <timer.h>
 #include <arch_cpu.h>
 #include <arch_int.h>
-#include <spinlock.h>
 #include <sem.h>
 
 // global
@@ -537,7 +536,8 @@ static void thread_context_switch(struct thread *t_from, struct thread *t_to)
 }
 
 /* thread TEST code */
-static int thread_test_sem;
+static sem_id thread_test_sem;
+static thread_id thread_test_first_thid;
 
 int test_thread()
 {
@@ -565,10 +565,10 @@ int test_thread()
 		thread_snooze(10000 * tid);
 #endif
 #if 1
-		switch(tid) {
-			case 5: case 7:
+		switch(tid - thread_test_first_thid) {
+			case 2: case 4:
 				if((a % 2048) == 0)
-					sem_release(thread_test_sem, 1);
+					sem_release(thread_test_sem, _rand() % 16 + 1);
 				break;
 			default:
 				sem_acquire(thread_test_sem, 1);
@@ -604,6 +604,9 @@ int thread_test()
 //		t = create_kernel_thread(temp, &test_thread, i % THREAD_NUM_PRIORITY_LEVELS);
 		t = create_kernel_thread(temp, &test_thread, 5);
 		thread_enqueue_run_q(t);
+		if(i == 0) {
+			thread_test_first_thid = t->id;
+		}
 	}	
 
 	t = create_kernel_thread("panic thread", &panic_thread, THREAD_MAX_PRIORITY);

@@ -5,7 +5,6 @@
 #include <debug.h>
 #include <int.h>
 #include <smp.h>
-#include <spinlock.h>
 #include <vm.h>
 
 #include <arch_cpu.h>
@@ -39,6 +38,25 @@ static struct smp_msg *smp_broadcast_msgs = NULL;
 static int broadcast_msg_spinlock = 0;
 
 static bool ici_enabled = false;
+
+static int smp_num_cpus = 1;
+
+void acquire_spinlock(int *lock)
+{
+	if(smp_num_cpus > 1) {
+		while(1) {
+			while(*lock != 0)
+				;
+			if(test_and_set(lock, 1) == 0)
+				break;
+		}
+	}
+}
+
+void release_spinlock(int *lock)
+{
+	*lock = 0;
+}
 
 // finds a free message and gets it
 // NOTE: has side effect of disabling interrupts
@@ -281,7 +299,7 @@ void smp_send_broadcast_ici(int message, unsigned int data, void *data_ptr, int 
 		msg->message = message;
 		msg->data = data;
 		msg->data_ptr = data_ptr;
-		msg->ref_count = arch_smp_get_num_cpus() - 1;
+		msg->ref_count = smp_num_cpus - 1;
 		msg->flags = flags;
 		msg->proc_bitmap = 0;
 		msg->done = false;
@@ -332,7 +350,7 @@ int smp_trap_non_boot_cpus(kernel_args *ka, int cpu)
 void smp_wake_up_all_non_boot_cpus()
 {
 	int i;
-	for(i=1; i < arch_smp_get_num_cpus(); i++) {
+	for(i=1; i < smp_num_cpus; i++) {
 		release_spinlock(&boot_cpu_spin[i]);
 	}
 }
@@ -372,9 +390,15 @@ int smp_init(kernel_args *ka)
 			free_msgs = msg;
 			free_msg_count++;
 		}
+		smp_num_cpus = ka->num_cpus;
 	}
 	dprintf("smp_init: calling arch_smp_init\n");
 	return arch_smp_init(ka);
+}
+
+int smp_get_num_cpus()
+{
+	return smp_num_cpus;
 }
 
 int smp_enable_ici()

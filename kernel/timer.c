@@ -68,6 +68,7 @@ restart_scan:
 		int mode = event->mode;
 		
 		*list = event->next;
+		event->next = NULL;
 
 		release_spinlock(spinlock);			
 
@@ -104,6 +105,7 @@ void timer_setup_timer(void (*func)(void *), void *data, struct timer_event *eve
 {
 	event->func = func;
 	event->data = data;
+	event->next = NULL;
 }
 
 int timer_set_event(time_t relative_time, int mode, struct timer_event *event)
@@ -114,6 +116,9 @@ int timer_set_event(time_t relative_time, int mode, struct timer_event *event)
 	
 	if(event == NULL)
 		return -1;
+
+	if(event->next != NULL)
+		panic("timer_set_event: event 0x%x in list already!\n", event);
 
 	event->sched_time = system_time() + relative_time;
 	event->mode = mode;
@@ -175,6 +180,7 @@ int timer_cancel_event(struct timer_event *event)
 				} else {
 					last->next = e->next;
 				}
+				e->next = NULL;
 				// break out of the whole thing
 				goto done;
 			}

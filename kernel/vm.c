@@ -7,7 +7,7 @@
 #include <console.h>
 #include <stage2.h>
 #include <int.h>
-#include <spinlock.h>
+#include <smp.h>
 #include <sem.h>
 
 #include <arch_cpu.h>

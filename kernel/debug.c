@@ -4,7 +4,6 @@
 #include <kernel.h>
 #include <debug.h>
 #include <int.h>
-#include <spinlock.h>
 #include <smp.h>
 #include <console.h>
 #include <vm.h>

@@ -4,7 +4,7 @@
 #include <stage2.h>
 #include <proc.h>
 #include <vm.h>
-#include <spinlock.h>
+#include <smp.h>
 #include <timer.h>
 
 #define THREAD_IDLE_PRIORITY 0

@@ -2,7 +2,7 @@
 
 #include <kernel.h>
 #include <sem.h>
-#include <spinlock.h>
+#include <smp.h>
 #include <int.h>
 #include <timer.h>
 #include <debug.h>
@@ -283,6 +283,9 @@ int sem_acquire_etc(sem_id id, int count, int flags, long long timeout)
 	if(id < 0)
 		return -1;
 
+	if(count <= 0)
+		return -1;
+	
 	state = int_disable_interrupts();
 	GRAB_SEM_LOCK(sems[slot]);
 	
@@ -340,6 +343,9 @@ int sem_release_etc(sem_id id, int count, int flags)
 	
 	if(id < 0)
 		return -1;	
+	
+	if(count <= 0)
+		return -1;
 	
 	state = int_disable_interrupts();
 	GRAB_SEM_LOCK(sems[slot]);

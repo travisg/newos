@@ -10,7 +10,6 @@
 #include <printf.h>
 #include <string.h>
 #include <int.h>
-#include <spinlock.h>
 #include <smp.h>
 
 #include <arch_cpu.h>
@@ -124,11 +123,6 @@ void arch_smp_send_ici(int target_cpu)
 	apic_write(APIC_ICR1, config | 0xfd | APIC_ICR1_DELMODE_FIXED | APIC_ICR1_DESTMODE_PHYS | APIC_ICR1_DEST_FIELD);
 
 	int_restore_interrupts(state);
-}
-
-int arch_smp_get_num_cpus()
-{
-	return num_cpus;
 }
 
 int arch_smp_get_current_cpu()

@@ -8,7 +8,6 @@
 #define SMP_MAX_CPUS 4
 
 int arch_smp_init(kernel_args *ka);
-int arch_smp_get_num_cpus();
 int arch_smp_get_current_cpu();
 void arch_smp_send_ici(int target_cpu);
 void arch_smp_send_broadcast_ici();

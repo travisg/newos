@@ -11,7 +11,6 @@ KERNEL_OBJS = \
         $(KERNEL_DIR)/proc.o \
         $(KERNEL_DIR)/sem.o \
         $(KERNEL_DIR)/smp.o \
-        $(KERNEL_DIR)/spinlock.o \
         $(KERNEL_DIR)/thread.o \
         $(KERNEL_DIR)/vm.o
 
