@@ -124,7 +124,7 @@ static int _fscanf_read(void *p)
 	sys_write(1, "\'\r\n", -1, 3);
 */
 	val->count++;
-    return c;
+    return (int)c;
 }
 
 int vfscanf( FILE *stream, char const *format, va_list arg_ptr)
@@ -204,7 +204,7 @@ static int _read_next_non_space( int (*_read)(void*), void* arg)
 static unsigned long long convertIntegralValue(int (*_read)(void*), void (*_push)(void*, unsigned char), void *arg, int base, short width)
 {
 	unsigned long long acc;
-	unsigned char c;
+	int c;
 	unsigned long long qbase, cutoff;
 	int neg, any, cutlim;
 	int length = 0;
@@ -214,22 +214,34 @@ static unsigned long long convertIntegralValue(int (*_read)(void*), void (*_push
 		c = _read(arg);
 	} while (isspace(c));
 
+	if(c <= 0)
+	{
+		// what to do?
+		return 0;
+	}
+	
 	if(width == 0)
 	{
 		return 0;
 	}
 
-	if (c == '-') {
+	if (c == (int)'-') {
 		neg = 1;
 		length++;
 		c = _read(arg);
 	} else {
 		neg = 0;
-		if (c == '+')
+		if (c == (int)'+')
 		{
 			length++;
 			c = _read(arg);
 		}
+	}
+
+	if(c <= 0)
+	{
+		// what to do?
+		return 0;
 	}
 
 	if(width > 0 && length >= width)
@@ -247,8 +259,19 @@ static unsigned long long convertIntegralValue(int (*_read)(void*), void (*_push
 		}
 		else
 		{
+			if(c <= 0 || c_next <= 0)
+			{
+				// what to do?
+				return 0;
+			}
 			_push(arg, c_next);
 		}
+	}
+
+	if(c <= 0)
+	{
+		// what to do?
+		return 0;
 	}
 
 	if(width > 0 && length >= width)
@@ -268,10 +291,14 @@ static unsigned long long convertIntegralValue(int (*_read)(void*), void (*_push
 
 	for (acc = 0, any = 0;; c = _read(arg), length++) 
 	{
+		if(c <= 0)
+		{
+			goto finish_EOF;
+		}
 		if(width > 0 && length > width)
 		{
 			goto finish;
-		}	
+		}
 		
 		if (!isascii(c))
 		break;
@@ -297,6 +324,7 @@ static unsigned long long convertIntegralValue(int (*_read)(void*), void (*_push
 finish:
 	_push(arg, c);
 
+finish_EOF:
 	if (any < 0) 
 	{
 		acc = ULLONG_MAX;
@@ -304,7 +332,7 @@ finish:
 	else if (neg)
 		acc = -acc;
 
-	return (acc);
+	return acc;
 }
 
 
@@ -525,13 +553,17 @@ read_signed_int:
 				{
 					width = 10;
 //					sys_write(1, "hello", -1, 5);
-					char* c = (char*)va_arg(arg_ptr, char*);
+					unsigned char* c = (unsigned char*)va_arg(arg_ptr, unsigned char*);
 					int i = 0;
 					if(width == -1)
 						width = 1;
 					for(; i < width; i++)
 					{
-						char temp = (char)_read(arg);
+						int temp = _read(arg);
+						if(temp < 0)
+						{
+							break;
+						}
 						*(c+i) = temp;
 						if(!temp)
 							break;
@@ -542,12 +574,12 @@ read_signed_int:
 				case 's':
 				{
 					width = 10;
-					char* c = (char*)va_arg(arg_ptr, char*);
+					unsigned char* c = (unsigned char*)va_arg(arg_ptr, unsigned char*);
 					int i = 0;
 					do
 					{
-						char temp = (char)_read(arg);
-						if(temp == '\0' || isspace(temp))
+						int temp = _read(arg);
+						if(temp <= 0 || isspace(temp))
 							break;
 						*(c+i++) = temp;
 					}while(!(width >= 0 && i >= width));

@@ -5,6 +5,8 @@ void testFormatting(FILE* f);
 void testLongLine(FILE* f);
 void test(FILE* f);
 
+static void testGets(FILE*);
+
 static void testGets(FILE* f)
 {
     char buf1[1024];
@@ -30,7 +32,7 @@ static void testScanf(FILE* f)
 	//argument is ignored for now
 	printf("Read an unsigned int:");
 	scanf("%u", &u);
-	printf("Integer value: %i\n", u);
+	printf("Unsigned Integer value: %u\n", u);
 	
 	printf("Read an integer(undetermined base):");
 	scanf("%i", &i);
@@ -48,11 +50,12 @@ static void testScanf(FILE* f)
 	scanf("%x", &x);
 	printf("Integer value: %i\n", x);
 	
-	printf("Read a an char array (10):");
+	printf("Read a char array (10):");
 	scanf("%10c", c);
+	c[9] = '\0';
 	printf("String value: %s\n", c);
 	
-	printf("Read a an string (10):");
+	printf("Read a string (10):");
 	scanf("%10s", s);
 	printf("String value: %s\n", s);
 
