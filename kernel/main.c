@@ -9,6 +9,7 @@
 #include <proc.h>
 #include <smp.h>
 #include <sem.h>
+#include <vfs.h>
 
 #include <arch_cpu.h>
 
@@ -50,7 +51,8 @@ int _start(kernel_args *oldka, int cpu)
 
 		// now we can create and use semaphores
 		vm_init_postsem(&ka);
-		con_init(&ka);		
+		vfs_init(&ka);
+		con_init(&ka); // XXX will move to driver later
 		proc_init(&ka);
 		thread_init(&ka);
 	

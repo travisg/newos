@@ -12,10 +12,12 @@ KERNEL_OBJS = \
         $(KERNEL_DIR)/sem.o \
         $(KERNEL_DIR)/smp.o \
         $(KERNEL_DIR)/thread.o \
+        $(KERNEL_DIR)/vfs.o \
         $(KERNEL_DIR)/vm.o
 
-KERNEL_ARCH_DIR = kernel/arch/$(ARCH)
+include $(KERNEL_DIR)/fs/fs_kernel.mk
 
+KERNEL_ARCH_DIR = kernel/arch/$(ARCH)
 include $(KERNEL_ARCH_DIR)/arch_kernel.mk
 
 KERNEL_DEPS = $(KERNEL_OBJS:.o=.d)
