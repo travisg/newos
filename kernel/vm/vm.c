@@ -318,6 +318,8 @@ region_id vm_create_anonymous_region(aspace_id aid, char *name, void **address, 
 	aspace = vm_get_aspace_from_id(aid);
 	if(aspace == NULL)
 		return -1;
+
+	size = PAGE_ALIGN(size);
 	
 	region = _vm_create_region(aspace, name, address, addr_type, size, wiring, lock);
 	if(region == NULL)
@@ -437,10 +439,19 @@ region_id vm_map_physical_memory(aspace_id aid, char *name, void **address, int 
 	vm_cache *cache;
 	vm_cache_ref *cache_ref;
 	vm_store *store;
+	addr map_offset;
 	
 	vm_address_space *aspace = vm_get_aspace_from_id(aid);
 	if(aspace == NULL)
 		return -1;
+
+	// if the physical address is somewhat inside a page, 
+	// move the actual region down to align on a page boundary
+	map_offset = phys_addr % PAGE_SIZE;
+	size += map_offset;
+	phys_addr -= map_offset;
+
+	size = PAGE_ALIGN(size);
 
 	region = _vm_create_region(aspace, name, address, addr_type, size, REGION_WIRING_WIRED_SPECIAL, lock);
 	if(region == NULL)
@@ -463,10 +474,14 @@ region_id vm_map_physical_memory(aspace_id aid, char *name, void **address, int 
 	region->cache_ref = cache_ref;
 	region->cache_offset = 0;
 
-	if(region)
+	if(region) {
+		// modify the pointer returned to be offset back into the new region
+		// the same way the physical address in was offset
+		(*address) += map_offset;
 		return region->id;
-	else
+	} else {
 		return -1;
+	}
 }
 
 region_id vm_clone_region(aspace_id aid, char *name, void **address, int addr_type,

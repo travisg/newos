@@ -13,6 +13,7 @@
 #include <dev/arch/i386/ide/ide_bus.h>
 #include <dev/arch/i386/console/console_dev.h>
 #include <dev/arch/i386/keyboard/keyboard.h>
+#include <dev/arch/i386/rtl8139/rtl8139_dev.h>
 #endif
 #ifdef ARCH_sh4
 #include <dev/arch/sh4/maple/maple_bus.h>
@@ -31,6 +32,7 @@ int devs_init(kernel_args *ka)
 	ide_bus_init(ka);
 	keyboard_dev_init(ka);
 	console_dev_init(ka);
+	rtl8139_dev_init(ka);
 #endif	
 
 #ifdef ARCH_sh4
