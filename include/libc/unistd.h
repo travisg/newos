@@ -39,6 +39,9 @@ char *getwd(char *);
 
 int		pipe(int fds[2]);
 
+/* not strictly supposed to be here, and doesn't quite match unix ioctl() */
+int		ioctl(int, int, void *, size_t);
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif

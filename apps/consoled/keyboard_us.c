@@ -157,12 +157,12 @@ int process_key_events(_key_event *kevents, int num_events, char *out_buf, int b
 						caps = !caps;
 						reset_keymap = true;
 						leds = caps ? (leds | KEY_LED_CAPS) : (leds & ~KEY_LED_CAPS);
-						_kern_ioctl(keyboard_fd, _KEYBOARD_IOCTL_SET_LEDS, &leds, sizeof(leds));
+						ioctl(keyboard_fd, _KEYBOARD_IOCTL_SET_LEDS, &leds, sizeof(leds));
 						break;
 					case KEY_PAD_NUMLOCK:
 						numlock = !numlock;
 						leds = numlock ? (leds | KEY_LED_NUM) : (leds & ~KEY_LED_NUM);
-						_kern_ioctl(keyboard_fd, _KEYBOARD_IOCTL_SET_LEDS, &leds, sizeof(leds));
+						ioctl(keyboard_fd, _KEYBOARD_IOCTL_SET_LEDS, &leds, sizeof(leds));
 						break;
 					case KEY_RETURN:
 					case KEY_PAD_ENTER:

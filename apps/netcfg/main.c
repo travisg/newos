@@ -157,7 +157,7 @@ static int do_if(int argc, const char *argv[], int curr_arg)
 			printf("error opening network control device\n");
 			return fd;
 		}
-		err = _kern_ioctl(fd, op, &control, sizeof(control));
+		err = ioctl(fd, op, &control, sizeof(control));
 		close(fd);
 
 		if(err < 0) {
@@ -259,7 +259,7 @@ static int do_route(int argc, const char *argv[], int curr_arg)
 			printf("error opening network control device\n");
 			return fd;
 		}
-		err = _kern_ioctl(fd, op, &control, sizeof(control));
+		err = ioctl(fd, op, &control, sizeof(control));
 		close(fd);
 
 		if(err < 0) {

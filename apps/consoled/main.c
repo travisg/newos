@@ -90,7 +90,7 @@ static int start_console(struct console *con)
 	if(con->tty_master_fd < 0)
 		return -4;
 
-	con->tty_num = _kern_ioctl(con->tty_master_fd, _TTY_IOCTL_GET_TTY_NUM, NULL, 0);
+	con->tty_num = ioctl(con->tty_master_fd, _TTY_IOCTL_GET_TTY_NUM, NULL, 0);
 	if(con->tty_num < 0)
 		return -5;
 

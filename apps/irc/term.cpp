@@ -19,7 +19,7 @@ Term::Term(int fd)
 	flags.input_flags = TTY_FLAG_NLCR | TTY_FLAG_CRNL;
 	flags.output_flags = TTY_FLAG_NLCR;
 
-	_kern_ioctl(mFd, _TTY_IOCTL_SET_TTY_FLAGS, &flags, sizeof(flags));
+	ioctl(mFd, _TTY_IOCTL_SET_TTY_FLAGS, &flags, sizeof(flags));
 }
 
 Term::~Term()
@@ -28,7 +28,7 @@ Term::~Term()
 	flags.input_flags = TTY_FLAG_DEFAULT_INPUT;
 	flags.output_flags = TTY_FLAG_DEFAULT_OUTPUT;
 
-	_kern_ioctl(mFd, _TTY_IOCTL_SET_TTY_FLAGS, &flags, sizeof(flags));
+	ioctl(mFd, _TTY_IOCTL_SET_TTY_FLAGS, &flags, sizeof(flags));
 }
 
 void Term::Lock()

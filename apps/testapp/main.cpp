@@ -255,7 +255,7 @@ int foo(int argc, char **argv)
 			return -1;
 		}
 
-		_kern_ioctl(fd, 90001, NULL, 0);
+		ioctl(fd, 90001, NULL, 0);
 
 		for(i=0; i<1*1024*1024; i += 512) {
 			for(j=0; j<512/4; j++)
@@ -434,13 +434,13 @@ int foo(int argc, char **argv)
 			return -1;
 		}
 
-		err = _kern_ioctl(fd, IOCTL_DEVFS_GET_FRAMEBUFFER_INFO, &fb, sizeof(fb));
+		err = ioctl(fd, IOCTL_DEVFS_GET_FRAMEBUFFER_INFO, &fb, sizeof(fb));
 		if(err < 0) {
 			printf("error getting framebuffer info\n");
 			return -1;
 		}
 
-		err = _kern_ioctl(fd, IOCTL_DEVFS_MAP_FRAMEBUFFER, &framebuffer, sizeof(framebuffer));
+		err = ioctl(fd, IOCTL_DEVFS_MAP_FRAMEBUFFER, &framebuffer, sizeof(framebuffer));
 		if(err < 0) {
 			printf("error mapping framebuffer\n");
 			return -1;

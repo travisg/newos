@@ -19,7 +19,7 @@ int socket_create(int proto, int flags)
 	args.u.create.type = proto;
 	args.u.create.flags = flags;
 
-	err = _kern_ioctl(fd, _SOCKET_API_CREATE, &args, sizeof(args));
+	err = ioctl(fd, _SOCKET_API_CREATE, &args, sizeof(args));
 	if(err < 0) {
 		close(fd);
 		return err;
@@ -38,7 +38,7 @@ int socket_bind(int fd, sockaddr *addr)
 	_socket_api_args_t args;
 
 	args.u.bind.saddr = addr;
-	return _kern_ioctl(fd, _SOCKET_API_BIND, &args, sizeof(args));
+	return ioctl(fd, _SOCKET_API_BIND, &args, sizeof(args));
 }
 
 int socket_connect(int fd, sockaddr *addr)
@@ -46,12 +46,12 @@ int socket_connect(int fd, sockaddr *addr)
 	_socket_api_args_t args;
 
 	args.u.connect.saddr = addr;
-	return _kern_ioctl(fd, _SOCKET_API_CONNECT, &args, sizeof(args));
+	return ioctl(fd, _SOCKET_API_CONNECT, &args, sizeof(args));
 }
 
 int socket_listen(int fd)
 {
-	return _kern_ioctl(fd, _SOCKET_API_LISTEN, NULL, 0);
+	return ioctl(fd, _SOCKET_API_LISTEN, NULL, 0);
 }
 
 int socket_accept(int fd, sockaddr *addr)
@@ -59,7 +59,7 @@ int socket_accept(int fd, sockaddr *addr)
 	_socket_api_args_t args;
 
 	args.u.accept.saddr = addr;
-	return _kern_ioctl(fd, _SOCKET_API_ACCEPT, &args, sizeof(args));
+	return ioctl(fd, _SOCKET_API_ACCEPT, &args, sizeof(args));
 }
 
 ssize_t socket_read(int fd, void *buf, ssize_t len)
@@ -82,7 +82,7 @@ ssize_t socket_recvfrom(int fd, void *buf, ssize_t len, sockaddr *addr)
 	args.u.transfer.saddr = addr;
 	args.u.transfer.timeout = 0;
 
-	return _kern_ioctl(fd, _SOCKET_API_RECVFROM, &args, sizeof(args));
+	return ioctl(fd, _SOCKET_API_RECVFROM, &args, sizeof(args));
 }
 
 ssize_t socket_recvfrom_etc(int fd, void *buf, ssize_t len, sockaddr *addr, int flags, bigtime_t timeout)
@@ -95,7 +95,7 @@ ssize_t socket_recvfrom_etc(int fd, void *buf, ssize_t len, sockaddr *addr, int 
 	args.u.transfer.saddr = addr;
 	args.u.transfer.timeout = timeout;
 
-	return _kern_ioctl(fd, _SOCKET_API_RECVFROM_ETC, &args, sizeof(args));
+	return ioctl(fd, _SOCKET_API_RECVFROM_ETC, &args, sizeof(args));
 }
 
 ssize_t socket_sendto(int fd, const void *buf, ssize_t len, sockaddr *addr)
@@ -108,6 +108,6 @@ ssize_t socket_sendto(int fd, const void *buf, ssize_t len, sockaddr *addr)
 	args.u.transfer.saddr = addr;
 	args.u.transfer.timeout = 0;
 
-	return _kern_ioctl(fd, _SOCKET_API_SENDTO, &args, sizeof(args));
+	return ioctl(fd, _SOCKET_API_SENDTO, &args, sizeof(args));
 }
 

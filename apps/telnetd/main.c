@@ -172,16 +172,16 @@ int main(int argc, char **argv)
 	if(tty_master_fd < 0)
 		return -2;
 
-	tty_num = _kern_ioctl(tty_master_fd, _TTY_IOCTL_GET_TTY_NUM, NULL, 0);
+	tty_num = ioctl(tty_master_fd, _TTY_IOCTL_GET_TTY_NUM, NULL, 0);
 	if(tty_num < 0)
 		return -3;
 
 	{
 		struct tty_flags flags;
 
-		_kern_ioctl(tty_master_fd, _TTY_IOCTL_GET_TTY_FLAGS, &flags, sizeof(flags));
+		ioctl(tty_master_fd, _TTY_IOCTL_GET_TTY_FLAGS, &flags, sizeof(flags));
 		flags.input_flags |= TTY_FLAG_CRNL;
-		_kern_ioctl(tty_master_fd, _TTY_IOCTL_SET_TTY_FLAGS, &flags, sizeof(flags));
+		ioctl(tty_master_fd, _TTY_IOCTL_SET_TTY_FLAGS, &flags, sizeof(flags));
 	}
 
 	{

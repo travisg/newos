@@ -335,13 +335,13 @@ int vesa_find(Renderer **renderer)
 		return -1;
 	}
 
-	err = _kern_ioctl(fd, IOCTL_DEVFS_GET_FRAMEBUFFER_INFO, &fb, sizeof(fb));
+	err = ioctl(fd, IOCTL_DEVFS_GET_FRAMEBUFFER_INFO, &fb, sizeof(fb));
 	if(err < 0) {
 		printf("error getting framebuffer info\n");
 		return -2;
 	}
 
-	err = _kern_ioctl(fd, IOCTL_DEVFS_MAP_FRAMEBUFFER, &framebuffer, sizeof(framebuffer));
+	err = ioctl(fd, IOCTL_DEVFS_MAP_FRAMEBUFFER, &framebuffer, sizeof(framebuffer));
 	if(err < 0) {
 		printf("error mapping framebuffer\n");
 		return -3;
