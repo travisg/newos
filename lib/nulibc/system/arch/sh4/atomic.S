@@ -4,6 +4,7 @@
 */
 #define	FUNC(name) .align 2 ; .globl _##name ; .type _##name,@function ; _##name
 
+#if 0
 FUNC(atomic_add):
 	mov.l	r8,@-r15
 	sts.l	pr,@-r15
@@ -144,6 +145,7 @@ _not_equal:
 	lds.l	@r15+,pr
 	rts
 	mov.l	@r15+,r8
+#endif
 
 
 // void sh4_switch_stack_and_call(addr stack, void (*func)(void *), void *arg);

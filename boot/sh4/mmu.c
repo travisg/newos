@@ -2,9 +2,10 @@
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
-#include <libc/string.h>
+#include <string.h>
 
 #include <boot/stage2.h>
+#include <arch/cpu.h>
 #include <arch/sh4/vcpu.h>
 #include <arch/sh4/sh4.h>
 #include "serial.h"

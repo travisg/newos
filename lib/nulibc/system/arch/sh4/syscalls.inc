@@ -13,34 +13,34 @@
 
 #define SYSCALL0(name, n) \
 FUNC(name) \
-	trapa	n; \
+	trapa	#(n); \
 	nop; \
 	rts; \
 	nop;
 
 #define SYSCALL1(name, n) \
 FUNC(name) \
-	trapa	n; \
+	trapa	#(n); \
 	rts; \
 	nop;
 
 #define SYSCALL2(name, n) \
 FUNC(name) \
-	trapa	n; \
+	trapa	#(n); \
 	nop; \
 	rts; \
 	nop;
 
 #define SYSCALL3(name, n) \
 FUNC(name) \
-	trapa	n; \
+	trapa	#(n); \
 	nop; \
 	rts; \
 	nop;
 
 #define SYSCALL4(name, n) \
 FUNC(name) \
-	trapa	n; \
+	trapa	#(n); \
 	nop; \
 	rts; \
 	nop; \
@@ -48,7 +48,7 @@ FUNC(name) \
 #define SYSCALL5(name, n) \
 FUNC(name) \
 	mov.l	@r15,r0; \
-	trapa	n; \
+	trapa	#(n); \
 	nop; \
 	rts; \
 	nop;
@@ -57,7 +57,7 @@ FUNC(name) \
 FUNC(name) \
 	mov.l	@(0,r15),r0; \
 	mov.l	@(4,r15),r1; \
-	trapa	n; \
+	trapa	#(n); \
 	nop; \
 	rts; \
 	nop;
@@ -66,7 +66,7 @@ FUNC(name) \
 	mov.l	@(0,r15),r0; \
 	mov.l	@(4,r15),r1; \
 	mov.l	@(8,r15),r2; \
-	trapa	n; \
+	trapa	#(n); \
 	nop; \
 	rts; \
 	nop;
@@ -77,7 +77,7 @@ FUNC(name) \
 	mov.l	@(4,r15),r1; \
 	mov.l	@(8,r15),r2; \
 	mov.l	@(12,r15),r3; \
-	trapa	n; \
+	trapa	#(n); \
 	nop; \
 	rts; \
 	nop;
@@ -90,7 +90,7 @@ FUNC(name) \
 	mov.l	@(12,r15),r3; \
 	mov.l	r8,@-r15; \
 	mov.l	@(20,r15),r8; \
-	trapa	n; \
+	trapa	#(n); \
 	nop; \
 	rts; \
 	mov.l	@r15+,r8

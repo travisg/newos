@@ -18,8 +18,8 @@ DEPS += $(STAGE2_OBJS:.o=.d)
 
 STAGE2 = $(BOOT_OBJ_DIR)/stage2
 
-$(STAGE2): $(STAGE2_OBJS) $(LIBC)
-	$(LD) $(GLOBAL_LDFLAGS) -dN --script=$(BOOT_DIR)/stage2.ld -L $(LIBGCC_PATH) $(STAGE2_OBJS) $(LIBC) $(LIBGCC) -o $@ 
+$(STAGE2): $(STAGE2_OBJS) $(KLIBS)
+	$(LD) $(GLOBAL_LDFLAGS) -dN --script=$(BOOT_DIR)/stage2.ld -L $(LIBGCC_PATH) $(STAGE2_OBJS) $(LINK_KLIBS) $(LIBGCC) -o $@ 
 
 stage2: $(STAGE2)
 
@@ -62,19 +62,19 @@ $(FINAL): $(SEMIFINAL) $(STAGE1).bin
 # 
 $(BOOT_OBJ_DIR)/%.o: $(BOOT_DIR)/%.c
 	@mkdir -p $(BOOT_OBJ_DIR)
-	$(CC) $(GLOBAL_CFLAGS) -Iinclude -I$(BOOT_DIR) -c $< -o $@
+	$(CC) $(GLOBAL_CFLAGS) -Iinclude -Iinclude/nulibc -I$(BOOT_DIR) -c $< -o $@
 
 $(BOOT_OBJ_DIR)/%.d: $(BOOT_DIR)/%.c
 	@mkdir -p $(BOOT_OBJ_DIR)
 	@echo "making deps for $<..."
-	@($(ECHO) -n $(dir $@);$(CC) $(GLOBAL_CFLAGS) -Iinclude -I$(BOOT_DIR) -M -MG $<) > $@
+	@($(ECHO) -n $(dir $@);$(CC) $(GLOBAL_CFLAGS) -Iinclude -Iinclude/nulibc -I$(BOOT_DIR) -M -MG $<) > $@
 
 $(BOOT_OBJ_DIR)/%.d: $(BOOT_DIR)/%.S
 	@mkdir -p $(BOOT_OBJ_DIR)
 	@echo "making deps for $<..."
-	@($(ECHO) -n $(dir $@);$(CC) $(GLOBAL_CFLAGS) -Iinclude -I$(BOOT_DIR) -M -MG $<) > $@
+	@($(ECHO) -n $(dir $@);$(CC) $(GLOBAL_CFLAGS) -Iinclude -Iinclude/nulibc -I$(BOOT_DIR) -M -MG $<) > $@
 
 $(BOOT_OBJ_DIR)/%.o: $(BOOT_DIR)/%.S
 	@mkdir -p $(BOOT_OBJ_DIR)
-	$(CC) $(GLOBAL_CFLAGS) -Iinclude -I$(BOOT_DIR) -c $< -o $@
+	$(CC) $(GLOBAL_CFLAGS) -Iinclude -Iinclude/nulibc -I$(BOOT_DIR) -c $< -o $@
 endif

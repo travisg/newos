@@ -6,7 +6,8 @@
 #include <arch/sh4/vcpu_struct.h>
 #include <boot/stage2.h>
 #include "serial.h"
-#include <libc/string.h>
+#include <string.h>
+#include <arch/cpu.h>
 #include <arch/sh4/sh4.h>
 
 #define SAVE_CPU_STATE 0

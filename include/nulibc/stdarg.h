@@ -12,52 +12,52 @@
 #undef __need___va_list
 
 #ifdef __clipper__
-#include "va-clipper.h"
+#include "arch/va-clipper.h"
 #else
 #ifdef __m88k__
-#include "va-m88k.h"
+#include "arch/va-m88k.h"
 #else
 #ifdef __i860__
-#include "va-i860.h"
+#include "arch/va-i860.h"
 #else
 #ifdef __hppa__
-#include "va-pa.h"
+#include "arch/va-pa.h"
 #else
 #ifdef __mips__
-#include "va-mips.h"
+#include "arch/va-mips.h"
 #else
 #ifdef __sparc__
-#include "va-sparc.h"
+#include "arch/va-sparc.h"
 #else
 #ifdef __i960__
-#include "va-i960.h"
+#include "arch/va-i960.h"
 #else
 #ifdef __alpha__
-#include "va-alpha.h"
+#include "arch/va-alpha.h"
 #else
 #if defined (__H8300__) || defined (__H8300H__) || defined (__H8300S__)
-#include "va-h8300.h"
+#include "arch/va-h8300.h"
 #else
 #if defined (__PPC__) && (defined (_CALL_SYSV) || defined (_WIN32))
-#include "va-ppc.h"
+#include "arch/va-ppc.h"
 #else
 #ifdef __arc__
-#include "va-arc.h"
+#include "arch/va-arc.h"
 #else
 #ifdef __M32R__
-#include "va-m32r.h"
+#include "arch/va-m32r.h"
 #else
 #ifdef __sh__
-#include "va-sh.h"
+#include "arch/va-sh.h"
 #else
 #ifdef __mn10300__
-#include "va-mn10300.h"
+#include "arch/va-mn10300.h"
 #else
 #ifdef __mn10200__
-#include "va-mn10200.h"
+#include "arch/va-mn10200.h"
 #else
 #ifdef __v850__
-#include "va-v850.h"
+#include "arch/va-v850.h"
 #else
 
 /* Define __gnuc_va_list.  */

@@ -3,7 +3,7 @@
 ** Distributed under the terms of the NewOS License.
 */
 #include <boot/stage2.h>
-#include <libc/printf.h>
+#include <stdio.h>
 #include "serial.h"
 
 int dprintf(const char *fmt, ...)

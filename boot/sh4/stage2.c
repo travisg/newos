@@ -4,11 +4,14 @@
 */
 #include <boot/bootdir.h>
 #include <boot/stage2.h>
-#include <libc/string.h>
-#include <sys/elf32.h>
-
+#include <arch/cpu.h>
 #include <arch/sh4/sh4.h>
 #include <arch/sh4/vcpu.h>
+
+#include <string.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <newos/elf32.h>
 #include "serial.h"
 #include "mmu.h"
 
