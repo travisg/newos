@@ -130,7 +130,7 @@ int cmd_cd(int argc, char *argv[])
 	int rc;
 
 	if(argc < 2) {
-		printf("not enough arguments to cat\n");
+		printf("not enough arguments to cd\n");
 		return 0;
 	}
 
