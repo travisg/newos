@@ -413,9 +413,9 @@ usage:
 	while(argc){
 		if(!strcmp(*argv,"--floppy")){
 			make_floppy = 1;
-		} if(!strcmp(*argv,"--sparc")) {
+		} else if(!strcmp(*argv,"--sparc")) {
 			make_sparcboot = 1;
-		} if(!strcmp(*argv,"--sh4")) {
+		} else if(!strcmp(*argv,"--sh4")) {
 			make_sh4boot = 1;
 		} else if(!strcmp(*argv,"-o")){
 			argc--;
