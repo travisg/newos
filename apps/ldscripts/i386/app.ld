@@ -51,6 +51,15 @@ SECTIONS
 	__ctor_end = .;
 	PROVIDE (_ctor_end = .);
 
+	__dtor_list = .;
+	PROVIDE (_dtor_list = .);
+	.dtors : { *(.dtors) }
+	__dtor_end = .;
+	PROVIDE (_dtor_end = .);
+
+    .got	 : { *(.got.plt) *(.got) }
+	.dynamic : { *(.dynamic) }
+
 
 	/* unintialized data (in same segment as writable data) */
 	PROVIDE (__bss_start = .);

@@ -67,6 +67,7 @@ struct image_t {
 	int                rela_len;
 	struct Elf32_Rel  *pltrel;
 	int                pltrel_len;
+
 	unsigned           num_needed;
 	struct image_t   **needed;
 
@@ -351,7 +352,7 @@ assert_dynamic_loadable(image_t *image)
 
 static
 bool
-load_image(int fd, char const *path, image_t *image)
+load_image(int fd, char const *path, image_t *image, bool fixed)
 {
 	unsigned i;
 
@@ -370,7 +371,7 @@ load_image(int fd, char const *path, image_t *image)
 			(image->regions[i].flags&RFLAG_RW)?"RW":"RO"
 		);
 
-		if(image->dynamic_ptr) {
+		if(image->dynamic_ptr && !fixed) {
 			/*
 			 * relocatable image... we can afford to place wherever
 			 */
@@ -581,10 +582,10 @@ resolve_symbol(image_t *image, struct Elf32_Sym *sym, addr *sym_addr)
 			}
 
 			*sym_addr = sym2->st_value + shimg->regions[0].delta;
-                        return NO_ERROR;
+			return NO_ERROR;
 		case SHN_ABS:
 			*sym_addr = sym->st_value + image->regions[0].delta;
-                        return NO_ERROR;
+			return NO_ERROR;
 		case SHN_COMMON:
 			// XXX finish this
 			printf("elf_resolve_symbol: COMMON symbol, finish me!\n");
@@ -592,7 +593,7 @@ resolve_symbol(image_t *image, struct Elf32_Sym *sym, addr *sym_addr)
 		default:
 			// standard symbol
 			*sym_addr = sym->st_value + image->regions[0].delta;
-                        return NO_ERROR;
+			return NO_ERROR;
 	}
 }
 
@@ -604,15 +605,16 @@ relocate_rel(image_t *image, struct Elf32_Rel *rel, int rel_len )
 	struct Elf32_Sym *sym;
 	int vlErr;
 	addr S;
-	addr A;
-	addr P;
 	addr final_val;
 
-	S = A = P = 0;
+# define P         ((addr *)(image->regions[0].delta + rel[i].r_offset))
+# define A         (*(P))
+# define B         (image->regions[0].delta)
 
 	for(i = 0; i * (int)sizeof(struct Elf32_Rel) < rel_len; i++) {
 
-		// calc S
+		unsigned type= ELF32_R_TYPE(rel[i].r_info);
+
 		switch(ELF32_R_TYPE(rel[i].r_info)) {
 			case R_386_32:
 			case R_386_PC32:
@@ -622,55 +624,59 @@ relocate_rel(image_t *image, struct Elf32_Rel *rel, int rel_len )
 				sym = SYMBOL(image, ELF32_R_SYM(rel[i].r_info));
 
 				vlErr = resolve_symbol(image, sym, &S);
-                                if(vlErr<0) {
+				if(vlErr<0) {
 					return vlErr;
 				}
 		}
-		// calc A
-		switch(ELF32_R_TYPE(rel[i].r_info)) {
-			case R_386_32:
-			case R_386_PC32:
-			case R_386_GOT32:
-			case R_386_PLT32:
-			case R_386_RELATIVE:
-			case R_386_GOTOFF:
-			case R_386_GOTPC:
-				A = *(addr *)(image->regions[0].delta + rel[i].r_offset);
-				break;
-		}
-		// calc P
-		switch(ELF32_R_TYPE(rel[i].r_info)) {
-			case R_386_PC32:
-			case R_386_GOT32:
-			case R_386_PLT32:
-			case R_386_GOTPC:
-				P = image->regions[0].delta + rel[i].r_offset;
-				break;
-		}
-
-		switch(ELF32_R_TYPE(rel[i].r_info)) {
+		switch(type) {
 			case R_386_NONE:
 				continue;
 			case R_386_32:
-				final_val = S + A;
+				final_val= S+A;
 				break;
 			case R_386_PC32:
-				final_val = S + A - P;
+				final_val=S+A-(addr)P;
+				break;
+#if 0
+			case R_386_GOT32:
+				final_val= G+A;
+				break;
+			case R_386_PLT32:
+				final_val= L+A-(addr)P;
+				break;
+#endif
+			case R_386_COPY:
+				/* what ? */
+				continue;
+			case R_386_GLOB_DAT:
+				final_val= S;
+				break;
+			case R_386_JMP_SLOT:
+				final_val= S;
 				break;
 			case R_386_RELATIVE:
-				// B + A;
-				final_val = image->regions[0].delta + A;
+				final_val= B+A;
 				break;
-			case R_386_GLOB_DAT:
-			case R_386_JMP_SLOT:
-				final_val = S;
+#if 0
+			case R_386_GOTOFF:
+				final_val= S+A-GOT;
 				break;
+			case R_386_GOTPC:
+				final_val= GOT+A-P;
+				break;
+#endif
 			default:
 				printf("unhandled relocation type %d\n", ELF32_R_TYPE(rel[i].r_info));
 				return ERR_NOT_ALLOWED;
 		}
-		*(addr *)(image->regions[0].delta + rel[i].r_offset) = final_val;
+
+		*P= final_val;
 	}
+
+# undef P
+# undef A
+# undef B
+
 
 	return NO_ERROR;
 }
@@ -713,7 +719,7 @@ relocate_image(image_t *image)
 
 static
 image_t *
-load_container(char const *path)
+load_container(char const *path, bool fixed)
 {
 	int      fd;
 	int      len;
@@ -735,7 +741,7 @@ load_container(char const *path)
 
 	ph_len= parse_eheader(&eheader);
 	FATAL((ph_len<= 0), "incorrect ELF header\n");
-	FATAL((ph_len> (int)sizeof(ph_buff)), "cannot handle Program headers bigger than %d\n", sizeof(ph_buff));
+	FATAL((ph_len> (int)sizeof(ph_buff)), "cannot handle Program headers bigger than %lu\n", (long unsigned)sizeof(ph_buff));
 
 	len= sys_read(fd, ph_buff, eheader.e_phoff, ph_len);
 	FATAL((len!= ph_len), "troubles reading Program headers\n");
@@ -749,7 +755,7 @@ load_container(char const *path)
 	parse_program_headers(image, ph_buff, eheader.e_phnum, eheader.e_phentsize);
 	FATAL(!assert_dynamic_loadable(image), "dynamic segment must be loadable (implementation restriction)\n");
 
-	load_success= load_image(fd, path, image);
+	load_success= load_image(fd, path, image, fixed);
 	FATAL(!load_success, "troubles reading image\n");
 
 	dynamic_success= parse_dynamic_segment(image);
@@ -788,7 +794,7 @@ load_dependencies(image_t *img)
 			case DT_NEEDED:
 				needed_offset = d[i].d_un.d_ptr;
 				sprintf(path, "/boot/lib/%s", STRING(img, needed_offset));
-				load_container(path);
+				load_container(path, false);
 
 				break;
 			default:
@@ -809,7 +815,7 @@ load_program(char const *path, void **entry)
 	image_t *iter;
 
 
-	image = load_container(path);
+	image = load_container(path, true);
 
 	iter= loaded_images.head;
 	while(iter) {
