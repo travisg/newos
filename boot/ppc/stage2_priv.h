@@ -5,6 +5,8 @@
 #ifndef _STAGE2_PRIV_H
 #define _STAGE2_PRIV_H
 
+#include <newos/types.h>
+
 #define LOAD_ADDR 0x100000
 #define BOOTDIR_ADDR 0x101000
 
@@ -31,11 +33,10 @@ void *of_claim(unsigned int vaddr, unsigned int size, unsigned int align);
 
 int s2_mmu_init(kernel_args *ka);
 int s2_mmu_remap_pagetable(kernel_args *ka);
-void mmu_map_page(kernel_args *ka, unsigned long pa, unsigned long va);
+int s2_mmu_remove_fb_bat_entries(kernel_args *ka);
+void mmu_map_page(kernel_args *ka, unsigned long pa, unsigned long va, bool cached);
 unsigned long mmu_allocate_page(kernel_args *ka);
 void syncicache(void *address, int len);
-
-void s2_faults_init(kernel_args *ka);
 
 void getibats(int bats[8]);
 void setibats(int bats[8]);

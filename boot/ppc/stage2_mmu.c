@@ -446,12 +446,28 @@ int s2_mmu_remap_pagetable(kernel_args *ka)
 	new_ptable = ka->virt_alloc_range[0].start + ka->virt_alloc_range[0].size;
 
 	for(i = 0; i < ptable_size; i += PAGE_SIZE) {
-		mmu_map_page(ka, ka->arch_args.page_table.start + i, new_ptable + i);
+		mmu_map_page(ka, ka->arch_args.page_table.start + i, new_ptable + i, true);
 	}
 
 	ka->arch_args.page_table_virt.start = new_ptable;
 	ka->arch_args.page_table_virt.size = ka->arch_args.page_table.size;
 }
+
+int s2_mmu_remove_fb_bat_entries(kernel_args *ka)
+{
+	unsigned int ibat[8];
+	unsigned int dbat[8];
+
+	// zero out the 2nd bat entry, used to map the framebuffer
+	getibats(ibat);
+	getdbats(dbat);
+	ibat[2] = ibat[3] = dbat[2] = dbat[3] = 0;
+	setibats(ibat);
+	setdbats(dbat);
+
+	return NO_ERROR;
+}
+
 
 static void print_pte(struct ppc_pte *e)
 {
@@ -471,7 +487,7 @@ static void print_pte(struct ppc_pte *e)
 	printf("\n");
 }
 
-void mmu_map_page(kernel_args *ka, unsigned long pa, unsigned long va)
+void mmu_map_page(kernel_args *ka, unsigned long pa, unsigned long va, bool cached)
 {
 	unsigned int hash;
 	struct ppc_pteg *pteg;
@@ -503,7 +519,7 @@ void mmu_map_page(kernel_args *ka, unsigned long pa, unsigned long va)
 			pteg->pte[i].unused = 0;
 			pteg->pte[i].r = 0;
 			pteg->pte[i].c = 0;
-			pteg->pte[i].wimg = 0x0;
+			pteg->pte[i].wimg = cached ? 0 : (1 << 3);
 			pteg->pte[i].unused1 = 0;
 			pteg->pte[i].pp = 0x2; // RW
 			asm volatile("eieio");

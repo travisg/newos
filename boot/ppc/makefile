@@ -13,7 +13,6 @@ MY_OBJS := \
 	stage2_asm.o \
 	stage2_mmu.o \
 	stage2_of.o \
-	stage2_faults.o \
 	stage2_text.o
 
 MY_INCLUDES := $(STDINCLUDE)

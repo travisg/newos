@@ -244,6 +244,8 @@ int s2_text_init(kernel_args *ka)
 	ka->fb.bit_depth = screen_depth;
 	ka->fb.mapping.start = (unsigned long)framebuffer;
 	ka->fb.mapping.size = ka->fb.x_size * ka->fb.y_size * ka->fb.bit_depth / 8;
+	ka->fb.phys_addr.start = ka->fb.mapping.start;
+	ka->fb.phys_addr.size = ka->fb.mapping.size;
 
 	printf("framebuffer at %p\n", framebuffer);
 	printf("screen_handle = 0x%x\n", screen_handle);

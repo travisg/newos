@@ -44,6 +44,7 @@ typedef struct {
 		unsigned char reserved_field_position;
 		int already_mapped;
 		addr_range mapping;
+		addr_range phys_addr;
 	} fb;
 	// architecture specific
 	arch_kernel_args arch_args;

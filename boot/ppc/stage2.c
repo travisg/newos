@@ -73,17 +73,35 @@ void _start(int arg1, int arg2, void *openfirmware)
 	// allocate a new stack for the kernel
 	ka.cpu_kstack[0].start = ROUNDUP(ka.virt_alloc_range[0].start + ka.virt_alloc_range[0].size, PAGE_SIZE);
 	ka.cpu_kstack[0].size = 2 * PAGE_SIZE;
-	mmu_map_page(&ka, mmu_allocate_page(&ka), ka.cpu_kstack[0].start);
-	mmu_map_page(&ka, mmu_allocate_page(&ka), ka.cpu_kstack[0].start + PAGE_SIZE);
+	mmu_map_page(&ka, mmu_allocate_page(&ka), ka.cpu_kstack[0].start, true);
+	mmu_map_page(&ka, mmu_allocate_page(&ka), ka.cpu_kstack[0].start + PAGE_SIZE, true);
 	printf("new stack at 0x%lx\n", ka.cpu_kstack[0].start);
 
 	// map in all of the exception handler pages
 	ka.arch_args.exception_handlers.start = ROUNDUP(ka.virt_alloc_range[0].start + ka.virt_alloc_range[0].size, PAGE_SIZE);
 	ka.arch_args.exception_handlers.size = 0x3000;
-	mmu_map_page(&ka, 0x0, ka.arch_args.exception_handlers.start);
-	mmu_map_page(&ka, PAGE_SIZE, ka.arch_args.exception_handlers.start + PAGE_SIZE);
-	mmu_map_page(&ka, 2*PAGE_SIZE, ka.arch_args.exception_handlers.start + 2*PAGE_SIZE);
+	mmu_map_page(&ka, 0x0, ka.arch_args.exception_handlers.start, true);
+	mmu_map_page(&ka, PAGE_SIZE, ka.arch_args.exception_handlers.start + PAGE_SIZE, true);
+	mmu_map_page(&ka, 2*PAGE_SIZE, ka.arch_args.exception_handlers.start + 2*PAGE_SIZE, true);
 	printf("exception handlers at 0x%lx\n", ka.arch_args.exception_handlers.start);
+
+	// remap the framebuffer into kernel space
+	{
+		unsigned long new_fb;
+		unsigned long i;
+
+		new_fb = ROUNDUP(ka.virt_alloc_range[0].start + ka.virt_alloc_range[0].size, PAGE_SIZE);
+
+		printf("new_fb 0x%x, phys.start 0x%x, phys.size 0x%x\n", new_fb, ka.fb.phys_addr.start, ka.fb.phys_addr.size);
+
+		for(i = 0; i < ka.fb.phys_addr.size; i += PAGE_SIZE) {
+			mmu_map_page(&ka, ka.fb.phys_addr.start + i, new_fb + i, false);
+		}
+
+		s2_change_framebuffer_addr(&ka, new_fb);
+		s2_mmu_remove_fb_bat_entries(&ka);
+		printf("framebuffer remapped to 0x%lx\n", new_fb);
+	}
 
 	{
 		unsigned int i;
@@ -156,7 +174,7 @@ static void load_elf_image(void *data, addr_range *ar0, addr_range *ar1, unsigne
 			segmentOffset < ROUNDUP(segment->p_filesz, PAGE_SIZE);
 			segmentOffset += PAGE_SIZE) {
 
-			mmu_map_page(&ka, mmu_allocate_page(&ka), segment->p_vaddr + segmentOffset);
+			mmu_map_page(&ka, mmu_allocate_page(&ka), segment->p_vaddr + segmentOffset, true);
 			memcpy((void *)ROUNDOWN(segment->p_vaddr + segmentOffset, PAGE_SIZE),
 				(void *)ROUNDOWN((unsigned)data + segment->p_offset + segmentOffset, PAGE_SIZE), PAGE_SIZE);
 		}
@@ -171,7 +189,7 @@ static void load_elf_image(void *data, addr_range *ar0, addr_range *ar1, unsigne
 		/* Map uninitialized portion */
 		for (; segmentOffset < ROUNDUP(segment->p_memsz, PAGE_SIZE); segmentOffset += PAGE_SIZE) {
 			printf("mapping zero page at va 0x%x\n", segment->p_vaddr + segmentOffset);
-			mmu_map_page(&ka, mmu_allocate_page(&ka), segment->p_vaddr + segmentOffset);
+			mmu_map_page(&ka, mmu_allocate_page(&ka), segment->p_vaddr + segmentOffset, true);
 			memset((void *)(segment->p_vaddr + segmentOffset), 0, PAGE_SIZE);
 		}
 		switch(foundSegmentIndex) {
