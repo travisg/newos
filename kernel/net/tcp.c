@@ -100,12 +100,25 @@ typedef struct tcp_socket {
 	uint32 tx_win_low;
 	uint32 tx_win_high;
 	uint32 retransmit_tx_seq;
+	int retransmit_timeout;
 	int tx_write_buf_size;
 	int unacked_data_len;
 	int duplicate_ack_count;
 	cbuf *write_buffer;
 	net_timer_event retransmit_timer;
 	net_timer_event persist_timer;
+
+	/* as per example in tcp/ip illustrated */
+	int cwnd;
+	int ssthresh;
+
+	/* rtt */
+	bool tracking_rtt;
+	uint32 rtt_seq;
+	bigtime_t rtt_seq_timestamp;
+	long smoothed_rtt;
+	long smoothed_deviation;
+	long rto;
 } tcp_socket;
 
 typedef struct tcp_socket_key {
@@ -120,11 +133,12 @@ static mutex socket_table_lock;
 static int next_ephemeral_port = 1024;
 
 #define SYN_RETRANSMIT_TIMEOUT 1000000
-#define RETRANSMIT_TIMEOUT 500
-#define ACK_DELAY 500
+#define MAX_RETRANSMIT_TIMEOUT 90000000 /* 90 secs */
+#define PERSIST_TIMEOUT 500
+#define ACK_DELAY 200
 #define DEFAULT_RX_WINDOW_SIZE (32*1024)
 #define DEFAULT_TX_WRITE_BUF_SIZE (128*1024)
-#define DEFAULT_MAX_SEGMENT_SIZE 1024
+#define DEFAULT_MAX_SEGMENT_SIZE 536
 
 #define SEQUENCE_GTE(a, b) ((int)((a) - (b)) >= 0)
 #define SEQUENCE_LTE(a, b) ((int)((a) - (b)) <= 0)
@@ -259,6 +273,13 @@ static tcp_socket *create_tcp_socket(void)
 	s->tx_write_buf_size = DEFAULT_TX_WRITE_BUF_SIZE;
 	s->write_buffer = NULL;
 	s->writers_waiting = false;
+
+	s->smoothed_deviation = 0;
+	s->smoothed_rtt = 500;
+	s->rto = 500;
+
+	s->cwnd = s->mss;
+	s->ssthresh = 0x10000;
 
 	return s;
 
@@ -445,7 +466,7 @@ int tcp_input(cbuf *buf, ifnet *i, ipv4_addr source_address, ipv4_addr target_ad
 	if(!(packet_flags & PKT_SYN)) {
 		if(SEQUENCE_LT(header->seq_num, s->rx_win_low)
 			|| SEQUENCE_GT(header->seq_num, s->rx_win_high)
-			&& !(data_len == 0 && header->seq_num != s->rx_win_high + 1)) {
+			&& (!((data_len == 0) && (header->seq_num != s->rx_win_high + 1)))) {
 			/* out of window, ack it */
 			send_ack(s);
 			goto ditch_packet;
@@ -626,6 +647,7 @@ int tcp_connect(void *prot_data, sockaddr *addr)
 		s->mss = DEFAULT_MAX_SEGMENT_SIZE;
 
 	s->mss -= sizeof(tcp_header);
+	s->cwnd = s->mss;
 
 	// set up the mss option
 	mss_option.kind = 0x2;
@@ -799,6 +821,7 @@ static void send_ack(tcp_socket *s)
 static void handle_ack(tcp_socket *s, uint32 sequence, uint32 window_size, bool with_data)
 {
 	bool wake_writers = false;
+	int ack_len = 0;
 
 	ASSERT_LOCKED_MUTEX(&s->lock);
 
@@ -811,36 +834,50 @@ static void handle_ack(tcp_socket *s, uint32 sequence, uint32 window_size, bool 
 		&& !with_data) {
 		// the other side is telling us it got a packet out of date, do fast retransmit
 		if(++s->duplicate_ack_count == 3) {
-			if(set_net_timer(&s->retransmit_timer, RETRANSMIT_TIMEOUT, &handle_retransmit_timeout, s, 0) >= 0)
+			s->retransmit_timeout = s->rto;
+			if(set_net_timer(&s->retransmit_timer, s->retransmit_timeout, &handle_retransmit_timeout, s, 0) >= 0)
 				inc_socket_ref(s);
 
 			tcp_retransmit(s);
 			s->duplicate_ack_count = 0;
+
+			// save 1/2 of the congestion window into ssthresh
+			s->ssthresh = min(s->mss * 2, s->cwnd / 2);
+
 			return;
 		}
 	}
 	s->duplicate_ack_count = 0;
 
 	if(SEQUENCE_GTE(sequence, s->retransmit_tx_seq)) {
-		// XXX update RTT
+		if(s->tracking_rtt && SEQUENCE_GTE(sequence, s->rtt_seq)) {
+			// this sequence acked the data we are tracking to recalc rtt
+			// as per Jacobson
+			long Err = ((long)(system_time() - s->rtt_seq_timestamp) / 1000) - s->smoothed_rtt;
+			s->smoothed_rtt = s->smoothed_rtt + Err / 8;
+			s->smoothed_deviation = s->smoothed_deviation + ((Err < 0 ? -Err : Err) - s->smoothed_deviation) / 4;
+			s->rto = s->smoothed_rtt + 4 * s->smoothed_deviation;
+			s->tracking_rtt = false;
+			dprintf("handle_ack: new rto %d\n", s->rto);
+		}
 
 
 		if(SEQUENCE_GT(sequence, s->retransmit_tx_seq)) {
 			if(!s->write_buffer) {
 				dprintf("tcp: data was acked that we didn't send\n");
-				return;
+				goto out;
 			}
 
-			// remove acked data from the transmit queue
 			ASSERT(cbuf_get_len(s->write_buffer) >= s->unacked_data_len);
 
-			s->write_buffer = cbuf_truncate_head(s->write_buffer, sequence - s->retransmit_tx_seq);
-			s->unacked_data_len -= sequence - s->retransmit_tx_seq;
-			if(s->unacked_data_len < 0) {
-//				dprintf("tcp: data was acked that we didn't send\n");
-				s->unacked_data_len = 0;
-//				return;
-			}
+			// remove acked data from the transmit queue
+			ack_len = sequence - s->retransmit_tx_seq;
+			if(ack_len == 0)
+				goto out;
+			if(ack_len > s->unacked_data_len)
+				ack_len = s->unacked_data_len;
+			s->write_buffer = cbuf_truncate_head(s->write_buffer, ack_len);
+			s->unacked_data_len -= ack_len;
 
 			s->retransmit_tx_seq = sequence;
 
@@ -848,7 +885,8 @@ static void handle_ack(tcp_socket *s, uint32 sequence, uint32 window_size, bool 
 			if(cancel_net_timer(&s->retransmit_timer) >= 0)
 				dec_socket_ref(s);
 			if(s->unacked_data_len > 0) {
-				set_net_timer(&s->retransmit_timer, RETRANSMIT_TIMEOUT, &handle_retransmit_timeout, s, 0);
+				s->retransmit_timeout = s->rto;
+				set_net_timer(&s->retransmit_timer, s->retransmit_timeout, &handle_retransmit_timeout, s, 0);
 				inc_socket_ref(s);
 			}
 
@@ -859,10 +897,24 @@ static void handle_ack(tcp_socket *s, uint32 sequence, uint32 window_size, bool 
 					wake_writers = true;
 				}
 			}
+
+			// open the congestion window
+			if(s->cwnd <= s->ssthresh) {
+				// doing slow start, increment the window by a mss per ack received
+				s->cwnd += s->mss;
+			} else {
+				// congestion avoidance, increment the congestion window by 1/cwnd
+				s->cwnd += s->mss * s->mss / s->cwnd;
+			}
+			// XXX need to clamp to max observed window
+			if(s->cwnd > 0xffff)
+				s->cwnd = 0xffff;
+			dprintf("cwnd %d\n", s->cwnd);
 		}
 	}
 
-	s->tx_win_high = sequence + window_size;
+out:
+	s->tx_win_high += ack_len;
 	tcp_flush_pending_data(s);
 	if(wake_writers)
 		sem_release(s->write_sem, 1);
@@ -891,7 +943,7 @@ static void handle_persist_timeout(void *_socket)
 		&& s->state == STATE_ESTABLISHED) {
 
 		// reset this timer
-		if(set_net_timer(&s->persist_timer, RETRANSMIT_TIMEOUT, &handle_persist_timeout, s, 0) >= 0)
+		if(set_net_timer(&s->persist_timer, PERSIST_TIMEOUT, &handle_persist_timeout, s, 0) >= 0)
 			inc_socket_ref(s);
 
 		if(tcp_flush_pending_data(s) == 0) {
@@ -917,7 +969,17 @@ static void handle_retransmit_timeout(void *_socket)
 	// XXX check here to see if we've retransmitted too many times
 
 	tcp_retransmit(s);
-	if(set_net_timer(&s->retransmit_timer, RETRANSMIT_TIMEOUT, &handle_retransmit_timeout, s, NET_TIMER_PENDING_IGNORE) >= 0)
+
+	// save 1/2 of the congestion window into ssthresh
+	s->ssthresh = max(s->mss * 2, s->cwnd / 2);
+	s->cwnd = s->mss; // slow start
+
+	// exponentially backoff the retransmit timeout
+	s->retransmit_timeout *= 2;
+	if(s->retransmit_timeout > MAX_RETRANSMIT_TIMEOUT)
+		s->retransmit_timeout = MAX_RETRANSMIT_TIMEOUT;
+
+	if(set_net_timer(&s->retransmit_timer, s->retransmit_timeout, &handle_retransmit_timeout, s, NET_TIMER_PENDING_IGNORE) >= 0)
 		inc_socket_ref(s);
 
 	mutex_unlock(&s->lock);
@@ -1012,6 +1074,7 @@ static void handle_data(tcp_socket *s, cbuf *buf)
 static void tcp_retransmit(tcp_socket *s)
 {
 	cbuf *retransmit_data;
+	int retransmit_len;
 	tcp_flags flags = PKT_PSH | PKT_ACK;
 
 	ASSERT_LOCKED_MUTEX(&s->lock);
@@ -1021,9 +1084,17 @@ static void tcp_retransmit(tcp_socket *s)
 		return;
 
 	// slice off some data to retransmit
-	retransmit_data = cbuf_duplicate_chain(s->write_buffer, 0, min(s->unacked_data_len, s->mss));
-
+	retransmit_len = min(s->unacked_data_len, s->mss);
+	retransmit_data = cbuf_duplicate_chain(s->write_buffer, 0, retransmit_len);
 	tcp_socket_send(s, retransmit_data, flags, NULL, 0, s->retransmit_tx_seq);
+
+	if(s->tracking_rtt) {
+		if(SEQUENCE_LTE(s->retransmit_tx_seq, s->rtt_seq)
+			&& SEQUENCE_GTE(s->retransmit_tx_seq + retransmit_len, s->rtt_seq)) {
+			// Karn sez dont follow this sequence when calculating rtt
+			s->tracking_rtt = false;
+		}
+	}
 }
 
 static int tcp_flush_pending_data(tcp_socket *s)
@@ -1037,11 +1108,12 @@ static int tcp_flush_pending_data(tcp_socket *s)
 
 	while(s->write_buffer != NULL
 		&& s->unacked_data_len < cbuf_get_len(s->write_buffer)
+		&& s->unacked_data_len < s->cwnd
 		&& s->state == STATE_ESTABLISHED) {
 		int send_len;
 		cbuf *packet;
 
-		send_len = min(s->mss, s->tx_win_high - s->tx_win_low);
+		send_len = min(min(s->mss, s->tx_win_high - s->tx_win_low), s->cwnd - s->unacked_data_len);
 		ASSERT(send_len >= 0);
 
 		// XXX take care of silly window
@@ -1050,7 +1122,7 @@ static int tcp_flush_pending_data(tcp_socket *s)
 		if(send_len == 0) {
 			if(s->unacked_data_len == 0) {
 				// the other side's rx window is closed, set the persist timer
-				if(set_net_timer(&s->persist_timer, RETRANSMIT_TIMEOUT, &handle_persist_timeout, s, NET_TIMER_PENDING_IGNORE) >= 0)
+				if(set_net_timer(&s->persist_timer, PERSIST_TIMEOUT, &handle_persist_timeout, s, NET_TIMER_PENDING_IGNORE) >= 0)
 					inc_socket_ref(s);
 			}
 			break;
@@ -1073,8 +1145,15 @@ static int tcp_flush_pending_data(tcp_socket *s)
 			dump_socket(s);
 		ASSERT(s->tx_win_low <= s->tx_win_high);
 		data_flushed += send_len;
+		if(!s->tracking_rtt) {
+			// track this packet
+			s->tracking_rtt = true;
+			s->rtt_seq = s->tx_win_low - send_len;
+			s->rtt_seq_timestamp = system_time();
+		}
 		tcp_socket_send(s, packet, PKT_ACK, NULL, 0, s->tx_win_low - send_len);
-		if(set_net_timer(&s->retransmit_timer, RETRANSMIT_TIMEOUT, &handle_retransmit_timeout, s, NET_TIMER_PENDING_IGNORE) >= 0)
+		s->retransmit_timeout = s->rto;
+		if(set_net_timer(&s->retransmit_timer, s->retransmit_timeout, &handle_retransmit_timeout, s, 0) >= 0)
 			inc_socket_ref(s);
 	}
 
