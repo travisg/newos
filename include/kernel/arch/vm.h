@@ -6,10 +6,12 @@
 #define _ARCH_VM_H
 
 #include <boot/stage2.h>
+#include <kernel/vm.h>
 
 int arch_vm_init(kernel_args *ka);
 int arch_vm_init2(kernel_args *ka);
 int arch_vm_init_endvm(kernel_args *ka);
+void arch_vm_aspace_swap(vm_address_space *aspace);
 
 #endif
 

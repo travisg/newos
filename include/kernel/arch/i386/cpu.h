@@ -87,6 +87,7 @@ void i386_context_switch(unsigned int **old_esp, unsigned int *new_esp, addr new
 void i386_enter_uspace(addr entry, void *args, addr ustack_top);
 void i386_set_kstack(addr kstack);
 void i386_switch_stack_and_call(addr stack, void (*func)(void *), void *arg);
+void i386_swap_pgdir(addr new_pgdir);
 
 #define iret() __asm__ ("iret"::)
 

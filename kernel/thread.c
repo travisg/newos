@@ -13,6 +13,7 @@
 #include <kernel/timer.h>
 #include <kernel/arch/cpu.h>
 #include <kernel/arch/int.h>
+#include <kernel/arch/vm.h>
 #include <kernel/sem.h>
 #include <kernel/port.h>
 #include <kernel/vfs.h>
@@ -1130,10 +1131,8 @@ void thread_exit(int retcode)
 			p->state = PROC_STATE_DEATH;
 		}
 		RELEASE_PROC_LOCK();
-		GRAB_THREAD_LOCK();
-		// reschedule, thus making sure this thread is running in the context of the kernel
-		thread_resched();
-		RELEASE_THREAD_LOCK();
+		// swap address spaces, to make sure we're running on the kernel's pgdir
+		vm_aspace_swap(kernel_proc->kaspace);
 		int_restore_interrupts(state);
 
 		dprintf("thread_exit: thread 0x%x now a kernel thread!\n", t->id);

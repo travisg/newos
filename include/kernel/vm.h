@@ -197,6 +197,7 @@ vm_address_space *vm_get_aspace_by_id(aspace_id aid);
 void vm_put_aspace(vm_address_space *aspace);
 vm_region *vm_get_region_by_id(region_id rid);
 void vm_put_region(vm_region *region);
+#define vm_aspace_swap(aspace) arch_vm_aspace_swap(aspace)
 
 region_id vm_create_anonymous_region(aspace_id aid, char *name, void **address, int addr_type,
 	addr size, int wiring, int lock);

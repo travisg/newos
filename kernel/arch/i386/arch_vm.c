@@ -53,3 +53,9 @@ int arch_vm_init_endvm(kernel_args *ka)
 	return 0;
 }
 
+void arch_vm_aspace_swap(vm_address_space *aspace)
+{
+	i386_swap_pgdir(vm_translation_map_get_pgdir(&aspace->translation_map));
+}
+
+
