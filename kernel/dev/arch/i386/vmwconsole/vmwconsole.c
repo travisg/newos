@@ -48,6 +48,7 @@ static struct {
 	uint32		glyph_width;
 	uint32		glyph_height;
 	uint32		fg, bg;
+	uint32		txt_off_x, txt_off_y;
 	int32		cursor_visible;
 	region_id	fb_region;
 	region_id	fifo_region;
@@ -173,7 +174,7 @@ static void show_cursor(int show)
 #else
 	if (show == vcons.cursor_visible) return;
 	vcons.cursor_visible = show;
-	invert_rect(vcons.cursor_x * vcons.glyph_width, vcons.cursor_y * vcons.glyph_height, vcons.glyph_width, vcons.glyph_height);
+	invert_rect((vcons.cursor_x * vcons.glyph_width) + vcons.txt_off_x, (vcons.cursor_y * vcons.glyph_height) + vcons.txt_off_y, vcons.glyph_width, vcons.glyph_height);
 #endif
 }
 
@@ -478,7 +479,7 @@ static void copy_bitmap(uint32 id, uint32 src_x, uint32 src_y, uint32 dst_x, uin
 
 static void write_glyph(char c, uint32 x, uint32 y, uint32 fg, uint32 bg)
 {
-	copy_bitmap(1, 0, vcons.glyph_height * (int)c, x, y, vcons.glyph_width, vcons.glyph_height, fg, bg);
+	copy_bitmap(1, 0, vcons.glyph_height * (int)c, x + vcons.txt_off_x, y + vcons.txt_off_y, vcons.glyph_width, vcons.glyph_height, fg, bg);
 }
 
 static void load_font()
@@ -487,6 +488,9 @@ static void load_font()
 	vcons.glyph_height = CHAR_HEIGHT;
 	vcons.text_cols = vcons.scrn_width / vcons.glyph_width;
 	vcons.text_rows = vcons.scrn_height / vcons.glyph_height;
+	// center the text display, giving any extra pixels to the left/bottom
+	vcons.txt_off_x = ((vcons.scrn_width - (vcons.text_cols * vcons.glyph_width)) + 1) / 2;
+	vcons.txt_off_y = ((vcons.scrn_height - (vcons.text_rows * vcons.glyph_height)) + 0) / 2;
 	define_font(1, ((CHAR_WIDTH + 7) & ~7), sizeof(FONT), FONT);
 	dprintf("load_font: %dx%d glyphs\n", vcons.text_cols, vcons.text_rows);
 }
@@ -575,7 +579,7 @@ int console_dev_init(kernel_args *ka)
 		vcons.bg = 0xffffff;
 		setup_bit_reversed();
 		init_fifo();
-		set_mode(800,600);
+		set_mode(80 * CHAR_WIDTH + 4, 50 * CHAR_HEIGHT + 4);
 		clear_screen();
 		dprintf("screen cleared\n");
 #if 0
