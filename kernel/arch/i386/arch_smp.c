@@ -11,6 +11,7 @@
 #include <string.h>
 #include <kernel/int.h>
 #include <kernel/smp.h>
+#include <kernel/smp_priv.h>
 
 #include <arch_cpu.h>
 #include <arch_vm.h>

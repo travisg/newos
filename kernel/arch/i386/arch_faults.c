@@ -1,6 +1,7 @@
 #include <kernel/kernel.h>
 #include <string.h>
 #include <kernel/faults.h>
+#include <kernel/faults_priv.h>
 #include <kernel/vm.h>
 #include <kernel/debug.h>
 #include <kernel/console.h>

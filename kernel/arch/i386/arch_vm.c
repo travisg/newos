@@ -1,6 +1,7 @@
 #include <kernel/kernel.h>
 #include <kernel/console.h>
 #include <kernel/vm.h>
+#include <kernel/vm_priv.h>
 #include <kernel/debug.h>
 
 #include <arch_vm.h>

@@ -4,7 +4,6 @@
 #include <kernel/kernel.h>
 #include <stage2.h>
 
-// architecture independant
 int dbg_init(kernel_args *ka);
 int dbg_init2(kernel_args *ka);
 char dbg_putch(char c);

@@ -3,7 +3,6 @@
 
 #include <stage2.h>
 
-// architecture independant
 int con_init(kernel_args *ka);
 int kprintf(const char *fmt, ...);
 int kprintf_xy(int x, int y, const char *fmt, ...);

@@ -25,7 +25,6 @@ void smp_send_broadcast_ici(int message, unsigned int data, void *data_ptr, int 
 int smp_enable_ici();
 int smp_disable_ici();
 
-int smp_intercpu_int_handler();
 int smp_get_num_cpus();
 
 #include <arch_smp.h>

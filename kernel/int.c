@@ -82,20 +82,3 @@ int int_io_interrupt_handler(int vector)
 	return ret;
 }
 
-#if !_INT_ARCH_INLINE_CODE
-void int_enable_interrupts()
-{
-	arch_int_enable_interrupts();
-}
-
-int int_disable_interrupts()
-{
-	return arch_int_disable_interrupts();
-}
-
-void int_restore_interrupts(int oldstate)
-{
-	arch_int_restore_interrupts(oldstate);
-}
-#endif
-
