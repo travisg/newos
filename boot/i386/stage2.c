@@ -479,7 +479,7 @@ void calculate_cpu_conversion_factor()
 
 	dprintf("CPU at %d Hz\n", (int)((time_base_ticks / timer_usecs) * 1000000));
 
-	system_time_setup((int)(1000000.0/(timer_usecs / time_base_ticks)));
+	system_time_setup((int)((time_base_ticks / timer_usecs) * 1000000));
 }
 
 void clearscreen()
