@@ -151,7 +151,7 @@ static void *_cbuf_alloc(size_t *size)
 
 static cbuf *allocate_cbuf_mem(size_t size)
 {
-	cbuf *buf = NULL;
+	cbuf *buf;
 	cbuf *last_buf = NULL;
 	cbuf *head_buf = NULL;
 	size_t found_size;
@@ -168,7 +168,6 @@ static cbuf *allocate_cbuf_mem(size_t size)
 		if(!head_buf) {
 			head_buf = last_buf = buf;
 			head_buf->total_len = 0;
-			head_buf->flags |= CBUF_FLAG_CHAIN_HEAD;
 		}
 		
 		size -= found_size;
@@ -184,9 +183,10 @@ static cbuf *allocate_cbuf_mem(size_t size)
 			buf++;
 		}
 	}
-	if(last_buf) {
-		last_buf->next = NULL;
+	if(head_buf) {
+		head_buf->flags |= CBUF_FLAG_CHAIN_HEAD;
 		last_buf->flags |= CBUF_FLAG_CHAIN_TAIL;
+		last_buf->next = NULL;
 	}
 
 	return head_buf;
@@ -797,6 +797,8 @@ cbuf *cbuf_truncate_head(cbuf *buf, size_t trunc_bytes, bool free_unused)
 		validate_cbuf(head);
 		return head;
 	}
+
+	buf = tail->next;
 	
 	tail->next = NULL;
 	tail->flags |= CBUF_FLAG_CHAIN_TAIL;
