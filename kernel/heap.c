@@ -15,7 +15,7 @@
 #include <libc/string.h>
 
 #define PARANOID_KFREE 1
-#define MAKE_NOIZE 1
+#define MAKE_NOIZE 0
 
 // heap stuff
 // ripped mostly from nujeffos

@@ -17,7 +17,7 @@
 #include <libc/string.h>
 #include <libc/ctype.h>
 
-#define MAKE_NOIZE 1
+#define MAKE_NOIZE 0
 
 struct vnode {
 	struct vnode *next;
