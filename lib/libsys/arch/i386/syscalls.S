@@ -43,6 +43,13 @@ name: \
 name: \
 	movl	$n,%eax; \
 	jmp		syscall5
+
+#define SYSCALL6(name, n) \
+.globl name; \
+.align 8; \
+name: \
+	movl	$n,%eax; \
+	jmp		syscall6
 	
 SYSCALL0(sys_null, 0)
 SYSCALL3(sys_open, 1)
@@ -61,7 +68,10 @@ SYSCALL5(sys_sem_acquire_etc, 13)
 SYSCALL2(sys_sem_release, 14)
 SYSCALL3(sys_sem_release_etc, 15)
 SYSCALL0(sys_get_current_thread_id, 16)
-SYSCALL0(sys_exit, 17)
+SYSCALL1(sys_exit, 17)
+SYSCALL3(sys_proc_create_proc, 18)
+SYSCALL2(sys_thread_wait_on_thread, 19)
+SYSCALL2(sys_proc_wait_on_proc, 20)
 
 syscall0:
 	int		$99
@@ -113,6 +123,24 @@ syscall5:
 	movl	28(%esp), %esi
 	movl	32(%esp), %edi
 	int		$99
+	popl	%edi
+	popl	%esi
+	popl	%ebx
+	ret
+
+syscall6:
+	pushl	%ebx
+	pushl	%esi
+	pushl	%edi
+	pushl	%ebp
+	movl	20(%esp), %ebx
+	movl	24(%esp), %ecx
+	movl	28(%esp), %edx
+	movl	32(%esp), %esi
+	movl	36(%esp), %edi
+	movl	40(%esp), %ebp
+	int		$99
+	popl	%ebp
 	popl	%edi
 	popl	%esi
 	popl	%ebx

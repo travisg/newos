@@ -46,8 +46,10 @@ struct proc {
 	char *name;
 	void *ioctx;
 	void *args;
+	sem_id proc_creation_sem;
 	vm_address_space *kaspace;
 	vm_address_space *aspace;
+	struct thread *main_thread;
 	struct thread *thread_list;
 	struct arch_proc arch_info;
 };
@@ -65,8 +67,10 @@ struct thread {
 	bool in_kernel;
 	int sem_count;
 	sem_id blocked_sem_id;
+	int sem_deleted_retcode;
 	void *args;
 	struct proc *proc;
+	sem_id return_code_sem;
 	vm_region *kernel_stack_region;
 	vm_region *user_stack_region;
 	// architecture dependant section
@@ -94,9 +98,11 @@ void thread_resched();
 void thread_start_threading();
 void thread_snooze(time_t time);
 int thread_init(kernel_args *ka);
-void thread_exit();
+void thread_exit(int retcode);
 struct thread *thread_get_current_thread();
 thread_id thread_get_current_thread_id();
+int thread_wait_on_thread(thread_id id, int *retcode);
+int proc_wait_on_proc(proc_id id, int *retcode);
 
 thread_id thread_create_user_thread(char *name, proc_id pid, int priority, addr entry);
 thread_id thread_create_kernel_thread(const char *name, int (*func)(void), int priority);

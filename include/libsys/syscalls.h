@@ -41,7 +41,10 @@ int sys_sem_acquire_etc(sem_id id, int count, int flags, time_t timeout);
 int sys_sem_release(sem_id id, int count);
 int sys_sem_release_etc(sem_id id, int count, int flags);
 thread_id sys_get_current_thread_id();
-void sys_exit();
+void sys_exit(int retcode);
+proc_id sys_proc_create_proc(const char *path, const char *name, int priority);
+int sys_thread_wait_on_thread(thread_id tid, int *retcode);
+int sys_proc_wait_on_proc(proc_id pid, int *retcode);
 
 #endif
 

@@ -4,6 +4,20 @@ AddFileGroup "newos" "/build/ossrc/newos" -nomake
 AddFile "makefile" "/build/ossrc/newos/makefile"
 AddFile "newos.wks" "/build/ossrc/newos/newos.wks"
 EndFileGroup "newos"
+AddFileGroup "init" "/build/ossrc/newos/apps/init" -nomake
+AddFile "app.mk" "/build/ossrc/newos/apps/init/app.mk"
+AddFile "init.c" "/build/ossrc/newos/apps/init/init.c"
+EndFileGroup "init"
+AddFileGroup "testapp" "/build/ossrc/newos/apps/testapp" -nomake
+AddFile "app.mk" "/build/ossrc/newos/apps/testapp/app.mk"
+AddFile "main.c" "/build/ossrc/newos/apps/testapp/main.c"
+EndFileGroup "testapp"
+AddFileGroup "shell" "/build/ossrc/newos/apps/shell" -nomake
+AddFile "app.mk" "/build/ossrc/newos/apps/shell/app.mk"
+AddFile "commands.c" "/build/ossrc/newos/apps/shell/commands.c"
+AddFile "commands.h" "/build/ossrc/newos/apps/shell/commands.h"
+AddFile "main.c" "/build/ossrc/newos/apps/shell/main.c"
+EndFileGroup "shell"
 AddFileGroup "dev" "/build/ossrc/newos/dev" -nomake
 AddFile "dev.mk" "/build/ossrc/newos/dev/dev.mk"
 AddFile "devs.c" "/build/ossrc/newos/dev/devs.c"
@@ -13,8 +27,6 @@ EndFileGroup "dev"
 AddFileGroup "dev-x86" "/build/ossrc/newos/dev/arch/i386" -nomake
 AddFile "arch_dev.mk" "/build/ossrc/newos/dev/arch/i386/arch_dev.mk"
 AddFile "console.c" "/build/ossrc/newos/dev/arch/i386/console/console.c"
-AddFile "keyboard.c" "/build/ossrc/newos/dev/arch/i386/console/keyboard.c"
-AddFile "keyboard.h" "/build/ossrc/newos/dev/arch/i386/console/keyboard.h"
 AddFile "pci.c" "/build/ossrc/newos/dev/arch/i386/pci/pci.c"
 EndFileGroup "dev-x86"
 AddFileGroup "x86-boot" "/build/ossrc/newos/boot/i386" -nomake
@@ -27,6 +39,7 @@ AddFile "stage2_priv.h" "/build/ossrc/newos/boot/i386/stage2_priv.h"
 EndFileGroup "x86-boot"
 AddFileGroup "fs" "/build/ossrc/newos/kernel/fs" -nomake
 AddFile "bootfs.c" "/build/ossrc/newos/kernel/fs/bootfs.c"
+AddFile "envfs.c" "/build/ossrc/newos/kernel/fs/envfs.c"
 AddFile "rootfs.c" "/build/ossrc/newos/kernel/fs/rootfs.c"
 AddFile "fs_kernel.mk" "/build/ossrc/newos/kernel/fs/fs_kernel.mk"
 EndFileGroup "fs"

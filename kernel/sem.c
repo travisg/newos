@@ -191,6 +191,11 @@ err:
 
 int sem_delete(sem_id id)
 {
+	return sem_delete_etc(id, 0);
+}
+
+int sem_delete_etc(sem_id id, int return_code)
+{
 	int slot = id % MAX_SEMS;
 	int state;
 	int err = 0;
@@ -222,6 +227,9 @@ int sem_delete(sem_id id)
 			
 		while((t = thread_dequeue(&sems[slot].q)) != NULL) {
 			t->state = THREAD_STATE_READY;
+			t->sem_deleted_retcode = return_code;
+			t->blocked_sem_id = 0;
+			t->sem_count = 0;
 			ready_threads[ready_threads_count++] = t;
 			released_threads++;
 			
@@ -295,10 +303,10 @@ static void sem_timeout(void *data)
 
 int sem_acquire(sem_id id, int count)
 {
-	return sem_acquire_etc(id, count, 0, 0);
+	return sem_acquire_etc(id, count, 0, 0, NULL);
 }
 
-int sem_acquire_etc(sem_id id, int count, int flags, long long timeout)
+int sem_acquire_etc(sem_id id, int count, int flags, time_t timeout, int *deleted_retcode)
 {
 	int slot = id % MAX_SEMS;
 	int state;
@@ -330,6 +338,7 @@ int sem_acquire_etc(sem_id id, int count, int flags, long long timeout)
 		t->next_state = THREAD_STATE_WAITING;
 		t->sem_count = count;
 		t->blocked_sem_id = id;
+		t->sem_deleted_retcode = 0;
 		thread_enqueue(t, &sems[slot].q);
 	
 		if((flags & SEM_FLAG_TIMEOUT) != 0) {
@@ -345,6 +354,8 @@ int sem_acquire_etc(sem_id id, int count, int flags, long long timeout)
 		thread_resched();
 		RELEASE_THREAD_LOCK();
 		int_restore_interrupts(state);
+		if(deleted_retcode != NULL)
+			*deleted_retcode = t->sem_deleted_retcode;
 		return 0;		
 	}
 
@@ -402,6 +413,7 @@ int sem_release_etc(sem_id id, int count, int flags)
 				released_threads++;
 				t->sem_count = 0;
 				t->blocked_sem_id = -1;
+				t->sem_deleted_retcode = 0;
 			}
 		}
 		if(ready_threads_count == READY_THREAD_CACHE_SIZE) {

@@ -78,6 +78,7 @@ static struct thread *thread_get_thread_struct(thread_id id);
 static struct thread *thread_get_thread_struct_locked(thread_id id);
 static struct proc *proc_get_proc_struct(proc_id id);
 static struct proc *proc_get_proc_struct_locked(proc_id id);
+static void thread_kthread_exit();
 
 // insert a thread onto the tail of a queue	
 void thread_enqueue(struct thread *t, struct thread_queue *q)
@@ -159,6 +160,10 @@ static void insert_thread_into_proc(struct proc *p, struct thread *t)
 	t->proc_next = p->thread_list;
 	p->thread_list = t;
 	p->num_threads++;
+	if(p->num_threads == 1) {
+		// this was the first thread
+		p->main_thread = t;
+	}
 	t->proc = p;
 }
 
@@ -229,12 +234,22 @@ static struct thread *create_thread_struct(const char *name)
 	t->args = NULL;
 	t->pending_signals = SIG_NONE;
 	t->in_kernel = true;
+	{
+		char temp[64];
+		
+		sprintf(temp, "thread_0x%x_retcode_sem", t->id);
+		t->return_code_sem = sem_create(0, temp);
+		if(t->return_code_sem < 0)
+			goto err2;
+	}
 
 	if(arch_thread_init_thread_struct(t) < 0)
-		goto err2;
+		goto err3;
 	
 	return t;
 
+err3:
+	sem_delete_etc(t->return_code_sem, -1);
 err2:
 	kfree(t->name);
 err1:
@@ -308,7 +323,7 @@ static thread_id _create_thread(const char *name, proc_id pid, int priority, add
 
 	if(kernel) {
 		// this sets up an initial kthread stack that runs the entry
-		arch_thread_initialize_kthread_stack(t, (void *)entry, &thread_entry, &thread_exit);
+		arch_thread_initialize_kthread_stack(t, (void *)entry, &thread_entry, &thread_kthread_exit);
 	} else {
 		// create user stack
 		// XXX make this better. For now just keep trying to create a stack
@@ -334,7 +349,7 @@ static thread_id _create_thread(const char *name, proc_id pid, int priority, add
 		// the function this will call will immediately switch the thread into
 		// user space.
 		t->args = (void *)entry;
-		arch_thread_initialize_kthread_stack(t, &_create_user_thread_kentry, &thread_entry, &thread_exit);
+		arch_thread_initialize_kthread_stack(t, &_create_user_thread_kentry, &thread_entry, &thread_kthread_exit);
 	}
 	
 	t->state = THREAD_STATE_SUSPENDED;
@@ -780,7 +795,7 @@ void thread_start_threading()
 
 void thread_snooze(time_t time)
 {
-	sem_acquire_etc(snooze_sem, 1, SEM_FLAG_TIMEOUT, time);
+	sem_acquire_etc(snooze_sem, 1, SEM_FLAG_TIMEOUT, time, NULL);
 }
 
 // this function gets run by a new thread before anything else
@@ -846,7 +861,7 @@ static void thread_exit2(void *_args)
 	panic("thread_exit2: made it where it shouldn't have!\n");
 }
 
-void thread_exit()
+void thread_exit(int retcode)
 {
 	int state;
 	struct thread *t = CURR_THREAD;
@@ -856,7 +871,7 @@ void thread_exit()
 	
 	dprintf("thread 0x%x exiting\n", t->id);
 
-	if(p->state != PROC_STATE_NORMAL) {
+	if(p->state == PROC_STATE_DEATH) {
 		// this process is already being deleted, just quit and let that code handle it
 		return;
 	}
@@ -876,9 +891,11 @@ void thread_exit()
 		remove_thread_from_proc(p, t);
 		t->proc = kernel_proc;
 		insert_thread_into_proc(kernel_proc, t);
-		if(p->num_threads <= 0) {
-			hash_remove(proc_hash, p);
+		if(p->num_threads <= 0 || p->main_thread == t) {
+			// this was the last or main thread in this process
 			delete_proc = true;
+			hash_remove(proc_hash, p);
+			p->state = PROC_STATE_DEATH;
 		}
 		RELEASE_PROC_LOCK();
 		GRAB_THREAD_LOCK();
@@ -892,9 +909,21 @@ void thread_exit()
 
 	// delete the process
 	if(delete_proc) {
+		if(p->num_threads > 0) {
+			// there are other threads still in this process,
+			// XXX kill the process
+		}
 		vm_delete_aspace(p->aspace);
 		vfs_free_ioctx(p->ioctx);
 		kfree(p);
+	}
+
+	// delete the sem that others will use to wait on us and get the retcode
+	{
+		sem_id s = t->return_code_sem;
+		
+		t->return_code_sem = -1;	
+		sem_delete_etc(s, retcode);
 	}
 
 	death_stack = get_death_stack();	
@@ -917,6 +946,53 @@ void thread_exit()
 	}
 
 	panic("never can get here\n");
+}
+
+static void thread_kthread_exit()
+{
+	thread_exit(0);
+}
+
+int thread_wait_on_thread(thread_id id, int *retcode)
+{
+	sem_id sem;
+	int state;
+	struct thread *t;
+	
+	state = int_disable_interrupts();
+	GRAB_THREAD_LOCK();
+
+	t = thread_get_thread_struct_locked(id);
+	if(t != NULL) {
+		sem = t->return_code_sem;
+	} else {
+		sem = -1;
+	}
+	
+	RELEASE_THREAD_LOCK();
+	int_restore_interrupts(state);
+
+	return sem_acquire_etc(sem, 1, 0, 0, retcode);
+}
+
+int proc_wait_on_proc(proc_id id, int *retcode)
+{
+	struct proc *p;
+	thread_id tid;
+	int state;
+	
+	state = int_disable_interrupts();
+	GRAB_PROC_LOCK();
+	p = proc_get_proc_struct_locked(id);
+	if(p && p->main_thread) {
+		tid = p->main_thread->id;
+	} else {
+		tid = -1;
+	}
+	RELEASE_PROC_LOCK();
+	int_restore_interrupts(state);
+
+	return thread_wait_on_thread(tid, retcode);
 }
 
 thread_id thread_get_current_thread_id()
@@ -1171,7 +1247,7 @@ int thread_test()
 	tid = thread_create_kernel_thread("test thread 3", &test_thread3, 5);
 	thread_resume_thread(tid);
 #endif
-#if 1
+#if 0
 	tid = thread_create_kernel_thread("test thread 4", &test_thread4, 5);
 	thread_resume_thread(tid);
 #endif
@@ -1313,13 +1389,19 @@ static struct proc *create_proc_struct(const char *name, bool kernel)
 	p->kaspace = vm_get_kernel_aspace();
 	p->aspace = NULL;
 	p->thread_list = NULL;
+	p->main_thread = NULL;
 	p->state = PROC_STATE_BIRTH;
 	p->pending_signals = SIG_NONE;
-	if(arch_proc_init_proc_struct(p, kernel) < 0)
+	p->proc_creation_sem = sem_create(0, "proc_creation_sem");
+	if(p->proc_creation_sem < 0)
 		goto error2;
+	if(arch_proc_init_proc_struct(p, kernel) < 0)
+		goto error3;
 
 	return p;
 
+error3:
+	sem_delete(p->proc_creation_sem);
 error2:
 	kfree(p->name);
 error1:
@@ -1343,22 +1425,6 @@ static int proc_create_proc2(void)
 
 	dprintf("proc_create_proc2: entry thread %d\n", t->id);
 
-	// create a new ioctx for this process
-	p->ioctx = vfs_new_ioctx();
-	if(p->ioctx == NULL) {
-		// XXX clean up proc
-		panic("proc_create_proc2: could not create new ioctx\n");
-		return -1;
-	}
-
-	// create an address space for this process
-	p->aspace = vm_create_aspace(p->name, USER_BASE, USER_SIZE, false);
-	if(p->aspace == NULL) {
-		// XXX clean up proc
-		panic("proc_create_proc2: could not create user address space\n");
-		return -1;
-	}
-
 	// create an initial primary stack region
 	ustack_addr = (void *)((USER_STACK_REGION  - STACK_SIZE) + USER_STACK_REGION_SIZE);
 	sprintf(ustack_name, "%s_primary_stack", p->name);
@@ -1366,6 +1432,7 @@ static int proc_create_proc2(void)
 		REGION_ADDR_EXACT_ADDRESS, STACK_SIZE, REGION_WIRING_LAZY, LOCK_RW);
 	if(t->user_stack_region == NULL) {
 		panic("proc_create_proc2: could not create default user stack region\n");
+		sem_delete_etc(p->proc_creation_sem, -1);
 		return -1;
 	}
 
@@ -1375,6 +1442,7 @@ static int proc_create_proc2(void)
 	err = elf_load(path, p, 0, &entry);
 	if(err < 0){
 		// XXX clean up proc
+		sem_delete_etc(p->proc_creation_sem, -1);
 		return -1;
 	}
 
@@ -1382,11 +1450,15 @@ static int proc_create_proc2(void)
 
 	p->state = PROC_STATE_NORMAL;
 
+	// this will wake up the thread that initially created us, with the process id
+	// as the return code
+	sem_delete_etc(p->proc_creation_sem, p->id);
+	p->proc_creation_sem = 0;
+
 	// jump to the entry point in user space
 	arch_thread_enter_uspace(entry, (addr)ustack_addr + STACK_SIZE);
 
 	// never gets here
-
 	return 0;
 }
 
@@ -1396,6 +1468,7 @@ proc_id proc_create_proc(const char *path, const char *name, int priority)
 	thread_id tid;
 	int err;
 	unsigned int state;
+	int sem_retcode;
 
 	dprintf("proc_create_proc: entry '%s', name '%s'\n", path, name);
 
@@ -1415,7 +1488,7 @@ proc_id proc_create_proc(const char *path, const char *name, int priority)
 		// XXX clean up proc
 		return -1;
 	}
-
+	
 	// copy the args over
 	p->args = kmalloc(strlen(path) + 1);
 	if(p->args == NULL) {
@@ -1424,9 +1497,32 @@ proc_id proc_create_proc(const char *path, const char *name, int priority)
 	}
 	strcpy(p->args, path);
 
-	thread_resume_thread(tid);
+	// create a new ioctx for this process
+	p->ioctx = vfs_new_ioctx();
+	if(p->ioctx == NULL) {
+		// XXX clean up proc
+		panic("proc_create_proc: could not create new ioctx\n");
+		return -1;
+	}
 
-	return p->id;
+	// create an address space for this process
+	p->aspace = vm_create_aspace(p->name, USER_BASE, USER_SIZE, false);
+	if(p->aspace == NULL) {
+		// XXX clean up proc
+		panic("proc_create_proc: could not create user address space\n");
+		return -1;
+	}
+
+	thread_resume_thread(tid);
+	
+	// XXX race condition
+	// acquire this semaphore, which will exist throughout the creation of the process
+	// by the new thread in the new process. At the end of creation, the semaphore will
+	// be deleted, with the return code being the process id, or an error.
+	sem_acquire_etc(p->proc_creation_sem, 1, 0, 0, &sem_retcode);
+	
+	// this will either contain the process id, or an error code
+	return sem_retcode;
 }
 
 int proc_kill_proc(proc_id id)
@@ -1488,7 +1584,7 @@ static void _check_for_thread_sigs(struct thread *t, int state)
 
 		RELEASE_THREAD_LOCK();
 		int_restore_interrupts(state);
-		thread_exit();
+		thread_exit(0);
 		// never gets to here
 	}		
 	if(t->pending_signals & SIG_SUSPEND) {

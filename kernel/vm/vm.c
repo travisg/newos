@@ -817,8 +817,8 @@ int vm_soft_fault(addr address, bool is_write, bool is_user)
 	int change_count;
 	int err;
 
-	dprintf("vm_soft_fault: address 0x%x, is_write %d, is_user %d\n",
-		address, is_write, is_user);
+	dprintf("vm_soft_fault: thid 0x%x address 0x%x, is_write %d, is_user %d\n",
+		thread_get_current_thread_id(), address, is_write, is_user);
 	
 	address = ROUNDOWN(address, PAGE_SIZE);
 	
@@ -842,6 +842,8 @@ int vm_soft_fault(addr address, bool is_write, bool is_user)
 	if(region == NULL) {
 		sem_release(map->sem, READ_COUNT);
 		dprintf("vm_soft_fault: va 0x%x not covered by region in address space\n", address);
+		// XXX remove
+		panic("here\n");
 		return -1; // BAD_ADDRESS
 	}
 	// XXX check permissions

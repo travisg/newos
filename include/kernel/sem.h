@@ -24,8 +24,9 @@ struct sem_entry {
 int sem_init(kernel_args *ka);
 sem_id sem_create(int count, const char *name);
 int sem_delete(sem_id id);
+int sem_delete_etc(sem_id id, int return_code);
 int sem_acquire(sem_id id, int count);
-int sem_acquire_etc(sem_id id, int count, int flags, time_t timeout);
+int sem_acquire_etc(sem_id id, int count, int flags, time_t timeout, int *deleted_retcode);
 int sem_release(sem_id id, int count);
 int sem_release_etc(sem_id id, int count, int flags);
 

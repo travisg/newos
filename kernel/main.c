@@ -66,18 +66,17 @@ int _start(kernel_args *oldka, int cpu)
 		con_init(&ka);
 
 		vm_init_postthread(&ka);
-#if 1
+#if 0
 		// XXX remove
 		vfs_test();
 #endif	
-#if 1
+#if 0
 		// XXX remove
 		thread_test();
 #endif
 #if 0
 		vm_test();
 #endif
-		kprintf("Welcome to the kernel!\n");
 		
 		smp_wake_up_all_non_boot_cpus();
 		smp_enable_ici(); // ici's were previously being ignored
@@ -85,12 +84,13 @@ int _start(kernel_args *oldka, int cpu)
 	}
 	int_enable_interrupts();
 
-#if 0
-	if(cpu == 1) {
-		dprintf("sending intercpu interrupt\n");
-		smp_send_ici(0, SMP_MSG_INVL_PAGE, 0x80000000, NULL);
-	}
-#endif
+	// start the init process
+	if(cpu == 0) {
+		proc_id pid;
+		pid = proc_create_proc("/boot/init", "init", 5);
+		if(pid < 0)
+			kprintf("error starting 'init'\n");
+	}		
 
 #if 0
 	panic("debugger_test\n");	

@@ -14,7 +14,7 @@
 #define INT32TOINT64(x, y) ((int64)(x) | ((int64)(y) << 32))
 
 int syscall_dispatcher(unsigned long call_num, unsigned long arg0, unsigned long arg1,
-	unsigned long arg2, unsigned long arg3, unsigned long arg4, uint64 *call_ret)
+	unsigned long arg2, unsigned long arg3, unsigned long arg4, unsigned long arg5, uint64 *call_ret)
 {
 	int ret = INT_RESCHEDULE;
 
@@ -62,9 +62,15 @@ int syscall_dispatcher(unsigned long call_num, unsigned long arg0, unsigned long
 		case SYSCALL_SEM_ACQUIRE:
 			*call_ret = sem_acquire((sem_id)arg0, (int)arg1);
 			break;
-		case SYSCALL_SEM_ACQUIRE_ETC:
-			*call_ret = sem_acquire_etc((sem_id)arg0, (int)arg1, (int)arg2, (time_t)INT32TOINT64(arg3, arg4));
+		case SYSCALL_SEM_ACQUIRE_ETC: {
+			int retcode;
+			*call_ret = sem_acquire_etc((sem_id)arg0, (int)arg1, (int)arg2, (time_t)INT32TOINT64(arg3, arg4), &retcode);
+			if(arg5 != 0) {
+				// XXX protect the copy
+				*(int *)arg5 = retcode;
+			}
 			break;
+		}
 		case SYSCALL_SEM_RELEASE:
 			*call_ret = sem_release((sem_id)arg0, (int)arg1);
 			break;
@@ -75,9 +81,30 @@ int syscall_dispatcher(unsigned long call_num, unsigned long arg0, unsigned long
 			*call_ret = thread_get_current_thread_id();
 			break;
 		case SYSCALL_EXIT_THREAD:
-			thread_exit();
+			thread_exit((int)arg0);
 			*call_ret = 0;
 			break;
+		case SYSCALL_PROC_CREATE_PROC:
+			*call_ret = proc_create_proc((const char *)arg0, (const char *)arg1, (int)arg2);
+			break;
+		case SYSCALL_THREAD_WAIT_ON_THREAD: {
+			int retcode;
+			*call_ret = thread_wait_on_thread((thread_id)arg0, &retcode);
+			if(arg2 != 0) {
+				// XXX protect the copy
+				*(int *)arg2 = retcode;
+			}
+			break;
+		}
+		case SYSCALL_PROC_WAIT_ON_PROC: {
+			int retcode;
+			*call_ret = proc_wait_on_proc((proc_id)arg0, &retcode);
+			if(arg2 != 0) {
+				// XXX protect the copy
+				*(int *)arg2 = retcode;
+			}
+			break;
+		}
 		default:
 			*call_ret = -1;
 			ret = INT_NO_RESCHEDULE;

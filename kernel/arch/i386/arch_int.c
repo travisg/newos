@@ -167,7 +167,7 @@ void i386_handle_trap(struct int_frame frame)
 
 			thread_atkernel_entry();
 
-			ret = syscall_dispatcher(frame.eax, frame.ebx, frame.ecx, frame.edx, frame.esi, frame.edi, &retcode);
+			ret = syscall_dispatcher(frame.eax, frame.ebx, frame.ecx, frame.edx, frame.esi, frame.edi, frame.ebp, &retcode);
 			frame.eax = retcode & 0xffffffff;
 			frame.edx = retcode >> 32;
 			break;

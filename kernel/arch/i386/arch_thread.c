@@ -77,8 +77,9 @@ void arch_thread_context_switch(struct thread *t_from, struct thread *t_to)
 #if 0
 	int i;
 
-	dprintf("arch_thread_context_switch: cpu %d 0x%x -> 0x%x, &old_esp = 0x%p, esp = 0x%p\n",
+	dprintf("arch_thread_context_switch: cpu %d 0x%x -> 0x%x, aspace 0x%x -> 0x%x, &old_esp = 0x%p, esp = 0x%p\n",
 		smp_get_current_cpu(), t_from->id, t_to->id,
+		t_from->proc->aspace, t_to->proc->aspace,
 		&t_from->arch_info.esp, t_to->arch_info.esp);
 #endif
 #if 0
@@ -106,6 +107,9 @@ void arch_thread_context_switch(struct thread *t_from, struct thread *t_to)
 	} else {
 		new_pgdir = (unsigned int *)vm_translation_map_get_pgdir(&t_to->proc->aspace->translation_map);
 	}
+#if 0
+	dprintf("new_pgdir is 0x%x\n", new_pgdir);
+#endif
 
 	i386_context_switch(&t_from->arch_info.esp, t_to->arch_info.esp, new_pgdir);
 }

@@ -23,11 +23,14 @@ enum {
 	SYSCALL_SEM_RELEASE,
 	SYSCALL_SEM_RELEASE_ETC,
 	SYSCALL_GET_CURRENT_THREAD_ID,
-	SYSCALL_EXIT_THREAD
+	SYSCALL_EXIT_THREAD,
+	SYSCALL_PROC_CREATE_PROC,
+	SYSCALL_THREAD_WAIT_ON_THREAD,
+	SYSCALL_PROC_WAIT_ON_PROC
 };
 
 int syscall_dispatcher(unsigned long call_num, unsigned long arg0, unsigned long arg1,
-	unsigned long arg2, unsigned long arg3, unsigned long arg4, uint64 *call_ret);
+	unsigned long arg2, unsigned long arg3, unsigned long arg4, unsigned long arg5, uint64 *call_ret);
 
 #endif
 

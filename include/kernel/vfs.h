@@ -13,6 +13,7 @@ typedef enum {
 	STREAM_TYPE_FILE,
 	STREAM_TYPE_DIR,
 	STREAM_TYPE_DEVICE,
+	STREAM_TYPE_STRING
 } stream_type;
 
 typedef enum {

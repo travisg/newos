@@ -199,7 +199,7 @@ static int map_tmap(vm_translation_map *map, addr va, addr pa, unsigned int attr
 {
 	pdentry *pd;
 	ptentry *pt;
-	int index;
+	unsigned int index;
 
 #if CHATTY_TMAP
 	dprintf("map_tmap: entry pa 0x%x va 0x%x\n", pa, va);
@@ -229,8 +229,9 @@ static int map_tmap(vm_translation_map *map, addr va, addr pa, unsigned int attr
 		// put it in the pgdir
 		put_pgtable_in_pgdir(&pd[index], pgtable, attributes);
 
-		// update any other page directories
-		_update_all_pgdirs(index, pd[index]);
+		// update any other page directories, if it maps kernel space
+		if(index >= FIRST_KERNEL_PGDIR_ENT && index < (FIRST_KERNEL_PGDIR_ENT + NUM_KERNEL_PGDIR_ENTS))
+			_update_all_pgdirs(index, pd[index]);
 		
 		map->map_count++;
 	}
