@@ -151,6 +151,28 @@ static int ide_create(void *_fs, void *_base_vnode, const char *path, const char
   return ret;
 }
 
+static int ide_stat(void *_fs, void *_base_vnode, const char *path, const char *stream, stream_type stream_type, struct vnode_stat *stat, struct redir_struct *redir)
+{
+  struct ide_fs *fs = _fs;
+  int		ret = -1;
+  dprintf("ide_stat: entry %X\n",fs);
+  if(fs->redir_vnode != NULL) {
+    // we were mounted on top of
+    redir->redir = true;
+    redir->vnode = fs->redir_vnode;
+    redir->path = path;
+    ret = 0;
+    goto out;
+  }
+
+  stat->size = 0;
+  ret = 0;
+	
+ out:
+  dprintf("ide_stat: exit %X\n",fs);	
+  return ret;
+}
+
 static int ide_read(void *_fs, void *_vnode, void *_cookie, void *buf, off_t pos, size_t *len)
 {
   int			block;
@@ -392,6 +414,7 @@ struct fs_calls ide_hooks = {
 	&ide_ioctl,
 	&ide_close,
 	&ide_create,
+	&ide_stat,
 };
 
 static	int	ide_interrupt_handler()
