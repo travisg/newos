@@ -1,0 +1,9 @@
+#ifndef _ARCH_DBG_CONSOLE
+#define _ARCH_DBG_CONSOLE
+
+char arch_dbg_con_putch(char c);
+void arch_dbg_con_puts(const char *s);
+int arch_dbg_con_init(struct kernel_args *ka);
+
+#endif
+
