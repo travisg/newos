@@ -25,11 +25,10 @@
 #include <kernel/dev/common/null.h>
 #include <kernel/dev/common/zero.h>
 #include <kernel/dev/fb_console/fb_console.h>
-#include <kernel/dev/netblock/netblock.h>
 
-int devs_init(kernel_args *ka)
+/* loads all the fixed drivers */
+int fixed_devs_init(kernel_args *ka)
 {
-
 	null_dev_init(ka);
 	zero_dev_init(ka);
 #ifdef ARCH_i386
@@ -38,7 +37,6 @@ int devs_init(kernel_args *ka)
 //	mouse_dev_init(ka);
 	console_dev_init(ka);
 	rtl8139_dev_init(ka);
-	netblock_dev_init(ka);
 #endif
 
 #ifdef ARCH_sh4

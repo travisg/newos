@@ -13,10 +13,15 @@
 
 int dev_init(kernel_args *ka)
 {
+	dprintf("dev_init: entry\n");
+
+	return 0;
+}
+
+int dev_scan_drivers(kernel_args *ka)
+{
 	int fd;
 	int err;
-
-	dprintf("dev_init: entry\n");
 
 	fd = sys_open("/boot/addons/dev", STREAM_TYPE_DIR, 0);
 	if(fd >= 0) {
@@ -29,9 +34,8 @@ int dev_init(kernel_args *ka)
 		}
 		sys_close(fd);
 	}
-
-	return 0;
 }
+
 
 image_id dev_load_dev_module(const char *name)
 {

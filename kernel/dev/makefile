@@ -10,5 +10,4 @@ include $(addsuffix /makefile, $(addprefix $(KERNEL_DIR)/$(KERNEL_DEV_DIR)/, \
 	common \
 	arch/$(ARCH) \
 	fb_console \
-	netblock \
 ))

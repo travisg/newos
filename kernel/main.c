@@ -58,6 +58,8 @@ int _start(kernel_args *oldka, int cpu_num)
 		cpu_init(&ka);
 		int_init(&ka);
 
+		srand((uint)system_time());
+
 		vm_init(&ka);
 		dprintf("vm up\n");
 
@@ -82,6 +84,7 @@ int _start(kernel_args *oldka, int cpu_num)
 
 		vm_init_postthread(&ka);
 		elf_init(&ka);
+		module_init(&ka, NULL);
 
 		// start a thread to finish initializing the rest of the system
 		{
@@ -119,9 +122,10 @@ static int main2(void *unused)
 
 	net_init(&ka);
 	dev_init(&ka);
-	module_init( &ka, NULL );
 	bus_init(&ka);
-	devs_init(&ka);
+	fixed_devs_init(&ka);
+	dev_scan_drivers(&ka);
+
 	con_init(&ka);
 
 	net_init_postdev(&ka);
@@ -156,6 +160,7 @@ static int main2(void *unused)
 	{
 		proc_id pid;
 		pid = proc_create_proc("/boot/bin/init", "init", NULL, 0, 5);
+//		pid = proc_create_proc("/boot/bin/static", "static", NULL, 0, 5);
 		if(pid < 0)
 			kprintf("error starting 'init' error = %d \n",pid);
 	}
