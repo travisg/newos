@@ -807,7 +807,7 @@ int thread_init(kernel_args *ka)
 		panic("could not create kernel proc!\n");
 	kernel_proc->state = PROC_STATE_NORMAL;
 
-	kernel_proc->ioctx = vfs_new_ioctx();
+	kernel_proc->ioctx = vfs_new_ioctx(NULL);
 	if(kernel_proc->ioctx == NULL)
 		panic("could not create ioctx for kernel proc!\n");
 
@@ -1575,7 +1575,7 @@ proc_id proc_create_proc(const char *path, const char *name, int priority)
 	}
 
 	// create a new ioctx for this process
-	p->ioctx = vfs_new_ioctx();
+	p->ioctx = vfs_new_ioctx(thread_get_current_thread()->proc->ioctx);
 	if(!p->ioctx) {
 		// XXX clean up proc
 		panic("proc_create_proc: could not create new ioctx\n");

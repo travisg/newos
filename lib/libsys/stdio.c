@@ -6,26 +6,16 @@
 #include <libc/string.h>
 #include <libsys/syscalls.h>
 
-static int infd = -1;
-static int outfd = -1;
+//static int infd = -1;
+//static int outfd = -1;
 
 int __stdio_init()
 {
-	infd = sys_open("/dev/console", STREAM_TYPE_DEVICE, 0);
-	if(infd < 0)
-		return infd;
-
-	outfd = sys_open("/dev/console", STREAM_TYPE_DEVICE, 0);
-	if(outfd < 0)
-		return outfd;
-		
 	return 0;
 }
 
 int __stdio_deinit()
 {
-	sys_close(infd);
-	sys_close(outfd);
 	return 0;
 }
 
@@ -39,7 +29,7 @@ int printf(const char *fmt, ...)
 	i = vsprintf(buf, fmt, args);
 	va_end(args);
 	
-	sys_write(outfd, buf, 0, strlen(buf));
+	sys_write(0, buf, 0, strlen(buf));
 	
 	return i;
 }
@@ -49,6 +39,6 @@ char getc()
 	char c;
 	int len;
 	
-	sys_read(infd, &c, 0, 1);
+	sys_read(1, &c, 0, 1);
 	return c;
 }

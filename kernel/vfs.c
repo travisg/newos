@@ -708,28 +708,63 @@ static int path_to_dir_vnode(char *path, struct vnode **v, char *filename, bool 
 }
 
 #define NEW_FD_TABLE_SIZE 32
-void *vfs_new_ioctx()
+void *vfs_new_ioctx(void *_parent_ioctx)
 {
+	size_t table_size;
 	struct ioctx *ioctx;
+	struct ioctx *parent_ioctx;
 	int i;
 
-	ioctx = kmalloc(sizeof(struct ioctx) + sizeof(struct file_descriptor) * NEW_FD_TABLE_SIZE);
+	parent_ioctx = (struct ioctx *)_parent_ioctx;
+	if(parent_ioctx) {
+		table_size = parent_ioctx->table_size;
+	} else {
+		table_size = NEW_FD_TABLE_SIZE;
+	}
+
+	ioctx = kmalloc(sizeof(struct ioctx) + sizeof(struct file_descriptor) * table_size);
 	if(ioctx == NULL)
 		return NULL;
 
 
-	memset(ioctx, 0, sizeof(struct ioctx) + sizeof(struct file_descriptor) * NEW_FD_TABLE_SIZE);
+	memset(ioctx, 0, sizeof(struct ioctx) + sizeof(struct file_descriptor) * table_size);
 
 	if(mutex_init(&ioctx->io_mutex, "ioctx_mutex") < 0) {
 		kfree(ioctx);
 		return NULL;
 	}
 
-	ioctx->cwd = root_vnode;
-	ioctx->table_size = NEW_FD_TABLE_SIZE;
+	/*
+	 * copy parent files
+	 */
+	if(parent_ioctx) {
+		size_t i;
 
-	if(ioctx->cwd)
-		inc_vnode_ref_count(ioctx->cwd);
+		mutex_lock(&parent_ioctx->io_mutex);
+
+		ioctx->cwd= parent_ioctx->cwd;
+		if(ioctx->cwd) {
+			inc_vnode_ref_count(ioctx->cwd);
+		}
+		
+
+		for(i = 0; i< table_size; i++) {
+			if(parent_ioctx->fds[i]) {
+				ioctx->fds[i]= parent_ioctx->fds[i];
+				atomic_add(&ioctx->fds[i]->ref_count, 1);
+			}
+		}
+
+		mutex_unlock(&parent_ioctx->io_mutex);
+	} else {
+		ioctx->cwd = root_vnode;
+
+		if(ioctx->cwd) {
+			inc_vnode_ref_count(ioctx->cwd);
+		}
+	}
+
+	ioctx->table_size = table_size;
 
 	return ioctx;
 }

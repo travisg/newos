@@ -101,7 +101,7 @@ struct fs_calls {
 int vfs_init(kernel_args *ka);
 int vfs_bootstrap_all_filesystems(void);
 int vfs_register_filesystem(const char *name, struct fs_calls *calls);
-void *vfs_new_ioctx(void);
+void *vfs_new_ioctx(void *parent_ioctx);
 int vfs_free_ioctx(void *ioctx);
 int vfs_test(void);
 

@@ -5,8 +5,23 @@
 #include <libsys/syscalls.h>
 #include <libsys/stdio.h>
 
+static void setup_io()
+{
+	int i;
+
+	for(i= 0; i< 256; i++) {
+		sys_close(i);
+	}
+
+	sys_open("/dev/console", STREAM_TYPE_DEVICE, 0); /* stdin  */
+	sys_open("/dev/console", STREAM_TYPE_DEVICE, 0); /* stdout */
+	sys_open("/dev/console", STREAM_TYPE_DEVICE, 0); /* stderr */
+}
+
 int main()
 {
+	setup_io();
+
 	printf("init: Welcome to NewOS!\n");
 
 	while(1) {
