@@ -1,7 +1,7 @@
 #ifndef _VFS_H
 #define _VFS_H
 
-#include <kernel.h>
+#include <kernel/kernel.h>
 #include <stage2.h>
 
 typedef enum {

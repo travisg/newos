@@ -1,12 +1,12 @@
 #include <string.h>
 #include <ctype.h>
 
-#include <kernel.h>
-#include <debug.h>
-#include <int.h>
-#include <smp.h>
-#include <console.h>
-#include <vm.h>
+#include <kernel/kernel.h>
+#include <kernel/debug.h>
+#include <kernel/int.h>
+#include <kernel/smp.h>
+#include <kernel/console.h>
+#include <kernel/vm.h>
 
 #include <arch_dbg_console.h>
 #include <arch_debug.h>

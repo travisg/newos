@@ -2,8 +2,8 @@
 #define _THREAD_H
 
 #include <stage2.h>
-#include <vm.h>
-#include <smp.h>
+#include <kernel/vm.h>
+#include <kernel/smp.h>
 #include <arch_thread_struct.h>
 
 #define THREAD_IDLE_PRIORITY 0

@@ -1,7 +1,7 @@
 #ifndef _DEBUG_H
 #define _DEBUG_H
 
-#include <kernel.h>
+#include <kernel/kernel.h>
 #include <stage2.h>
 
 // architecture independant

@@ -1,7 +1,7 @@
 #ifndef _KERNEL_H
 #define _KERNEL_H
 
-#include <ktypes.h>
+#include <kernel/ktypes.h>
 #include <arch_kernel.h>
 
 #define ROUNDUP(a, b) (((a) + ((b)-1)) & ~((b)-1))

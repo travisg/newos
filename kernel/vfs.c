@@ -1,14 +1,14 @@
 #include <string.h>
 
-#include <kernel.h>
+#include <kernel/kernel.h>
 #include <stage2.h>
-#include <vfs.h>
-#include <debug.h>
-#include <khash.h>
-#include <sem.h>
+#include <kernel/vfs.h>
+#include <kernel/debug.h>
+#include <kernel/khash.h>
+#include <kernel/sem.h>
 #include <arch_cpu.h>
 
-#include <fs/rootfs.h>
+#include <kernel/fs/rootfs.h>
 
 #define MAKE_NOIZE 0
 

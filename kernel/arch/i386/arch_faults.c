@@ -1,10 +1,10 @@
-#include <kernel.h>
+#include <kernel/kernel.h>
 #include <string.h>
-#include <faults.h>
-#include <vm.h>
-#include <debug.h>
-#include <console.h>
-#include <int.h>
+#include <kernel/faults.h>
+#include <kernel/vm.h>
+#include <kernel/debug.h>
+#include <kernel/console.h>
+#include <kernel/int.h>
 
 #include <arch_cpu.h>
 #include <arch_interrupts.h>

@@ -1,15 +1,15 @@
-#include <kernel.h>
-#include <console.h>
-#include <debug.h>
+#include <kernel/kernel.h>
+#include <kernel/console.h>
+#include <kernel/debug.h>
 #include <string.h>
-#include <faults.h>
-#include <int.h>
-#include <vm.h>
-#include <timer.h>
-#include <smp.h>
-#include <sem.h>
-#include <vfs.h>
-#include <dev.h>
+#include <kernel/faults.h>
+#include <kernel/int.h>
+#include <kernel/vm.h>
+#include <kernel/timer.h>
+#include <kernel/smp.h>
+#include <kernel/sem.h>
+#include <kernel/vfs.h>
+#include <kernel/dev.h>
 #include <devs.h>
 
 #include <arch_cpu.h>

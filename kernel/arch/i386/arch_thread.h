@@ -1,7 +1,7 @@
 #ifndef _ARCH_THREAD_H
 #define _ARCH_THREAD_H
 
-#include <thread.h>
+#include <kernel/thread.h>
 
 int arch_proc_init_proc_struct(struct proc *p, bool kernel);
 int arch_thread_init_thread_struct(struct thread *t);

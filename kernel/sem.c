@@ -1,12 +1,12 @@
 #include <string.h>
 
-#include <kernel.h>
-#include <sem.h>
-#include <smp.h>
-#include <int.h>
-#include <timer.h>
-#include <debug.h>
-#include <vm.h>
+#include <kernel/kernel.h>
+#include <kernel/sem.h>
+#include <kernel/smp.h>
+#include <kernel/int.h>
+#include <kernel/timer.h>
+#include <kernel/debug.h>
+#include <kernel/vm.h>
 
 #include <stage2.h>
 

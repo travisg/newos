@@ -1,6 +1,6 @@
-#include <kernel.h>
+#include <kernel/kernel.h>
 #include <string.h>
-#include <int.h>
+#include <kernel/int.h>
 
 #include <arch_cpu.h>
 

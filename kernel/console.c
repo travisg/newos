@@ -1,10 +1,10 @@
-#include <kernel.h>
-#include <console.h>
-#include <debug.h>
-#include <int.h>
-#include <smp.h>
-#include <sem.h>
-#include <vfs.h>
+#include <kernel/kernel.h>
+#include <kernel/console.h>
+#include <kernel/debug.h>
+#include <kernel/int.h>
+#include <kernel/smp.h>
+#include <kernel/sem.h>
+#include <kernel/vfs.h>
 
 #include <stdarg.h>
 #include <printf.h>

@@ -1,12 +1,12 @@
-#include <kernel.h>
+#include <kernel/kernel.h>
 #include <stage2.h>
-#include <console.h>
-#include <debug.h>
-#include <thread.h>
-#include <int.h>
-#include <smp.h>
-#include <vm.h>
-#include <timer.h>
+#include <kernel/console.h>
+#include <kernel/debug.h>
+#include <kernel/thread.h>
+#include <kernel/int.h>
+#include <kernel/smp.h>
+#include <kernel/vm.h>
+#include <kernel/timer.h>
 
 #include <arch_cpu.h>
 #include <arch_timer.h>

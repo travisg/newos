@@ -2,11 +2,11 @@
 #include <vcpu.h>
 #include <sh4.h>
 
-#include <debug.h>
-#include <int.h>
-#include <thread.h>
-#include <vm.h>
-#include <faults.h>
+#include <kernel/debug.h>
+#include <kernel/int.h>
+#include <kernel/thread.h>
+#include <kernel/vm.h>
+#include <kernel/faults.h>
 
 struct vector *vector_table;
 

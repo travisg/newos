@@ -1,4 +1,4 @@
-#include <kernel.h>
+#include <kernel/kernel.h>
 #include <stage2.h>
 
 #include <arch_dbg_console.h>

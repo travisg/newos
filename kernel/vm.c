@@ -1,14 +1,14 @@
 #include <string.h>
 #include <ctype.h>
 #include <printf.h>
-#include <kernel.h>
-#include <vm.h>
-#include <debug.h>
-#include <console.h>
+#include <kernel/kernel.h>
+#include <kernel/vm.h>
+#include <kernel/debug.h>
+#include <kernel/console.h>
 #include <stage2.h>
-#include <int.h>
-#include <smp.h>
-#include <sem.h>
+#include <kernel/int.h>
+#include <kernel/smp.h>
+#include <kernel/sem.h>
 
 #include <arch_cpu.h>
 #include <arch_pmap.h>

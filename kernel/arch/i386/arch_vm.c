@@ -1,7 +1,7 @@
-#include <kernel.h>
-#include <console.h>
-#include <vm.h>
-#include <debug.h>
+#include <kernel/kernel.h>
+#include <kernel/console.h>
+#include <kernel/vm.h>
+#include <kernel/debug.h>
 
 #include <arch_vm.h>
 #include <arch_interrupts.h>

@@ -1,9 +1,9 @@
 #include <string.h>
-#include <kernel.h>
+#include <kernel/kernel.h>
 
-#include <vm.h>
-#include <debug.h>
-#include <smp.h>
+#include <kernel/vm.h>
+#include <kernel/debug.h>
+#include <kernel/smp.h>
 
 #include <arch_cpu.h>
 #include <arch_pmap.h>

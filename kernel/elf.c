@@ -1,10 +1,10 @@
-#include <kernel.h>
-#include <elf.h>
+#include <kernel/kernel.h>
+#include <kernel/elf.h>
 #include <elf32.h>
-#include <vfs.h>
-#include <thread.h>
+#include <kernel/vfs.h>
+#include <kernel/thread.h>
 #include <string.h>
-#include <debug.h>
+#include <kernel/debug.h>
 #include <printf.h>
 #include <arch_cpu.h>
 

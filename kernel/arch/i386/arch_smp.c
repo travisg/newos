@@ -2,15 +2,15 @@
 // Will be redone later
 
 #include <stage2.h>
-#include <kernel.h>
-#include <console.h>
-#include <debug.h>
-#include <vm.h>
-#include <kernel.h>
+#include <kernel/kernel.h>
+#include <kernel/console.h>
+#include <kernel/debug.h>
+#include <kernel/vm.h>
+#include <kernel/kernel.h>
 #include <printf.h>
 #include <string.h>
-#include <int.h>
-#include <smp.h>
+#include <kernel/int.h>
+#include <kernel/smp.h>
 
 #include <arch_cpu.h>
 #include <arch_vm.h>

@@ -1,10 +1,10 @@
-#include <kernel.h>
+#include <kernel/kernel.h>
 #include <stage2.h>
-#include <dev.h>
-#include <vfs.h>
-#include <debug.h>
+#include <kernel/dev.h>
+#include <kernel/vfs.h>
+#include <kernel/debug.h>
 
-#include <fs/bootfs.h>
+#include <kernel/fs/bootfs.h>
 
 int dev_init(kernel_args *ka)
 {

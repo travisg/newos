@@ -1,9 +1,9 @@
 #include <string.h>
-#include <kernel.h>
+#include <kernel/kernel.h>
 #include <stage2.h>
-#include <debug.h>
-#include <vm.h>
-#include <thread.h>
+#include <kernel/debug.h>
+#include <kernel/vm.h>
+#include <kernel/thread.h>
 #include <arch_thread.h>
 #include <arch_cpu.h>
 

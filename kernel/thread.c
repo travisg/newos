@@ -1,20 +1,20 @@
 #include <string.h>
 #include <printf.h>
-#include <kernel.h>
+#include <kernel/kernel.h>
 #include <stage2.h>
-#include <debug.h>
-#include <console.h>
-#include <thread.h>
+#include <kernel/debug.h>
+#include <kernel/console.h>
+#include <kernel/thread.h>
 #include <arch_thread.h>
-#include <khash.h>
-#include <int.h>
-#include <smp.h>
-#include <timer.h>
+#include <kernel/khash.h>
+#include <kernel/int.h>
+#include <kernel/smp.h>
+#include <kernel/timer.h>
 #include <arch_cpu.h>
 #include <arch_int.h>
-#include <sem.h>
-#include <vfs.h>
-#include <elf.h>
+#include <kernel/sem.h>
+#include <kernel/vfs.h>
+#include <kernel/elf.h>
 
 struct proc_key {
 	proc_id id;

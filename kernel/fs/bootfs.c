@@ -1,16 +1,16 @@
 #include <string.h>
 #include <printf.h>
 
-#include <kernel.h>
-#include <vfs.h>
-#include <debug.h>
-#include <khash.h>
-#include <vm.h>
-#include <sem.h>
+#include <kernel/kernel.h>
+#include <kernel/vfs.h>
+#include <kernel/debug.h>
+#include <kernel/khash.h>
+#include <kernel/vm.h>
+#include <kernel/sem.h>
 
 #include <arch_cpu.h>
 
-#include "bootfs.h"
+#include <kernel/fs/bootfs.h>
 
 #include <boot.h>
 

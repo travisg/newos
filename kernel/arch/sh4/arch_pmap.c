@@ -1,6 +1,6 @@
-#include <kernel.h>
-#include <vm.h>
-#include <debug.h>
+#include <kernel/kernel.h>
+#include <kernel/vm.h>
+#include <kernel/debug.h>
 #include <string.h>
 
 #include <arch_pmap.h>

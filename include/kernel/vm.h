@@ -1,7 +1,7 @@
 #ifndef _VM_H
 #define _VM_H
 
-#include <kernel.h>
+#include <kernel/kernel.h>
 #include <stage2.h>
 
 // address space

@@ -1,11 +1,11 @@
 #include <string.h>
 
-#include <kernel.h>
-#include <console.h>
-#include <debug.h>
-#include <int.h>
-#include <smp.h>
-#include <vm.h>
+#include <kernel/kernel.h>
+#include <kernel/console.h>
+#include <kernel/debug.h>
+#include <kernel/int.h>
+#include <kernel/smp.h>
+#include <kernel/vm.h>
 
 #include <arch_cpu.h>
 #include <arch_smp.h>

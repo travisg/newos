@@ -1,11 +1,11 @@
 #include <string.h>
 #include <printf.h>
-#include <kernel.h>
-#include <int.h>
-#include <debug.h>
+#include <kernel/kernel.h>
+#include <kernel/int.h>
+#include <kernel/debug.h>
 #include <stage2.h>
-#include <vm.h>
-#include <smp.h>
+#include <kernel/vm.h>
+#include <kernel/smp.h>
 #include <arch_int.h>
 
 #define NUM_IO_HANDLERS 256

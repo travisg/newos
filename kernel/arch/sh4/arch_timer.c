@@ -1,9 +1,9 @@
-#include <kernel.h>
+#include <kernel/kernel.h>
 #include <stage2.h>
 #include <sh4.h>
-#include <int.h>
-#include <debug.h>
-#include <timer.h>
+#include <kernel/int.h>
+#include <kernel/debug.h>
+#include <kernel/timer.h>
 #include <arch_cpu.h>
 
 #define timer_rate 12500000

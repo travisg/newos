@@ -1,7 +1,7 @@
-#include <kernel.h>
-#include <thread.h>
+#include <kernel/kernel.h>
+#include <kernel/thread.h>
 #include <string.h>
-#include <debug.h>
+#include <kernel/debug.h>
 #include <arch_cpu.h>
 
 int arch_proc_init_proc_struct(struct proc *p, bool kernel)

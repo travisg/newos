@@ -1,7 +1,7 @@
-#include <kernel.h>
+#include <kernel/kernel.h>
 #include <stage2.h>
-#include <vm.h>
-#include <vfs.h>
+#include <kernel/vm.h>
+#include <kernel/vfs.h>
 #include <string.h>
 
 struct zero_fs {

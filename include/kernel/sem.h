@@ -1,7 +1,7 @@
 #ifndef _SEM_H
 #define _SEM_H
 
-#include <thread.h>
+#include <kernel/thread.h>
 #include <stage2.h>
 
 struct sem_entry {
