@@ -149,21 +149,20 @@ FUNCTION(i386_fxsave_swap):
 	fxrstor	(%eax)
 	ret
 
-/* void i386_context_switch(unsigned int **old_esp, unsigned int *new_esp, addr_t new_pgdir); */
+/* void i386_context_switch(struct arch_thread *old, struct arch_thread *new); */
 FUNCTION(i386_context_switch):
 	pusha					/* pushes 8 words onto the stack */
+
 	movl	36(%esp),%eax	/* save current_stack */
 	movl	%esp,(%eax)
-	pushl	%ss
-	popl	%edx
-	movl	%edx,4(%eax)
-	movl	44(%esp),%eax	/* get possible new pgdir */
-	orl		%eax,%eax		/* is it null? */
-	je		skip_pgdir_swap
-		movl	%eax,%cr3
-skip_pgdir_swap:
+
+	pushl	%ss				/* push the old ss */
+	popl	%edx			/* pop it back off the stack */
+	movl	%edx,4(%eax)	/* save it into the arch_thread structure */
+
 	movl	40(%esp),%eax	/* get new current_stack */
 	lss		(%eax),%esp
+
 	popa
 	ret
 

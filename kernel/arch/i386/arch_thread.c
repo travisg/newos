@@ -105,7 +105,6 @@ void arch_thread_context_switch(struct thread *t_from, struct thread *t_to)
 	for(i=0; i<11; i++)
 		dprintf("*esp[%d] (0x%x) = 0x%x\n", i, ((unsigned int *)new_at->esp + i), *((unsigned int *)new_at->esp + i));
 #endif
-	i386_set_kstack(t_to->kernel_stack_base + KSTACK_SIZE);
 
 #if 0
 {
@@ -144,8 +143,11 @@ void arch_thread_context_switch(struct thread *t_from, struct thread *t_to)
 	if((new_pgdir % PAGE_SIZE) != 0)
 		panic("arch_thread_context_switch: bad pgdir %p\n", (void*)new_pgdir);
 
+	if(new_pgdir)
+		i386_swap_pgdir(new_pgdir);
+	i386_set_kstack(t_to->kernel_stack_base + KSTACK_SIZE);
 	i386_fsave_swap(t_from->arch_info.fpu_state, t_to->arch_info.fpu_state);
-	i386_context_switch(&t_from->arch_info, &t_to->arch_info, new_pgdir);
+	i386_context_switch(&t_from->arch_info, &t_to->arch_info);
 }
 
 void arch_thread_dump_info(void *info)
