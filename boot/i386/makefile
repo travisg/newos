@@ -4,6 +4,12 @@ BOOT_TARGETDIR := $(call TOBUILDDIR, boot)
 
 STAGE2 = $(BOOT_TARGETDIR)/stage2
 
+ifeq ($(OSTYPE),cygwin)
+	BOOT_IMAGE_TARGET ?= a:
+else
+	BOOT_IMAGE_TARGET ?= /dev/disk/floppy/raw
+endif
+
 # make a rule for the stage2
 MY_TARGETDIR := $(BOOT_TARGETDIR)
 MY_SRCDIR := $(BOOT_SRCDIR)
@@ -70,16 +76,16 @@ $(STAGE1): $(STAGE1).elf
 
 disk: $(FINAL)
 ifeq ($(OSTYPE),cygwin)
-	fdimage -q $(FINAL) a:
+	fdimage -q $(FINAL) $(BOOT_IMAGE_TARGET)
 else
-	dd if=$(FINAL) of=/dev/disk/floppy/raw bs=18k
+	dd if=$(FINAL) of=$(BOOT_IMAGE_TARGET) bs=18k
 endif
 
 vdisk: $(FINAL).v
 ifeq ($(OSTYPE),cygwin)
-	fdimage -q $(FINAL).v a:
+	fdimage -q $(FINAL).v $(BOOT_IMAGE_TARGET)
 else
-	dd if=$(FINAL).v of=/dev/disk/floppy/raw bs=18k
+	dd if=$(FINAL).v of=$(BOOT_IMAGE_TARGET) bs=18k
 endif
 
 $(MAKEFLOP): $(MAKEFLOP).c
