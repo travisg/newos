@@ -585,7 +585,7 @@ region_id vm_create_anonymous_region(aspace_id aid, char *name, void **address, 
 			addr_t va;
 			// XXX remove
 			for(va = region->base; va < region->base + region->size; va += PAGE_SIZE) {
-				dprintf("mapping wired pages: region %p, cache_ref %p %p, address 0x%lx\n", region, cache_ref, region->cache_ref, va);
+//				dprintf("mapping wired pages: region %p, cache_ref %p %p, address 0x%lx\n", region, cache_ref, region->cache_ref, va);
 				vm_soft_fault(va, false, false);
 			}
 			break;
@@ -2238,5 +2238,10 @@ int user_memset(void *s, char c, size_t count)
 addr_t vm_get_mem_size(void)
 {
 	return vm_info.physical_page_size * vm_info.physical_pages;
+}
+
+int user_vm_get_vm_info(vm_info_t *uinfo)
+{
+	return user_memcpy(uinfo, &vm_info, sizeof(vm_info));
 }
 

@@ -32,6 +32,7 @@ include $(addsuffix /makefile, $(addprefix $(APPS_DIR)/, \
 	window_server \
 	guiapp \
 	disktest \
+	vmstat \
 ))
 
 

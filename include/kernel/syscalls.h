@@ -86,6 +86,7 @@ enum {
 	SYSCALL_READDIR,
 	SYSCALL_MKDIR,
 	SYSCALL_RMDIR,
+	SYSCALL_VM_GET_VM_INFO,
 };
 
 int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_ret);

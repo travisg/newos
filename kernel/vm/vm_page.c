@@ -496,12 +496,10 @@ vm_page *vm_page_allocate_page(int page_state)
 		case PAGE_STATE_FREE:
 			q = &page_free_queue;
 			q_other = &page_clear_queue;
-			vm_info.free_pages--;
 			break;
 		case PAGE_STATE_CLEAR:
 			q = &page_clear_queue;
 			q_other = &page_free_queue;
-			vm_info.clear_pages--;
 			break;
 		default:
 			return NULL; // invalid
@@ -513,12 +511,18 @@ vm_page *vm_page_allocate_page(int page_state)
 	p = dequeue_page(q);
 	if(p == NULL) {
 		// the clear queue was empty, grab one from the free queue and zero it out
-		p = dequeue_page(q_other);
+		q = q_other;
+		p = dequeue_page(q);
 		if(p == NULL) {
 			// XXX hmm
 			panic("vm_allocate_page: out of memory!\n");
 		}
 	}
+
+	if(q == &page_free_queue)
+		vm_info.free_pages--;
+	else
+		vm_info.clear_pages--;
 
 	old_page_state = p->state;
 	p->state = PAGE_STATE_BUSY;

@@ -271,6 +271,7 @@ typedef struct {
 } vm_info_t;
 
 addr_t vm_get_mem_size(void);
+int user_vm_get_vm_info(vm_info_t *uinfo);
 
 // XXX remove later
 void vm_test(void);

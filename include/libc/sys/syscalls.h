@@ -107,6 +107,29 @@ enum {
 #define LOCK_KERNEL    0x2
 #define LOCK_MASK      0x3
 
+// state of the vm
+typedef struct {
+	// info about the size of memory in the system
+	int physical_page_size;
+	int physical_pages;
+
+	// amount of committed mem in the system
+	int committed_mem;
+
+	// info about the page queues
+	int active_pages;
+	int inactive_pages;
+	int busy_pages;
+	int unused_pages;
+	int modified_pages;
+	int free_pages;
+	int clear_pages;
+	int wired_pages;
+
+	// info about vm activity
+	int page_faults;
+} vm_info_t;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -181,6 +204,7 @@ region_id _kern_vm_map_file(const char *name, void **address, int addr_type,
 	addr_t size, int lock, int mapping, const char *path, off_t offset);
 int _kern_vm_delete_region(region_id id);
 int _kern_vm_get_region_info(region_id id, vm_region_info *info);
+int _kern_vm_get_vm_info(vm_info_t *uinfo);
 
 /* kernel port functions */
 port_id		_kern_port_create(int32 queue_length, const char *name);

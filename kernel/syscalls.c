@@ -289,6 +289,9 @@ int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_re
 		case SYSCALL_RMDIR:
 			*call_ret = user_rmdir((const char *)arg0);
 			break;
+		case SYSCALL_VM_GET_VM_INFO:
+			*call_ret = user_vm_get_vm_info((vm_info_t *)arg0);
+			break;
 		default:
 			*call_ret = ERR_BAD_SYSCALL;
 	}

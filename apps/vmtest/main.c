@@ -44,14 +44,14 @@ int main(void)
 	}
 #endif
 #if 1
-	printf("doing some commitment tests (will only be proper on 512Mb machines)\n");
+	printf("doing some commitment tests (will only be proper on 256MB machines)\n");
 	{
 		region_id region;
 		region_id region2;
 		void *ptr, *ptr2;
 
 		region = _kern_vm_create_anonymous_region("large", &ptr, REGION_ADDR_ANY_ADDRESS,
-			450*1024*1024, REGION_WIRING_LAZY, LOCK_RW);
+			200*1024*1024, REGION_WIRING_LAZY, LOCK_RW);
 		if(region < 0) {
 			printf("error %d creating large region\n", region);
 		} else {
