@@ -29,6 +29,10 @@ Term::~Term()
 	flags.output_flags = TTY_FLAG_DEFAULT_OUTPUT;
 
 	ioctl(mFd, _TTY_IOCTL_SET_TTY_FLAGS, &flags, sizeof(flags));
+
+	Reset();
+
+	_kern_sem_delete(mSem);
 }
 
 void Term::Lock()
@@ -55,6 +59,11 @@ void Term::SaveCursor()
 void Term::RestoreCursor()
 {
 	WriteEscaped("8");
+}
+
+void Term::Reset()
+{
+	WriteEscaped("c");
 }
 
 ssize_t Term::Write(const char *buf)

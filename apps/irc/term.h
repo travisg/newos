@@ -15,6 +15,7 @@ public:
 	void ClearScreen();
 	void SaveCursor();
 	void RestoreCursor();
+	void Reset();
 	void SetScrollRegion(int y, int height);
 	void SetCursor(int x, int y);
 	void ScrollUp(int count);

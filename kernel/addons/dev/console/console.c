@@ -24,12 +24,6 @@
 #define TAB_SIZE 8
 #define TAB_MASK 7
 
-#define TEXT_INDEX 0x3d4
-#define TEXT_DATA  0x3d5
-
-#define TEXT_CURSOR_LO 0x0f
-#define TEXT_CURSOR_HI 0x0e
-
 typedef enum {
 	CONSOLE_STATE_NORMAL = 0,
 	CONSOLE_STATE_GOT_ESCAPE,
@@ -43,10 +37,6 @@ typedef enum {
 static struct console_desc {
 	mutex lock;
 
-#if 0
-	unsigned int origin;
-	unsigned int end;
-#endif
 	int lines;
 	int columns;
 
@@ -55,9 +45,6 @@ static struct console_desc {
 	bool          bright_attr;
 	bool          reverse_attr;
 
-#if 0
-	unsigned int pos;			/* current position within the buffer */
-#endif
 	int x;						/* current x coordinate */
 	int y;						/* current y coordinate */
 	int saved_x;				/* used to save x and y */
@@ -72,8 +59,6 @@ static struct console_desc {
 	int args[MAX_ARGS];
 	mod_console *funcs;
 } gconsole;
-
-#define LINE_OFFSET(con, line) ((con)->columns * (line) * 2)
 
 #define update_cursor(con, x, y) (con->funcs->move_cursor)(x, y)
 
@@ -90,6 +75,15 @@ static void gotoxy(struct console_desc *con, int new_x, int new_y)
 
 	con->x = new_x;
 	con->y = new_y;
+}
+
+static void reset_console(struct console_desc *con)
+{
+	con->attr = 0x0f;
+	con->scroll_top = 0;
+	con->scroll_bottom = con->lines - 1;
+	con->bright_attr = true;
+	con->reverse_attr = false;
 }
 
 /* scroll from the cursor line up to the top of the scroll region up one line */
@@ -470,6 +464,9 @@ static bool process_vt100_command(struct console_desc *con, const char c, bool s
 		}
 	} else {
 		switch(c) {
+			case 'c':
+				reset_console(con);
+				break;
 			case 'D':
 				rlf(con);
 				break;
@@ -494,7 +491,7 @@ static bool process_vt100_command(struct console_desc *con, const char c, bool s
 static ssize_t _console_write_raw(struct console_desc *con, const void *buf, ssize_t len)
 {
 	const char *c;
-	size_t pos = 0;
+	ssize_t pos = 0;
 
 	while(pos < len) {
 		c = &((const char *)buf)[pos++];
@@ -524,7 +521,7 @@ static ssize_t _console_write_raw(struct console_desc *con, const void *buf, ssi
 static ssize_t _console_write_raw_xy(struct console_desc *in_con, const void *buf, ssize_t len, int x, int y)
 {
 	const char *c;
-	size_t pos = 0;
+	ssize_t pos = 0;
 	struct console_desc con;
 
 	memcpy(&con, in_con, sizeof(con)); // not great, but it keeps us from updating the system's x y
@@ -810,13 +807,9 @@ int dev_bootstrap(void)
 	{
 		// set up the console structure
 		mutex_init(&gconsole.lock, "console_lock");
-		gconsole.attr = 0x0f;
 		gconsole.funcs->get_size(&gconsole.columns, &gconsole.lines);
-		gconsole.scroll_top = 0;
-		gconsole.scroll_bottom = gconsole.lines - 1;
-		gconsole.bright_attr = true;
-		gconsole.reverse_attr = false;
 
+		reset_console(&gconsole);
 		gotoxy(&gconsole, 0, global_kernel_args.cons_line);
 		update_cursor((&gconsole), gconsole.x, gconsole.y);
 		save_cur(&gconsole, true);
