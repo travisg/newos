@@ -87,16 +87,16 @@ endif
 
 $(FINAL): $(KERNEL) $(STAGE2) $(APPS) tools
 	$(BOOTMAKER) boot/$(ARCH)/config.ini -o $(FINAL) $(BOOTMAKER_ARGS)
-	ln -sf $(FINAL) final
-	ln -sf $(KERNEL) system
+	ln -sf $(FINAL) final.$(ARCH)
+	ln -sf $(KERNEL) system.$(ARCH)
 
 ifeq ($(ARCH),i386)
 floppy: floppy1
 
 floppy1: $(KERNEL) $(STAGE2) $(APPS) tools
 	$(BOOTMAKER) boot/config.ini --floppy -o $(FINAL)
-	ln -sf $(FINAL) final
-	ln -sf $(KERNEL) system
+	ln -sf $(FINAL) final.$(ARCH)
+	ln -sf $(KERNEL) system.$(ARCH)
 
 disk: floppy
 	dd if=$(FINAL) of=/dev/disk/floppy/raw bs=18k
