@@ -97,6 +97,7 @@ static unsigned int arp_cache_hash(void *_e, void *_key, int range)
 
 static void dump_arp_packet(arp_packet *arp)
 {
+#if NET_CHATTY
 	dprintf("arp packet: src ");
 	dump_ethernet_addr(arp->sender_ethernet);
 	dprintf(" ");
@@ -106,6 +107,7 @@ static void dump_arp_packet(arp_packet *arp)
 	dprintf(" ");
 	dump_ipv4_addr(ntohl(arp->target_ipv4));
 	dprintf(" op 0x%x\n", ntohs(arp->op));
+#endif
 }
 
 int arp_input(cbuf *buf, ifnet *i)
@@ -170,7 +172,9 @@ int arp_input(cbuf *buf, ifnet *i)
 				arp->sender_ipv4 = htonl(*(ipv4_addr *)&iaddr->addr.addr[0]);
 				arp->op = htons(ARP_OP_REPLY);
 
+#if NET_CHATTY
 				dprintf("arp_receive: arp was for us, responding...\n");
+#endif
 
 				// send it out
 				{
@@ -185,8 +189,10 @@ int arp_input(cbuf *buf, ifnet *i)
 			}
 			break;
 		}
+#if NET_CHATTY
 		default:
 			dprintf("arp_receive: unhandled arp request type 0x%x\n", ntohs(arp->op));
+#endif
 	}
 
 out:
@@ -283,7 +289,7 @@ int arp_insert(ipv4_addr ip_addr, netaddr *link_addr)
 	arp_wait_request *last;
 	arp_wait_request *temp;
 
-#if 1
+#if NET_CHATTY
 	dprintf("arp_insert: ip addr ");
 	dump_ipv4_addr(ip_addr);
 	dprintf(" link_addr: type %d len %d addr ", link_addr->type, link_addr->len);
@@ -469,10 +475,11 @@ static int arp_cleanup_thread(void *unused)
 
 		// free any entries that we pulled out of the cache
 		while(free_list) {
+#if NET_CHATTY
 			dprintf("arp_cleanup_thread: pruning arp entry for ");
 			dump_ipv4_addr(e->ip_addr);
 			dprintf("\n");
-
+#endif
 			temp = free_list;
 			free_list = free_list->all_next;
 			kfree(temp);
@@ -497,7 +504,6 @@ int arp_init(void)
 
 	thread_resume_thread(thread_create_kernel_thread("arp cache cleaner", &arp_cleanup_thread, NULL));
 	thread_resume_thread(thread_create_kernel_thread("arp retransmit thread", &arp_retransmit_thread, NULL));
-
 
 	return 0;
 }

@@ -47,24 +47,29 @@ typedef struct ipv4_routing_entry {
 static ipv4_routing_entry *route_table;
 static mutex route_table_mutex;
 
-static uint32 curr_identification = 0xbeef;
+// current ip identification number
+static uint32 curr_identification;
 
 // expects hosts order
 void dump_ipv4_addr(ipv4_addr addr)
 {
+#if NET_CHATTY
 	uint8 *nuaddr = (uint8 *)&addr;
 
 	dprintf("%d.%d.%d.%d", nuaddr[3], nuaddr[2], nuaddr[1], nuaddr[0]);
+#endif
 }
 
 static void dump_ipv4_header(ipv4_header *head)
 {
+#if NET_CHATTY
 	dprintf("ipv4 header: src ");
 	dump_ipv4_addr(ntohl(head->src));
 	dprintf(" dest ");
 	dump_ipv4_addr(ntohl(head->dest));
 	dprintf(" prot %d, cksum 0x%x, len 0x%x, ident 0x%x, frag offset 0x%x\n",
 		head->protocol, ntohs(head->header_checksum), ntohs(head->total_length), ntohs(head->identification), ntohs(head->flags_frag_offset & 0x1fff));
+#endif
 }
 
 static int ipv4_route_add_etc(ipv4_addr network_addr, ipv4_addr netmask, ipv4_addr if_addr, if_id interface_num, int flags, ipv4_addr gw_addr)
@@ -155,6 +160,14 @@ static int ipv4_route_match(ipv4_addr ip_addr, if_id *interface_num, ipv4_addr *
 	return err;
 }
 
+int ipv4_lookup_srcaddr_for_dest(ipv4_addr dest_addr, ipv4_addr *src_addr)
+{
+	if_id id;
+	ipv4_addr target_addr;
+
+	return ipv4_route_match(dest_addr, &id, &target_addr, src_addr);
+}
+
 static void ipv4_arp_callback(int arp_code, void *args, ifnet *i, netaddr *link_addr)
 {
 	cbuf *buf = args;
@@ -182,9 +195,11 @@ int ipv4_output(cbuf *buf, ipv4_addr target_addr, int protocol)
 	ipv4_addr if_addr;
 	int err;
 
+#if NET_CHATTY
 	dprintf("ipv4_output: buf %p, target_addr ", buf);
 	dump_ipv4_addr(target_addr);
 	dprintf(", protocol %d\n", protocol);
+#endif
 
 	// figure out what interface we will send this over
 	err = ipv4_route_match(target_addr, &iid, &transmit_addr, &if_addr);
@@ -230,7 +245,9 @@ int ipv4_output(cbuf *buf, ipv4_addr target_addr, int protocol)
 		// and the rest of the work will be done via the arp callback
 		return NO_ERROR;
 	} else if(err < 0) {
+#if NET_CHATTY
 		dprintf("ipv4_output: failed arp lookup\n");
+#endif
 		cbuf_free_chain(buf);
 		return ERR_NET_FAILED_ARP;
 	} else {
@@ -318,6 +335,7 @@ int ipv4_init(void)
 	mutex_init(&route_table_mutex, "ipv4 routing table mutex");
 
 	route_table = NULL;
+	curr_identification = system_time();
 
 	return 0;
 }

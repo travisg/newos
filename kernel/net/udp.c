@@ -142,9 +142,10 @@ int udp_input(cbuf *buf, ifnet *i, ipv4_addr source_address, ipv4_addr target_ad
 
 	header = cbuf_get_ptr(buf, 0);
 
-	dprintf("udp_receive: src port %d, dest port %d, len %d, buf len %d, checksum 0x%x\n",
-		ntohs(header->source_port), ntohs(header->dest_port), ntohs(header->length), (int)cbuf_get_len(buf), header->checksum);
-
+#if NET_CHATTY
+	dprintf("udp_input: src port %d, dest port %d, len %d, buf len %d, checksum 0x%x\n",
+		ntohs(header->source_port), ntohs(header->dest_port), ntohs(header->length), (int)cbuf_get_len(buf), ntohs(header->checksum));
+#endif
 	if(ntohs(header->length) > (uint16)cbuf_get_len(buf)) {
 		err = ERR_NET_BAD_PACKET;
 		goto ditch_packet;
@@ -168,7 +169,9 @@ int udp_input(cbuf *buf, ifnet *i, ipv4_addr source_address, ipv4_addr target_ad
 		}
 		checksum = cksum16_2(&pheader, sizeof(pheader), header, ROUNDUP(ntohs(header->length), 2));
 		if(checksum != 0) {
+#if NET_CHATTY
 			dprintf("udp_receive: packet failed checksum\n");
+#endif
 			err = ERR_NET_BAD_PACKET;
 			goto ditch_packet;
 		}
@@ -302,6 +305,9 @@ ssize_t udp_sendto(void *prot_data, const void *inbuf, ssize_t len, sockaddr *to
 	udp_header *header;
 	int total_len;
 	cbuf *buf;
+	uint8 *bufptr;
+	udp_pseudo_header pheader;
+	ipv4_addr srcaddr;
 
 	// make sure the args make sense
 	if(len < 0 || len + sizeof(udp_header) > 0xffff)
@@ -311,7 +317,6 @@ ssize_t udp_sendto(void *prot_data, const void *inbuf, ssize_t len, sockaddr *to
 
 	// allocate a buffer to hold the data + header
 	total_len = len + sizeof(udp_header);
-	if(total_len % 2 != 0) total_len++;
 	buf = cbuf_get_chain(total_len);
 	if(!buf)
 		return ERR_NO_MEMORY;
@@ -319,12 +324,26 @@ ssize_t udp_sendto(void *prot_data, const void *inbuf, ssize_t len, sockaddr *to
 	// copy the data to this new buffer
 	cbuf_memcpy_to_chain(buf, sizeof(udp_header), inbuf, len);
 
+	// set up the udp pseudo header
+	if(ipv4_lookup_srcaddr_for_dest(NETADDR_TO_IPV4(&toaddr->addr), &srcaddr) < 0) {
+		cbuf_free_chain(buf);
+		return ERR_NET_NO_ROUTE;
+	}
+	pheader.source_addr = htonl(srcaddr);
+	pheader.dest_addr = htonl(NETADDR_TO_IPV4(&toaddr->addr));
+	pheader.zero = 0;
+	pheader.protocol = IP_PROT_UDP;
+	pheader.udp_length = htons(total_len);
+
 	// start setting up the header
 	header = cbuf_get_ptr(buf, 0);
 	header->source_port = htons(e->port);
 	header->dest_port = htons(toaddr->port);
-	header->length = htons(len + sizeof(udp_header));
-	header->checksum = 0; // XXX calc checksum later
+	header->length = htons(total_len);
+	header->checksum = 0;
+	header->checksum = cksum16_2(&pheader, sizeof(pheader), header, total_len);
+	if(header->checksum == 0)
+		header->checksum = 0xffff;
 
 	// send it away
 	return ipv4_output(buf, NETADDR_TO_IPV4(&toaddr->addr), IP_PROT_UDP);

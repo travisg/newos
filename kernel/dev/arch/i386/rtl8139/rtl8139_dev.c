@@ -264,8 +264,8 @@ restart:
 	}
 
 	memcpy((void*)(rtl->txbuf + rtl->txbn * 0x800), ptr, len);
-	if(len < 64)
-		len = 64;
+	if(len < 60)
+		len = 60;
 
 	state = int_disable_interrupts();
 

@@ -27,7 +27,9 @@ int icmp_input(cbuf *buf, ifnet *i, ipv4_addr source_ipaddr)
 
 	header = (icmp_header *)cbuf_get_ptr(buf, 0);
 
+#if NET_CHATTY
 	dprintf("icmp_message: header type %d, code %d, checksum 0x%x, length %Ld\n", header->type, header->code, header->checksum, (long long)cbuf_get_len(buf));
+#endif
 
 	// calculate the checksum on the whole thing
 	if(cksum16(header, cbuf_get_len(buf)) != 0) {
@@ -51,8 +53,10 @@ int icmp_input(cbuf *buf, ifnet *i, ipv4_addr source_ipaddr)
 			eheader->preheader.checksum = cksum16(eheader, cbuf_get_len(buf));
 			return ipv4_output(buf, source_ipaddr, IP_PROT_ICMP);
 		}
+#if NET_CHATTY
 		default:
 			dprintf("unhandled icmp message\n");
+#endif
 	}
 
 	err = NO_ERROR;
