@@ -100,7 +100,8 @@ static int telnet_reader(void *arg)
 	}
 
 	sys_sem_release(wait_sem, 1);
-	return 0;
+
+	sys_exit(0);
 }
 
 static int telnet_writer(void *arg)
@@ -121,7 +122,8 @@ static int telnet_writer(void *arg)
 	}
 
 	sys_sem_release(wait_sem, 1);
-	return 0;
+
+	sys_exit(0);
 }
 
 static int send_opts()

@@ -41,32 +41,32 @@ SECTIONS
 
 	/* writable data  */
   	. = ALIGN(0x1000) + (. & (0x1000 - 1));
-	__data_start = .;
-	PROVIDE(_data_start = .);
+	___data_start = .;
+	PROVIDE(__data_start = .);
 	.data : { *(.data .gnu.linkonce.d.*) }
 
-	__ctor_list = .;
-	PROVIDE (_ctor_list = .);
+	___ctor_list = .;
+	PROVIDE (__ctor_list = .);
 	.ctors : { *(.ctors) }
-	__ctor_end = .;
-	PROVIDE (_ctor_end = .);
+	___ctor_end = .;
+	PROVIDE (__ctor_end = .);
 
-	__dtor_list = .;
-	PROVIDE (_dtor_list = .);
+	___dtor_list = .;
+	PROVIDE (__dtor_list = .);
 	.dtors : { *(.dtors) }
-	__dtor_end = .;
-	PROVIDE (_dtor_end = .);
+	___dtor_end = .;
+	PROVIDE (__dtor_end = .);
 
     .got	 : { *(.got.plt) *(.got) }
 	.dynamic : { *(.dynamic) }
 
 
 	/* unintialized data (in same segment as writable data) */
-	PROVIDE (__bss_start = .);
+	PROVIDE (___bss_start = .);
 	.bss : { *(.bss) }
 
 	. = ALIGN(0x1000);
-	PROVIDE (_end = .);
+	PROVIDE (__end = .);
 
 	/* Strip unnecessary stuff */
 	/DISCARD/ : { *(.comment .note .eh_frame .dtors) }

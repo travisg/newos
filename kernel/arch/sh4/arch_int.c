@@ -53,6 +53,11 @@ static int sh4_handle_exception(void *_frame)
 		case 12: // illegal instruction
 		case 13: // slot illegal instruction
 			dprintf("about to gpf at pc 0x%x, excode %d, TEA 0x%x\n", frame->spc, frame->excode, *(addr *)TEA);
+			dprintf("\tframe %p code 0x%x, spc 0x%x, ssr 0x%x, sgr 0x%x, sr 0x%x, pr 0x%x\n",
+				frame, frame->excode, frame->spc, frame->ssr, frame->sgr, get_sr(), frame->pr);
+			dprintf("\tregs: 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x\n",
+				frame->r0, frame->r1, frame->r2, frame->r3, frame->r4, frame->r5, frame->r6, frame->r7,
+				frame->r8, frame->r9, frame->r10, frame->r11, frame->r12, frame->r13, frame->r14, frame->sgr);
 			ret = general_protection_fault(frame->excode);
 			break;
 		case 11:  { // TRAPA
