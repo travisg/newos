@@ -109,32 +109,6 @@ void arch_int_disable_interrupts(void)
 	asm("cli");
 }
 
-#if 0
-int arch_int_disable_interrupts(void)
-{
-	int flags;
-
-	asm("pushfl;\n"
-		"popl %0;\n"
-		"cli" : "=g" (flags));
-	return flags & 0x200 ? 1 : 0;
-}
-
-void arch_int_restore_interrupts(int oldstate)
-{
-	int flags = oldstate ? 0x200 : 0;
-
-	asm (
-		"pushfl;\n"
-		"popl	%1;\n"
-		"andl	$0xfffffdff,%1;\n"
-		"orl	%0,%1;\n"
-		"pushl	%1;\n"
-		"popfl\n"
-		: : "r" (flags), "r" (0));
-}
-#endif
-
 bool arch_int_are_interrupts_enabled(void)
 {
 	int flags;

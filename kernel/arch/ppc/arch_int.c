@@ -6,11 +6,6 @@
 
 #include <kernel/int.h>
 
-bool arch_int_are_interrupts_enabled(void)
-{
-	return true;
-}
-
 void arch_int_enable_io_interrupt(int irq)
 {
 	return;

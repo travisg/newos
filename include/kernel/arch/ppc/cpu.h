@@ -27,6 +27,7 @@ unsigned int getsr(unsigned int va);
 void setsr(unsigned int va, unsigned int val);
 unsigned int getmsr(void);
 void setmsr(unsigned int msr);
+long long get_time_base(void);
 
 #endif
 

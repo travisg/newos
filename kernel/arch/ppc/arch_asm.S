@@ -2,42 +2,127 @@
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
-#define	FUNC(name) .align 4 ; .globl ##name ; ##name:
+#define FUNCTION(x) .global x; .type x,@function; x
 
 .text
-.globl reboot
-reboot:
+// XXX fixme
+FUNCTION(reboot):
+	b	.
 
-.globl atomic_add
-atomic_add:
+/* int atomic_add(volatile int *val, int incr) */
+FUNCTION(atomic_add):
+1:
+	isync
+	lwarx	r5, r0, r3					// load & reserve
+	add		r0, r4, r5					// do the add
+	stwcx.	r0, r0, r3					// store the new value
+	bne-	1b							// did we lose reservation? if so, repeat
+	mr		r3, r5						// return the old value
+	isync
+	blr
 
-.globl atomic_and
-atomic_and:
+/* int atomic_and(volatile int *val, int incr) */
+FUNCTION(atomic_and):
+1:
+	isync
+	lwarx	r5, r0, r3					// load & reserve
+	and		r0, r4, r5					// do the and
+	stwcx.	r0, r0, r3					// store the new value
+	bne-	1b							// did we lose reservation? if so, repeat
+	mr		r3, r5						// return the old value
+	isync
+	blr
 
-.globl atomic_or
-atomic_or:
+/* int atomic_or(volatile int *val, int incr) */
+FUNCTION(atomic_or):
+1:
+	isync
+	lwarx	r5, r0, r3					// load & reserve
+	or		r0, r4, r5					// do the or
+	stwcx.	r0, r0, r3					// store the new value
+	bne-	1b							// did we lose reservation? if so, repeat
+	mr		r3, r5						// return the old value
+	isync
+	blr
 
-.globl atomic_set
-atomic_set:
+/* int atomic_set(volatile int *val, int set_to) */
+FUNCTION(atomic_set):
+1:
+	isync
+	lwarx	r5, r0, r3					// load & reserve
+	stwcx.	r4, r0, r3					// store the new value
+	bne-	1b							// did we lose reservation? if so, repeat
+	mr		r3, r5						// return the old value
+	blr
 
-.globl test_and_set
-test_and_set:
+/* int test_and_set(int *val, int set_to, int test_val) */
+FUNCTION(test_and_set):
+1:
+	isync
+	lwarx	r1, r0, r3					// load & reserve
+	cmpw	r1, r5						// see if the value == test_val
+	bne-	2f							// if not, bail
 
-.globl arch_int_restore_interrupts
-arch_int_restore_interrupts:
+	stwcx.	r4, r0, r3					// store the new value
+	bne-	1b							// did we lose reservation? if so, repeat
+2:
+	mr		r3, r1						// return what was there (success or failure)
+	blr
 
-.globl arch_int_enable_interrupts
-arch_int_enable_interrupts:
+/* void arch_int_enable_interrupts(void) */
+FUNCTION(arch_int_enable_interrupts):
+	mfmsr	r3							// load msr
 
-.globl arch_int_disable_interrupts
-arch_int_disable_interrupts:
+	li		r4, 1
+	insrwi	r3, r4, 1, 16				// set the EE bit
 
-.global dbg_save_registers
-dbg_save_registers:
+/*
+	li		r4, 0
+	ori		r4, r4, (1 << 15)			// create a mask for EE bit of MSR
+	or		r3, r3, r4					// set the EE bit
+*/
+
+	mtmsr	r3							// put it back into the msr
+	blr
+
+/* void arch_int_disable_interrupts(void) */
+FUNCTION(arch_int_disable_interrupts):
+	mfmsr	r3							// load msr
+
+	li		r4, 0
+	rlwinm	r3, r4, 15, 16, 16			// mask the EE bit
+
+/*
+	li		r4, 0
+	ori		r4, r4, (1 << 15)			// create a mask for EE bit of MSR
+	andc	r3, r3, r4					// mask the EE bit
+*/
+
+	mtmsr	r3							// put it back into the msr
+	blr
+
+/* bool arch_int_are_interrupts_enabled(void) */
+FUNCTION(arch_int_are_interrupts_enabled):
+	mfmsr	r3							// load msr
+	extrwi	r3, r3, 1, 16				// mask out the EE bit
+	blr
+
+// XXX fixme
+FUNCTION(dbg_save_registers):
+	blr
+
+/* long long get_time_base(void) */
+FUNCTION(get_time_base):
+1:
+	mftbu	r3							// get the upper time base register
+	mftb	r4							// get the lower time base register
+	mftbu	r5							// get the upper again
+	cmpw	r5, r3						// see if it changed while we were reading the lower
+	bne-	1b							// if so, repeat
+	blr
 
 /* void getibats(int bats[8]); */
-.globl getibats
-getibats:
+FUNCTION(getibats):
 	mfibatu 	r0,0
 	stw     	r0,0(r3)
 	mfibatl 	r0,0
@@ -57,8 +142,7 @@ getibats:
 	blr
 
 // void setibats(int bats[8]);
-.globl setibats
-setibats:
+FUNCTION(setibats):
 	mfmsr		r8
 	li			r0,0
 	mtmsr		r0
@@ -94,8 +178,7 @@ setibats:
 	blr
 
 // void getdbats(int bats[8]);
-.globl getdbats
-getdbats:
+FUNCTION(getdbats):
 	mfdbatu 	r0,0
 	stw     	r0,0(r3)
 	mfdbatl 	r0,0
@@ -115,8 +198,7 @@ getdbats:
 	blr
 
 // void setdbats(int bats[8]);
-.globl setdbats
-setdbats:
+FUNCTION(setdbats):
 	mfmsr		r8
 	li			r0,0
 	mtmsr		r0
@@ -143,44 +225,36 @@ setdbats:
 	blr
 
 // unsigned int getsdr1();
-.globl getsdr1
-getsdr1:
+FUNCTION(getsdr1):
 	mfsdr1		r3
 	blr
 
 // void setsdr1(unsigned int sdr);
-.globl setsdr1
-setsdr1:
+FUNCTION(setsdr1):
 	sync
 	mtsdr1		r3
 	sync
 	blr
 
 // unsigned int getsr(unsigned int va);
-.globl getsr
-getsr:
+FUNCTION(getsr):
 	mfsrin		r3,r3
 	sync
 	blr
 
 // void setsr(unsigned int va, unsigned int val);
-.globl setsr
-setsr:
+FUNCTION(setsr):
 	mtsrin		r4,r3
 	sync
 	blr
 
-
-
 // unsigned int getmsr();
-.globl getmsr
-getmsr:
+FUNCTION(getmsr):
 	mfmsr 		r3
 	blr
 
 // void setmsr(unsigned int msr);
-.globl setmsr
-setmsr:
+FUNCTION(setmsr):
 	mtmsr 		r3
 	blr
 

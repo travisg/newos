@@ -149,7 +149,7 @@ static struct ppc_pte *lookup_pagetable_entry(vm_translation_map *map, addr_t va
 	// lookup the vsid based off the va
 	vsid = VADDR_TO_ASID(map, va);
 
-	dprintf("vm_translation_map.lookup_pagetable_entry: vsid %d, va 0x%lx\n", vsid, va);
+//	dprintf("vm_translation_map.lookup_pagetable_entry: vsid %d, va 0x%lx\n", vsid, va);
 
 	hash = primary_hash(vsid, va);
 //	dprintf("hash = 0x%x\n", hash);
