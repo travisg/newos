@@ -51,6 +51,9 @@ int int_set_io_interrupt_handler(int vector, int (*func)(void*), void* data)
 	struct io_handler *io;
 	int state;
 
+	if(vector < 0 || vector >= NUM_IO_VECTORS)
+		return ERR_INVALID_ARGS;
+
 	// insert this io handler in the chain of interrupt
 	// handlers registered for this io interrupt
 
@@ -76,6 +79,9 @@ int int_remove_io_interrupt_handler(int vector, int (*func)(void*), void* data)
 {
 	struct io_handler *io, *prev = NULL;
 	int state;
+
+	if(vector < 0 || vector >= NUM_IO_VECTORS)
+		return ERR_INVALID_ARGS;
 
 	// lock the structures down so it is not modified while we search
 	state = int_disable_interrupts();
