@@ -18,7 +18,8 @@ MY_OBJS := \
 	stage2.o \
 	stage2_asm.o \
 	smp_boot.o \
-	smp_trampoline.o
+	smp_trampoline.o \
+	int86.o
 
 MY_INCLUDES := $(STDINCLUDE)
 MY_CFLAGS := $(KERNEL_CFLAGS)

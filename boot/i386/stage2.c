@@ -1,19 +1,17 @@
 /*
-** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2004, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #include <boot/bootdir.h>
 #include <boot/stage2.h>
 #include "stage2_priv.h"
 #include "vesa.h"
+#include "int86.h"
 
 #include <string.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <newos/elf32.h>
-
-const unsigned kBSSSize = 0x9000;
-
 
 // we're running out of the first 'file' contained in the bootdir, which is
 // a set of binaries and data packed back to back, described by an array
@@ -145,37 +143,6 @@ void _start(unsigned int mem, int in_vesa, unsigned int vesa_ptr, unsigned int c
 
 //	dprintf("new stack at 0x%x to 0x%x\n", ka->cpu_kstack[0].start, ka->cpu_kstack[0].start + ka->cpu_kstack[0].size);
 
-	// set up a new idt
-	{
-		struct gdt_idt_descr idt_descr;
-
-		// find a new idt
-		idt = (unsigned int *)next_paddr;
-		ka->arch_args.phys_idt = (unsigned int)idt;
-		next_paddr += PAGE_SIZE;
-
-//		nmessage("idt at ", (unsigned int)idt, "\n");
-
-		// clear it out
-		for(i=0; i<IDT_LIMIT/4; i++) {
-			idt[i] = 0;
-		}
-
-		// map the idt into virtual space
-		mmu_map_page(next_vaddr, (unsigned int)idt);
-		ka->arch_args.vir_idt = (unsigned int)next_vaddr;
-		next_vaddr += PAGE_SIZE;
-
-		// load the idt
-		idt_descr.a = IDT_LIMIT - 1;
-		idt_descr.b = (unsigned int *)ka->arch_args.vir_idt;
-
-		asm("lidt	%0;"
-			: : "m" (idt_descr));
-
-//		nmessage("idt at virtual address ", next_vpage, "\n");
-	}
-
 	// set up a new gdt
 	{
 		struct gdt_idt_descr gdt_descr;
@@ -213,6 +180,74 @@ void _start(unsigned int mem, int in_vesa, unsigned int vesa_ptr, unsigned int c
 			: : "m" (gdt_descr));
 
 //		nmessage("gdt at virtual address ", next_vpage, "\n");
+	}
+
+#if 0
+	{
+		struct regs r;
+		struct ebios_struct {
+			uint32 base_addr_low;
+			uint32 base_addr_high;
+			uint32 length_low;
+			uint32 length_high;
+			uint8 type;
+		} *buf = (struct ebios_struct *)0xf000;
+
+		memset(buf, 0, sizeof(struct ebios_struct));
+
+		r.ebx = 0;
+		do {
+			r.eax = 0xe820;
+			r.ecx = 0x20;
+			r.edx = 'SMAP';
+			r.esi = 0;
+			r.edi = 0x1000;
+			r.es = 0;
+			r.flags = 0;
+
+			int86(0x15, &r);
+
+			if(r.flags & 0x1) {
+				dprintf("error calling int 0x15 e820\n");
+				break;
+			}
+
+			dprintf("flags 0x%x base 0x%x 0x%x length 0x%x 0x%x type %d\n",
+				r.flags, buf->base_addr_low, buf->base_addr_high, buf->length_low, buf->length_high, buf->type);
+			for(;;);
+		} while(r.ebx != 0);
+	}
+#endif
+
+	// set up a new idt
+	{
+		struct gdt_idt_descr idt_descr;
+
+		// find a new idt
+		idt = (unsigned int *)next_paddr;
+		ka->arch_args.phys_idt = (unsigned int)idt;
+		next_paddr += PAGE_SIZE;
+
+//		nmessage("idt at ", (unsigned int)idt, "\n");
+
+		// clear it out
+		for(i=0; i<IDT_LIMIT/4; i++) {
+			idt[i] = 0;
+		}
+
+		// map the idt into virtual space
+		mmu_map_page(next_vaddr, (unsigned int)idt);
+		ka->arch_args.vir_idt = (unsigned int)next_vaddr;
+		next_vaddr += PAGE_SIZE;
+
+		// load the idt
+		idt_descr.a = IDT_LIMIT - 1;
+		idt_descr.b = (unsigned int *)ka->arch_args.vir_idt;
+
+		asm("lidt	%0;"
+			: : "m" (idt_descr));
+
+//		nmessage("idt at virtual address ", next_vpage, "\n");
 	}
 
 	// Map the pg_dir into kernel space at 0xffc00000-0xffffffff
