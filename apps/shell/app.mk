@@ -21,7 +21,7 @@ APPS_CLEAN += shellappclean
 $(SHELLAPP_OBJ_DIR)/%.o: $(SHELLAPP_DIR)/%.c
 	@if [ ! -d $(SHELLAPP_OBJ_DIR) ]; then mkdir -p $(SHELLAPP_OBJ_DIR); fi
 	@mkdir -p $(SHELLAPP_OBJ_DIR)
-	$(CC) -c $< $(GLOBAL_CFLAGS) -O0 $(APPS_INCLUDES) -o $@
+	$(CC) -c $< $(GLOBAL_CFLAGS) $(APPS_INCLUDES) -o $@
 
 $(SHELLAPP_OBJ_DIR)/%.d: $(SHELLAPP_DIR)/%.c
 	@if [ ! -d $(SHELLAPP_OBJ_DIR) ]; then mkdir -p $(SHELLAPP_OBJ_DIR); fi

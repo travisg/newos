@@ -19,7 +19,7 @@ APPS_CLEAN += initappclean
 
 $(INITAPP_OBJ_DIR)/%.o: $(INITAPP_DIR)/%.c
 	@if [ ! -d $(INITAPP_OBJ_DIR) ]; then mkdir -p $(INITAPP_OBJ_DIR); fi
-	$(CC) -c $< $(GLOBAL_CFLAGS) -O0 $(APPS_INCLUDES) -o $@
+	$(CC) -c $< $(GLOBAL_CFLAGS) $(APPS_INCLUDES) -o $@
 
 $(INITAPP_OBJ_DIR)/%.d: $(INITAPP_DIR)/%.c
 	@if [ ! -d $(INITAPP_OBJ_DIR) ]; then mkdir -p $(INITAPP_OBJ_DIR); fi
