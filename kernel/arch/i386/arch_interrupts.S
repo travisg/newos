@@ -1,10 +1,11 @@
 /*
-** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2004, Travis Geiselbrecht. All rights reserved.
 ** Copyright 2002, Michael Noisternig. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 
 #include <kernel/arch/i386/descriptors.h>
+#include <kernel/arch/i386/kernel.h>
 
 #define FUNCTION(x) .global x; .type x,@function; x
 
@@ -127,11 +128,12 @@ _interrupt_stack_offset:
 /* syscall entry point. arg passing is as follows:
  * eax: vector number
  * ecx: number of words on stack
- * edx: pointer to args
+ * edx: pointer to args on user stack
  *
  * algorithm: push all registers, copy arguments to kernel stack, indirect
  * jump through syscall_table (in kernel/syscalls.c).
- */
+ */ 
+.align 8
 FUNCTION(i386_syscall_vector):
 	/* save all non-trashed integer regs and load kernel data segments */
 	push	%ebx
@@ -177,7 +179,10 @@ FUNCTION(i386_syscall_vector):
 	test	$0xfffffff0,%ecx
 	jnz		syscall_vector_error
 
-	/* XXX sanity check kernel space pointer here */
+	/* check to make sure the args pointer is not inside kernel space */
+	test	$KERNEL_ADDR_MASK,%edx
+	jnz		syscall_vector_error
+
 	/* if the syscall has no args, fast path over the arg copy code */
 	test	%ecx,%ecx
 	jz		skip_arg_copy

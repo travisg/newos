@@ -1,16 +1,19 @@
 /*
-** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2004, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #ifndef _NEWOS_KERNEL_ARCH_I386_KERNEL_H
 #define _NEWOS_KERNEL_ARCH_I386_KERNEL_H
 
-#include <kernel/arch/cpu.h>
-
 // memory layout
 #define KERNEL_BASE 0x80000000
 #define KERNEL_SIZE 0x80000000
 #define KERNEL_TOP  (KERNEL_BASE + (KERNEL_SIZE - 1))
+
+#define KERNEL_ADDR_MASK 0x80000000
+
+// a macro to test if a pointer is inside kernel space or not
+#define is_kernel_address(x) (((addr_t)(x)) & KERNEL_ADDR_MASK)
 
 /*
 ** User space layout is a little special:

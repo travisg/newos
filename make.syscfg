@@ -234,6 +234,8 @@ GLOBAL_CFLAGS += -Wall -W -Wno-multichar -Wno-unused-parameter -Wmissing-prototy
 GLOBAL_CFLAGS += -DARCH_$(ARCH) -DNEWOS=1 -D__ARCH__=$(ARCH) -U$(ARCH)
 GLOBAL_CPPFLAGS = $(GLOBAL_CFLAGS)
 
+GLOBAL_ASFLAGS += -D__ASSEMBLY__
+
 # find libgcc
 LIBGCC := -lgcc
 LIBGCC_PATH := $(dir $(shell $(CC) $(GLOBAL_CFLAGS) -print-libgcc-file-name))
