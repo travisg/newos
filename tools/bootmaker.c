@@ -134,6 +134,7 @@ static int target_endian = LE;
 
 static int make_sparcboot = 0;
 static int strip_debug = 0;
+static char *strip_binary = "strip";
 
 void die(char *s, char *a)
 {
@@ -179,7 +180,7 @@ void *loadstripfile(char *file, int *size)
     if(strip_debug) {
         strcpy(temp, "/tmp/mkboot.XXXXXXXX");
         mktemp(temp);
-        sprintf(cmd, "cp %s %s; strip %s", file, temp, temp);
+        sprintf(cmd, "cp %s %s; %s %s", file, temp, strip_binary, temp);
         system(cmd);
 
         retval = loadfile(temp, size);
@@ -498,7 +499,7 @@ int main(int argc, char **argv)
     
     if(argc < 2){
 usage:
-        fprintf(stderr,"usage: %s [--littleendian (default)] [--bigendian ] [ --sparc | -s ] [ <inifile> ... ] -o <bootfile>\n",argv[0]);
+        fprintf(stderr,"usage: %s [--littleendian (default)] [--bigendian ] [ --strip-binary <binary ] [ --strip-debug] [ --sparc | -s ] [ <inifile> ... ] -o <bootfile>\n",argv[0]);
         return 1;
     }
 
@@ -515,6 +516,14 @@ usage:
 			argv++;
 			if(argc) {
 				file = *argv;
+			} else {
+				goto usage;
+			}
+		} else if(!strcmp(*argv, "--strip-binary")) {
+			argc--;
+			argv++;
+			if(argc) {
+				strip_binary = *argv;
 			} else {
 				goto usage;
 			}

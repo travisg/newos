@@ -21,11 +21,12 @@ ARCH := $(HOSTTYPE)
 #ARCH := sparc64
 endif
 
-HOST_CC := $(CC)
+HOST_CC := gcc
 HOST_LD := $(LD)
 HOST_AS := $(AS)
 HOST_AR := $(AR)
 HOST_OBJCOPY := objcopy
+HOST_STRIP := strip
 
 # setup echo
 ECHO := echo
@@ -42,6 +43,8 @@ CC = $(HOST_CC)
 LD = $(HOST_LD)
 AS = $(HOST_AS)
 AR = $(HOST_AR)
+OBJCOPY = $(HOST_OBJCOPY)
+STRIP = $(HOST_STRIP)
 
 ifeq ($(ARCH),i386)
 	ifneq ($(HOSTTYPE),i386)
@@ -50,6 +53,7 @@ ifeq ($(ARCH),i386)
 		AS = i386-elf-as
 		AR = i386-elf-ar
 		OBJCOPY = i386-elf-objcopy
+		STRIP = i386-elf-strip
 	endif
 	ifeq ($(OSTYPE),cygwin)
 		CC = i386-linux-gcc
@@ -57,6 +61,7 @@ ifeq ($(ARCH),i386)
 		AS = i386-linux-as
 		AR = i386-linux-ar
 		OBJCOPY = i386-linux-objcopy
+		STRIP = i386-linux-strip
 	endif
 	GLOBAL_CFLAGS = -O1
 	KERNEL_CFLAGS = -fno-pic
@@ -72,6 +77,7 @@ ifeq ($(ARCH),sh4)
 	AS = sh-elf-as
 	AR = sh-elf-ar
 	OBJCOPY = sh-elf-objcopy
+	STRIP = sh-elf-strip
 	GLOBAL_CFLAGS = -ml -m4 -mhitachi -O
 	KERNEL_CFLAGS = -fno-pic
 	USER_CFLAGS = -fpic
@@ -86,6 +92,7 @@ ifeq ($(ARCH),sparc64)
 	AS = sparc64-elf-as
 	AR = sparc64-elf-ar
 	OBJCOPY = sparc64-elf-objcopy
+	STRIP = sparc64-elf-strip
 	GLOBAL_CFLAGS =
 	GLOBAL_LDFLAGS =
 	LIBGCC = -lgcc
@@ -99,6 +106,7 @@ ifeq ($(ARCH),sparc)
 		AS = sparc-elf-as
 		AR = sparc-elf-ar
 		OBJCOPY = sparc-elf-objcopy
+		STRIP = sparc-elf-strip
 	endif
 	GLOBAL_CFLAGS =
 	GLOBAL_LDFLAGS =
@@ -113,6 +121,7 @@ ifeq ($(ARCH),alpha)
 		AS = alpha-elf-as
 		AR = alpha-elf-ar
 		OBJCOPY = alpha-elf-objcopy
+		STRIP = alpha-elf-strip
 	endif
 	GLOBAL_CFLAGS =
 	GLOBAL_LDFLAGS =
@@ -127,6 +136,7 @@ ifeq ($(ARCH),mips)
 		AS = mips-elf-as
 		AR = mips-elf-ar
 		OBJCOPY = mips-elf-objcopy
+		STRIP = mips-elf-strip
 	endif
 	GLOBAL_CFLAGS = -fno-pic -mips4 -meb -G 0
 	GLOBAL_LDFLAGS =
@@ -141,6 +151,7 @@ ifeq ($(ARCH),ppc)
 		AS = ppc-elf-as
 		AR = ppc-elf-ar
 		OBJCOPY = ppc-elf-objcopy
+		STRIP = ppc-elf-strip
 	endif
 	GLOBAL_CFLAGS = -fno-pic -O
 	GLOBAL_LDFLAGS =
