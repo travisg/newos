@@ -100,10 +100,11 @@ static void dump_sem_info(int argc, char **argv)
 
 	// walk through the sem list, trying to match name
 	for(i=0; i<MAX_SEMS; i++) {
-		if(strcmp(argv[1], sems[i].name) == 0) {
-			_dump_sem_info(&sems[i]);
-			return;
-		}
+		if (sems[i].name != NULL)
+			if(strcmp(argv[1], sems[i].name) == 0) {
+				_dump_sem_info(&sems[i]);
+				return;
+			}
 	}
 }
 
@@ -747,6 +748,9 @@ int sem_delete_owned_sems(proc_id owner)
 	int state;
 	int i;
 	int count = 0;
+	
+	if (owner < 0)
+		return ERR_INVALID_HANDLE;
 
 	state = int_disable_interrupts();
 	GRAB_SEM_LIST_LOCK();

@@ -146,10 +146,11 @@ static void dump_port_info(int argc, char **argv)
 
 	// walk through the ports list, trying to match name
 	for(i=0; i<MAX_PORTS; i++) {
-		if(strcmp(argv[1], ports[i].name) == 0) {
-			_dump_port_info(&ports[i]);
-			return;
-		}
+		if (ports[i].name != NULL)
+			if(strcmp(argv[1], ports[i].name) == 0) {
+				_dump_port_info(&ports[i]);
+				return;
+			}
 	}
 }
 
@@ -212,7 +213,7 @@ port_create(int32 queue_length, const char *name)
 		kfree(q);
 		return sem_w;
 	}
-	owner = proc_get_kernel_proc_id();
+	owner = proc_get_current_proc_id();
 
 	state = int_disable_interrupts();
 	GRAB_PORT_LIST_LOCK();
@@ -306,9 +307,11 @@ port_delete(port_id id)
 	int slot;
 	int state;
 	sem_id	r_sem, w_sem;
+	int capacity;
+	int i;
 
 	char *old_name;
-	void *q;
+	struct port_msg *q;
 
 	dprintf("port_delete(): port_id %d\n", id);
 
@@ -335,10 +338,17 @@ port_delete(port_id id)
 	q				 = ports[slot].msg_queue;
 	r_sem			 = ports[slot].read_sem;
 	w_sem			 = ports[slot].write_sem;
+	capacity		 = ports[slot].capacity;
 	ports[slot].name = NULL;
 
 	RELEASE_PORT_LOCK(ports[slot]);
 	int_restore_interrupts(state);
+
+	// delete the cbuf's that are left in the queue (if any)
+	for (i=0; i<capacity; i++) {
+		if (q[i].data_cbuf != NULL)
+	 		cbuf_free_chain(q[i].data_cbuf);
+	}
 
 	kfree(q);
 	kfree(old_name);
@@ -683,7 +693,6 @@ port_read_etc(port_id id,
 		return res;
 	}
 
-	// attach copied message to queue
 	state = int_disable_interrupts();
 	GRAB_PORT_LOCK(ports[slot]);
 
@@ -697,6 +706,9 @@ port_read_etc(port_id id,
 
 	msg_store	= ports[slot].msg_queue[t].data_cbuf;
 	code 		= ports[slot].msg_queue[t].msg_code;
+	
+	// mark queue entry unused
+	ports[slot].msg_queue[t].data_cbuf	= NULL;
 
 	// check output buffer size
 	siz	= min(buffer_size, ports[slot].msg_queue[t].data_len);
@@ -707,23 +719,20 @@ port_read_etc(port_id id,
 	int_restore_interrupts(state);
 
 	// copy message
-/*	if (siz > 0) {
-		if (flags & PORT_FLAG_USE_USER_MEMCPY)
-			user_memcpy(msg_buffer, buf, siz);
-		else
-			memcpy(msg_buffer, buf, siz);
-	}
-*/
 	*msg_code = code;
 	if (siz > 0) {
 		if (flags & PORT_FLAG_USE_USER_MEMCPY) {
 			if ((err = cbuf_user_memcpy_from_chain(msg_buffer, msg_store, 0, siz) < 0))	{
-				sem_release(cached_semid, 1); // it's read anyway...
+				// leave the port intact, for other threads that might not crash
+				cbuf_free_chain(msg_store);
+				sem_release(cached_semid, 1); 
 				return err;
 			}
 		} else
 			cbuf_memcpy_from_chain(msg_buffer, msg_store, 0, siz);
 	}
+	// free the cbuf
+	cbuf_free_chain(msg_store);
 
 	// make one spot in queue available again for write
 	sem_release(cached_semid, 1);
@@ -859,17 +868,21 @@ port_write_etc(port_id id,
 		return res;
 	}
 
-	msg_store = cbuf_get_chain(buffer_size);
-	if (msg_store == NULL)
-		return ERR_NO_MEMORY;
-	if (flags & PORT_FLAG_USE_USER_MEMCPY)
-		// copy from user memory
-		if ((err = cbuf_user_memcpy_to_chain(msg_store, 0, msg_buffer, buffer_size)) < 0)
-			return err; // memory exception
-	else
-		// copy from kernel memory
-		if ((err = cbuf_memcpy_to_chain(msg_store, 0, msg_buffer, buffer_size)) < 0)
-			return err; // memory exception
+	if (buffer_size > 0) {
+		msg_store = cbuf_get_chain(buffer_size);
+		if (msg_store == NULL)
+			return ERR_NO_MEMORY;
+		if (flags & PORT_FLAG_USE_USER_MEMCPY) {
+			// copy from user memory
+			if ((err = cbuf_user_memcpy_to_chain(msg_store, 0, msg_buffer, buffer_size)) < 0)
+				return err; // memory exception
+		} else
+			// copy from kernel memory
+			if ((err = cbuf_memcpy_to_chain(msg_store, 0, msg_buffer, buffer_size)) < 0)
+				return err; // memory exception
+	} else {
+		msg_store = NULL;
+	}
 
 	// attach copied message to queue
 	state = int_disable_interrupts();
