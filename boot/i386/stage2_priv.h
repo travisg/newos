@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -14,6 +14,11 @@ extern int dprintf(const char *fmt, ...);
 extern void sleep(long long time);
 extern long long system_time(void);
 extern void execute_n_instructions(int count);
+void system_time_setup(long a);
+long long rdtsc();
+unsigned int get_eflags(void);
+void set_eflags(unsigned int val);
+void cpuid(unsigned int selector, unsigned int *data);
 
 //void put_uint_dec(unsigned int a);
 //void put_uint_hex(unsigned int a);
@@ -34,11 +39,11 @@ extern void execute_n_instructions(int count);
 
 #define NULL ((void *)0)
 
-#define _PACKED __attribute__((packed)) 	
+#define _PACKED __attribute__((packed))
 
 #define IDT_LIMIT 0x800
 #define GDT_LIMIT 0x800
-		
+
 struct gdt_idt_descr {
 	unsigned short a;
 	unsigned int *b;

@@ -11,6 +11,7 @@ BOOT_DIR = boot/$(ARCH)
 BOOT_OBJ_DIR = $(BOOT_DIR)/$(OBJ_DIR)
 STAGE2_OBJS = \
 	$(BOOT_OBJ_DIR)/stage2.o \
+	$(BOOT_OBJ_DIR)/stage2_asm.o \
 	$(BOOT_OBJ_DIR)/smp_boot.o \
 	$(BOOT_OBJ_DIR)/smp_trampoline.o
 DEPS += $(STAGE2_OBJS:.o=.d)

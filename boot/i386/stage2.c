@@ -31,7 +31,7 @@ static unsigned short *kScreenBase = (unsigned short*) 0xb8000;
 static unsigned screenOffset = 0;
 static unsigned int line = 0;
 
-static unsigned int cv_factor = 0;
+unsigned int cv_factor = 0;
 
 // size of bootdir in pages
 static unsigned int bootdir_pages = 0;
@@ -46,9 +46,6 @@ static void load_elf_image(void *data, unsigned int *next_paddr,
 	addr_range *ar0, addr_range *ar1, unsigned int *start_addr, addr_range *dynamic_section);
 static int mmu_init(kernel_args *ka, unsigned int *next_paddr);
 static void mmu_map_page(unsigned int vaddr, unsigned int paddr);
-static void cpuid(uint32 selector, uint32 *data);
-static unsigned int get_eflags(void);
-static void set_eflags(unsigned int val);
 static int check_cpu(void);
 
 // called by the stage1 bootloader.
@@ -446,131 +443,6 @@ static int check_cpu(void)
 	if(!(data[3] & 1<<4)) return -1; // check for rdtsc
 
 	return 0;
-}
-
-static long long rdtsc()
-{
-	long long retval;
-
-	asm(
-		"	rdtsc;"
-		: "=A" (retval)
-	);
-
-	return retval;
-}
-
-void execute_n_instructions(int count)
-{
-	asm(
-		"	movl	%0, %%ecx;"
-		"	shrl	$4, %%ecx;"		/* divide count by 16 */
-		".again:;"
-		"	xorl	%%eax, %%eax;"
-		"	xorl	%%eax, %%eax;"
-		"	xorl	%%eax, %%eax;"
-		"	xorl	%%eax, %%eax;"
-		"	xorl	%%eax, %%eax;"
-		"	xorl	%%eax, %%eax;"
-		"	xorl	%%eax, %%eax;"
-		"	xorl	%%eax, %%eax;"
-		"	xorl	%%eax, %%eax;"
-		"	xorl	%%eax, %%eax;"
-		"	xorl	%%eax, %%eax;"
-		"	xorl	%%eax, %%eax;"
-		"	xorl	%%eax, %%eax;"
-		"	xorl	%%eax, %%eax;"
-		"	xorl	%%eax, %%eax;"
-		"	loop	.again;"
-		: : "g" (count) : "eax", "ecx"
-	);
-}
-
-static void system_time_setup(long a)
-{
-	asm(
-			/* First divide 1M * 2^32 by proc_clock */
-		"	movl	$0x0F4240, %%ecx;"
-		"	movl	%%ecx, %%edx;"
-		"	subl	%%eax, %%eax;"
-		"	movl	%1, %%ebx;"
-		"	divl	%%ebx, %%eax;"		/* should be 64 / 32 */
-		"	movl	%%eax, %0;"
-		: "=g" (cv_factor) : "g" (a) : "ecx", "ebx"
-	);
-}
-
-long long system_time()
-{
-	long long retval;
-
-	/* load 64-bit factor into %eax (low), %edx (high) */
-	/* hand-assemble rdtsc -- read time stamp counter */
-
-	asm(
-		"	rdtsc;"			/* time in %edx,%eax */
-
-		"	pushl	%%ebx;"
-		"	pushl	%%ecx;"
-		"	movl	%1, %%ebx;"
-		"	movl	%%edx, %%ecx;"	/* save high half */
-		"	mull	%%ebx;" 		/* truncate %eax, but keep %edx */
-		"	movl	%%ecx, %%eax;"
-		"	movl	%%edx, %%ecx;"	/* save high half of low */
-		"	mull	%%ebx;"			/*, %eax*/
-			/* now compute  [%%edx, %%eax] + [%%ecx], propagating carry */
-		"	subl	%%ebx, %%ebx;"	/* need zero to propagate carry */
-		"	addl	%%ecx, %%eax;"
-		"	adc	%%ebx, %%edx;"
-		"	popl	%%ecx;"
-		"	popl	%%ebx;"
-		: "=A" (retval) : "g" (cv_factor)
-	);
-
-	return retval;
-}
-
-static void cpuid(uint32 selector, uint32 *data)
-{
-	asm(
-		"	pushl	%%ebx;"
-		"	pushl	%%edi;"
-
-		"	movl	%0,%%eax;"
-		"	movl	%1,%%edi;"
-		"	cpuid;"
-
-		"	movl	%%eax,0(%%edi);"
-		"	movl	%%ebx,4(%%edi);"
-		"	movl	%%ecx,8(%%edi);"
-		"	movl	%%edx,12(%%edi);"
-
-		"	popl	%%edi;"
-		"	popl	%%ebx;"
-		: : "g" (selector), "g" (data) : "eax", "ebx"
-	);
-}
-
-static unsigned int get_eflags(void)
-{
-	unsigned retval;
-
-	asm(
-		"	pushfl;"
-		"	popl	%0;"
-		: "=r" (retval)
-	);
-
-	return retval;
-}
-
-static void set_eflags(unsigned int val)
-{
-	asm(
-		"	pushl	%0;"
-		"	popfl;"
-		: : "g" (val)
-	);
 }
 
 void sleep(long long time)
