@@ -114,6 +114,19 @@ struct proc_info {
 	int num_threads;
 };
 
+struct thread_info {
+	thread_id id;
+	proc_id owner_proc_id;
+
+	char name[SYS_MAX_OS_NAME_LEN];
+	int state;
+
+	addr user_stack_base;
+
+	bigtime_t user_time;
+	bigtime_t kernel_time;
+};
+
 #include <kernel/arch/thread.h>
 
 void thread_enqueue(struct thread *t, struct thread_queue *q);
@@ -148,6 +161,11 @@ int thread_wait_on_thread(thread_id id, int *retcode);
 thread_id thread_create_user_thread(char *name, proc_id pid, addr entry, void *args);
 thread_id thread_create_kernel_thread(const char *name, int (*func)(void *args), void *args);
 
+int thread_get_thread_info(thread_id id, struct thread_info *info);
+int user_thread_get_thread_info(thread_id id, struct thread_info *info);
+int thread_get_next_thread_info(uint32 *cookie, proc_id pid, struct thread_info *info);
+int user_thread_get_next_thread_info(uint32 *cookie, proc_id pid, struct thread_info *info);
+
 struct proc *proc_get_kernel_proc(void);
 proc_id proc_create_proc(const char *path, const char *name, char **args, int argc, int priority);
 int proc_kill_proc(proc_id);
@@ -157,13 +175,17 @@ proc_id proc_get_current_proc_id(void);
 char **user_proc_get_arguments(void);
 int user_proc_get_arg_count(void);
 
+int proc_get_proc_info(proc_id id, struct proc_info *info);
+int user_proc_get_proc_info(proc_id id, struct proc_info *info);
+int proc_get_next_proc_info(uint32 *cookie, struct proc_info *info);
+int user_proc_get_next_proc_info(uint32 *cookie, struct proc_info *info);
+
 // used in syscalls.c
 int user_thread_wait_on_thread(thread_id id, int *uretcode);
 proc_id user_proc_create_proc(const char *path, const char *name, char **args, int argc, int priority);
 int user_proc_wait_on_proc(proc_id id, int *uretcode);
 thread_id user_thread_create_user_thread(char *uname, proc_id pid, addr entry, void *args);
 int user_thread_snooze(bigtime_t time);
-int user_proc_get_table(struct proc_info *pi, size_t len);
 int user_getrlimit(int resource, struct rlimit * rlp);
 int user_setrlimit(int resource, const struct rlimit * rlp);
 

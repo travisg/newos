@@ -234,9 +234,6 @@ int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_re
 		case SYSCALL_FDDUP2:
 			*call_ret = user_dup2(arg0, arg1);
 			break;
-		case SYSCALL_GET_PROC_TABLE:
-			*call_ret = user_proc_get_table((struct proc_info *)arg0, (size_t)arg1);
-			break;
 		case SYSCALL_GETRLIMIT:
 			*call_ret = user_getrlimit((int)arg0, (struct rlimit *)arg1);
 			break;
@@ -257,6 +254,18 @@ int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_re
 			break;
 		case SYSCALL_TEST_AND_SET:
 			*call_ret = user_test_and_set((int *)arg0, (int)arg1, (int)arg2);
+			break;
+		case SYSCALL_THREAD_GET_THREAD_INFO:
+			*call_ret = user_thread_get_thread_info((thread_id)arg0, (struct thread_info *)arg1);
+			break;
+		case SYSCALL_THREAD_GET_NEXT_THREAD_INFO:
+			*call_ret = user_thread_get_next_thread_info((uint32 *)arg0, (proc_id)arg1, (struct thread_info *)arg2);
+			break;
+		case SYSCALL_PROC_GET_PROC_INFO:
+			*call_ret = user_proc_get_proc_info((proc_id)arg0, (struct proc_info *)arg1);
+			break;
+		case SYSCALL_PROC_GET_NEXT_PROC_INFO:
+			*call_ret = user_proc_get_next_proc_info((uint32 *)arg0, (struct proc_info *)arg1);
 			break;
 		default:
 			*call_ret = -1;

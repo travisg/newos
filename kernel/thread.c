@@ -52,7 +52,7 @@ spinlock_t thread_spinlock = 0;
 // proc list
 static void *proc_hash = NULL;
 static struct proc *kernel_proc = NULL;
-static proc_id next_proc_id = 0;
+static proc_id next_proc_id = 1;
 static spinlock_t proc_spinlock = 0;
 	// NOTE: PROC lock can be held over a THREAD lock acquisition,
 	// but not the other way (to avoid deadlock)
@@ -62,7 +62,7 @@ static spinlock_t proc_spinlock = 0;
 // thread list
 static struct thread *idle_threads[MAX_BOOT_CPUS];
 static void *thread_hash = NULL;
-static thread_id next_thread_id = 0;
+static thread_id next_thread_id = 1;
 
 static sem_id snooze_sem = -1;
 
@@ -619,6 +619,161 @@ int thread_set_priority(thread_id id, int priority)
 	return retval;
 }
 
+int thread_get_thread_info(thread_id id, struct thread_info *outinfo)
+{
+	int state;
+	struct thread *t;
+	struct thread_info info;
+	int err;
+
+	state = int_disable_interrupts();
+	GRAB_THREAD_LOCK();
+
+	t = thread_get_thread_struct_locked(id);
+	if(!t) {
+		err = ERR_INVALID_HANDLE;
+		goto out;
+	}
+
+	/* found the thread, copy the data out */
+	info.id = id;
+	info.owner_proc_id = t->proc->id;
+	strncpy(info.name, t->name, SYS_MAX_OS_NAME_LEN-1);
+	info.name[SYS_MAX_OS_NAME_LEN-1] = '\0';
+	info.state = t->state;
+	info.user_stack_base = t->user_stack_base;
+	info.user_time = t->user_time;
+	info.kernel_time = t->kernel_time;
+
+	err = NO_ERROR;
+
+out:
+	RELEASE_THREAD_LOCK();
+	int_restore_interrupts(state);
+
+	if(err >= 0)
+		memcpy(outinfo, &info, sizeof(info));
+
+	return err;
+}
+
+int user_thread_get_thread_info(thread_id id, struct thread_info *uinfo)
+{
+	struct thread_info info;
+	int err, err2;
+
+	if((addr)uinfo >= KERNEL_BASE && (addr)uinfo <= KERNEL_TOP) {
+		return ERR_VM_BAD_USER_MEMORY;
+	}
+
+	err = thread_get_thread_info(id, &info);
+	if(err < 0)
+		return err;
+
+	err2 = user_memcpy(uinfo, &info, sizeof(info));
+	if(err2 < 0)
+		return err2;
+
+	return err;
+}
+
+int thread_get_next_thread_info(uint32 *_cookie, proc_id pid, struct thread_info *outinfo)
+{
+	int state;
+	struct thread *t;
+	struct proc *p;
+	struct thread_info info;
+	thread_id tid;
+	int err;
+	thread_id cookie;
+
+	cookie = (thread_id)*_cookie;
+
+	state = int_disable_interrupts();
+	GRAB_PROC_LOCK();
+
+	p = proc_get_proc_struct_locked(pid);
+	if(!p) {
+		err = ERR_INVALID_HANDLE;
+		goto out;
+	}
+
+	/* find the next thread in the list of threads in the proc structure */
+	if(cookie == 0) {
+		t = p->thread_list;
+	} else {
+		for(t = p->thread_list; t; t = t->proc_next) {
+			if(t->id == cookie) {
+				/* we found what the last search got us, walk one past the last search */
+				t = t->proc_next;
+				break;
+			}
+		}
+	}
+
+	if(!t) {
+		err = ERR_NOT_FOUND;
+		goto out;
+	}
+
+	/* found the thread, copy the data out */
+	info.id = t->id;
+	info.owner_proc_id = t->proc->id;
+	strncpy(info.name, t->name, SYS_MAX_OS_NAME_LEN-1);
+	info.name[SYS_MAX_OS_NAME_LEN-1] = '\0';
+	info.state = t->state;
+	info.user_stack_base = t->user_stack_base;
+	info.user_time = t->user_time;
+	info.kernel_time = t->kernel_time;
+
+	err = NO_ERROR;
+
+	*_cookie = (uint32)t->id;
+
+out:
+	RELEASE_PROC_LOCK();
+	int_restore_interrupts(state);
+
+	if(err >= 0)
+		memcpy(outinfo, &info, sizeof(info));
+
+	return err;
+}
+
+int user_thread_get_next_thread_info(uint32 *ucookie, proc_id pid, struct thread_info *uinfo)
+{
+	struct thread_info info;
+	uint32 cookie;
+	int err, err2;
+
+	if((addr)ucookie >= KERNEL_BASE && (addr)ucookie <= KERNEL_TOP) {
+		return ERR_VM_BAD_USER_MEMORY;
+	}
+
+	if((addr)uinfo >= KERNEL_BASE && (addr)uinfo <= KERNEL_TOP) {
+		return ERR_VM_BAD_USER_MEMORY;
+	}
+
+	err2 = user_memcpy(&cookie, ucookie, sizeof(cookie));
+	if(err2 < 0)
+		return err2;
+
+	err = thread_get_next_thread_info(&cookie, pid, &info);
+	if(err < 0)
+		return err;
+
+	err2 = user_memcpy(uinfo, &info, sizeof(info));
+	if(err2 < 0)
+		return err2;
+
+	err2 = user_memcpy(ucookie, &cookie, sizeof(cookie));
+	if(err2 < 0)
+		return err2;
+
+	return err;
+}
+
+
 static void _dump_proc_info(struct proc *p)
 {
 	dprintf("PROC: %p\n", p);
@@ -912,7 +1067,7 @@ int thread_init(kernel_args *ka)
 		&proc_struct_compare, &proc_struct_hash);
 
 	// create the kernel process
-	kernel_proc = create_proc_struct("kernel_proc", true);
+	kernel_proc = create_proc_struct("kernel", true);
 	if(kernel_proc == NULL)
 		panic("could not create kernel proc!\n");
 	kernel_proc->state = PROC_STATE_NORMAL;
@@ -1607,6 +1762,142 @@ static void delete_proc_struct(struct proc *p)
 	kfree(p);
 }
 
+int proc_get_proc_info(proc_id id, struct proc_info *outinfo)
+{
+	int state;
+	struct proc *p;
+	struct proc_info info;
+	int err;
+
+	state = int_disable_interrupts();
+	GRAB_PROC_LOCK();
+
+	p = proc_get_proc_struct_locked(id);
+	if(!p) {
+		err = ERR_INVALID_HANDLE;
+		goto out;
+	}
+
+	/* found the proc, copy the data out */
+	info.id = id;
+	strncpy(info.name, p->name, SYS_MAX_OS_NAME_LEN-1);
+	info.name[SYS_MAX_OS_NAME_LEN-1] = '\0';
+	info.state = p->state;
+	info.num_threads = p->num_threads;
+
+	err = NO_ERROR;
+
+out:
+	RELEASE_PROC_LOCK();
+	int_restore_interrupts(state);
+
+	if(err >= 0)
+		memcpy(outinfo, &info, sizeof(info));
+
+	return err;
+}
+
+int user_proc_get_proc_info(proc_id id, struct proc_info *uinfo)
+{
+	struct proc_info info;
+	int err, err2;
+
+	if((addr)uinfo >= KERNEL_BASE && (addr)uinfo <= KERNEL_TOP) {
+		return ERR_VM_BAD_USER_MEMORY;
+	}
+
+	err = proc_get_proc_info(id, &info);
+	if(err < 0)
+		return err;
+
+	err2 = user_memcpy(uinfo, &info, sizeof(info));
+	if(err2 < 0)
+		return err2;
+
+	return err;
+}
+
+int proc_get_next_proc_info(uint32 *cookie, struct proc_info *outinfo)
+{
+	struct proc *p;
+	struct proc_info info;
+	int err;
+	int state;
+	struct hash_iterator i;
+	proc_id id = (proc_id)*cookie;
+
+	state = int_disable_interrupts();
+	GRAB_PROC_LOCK();
+
+	hash_open(proc_hash, &i);
+	while((p = hash_next(proc_hash, &i)) != NULL) {
+		if(id == 0)
+			break; // initial search, return the first proc
+		if(p->id == id) {
+			// we found the last proc that was looked at, increment to the next one
+			p = hash_next(proc_hash, &i);
+			break;
+		}
+	}
+	if(p == NULL) {
+		err = ERR_NO_MORE_HANDLES;
+		goto out;
+	}
+
+	// we have the proc structure, copy the data out of it
+	info.id = p->id;
+	strncpy(info.name, p->name, SYS_MAX_OS_NAME_LEN-1);
+	info.name[SYS_MAX_OS_NAME_LEN-1] = '\0';
+	info.state = p->state;
+	info.num_threads = p->num_threads;
+
+	err = 0;
+
+	*cookie = (uint32)p->id;
+
+out:
+	RELEASE_PROC_LOCK();
+	int_restore_interrupts(state);
+
+	if(err >= 0)
+		memcpy(outinfo, &info, sizeof(info));
+
+	return err;
+}
+
+int user_proc_get_next_proc_info(uint32 *ucookie, struct proc_info *uinfo)
+{
+	struct proc_info info;
+	uint32 cookie;
+	int err, err2;
+
+	if((addr)ucookie >= KERNEL_BASE && (addr)ucookie <= KERNEL_TOP) {
+		return ERR_VM_BAD_USER_MEMORY;
+	}
+
+	if((addr)uinfo >= KERNEL_BASE && (addr)uinfo <= KERNEL_TOP) {
+		return ERR_VM_BAD_USER_MEMORY;
+	}
+
+	err2 = user_memcpy(&cookie, ucookie, sizeof(cookie));
+	if(err2 < 0)
+		return err2;
+
+	err = proc_get_next_proc_info(&cookie, &info);
+	if(err < 0)
+		return err;
+
+	err2 = user_memcpy(uinfo, &info, sizeof(info));
+	if(err2 < 0)
+		return err2;
+
+	err2 = user_memcpy(ucookie, &cookie, sizeof(cookie));
+	if(err2 < 0)
+		return err2;
+
+	return err;
+}
+
 static int get_arguments_data_size(char **args,int argc)
 {
 	int cnt;
@@ -1817,45 +2108,6 @@ error:
 	free_arg_list(kargs,argc);
 	return rc;
 }
-
-
-// used by PS command and anything else interested in a process list
-int user_proc_get_table(struct proc_info *pbuf, size_t len)
-{
-	struct proc *p;
-	struct hash_iterator i;
-	struct proc_info pi;
-	int state;
-	int count=0;
-	int max = (len / sizeof(struct proc_info));
-
-	if((addr)pbuf >= KERNEL_BASE && (addr)pbuf <= KERNEL_TOP)
-		return ERR_VM_BAD_USER_MEMORY;
-
-	state = int_disable_interrupts();
-	GRAB_PROC_LOCK();
-
-	hash_open(proc_hash, &i);
-	while(((p = hash_next(proc_hash, &i)) != NULL) && (count < max)) {
-		pi.id = p->id;
-		strcpy(pi.name, p->name);
-		pi.state = p->state;
-		pi.num_threads = p->num_threads;
-		count++;
-		user_memcpy(pbuf, &pi, sizeof(struct proc_info));
-		pbuf=pbuf + sizeof(struct proc_info);
-	}
-	hash_close(proc_hash, &i, false);
-
-	RELEASE_PROC_LOCK();
-	int_restore_interrupts(state);
-
-	if (count < max)
-		return count;
-	else
-		return ERR_NO_MEMORY;
-}
-
 
 int proc_kill_proc(proc_id id)
 {

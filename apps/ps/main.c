@@ -13,28 +13,47 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-int main(int argc, char ** argv) {
-	char *proc_state[3] = { 
-		"normal","birth","death" 
-		};
-	const int maxprocess = 1024;
-	struct proc_info *pi = (struct proc_info *) malloc(
-				sizeof(struct proc_info) * maxprocess);
-	int pidx;
-	int procs = sys_proc_get_table(pi, sizeof(struct proc_info) * maxprocess);
+#define DISPLAY_THREADS 0
 
-	if (procs > 0) {
-		printf("process list\n\n");
-		printf("id\tstate\tthreads\tname\n");
-		for (pidx=0; pidx<procs; pidx++) {
-			printf("%d\t%s\t%d\t%s\n", pi->id,proc_state[pi->state],
-					pi->num_threads, pi->name);
-			pi = pi + sizeof(struct proc_info);
+int main(int argc, char ** argv)
+{
+	uint32 cookie = 0;
+	struct proc_info pi;
+	int err;
+	int count = 0;
+#if DISPLAY_THREADS
+	struct thread_info ti;
+	uint32 cookie2;
+#endif
+
+	printf("process list:\n");
+	printf("id\tthreads\tname\n");
+#if DISPLAY_THREADS
+	printf(" id\t name\t user\t kernel\n");
+#endif
+	for(;;) {
+		err = sys_proc_get_next_proc_info(&cookie, &pi);
+		if(err < 0)
+			break;
+
+		printf("%d\t%d\t%s\n", pi.id,
+				pi.num_threads, pi.name);
+		count++;
+#if DISPLAY_THREADS
+		// display the threads this proc holds
+		cookie2 = 0;
+		for(;;) {
+			err = sys_thread_get_next_thread_info(&cookie2, pi.id, &ti);
+			if(err < 0)
+				break;
+
+			printf(" %d\t %s\t %Ld\t %Ld\n", ti.id, ti.name, ti.user_time, ti.kernel_time);
 		}
-		printf("\n%d processes listed\n", procs);
-	} else {
-		printf("ps: sys_get_proc_table() returned error %s!\n",strerror(procs));
+#endif
 	}
+
+	printf("\n%d processes listed\n", count);
+
 	return 0;
 }
 

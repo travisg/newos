@@ -69,6 +69,19 @@ struct proc_info {
 	int num_threads;
 };
 
+struct thread_info {
+	thread_id id;
+	proc_id owner_proc_id;
+
+	char name[SYS_MAX_OS_NAME_LEN];
+	int state;
+
+	addr user_stack_base;
+
+	bigtime_t user_time;
+	bigtime_t kernel_time;
+};
+
 // args for the create_area funcs
 enum {
 	REGION_ADDR_ANY_ADDRESS = 0,
@@ -136,7 +149,6 @@ int sys_sem_get_sem_info(sem_id id, struct sem_info *info);
 int sys_sem_get_next_sem_info(proc_id proc, uint32 *cookie, struct sem_info *info);
 int sys_set_sem_owner(sem_id id, proc_id proc);
 
-int sys_proc_get_table(struct proc_info *pi, size_t len);
 thread_id sys_get_current_thread_id();
 void sys_exit(int retcode);
 proc_id sys_proc_create_proc(const char *path, const char *name, char **args, int argc, int priority);
@@ -145,9 +157,13 @@ int sys_thread_wait_on_thread(thread_id tid, int *retcode);
 int sys_thread_suspend_thread(thread_id tid);
 int sys_thread_resume_thread(thread_id tid);
 int sys_thread_kill_thread(thread_id tid);
+int sys_thread_get_thread_info(thread_id id, struct thread_info *info);
+int sys_thread_get_next_thread_info(uint32 *cookie, proc_id pid, struct thread_info *info);
 int sys_proc_kill_proc(proc_id pid);
 proc_id sys_get_current_proc_id();
 int sys_proc_wait_on_proc(proc_id pid, int *retcode);
+int sys_proc_get_proc_info(proc_id id, struct proc_info *info);
+int sys_proc_get_next_proc_info(uint32 *cookie, struct proc_info *info);
 region_id sys_vm_create_anonymous_region(const char *name, void **address, int addr_type,
 	addr size, int wiring, int lock);
 region_id sys_vm_clone_region(const char *name, void **address, int addr_type,
