@@ -15,8 +15,13 @@ enum {
 	IP_PROT_UDP = 17,
 };
 
+
+int ipv4_route_add(ipv4_addr network_addr, ipv4_addr netmask, ipv4_addr if_addr, if_id interface_num);
+int ipv4_route_add_gateway(ipv4_addr network_addr, ipv4_addr netmask, ipv4_addr if_addr, if_id interface_num, ipv4_addr gw_addr);
+
 int ipv4_receive(cbuf *buf, ifnet *i);
-int ipv4_output(cbuf *buf, ifnet *i, ipv4_addr target_addr, ipv4_addr if_addr, int protocol);
+int ipv4_output(cbuf *buf, ipv4_addr target_addr, int protocol);
+int ipv4_init(void);
 
 void dump_ipv4_addr(ipv4_addr addr);
 

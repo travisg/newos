@@ -37,6 +37,11 @@ static unsigned int if_hash_func(void *_i, void *_key, int range)
 		return (*id % range);
 }
 
+ifnet *if_id_to_ifnet(if_id id)
+{
+	return hash_lookup(iflist, &id);
+}
+
 ifnet *if_register_interface(const char *path, int type)
 {
 	ifnet *i;
@@ -52,6 +57,8 @@ ifnet *if_register_interface(const char *path, int type)
 	i->link_addr = NULL;
 	i->fd = -1;
 	i->rx_thread = -1;
+
+	hash_insert(iflist, i);
 
 	return i;
 }

@@ -9,7 +9,7 @@
 #include <kernel/net/ipv4.h>
 #include <kernel/cbuf.h>
 
-int icmp_receive(cbuf *buf, ifnet *i, ipv4_addr source_ipaddr, ifaddr *target_addr);
+int icmp_receive(cbuf *buf, ifnet *i, ipv4_addr source_ipaddr);
 
 #endif
 

@@ -16,7 +16,8 @@
 #define htonl(n) \
 	(((uint32)(n) << 24) | (((uint32)(n) & 0xff00) << 8) |(((uint32)(n) & 0x00ff0000) >> 8) | ((uint32)(n) >> 24))
 
-uint16 cksum16(void *buf, int len);
+uint16 cksum16(void *_buf, int len);
+uint16 cksum16_2(void *buf1, int len1, void *buf2, int len2);
 int cmp_netaddr(netaddr *addr1, netaddr *addr2);
 
 #endif

@@ -28,8 +28,9 @@ int net_init(kernel_args *ka)
 	dprintf("net_init: entry\n");
 
 	if_init();
-	arp_init();
 	ethernet_init();
+	arp_init();
+	ipv4_init();
 
 	// open the network device
 	net_fd = sys_open("/dev/net/rtl8139/0", STREAM_TYPE_DEVICE, 0);
@@ -53,6 +54,10 @@ int net_init(kernel_args *ka)
 //	*(ipv4_addr *)&addr->addr.addr[0] = 0xc0a80063; // 192.168.0.99
 	*(ipv4_addr *)&addr->addr.addr[0] = 0x0a000063; // 10.0.0.99
 	if_bind_address(i, addr);
+
+	// set up an initial routing table
+	ipv4_route_add(0x0a000000, 0xffffff00, 0x0a000063, i->id);
+	ipv4_route_add_gateway(0x00000000, 0x00000000, 0x0a000063, i->id, 0xc0000001);
 
 	rx_thread_id = thread_create_kernel_thread("net_rx_thread", &if_rx_thread, i);
 	if(rx_thread_id < 0)

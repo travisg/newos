@@ -20,7 +20,7 @@ typedef struct icmp_echo_header {
 	uint16 sequence;
 } _PACKED icmp_echo_header;
 
-int icmp_receive(cbuf *buf, ifnet *i, ipv4_addr source_ipaddr, ifaddr *target_addr)
+int icmp_receive(cbuf *buf, ifnet *i, ipv4_addr source_ipaddr)
 {
 	icmp_header *header;
 	int err;
@@ -49,7 +49,7 @@ int icmp_receive(cbuf *buf, ifnet *i, ipv4_addr source_ipaddr, ifaddr *target_ad
 			eheader->preheader.type = 0; // echo reply
 			eheader->preheader.checksum = 0;
 			eheader->preheader.checksum = cksum16(eheader, cbuf_get_len(buf));
-			return ipv4_output(buf, i, source_ipaddr, *(ipv4_addr *)&target_addr->addr.addr[0], IP_PROT_ICMP);
+			return ipv4_output(buf, source_ipaddr, IP_PROT_ICMP);
 		}
 		default:
 			dprintf("unhandled icmp message\n");

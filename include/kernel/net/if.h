@@ -37,6 +37,7 @@ typedef struct ifnet {
 } ifnet;
 
 int if_init(void);
+ifnet *if_id_to_ifnet(if_id id);
 ifnet *if_register_interface(const char *path, int type);
 void if_bind_address(ifnet *i, ifaddr *addr);
 void if_bind_link_address(ifnet *i, ifaddr *addr);

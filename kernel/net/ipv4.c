@@ -4,6 +4,8 @@
 */
 #include <kernel/kernel.h>
 #include <kernel/debug.h>
+#include <kernel/lock.h>
+#include <kernel/heap.h>
 #include <kernel/arch/cpu.h>
 #include <kernel/net/misc.h>
 #include <kernel/net/ethernet.h>
@@ -26,6 +28,21 @@ typedef struct ipv4_header {
 	ipv4_addr dest;
 } _PACKED ipv4_header;
 
+typedef struct ipv4_routing_entry {
+	struct ipv4_routing_entry *next;
+	ipv4_addr network_addr;
+	ipv4_addr netmask;
+	ipv4_addr gw_addr;
+	ipv4_addr if_addr;
+	if_id interface_id;
+	int flags;
+} ipv4_routing_entry;
+
+#define ROUTE_FLAGS_GW 1
+
+static ipv4_routing_entry *route_table;
+static mutex route_table_mutex;
+
 static uint32 curr_identification = 0xbeef;
 
 // expects hosts order
@@ -46,11 +63,120 @@ static void dump_ipv4_header(ipv4_header *head)
 		head->protocol, ntohs(head->header_checksum), ntohs(head->total_length), ntohs(head->identification), ntohs(head->flags_frag_offset & 0x1fff));
 }
 
-int ipv4_output(cbuf *buf, ifnet *i, ipv4_addr target_addr, ipv4_addr if_addr, int protocol)
+static int ipv4_route_add_etc(ipv4_addr network_addr, ipv4_addr netmask, ipv4_addr if_addr, if_id interface_num, int flags, ipv4_addr gw_addr)
+{
+	ipv4_routing_entry *e;
+	ipv4_routing_entry *temp;
+	ipv4_routing_entry *last;
+
+	// make sure the netmask makes sense
+	if((netmask | (netmask - 1)) != 0xffffffff) {
+		return ERR_INVALID_ARGS;
+	}
+
+	e = kmalloc(sizeof(ipv4_routing_entry));
+	if(!e)
+		return ERR_NO_MEMORY;
+
+	e->network_addr = network_addr;
+	e->netmask = netmask;
+	e->gw_addr = gw_addr;
+	e->if_addr = if_addr;
+	e->interface_id = interface_num;
+	e->flags = flags;
+
+	mutex_lock(&route_table_mutex);
+
+	// add it to the list, sorted by netmask 'completeness'
+	last = NULL;
+	for(temp = route_table; temp; temp = temp->next) {
+		if((netmask | e->netmask) == e->netmask) {
+			// insert our route entry here
+			break;
+		}
+		last = temp;
+	}
+	if(last)
+		last->next = e;
+	else
+		route_table = e;
+	e->next = temp;
+
+	mutex_unlock(&route_table_mutex);
+
+	return NO_ERROR;
+}
+
+int ipv4_route_add(ipv4_addr network_addr, ipv4_addr netmask, ipv4_addr if_addr, if_id interface_num)
+{
+	return ipv4_route_add_etc(network_addr, netmask, if_addr, interface_num, 0, 0);
+}
+
+int ipv4_route_add_gateway(ipv4_addr network_addr, ipv4_addr netmask, ipv4_addr if_addr, if_id interface_num, ipv4_addr gw_addr)
+{
+	return ipv4_route_add_etc(network_addr, netmask, if_addr, interface_num, ROUTE_FLAGS_GW, gw_addr);
+}
+
+static int ipv4_route_match(ipv4_addr ip_addr, if_id *interface_num, ipv4_addr *target_addr, ipv4_addr *if_addr)
+{
+	ipv4_routing_entry *e;
+	ipv4_routing_entry *last_e = NULL;
+	int err;
+
+	// walk through the routing table, finding the last entry to match
+	mutex_lock(&route_table_mutex);
+	for(e = route_table; e; e = e->next) {
+		ipv4_addr masked_addr = ip_addr & e->netmask;
+		if(masked_addr == e->network_addr)
+			last_e = e;
+	}
+
+	if(last_e) {
+		*interface_num = last_e->interface_id;
+		*if_addr = last_e->if_addr;
+		if(last_e->flags & ROUTE_FLAGS_GW) {
+			*target_addr = last_e->gw_addr;
+		} else {
+			*target_addr = ip_addr;
+		}
+		err = NO_ERROR;
+	} else {
+		*interface_num = -1;
+		*target_addr = 0;
+		*if_addr = 0;
+		err = ERR_NET_GENERAL;
+	}
+	mutex_unlock(&route_table_mutex);
+
+	return err;
+}
+
+int ipv4_output(cbuf *buf, ipv4_addr target_addr, int protocol)
 {
 	cbuf *header_buf;
 	ipv4_header *header;
 	ethernet_addr eaddr;
+	if_id iid;
+	ifnet *i;
+	ipv4_addr transmit_addr;
+	ipv4_addr if_addr;
+	int err;
+
+	dprintf("ipv4_output: buf 0x%x, target_addr 0x%x, protocol %d\n", buf, target_addr, protocol);
+
+	// figure out what interface we will send this over
+	err = ipv4_route_match(target_addr, &iid, &transmit_addr, &if_addr);
+	if(err < 0) {
+		cbuf_free_chain(buf);
+		return ERR_NO_MEMORY;
+	}
+	i = if_id_to_ifnet(iid);
+	if(!i) {
+		cbuf_free_chain(buf);
+		return ERR_NO_MEMORY;
+	}
+
+//	dprintf("did route match, result iid %d, i 0x%x, transmit_addr 0x%x, if_addr 0x%x\n", iid, i, transmit_addr, if_addr);
 
 	header_buf = cbuf_get_chain(sizeof(ipv4_header));
 	if(!header_buf) {
@@ -76,7 +202,7 @@ int ipv4_output(cbuf *buf, ifnet *i, ipv4_addr target_addr, ipv4_addr if_addr, i
 	buf = cbuf_merge_chains(header_buf, buf);
 
 	// do the arp thang
-	if(arp_lookup(i, if_addr, target_addr, eaddr) < 0) {
+	if(arp_lookup(i, if_addr, transmit_addr, eaddr) < 0) {
 		dprintf("ipv4_output: failed arp lookup\n");
 		cbuf_free_chain(buf);
 		return ERR_NET_FAILED_ARP;
@@ -129,9 +255,9 @@ int ipv4_receive(cbuf *buf, ifnet *i)
 	// demultiplex and hand to the proper module
 	switch(header->protocol) {
 		case IP_PROT_ICMP:
-			return icmp_receive(buf, i, ntohl(header->src), &ifaddr);
+			return icmp_receive(buf, i, ntohl(header->src));
 		case IP_PROT_UDP:
-			return udp_receive(buf, i, &ifaddr);
+			return udp_receive(buf, i, ntohl(header->src), ntohl(header->dest));
 		default:
 			dprintf("ipv4_receive: packet with unknown protocol (%d)\n");
 			err = ERR_NET_BAD_PACKET;
@@ -144,5 +270,14 @@ ditch_packet:
 	cbuf_free_chain(buf);
 
 	return err;
+}
+
+int ipv4_init(void)
+{
+	mutex_init(&route_table_mutex, "ipv4 routing table mutex");
+
+	route_table = NULL;
+
+	return 0;
 }
 
