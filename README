@@ -1,5 +1,0 @@
-If you use BeOS for compiling, you need a new gmake which
-can be found under "./BeOS tools/make". Just copy it to 
-"/boot/beos/bin".
-
-
