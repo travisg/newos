@@ -1,9 +1,9 @@
 #include <kernel/kernel.h>
 #include <boot/stage2.h>
-#include <string.h>
 #include <kernel/debug.h>
-#include <kernel/vm.h>
+#include <kernel/heap.h>
 #include <kernel/vfs.h>
+#include <libc/string.h>
 
 #include "rtl8139_priv.h"
 
@@ -163,10 +163,10 @@ int rtl8139_dev_init(kernel_args *ka)
 	
 	// create device node
 	vfs_register_filesystem("rtl8139_dev_fs", &rtl8139_hooks);
-	vfs_create(NULL, "/dev", "", STREAM_TYPE_DIR);
-	vfs_create(NULL, "/dev/net", "", STREAM_TYPE_DIR);
-	vfs_create(NULL, "/dev/net/rtl8139", "", STREAM_TYPE_DIR);
-	vfs_mount("/dev/net/rtl8139", "rtl8139_dev_fs");
+	sys_create("/dev", "", STREAM_TYPE_DIR);
+	sys_create("/dev/net", "", STREAM_TYPE_DIR);
+	sys_create("/dev/net/rtl8139", "", STREAM_TYPE_DIR);
+	sys_mount("/dev/net/rtl8139", "rtl8139_dev_fs");
 
 	return 0;
 }

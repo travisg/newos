@@ -11,7 +11,6 @@ typedef struct {
 	unsigned int kernel_asid;
 	unsigned int user_asid;
 	unsigned int *kstack;
-	int handling_exception;
 	struct vector vt[256];
 } vcpu_struct;
 

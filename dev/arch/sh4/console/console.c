@@ -2,9 +2,10 @@
 #include <kernel/vfs.h>
 #include <kernel/sem.h>
 #include <kernel/debug.h>
+#include <kernel/heap.h>
 
-#include <string.h>
-#include <printf.h>
+#include <libc/string.h>
+#include <libc/printf.h>
 
 #include <dev/arch/sh4/console/console_dev.h>
 #include "keyboard.h"
@@ -367,9 +368,9 @@ int console_dev_init(kernel_args *ka)
 
 	// create device node
 	vfs_register_filesystem("console_dev_fs", &console_hooks);
-	vfs_create(NULL, "/dev", "", STREAM_TYPE_DIR);
-	vfs_create(NULL, "/dev/console", "", STREAM_TYPE_DIR);
-	vfs_mount("/dev/console", "console_dev_fs");
+	sys_create("/dev", "", STREAM_TYPE_DIR);
+	sys_create("/dev/console", "", STREAM_TYPE_DIR);
+	sys_mount("/dev/console", "console_dev_fs");
 
 	return 0;
 }

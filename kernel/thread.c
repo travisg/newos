@@ -801,11 +801,12 @@ int thread_test()
 	thread_enqueue_run_q(t);
 #endif
 #if 0
-//	t = create_kernel_thread(NULL, "test thread 5", &test_thread5, 5);
-//	thread_enqueue_run_q(t);
-
-//	t = create_kernel_thread(NULL, "panic thread", &panic_thread, THREAD_MAX_PRIORITY);
-//	thread_enqueue_run_q(t);
+	t = create_kernel_thread(NULL, "test thread 5", &test_thread5, 5);
+	thread_enqueue_run_q(t);
+#endif
+#if 1
+	t = create_kernel_thread(NULL, "panic thread", &panic_thread, THREAD_MAX_PRIORITY);
+	thread_enqueue_run_q(t);
 #endif
 	dprintf("thread_test: done creating test threads\n");
 	

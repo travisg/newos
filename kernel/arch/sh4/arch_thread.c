@@ -1,12 +1,23 @@
 #include <kernel/kernel.h>
 #include <kernel/thread.h>
-#include <string.h>
 #include <kernel/debug.h>
+#include <kernel/int.h>
+#include <kernel/vm_priv.h>
 #include <kernel/arch/cpu.h>
+#include <libc/string.h>
 
 int arch_proc_init_proc_struct(struct proc *p, bool kernel)
 {
-	// XXX finish
+	if(!kernel) {
+		unsigned int page;
+		if(vm_get_free_page(&page) < 0) {
+			panic("arch_proc_init_proc_struct: could not find free frame for page dir\n");
+		}
+		p->arch_info.pgdir = (unsigned int *)PHYS_ADDR_TO_P1(page * PAGE_SIZE);
+		memset(p->arch_info.pgdir, 0, PAGE_SIZE);
+	} else {
+		p->arch_info.pgdir = NULL;
+	}
 	return 0;
 }
 
@@ -62,10 +73,16 @@ void arch_thread_context_switch(struct thread *t_from, struct thread *t_to)
 #if 0
 	int i;
 	dprintf("arch_thread_context_switch: to sp 0x%x\n", t_to->arch_info.sp);
+#endif
+#if 0
 	for(i=0; i<8; i++) {
 		dprintf("sp[%d] = 0x%x\n", i, t_to->arch_info.sp[i]);
 	}
 #endif
+	sh4_set_kstack(t_to->kernel_stack_area->base + KSTACK_SIZE);
+	
+	if(t_from->proc->arch_info.pgdir != t_to->proc->arch_info.pgdir)
+		sh4_set_user_pgdir((addr)t_to->proc->arch_info.pgdir);
 	sh4_context_switch(&t_from->arch_info.sp, t_to->arch_info.sp);
 }
 
@@ -73,5 +90,18 @@ void arch_thread_dump_info(void *info)
 {
 	struct arch_thread *at = (struct arch_thread *)info;
 	dprintf("\tsp: 0x%x\n", at->sp);
+}
+
+void arch_thread_enter_uspace(addr entry, addr ustack_top)
+{
+    dprintf("arch_thread_entry_uspace: entry 0x%x, ustack_top 0x%x\n",
+	        entry, ustack_top);
+
+    int_disable_interrupts();
+
+    sh4_set_kstack(thread_get_current_thread()->kernel_stack_area->base + KSTACK_SIZE);
+
+    sh4_enter_uspace(entry, ustack_top - 4);
+	// never get to here
 }
 

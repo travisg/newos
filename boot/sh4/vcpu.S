@@ -82,7 +82,6 @@ _soft_fault:
 .align 2
 tea_addr1:	.long	0xff00000c
 expevt_addr1:	.long	0xff000024
-exception_flag:	.long	handling_exception
 initial_page_write_handler:	.long	_tlb_initial_page_write
 tlb_stack_addr1:	.long	tlb_stack_end-4
 
@@ -110,8 +109,8 @@ TLB_miss_ent:
 	sts.l	fpul,@-r15
 	sts.l	fpscr,@-r15
 
-	mov.l	r4,@-r15		/* save the exception code into r12 */
-	sts.l	pr,@-r15		/* save the pr reg into r13 */
+	mov.l	r4,@-r15		/* save the exception code */
+	sts.l	pr,@-r15		/* save the pr reg */
 
 	/* arg 1 is exception code already in r4 */
 	stc	spc,r5			/* arg 2, spc */
@@ -122,7 +121,7 @@ TLB_miss_ent:
 	/* see if the tlb miss handler returned another exception code */
 	/* if so, the tlb miss just elevated to a page fault or other such */
 	/* 'soft' faults. */
-	lds.l	@r15+,pr		/* restore pr from r13 */
+	lds.l	@r15+,pr		/* restore pr */
 	mov.l	@r15+,r1		/* restore the original exception code */	
 
 	/* restore the saved floating point registers */
@@ -192,8 +191,9 @@ switch_banks_and_enter_kernel:
 	nop
 
 	/* we need to set the stack because we came from user space */
-	bra	_have_set_stack
 	mov.l	kstack,r15
+	bra	_have_set_stack
+	nop
 
 _keep_current_stack:
 	stc	sgr,r15
@@ -401,10 +401,10 @@ _after_r0r7_restore:
 	ldc	r15,sr
 	
 	/* restore the ssr & spc registers */
-	mov.l	saved_ssr,r0
-	ldc	r0,ssr
-	mov.l	saved_spc,r0
-	ldc	r0,spc
+	mov.l	saved_ssr,r15
+	ldc	r15,ssr
+	mov.l	saved_spc,r15
+	ldc	r15,spc
 	mov.l	saved_sgr,r15
 	
 	/* get out of here */
@@ -448,7 +448,6 @@ user_pgdir:	.long	0
 kernel_asid:	.long	0
 user_asid:	.long 	0
 kstack:		.long	0
-handling_exception:	.long	0
 vector_table:
 	.rep	0x100
 	.long	0
@@ -457,7 +456,7 @@ vector_table:
 .data
 .align 2
 tlb_stack:
-	.rep	0x100
+	.rep	0x1000
 	.long	0
 	.endr
 tlb_stack_end:

@@ -2,7 +2,6 @@
 #include <kernel/vm.h>
 #include <kernel/vm_priv.h>
 #include <kernel/debug.h>
-#include <string.h>
 
 #include <kernel/arch/pmap.h>
 
@@ -10,9 +9,11 @@
 #include <arch/sh4/sh4.h>
 #include <arch/sh4/vcpu.h>
 
+#include <libc/string.h>
+
 #define CHATTY_PMAP 0
 
-vcpu_struct *vcpu;
+static vcpu_struct *vcpu;
 
 #define PHYS_TO_P1(x) ((x) + P1_AREA)
 
@@ -47,8 +48,8 @@ int pmap_map_page(addr paddr, addr vaddr, int lock)
 #endif
 
 	if(vaddr < P1_AREA) {
-		// XXX deal with this
-		panic("pmap_map_page: cannot map user space!\n");
+		pd = (struct pdent *)vcpu->user_pgdir;
+		index = vaddr >> 22;
 	} else if(vaddr >= P3_AREA && vaddr < P4_AREA) {
 		pd = (struct pdent *)vcpu->kernel_pgdir;
 		index = (vaddr & 0x7fffffff) >> 22;
@@ -107,3 +108,40 @@ void arch_pmap_invl_page(addr vaddr)
 	return;
 }
 
+int pmap_get_page_mapping(addr vaddr, addr *paddr)
+{
+	struct pdent *pd = NULL;
+	struct ptent *pt;
+	unsigned int index = 0;
+
+	if(vaddr < P1_AREA) {
+		pd = (struct pdent *)vcpu->user_pgdir;
+		index = vaddr >> 22;
+	} else if(vaddr >= P3_AREA && vaddr < P4_AREA) {
+		pd = (struct pdent *)vcpu->kernel_pgdir;
+		index = (vaddr & 0x7fffffff) >> 22;
+	} else if(vaddr >= P1_AREA && vaddr < P2_AREA) {
+		// this region is identity mapped with a shift
+		*paddr = vaddr - P1_AREA;
+		return 0;
+	} else if(vaddr >= P2_AREA && vaddr < P3_AREA) {
+		// this region is identity mapped with a shift
+		*paddr = vaddr - P2_AREA;
+		return 0;
+	}
+	
+	if(pd[index].v == 0) {
+		return -1;
+	}
+
+	// get the pagetable
+	pt = (struct ptent *)PHYS_TO_P1(pd[index].ppn << 12);
+	index = (vaddr >> 12) & 0x000003ff;
+
+	if(pt[index].v == 0) {
+		return -1;
+	}
+	*paddr = pt[index].ppn << 12;
+
+	return 0;
+}

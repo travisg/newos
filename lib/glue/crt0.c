@@ -5,7 +5,6 @@ extern int main();
 
 int _start()
 {
-
 	__stdio_init();
 	
 	main();
@@ -13,4 +12,3 @@ int _start()
 	__stdio_deinit();
 	return 0;	
 }
-

@@ -1,4 +1,4 @@
-#include <string.h>
+#include <libc/string.h>
 
 #include <boot/stage2.h>
 #include <arch/sh4/vcpu.h>

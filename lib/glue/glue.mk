@@ -9,7 +9,7 @@ GLUE = $(GLUE_OBJ_DIR)/glue.o
 
 $(GLUE): $(GLUE_OBJS)
 	@mkdir -p $(GLUE_OBJ_DIR)
-	$(LD) -r -o $@ $(GLUE_OBJS)
+	$(LD) $(GLOBAL_LDFLAGS) -r -o $@ $(GLUE_OBJS)
 
 LIBS += $(GLUE) 
 

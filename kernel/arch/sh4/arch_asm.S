@@ -212,3 +212,15 @@ _fc_loop:
 	nop
 	bra	_fc_loop
 	nop
+
+// void sh4_enter_uspace(addr entry, addr ustack_top);
+FUNC(sh4_enter_uspace)
+	ldc		r4,spc		// load the program counter it will switch to
+	mov		r5,r15		// restore the user stack
+	mov.l	uspace_sr,r0
+	ldc		r0,ssr
+	rte
+	nop
+
+uspace_sr:	.long	0x00000000
+

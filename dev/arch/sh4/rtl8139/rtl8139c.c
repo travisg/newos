@@ -38,9 +38,9 @@
 */
 
 #include "defs.h"
-#include <stdarg.h>
 #include <kernel/debug.h>
-#include <string.h>
+#include <libc/string.h>
+#include <libc/stdarg.h>
 
 #include "rtl8139c.h"
 
@@ -154,7 +154,7 @@ int rtl8139_init() {
 	g232[0x1614/4] = 0x01000000;
 	(void)g28[0x1650];
 	
-	memset(PHYS_ADDR_TO_P1(ADDR_RXBUF), 0, 32*1024);
+	memset((void *)PHYS_ADDR_TO_P1(ADDR_RXBUF), 0, 32*1024);
 
 	/* Soft-reset the chip */
 	nic8[RT_CHIPCMD] = RT_CMD_RESET;

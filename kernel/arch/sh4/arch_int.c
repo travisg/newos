@@ -41,6 +41,10 @@ static int sh4_handle_exception(unsigned int code, unsigned int pc, unsigned int
 		case 13: // slot illegal instruction
 			ret = general_protection_fault(code);
 			break;
+		case 11: // TRAPA
+			panic("trap # %d @ pc 0x%x!\n", trap, pc);
+			ret = INT_NO_RESCHEDULE;
+			break;
 		case 9: { // FPU exception
 			int fpscr = get_fpscr();	
 			int fpu_fault_code;
@@ -80,11 +84,11 @@ static int sh4_handle_exception(unsigned int code, unsigned int pc, unsigned int
 		default:
 			ret = int_io_interrupt_handler(code);
 	}
-        if(ret == INT_RESCHEDULE) {
-                GRAB_THREAD_LOCK();
-                thread_resched();
-                RELEASE_THREAD_LOCK();
-        } 
+	if(ret == INT_RESCHEDULE) {
+		GRAB_THREAD_LOCK();
+		thread_resched();
+		RELEASE_THREAD_LOCK();
+	} 
 
 	return 0;
 }

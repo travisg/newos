@@ -2,7 +2,7 @@
 #include <arch/sh4/vcpu_struct.h>
 #include <boot/stage2.h>
 #include "serial.h"
-#include <string.h>
+#include <libc/string.h>
 #include <arch/sh4/sh4.h>
 
 #define CHATTY_TLB 0
@@ -23,6 +23,8 @@ void set_sr(unsigned int sr);
 unsigned int get_vbr();
 void set_vbr(unsigned int vbr);
 unsigned int get_sgr();
+unsigned int get_ssr();
+unsigned int get_spc();
 asm("
 .globl _get_sr,_set_sr
 .globl _get_vbr,_set_vbr
@@ -50,6 +52,16 @@ _set_vbr:
 
 _get_sgr:
 	stc	sgr,r0
+	rts
+	nop
+
+_get_ssr:
+	stc	ssr,r0
+	rts
+	nop
+
+_get_spc:
+	stc spc,r0
 	rts
 	nop
 ");
@@ -127,11 +139,10 @@ static struct ptent *get_ptent(struct pdent *pd, unsigned int fault_address)
 		return 0;
 	}
 
-	if(pd[fault_address >> 22].v != 0) {
-		pt = (struct ptent *)PHYS_ADDR_TO_P1(pd[fault_address >> 22].ppn << 12);
-	} else {
-		pt = 0;
+	if(pd[fault_address >> 22].v == 0) {
+		return 0;
 	}
+	pt = (struct ptent *)PHYS_ADDR_TO_P1(pd[fault_address >> 22].ppn << 12);
 #if CHATTY_TLB
 	dprintf("get_ptent: found ptent 0x%x\n", pt);
 #endif
@@ -181,7 +192,7 @@ unsigned int tlb_miss(unsigned int excode, unsigned int pc)
 	unsigned int asid;
 
 #if CHATTY_TLB
-	dprintf("tlb_miss: excode 0x%x, pc 0x%x, fault_address 0x%x\n", excode, pc, fault_addr);
+	dprintf("tlb_miss: excode 0x%x, pc 0x%x, sgr 0x%x, fault_address 0x%x\n", excode, pc, get_sgr(), fault_addr);
 #endif
 	
 	if(fault_addr >= P1_AREA) {
@@ -204,12 +215,33 @@ unsigned int tlb_miss(unsigned int excode, unsigned int pc)
 		fault_addr, ent->ppn << 12);
 #endif
 
+
 	if(excode == 0x3) {
 		// this is a tlb miss because of a write, so 
 		// go ahead and mark it dirty
 		ent->d = 1;
 	}
 
+#if 0
+	// XXX hack!
+	if(fault_addr == 0x7ffffff8) {
+		dprintf("sr = 0x%x\n", get_sr());
+		dprintf("ssr = 0x%x sgr = 0x%x spc = 0x%x\n", get_ssr(), get_sgr(), get_spc());
+		dprintf("kernel_struct: kpgdir 0x%x upgdir 0x%x kasid 0x%x uasid 0x%x kstack 0x%x\n",
+			kernel_struct.kernel_pgdir, kernel_struct.user_pgdir, kernel_struct.kernel_asid,
+			kernel_struct.user_asid, kernel_struct.kstack);
+	}
+#endif
+#if 0
+	{
+		static int clear_all = 0;
+		if(fault_addr == 0x7ffffff8)
+			clear_all = 1;
+		if(clear_all) 
+			vcpu_clear_all_utlb_entries();
+	}
+#endif
+	
 	tlb_map(fault_addr >> 12, ent, next_utlb_ent, asid);
 #if CHATTY_TLB
 	vcpu_dump_utlb_entry(next_utlb_ent);
@@ -217,7 +249,7 @@ unsigned int tlb_miss(unsigned int excode, unsigned int pc)
 	next_utlb_ent++;
 	if(next_utlb_ent >= UTLB_COUNT)
 		next_utlb_ent = 0;
-	
+
 	return excode;
 }
 

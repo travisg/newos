@@ -1,5 +1,5 @@
 #include <boot/stage2.h>
-#include <printf.h>
+#include <libc/printf.h>
 #include "serial.h"
 
 int dprintf(const char *fmt, ...)

@@ -12,7 +12,7 @@ include $(LIBSYS_ARCH_DIR)/arch_libsys.mk
 
 $(LIBSYS): $(LIBSYS_OBJS)
 	@mkdir -p $(LIBSYS_OBJ_DIR)
-	$(LD) -r -o $@ $(LIBSYS_OBJS)
+	$(LD) $(GLOBAL_LDFLAGS) -r -o $@ $(LIBSYS_OBJS)
 
 LIBS += $(LIBSYS) 
 LINK_LIBS += $(LIBSYS) 
