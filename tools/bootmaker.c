@@ -40,6 +40,58 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+// ELF stuff
+#define ELF_MAGIC "\x7f""ELF"
+#define EI_MAG0	0
+#define EI_MAG1 1
+#define EI_MAG2 2
+#define EI_MAG3 3
+#define EI_CLASS 4
+#define EI_DATA 5
+#define EI_VERSION 6
+#define EI_PAD 7
+#define EI_NIDENT 16
+
+#define ELFCLASS32 1
+#define ELFCLASS64 2
+#define ELFDATA2LSB 1
+#define ELFDATA2MSB 2
+
+// XXX not safe across all build architectures
+typedef unsigned int Elf32_Addr;
+typedef unsigned short Elf32_Half;
+typedef unsigned int Elf32_Off;
+typedef int Elf32_Sword;
+typedef unsigned int Elf32_Word;
+
+struct Elf32_Ehdr {
+	unsigned char	e_ident[EI_NIDENT];
+	Elf32_Half		e_type;
+	Elf32_Half		e_machine;
+	Elf32_Word		e_version;
+	Elf32_Addr		e_entry;
+	Elf32_Off		e_phoff;
+	Elf32_Off		e_shoff;
+	Elf32_Word		e_flags;
+	Elf32_Half		e_ehsize;
+	Elf32_Half		e_phentsize;
+	Elf32_Half		e_phnum;
+	Elf32_Half		e_shentsize;
+	Elf32_Half		e_shnum;
+	Elf32_Half		e_shstrndx;
+};
+
+struct Elf32_Phdr {
+	Elf32_Word		p_type;
+	Elf32_Off		p_offset;
+	Elf32_Addr		p_vaddr;
+	Elf32_Addr		p_paddr;
+	Elf32_Word		p_filesz;
+	Elf32_Word		p_memsz;
+	Elf32_Word		p_flags;
+	Elf32_Word		p_align;
+};
+
 static int make_sparcboot = 0;
 
 void die(char *s, char *a)
@@ -258,6 +310,39 @@ char *getvaldef(section *s, char *name, char *def)
     return def;
 }
 
+Elf32_Addr elf_find_entry(void *buf, int size)
+{
+	struct Elf32_Ehdr *header;
+	struct Elf32_Phdr *pheader;
+	char *cbuf = buf;
+	int byte_swap;
+	int index;
+
+#define SWAPIT(x) ((byte_swap) ? fix(x) : (x))
+
+	if(memcmp(cbuf, ELF_MAGIC, sizeof(ELF_MAGIC)-1) != 0)
+		return 0;
+
+	if(cbuf[EI_CLASS] != ELFCLASS32)
+		return 0;
+
+	byte_swap = 0;
+#ifdef xBIG_ENDIAN		
+	if(cbuf[EI_DATA] == ELFDATA2LSB) {
+		byte_swap = 1;
+	}
+#else
+	if(cbuf[EI_DATA] == ELFDATA2MSB) {
+		byte_swap = 1;
+	}
+#endif
+	header = (struct Elf32_Ehdr *)cbuf;
+	pheader = (struct Elf32_Phdr *)&cbuf[SWAPIT(header->e_phoff)];
+	
+	// XXX only looking at the first program header. Should be ok
+	return SWAPIT(pheader->p_offset);
+}
+
 #define centry bdir.bd_entry[c]
 void makeboot(section *s, char *outfile)
 {
@@ -333,6 +418,8 @@ void makeboot(section *s, char *outfile)
         }
         if(!strcmp(type,"elf32")){
             centry.be_type = fix(BE_TYPE_ELF32);
+            centry.be_code_vaddr = 0;
+            centry.be_code_ventr = elf_find_entry(rawdata[c], rawsize[c]);
         }
 
         if(centry.be_type == BE_TYPE_NONE){

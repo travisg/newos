@@ -14,7 +14,20 @@ typedef int32 Elf32_Sword;
 typedef uint32 Elf32_Word;
 
 #define ELF_MAGIC "\x7f""ELF"
+#define EI_MAG0	0
+#define EI_MAG1 1
+#define EI_MAG2 2
+#define EI_MAG3 3
+#define EI_CLASS 4
+#define EI_DATA 5
+#define EI_VERSION 6
+#define EI_PAD 7
 #define EI_NIDENT 16
+
+#define ELFCLASS32 1
+#define ELFCLASS64 2
+#define ELFDATA2LSB 1
+#define ELFDATA2MSB 2
 
 struct Elf32_Ehdr {
 	unsigned char	e_ident[EI_NIDENT];
@@ -32,9 +45,6 @@ struct Elf32_Ehdr {
 	Elf32_Half		e_shnum;
 	Elf32_Half		e_shstrndx;
 } ;
-
-#define ELFCLASS32 1
-#define ELFDATA2LSB 1
 
 struct Elf32_Shdr {
 	Elf32_Word		sh_name;
