@@ -161,9 +161,8 @@ port_create(int32 queue_length, const char *name)
 	port_id retval;
 	char 	*temp_name;
 	void 	*q;
+	proc_id	owner;
 	
-	dprintf("port_create: entry, next_port = %d\n", next_port);
-
 	if(ports_active == false)
 		return ERR_PORT_NOT_ACTIVE;
 
@@ -202,6 +201,7 @@ port_create(int32 queue_length, const char *name)
 		kfree(q);
 		return sem_r;
 	}
+
 	// create sem_w
 	sem_w = sem_create_etc(queue_length, temp_name, -1);
 	if (sem_w < 0) {
@@ -211,6 +211,7 @@ port_create(int32 queue_length, const char *name)
 		kfree(q);
 		return sem_w;
 	}
+	owner = proc_get_kernel_proc_id();
 
 	state = int_disable_interrupts();
 	GRAB_PORT_LIST_LOCK();
@@ -226,8 +227,9 @@ port_create(int32 queue_length, const char *name)
 			}
 			ports[i].id		= next_port++;
 			ports[i].lock	= 0;
-
 			GRAB_PORT_LOCK(ports[i]);
+			RELEASE_PORT_LIST_LOCK();
+
 			ports[i].capacity	= queue_length;
 			ports[i].name 		= temp_name;
 
@@ -238,7 +240,7 @@ port_create(int32 queue_length, const char *name)
 			ports[i].head 		= 0;
 			ports[i].tail 		= 0;
 			ports[i].total_count= 0;
-			ports[i].owner 		= proc_get_kernel_proc_id();
+			ports[i].owner 		= owner;
 			retval = ports[i].id;
 			RELEASE_PORT_LOCK(ports[i]);
 			goto out;
