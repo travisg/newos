@@ -5,7 +5,7 @@ ENTRY(__start)
 SEARCH_DIR("libgcc");
 SECTIONS
 {
-	. = 0x00100000 + SIZEOF_HEADERS;
+	. = 0x00200000 + SIZEOF_HEADERS;
 
 	/* text/read-only data */
 	.text :	{ *(.text .gnu.linkonce.t.*) }
