@@ -5,6 +5,7 @@
 #include <kernel/kernel.h>
 #include <kernel/vm.h>
 #include <kernel/vm_cache.h>
+#include <kernel/vm_page.h>
 #include <kernel/heap.h>
 #include <kernel/sem.h>
 #include <kernel/debug.h>
@@ -56,11 +57,26 @@ void vm_cache_acquire_ref(vm_cache_ref *cache_ref)
 
 void vm_cache_release_ref(vm_cache_ref *cache_ref)
 {
+	vm_page *page;
+	
 	if(cache_ref == NULL)
 		panic("vm_cache_release_ref: passed NULL\n");
 	if(atomic_add(&cache_ref->ref_count, -1) == 1) {
-		// XXX remove the cache
+		// delete this cache
+		// delete the cache's backing store, if it has one
+		if(cache_ref->cache->store)
+			(*cache_ref->cache->store->ops->destroy)(cache_ref->cache->store);
 		
+		// free all of the pages in the cache
+		page = cache_ref->cache->page_list;
+		while(page) {
+			vm_page *old_page = page;
+			page = page->cache_next;
+			dprintf("vm_cache_release_ref: freeing page 0x%x\n", old_page->ppn);
+			vm_page_set_state(old_page, PAGE_STATE_FREE);
+		}
+
+		sem_delete(cache_ref->sem);
 		kfree(cache_ref->cache);
 		kfree(cache_ref);
 	}

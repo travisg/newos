@@ -56,7 +56,6 @@ int _start(kernel_args *oldka, int cpu)
 		arch_cpu_init2(&ka);
 		
 		sem_init(&ka);
-		dprintf("sem up\n");
 
 		// now we can create and use semaphores
 		vm_init_postsem(&ka);
@@ -65,8 +64,8 @@ int _start(kernel_args *oldka, int cpu)
 		dev_init(&ka);
 		devs_init(&ka);
 		con_init(&ka);
-		kprintf("durn\n");
-	
+
+		vm_init_postthread(&ka);
 #if 1
 		// XXX remove
 		vfs_test();

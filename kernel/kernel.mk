@@ -12,11 +12,13 @@ KERNEL_OBJS = \
         $(KERNEL_OBJ_DIR)/elf.o \
         $(KERNEL_OBJ_DIR)/faults.o \
         $(KERNEL_OBJ_DIR)/khash.o \
+        $(KERNEL_OBJ_DIR)/lock.o \
         $(KERNEL_OBJ_DIR)/heap.o \
         $(KERNEL_OBJ_DIR)/int.o \
         $(KERNEL_OBJ_DIR)/console.o \
         $(KERNEL_OBJ_DIR)/debug.o \
         $(KERNEL_OBJ_DIR)/dev.o \
+        $(KERNEL_OBJ_DIR)/queue.o \
         $(KERNEL_OBJ_DIR)/timer.o \
         $(KERNEL_OBJ_DIR)/sem.o \
         $(KERNEL_OBJ_DIR)/smp.o \

@@ -272,12 +272,12 @@ static vm_region *_vm_create_anonymous_region(vm_address_space *aspace, char *na
 				err = (*aspace->translation_map.ops->query)(&aspace->translation_map,
 					va, &pa, &flags);
 				if(err < 0) {
-					dprintf("vm_create_anonymous_region: error looking up mapping for va 0x%x\n", va);
+//					dprintf("vm_create_anonymous_region: error looking up mapping for va 0x%x\n", va);
 					continue;
 				}
 				page = vm_lookup_page(pa / PAGE_SIZE);
 				if(page == NULL) {
-					dprintf("vm_create_anonymous_region: error looking up vm_page structure for pa 0x%x\n", pa);
+//					dprintf("vm_create_anonymous_region: error looking up vm_page structure for pa 0x%x\n", pa);
 					continue;
 				}
 				vm_page_set_state(page, PAGE_STATE_WIRED);
@@ -371,6 +371,42 @@ vm_region *vm_map_physical_memory(vm_address_space *aspace, char *name, void **a
 {
 	return _vm_create_anonymous_region(aspace, name, address, addr_type, size,
 		REGION_WIRING_WIRED_PHYSICAL, lock, phys_addr);
+}
+
+int vm_delete_region(vm_address_space *aspace, vm_region *region)
+{
+	vm_region *temp, *last = NULL;
+
+	dprintf("vm_delete_region: aspace 0x%x, region 0x%x\n", aspace, region);
+
+	sem_acquire(aspace->virtual_map.sem, WRITE_COUNT);
+	temp = aspace->virtual_map.region_list;
+	while(temp != NULL) {
+		if(region == temp) {
+			if(last != NULL) {
+				last->next = temp->next;
+			} else {
+				aspace->virtual_map.region_list = temp->next;
+			}
+			break;
+		}
+		last = temp;
+		temp = temp->next;
+	}
+	if(region == aspace->virtual_map.region_hint)
+		aspace->virtual_map.region_hint = NULL;
+	sem_release(aspace->virtual_map.sem, WRITE_COUNT);
+
+	if(temp == NULL)
+		return -1;
+	
+	vm_cache_release_ref(region->cache_ref);
+
+	if(region->name)
+		kfree(region->name);
+	kfree(region);
+	
+	return 0;
 }
 
 int vm_get_page_mapping(vm_address_space *aspace, addr vaddr, addr *paddr)
@@ -561,7 +597,7 @@ vm_address_space *vm_create_aspace(const char *name, unsigned int base, unsigned
 
 void vm_test()
 {
-	vm_region *region;
+	vm_region *region, *region2, *region3;
 	addr region_addr;
 	int i;
 	
@@ -572,21 +608,54 @@ void vm_test()
 	dprintf("region = 0x%x, addr = 0x%x, region->base = 0x%x\n", region, region_addr, region->base);
 
 	memset((void *)region_addr, 0, PAGE_SIZE * 16);
-	
-	region = vm_map_physical_memory(vm_get_kernel_aspace(), "test_physical_region", (void **)&region_addr,
+
+#if 0
+	region2 = vm_map_physical_memory(vm_get_kernel_aspace(), "test_physical_region", (void **)&region_addr,
 		REGION_ADDR_ANY_ADDRESS, PAGE_SIZE * 16, LOCK_RW|LOCK_KERNEL, 0xb8000);
-	dprintf("region = 0x%x, addr = 0x%x, region->base = 0x%x\n", region, region_addr, region->base);
+	dprintf("region = 0x%x, addr = 0x%x, region->base = 0x%x\n", region2, region_addr, region2->base);
 
 	for(i=0; i<64; i++) {
 		((char *)region_addr)[i] = 'a';
 	}	
-
-	region = vm_create_anonymous_region(vm_get_kernel_aspace(), "test_region_wired", (void **)&region_addr,
+#endif
+	region3 = vm_create_anonymous_region(vm_get_kernel_aspace(), "test_region_wired", (void **)&region_addr,
 		REGION_ADDR_ANY_ADDRESS, PAGE_SIZE * 16, REGION_WIRING_WIRED, LOCK_RW|LOCK_KERNEL);
-	dprintf("region = 0x%x, addr = 0x%x, region->base = 0x%x\n", region, region_addr, region->base);
+	dprintf("region = 0x%x, addr = 0x%x, region->base = 0x%x\n", region3, region_addr, region3->base);
 
 	memset((void *)region_addr, 0, PAGE_SIZE * 16);
+
+	dprintf("now deleting regions\n");
 	
+	vm_delete_region(vm_get_kernel_aspace(), region);
+	vm_delete_region(vm_get_kernel_aspace(), region3);
+
+	dprintf("physical mappings tests:\n");	
+	
+	{
+		addr va, pa;
+		addr va2;
+		
+		vm_get_page_mapping(vm_get_kernel_aspace(), 0x80000000, &pa);
+		vm_get_physical_page(pa, &va, PHYSICAL_PAGE_CAN_WAIT);
+		dprintf("pa 0x%x va 0x%x\n", pa, va);
+		dprintf("%d\n", memcmp(0x80000000, va, PAGE_SIZE));
+
+		vm_get_page_mapping(vm_get_kernel_aspace(), 0x80001000, &pa);
+		vm_get_physical_page(pa, &va2, PHYSICAL_PAGE_CAN_WAIT);
+		dprintf("pa 0x%x va 0x%x\n", pa, va2);
+		dprintf("%d\n", memcmp(0x80001000, va2, PAGE_SIZE));
+
+		vm_put_physical_page(va);
+		vm_put_physical_page(va2);
+
+		vm_get_page_mapping(vm_get_kernel_aspace(), 0x80000000, &pa);
+		vm_get_physical_page(pa, &va, PHYSICAL_PAGE_CAN_WAIT);
+		dprintf("pa 0x%x va 0x%x\n", pa, va);
+		dprintf("%d\n", memcmp(0x80000000, va, PAGE_SIZE));
+
+		vm_put_physical_page(va);
+	}
+
 	dprintf("vm_test: done\n");
 }
 
@@ -612,7 +681,7 @@ int vm_init(kernel_args *ka)
 	dprintf("heap at 0x%x\n", heap_base);
 	heap_init(heap_base, HEAP_SIZE);
 
-	// initialize the free page list
+	// initialize the free page list and physical page mapper
 	vm_page_init(ka);
 	
 	// create the initial kernel address space
@@ -677,6 +746,7 @@ int vm_init_postsem(kernel_args *ka)
 	// since we're still single threaded and only the kernel address space exists,
 	// it isn't that hard to find all of the ones we need to create
 	kernel_aspace->virtual_map.sem = sem_create(WRITE_COUNT, "kernel_aspacelock");
+	kernel_aspace->translation_map.lock.sem = sem_create(1, "recursive_lock");
 	
 	for(region = kernel_aspace->virtual_map.region_list; region; region = region->next) {
 		if(region->cache_ref->sem < 0) {
@@ -685,6 +755,13 @@ int vm_init_postsem(kernel_args *ka)
 	}
 
 	return heap_init_postsem(ka);
+}
+
+int vm_init_postthread(kernel_args *ka)
+{
+	vm_page_init_postthread(ka);
+
+	return 0;
 }
 
 int vm_page_fault(addr address, addr fault_address, bool is_write, bool is_user)
@@ -856,6 +933,16 @@ vm_region *vm_virtual_map_lookup(vm_virtual_map *map, addr address)
 	if(region)
 		map->region_hint = region;
 	return region;
+}
+
+int vm_get_physical_page(addr paddr, addr *vaddr, int flags)
+{
+	return (*kernel_aspace->translation_map.ops->get_physical_page)(paddr, vaddr, flags);
+}
+
+int vm_put_physical_page(addr vaddr)
+{
+	return (*kernel_aspace->translation_map.ops->put_physical_page)(vaddr);
 }
 
 

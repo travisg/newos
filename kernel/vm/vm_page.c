@@ -10,6 +10,7 @@
 #include <kernel/arch/vm_translation_map.h>
 #include <kernel/debug.h>
 #include <kernel/int.h>
+#include <kernel/thread.h>
 #include <kernel/smp.h>
 #include <boot/stage2.h>
 
@@ -34,6 +35,8 @@ static int page_lock;
 void dump_page_stats(int argc, char **argv);
 void dump_free_page_table(int argc, char **argv);
 static int vm_page_set_state_nolock(vm_page *page, int page_state);
+static void clear_page(addr pa);
+static int page_scrubber();
 
 static vm_page *dequeue_page(page_queue *q)
 {
@@ -157,6 +160,77 @@ int vm_page_init2(kernel_args *ka)
 	return 0;
 }
 
+int vm_page_init_postthread(kernel_args *ka)
+{
+	struct thread *t;
+	
+	// create a kernel thread to clear out pages
+	t = thread_create_kernel_thread("page scrubber", &page_scrubber, 1);
+	thread_resume_thread(t);
+
+	return 0;
+}
+
+static int page_scrubber()
+{
+#define SCRUB_SIZE 16
+	int state;
+	vm_page *page[SCRUB_SIZE];
+	int i;
+	int scrub_count;
+
+	dprintf("page_scrubber starting...\n");
+
+	for(;;) {
+		thread_snooze(100000); // 10ms
+		
+		if(page_free_queue.count > 0) {
+			state = int_disable_interrupts();
+			acquire_spinlock(&page_lock);
+
+			for(i=0; i<SCRUB_SIZE; i++) {
+				page[i] = dequeue_page(&page_free_queue);
+				if(page[i] == NULL)
+					break;
+			}
+			
+			release_spinlock(&page_lock);
+			int_restore_interrupts(state);
+
+			scrub_count = i;
+
+			for(i=0; i<scrub_count; i++) {
+				clear_page(page[i]->ppn * PAGE_SIZE);
+			}
+
+			state = int_disable_interrupts();
+			acquire_spinlock(&page_lock);
+			
+			for(i=0; i<scrub_count; i++) {
+				enqueue_page(&page_clear_queue, page[i]);
+			}
+	
+			release_spinlock(&page_lock);
+			int_restore_interrupts(state);
+		}	
+	}
+
+	return 0;
+}
+
+static void clear_page(addr pa)
+{
+	addr va;
+
+	dprintf("clear_page: clearing page 0x%x\n", pa);
+
+	vm_get_physical_page(pa, &va, PHYSICAL_PAGE_CAN_WAIT);
+	
+	memset((void *)va, 0, PAGE_SIZE);
+
+	vm_put_physical_page(va);
+}
+
 int vm_mark_page_inuse(addr page)
 {
 	return vm_mark_page_range_inuse(page, 1);
@@ -251,7 +325,8 @@ out:
 
 	if(p != NULL && page_state == PAGE_STATE_CLEAR &&
 		(old_page_state == PAGE_STATE_FREE || old_page_state == PAGE_STATE_UNUSED)) {
-		// XXX clear the page
+
+		clear_page(p->ppn * PAGE_SIZE);
 	}
 
 	return p;
@@ -300,7 +375,7 @@ vm_page *vm_page_allocate_page(int page_state)
 	int_restore_interrupts(state);
 
 	if(page_state == PAGE_STATE_CLEAR && p->state == PAGE_STATE_FREE) {
-		// XXX clear the page
+		clear_page(p->ppn * PAGE_SIZE);
 	}
 
 	return p;

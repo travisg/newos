@@ -140,6 +140,11 @@ enum {
 	REGION_WIRING_WIRED_CONTIG
 };
 
+enum {
+	PHYSICAL_PAGE_NO_WAIT = 0,
+	PHYSICAL_PAGE_CAN_WAIT,
+};
+
 #define LOCK_RO        0x0
 #define LOCK_RW        0x1
 #define LOCK_KERNEL    0x2
@@ -148,6 +153,7 @@ enum {
 //void vm_dump_areas(vm_address_space *aspace);
 int vm_init(kernel_args *ka);
 int vm_init_postsem(kernel_args *ka);
+int vm_init_postthread(kernel_args *ka);
 vm_address_space *vm_create_aspace(const char *name, unsigned int base, unsigned int size, bool kernel);
 vm_address_space *vm_get_kernel_aspace();
 vm_address_space *vm_get_current_user_aspace();
@@ -155,8 +161,11 @@ vm_region *vm_create_anonymous_region(vm_address_space *aspace, char *name, void
 	addr size, int wiring, int lock);
 vm_region *vm_map_physical_memory(vm_address_space *aspace, char *name, void **address, int addr_type,
 	addr size, int lock, addr phys_addr);
+int vm_delete_region(vm_address_space *aspace, vm_region *region);
 vm_region *vm_find_region_by_name(vm_address_space *aspace, const char *name);
 int vm_get_page_mapping(vm_address_space *aspace, addr vaddr, addr *paddr);
+int vm_get_physical_page(addr paddr, addr *vaddr, int flags);
+int vm_put_physical_page(addr vaddr);
 
 #endif
 

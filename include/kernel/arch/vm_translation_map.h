@@ -7,11 +7,12 @@
 
 #include <kernel/kernel.h>
 #include <boot/stage2.h>
+#include <kernel/lock.h>
 
 typedef struct vm_translation_map_struct {
 	struct vm_translation_map_struct *next;
 	struct vm_translation_map_ops_struct *ops;
-	int lock;
+	recursive_lock lock;
 	int map_count;
 	struct vm_translation_map_arch_info_struct *arch_data;
 } vm_translation_map;
@@ -26,8 +27,8 @@ typedef struct vm_translation_map_ops_struct {
 	int (*query)(vm_translation_map *map, addr va, addr *out_physical, unsigned int *out_flags);
 	addr (*get_mapped_size)(vm_translation_map*);
 	int (*protect)(vm_translation_map *map, addr base, addr top, unsigned int attributes);
-//	int (*get_physical_page)(addr physical_address, addr *out_virtual_address, int flags);
-//	int (*put_physical_page)(addr virtual_address);
+	int (*get_physical_page)(addr physical_address, addr *out_virtual_address, int flags);
+	int (*put_physical_page)(addr virtual_address);
 } vm_translation_map_ops;
 
 int vm_translation_map_create(vm_translation_map *new_map, bool kernel);

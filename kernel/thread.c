@@ -617,6 +617,8 @@ void thread_kthread_exit()
 
 thread_id thread_get_current_thread_id()
 {
+	if(cur_thread == NULL)
+		return 0;
 	return CURR_THREAD->id;
 }
 

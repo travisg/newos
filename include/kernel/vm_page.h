@@ -11,6 +11,7 @@
 
 int vm_page_init(kernel_args *ka);
 int vm_page_init2(kernel_args *ka);
+int vm_page_init_postthread(kernel_args *ka);
 
 int vm_mark_page_inuse(addr page);
 int vm_mark_page_range_inuse(addr start_page, addr len);
