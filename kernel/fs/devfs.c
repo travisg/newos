@@ -2,6 +2,9 @@
 ** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
+
+// 280202 TK: added partition support
+
 #include <kernel/kernel.h>
 #include <kernel/vfs.h>
 #include <kernel/debug.h>
@@ -10,6 +13,7 @@
 #include <kernel/lock.h>
 #include <kernel/vm.h>
 #include <newos/errors.h>
+#include <newos/drivers.h>
 
 #include <kernel/arch/cpu.h>
 
@@ -18,6 +22,7 @@
 #include <nulibc/string.h>
 #include <nulibc/stdio.h>
 
+
 #define DEVFS_TRACE 0
 
 #if DEVFS_TRACE
@@ -25,6 +30,17 @@
 #else
 #define TRACE(x)
 #endif
+
+struct devfs_part_map {
+	off_t offset;
+	off_t size;
+	uint32 logical_block_size;
+	struct devfs_vnode *raw_vnode;
+	
+	// following info could be recreated on the fly, but it's not worth it
+	uint32 session;
+	uint32 partition;
+};
 
 struct devfs_stream {
 	stream_type type;
@@ -36,6 +52,7 @@ struct devfs_stream {
 		struct stream_dev {
 			dev_ident ident;
 			struct dev_calls *calls;
+			struct devfs_part_map *part_map;
 		} dev;
 	} u;
 };
@@ -130,6 +147,10 @@ static int devfs_delete_vnode(struct devfs *fs, struct devfs_vnode *v, bool forc
 	// remove it from the global hash table
 	hash_remove(fs->vnode_list_hash, v);
 
+	// TK: for partitions, we have to release the raw device
+	if( v->stream.type == STREAM_TYPE_DEVICE && v->stream.u.dev.part_map )
+		vfs_put_vnode( fs->id, v->stream.u.dev.part_map->raw_vnode->id );
+		
 	if(v->name != NULL)
 		kfree(v->name);
 	kfree(v);
@@ -229,6 +250,117 @@ static int devfs_is_dir_empty(struct devfs_vnode *dir)
 	if(dir->stream.type != STREAM_TYPE_DIR)
 		return false;
 	return !dir->stream.u.dir.dir_head;
+}
+
+
+static int devfs_get_partition_info( struct devfs *fs, struct devfs_vnode *v, 
+	struct devfs_cookie *cookie, void *buf, size_t len)
+{
+	devfs_partition_info *info = (devfs_partition_info *)buf;
+	struct devfs_part_map *part_map = v->stream.u.dev.part_map;
+	
+	if( v->stream.type != STREAM_TYPE_DEVICE || part_map == NULL )
+		return ERR_INVALID_ARGS;
+
+	info->offset = part_map->offset;
+	info->size = part_map->size;
+	info->logical_block_size = part_map->logical_block_size;
+	info->session = part_map->session;
+	info->partition = part_map->partition;
+
+	// XXX: todo - create raw device name out of raw_vnode 
+	//             we need vfs support for that (see vfs_get_cwd)
+	strcpy( info->raw_device, "something_raw" );
+	
+	return NO_ERROR;
+}
+
+static int devfs_set_partition( struct devfs *fs, struct devfs_vnode *v, 
+	struct devfs_cookie *cookie, void *buf, size_t len)
+{
+	struct devfs_part_map *part_map;
+	struct devfs_vnode *part_node;
+	struct devfs_vnode *v1;
+	int res;
+	char part_name[30];
+	devfs_partition_info info;
+	
+	info = *(devfs_partition_info *)buf;
+	
+	if( v->stream.type != STREAM_TYPE_DEVICE )
+		return ERR_INVALID_ARGS;
+		
+	// we don't support nested partitions
+	if( v->stream.u.dev.part_map )
+		return ERR_INVALID_ARGS;
+	
+	// reduce checks to a minimum - things like negative offsets could be useful
+	if( info.size < 0)
+		return ERR_INVALID_ARGS;
+				
+	// create partition map
+	part_map = kmalloc( sizeof( *part_map ));
+	if( !part_map )
+		return ERR_NO_MEMORY;
+		
+	part_map->offset = info.offset;
+	part_map->size = info.size;
+	part_map->logical_block_size = info.logical_block_size;
+	part_map->session = info.session;
+	part_map->partition = info.partition;
+		
+	sprintf( part_name, "%i_%i", info.session, info.partition );
+
+	mutex_lock(&thedevfs->lock);
+	
+	// you cannot change a partition once set
+	if( devfs_find_in_dir( v->parent, part_name )) {
+		res = ERR_INVALID_ARGS;
+		goto err1;
+	}
+	
+	// increase reference count of raw device - 
+	// the partition device really needs it 
+	// (at least to resolve its name on GET_PARTITION_INFO)
+	res = vfs_get_vnode( fs->id, v->id, (fs_vnode *)&part_map->raw_vnode );
+	if( res < 0 )
+		goto err1;
+
+	// now create the partition node	
+	part_node = devfs_create_vnode( fs, part_name );
+	
+	if( part_node == NULL ) {
+		res = ERR_NO_MEMORY;
+		goto err2;
+	}
+
+	part_node->stream.type = STREAM_TYPE_DEVICE;
+	part_node->stream.u.dev.ident = v->stream.u.dev.ident;
+	part_node->stream.u.dev.calls = v->stream.u.dev.calls;
+	part_node->stream.u.dev.part_map = part_map;
+
+	hash_insert( fs->vnode_list_hash, part_node );
+
+	devfs_insert_in_dir( v->parent, part_node );
+
+	mutex_unlock(&thedevfs->lock);
+	
+	dprintf( "SET_PARTITION: Added partition\n" );
+
+	return NO_ERROR;
+	
+err1:
+	mutex_unlock(&thedevfs->lock);
+
+	kfree( part_map );
+	return res;
+		
+err2:
+	mutex_unlock(&thedevfs->lock);
+
+	vfs_put_vnode( fs->id, v->id );
+	kfree( part_map );
+	return res;
 }
 
 static int devfs_mount(fs_cookie *_fs, fs_id id, const char *devfs, void *args, vnode_id *root_vnid)
@@ -553,10 +685,24 @@ static ssize_t devfs_read(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, void 
 			cookie->u.dir.ptr = cookie->u.dir.ptr->dir_next;
 			break;
 		}
-		case STREAM_TYPE_DEVICE:
+		case STREAM_TYPE_DEVICE: {
+			struct devfs_part_map *part_map = v->stream.u.dev.part_map;
+			
+			if( part_map ) {
+				if( pos < 0 )
+					pos = 0;
+					
+				if( pos > part_map->size )
+					return 0;
+					
+				len = min( len, part_map->size - pos );
+				pos += part_map->offset;
+			}
+			
 			// pass the call through to the device
 			err = v->stream.u.dev.calls->dev_read(cookie->u.dev.dcookie, buf, pos, len);
 			break;
+		}
 		default:
 			err = ERR_INVALID_ARGS;
 	}
@@ -576,6 +722,19 @@ static ssize_t devfs_write(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, cons
 	TRACE(("devfs_write: vnode 0x%x, cookie 0x%x, pos 0x%x 0x%x, len 0x%x\n", v, cookie, pos, len));
 
 	if(v->stream.type == STREAM_TYPE_DEVICE) {
+		struct devfs_part_map *part_map = v->stream.u.dev.part_map;
+			
+		if( part_map ) {
+			if( pos < 0 )
+				pos = 0;
+				
+			if( pos > part_map->size )
+				return 0;
+
+			len = min( len, part_map->size - pos );
+			pos += part_map->offset;
+		}
+		
 		return v->stream.u.dev.calls->dev_write(cookie->u.dev.dcookie, buf, pos, len);
 	} else {
 		return ERR_VFS_READONLY_FS;
@@ -628,8 +787,16 @@ static int devfs_ioctl(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, int op, 
 	struct devfs_cookie *cookie = _cookie;
 
 	TRACE(("devfs_ioctl: vnode 0x%x, cookie 0x%x, op %d, buf 0x%x, len 0x%x\n", _v, _cookie, op, buf, len));
-
+	
 	if(v->stream.type == STREAM_TYPE_DEVICE) {
+		switch( op ) {
+		case IOCTL_DEVFS_GET_PARTITION_INFO:
+			return devfs_get_partition_info( fs, v, cookie, buf, len );
+			
+		case IOCTL_DEVFS_SET_PARTITION:
+			return devfs_set_partition( fs, v, cookie, buf, len );
+		}
+
 		return v->stream.u.dev.calls->dev_ioctl(cookie->u.dev.dcookie, op, buf, len);
 	} else {
 		return ERR_INVALID_ARGS;
@@ -660,8 +827,23 @@ static ssize_t devfs_readpage(fs_cookie _fs, fs_vnode _v, iovecs *vecs, off_t po
 	TRACE(("devfs_readpage: vnode 0x%x, vecs 0x%x, pos 0x%x 0x%x\n", v, vecs, pos));
 
 	if(v->stream.type == STREAM_TYPE_DEVICE) {
+		struct devfs_part_map *part_map = v->stream.u.dev.part_map;
+			
 		if(!v->stream.u.dev.calls->dev_readpage)
 			return ERR_NOT_ALLOWED;
+			
+		if( part_map ) {
+			if( pos < 0 )
+				return ERR_INVALID_ARGS;
+				
+			if( pos > part_map->size )
+				return 0;
+
+			// XXX we modify a passed-in structure
+			vecs->total_len = min( vecs->total_len, part_map->size - pos );
+			pos += part_map->offset;
+		}
+
 		return v->stream.u.dev.calls->dev_readpage(v->stream.u.dev.ident, vecs, pos);
 	} else {
 		return ERR_NOT_ALLOWED;
@@ -676,8 +858,23 @@ static ssize_t devfs_writepage(fs_cookie _fs, fs_vnode _v, iovecs *vecs, off_t p
 	TRACE(("devfs_writepage: vnode 0x%x, vecs 0x%x, pos 0x%x 0x%x\n", v, vecs, pos));
 
 	if(v->stream.type == STREAM_TYPE_DEVICE) {
+		struct devfs_part_map *part_map = v->stream.u.dev.part_map;
+
 		if(!v->stream.u.dev.calls->dev_writepage)
 			return ERR_NOT_ALLOWED;
+
+		if( part_map ) {
+			if( pos < 0 )
+				return ERR_INVALID_ARGS;
+				
+			if( pos > part_map->size )
+				return 0;
+
+			// XXX we modify a passed-in structure
+			vecs->total_len = min( vecs->total_len, part_map->size - pos );
+			pos += part_map->offset;
+		}
+
 		return v->stream.u.dev.calls->dev_writepage(v->stream.u.dev.ident, vecs, pos);
 	} else {
 		return ERR_NOT_ALLOWED;
@@ -691,7 +888,35 @@ static int devfs_create(fs_cookie _fs, fs_vnode _dir, const char *name, stream_t
 
 static int devfs_unlink(fs_cookie _fs, fs_vnode _dir, const char *name)
 {
-	return ERR_VFS_READONLY_FS;
+	struct devfs *fs = _fs;
+	struct devfs_vnode *dir = _dir;
+	struct devfs_vnode *v;
+	int res = NO_ERROR;
+
+	mutex_lock(&fs->lock);
+
+	v = devfs_find_in_dir( dir, name );
+	if(!v) {
+		res = ERR_NOT_FOUND;
+		goto err;
+	}
+	
+	// you can unlink partitions only
+	if( v->stream.type != STREAM_TYPE_DEVICE || !v->stream.u.dev.part_map ) {
+		res = ERR_VFS_READONLY_FS;
+		goto err;
+	}
+
+	res = devfs_remove_from_dir( v->parent, v );
+	if( res )
+		goto err;
+
+	res = vfs_remove_vnode( fs->id, v->id );
+
+err:	
+	mutex_unlock(&fs->lock);
+
+	return res;
 }
 
 static int devfs_rename(fs_cookie _fs, fs_vnode _olddir, const char *oldname, fs_vnode _newdir, const char *newname)
