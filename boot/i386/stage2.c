@@ -45,6 +45,10 @@ void load_elf_image(void *data, unsigned int *next_paddr,
 	addr_range *ar0, addr_range *ar1, unsigned int *start_addr, addr_range *dynamic_section);
 int mmu_init(kernel_args *ka, unsigned int *next_paddr);
 void mmu_map_page(unsigned int vaddr, unsigned int paddr);
+void cpuid(uint32 selector, uint32 *data);
+unsigned int get_eflags();
+void set_eflags(unsigned int val);
+int check_cpu();
 
 // called by the stage1 bootloader.
 // State:
@@ -71,9 +75,19 @@ void _start(unsigned int mem, int in_vesa, unsigned int vesa_ptr)
 	dprintf("stage2 bootloader entry.\n");
 	dprintf("memsize = 0x%x, in_vesa %d, vesa_ptr 0x%x\n", mem, in_vesa, vesa_ptr);
 
+	// verify we can run on this cpu
+	if(check_cpu() < 0) {
+		dprintf("\nSorry, this computer appears to be lacking some of the features\n");
+		dprintf("needed by NewOS. It is currently only able to run on\n");
+		dprintf("Pentium class cpus and above, with a few exceptions to\n");
+		dprintf("that rule.\n");
+		dprintf("\nPlease reset your computer to continue.");
+
+		for(;;);
+	}
+
 	// calculate the conversion factor that translates rdtsc time to real microseconds
 	calculate_cpu_conversion_factor();
-	dprintf("system_time = %d %d\n", system_time());
 
 	// calculate how big the bootdir is so we know where we can start grabbing pages
 	{
@@ -128,7 +142,7 @@ void _start(unsigned int mem, int in_vesa, unsigned int vesa_ptr)
 	}
 	ka->cpu_kstack[0].size = next_vaddr - ka->cpu_kstack[0].start;
 
-	dprintf("new stack at 0x%x to 0x%x\n", ka->cpu_kstack[0].start, ka->cpu_kstack[0].start + ka->cpu_kstack[0].size);
+//	dprintf("new stack at 0x%x to 0x%x\n", ka->cpu_kstack[0].start, ka->cpu_kstack[0].start + ka->cpu_kstack[0].size);
 
 	// set up a new idt
 	{
@@ -243,7 +257,7 @@ void _start(unsigned int mem, int in_vesa, unsigned int vesa_ptr)
 	dprintf("virt_alloc_range_high = 0x%x\n", ka->virt_alloc_range_high);
 	dprintf("page_hole = 0x%x\n", ka->page_hole);
 #endif
-	dprintf("finding and booting other cpus...\n");
+//	dprintf("finding and booting other cpus...\n");
 	smp_boot(ka, kernel_entry);
 
 	dprintf("jumping into kernel at 0x%x\n", kernel_entry);
@@ -395,6 +409,44 @@ void mmu_map_page(unsigned int vaddr, unsigned int paddr)
 	pgtable[(vaddr % (PAGE_SIZE * 1024)) / PAGE_SIZE] = paddr | DEFAULT_PAGE_FLAGS;
 }
 
+int check_cpu()
+{
+	unsigned int i;
+	uint32 data[4];
+	char str[17];
+
+	// check the eflags register to see if the cpuid instruction exists
+	if((get_eflags() & 1<<21) == 0) {
+		set_eflags(get_eflags() | 1<<21);
+		if((get_eflags() & 1<<21) == 0) {
+			// we couldn't set the ID bit of the eflags register, this cpu is old
+			return -1;
+		}
+	}
+
+	// we can safely call cpuid
+
+	// print some fun data
+	cpuid(0, data);
+
+	// build the vendor string
+	memset(str, 0, sizeof(str));
+	*(unsigned int *)&str[0] = data[1];
+	*(unsigned int *)&str[4] = data[3];
+	*(unsigned int *)&str[8] = data[2];
+
+	// get the family, model, stepping
+	cpuid(1, data);
+	dprintf("CPU: family %d model %d stepping %d, string '%s'\n",
+		(data[0] >> 8) & 0xf, (data[0] >> 4) & 0xf, data[0] & 0xf, str);
+
+	// check for bits we need
+	cpuid(1, data);
+	if(!(data[4] & 1<<4)) return -1; // check for rdtsc
+
+	return 0;
+}
+
 long long rdtsc();
 asm(
 "rdtsc:\n"
@@ -463,6 +515,50 @@ asm(
 "	adc		%ebx, %edx\n"
 "	popl	%ecx\n"
 "	popl	%ebx\n"
+"	ret\n"
+);
+
+// void cpuid(uint32 selector, uint32 *data);
+asm(
+".global cpuid\n"
+"cpuid:\n"
+"	pushl	%ebx\n"
+"	pushl	%edi\n"
+
+"	movl	12(%esp),%eax\n"
+"	movl	16(%esp),%edi\n"
+"	cpuid\n"
+
+"	movl	%eax,0(%edi)\n"
+"	movl	%ebx,4(%edi)\n"
+"	movl	%ecx,8(%edi)\n"
+"	movl	%edx,12(%edi)\n"
+
+"	popl	%edi\n"
+"	popl	%ebx\n"
+
+"	ret\n"
+);
+
+// unsigned int get_eflags();
+asm(
+".global get_eflags\n"
+"get_eflags:\n"
+
+"	pushfl\n"
+"	popl	%eax\n"
+
+"	ret\n"
+);
+
+// void set_eflags(unsigned int val);
+asm(
+".global set_eflags\n"
+"set_eflags:\n"
+
+"	pushl	4(%esp)\n"
+"	popfl\n"
+
 "	ret\n"
 );
 
