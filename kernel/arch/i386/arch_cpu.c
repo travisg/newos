@@ -420,8 +420,10 @@ void i386_swap_fpu_context(void *old_fpu_state, void *new_fpu_state)
 
 void arch_cpu_invalidate_TLB_range(addr_t start, addr_t end)
 {
-	for(; start < end; start += PAGE_SIZE) {
+	int num_pages = end/PAGE_SIZE - start/PAGE_SIZE;
+	while ( num_pages-- >= 0 ) {
 		invalidate_TLB(start);
+		start += PAGE_SIZE;
 	}
 }
 

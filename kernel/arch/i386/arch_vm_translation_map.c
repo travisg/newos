@@ -572,8 +572,10 @@ int vm_translation_map_create(vm_translation_map *new_map, bool kernel)
 		return ERR_NO_MEMORY;
 
 	new_map->arch_data = kmalloc(sizeof(vm_translation_map_arch_info));
-	if(new_map->arch_data == NULL)
+	if(new_map->arch_data == NULL) {
+		recursive_lock_destroy(&new_map->lock);
 		return ERR_NO_MEMORY;
+	}
 
 	new_map->arch_data->num_invalidate_pages = 0;
 
@@ -583,6 +585,7 @@ int vm_translation_map_create(vm_translation_map *new_map, bool kernel)
 		new_map->arch_data->pgdir_virt = kmalloc(PAGE_SIZE);
 		if(new_map->arch_data->pgdir_virt == NULL) {
 			kfree(new_map->arch_data);
+			recursive_lock_destroy(&new_map->lock);
 			return ERR_NO_MEMORY;
 		}
 		if(((addr_t)new_map->arch_data->pgdir_virt % PAGE_SIZE) != 0)
@@ -676,7 +679,7 @@ int vm_translation_map_module_init(kernel_args *ka)
 
 	// turn on the global bit if the cpu supports it
 	if(i386_check_feature(X86_PGE, FEATURE_COMMON)) {
-		dprintf("enabing global bit\n");
+		dprintf("enabling global bit\n");
 		uint32 cr4; 
 		read_cr4(cr4);
 		write_cr4(cr4 | (1<<7)); // PGE bit in cr4
@@ -781,7 +784,7 @@ int vm_translation_map_quick_map(kernel_args *ka, addr_t va, addr_t pa, unsigned
 	if(is_kernel_address(va))
 		pentry->global = 1; // global bit set for all kernel addresses
 
-	arch_cpu_invalidate_TLB_range(va, va+1);
+	arch_cpu_invalidate_TLB_range(va, va);
 
 	return 0;
 }

@@ -565,7 +565,7 @@ vm_page *vm_lookup_page(addr_t page_num)
 	if(page_num < physical_page_offset)
 		return NULL;
 	page_num -= physical_page_offset;
-	if(page_num > num_pages)
+	if(page_num >= num_pages)
 		return NULL;
 
 	VERIFY_VM_PAGE(&all_pages[page_num]);
