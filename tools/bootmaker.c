@@ -419,7 +419,7 @@ void makeboot(section *s, char *outfile)
         if(!strcmp(type,"elf32")){
             centry.be_type = fix(BE_TYPE_ELF32);
             centry.be_code_vaddr = 0;
-            centry.be_code_ventr = elf_find_entry(rawdata[c], rawsize[c]);
+            centry.be_code_ventr = fix(elf_find_entry(rawdata[c], rawsize[c]));
         }
 
         if(centry.be_type == BE_TYPE_NONE){
