@@ -169,11 +169,16 @@ static void draw_char(unsigned char c, int x, int y)
 	}
 }
 
+#define SCROLL 0
+
 static void arch_dbg_putchar(char c)
 {
 	if(c == '\n') {
 		char_x = 0;
 		char_y++;
+#if !SCROLL
+		memset(framebuffer + ((char_y < num_rows) ? char_y : 0) * CHAR_HEIGHT * screen_size_x, back_color, screen_size_x*CHAR_HEIGHT);
+#endif
 	} else {
 		draw_char(c, char_x * CHAR_WIDTH, char_y * CHAR_HEIGHT);
 		char_x++;
@@ -183,10 +188,15 @@ static void arch_dbg_putchar(char c)
 		char_y++;
 	}
 	if(char_y >= num_rows) {
+#if SCROLL
 		// scroll up
 		memcpy(framebuffer, framebuffer + screen_size_x*CHAR_HEIGHT, screen_size_x * screen_size_y - screen_size_x*CHAR_HEIGHT);
 		memset(framebuffer + (screen_size_y-CHAR_HEIGHT)*screen_size_x, back_color, screen_size_x*CHAR_HEIGHT);
 		char_y--;
+#else
+		// wrap around
+		char_y = 0;
+#endif
 	}
 }
 #endif

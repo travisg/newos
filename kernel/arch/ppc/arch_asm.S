@@ -128,53 +128,46 @@ FUNCTION(getibats):
 	mfibatl 	r0,0
 	stwu		r0,4(r3)
 	mfibatu 	r0,1
-	stwu		r0,8(r3)
+	stwu		r0,4(r3)
 	mfibatl 	r0,1
-	stwu		r0,12(r3)
+	stwu		r0,4(r3)
 	mfibatu 	r0,2
-	stwu		r0,16(r3)
+	stwu		r0,4(r3)
 	mfibatl 	r0,2
-	stwu		r0,20(r3)
+	stwu		r0,4(r3)
 	mfibatu 	r0,3
-	stwu		r0,24(r3)
+	stwu		r0,4(r3)
 	mfibatl 	r0,3
-	stwu		r0,28(r3)
+	stwu		r0,4(r3)
 	blr
 
 // void setibats(int bats[8]);
 FUNCTION(setibats):
-	mfmsr		r8
-	li			r0,0
-	mtmsr		r0
-
 	lwz			r0,0(r3)
 	mtibatu 	0,r0
 	isync
 	lwzu		r0,4(r3)
 	mtibatl 	0,r0
 	isync
-	lwzu		r0,8(r3)
+	lwzu		r0,4(r3)
 	mtibatu 	1,r0
 	isync
-	lwzu		r0,12(r3)
+	lwzu		r0,4(r3)
 	mtibatl 	1,r0
 	isync
-	lwzu		r0,16(r3)
+	lwzu		r0,4(r3)
 	mtibatu 	2,r0
 	isync
-	lwzu		r0,20(r3)
+	lwzu		r0,4(r3)
 	mtibatl 	2,r0
 	isync
-	lwzu		r0,24(r3)
+	lwzu		r0,4(r3)
 	mtibatu 	3,r0
 	isync
-	lwzu		r0,28(r3)
+	lwzu		r0,4(r3)
 	mtibatl 	3,r0
-
 	isync
 
-	mtmsr		r8
-	isync
 	blr
 
 // void getdbats(int bats[8]);
@@ -199,10 +192,6 @@ FUNCTION(getdbats):
 
 // void setdbats(int bats[8]);
 FUNCTION(setdbats):
-	mfmsr		r8
-	li			r0,0
-	mtmsr		r0
-
 	lwz			r0,0(r3)
 	mtdbatu 	0,r0
 	lwzu		r0,4(r3)
@@ -219,9 +208,8 @@ FUNCTION(setdbats):
 	mtdbatu 	3,r0
 	lwzu		r0,4(r3)
 	mtdbatl 	3,r0
-
-	mtmsr		r8
 	sync
+
 	blr
 
 // unsigned int getsdr1();
@@ -253,9 +241,29 @@ FUNCTION(getmsr):
 	mfmsr 		r3
 	blr
 
-// void setmsr(unsigned int msr);
+// void setmsr(unsigned int val);
 FUNCTION(setmsr):
 	mtmsr 		r3
+	blr
+
+// unsigned int gethid0();
+FUNCTION(gethid0):
+	mfspr		r3, 1008
+	blr
+
+// void sethid0(unsigned int val);
+FUNCTION(sethid0):
+	mtspr		1008, r3
+	blr
+
+// unsigned int getl2cr();
+FUNCTION(getl2cr):
+	mfspr		r3, 1017
+	blr
+
+// void setl2cr(unsigned int val);
+FUNCTION(setl2cr):
+	mtspr		1017, r3
 	blr
 
 

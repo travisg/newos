@@ -4,6 +4,15 @@
 */
 .text
 
+/* void switch_stacks_and_call(unsigned int new_stack, void *func, int arg0, int arg1) */
+.globl switch_stacks_and_call
+switch_stacks_and_call:
+	mr			r1, r3	/* load the stack pointer */
+	mtlr		r4
+	mr			r3, r5
+	mr			r4, r6
+	blr
+
 /* void getibats(int bats[8]); */
 .globl getibats
 getibats:
@@ -12,17 +21,17 @@ getibats:
 	mfibatl 	r0,0
 	stwu		r0,4(r3)
 	mfibatu 	r0,1
-	stwu		r0,8(r3)
+	stwu		r0,4(r3)
 	mfibatl 	r0,1
-	stwu		r0,12(r3)
+	stwu		r0,4(r3)
 	mfibatu 	r0,2
-	stwu		r0,16(r3)
+	stwu		r0,4(r3)
 	mfibatl 	r0,2
-	stwu		r0,20(r3)
+	stwu		r0,4(r3)
 	mfibatu 	r0,3
-	stwu		r0,24(r3)
+	stwu		r0,4(r3)
 	mfibatl 	r0,3
-	stwu		r0,28(r3)
+	stwu		r0,4(r3)
 	blr
 
 // void setibats(int bats[8]);
@@ -38,22 +47,22 @@ setibats:
 	lwzu		r0,4(r3)
 	mtibatl 	0,r0
 	isync
-	lwzu		r0,8(r3)
+	lwzu		r0,4(r3)
 	mtibatu 	1,r0
 	isync
-	lwzu		r0,12(r3)
+	lwzu		r0,4(r3)
 	mtibatl 	1,r0
 	isync
-	lwzu		r0,16(r3)
+	lwzu		r0,4(r3)
 	mtibatu 	2,r0
 	isync
-	lwzu		r0,20(r3)
+	lwzu		r0,4(r3)
 	mtibatl 	2,r0
 	isync
-	lwzu		r0,24(r3)
+	lwzu		r0,4(r3)
 	mtibatu 	3,r0
 	isync
-	lwzu		r0,28(r3)
+	lwzu		r0,4(r3)
 	mtibatl 	3,r0
 
 	isync
@@ -138,8 +147,6 @@ setsr:
 	mtsrin		r4,r3
 	sync
 	blr
-
-
 
 // unsigned int getmsr();
 .globl getmsr

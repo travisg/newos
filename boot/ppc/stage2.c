@@ -51,8 +51,42 @@ void _start(int arg1, int arg2, void *openfirmware)
 
 	s2_mmu_remap_pagetable(&ka);
 
+	// calculate how big the bootdir is
 	{
-		int i;
+		int entry;
+		int bootdir_pages = 0;
+
+		for (entry = 0; entry < BOOTDIR_MAX_ENTRIES; entry++) {
+			if (bootdir[entry].be_type == BE_TYPE_NONE)
+				break;
+			bootdir_pages += bootdir[entry].be_size;
+		}
+
+		ka.bootdir_addr.start = (unsigned long)bootdir;
+		ka.bootdir_addr.size = bootdir_pages * PAGE_SIZE;
+		printf("bootdir is  %d pages long\n", bootdir_pages);
+	}
+
+	// save some more boot info for the kernel
+	ka.num_cpus = 1;
+
+	// allocate a new stack for the kernel
+	ka.cpu_kstack[0].start = ROUNDUP(ka.virt_alloc_range[0].start + ka.virt_alloc_range[0].size, PAGE_SIZE);
+	ka.cpu_kstack[0].size = 2 * PAGE_SIZE;
+	mmu_map_page(&ka, mmu_allocate_page(&ka), ka.cpu_kstack[0].start);
+	mmu_map_page(&ka, mmu_allocate_page(&ka), ka.cpu_kstack[0].start + PAGE_SIZE);
+	printf("new stack at 0x%lx\n", ka.cpu_kstack[0].start);
+
+	// map in all of the exception handler pages
+	ka.arch_args.exception_handlers.start = ROUNDUP(ka.virt_alloc_range[0].start + ka.virt_alloc_range[0].size, PAGE_SIZE);
+	ka.arch_args.exception_handlers.size = 0x3000;
+	mmu_map_page(&ka, 0x0, ka.arch_args.exception_handlers.start);
+	mmu_map_page(&ka, PAGE_SIZE, ka.arch_args.exception_handlers.start + PAGE_SIZE);
+	mmu_map_page(&ka, 2*PAGE_SIZE, ka.arch_args.exception_handlers.start + 2*PAGE_SIZE);
+	printf("exception handlers at 0x%lx\n", ka.arch_args.exception_handlers.start);
+
+	{
+		unsigned int i;
 
 		for(i=0; i<ka.num_phys_mem_ranges; i++) {
 			printf("phys map %d: pa 0x%lx, len 0x%lx\n", i, ka.phys_mem_range[i].start, ka.phys_mem_range[i].size);
@@ -69,8 +103,8 @@ void _start(int arg1, int arg2, void *openfirmware)
 
 	ka.cons_line = s2_get_text_line();
 
-	int (*_kernel_start)(kernel_args *, int cpu_num) = (void *)kernel_entry;
-	_kernel_start(&ka, 0);
+	// call the kernel, and switch stacks while we're at it
+	switch_stacks_and_call(ka.cpu_kstack[0].start + 2*PAGE_SIZE - 8, (void *)kernel_entry, (int)&ka, 0);
 
 	printf("should not get here\n");
 	for(;;);

@@ -14,6 +14,7 @@ void s2_change_framebuffer_addr(kernel_args *ka, unsigned int address);
 void putchar(char c);
 void puts(char *str);
 int printf(const char *fmt, ...);
+void switch_stacks_and_call(unsigned int new_stack, void *func, int arg0, int arg1);
 
 /* openfirmware calls */
 int of_init(void *of_entry);

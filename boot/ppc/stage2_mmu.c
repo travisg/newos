@@ -251,7 +251,7 @@ static void tlbia()
 	asm volatile("sync");
 }
 
-#define CACHELINE 64
+#define CACHELINE 32
 
 void syncicache(void *address, int len)
 {

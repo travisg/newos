@@ -7,6 +7,7 @@ MY_OBJS += \
 	$(KERNEL_ARCH_PPC_DIR)/arch_dbg_console.o \
 	$(KERNEL_ARCH_PPC_DIR)/arch_debug.o \
 	$(KERNEL_ARCH_PPC_DIR)/arch_elf.o \
+	$(KERNEL_ARCH_PPC_DIR)/arch_exceptions.o \
 	$(KERNEL_ARCH_PPC_DIR)/arch_faults.o \
 	$(KERNEL_ARCH_PPC_DIR)/arch_int.o \
 	$(KERNEL_ARCH_PPC_DIR)/arch_smp.o \
