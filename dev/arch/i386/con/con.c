@@ -12,7 +12,8 @@
 #include <string.h>
 #include <printf.h>
 
-#include <con.h>
+#include "con.h"
+#include "keyboard.h"
 
 struct console_fs {
 	fs_id id;
@@ -38,11 +39,6 @@ struct tty_queue tty_buffer = {
 	0, // tail
 	"" // buffer
 };
-
-// in keyboard.c
-int handle_keyboard_interrupt();
-int setup_keyboard();
-char keyboard_read();
 
 sem_id console_sem;
 
@@ -397,8 +393,6 @@ int console_open(void *_fs, void *_base_vnode, const char *path, const char *str
 	struct console_fs *fs = _fs;
 	int err;
 	
-	TOUCH(_base_vnode);
-
 //	dprintf("console_open: entry on vnode 0x%x, path = '%s'\n", _base_vnode, path);
 
 	sem_acquire(fs->sem, 1);
@@ -430,15 +424,13 @@ err:
 
 int console_seek(void *_fs, void *_vnode, void *_cookie, off_t pos, seek_type seek_type)
 {
-	TOUCH(_fs);TOUCH(_vnode);TOUCH(_cookie);TOUCH(pos);TOUCH(seek_type);
+//	dprintf("console_seek: entry\n");
 
 	return -1;
 }
 
 int console_close(void *_fs, void *_vnode, void *_cookie)
 {
-	TOUCH(_fs);TOUCH(_vnode);TOUCH(_cookie);
-
 //	dprintf("console_close: entry\n");
 
 	return 0;
@@ -448,8 +440,6 @@ int console_create(void *_fs, void *_base_vnode, const char *path, const char *s
 {
 	struct console_fs *fs = _fs;
 	
-	TOUCH(_base_vnode);TOUCH(stream);TOUCH(stream_type);
-
 //	dprintf("console_create: entry\n");
 
 	sem_acquire(fs->sem, 1);
@@ -470,15 +460,11 @@ int console_create(void *_fs, void *_base_vnode, const char *path, const char *s
 int console_read(void *_fs, void *_vnode, void *_cookie, void *buf, off_t pos, size_t *len)
 {
 	char c;
-//	sem_acquire(console_sem, 1);
-//	sem_release(console_sem, 1);
+	int err;
 
 //	dprintf("console_read: entry\n");
 	
-	*(char *)buf = keyboard_read();
-	*len = 1;
-	
-	return 0;
+	return keyboard_read(buf, len);
 }
 
 int _console_write(const void *buf, size_t *len)
@@ -594,8 +580,6 @@ int console_register_mountpoint(void *_fs, void *_v, void *redir_vnode)
 {
 	struct console_fs *fs = _fs;
 	
-	TOUCH(_fs);TOUCH(_v);
-	
 	fs->redir_vnode = redir_vnode;
 	
 	return 0;
@@ -604,7 +588,6 @@ int console_register_mountpoint(void *_fs, void *_v, void *redir_vnode)
 int console_unregister_mountpoint(void *_fs, void *_v)
 {
 	struct console_fs *fs = _fs;
-	TOUCH(_fs);
 	
 	fs->redir_vnode = NULL;
 	

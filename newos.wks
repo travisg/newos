@@ -14,6 +14,7 @@ AddFile "arch_dev.mk" "/build/newos/dev/arch/i386/arch_dev.mk"
 AddFile "con.c" "/build/newos/dev/arch/i386/con/con.c"
 AddFile "con.h" "/build/newos/dev/arch/i386/con/con.h"
 AddFile "keyboard.c" "/build/newos/dev/arch/i386/con/keyboard.c"
+AddFile "keyboard.h" "/build/newos/dev/arch/i386/con/keyboard.h"
 EndFileGroup "dev-x86"
 AddFileGroup "x86-boot" "/build/newos/boot/i386" -nomake
 AddFile "smp_boot.c" "/build/newos/boot/i386/smp_boot.c"

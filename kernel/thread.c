@@ -555,11 +555,13 @@ int test_thread_starter_thread()
 int test_thread2()
 {
 	while(1) {
-		size_t len = 1;
-		char c;
+		char str[65];
+		size_t len = sizeof(str) - 1;
 		
-		vfs_read(0, &c, 0, &len);
-		kprintf("%c", c);
+		vfs_read(0, str, 0, &len);
+		if(len > 1) dprintf("test_thread2: read %d bytes\n", len);
+		str[len] = 0;
+		kprintf("%s", str);
 	}
 	return 0;
 }

@@ -2,10 +2,12 @@
 #include <debug.h>
 #include <int.h>
 #include <sem.h>
+#include <string.h>
 
 #include <arch_cpu.h>
 
-#include <con.h>
+#include "con.h"
+#include "keyboard.h"
 
 #define LSHIFT  42
 #define RSHIFT  54
@@ -13,6 +15,7 @@
 #define NUMLOCK 45
 #define CAPS    58
 #define SYSREQ  55
+#define F12     88
 
 #define LED_SCROLL 1
 #define LED_NUM    2
@@ -62,21 +65,53 @@ static void set_leds()
 	outb(leds, 0x60);
 }
 
-char keyboard_read()
+int keyboard_read(void *_buf, size_t *len)
 {
-	char c;
+	unsigned int saved_tail;
+	char *buf = _buf;
+	size_t copied_bytes = 0;
+	size_t copy_len;
 	
+retry:
+	// block here until data is ready
 	sem_acquire(keyboard_sem, 1);
 
+	// critical section
 	sem_acquire(keyboard_read_sem, 1);
 
-	c = keyboard_buf[head++];
-	if(head >= sizeof(keyboard_buf))
-		head = 0;
-		
+	saved_tail = tail;
+	if(head == saved_tail) {
+		sem_release(keyboard_read_sem, 1);
+		goto retry;
+	} else if(head < saved_tail) {
+		// copy out of the buffer
+		copy_len = min(*len, saved_tail - head);
+		memcpy(buf, &keyboard_buf[head], copy_len);	
+		copied_bytes = copy_len;
+		head += copy_len;
+	} else {
+		// the buffer wraps around
+
+		// copy the last part of the buffer
+		copy_len = min(*len, sizeof(keyboard_buf) - head);
+		memcpy(buf, &keyboard_buf[head], copy_len);
+		copied_bytes = copy_len;
+		head += copy_len;
+		if(copied_bytes < *len) {
+			// we still have buffer left, keep going		
+			// copy the first part of the buffer
+			copy_len = min(*len - copied_bytes, saved_tail);
+			memcpy(&buf[*len], &keyboard_buf[0], copy_len);
+			copied_bytes += copy_len;
+			head = copy_len;
+		}
+	}
+
 	sem_release(keyboard_read_sem, 1);
 
-	return c;	
+	*len = copied_bytes;
+
+	return 0;	
 }
 
 static void insert_in_buf(char c)
@@ -129,6 +164,9 @@ int handle_keyboard_interrupt()
 				break;
 			case SYSREQ:
 				kernel_debugger();
+				break;
+			case F12:
+				reboot();
 				break;
 			default: {
 				char ascii;
