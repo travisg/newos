@@ -4,6 +4,8 @@
 #include <win/Rect.h>
 #include "assert.h"
 
+using namespace os::gui;
+
 const int COORD_MAX = 0x7ffffff0;
 
 class Region {

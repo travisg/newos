@@ -4,6 +4,9 @@
 #include <win/Color.h>
 #include <win/Rect.h>
 
+namespace os {
+namespace gui {
+
 class Window;
 class Event;
 class Rect;
@@ -50,6 +53,7 @@ private:
 	friend class Window;
 };
 
-
+}
+}
 #endif
 

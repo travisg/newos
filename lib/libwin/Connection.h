@@ -3,6 +3,9 @@
 
 #include <sys/syscalls.h>
 
+namespace os {
+namespace gui {
+
 class Connection {
 public:
 	Connection(port_id sendPort, port_id receivePort);
@@ -33,6 +36,7 @@ private:
 	int fReceiveBufferPos;
 };
 
-
+}
+}
 #endif
 

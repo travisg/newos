@@ -4,6 +4,9 @@
 #include <sys/syscalls.h>
 #include "Connection.h"
 
+namespace os {
+namespace gui {
+
 const int kSendBufferSize = 0x1000;
 const int kMaxCommandSize = 270;
 const int kReceiveBufferSize = 1024;
@@ -130,4 +133,6 @@ void Connection::WriteInt8(char c)
 	Write(&c, 1);
 }
 
+}
+}
 

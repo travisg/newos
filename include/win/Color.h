@@ -4,6 +4,9 @@
 #include <sys/types.h>
 #include <stdio.h>
 
+namespace os {
+namespace gui {
+
 // some color conversion routines
 
 typedef uint16 color565;
@@ -23,9 +26,9 @@ typedef enum {
 } color_space;
 
 // some nasty pinkish color
-#define TRANS555COLOR ((color565)0x68ab)
-#define TRANS565COLOR ((color565)0xd16b)
-#define TRANS888COLOR ((color888)0x00d52f5c)
+const color555 TRANS555COLOR = 0x68ab;
+const color565 TRANS565COLOR = 0xd16b;
+const color888 TRANS888COLOR = 0x00d52f5c;
 
 inline color565 Color888to565(color888 incolor)
 {
@@ -109,5 +112,7 @@ inline color32 ColorTranslate(color32 incolor, color_space incspace, color_space
 	return 0;
 }
 
+}
+}
 #endif
 

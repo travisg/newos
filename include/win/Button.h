@@ -3,6 +3,9 @@
 
 #include <win/Canvas.h>
 
+namespace os {
+namespace gui {
+
 class Button : public Canvas {
 public:
 	Button(const char *text);
@@ -17,6 +20,9 @@ private:
 	bool fMouseDown;
 	bool fOverButton;
 };
+
+}
+}
 
 #endif
 

@@ -1,6 +1,9 @@
 #ifndef _WIN_WINDOW_H
 #define _WIN_WINDOW_H
 
+namespace os {
+namespace gui {
+
 class Canvas;
 class Connection;
 class Rect;
@@ -43,6 +46,8 @@ private:
 	friend class Canvas;
 };
 
+}
+}
 
 #endif
 

@@ -4,6 +4,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+namespace os {
+namespace gui {
+
 Button::Button(const char *text)
 	:	fMouseDown(false),
 		fOverButton(false)
@@ -81,5 +84,8 @@ void Button::EventReceived(const Event *event)
 		default:
 			Canvas::EventReceived(event);
 	}
+}
+
+}
 }
 

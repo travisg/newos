@@ -1,6 +1,9 @@
 #ifndef _EVENT_H
 #define _EVENT_H
 
+namespace os {
+namespace gui {
+
 const int EVT_PAINT = 1;
 const int EVT_QUIT = 2;
 const int EVT_MOUSE_DOWN = 3;
@@ -15,6 +18,9 @@ struct Event {
 
 	int x, y;
 };
+
+}
+}
 
 #endif
 

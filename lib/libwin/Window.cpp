@@ -7,6 +7,9 @@
 #include <stdio.h>
 #include "Connection.h"
 
+namespace os {
+namespace gui {
+
 /* special canvas class that is always placed first on any new window and draws the border */
 class WindowBorderCanvas : public Canvas {
 public:
@@ -243,5 +246,8 @@ void Window::Quit()
 	event.target = fID;
 
 	sys_port_write(fEventPort, 0, &event, sizeof(Event));
+}
+
+}
 }
 

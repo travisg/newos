@@ -3,6 +3,9 @@
 
 #include <stdlib.h>
 
+namespace os {
+namespace gui {
+
 class Rect {
 public:
 	inline Rect();
@@ -106,6 +109,9 @@ inline int Rect::Height() const
 inline Rect Rect::Bounds() const
 {
 	return Rect(0, 0, right - left, bottom - top);
+}
+
+}
 }
 
 #endif

@@ -6,6 +6,9 @@
 #include <win/protocol.h>
 #include "Connection.h"
 
+namespace os {
+namespace gui {
+
 Canvas::Canvas()
 	:	fID(-1),
 		fWindow(0),
@@ -258,5 +261,8 @@ void Canvas::LockMouseFocus()
 {
 	fWindow->fConnection->WriteInt8(OP_LOCK_MOUSE_FOCUS);
 	fWindow->fConnection->Flush();
+}
+
+}
 }
 

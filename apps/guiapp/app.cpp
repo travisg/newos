@@ -15,6 +15,8 @@
 #include <win/Rect.h>
 #include <win/Button.h>
 
+using namespace os::gui;
+
 class mycanvas : public Canvas {
 public:
 	mycanvas();

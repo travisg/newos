@@ -5,6 +5,8 @@
 #include <win/Event.h>
 #include <win/protocol.h>
 
+using namespace os::gui;
+
 #include "WindowManager.h"
 #include "Renderer.h"
 #include "Window.h"

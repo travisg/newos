@@ -4,8 +4,9 @@
 #include "Region.h"
 #include "GraphicsContext.h"
 #include <sys/syscalls.h>
+#include <win/Event.h>
 
-class Event;
+using namespace os::gui;
 
 class Window {
 public:

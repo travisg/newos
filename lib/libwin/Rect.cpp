@@ -1,6 +1,9 @@
 #include <win/Rect.h>
 #include <stdio.h>
 
+namespace os {
+namespace gui {
+
 bool Rect::Intersects(const Rect &rect) const
 {
 	return max(left, rect.left) <= min(right, rect.right)
@@ -30,5 +33,8 @@ Rect& Rect::Intersect(const Rect &rect)
 	top = max(top, rect.top);
 	bottom = min(bottom, rect.bottom);
 	return *this;
+}
+
+}
 }
 

@@ -9,6 +9,7 @@
 #include "WindowManager.h"
 #include "Renderer_vesa.h"
 
+using namespace os::gui;
 
 #if 0
 

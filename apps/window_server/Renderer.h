@@ -5,6 +5,8 @@
 #include <win/Color.h>
 #include <win/Rect.h>
 
+using namespace os::gui;
+
 class Renderer {
 public:
 

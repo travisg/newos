@@ -4,6 +4,8 @@
 #include "assert.h"
 #include "Window.h"
 
+using namespace os::gui;
+
 Window::Window(int id, int eventPort, Renderer *renderer)
 	:	fID(id),
 		fNextSibling(0),
