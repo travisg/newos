@@ -7,7 +7,8 @@ struct arch_thread {
 };
 
 struct arch_proc {
-	unsigned int *pgdir;
+	unsigned int *pgdir_virt;
+	unsigned int *pgdir_phys;
 };
 
 #endif

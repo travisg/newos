@@ -49,6 +49,7 @@ int vm_map_physical_memory(struct aspace *aspace, char *name, void **addr, int a
 	unsigned int size, unsigned int lock, unsigned int phys_addr);
 void *kmalloc(unsigned int size);
 void kfree(void *address);
+int vm_get_page_mapping(addr vaddr, addr *paddr);
 
 #endif
 

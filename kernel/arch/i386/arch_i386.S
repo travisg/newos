@@ -105,13 +105,18 @@ system_time:
 	popl	%ebx
 	ret
 
-// void i386_context_switch(unsigned int **old_esp, unsigned int *new_esp);
+// void i386_context_switch(unsigned int **old_esp, unsigned int *new_esp, unsigned int *new_pgdir);
 .global i386_context_switch
 i386_context_switch:
 //	pushfl
 	pusha
 	movl	36(%esp),%eax
 	movl	%esp,(%eax)
+	movl	44(%esp),%eax	/* get possible new pgdir */
+	cmpl	$0x0,%eax		/* is it null? */
+	je		skip_pgdir_swap
+	movl	%eax,%cr3
+skip_pgdir_swap:
 	movl	40(%esp),%eax
 	movl	%eax,%esp
 	popa

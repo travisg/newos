@@ -5,10 +5,13 @@
 #include <kernel/vm_priv.h>
 #include <kernel/debug.h>
 #include <kernel/smp.h>
+#include <kernel/int.h>
 
 #include <kernel/arch/cpu.h>
 #include <kernel/arch/pmap.h>
 #include <kernel/arch/int.h>
+
+#include <kernel/arch/i386/pmap.h>
 
 typedef struct ptentry {
 	unsigned int present:1;
@@ -39,11 +42,29 @@ typedef struct pdentry {
 } pdentry;
 
 static ptentry *page_hole = NULL;
-static pdentry *pgdir = NULL;
+static pdentry *curr_pgdir = NULL;
+
+// The following deal with a list of pgdirs that this module has to
+// keep around so it can keep the kernel portion of the pgdirs
+// in sync.
+struct pgdir_list_entry {
+	struct pgdir_list_entry *next;
+	pdentry *pgdir;
+};
+
+static int pmap_pgdir_lock = 0;
+static struct pgdir_list_entry *pgdir_list = NULL;
 
 #define CHATTY_PMAP 0
 
 #define ADDR_SHIFT(x) ((x)>>12)
+
+#define VADDR_TO_PDENT(va) ((va) / PAGE_SIZE / 1024)
+
+#define FIRST_USER_PGDIR_ENT    (VADDR_TO_PDENT(USER_BASE))
+#define NUM_USER_PGDIR_ENTS     (VADDR_TO_PDENT(USER_SIZE))
+#define FIRST_KERNEL_PGDIR_ENT  (VADDR_TO_PDENT(KERNEL_BASE))
+#define NUM_KERNEL_PGDIR_ENTS   (VADDR_TO_PDENT(KERNEL_SIZE))
 
 int arch_pmap_init(kernel_args *ka)
 {
@@ -52,9 +73,12 @@ int arch_pmap_init(kernel_args *ka)
 	// page hole set up in stage2
 	page_hole = (ptentry *)ka->arch_args.page_hole;
 	// calculate where the pgdir would be
-	pgdir = (pdentry *)(((unsigned int)ka->arch_args.page_hole) + (PAGE_SIZE * 1024 - PAGE_SIZE));
+	curr_pgdir = (pdentry *)(((unsigned int)ka->arch_args.page_hole) + (PAGE_SIZE * 1024 - PAGE_SIZE));
 	// clear out the bottom 2 GB, unmap everything
-	memset(pgdir, 0, sizeof(unsigned int) * 512);
+	memset(curr_pgdir + FIRST_USER_PGDIR_ENT, 0, sizeof(pdentry) * NUM_USER_PGDIR_ENTS);
+
+	pmap_pgdir_lock = 0;
+	pgdir_list = NULL;
 
 	return 0;
 }
@@ -85,9 +109,26 @@ static void init_ptentry(ptentry *e)
 	*(int *)e = 0;
 }
 
+static void pmap_update_all_pgdirs(int index, pdentry e)
+{
+	// XXX disable interrupts here?
+	unsigned int state;
+	struct pgdir_list_entry *entry;
+	
+	state = int_disable_interrupts();
+	acquire_spinlock(&pmap_pgdir_lock);
+	
+	for(entry = pgdir_list; entry != NULL; entry = entry->next)
+		entry->pgdir[index] = e;
+
+	release_spinlock(&pmap_pgdir_lock);
+	int_restore_interrupts(state);
+}
+
 int pmap_map_page(addr paddr, addr vaddr, int lock)
 {
 	ptentry *pentry;
+	int index;
 
 #if CHATTY_PMAP
 	dprintf("pmap_map_page: entry paddr 0x%x vaddr 0x%x\n", paddr, vaddr);
@@ -101,7 +142,8 @@ int pmap_map_page(addr paddr, addr vaddr, int lock)
 	dprintf("addr is %d\n", pgdir[vaddr / PAGE_SIZE / 1024].addr);
 */
 	// check to see if a page table exists for this range
-	if(pgdir[vaddr / PAGE_SIZE / 1024].present == 0) {
+	index = VADDR_TO_PDENT(vaddr);
+	if(curr_pgdir[index].present == 0) {
 		unsigned int pgtable;
 		pdentry *e;
 		// we need to allocate a pgtable
@@ -113,7 +155,7 @@ int pmap_map_page(addr paddr, addr vaddr, int lock)
 #endif
 
 		// put it in the pgdir
-		e = &pgdir[vaddr / PAGE_SIZE / 1024];
+		e = &curr_pgdir[index];
 		init_pdentry(e);
 		e->addr = ADDR_SHIFT(pgtable);
 		e->supervisor = lock & LOCK_KERNEL;
@@ -122,6 +164,9 @@ int pmap_map_page(addr paddr, addr vaddr, int lock)
 
 		// zero it out in it's new mapping
 		memset((unsigned int *)((unsigned int)page_hole + (vaddr / PAGE_SIZE / 1024) * PAGE_SIZE), 0, PAGE_SIZE);
+		
+		// update any other page directories
+		pmap_update_all_pgdirs(index, *e);
 	}
 	// now, fill in the pentry
 	pentry = page_hole + vaddr / PAGE_SIZE;
@@ -142,7 +187,7 @@ int pmap_unmap_page(addr vaddr)
 {
 	ptentry *pentry;
 
-	if(pgdir[vaddr / PAGE_SIZE / 1024].present) {
+	if(curr_pgdir[VADDR_TO_PDENT(vaddr)].present) {
 		pentry = page_hole + vaddr / PAGE_SIZE;
 		pentry->present = 0;
 	}
@@ -152,5 +197,87 @@ int pmap_unmap_page(addr vaddr)
 void arch_pmap_invl_page(addr vaddr)
 {
 	invalidate_TLB(vaddr);
+}
+
+int pmap_get_page_mapping(addr vaddr, addr *paddr)
+{
+	ptentry *pentry;
+
+	if(curr_pgdir[VADDR_TO_PDENT(vaddr)].present == 0) {
+		// no pagetable here
+		return -1;
+	}
+
+	pentry = page_hole + vaddr / PAGE_SIZE;
+	if(pentry->present == 0) {
+		// page mapping not valid
+		return -1;
+	}
+	
+	*paddr = pentry->addr << 12;
+
+	return 0;	
+}
+
+int pmap_init_and_add_pgdir_to_list(addr pgdir)
+{
+	unsigned int state;
+	struct pgdir_list_entry *entry;
+	
+	entry = kmalloc(sizeof(struct pgdir_list_entry));
+	if(entry == NULL) {
+		panic("pmap_add_pgdir_to_list: unable to allocate pgdir container struct!\n");
+		return -1;
+	}
+	entry->pgdir = (pdentry *)pgdir;
+	
+	// zero out the bottom portion of the new pgdir
+	memset(entry->pgdir + FIRST_USER_PGDIR_ENT, 0, NUM_USER_PGDIR_ENTS * sizeof(pdentry));
+	
+	state = int_disable_interrupts();
+	acquire_spinlock(&pmap_pgdir_lock);
+	
+	// copy the top portion of the pgdir from the current one
+	memcpy(entry->pgdir + FIRST_KERNEL_PGDIR_ENT, curr_pgdir + FIRST_KERNEL_PGDIR_ENT,
+		NUM_KERNEL_PGDIR_ENTS * sizeof(pdentry));
+	
+	entry->next = pgdir_list;
+	pgdir_list = entry;
+
+	release_spinlock(&pmap_pgdir_lock);
+	int_restore_interrupts(state);
+
+	return 0;
+}
+
+int pmap_remove_pgdir_from_list(addr pgdir)
+{
+	unsigned int state;
+	struct pgdir_list_entry *last = NULL;
+	struct pgdir_list_entry *entry;
+
+	state = int_disable_interrupts();
+	acquire_spinlock(&pmap_pgdir_lock);
+	
+	entry = pgdir_list;
+	while(entry != NULL) {
+		if(entry->pgdir == (pdentry *)pgdir) {
+			if(last != NULL) {
+				last->next = entry->next;
+			} else {
+				pgdir_list = entry->next;
+			}
+			break;
+		}
+		last = entry;
+		entry = entry->next;
+	}
+
+	release_spinlock(&pmap_pgdir_lock);
+	int_restore_interrupts(state);
+	
+	if(entry->pgdir == (pdentry *)pgdir)
+		kfree(entry);
+	return 0;
 }
 

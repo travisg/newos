@@ -38,7 +38,8 @@ struct thread {
 	struct thread *proc_next;
 	struct thread *q_next;
 	char *name;
-	int id;
+	void *args;
+	thread_id id;
 	int priority;
 	int state;
 	int next_state;
@@ -76,7 +77,7 @@ struct thread *thread_get_thread_struct(thread_id id);
 struct thread *thread_get_thread_struct_locked(thread_id id);
 
 struct proc *proc_get_kernel_proc();
-struct proc *proc_create_user_proc(const char *path, const char *name, int priority);
+struct proc *proc_create_proc(const char *path, const char *name, int priority);
 
 #if 1
 // XXX remove later

@@ -36,6 +36,9 @@ static thread_id next_thread_id = 0;
 static void *proc_hash = NULL;
 static struct proc *kernel_proc = NULL;
 static proc_id next_proc_id = 0;
+static int proc_spinlock = 0;
+#define GRAB_PROC_LOCK() acquire_spinlock(&proc_spinlock)
+#define RELEASE_PROC_LOCK() release_spinlock(&proc_spinlock)
 
 // scheduling timer
 #define LOCAL_CPU_TIMER timers[smp_get_current_cpu()]
@@ -156,7 +159,7 @@ static unsigned int thread_struct_hash(void *_t, void *_key, int range)
 		return (key->id % range);
 }
 
-static struct thread *create_thread_struct(char *name)
+static struct thread *create_thread_struct(const char *name)
 {
 	struct thread *t;
 	
@@ -228,7 +231,7 @@ struct thread *thread_create_user_thread(char *name, struct proc *p, int priorit
 	return t;
 }
 
-static struct thread *create_kernel_thread(char *name, int (*func)(void), int priority)
+static struct thread *create_kernel_thread(struct proc *p, const char *name, int (*func)(void), int priority)
 {
 	struct thread *t;
 	unsigned int *kstack_addr;
@@ -238,7 +241,9 @@ static struct thread *create_kernel_thread(char *name, int (*func)(void), int pr
 	t = create_thread_struct(name);
 	if(t == NULL)
 		return NULL;
-	t->proc = proc_get_kernel_proc();
+	if(p == NULL)
+		p = proc_get_kernel_proc();
+	t->proc = p;
 	t->priority = priority;
 	t->state = THREAD_STATE_READY;
 	t->next_state = THREAD_STATE_READY;
@@ -507,7 +512,7 @@ int thread_init(kernel_args *ka)
 	}
 
 	// create a worker thread to kill other ones
-	t = create_kernel_thread("manny", &thread_killer, THREAD_MAX_PRIORITY);
+	t = create_kernel_thread(NULL, "manny", &thread_killer, THREAD_MAX_PRIORITY);
 	if(t == NULL) {
 		panic("error creating Manny the thread killer\n");
 		return -1;
@@ -647,7 +652,7 @@ int test_thread5()
 
 int test_thread4()
 {
-	proc_create_user_proc("/boot/testapp", "testapp", 5);
+	proc_create_proc("/boot/testapp", "testapp", 5);
 
 	return 0;
 }
@@ -770,8 +775,8 @@ int thread_test()
 #if 1
 	for(i=0; i<NUM_TEST_THREADS; i++) {
 		sprintf(temp, "test_thread%d", i);
-//		t = create_kernel_thread(temp, &test_thread, i % THREAD_NUM_PRIORITY_LEVELS);
-		t = create_kernel_thread(temp, &test_thread, 5);
+//		t = create_kernel_thread(NULL, temp, &test_thread, i % THREAD_NUM_PRIORITY_LEVELS);
+		t = create_kernel_thread(NULL, temp, &test_thread, 5);
 		thread_enqueue_run_q(t);
 		if(i == 0) {
 			thread_test_first_thid = t->id;
@@ -779,23 +784,23 @@ int thread_test()
 		sprintf(temp, "test sem %d", i);
 		thread_test_sems[i] = sem_create(0, temp);
 	}	
-	t = create_kernel_thread("test starter thread", &test_thread_starter_thread, THREAD_MAX_PRIORITY);
+	t = create_kernel_thread(NULL, "test starter thread", &test_thread_starter_thread, THREAD_MAX_PRIORITY);
 	thread_enqueue_run_q(t);
 #endif
 
-	t = create_kernel_thread("test thread 2", &test_thread2, 5);
+	t = create_kernel_thread(NULL, "test thread 2", &test_thread2, 5);
 	thread_enqueue_run_q(t);
 
-	t = create_kernel_thread("test thread 3", &test_thread3, 5);
+	t = create_kernel_thread(NULL, "test thread 3", &test_thread3, 5);
 	thread_enqueue_run_q(t);
 
-//	t = create_kernel_thread("test thread 4", &test_thread4, 5);
+	t = create_kernel_thread(NULL, "test thread 4", &test_thread4, 5);
+	thread_enqueue_run_q(t);
+
+//	t = create_kernel_thread(NULL, "test thread 5", &test_thread5, 5);
 //	thread_enqueue_run_q(t);
 
-//	t = create_kernel_thread("test thread 5", &test_thread5, 5);
-//	thread_enqueue_run_q(t);
-
-//	t = create_kernel_thread("panic thread", &panic_thread, THREAD_MAX_PRIORITY);
+//	t = create_kernel_thread(NULL, "panic thread", &panic_thread, THREAD_MAX_PRIORITY);
 //	thread_enqueue_run_q(t);
 
 	dprintf("thread_test: done creating test threads\n");
@@ -928,36 +933,71 @@ static struct proc *create_proc_struct(const char *name, bool kernel)
 	return p;
 }
 
-struct proc *proc_create_user_proc(const char *path, const char *name, int priority)
+static int proc_create_proc2(void)
 {
-	struct proc *p;
-	struct thread *t;
 	int err;
+	struct thread *t;
+	struct proc *p;
+	char *path;
 	addr entry;
-	
-	dprintf("proc_create_user_proc: entry '%s', name '%s'\n", path, name);
-	
-	p = create_proc_struct(name, false);
-	if(p == NULL)
-		return NULL;
-	p->aspace = vm_create_aspace(name, USER_BASE, USER_SIZE);
+
+	dprintf("proc_create_proc2: entry\n");
+
+	t = thread_get_current_thread();
+	p = t->proc;
+
+	p->aspace = vm_create_aspace(p->name, USER_BASE, USER_SIZE);
 	if(p->aspace == NULL) {
 		// XXX clean up proc
 		return NULL;
 	}
 	
-	hash_insert(proc_hash, p);
-	
+	path = t->args;
+	dprintf("proc_create_proc2: loading elf binary '%s'\n", path);
+
 	err = elf_load(path, p, 0, &entry);
 	if(err < 0){
 		// XXX clean up proc
 		return NULL;
-	}	
-	
-//	t = create
+	}
 	 
-	dprintf("proc_create_user_proc: loaded elf. entry = 0x%x\n", entry);
-	
-	return p;
+	dprintf("proc_create_proc2: loaded elf. entry = 0x%x\n", entry);
+
+	return 0;
 }
 
+struct proc *proc_create_proc(const char *path, const char *name, int priority)
+{
+	struct proc *p;
+	struct thread *t;
+	int err;
+	unsigned int state;
+	
+	dprintf("proc_create_proc: entry '%s', name '%s'\n", path, name);
+	
+	p = create_proc_struct(name, false);
+	if(p == NULL)
+		return NULL;
+
+	t = create_kernel_thread(p, name, proc_create_proc2, priority);
+	if(t == NULL) {
+		// XXX clean up proc
+		return NULL;
+	}
+	
+	// copy the args over
+	t->args = kmalloc(strlen(path) + 1);
+	strcpy(t->args, path);
+	
+	state = int_disable_interrupts();
+	GRAB_PROC_LOCK();
+	hash_insert(proc_hash, p);
+	RELEASE_PROC_LOCK();
+
+	GRAB_THREAD_LOCK();
+	thread_enqueue_run_q(t);
+	RELEASE_THREAD_LOCK();
+	int_restore_interrupts(state);
+
+	return p;
+}

@@ -12,7 +12,7 @@ typedef struct desc_struct {
 #define nop() __asm__ ("nop"::)
 
 void setup_system_time(unsigned int cv_factor);
-void i386_context_switch(unsigned int **old_esp, unsigned int *new_esp);
+void i386_context_switch(unsigned int **old_esp, unsigned int *new_esp, unsigned int *new_pgdir);
 
 #define iret() __asm__ ("iret"::)
 

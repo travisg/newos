@@ -6,14 +6,21 @@
 #include <kernel/thread.h>
 #include <kernel/arch/thread.h>
 #include <kernel/arch/cpu.h>
+#include <kernel/arch/i386/pmap.h>
 
 int arch_proc_init_proc_struct(struct proc *p, bool kernel)
 {
 	if(!kernel) {
 		// user space
-		p->arch_info.pgdir = kmalloc(PAGE_SIZE);
-		if(p->arch_info.pgdir == NULL)
+		p->arch_info.pgdir_virt = kmalloc(PAGE_SIZE);
+		if(p->arch_info.pgdir_virt == NULL)
 			return -1;
+		if(((addr)p->arch_info.pgdir_virt % PAGE_SIZE) != 0)
+			panic("arch_proc_init_proc_struct: malloced pgdir and found it wasn't aligned!\n");
+		vm_get_page_mapping((addr)p->arch_info.pgdir_virt, (addr *)&p->arch_info.pgdir_phys);
+		
+		pmap_init_and_add_pgdir_to_list((addr)p->arch_info.pgdir_virt);
+
 	} else {
 		// kernel
 		// this should only be called once, so find the pgdir area,
@@ -23,7 +30,8 @@ int arch_proc_init_proc_struct(struct proc *p, bool kernel)
 		a = vm_find_area_by_name(vm_get_kernel_aspace(), "kernel_pgdir");
 		if(a == NULL)
 			return -1;
-		p->arch_info.pgdir = (unsigned int *)a->base;
+		p->arch_info.pgdir_virt = (unsigned int *)a->base;
+		vm_get_page_mapping((addr)p->arch_info.pgdir_virt, (addr *)&p->arch_info.pgdir_phys);
 	}
 	return 0;
 }
@@ -82,12 +90,17 @@ void arch_thread_context_switch(struct thread *t_from, struct thread *t_to)
 	int i;
 
 	dprintf("arch_thread_context_switch: &old_esp = 0x%p, esp = 0x%p\n",
-		&old_at->esp, new_at->esp);
-
+		&t_from->arch_info.esp, t_to->arch_info.esp);
+#endif
+#if 0
 	for(i=0; i<11; i++)
 		dprintf("*esp[%d] (0x%x) = 0x%x\n", i, ((unsigned int *)new_at->esp + i), *((unsigned int *)new_at->esp + i));
 #endif
-	i386_context_switch(&t_from->arch_info.esp, t_to->arch_info.esp);
+	if(t_from->proc->arch_info.pgdir_phys != t_to->proc->arch_info.pgdir_phys) { 
+		i386_context_switch(&t_from->arch_info.esp, t_to->arch_info.esp, t_to->proc->arch_info.pgdir_phys);
+	} else {
+		i386_context_switch(&t_from->arch_info.esp, t_to->arch_info.esp, NULL);
+	}
 }
 
 void arch_thread_dump_info(void *info)

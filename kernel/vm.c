@@ -292,6 +292,11 @@ int vm_map_physical_memory(struct aspace *aspace, char *name, void **addr, int a
 	return _vm_create_area(aspace, name, addr, addr_type, size, lock, phys_addr, SRC_ADDR_PHYSICAL);
 }
 
+int vm_get_page_mapping(addr vaddr, addr *paddr)
+{
+	return pmap_get_page_mapping(vaddr, paddr);
+}
+
 static void display_mem(int argc, char **argv)
 {
 	int item_size;
