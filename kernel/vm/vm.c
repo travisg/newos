@@ -467,11 +467,10 @@ region_id vm_map_physical_memory(aspace_id aid, char *name, void **address, int 
 }
 
 region_id vm_clone_region(aspace_id aid, char *name, void **address, int addr_type,
-	region_id source_region, off_t offset, addr size, int lock)
+	region_id source_region, int lock)
 {
 	vm_region *new_region;
 	vm_region *src_region;
-	off_t new_offset;
 	
 	vm_address_space *aspace = vm_get_aspace_from_id(aid);
 	if(aspace == NULL)
@@ -489,23 +488,10 @@ region_id vm_clone_region(aspace_id aid, char *name, void **address, int addr_ty
 	sem_release(region_hash_sem, READ_COUNT);
 	
 	if(src_region == NULL)
-		return -1;
-
-	// figure out how this will work
-	if(src_region->cache_offset + offset < 0) {
-		dprintf("vm_clone_region: asked to map at offset %d, too low\n", (int)offset);
-		vm_region_release_ref(src_region);
-		return -1;
-	}
-	new_offset = src_region->cache_offset + offset;
-	if(new_offset + size > src_region->cache_offset + src_region->size) {
-		dprintf("vm_clone_region: asked to map past the end of the old region\n");
-		vm_region_release_ref(src_region);
-		return -1;
-	}		
+		return -1;	
 
 	// create the new region, with the src region's wiring
-	new_region = _vm_create_region(aspace, name, address, addr_type, size, src_region->wiring, lock);
+	new_region = _vm_create_region(aspace, name, address, addr_type, src_region->size, src_region->wiring, lock);
 	if(new_region == NULL) {
 		vm_region_release_ref(src_region);
 		return -1;
@@ -515,7 +501,7 @@ region_id vm_clone_region(aspace_id aid, char *name, void **address, int addr_ty
 	vm_cache_acquire_ref(src_region->cache_ref);
 	vm_cache_insert_region(src_region->cache_ref, new_region);
 	new_region->cache_ref = src_region->cache_ref;
-	new_region->cache_offset = new_offset;
+	new_region->cache_offset = src_region->cache_offset;
 	
 	// release the ref on the old region
 	vm_region_release_ref(src_region);
@@ -1030,133 +1016,6 @@ int vm_delete_aspace(aspace_id aid)
 	sem_delete(aspace->virtual_map.sem);
 	kfree(aspace);
 	return 0;
-}
-
-void vm_test()
-{
-	region_id region, region2, region3;
-	addr region_addr;
-	int i;
-	
-	dprintf("vm_test: entry\n");
-#if 0
-	region = vm_create_anonymous_region(vm_get_kernel_aspace_id(), "test_region", (void **)&region_addr,
-		REGION_ADDR_ANY_ADDRESS, PAGE_SIZE * 16, REGION_WIRING_LAZY, LOCK_RW|LOCK_KERNEL);
-	dprintf("region = 0x%x, addr = 0x%x\n", region, region_addr);
-
-	memset((void *)region_addr, 0, PAGE_SIZE * 16);
-
-	dprintf("memsetted the region\n");
-#endif
-#if 0
-	region2 = vm_map_physical_memory(vm_get_kernel_aspace(), "test_physical_region", (void **)&region_addr,
-		REGION_ADDR_ANY_ADDRESS, PAGE_SIZE * 16, LOCK_RW|LOCK_KERNEL, 0xb8000);
-	dprintf("region = 0x%x, addr = 0x%x, region->base = 0x%x\n", region2, region_addr, region2->base);
-
-	for(i=0; i<64; i++) {
-		((char *)region_addr)[i] = 'a';
-	}	
-#endif
-#if 0
-	region3 = vm_create_anonymous_region(vm_get_kernel_aspace_id(), "test_region_wired", (void **)&region_addr,
-		REGION_ADDR_ANY_ADDRESS, PAGE_SIZE * 16, REGION_WIRING_WIRED, LOCK_RW|LOCK_KERNEL);
-	dprintf("region = 0x%x, addr = 0x%x\n", region3, region_addr);
-
-	memset((void *)region_addr, 0, PAGE_SIZE * 16);
-
-	dprintf("now deleting regions\n");
-	
-	vm_delete_region(vm_get_kernel_aspace_id(), region);
-	vm_delete_region(vm_get_kernel_aspace_id(), region3);
-
-	dprintf("physical mappings tests:\n");	
-	
-	{
-		addr va, pa;
-		addr va2;
-		
-		vm_get_page_mapping(vm_get_kernel_aspace(), 0x80000000, &pa);
-		vm_get_physical_page(pa, &va, PHYSICAL_PAGE_CAN_WAIT);
-		dprintf("pa 0x%x va 0x%x\n", pa, va);
-		dprintf("%d\n", memcmp((void *)0x80000000, (void *)va, PAGE_SIZE));
-
-		vm_get_page_mapping(vm_get_kernel_aspace(), 0x80001000, &pa);
-		vm_get_physical_page(pa, &va2, PHYSICAL_PAGE_CAN_WAIT);
-		dprintf("pa 0x%x va 0x%x\n", pa, va2);
-		dprintf("%d\n", memcmp((void *)0x80001000, (void *)va2, PAGE_SIZE));
-
-		vm_put_physical_page(va);
-		vm_put_physical_page(va2);
-
-		vm_get_page_mapping(vm_get_kernel_aspace(), 0x80000000, &pa);
-		vm_get_physical_page(pa, &va, PHYSICAL_PAGE_CAN_WAIT);
-		dprintf("pa 0x%x va 0x%x\n", pa, va);
-		dprintf("%d\n", memcmp((void *)0x80000000, (void *)va, PAGE_SIZE));
-
-		vm_put_physical_page(va);
-	}
-#endif
-#if 1
-	dprintf("cloning vidmem and testing if it compares\n");
-	{
-		vm_region_info info;
-
-		region = vm_find_region_by_name(vm_get_kernel_aspace_id(), "vid_mem");
-		dprintf("vid_mem region = 0x%x\n", region);
-		if(region >= 0) {
-			void *ptr;
-			
-			
-			region2 = vm_clone_region(vm_get_kernel_aspace_id(), "vid_mem2",
-				&ptr, REGION_ADDR_ANY_ADDRESS, region, 0, 0x8000, LOCK_RW|LOCK_KERNEL);
-			dprintf("region2 = 0x%x, ptr = 0x%x\n", region2, ptr);
-
-			vm_get_region_info(region, &info);
-			dprintf("memcmp = %d\n", memcmp(ptr, (void *)info.base, info.size));
-		}
-	}
-#endif
-#if 1
-	dprintf("cloning vidmem in RO and testing if it compares\n");
-	{
-		vm_region_info info;
-
-		region = vm_find_region_by_name(vm_get_kernel_aspace_id(), "vid_mem");
-		dprintf("vid_mem region = 0x%x\n", region);
-		if(region >= 0) {
-			void *ptr;
-			
-			
-			region2 = vm_clone_region(vm_get_kernel_aspace_id(), "vid_mem3",
-				&ptr, REGION_ADDR_ANY_ADDRESS, region, 0, 0x8000, LOCK_RO|LOCK_KERNEL);
-			dprintf("region2 = 0x%x, ptr = 0x%x\n", region2, ptr);
-
-			vm_get_region_info(region, &info);
-			dprintf("memcmp = %d\n", memcmp(ptr, (void *)info.base, info.size));
-		}
-	}
-#endif
-#if 1
-	dprintf("creating anonymous region, cloning it, and testing if it compares\n");
-	{
-		void *ptr;
-
-		region = vm_create_anonymous_region(vm_get_kernel_aspace_id(), "test_region", (void **)&region_addr,
-			REGION_ADDR_ANY_ADDRESS, PAGE_SIZE * 16, REGION_WIRING_LAZY, LOCK_RW|LOCK_KERNEL);
-		dprintf("region = 0x%x, addr = 0x%x\n", region, region_addr);
-	
-		memset((void *)region_addr, 99, PAGE_SIZE * 16);
-	
-		dprintf("memsetted the region\n");
-
-		region2 = vm_clone_region(vm_get_kernel_aspace_id(), "test_region2",
-			&ptr, REGION_ADDR_ANY_ADDRESS, region, 0, PAGE_SIZE * 16, LOCK_RW|LOCK_KERNEL);
-		dprintf("region2 = 0x%x, ptr = 0x%x\n", region2, ptr);
-
-		dprintf("memcmp = %d\n", memcmp((void *)region_addr, ptr, PAGE_SIZE * 16));
-	}
-#endif
-	dprintf("vm_test: done\n");
 }
 
 int vm_init(kernel_args *ka)

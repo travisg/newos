@@ -5,9 +5,10 @@ KERNEL_OBJS += \
 		$(KERNEL_VM_OBJ_DIR)/vm_cache.o \
 		$(KERNEL_VM_OBJ_DIR)/vm_page.o \
 		$(KERNEL_VM_OBJ_DIR)/vm_store_anonymous_noswap.o \
-		$(KERNEL_VM_OBJ_DIR)/vm_store_device.o
+		$(KERNEL_VM_OBJ_DIR)/vm_store_device.o \
+		$(KERNEL_VM_OBJ_DIR)/vm_tests.o		
 
-KERNEL_VM_INCLUDES = $(KERNEL_INCLUDES) -I$(KERNEL_VM_DIR)
+KERNEL_VM_INCLUDES = $(KERNEL_INCLUDES)
 
 $(KERNEL_VM_OBJ_DIR)/%.o: $(KERNEL_VM_DIR)/%.c
 	@mkdir -p $(KERNEL_VM_OBJ_DIR)
