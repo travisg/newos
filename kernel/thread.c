@@ -281,11 +281,11 @@ retry:
 				// the thread is probably still running, hasn't rescheded yet
 				RELEASE_THREAD_LOCK();
 				int_restore_interrupts(state);
-				thread_snooze(100000); // 10ms
+				thread_snooze(10000); // 10ms
 				goto retry;
 			}
 			
-			kprintf("manny killing thread %d\n", t->id);	
+			dprintf("manny killing thread %d\n", t->id);	
 			t = thread_dequeue(&death_q);
 			// XXX kill the thread		
 		}				
