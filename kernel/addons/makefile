@@ -3,10 +3,7 @@ KERNEL_ADDONS_CFLAGS := $(KERNEL_CFLAGS)
 
 # include sub makefiles
 include $(addsuffix /makefile, $(addprefix $(KERNEL_ADDONS_DIR)/, \
+	modules \
 	fs \
-	bus_managers \
-	busses \
-	generic \
 	dev \
-	arch/$(ARCH) \
 ))

@@ -1,13 +1,23 @@
 KERNEL_ADDONS += $(addprefix $(KERNEL_ADDONS_BUILD_DIR)/, \
-	console/text/text \
-	console/vmware/vmware \
-	bus_managers/isa/isa \
-	busses/ide/ide_isa/ide_isa \
-	bus_managers/ide/ide \
-	bus_managers/scsi/scsi \
-	generic/locked_pool/locked_pool \
-	generic/scsi_periph/scsi_periph \
+	modules/console/text/text \
+	modules/console/vmware/vmware \
+	modules/bus_managers/isa/isa \
+	modules/busses/ide/ide_isa/ide_isa \
+	modules/bus_managers/ide/ide \
+	modules/bus_managers/scsi/scsi \
+	modules/bus_managers/pci/pci \
+	modules/generic/locked_pool/locked_pool \
+	modules/generic/scsi_periph/scsi_periph \
+	modules/generic/blkman/blkman \
 	dev/disk/scsi/scsi_dsk/scsi_dsk \
 	dev/disk/netblock/netblock \
-	generic/blkman/blkman \
+	dev/arch/i386/keyboard/keyboard \
+	dev/arch/i386/ps2mouse/ps2mouse \
+	dev/arch/i386/rtl8139/rtl8139 \
+	dev/arch/i386/vesa/vesa \
 )
+
+# unused
+#	dev/arch/i386/ide/ide \
+#	dev/arch/i386/ide2/ide \
+#	dev/arch/i386/ide3/ide \

@@ -10,7 +10,7 @@
 
 int dev_init(kernel_args *ka);
 int dev_scan_drivers(kernel_args *ka);
-image_id dev_load_dev_module(const char *name);
+image_id dev_load_driver(const char *name);
 
 #endif
 

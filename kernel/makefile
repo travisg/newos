@@ -40,7 +40,6 @@ include $(addsuffix /makefile, $(addprefix $(KERNEL_DIR)/, \
 	net \
 	arch \
 	dev \
-	bus \
 	util \
 ))
 

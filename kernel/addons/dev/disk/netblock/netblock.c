@@ -14,7 +14,6 @@
 #include <kernel/net/socket.h>
 #include <kernel/net/misc.h>
 #include <kernel/net/ipv4.h>
-#include <kernel/dev/netblock/netblock.h>
 #include <newos/errors.h>
 #include <string.h>
 
@@ -516,7 +515,9 @@ static struct dev_calls netblock_hooks = {
 	&netblock_writepage
 };
 
-int netblock_dev_init(kernel_args *ka)
+int dev_bootstrap(void);
+
+int dev_bootstrap(void)
 {
 	struct netblock_dev *dev;
 	sockaddr saddr;

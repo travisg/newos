@@ -1,0 +1,19 @@
+MY_TARGETDIR := $(KERNEL_DEV_ARCH_ADDONS_BUILD_DIR)/ide3
+MY_SRCDIR := $(KERNEL_DEV_ARCH_ADDONS_DIR)/ide3
+MY_TARGET := $(MY_TARGETDIR)/ide3
+ifeq ($(call FINDINLIST,$(MY_TARGET),$(ALL)),1)
+
+MY_OBJS := \
+	ide.o \
+	ide_raw.o
+
+MY_INCLUDES := $(STDINCLUDES)
+MY_CFLAGS := $(KERNEL_CFLAGS)
+MY_LIBS := $(LIBKERNEL)
+MY_LIBPATHS :=
+MY_DEPS :=
+MY_LINKSCRIPT := $(KERNEL_ADDONS_DIR)/ldscripts/$(ARCH)/addon.ld
+
+include templates/kernel_addons.mk
+
+endif

@@ -424,17 +424,17 @@ Elf32_Addr elf_find_entry(void *buf, int size)
 void makeboot(section *s, char *outfile)
 {
     int fd;
-    void *rawdata[64];
-    int rawsize[64];
+    void *rawdata[BOOTDIR_MAX_ENTRIES];
+    int rawsize[BOOTDIR_MAX_ENTRIES];
     char fill[4096];
     boot_dir bdir;
     int i,c;
-    int nextpage = 1; /* page rel offset of next loaded object */
+    int nextpage = 0; /* page rel offset of next loaded object */
 
     memset(fill,0,4096);
 
-    memset(&bdir, 0, 4096);
-    for(i=0;i<64;i++){
+    memset(&bdir, 0, sizeof(bdir));
+    for(i=0;i<BOOTDIR_MAX_ENTRIES;i++){
         rawdata[i] = NULL;
         rawsize[i] = 0;
     }
@@ -442,12 +442,14 @@ void makeboot(section *s, char *outfile)
     c = 1;
 
     bdir.bd_entry[0].be_type = fix(BE_TYPE_DIRECTORY);
-    bdir.bd_entry[0].be_size = fix(1);
-    bdir.bd_entry[0].be_vsize = fix(1);
+    bdir.bd_entry[0].be_size = fix(sizeof(bdir)/4096);
+    bdir.bd_entry[0].be_vsize = fix(sizeof(bdir));
     rawdata[0] = (void *) &bdir;
-    rawsize[0] = 4096;
+    rawsize[0] = sizeof(bdir);
+	nextpage += sizeof(bdir)/4096;
 
     strcpy(bdir.bd_entry[0].be_name,"SBBB/Directory");
+	printf("directory size %d\n", rawsize[0]);
 
     while(s){
         char *type = getvaldef(s,"type","NONE");
@@ -455,8 +457,8 @@ void makeboot(section *s, char *outfile)
 
         if(!type) die("section %s has no type",s->name);
 
-        strncpy(centry.be_name,s->name,32);
-        centry.be_name[31] = 0;
+        strncpy(centry.be_name,s->name,BOOTDIR_NAMELEN);
+        centry.be_name[BOOTDIR_NAMELEN-1] = 0;
 
         if(!file) die("section %s has no file",s->name);
 
@@ -503,10 +505,12 @@ void makeboot(section *s, char *outfile)
             die("unrecognized section type \"%s\"",type);
         }
 
+		printf(" %8s %8d %s\n", type, LENDIAN_TO_HOST32(centry.be_vsize), centry.be_name);
+		
         c++;
         s = s->next;
 
-        if(c==64) die("too many sections (>63)",NULL);
+        if(c==BOOTDIR_MAX_ENTRIES) die("too many sections (>128)",NULL);
     }
 
     if((fd = open(outfile, O_BINARY|O_WRONLY|O_CREAT|O_TRUNC, 0666)) < 0) {

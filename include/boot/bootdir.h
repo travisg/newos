@@ -29,8 +29,8 @@
 #ifndef _NEWOS_BOOT_H_
 #define _NEWOS_BOOT_H_
 
-#define BOOTDIR_NAMELEN         32
-#define BOOTDIR_MAX_ENTRIES     64
+#define BOOTDIR_NAMELEN         96
+#define BOOTDIR_MAX_ENTRIES     128
 #define BOOTDIR_DIRECTORY       "SBBB/Directory"
 
 typedef struct {

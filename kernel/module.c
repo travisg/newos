@@ -76,8 +76,8 @@ typedef struct module_image {
 static recursive_lock modules_lock;		
 
 const char *const module_paths[] = {
-	"/boot/user-addons", 
-	"/boot/addons"
+	"/boot/user-addons/modules", 
+	"/boot/addons/modules"
 };
 
 #define num_module_paths (sizeof( module_paths ) / sizeof( module_paths[0] ))

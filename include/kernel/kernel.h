@@ -9,6 +9,7 @@
 #include <kernel/arch/kernel.h>
 #include <newos/defines.h>
 #include <newos/errors.h>
+#include <boot/stage2.h>
 
 #define ROUNDUP(a, b) (((a) + ((b)-1)) & ~((b)-1))
 #define ROUNDOWN(a, b) (((a) / (b)) * (b))
@@ -25,6 +26,7 @@
 #define TOUCH(x) ((void)(x))
 
 extern bool kernel_startup;
+extern kernel_args global_kernel_args;
 
 #endif
 

@@ -1,3 +1,0 @@
-include $(addsuffix /makefile, $(addprefix $(KERNEL_DIR)/$(KERNEL_BUS_DIR)/, \
-	pci \
-))

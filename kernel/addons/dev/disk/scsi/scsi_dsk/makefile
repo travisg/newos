@@ -1,6 +1,5 @@
-# bus manager makefile
-MY_TARGETDIR := $(KERNEL_DEV_DISK_SCSI_ADDONS_BUILD_DIR)/scsi_dsk
-MY_SRCDIR := $(KERNEL_DEV_DISK_SCSI_ADDONS_DIR)/scsi_dsk
+MY_TARGETDIR := $(KERNEL_DEV_ADDONS_BUILD_DIR)/disk/scsi/scsi_dsk
+MY_SRCDIR := $(KERNEL_DEV_ADDONS_DIR)/disk/scsi/scsi_dsk
 MY_TARGET :=  $(MY_TARGETDIR)/scsi_dsk
 ifeq ($(call FINDINLIST,$(MY_TARGET),$(ALL)),1)
 
@@ -17,4 +16,3 @@ MY_LINKSCRIPT := $(KERNEL_ADDONS_DIR)/ldscripts/$(ARCH)/addon.ld
 include templates/kernel_addons.mk
 
 endif
-

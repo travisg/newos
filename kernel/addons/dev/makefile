@@ -3,5 +3,9 @@ KERNEL_DEV_ADDONS_BUILD_DIR := $(KERNEL_ADDONS_BUILD_DIR)/dev
 
 # include sub makefiles
 include $(addsuffix /makefile, $(addprefix $(KERNEL_DEV_ADDONS_DIR)/, \
-	disk \
+	arch/$(ARCH) \
+	console \
+	disk/netblock \
+	disk/scsi/scsi_dsk \
+	tty \
 ))

@@ -4,7 +4,7 @@ OUTPUT_ARCH(i386)
 ENTRY(_start)
 SECTIONS
 {
-	. = 0x401000 + SIZEOF_HEADERS;
+	. = 0x404000 + SIZEOF_HEADERS;
 
 	/* text/read-only data */
 	.text :	{ *(.text .gnu.linkonce.t.*) }

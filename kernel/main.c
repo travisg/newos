@@ -22,7 +22,6 @@
 #include <kernel/cpu.h>
 #include <kernel/dev/beos.h>
 #include <kernel/dev/fixed.h>
-#include <kernel/bus/bus.h>
 #include <kernel/module.h>
 
 #include <string.h>
@@ -30,7 +29,7 @@
 
 #include <kernel/arch/cpu.h>
 
-static kernel_args ka;
+kernel_args global_kernel_args;
 
 static int main2(void *);
 
@@ -40,54 +39,54 @@ bool kernel_startup = true;
 int _start(kernel_args *oldka, int cpu);	/* keep compiler happy */
 int _start(kernel_args *oldka, int cpu_num)
 {
-	memcpy(&ka, oldka, sizeof(kernel_args));
+	memcpy(&global_kernel_args, oldka, sizeof(kernel_args));
 
-	smp_set_num_cpus(ka.num_cpus);
+	smp_set_num_cpus(global_kernel_args.num_cpus);
 
 	// do any pre-booting cpu config
-	cpu_preboot_init(&ka);
+	cpu_preboot_init(&global_kernel_args);
 
 	// if we're not a boot cpu, spin here until someone wakes us up
-	if(smp_trap_non_boot_cpus(&ka, cpu_num) == NO_ERROR) {
+	if(smp_trap_non_boot_cpus(&global_kernel_args, cpu_num) == NO_ERROR) {
 		// we're the boot processor, so wait for all of the APs to enter the kernel
-		smp_wait_for_ap_cpus(&ka);
+		smp_wait_for_ap_cpus(&global_kernel_args);
 
 		// setup debug output
-		dbg_init(&ka);
+		dbg_init(&global_kernel_args);
 		dbg_set_serial_debug(true);
 		dprintf("Welcome to kernel debugger output!\n");
 
 		// init modules
-		cpu_init(&ka);
-		int_init(&ka);
+		cpu_init(&global_kernel_args);
+		int_init(&global_kernel_args);
 
 		srand((uint)system_time());
 
-		vm_init(&ka);
+		vm_init(&global_kernel_args);
 		dprintf("vm up\n");
 
 		// now we can use the heap and create areas
-		dbg_init2(&ka);
-		int_init2(&ka);
+		dbg_init2(&global_kernel_args);
+		int_init2(&global_kernel_args);
 
-		faults_init(&ka);
-		smp_init(&ka);
-		timer_init(&ka);
+		faults_init(&global_kernel_args);
+		smp_init(&global_kernel_args);
+		timer_init(&global_kernel_args);
 
-		arch_cpu_init2(&ka);
+		arch_cpu_init2(&global_kernel_args);
 
-		sem_init(&ka);
+		sem_init(&global_kernel_args);
 
 		// now we can create and use semaphores
-		vm_init_postsem(&ka);
+		vm_init_postsem(&global_kernel_args);
 		cbuf_init();
-		vfs_init(&ka);
-		thread_init(&ka);
-		port_init(&ka);
+		vfs_init(&global_kernel_args);
+		thread_init(&global_kernel_args);
+		port_init(&global_kernel_args);
 
-		vm_init_postthread(&ka);
-		elf_init(&ka);
-		module_init(&ka, NULL);
+		vm_init_postthread(&global_kernel_args);
+		elf_init(&global_kernel_args);
+		module_init(&global_kernel_args, NULL);
 
 		// start a thread to finish initializing the rest of the system
 		{
@@ -121,15 +120,16 @@ static int main2(void *unused)
 	// bootstrap all the filesystems
 	vfs_bootstrap_all_filesystems();
 
-	net_init(&ka);
-	dev_init(&ka);
-	bus_init(&ka);
-	fixed_devs_init(&ka);
-	dev_scan_drivers(&ka);
+	net_init(&global_kernel_args);
 
-	con_init(&ka);
+	// initialize the dev tree
+	dev_init(&global_kernel_args);
+	fixed_devs_init(&global_kernel_args);
+	dev_scan_drivers(&global_kernel_args);
 
-	net_init_postdev(&ka);
+	con_init(&global_kernel_args);
+
+	net_init_postdev(&global_kernel_args);
 
 	/* remove this later, just a hack for right now */
 #ifdef ARCH_i386
