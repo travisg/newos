@@ -6,10 +6,6 @@
 #include <kernel/queue.h>
 #include <kernel/heap.h>
 
-typedef struct queue_element {
-	void *next;
-} queue_element;
-
 typedef struct queue_typed {
 	queue_element *head;
 	queue_element *tail;

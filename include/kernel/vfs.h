@@ -131,6 +131,23 @@ ssize_t vfs_writepage(void *vnode, iovecs *vecs, off_t pos);
 void *vfs_get_cache_ptr(void *vnode);
 int vfs_set_cache_ptr(void *vnode, void *cache);
 
+/* calls kernel code should make if it's trying strange stuff */
+int vfs_mount(char *path, const char *device, const char *fs_name, void *args, bool kernel);
+int vfs_unmount(char *path, bool kernel);
+int vfs_sync(void);
+int vfs_open(char *path, stream_type st, int omode, bool kernel);
+int vfs_seek(int fd, off_t pos, seek_type seek_type, bool kernel);
+ssize_t vfs_read(int fd, void *buf, off_t pos, ssize_t len, bool kernel);
+ssize_t vfs_write(int fd, const void *buf, off_t pos, ssize_t len, bool kernel);
+int vfs_ioctl(int fd, int op, void *buf, size_t len, bool kernel);
+int vfs_close(int fd, bool kernel);
+int vfs_fsync(int fd, bool kernel);
+int vfs_create(char *path, stream_type stream_type, void *args, bool kernel);
+int vfs_unlink(char *path, bool kernel);
+int vfs_rename(char *path, char *newpath, bool kernel);
+int vfs_rstat(char *path, struct file_stat *stat, bool kernel);
+int vfs_wstat(char *path, struct file_stat *stat, int stat_mask, bool kernel);
+
 /* calls kernel code should make for file I/O */
 int sys_mount(const char *path, const char *device, const char *fs_name, void *args);
 int sys_unmount(const char *path);

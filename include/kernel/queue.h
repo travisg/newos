@@ -7,6 +7,10 @@
 
 #include <kernel/kernel.h>
 
+typedef struct queue_element {
+	void *next;
+} queue_element;
+
 typedef struct queue {
 	void *head;
 	void *tail;

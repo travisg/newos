@@ -58,8 +58,6 @@ static int socket_dev_ioctl(dev_cookie cookie, int op, void *buf, size_t len)
 	int err;
 
 	// copy the args over from user space
-	if((addr)buf >= KERNEL_BASE && (addr)buf <= KERNEL_TOP)
-		return ERR_VM_BAD_USER_MEMORY;
 	err = user_memcpy(&args, buf, sizeof(args));
 	if(err < 0)
 		return err;
@@ -68,6 +66,10 @@ static int socket_dev_ioctl(dev_cookie cookie, int op, void *buf, size_t len)
 		switch(op) {
 			case _SOCKET_API_CREATE:
 				err = s->id = socket_create(args.u.create.type, args.u.create.flags);
+				break;
+			case _SOCKET_API_ASSOCIATE_SOCKET:
+				s->id = args.u.associate.id;
+				err = NO_ERROR;
 				break;
 			default:
 				err = ERR_INVALID_ARGS;
@@ -78,8 +80,44 @@ static int socket_dev_ioctl(dev_cookie cookie, int op, void *buf, size_t len)
 				err = socket_bind(s->id, args.u.bind.saddr);
 				break;
 			case _SOCKET_API_CONNECT:
-				err = socket_connect(s->id, args.u.bind.saddr);
+				err = socket_connect(s->id, args.u.connect.saddr);
 				break;
+			case _SOCKET_API_LISTEN:
+				err = socket_listen(s->id);
+				break;
+			case _SOCKET_API_ACCEPT: {
+				// this one is a little tricky, we have a new socket we need to associate with a file descriptor
+				sock_id id;
+				int fd;
+				_socket_api_args_t new_args;
+				char socket_dev_path[SYS_MAX_PATH_LEN];
+
+				id = socket_accept(s->id, args.u.accept.saddr);
+				if(id < 0) {
+					err = id;
+					break;
+				}
+
+				// we have the new id, open a new file descriptor in user space
+				strcpy(socket_dev_path, "/dev/net/socket");
+				fd = vfs_open(socket_dev_path, STREAM_TYPE_ANY, 0, false);
+				if(fd < 0) {
+					socket_close(id);
+					err = fd;
+					break;
+				}
+
+				// now do a special call on this file descriptor that associates it with this socket
+				new_args.u.associate.id = id;
+				err = vfs_ioctl(fd, _SOCKET_API_ASSOCIATE_SOCKET, &new_args, sizeof(new_args), false);
+				if(err < 0) {
+					socket_close(id);
+					break;
+				}
+
+				err = fd;
+				break;
+			}
 			case _SOCKET_API_RECVFROM:
 				err = socket_recvfrom(s->id, args.u.transfer.buf, args.u.transfer.len, args.u.transfer.saddr);
 				break;

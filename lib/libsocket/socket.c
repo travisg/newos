@@ -49,6 +49,19 @@ int socket_connect(int fd, sockaddr *addr)
 	return sys_ioctl(fd, _SOCKET_API_CONNECT, &args, sizeof(args));
 }
 
+int socket_listen(int fd)
+{
+	return sys_ioctl(fd, _SOCKET_API_LISTEN, NULL, 0);
+}
+
+int socket_accept(int fd, sockaddr *addr)
+{
+	_socket_api_args_t args;
+
+	args.u.accept.saddr = addr;
+	return sys_ioctl(fd, _SOCKET_API_ACCEPT, &args, sizeof(args));
+}
+
 ssize_t socket_read(int fd, void *buf, ssize_t len)
 {
 	return read(fd, buf, len);

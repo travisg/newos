@@ -87,18 +87,6 @@ static mutex vfs_mount_mutex;
 static mutex vfs_mount_op_mutex;
 static mutex vfs_vnode_mutex;
 
-/* function declarations */
-static int vfs_mount(char *path, const char *device, const char *fs_name, void *args, bool kernel);
-static int vfs_unmount(char *path, bool kernel);
-static int vfs_open(char *path, stream_type st, int omode, bool kernel);
-static int vfs_seek(int fd, off_t pos, seek_type seek_type, bool kernel);
-static ssize_t vfs_read(int fd, void *buf, off_t pos, ssize_t len, bool kernel);
-static ssize_t vfs_write(int fd, const void *buf, off_t pos, ssize_t len, bool kernel);
-static int vfs_ioctl(int fd, int op, void *buf, size_t len, bool kernel);
-static int vfs_close(int fd, bool kernel);
-static int vfs_create(char *path, stream_type stream_type, void *args, bool kernel);
-static int vfs_rstat(char *path, struct file_stat *stat, bool kernel);
-
 #define VNODE_HASH_TABLE_SIZE 1024
 static void *vnode_table;
 static struct vnode *root_vnode;
@@ -979,7 +967,7 @@ int vfs_register_filesystem(const char *name, struct fs_calls *calls)
 	return 0;
 }
 
-static int vfs_mount(char *path, const char *device, const char *fs_name, void *args, bool kernel)
+int vfs_mount(char *path, const char *device, const char *fs_name, void *args, bool kernel)
 {
 	struct fs_mount *mount;
 	int err = 0;
@@ -1097,7 +1085,7 @@ err:
 	return err;
 }
 
-static int vfs_unmount(char *path, bool kernel)
+int vfs_unmount(char *path, bool kernel)
 {
 	struct vnode *v;
 	struct fs_mount *mount;
@@ -1186,7 +1174,7 @@ err:
 	return err;
 }
 
-static int vfs_sync(void)
+int vfs_sync(void)
 {
 	struct hash_iterator iter;
 	struct fs_mount *mount;
@@ -1211,7 +1199,7 @@ static int vfs_sync(void)
 	return 0;
 }
 
-static int vfs_open(char *path, stream_type st, int omode, bool kernel)
+int vfs_open(char *path, stream_type st, int omode, bool kernel)
 {
 	int fd;
 	struct vnode *v;
@@ -1257,7 +1245,7 @@ err:
 	return err;
 }
 
-static int vfs_close(int fd, bool kernel)
+int vfs_close(int fd, bool kernel)
 {
 	struct file_descriptor *f;
 	struct ioctx *ioctx;
@@ -1278,7 +1266,7 @@ static int vfs_close(int fd, bool kernel)
 	return 0;
 }
 
-static int vfs_fsync(int fd, bool kernel)
+int vfs_fsync(int fd, bool kernel)
 {
 	struct file_descriptor *f;
 	struct vnode *v;
@@ -1300,7 +1288,7 @@ static int vfs_fsync(int fd, bool kernel)
 	return err;
 }
 
-static ssize_t vfs_read(int fd, void *buf, off_t pos, ssize_t len, bool kernel)
+ssize_t vfs_read(int fd, void *buf, off_t pos, ssize_t len, bool kernel)
 {
 	struct vnode *v;
 	struct file_descriptor *f;
@@ -1325,7 +1313,7 @@ err:
 	return err;
 }
 
-static ssize_t vfs_write(int fd, const void *buf, off_t pos, ssize_t len, bool kernel)
+ssize_t vfs_write(int fd, const void *buf, off_t pos, ssize_t len, bool kernel)
 {
 	struct vnode *v;
 	struct file_descriptor *f;
@@ -1350,7 +1338,7 @@ err:
 	return err;
 }
 
-static int vfs_seek(int fd, off_t pos, seek_type seek_type, bool kernel)
+int vfs_seek(int fd, off_t pos, seek_type seek_type, bool kernel)
 {
 	struct vnode *v;
 	struct file_descriptor *f;
@@ -1376,7 +1364,7 @@ err:
 
 }
 
-static int vfs_ioctl(int fd, int op, void *buf, size_t len, bool kernel)
+int vfs_ioctl(int fd, int op, void *buf, size_t len, bool kernel)
 {
 	struct vnode *v;
 	struct file_descriptor *f;
@@ -1401,7 +1389,7 @@ err:
 	return err;
 }
 
-static int vfs_create(char *path, stream_type stream_type, void *args, bool kernel)
+int vfs_create(char *path, stream_type stream_type, void *args, bool kernel)
 {
 	int err;
 	struct vnode *v;
@@ -1424,7 +1412,7 @@ err:
 	return err;
 }
 
-static int vfs_unlink(char *path, bool kernel)
+int vfs_unlink(char *path, bool kernel)
 {
 	int err;
 	struct vnode *v;
@@ -1446,7 +1434,7 @@ err:
 	return err;
 }
 
-static int vfs_rename(char *path, char *newpath, bool kernel)
+int vfs_rename(char *path, char *newpath, bool kernel)
 {
 	struct vnode *v1, *v2;
 	char filename1[SYS_MAX_NAME_LEN];
@@ -1476,7 +1464,7 @@ err:
 	return err;
 }
 
-static int vfs_rstat(char *path, struct file_stat *stat, bool kernel)
+int vfs_rstat(char *path, struct file_stat *stat, bool kernel)
 {
 	int err;
 	struct vnode *v;
@@ -1497,7 +1485,7 @@ err:
 	return err;
 }
 
-static int vfs_wstat(char *path, struct file_stat *stat, int stat_mask, bool kernel)
+int vfs_wstat(char *path, struct file_stat *stat, int stat_mask, bool kernel)
 {
 	int err;
 	struct vnode *v;

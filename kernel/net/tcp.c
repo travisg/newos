@@ -9,6 +9,7 @@
 #include <kernel/heap.h>
 #include <kernel/khash.h>
 #include <kernel/sem.h>
+#include <kernel/queue.h>
 #include <kernel/arch/cpu.h>
 #include <kernel/net/tcp.h>
 #include <kernel/net/ipv4.h>
@@ -16,6 +17,8 @@
 #include <kernel/net/net_timer.h>
 #include <string.h>
 #include <stdlib.h>
+
+#define DEBUG_REF_COUNT 0
 
 typedef struct tcp_header {
 	uint16 source_port;
@@ -72,12 +75,12 @@ typedef enum tcp_flags {
 } tcp_flags;
 
 typedef struct tcp_socket {
+	queue_element accept_next; // must be first
 	struct tcp_socket *next;
 	tcp_state state;
 	mutex lock;
 	int ref_count;
 	int last_error;
-
 
 	ipv4_addr local_addr;
 	ipv4_addr remote_addr;
@@ -123,6 +126,10 @@ typedef struct tcp_socket {
 	long smoothed_rtt;
 	long smoothed_deviation;
 	long rto;
+
+	/* accept queue */
+	queue accept_queue;
+	sem_id accept_sem;
 } tcp_socket;
 
 typedef struct tcp_socket_key {
@@ -200,14 +207,32 @@ static unsigned int tcp_socket_hash_func(void *_s, const void *_key, unsigned in
 	return hash % range;
 }
 
+#if DEBUG_REF_COUNT
+#define inc_socket_ref(s) _inc_socket_ref(s, __FUNCTION__, __LINE__);
+static void _inc_socket_ref(tcp_socket *s, const char *where, int line)
+{
+	if((addr)s < KERNEL_BASE)
+		panic("inc_socket_ref: %s:%d s %p bad pointer\n", where, line, s);
+	dprintf("inc_socket_ref: %s:%d s %p, %d -> %d\n", where, line, s, s->ref_count, s->ref_count+1);
+#else
 static void inc_socket_ref(tcp_socket *s)
 {
+#endif
 	if(atomic_add(&s->ref_count, 1) <= 0)
 		panic("inc_socket_ref: socket %p has bad ref %d\n", s, s->ref_count);
 }
 
+#if DEBUG_REF_COUNT
+#define dec_socket_ref(s) _dec_socket_ref(s, __FUNCTION__, __LINE__);
+static void _dec_socket_ref(tcp_socket *s, const char *where, int line)
+{
+	if((addr)s < KERNEL_BASE)
+		panic("dec_socket_ref: %s:%d s %p bad pointer\n", where, line, s);
+	dprintf("dec_socket_ref: %s:%d s %p, %d -> %d\n", where, line, s, s->ref_count, s->ref_count-1);
+#else
 static void dec_socket_ref(tcp_socket *s)
 {
+#endif
 	if(atomic_add(&s->ref_count, -1) == 1) {
 		// pull the socket out of the hash table
 		mutex_lock(&socket_table_lock);
@@ -236,9 +261,16 @@ static tcp_socket *lookup_socket(ipv4_addr src_addr, ipv4_addr dest_addr, uint16
 	if(s)
 		goto found;
 
-	// didn't see it, lets search for the null remote address (a socket in accept state)
+	// didn't see it, lets search for the null remote address (a socket in listen state)
 	key.remote_addr = 0;
 	key.remote_port = 0;
+
+	s = hash_lookup(socket_table, &key);
+	if(s)
+		goto found;
+
+	// one last search for a socket with 0.0.0.0 as the local addr (will accept to any local address)
+	key.local_addr = 0;
 
 	s = hash_lookup(socket_table, &key);
 	if(!s)
@@ -274,6 +306,9 @@ static tcp_socket *create_tcp_socket(void)
 		goto err2;
 	if(mutex_init(&s->write_lock, "socket write lock") < 0)
 		goto err3;
+	s->accept_sem = sem_create(0, "socket accept sem");
+	if(s->accept_sem < 0)
+		goto err4;
 	s->ref_count = 1;
 	s->local_addr = 0;
 	s->local_port = 0;
@@ -297,8 +332,12 @@ static tcp_socket *create_tcp_socket(void)
 	s->cwnd = s->mss;
 	s->ssthresh = 0x10000;
 
+	queue_init(&s->accept_queue);
+
 	return s;
 
+err4:
+	mutex_destroy(&s->write_lock);
 err3:
 	sem_delete(s->write_sem);
 err2:
@@ -312,6 +351,9 @@ err:
 
 static int destroy_tcp_socket(tcp_socket *s)
 {
+	ASSERT(s->state == STATE_CLOSED);
+
+	sem_delete(s->accept_sem);
 	mutex_destroy(&s->write_lock);
 	sem_delete(s->write_sem);
 	sem_delete(s->read_sem);
@@ -499,19 +541,6 @@ int tcp_input(cbuf *buf, ifnet *i, ipv4_addr source_address, ipv4_addr target_ad
 		case STATE_CLOSED:
 			// socket is closed, send RST packet
 			goto send_reset;
-		case STATE_LISTEN: {
-			tcp_socket *accept_socket;
-
-			if(!(packet_flags & PKT_SYN)) {
-				// didn't have a SYN flag, send a reset
-				goto send_reset;
-			}
-
-			// XXX finish me
-			goto send_reset;
-
-			break;
-		}
 		case STATE_SYN_SENT:
 			s->tx_win_low++;
 			s->retransmit_tx_seq = s->tx_win_low;
@@ -628,7 +657,90 @@ int tcp_input(cbuf *buf, ifnet *i, ipv4_addr source_address, ipv4_addr target_ad
 					inc_socket_ref(s);
 			}
 			break;
-		case STATE_SYN_RCVD:
+
+	/* passive open states */
+		case STATE_LISTEN: {
+			tcp_socket *accept_socket;
+			tcp_mss_option mss_option;
+
+			if(!(packet_flags & PKT_SYN)) {
+				// didn't have a SYN flag, send a reset
+				goto send_reset;
+			}
+
+			// packet had an ack flag, create a new socket
+			accept_socket = create_tcp_socket();
+			if(!accept_socket)
+				break;
+
+			// set up the address
+			ipv4_lookup_srcaddr_for_dest(source_address, &accept_socket->local_addr);
+			accept_socket->local_port = s->local_port;
+			accept_socket->remote_addr = source_address;
+			accept_socket->remote_port = header->source_port;
+
+			// put it in the right state
+			accept_socket->state = STATE_SYN_RCVD;
+
+			// add it to the hash table
+			mutex_lock(&socket_table_lock);
+			hash_insert(socket_table, accept_socket);
+			mutex_unlock(&socket_table_lock);
+
+			// add it to the accept queue
+			queue_enqueue(&s->accept_queue, accept_socket);
+			sem_release(s->accept_sem, 1);
+
+			// record their sequence
+			accept_socket->rx_win_low = header->seq_num + 1;
+			accept_socket->rx_win_high = accept_socket->rx_win_low + accept_socket->rx_win_size - 1;
+
+			// figure out what the mss will be
+			err = ipv4_get_mss_for_dest(accept_socket->remote_addr, &s->mss);
+			if(err < 0)
+				accept_socket->mss = DEFAULT_MAX_SEGMENT_SIZE;
+
+			accept_socket->mss -= sizeof(tcp_header);
+			accept_socket->cwnd = accept_socket->mss;
+
+			// set up the mss option
+			mss_option.kind = 0x2;
+			mss_option.len = 0x4;
+			mss_option.mss = htons(s->mss);
+
+			// grab a lock on the new socket and send an ack to the syn
+			inc_socket_ref(accept_socket);
+			mutex_lock(&accept_socket->lock);
+			tcp_socket_send(accept_socket, NULL, PKT_ACK|PKT_SYN, &mss_option, sizeof(mss_option), accept_socket->tx_win_low);
+			mutex_unlock(&accept_socket->lock);
+			dec_socket_ref(accept_socket);
+
+			break;
+		}
+		case STATE_SYN_RCVD: {
+			if(packet_flags & PKT_SYN) {
+				// they must have not received our ack to their syn, retransmit
+				// XXX implement
+				goto send_reset;
+				break;
+			}
+
+			// see if they're acking our SYN
+			if((packet_flags & PKT_ACK)) {
+				if(header->ack_num != s->tx_win_low + 1)
+					goto send_reset;
+				s->tx_win_low++;
+				s->retransmit_tx_seq = s->tx_win_low;
+				s->tx_win_high = s->tx_win_low + header->win_size;
+
+				s->state = STATE_ESTABLISHED;
+				sem_release(s->read_sem, 1);
+			} else {
+				goto send_reset;
+			}
+
+			break;
+		}
 		case STATE_TIME_WAIT:
 		default:
 			dprintf("tcp_receive: incoming packet on socket with unhandled state %d\n", s->state);
@@ -768,6 +880,97 @@ out:
 	return err;
 }
 
+int tcp_listen(void *prot_data)
+{
+	tcp_socket *s = prot_data;
+	int err;
+
+	inc_socket_ref(s);
+	mutex_lock(&s->lock);
+
+	if(s->state != STATE_CLOSED) {
+		err = ERR_NET_ALREADY_CONNECTED;
+		goto out;
+	}
+
+	// trasition into listen state
+	s->state = STATE_LISTEN;
+
+	err = NO_ERROR;
+
+out:
+	mutex_unlock(&s->lock);
+	dec_socket_ref(s);
+
+	return err;
+}
+
+int tcp_accept(void *prot_data, sockaddr *saddr, void **_new_socket)
+{
+	tcp_socket *s = prot_data;
+	tcp_socket *new_socket;
+	int err;
+
+	inc_socket_ref(s);
+	mutex_lock(&s->lock);
+
+retry:
+	if(s->state != STATE_LISTEN) {
+		err = ERR_NET_NOT_LISTENING;
+		goto out;
+	}
+
+	// wait on the accept queue
+	mutex_unlock(&s->lock);
+	sem_acquire(s->accept_sem, 1);
+	mutex_lock(&s->lock);
+
+	// see if this socket is still valid
+	if(s->state != STATE_LISTEN) {
+		err = s->last_error; // it was probably closed
+		goto out;
+	}
+
+	// pull something from the head of the accept queue
+	new_socket = queue_dequeue(&s->accept_queue);
+	ASSERT(new_socket != NULL);
+	ASSERT(new_socket->ref_count > 0);
+
+	// we have the new socket, make sure it's ready to go
+	mutex_unlock(&s->lock);
+	sem_acquire(new_socket->read_sem, 1);
+	mutex_lock(&new_socket->lock);
+
+	if(new_socket->state != STATE_ESTABLISHED) {
+		// this socket didn't make it
+		mutex_unlock(&new_socket->lock);
+		mutex_lock(&s->lock);
+		goto retry;
+	}
+
+	// copy the address out
+	if(saddr) {
+		saddr->addr.len = 4;
+		saddr->addr.type = ADDR_TYPE_IP;
+		NETADDR_TO_IPV4(saddr->addr) = s->remote_addr;
+		saddr->port = s->remote_port;
+	}
+
+	mutex_unlock(&new_socket->lock);
+	mutex_lock(&s->lock);
+
+	// this is the new socket
+	*_new_socket = (void *)new_socket;
+
+	err = NO_ERROR;
+
+out:
+	mutex_unlock(&s->lock);
+	dec_socket_ref(s);
+
+	return err;
+}
+
 int tcp_close(void *prot_data)
 {
 	tcp_socket *s = prot_data;
@@ -792,6 +995,7 @@ int tcp_close(void *prot_data)
 			s->state = STATE_LAST_ACK;
 			break;
 		case STATE_SYN_SENT:
+		case STATE_LISTEN:
 			s->state = STATE_CLOSED;
 			break;
 		default:
@@ -802,6 +1006,7 @@ int tcp_close(void *prot_data)
 	}
 
 	// wake up anyone that may be blocked on this socket
+	sem_release(s->accept_sem, 1);
 	sem_release(s->read_sem, 1);
 	sem_release(s->write_sem, 1);
 	s->writers_waiting = false;
@@ -1002,7 +1207,6 @@ static void handle_ack(tcp_socket *s, uint32 sequence, uint32 window_size, bool 
 			s->smoothed_deviation = s->smoothed_deviation + ((Err < 0 ? -Err : Err) - s->smoothed_deviation) / 4;
 			s->rto = s->smoothed_rtt + 4 * s->smoothed_deviation;
 			s->tracking_rtt = false;
-			dprintf("handle_ack: new rto %ld\n", s->rto);
 		}
 
 
@@ -1053,7 +1257,6 @@ static void handle_ack(tcp_socket *s, uint32 sequence, uint32 window_size, bool 
 			// XXX need to clamp to max observed window
 			if(s->cwnd > 0xffff)
 				s->cwnd = 0xffff;
-			dprintf("cwnd %d\n", s->cwnd);
 		}
 	}
 
@@ -1156,6 +1359,9 @@ static void handle_time_wait_timeout(void *_socket)
 	mutex_lock(&s->lock);
 
 	ASSERT(s->state == STATE_TIME_WAIT);
+
+	// killing it
+	s->state = STATE_CLOSED;
 
 	mutex_unlock(&s->lock);
 	dec_socket_ref(s);
@@ -1329,6 +1535,8 @@ static int tcp_flush_pending_data(tcp_socket *s)
 		}
 		tcp_socket_send(s, packet, PKT_ACK, NULL, 0, s->tx_win_low - send_len);
 		s->retransmit_timeout = s->rto;
+		if(cancel_net_timer(&s->retransmit_timer) >= 0)
+			dec_socket_ref(s);
 		if(set_net_timer(&s->retransmit_timer, s->retransmit_timeout, &handle_retransmit_timeout, s, 0) >= 0)
 			inc_socket_ref(s);
 	}

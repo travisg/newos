@@ -14,6 +14,8 @@ int socket_init(void);
 sock_id socket_create(int type, int flags);
 int socket_bind(sock_id id, sockaddr *addr);
 int socket_connect(sock_id id, sockaddr *addr);
+int socket_listen(sock_id fd);
+int socket_accept(sock_id fd, sockaddr *addr);
 ssize_t socket_read(sock_id id, void *buf, ssize_t len);
 ssize_t socket_write(sock_id id, const void *buf, ssize_t len);
 ssize_t socket_recvfrom(sock_id id, void *buf, ssize_t len, sockaddr *addr);

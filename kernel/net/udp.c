@@ -272,6 +272,16 @@ int udp_connect(void *prot_data, sockaddr *addr)
 	return ERR_NOT_ALLOWED;
 }
 
+int udp_listen(void *prot_data)
+{
+	return ERR_NOT_ALLOWED;
+}
+
+int udp_accept(void *prot_data, sockaddr *addr, void **new_socket)
+{
+	return ERR_NOT_ALLOWED;
+}
+
 int udp_close(void *prot_data)
 {
 	udp_endpoint *e = prot_data;

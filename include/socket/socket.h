@@ -16,6 +16,8 @@ int socket_create(int proto, int flags);
 int socket_close(int fd);
 int socket_bind(int fd, sockaddr *addr);
 int socket_connect(int fd, sockaddr *addr);
+int socket_listen(int fd);
+int socket_accept(int fd, sockaddr *addr);
 ssize_t socket_read(int fd, void *buf, ssize_t len);
 ssize_t socket_write(int fd, const void *buf, ssize_t len);
 ssize_t socket_recvfrom(int fd, void *buf, ssize_t len, sockaddr *addr);
