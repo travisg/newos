@@ -42,7 +42,7 @@ int IRCApp::Run(int argc, char **argv)
 
 	int err;
 
-	mEngine->SetServer(IPV4_DOTADDR_TO_ADDR(216,218,240,132));
+	mEngine->SetServer(IPV4_DOTADDR_TO_ADDR(196,40,71,132));
 
 	err = mEngine->Run();
 

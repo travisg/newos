@@ -111,7 +111,7 @@ int IRCEngine::SignOn()
 	saddr.addr.len = 4;
 	saddr.addr.type = ADDR_TYPE_IP;
 	saddr.port = 6667;
-	NETADDR_TO_IPV4(saddr.addr) = IPV4_DOTADDR_TO_ADDR(216,218,240,132); // card.freenode.net
+	NETADDR_TO_IPV4(saddr.addr) = IPV4_DOTADDR_TO_ADDR(196,40,71,132); // irc.freenode.net
 //	NETADDR_TO_IPV4(saddr.addr) = IPV4_DOTADDR_TO_ADDR(63,203,215,73); // newos.org
 
 	err = socket_connect(mSocket, &saddr);
