@@ -15,6 +15,7 @@
 #include <kernel/net/udp.h>
 #include <kernel/net/tcp.h>
 #include <kernel/net/arp.h>
+#include <kernel/net/net_timer.h>
 #include <string.h>
 
 typedef struct ipv4_header {
@@ -78,6 +79,10 @@ static uint32 curr_identification;
 // fragment hash table
 static void *frag_table;
 static mutex frag_table_mutex;
+static net_timer_event frag_killer_event;
+
+#define FRAG_KILLER_QUANTUM 5000 /* 5 secs */
+#define MAX_FRAG_AGE 60000000 /* 1 min */
 
 static int frag_compare_func(void *_frag, const void *_key)
 {
@@ -122,6 +127,51 @@ static void dump_ipv4_header(ipv4_header *head)
 	dprintf(" prot %d, cksum 0x%x, len 0x%x, ident 0x%x, frag offset 0x%x\n",
 		head->protocol, ntohs(head->header_checksum), ntohs(head->total_length), ntohs(head->identification), ntohs(head->flags_frag_offset) & 0x1fff);
 #endif
+}
+
+static void ipv4_frag_killer(void *unused)
+{
+	struct hash_iterator i;
+	ipv4_fragment *frag, *last;
+	ipv4_fragment *free_list = NULL;
+	bigtime_t now = system_time();
+
+	set_net_timer(&frag_killer_event, FRAG_KILLER_QUANTUM, &ipv4_frag_killer, NULL, 0);
+
+	mutex_lock(&frag_table_mutex);
+
+	// cycle through the list, searching for a chain that's older than the max age
+	hash_open(frag_table, &i);
+	frag = hash_next(frag_table, &i);
+	while(frag != NULL) {
+		last = frag;
+		frag = hash_next(frag_table, &i);
+
+		// see if last is eligable for death
+		if(now - last->entry_time > MAX_FRAG_AGE) {
+			hash_remove(frag_table, last);
+			last->hash_next = free_list;
+			free_list = last;
+		}
+	}
+
+	mutex_unlock(&frag_table_mutex);
+
+	// erase the frags we scheduled to be killed
+	while(free_list) {
+		frag = free_list;
+		free_list = frag->hash_next;
+
+		// walk this frag chain
+		while(frag) {
+			last = frag;
+			frag = frag->frag_next;
+
+			// kill last
+			cbuf_free_chain(last->buf);
+			kfree(last);
+		}
+	}
 }
 
 static int ipv4_route_add_etc(ipv4_addr network_addr, ipv4_addr netmask, ipv4_addr if_addr, if_id interface_num, int flags, ipv4_addr gw_addr)
@@ -754,6 +804,8 @@ int ipv4_init(void)
 
 	frag_table = hash_init(256, (addr)&frag.hash_next - (addr)&frag,
 		&frag_compare_func, &frag_hash_func);
+
+	set_net_timer(&frag_killer_event, FRAG_KILLER_QUANTUM, &ipv4_frag_killer, NULL, 0);
 
 	return 0;
 }
