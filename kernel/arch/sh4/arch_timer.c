@@ -4,7 +4,7 @@
 #include <kernel/int.h>
 #include <kernel/debug.h>
 #include <kernel/timer.h>
-#include <arch_cpu.h>
+#include <kernel/arch/cpu.h>
 
 #define timer_rate 12500000
 #define max_timer_interval ((time_t)0xffffffff * 1000000 / timer_rate)

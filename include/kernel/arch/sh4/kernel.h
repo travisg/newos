@@ -1,5 +1,5 @@
-#ifndef _ARCH_KERNEL_H
-#define _ARCH_KERNEL_H
+#ifndef _SH4_KERNEL_H
+#define _SH4_KERNEL_H
 
 #include <sh4.h>
 
@@ -9,8 +9,5 @@
 
 #define USER_BASE   U0_AREA
 #define USER_SIZE   U0_AREA_LEN
-
-#define KSTACK_SIZE (PAGE_SIZE*2)
-#define STACK_SIZE  (PAGE_SIZE*16)
 
 #endif

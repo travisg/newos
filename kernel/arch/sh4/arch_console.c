@@ -1,4 +1,4 @@
-#include <arch_cpu.h>
+#include <kernel/arch/cpu.h>
 #include <stage2.h>
 
 char arch_con_putch(char c)

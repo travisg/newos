@@ -4,7 +4,7 @@
 #include <kernel/debug.h>
 #include <string.h>
 
-#include <arch_pmap.h>
+#include <kernel/arch/pmap.h>
 
 #include <stage2.h>
 #include <sh4.h>

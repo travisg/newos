@@ -1,7 +1,7 @@
 #include <kernel/kernel.h>
 #include <stage2.h>
 
-#include <arch_dbg_console.h>
+#include <kernel/arch/dbg_console.h>
 
 int arch_dbg_con_init(kernel_args *ka)
 {
