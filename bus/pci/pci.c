@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -24,68 +24,24 @@
 
 #include "pci_p.h" // private includes
 
-/* hash table full of pci config structs */
-#define PCI_HASH_SIZE 16
-static mutex pci_lock;
-static void *pci_hash = NULL;
-
 struct pci_config {
 	struct pci_config *next;
 	char *full_path;
 	struct pci_cfg *cfg;
 };
 
-// the hash is the chars added together
-static unsigned int hash(const char *str)
-{
-	int i;
-	int len = strlen(str);
-	unsigned int hash = 0;
+struct pci_config *pci_list;
 
-	for(i=0; i<len; i++)
-		hash += str[i];
-	return hash;
-}
-
-static unsigned int pci_config_hash_func(void *_config, void *_key, int range)
-{
-	struct pci_config *config = _config;
-	char *key = _key;
-
-	if(config)
-		return hash(config->full_path) % range;
-	else
-		return hash(key) % range;
-}
-
-static int pci_config_compare_func(void *_config, void *_key)
-{
-	struct pci_config *config = _config;
-	char *key = _key;
-
-	return strcmp(config->full_path, key);
-}	
-
-static int pci_open(const char *name, dev_cookie *_cookie)
+static int pci_open(dev_ident ident, dev_cookie *_cookie)
 {
 	struct pci_cookie *cookie;
-	int err;
+	struct pci_config *c = (struct pci_config *)ident;
 
-	dprintf("pci_open: entry on '%s'\n", name);
+	dprintf("pci_open: entry on '%s'\n", c->full_path);
 
-	mutex_lock(&pci_lock);
+	*_cookie = c;
 
-	err = 0;
-
-	cookie = hash_lookup(pci_hash, (void *)name);
-	if(!cookie)
-		err = ERR_IO_ERROR;
-
-	mutex_unlock(&pci_lock);
-
-	*_cookie = cookie;
-
-	return err;
+	return 0;
 }
 
 static int pci_freecookie(dev_cookie cookie)
@@ -118,8 +74,6 @@ static int pci_ioctl(dev_cookie _cookie, int op, void *buf, size_t len)
 	struct pci_config *cookie = _cookie;
 	int err = 0;
 
-	mutex_lock(&pci_lock);
-
 	switch(op) {
 		case PCI_GET_CFG:
 			if(len < sizeof(struct pci_cfg)) {
@@ -138,7 +92,6 @@ static int pci_ioctl(dev_cookie _cookie, int op, void *buf, size_t len)
 	}
 
 err:
-	mutex_unlock(&pci_lock);
 	return err;
 }
 
@@ -186,7 +139,7 @@ static int pci_create_config_structs()
 				config = kmalloc(sizeof(struct pci_config));
 				if(!config)
 					panic("pci_create_config_structs: error allocating pci config struct\n");
-				
+
 				sprintf(char_buf, "bus/pci/%s/%s/%s/ctrl", bus_txt, unit_txt, func_txt);
 				dprintf("created node '%s'\n", char_buf);
 
@@ -196,7 +149,9 @@ static int pci_create_config_structs()
 				config->cfg = cfg;
 				config->next = NULL;
 
-				hash_insert(pci_hash, config);
+				config->next = pci_list;
+				pci_list = config;
+
 				cfg = NULL;
 			}
 		}
@@ -210,26 +165,16 @@ static int pci_create_config_structs()
 
 int pci_bus_init(kernel_args *ka)
 {
-	struct pci_config t;
 	struct pci_config *c;
-	struct hash_iterator i;
-	
-	/* initialize the pci config hash table */
-	mutex_init(&pci_lock, "pci_bus_lock");
-	pci_hash = hash_init(PCI_HASH_SIZE, (int)&t.next - (int)&t, 
-		&pci_config_compare_func,
-		&pci_config_hash_func);
-	if(!pci_hash)
-		panic("pci_bus_init: error creating hash table\n");
+
+	pci_list = NULL;
 
 	pci_create_config_structs();
-	
+
 	// create device nodes
-	hash_open(pci_hash, &i);
-	while((c = hash_next(pci_hash, &i))) {
-		devfs_publish_device(c->full_path, &pci_hooks);
+	for(c = pci_list; c; c = c->next) {
+		devfs_publish_device(c->full_path, c, &pci_hooks);
 	}
-	hash_close(pci_hash, &i, false);
 
 	// register with the bus manager
 	bus_register_bus("/dev/bus/pci");

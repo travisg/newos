@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -54,13 +54,13 @@ static inline void gotoxy(unsigned int new_x,unsigned int new_y)
 static void scrup(void)
 {
 	unsigned long i;
-	
+
 	// move the screen up one
 	memcpy((void *)origin, (void *)origin+2*COLUMNS, 2*(LINES-1)*COLUMNS);
-	
+
 	// set the new position to the beginning of the last line
 	pos = origin + (LINES-1)*COLUMNS*2;
-	
+
 	// clear the bottom line
 	for(i = pos; i < scr_end; i += 2) {
 		*(unsigned short *)i = 0x0720;
@@ -114,16 +114,16 @@ static char console_putch(const char c)
 		cr();
 		lf();
 	}
-	
+
 	*(char *)pos = c;
 	*(char *)(pos+1) = attr;
 
-	pos += 2; 
+	pos += 2;
 
 	return c;
 }
 
-static int console_open(const char *name, dev_cookie *cookie)
+static int console_open(dev_ident ident, dev_cookie *cookie)
 {
 	return 0;
 }
@@ -173,7 +173,7 @@ static ssize_t _console_write(const void *buf, size_t len)
 			case '\0':
 				break;
 			default:
-				console_putch(*c); 
+				console_putch(*c);
 		}
 	}
 	return len;
@@ -190,22 +190,22 @@ static ssize_t console_write(dev_cookie cookie, const void *buf, off_t pos, ssiz
 	err = _console_write(buf, len);
 
 	mutex_unlock(&console_lock);
-	
+
 	return err;
 }
 
 static int console_ioctl(dev_cookie cookie, int op, void *buf, size_t len)
 {
 	int err;
-	
+
 	switch(op) {
 		case CONSOLE_OP_WRITEXY: {
 			int x,y;
 			mutex_lock(&console_lock);
-			
+
 			x = ((int *)buf)[0];
 			y = ((int *)buf)[1];
-			
+
 			save_cur();
 			gotoxy(x, y);
 			if(_console_write(((char *)buf) + 2*sizeof(int), len - 2*sizeof(int)) > 0)
@@ -213,7 +213,7 @@ static int console_ioctl(dev_cookie cookie, int op, void *buf, size_t len)
 			else
 				err = ERR_IO_ERROR;
 			restore_cur();
-			mutex_unlock(&console_lock);	
+			mutex_unlock(&console_lock);
 			break;
 		}
 		default:
@@ -235,7 +235,7 @@ struct dev_calls console_hooks = {
 	NULL,
 	NULL,
 	NULL
-};	
+};
 
 int console_dev_init(kernel_args *ka)
 {
@@ -252,11 +252,11 @@ int console_dev_init(kernel_args *ka)
 
 	mutex_init(&console_lock, "console_lock");
 	keyboard_fd = sys_open("/dev/keyboard", STREAM_TYPE_DEVICE, 0);
-	if(keyboard_fd < 0) 
+	if(keyboard_fd < 0)
 		panic("console_dev_init: error opening /dev/keyboard\n");
 
 	// create device node
-	devfs_publish_device("console", &console_hooks);
+	devfs_publish_device("console", NULL, &console_hooks);
 
 	return 0;
 }

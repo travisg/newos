@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -34,7 +34,7 @@ struct devfs_stream {
 			struct devfs_cookie *jar_head;
 		} dir;
 		struct stream_dev {
-			char *full_name;
+			dev_ident ident;
 			struct dev_calls *calls;
 		} dev;
 	} u;
@@ -102,7 +102,7 @@ static int devfs_vnode_compare_func(void *_v, void *_key)
 static struct devfs_vnode *devfs_create_vnode(struct devfs *fs, const char *name)
 {
 	struct devfs_vnode *v;
-	
+
 	v = kmalloc(sizeof(struct devfs_vnode));
 	if(v == NULL)
 		return NULL;
@@ -131,9 +131,6 @@ static int devfs_delete_vnode(struct devfs *fs, struct devfs_vnode *v, bool forc
 	// remove it from the global hash table
 	hash_remove(fs->vnode_list_hash, v);
 
-	if(v->stream.type == STREAM_TYPE_DEVICE)
-		if(v->stream.u.dev.full_name)
-			kfree(v->stream.u.dev.full_name);
 	if(v->name != NULL)
 		kfree(v->name);
 	kfree(v);
@@ -164,7 +161,7 @@ static void remove_cookie_from_jar(struct devfs_vnode *dir, struct devfs_cookie 
 static void update_dircookies(struct devfs_vnode *dir, struct devfs_vnode *v)
 {
 	struct devfs_cookie *cookie;
-	
+
 	for(cookie = dir->stream.u.dir.jar_head; cookie; cookie = cookie->u.dir.next) {
 		if(cookie->u.dir.ptr == v) {
 			cookie->u.dir.ptr = v->dir_next;
@@ -179,7 +176,7 @@ static struct devfs_vnode *devfs_find_in_dir(struct devfs_vnode *dir, const char
 
 	if(dir->stream.type != STREAM_TYPE_DIR)
 		return NULL;
-	
+
 	if(!strcmp(path, "."))
 		return dir;
 	if(!strcmp(path, ".."))
@@ -202,7 +199,7 @@ static int devfs_insert_in_dir(struct devfs_vnode *dir, struct devfs_vnode *v)
 
 	v->dir_next = dir->stream.u.dir.dir_head;
 	dir->stream.u.dir.dir_head = v;
-	
+
 	v->parent = dir;
 	return 0;
 }
@@ -254,7 +251,7 @@ static int devfs_mount(fs_cookie *_fs, fs_id id, void *flags, vnode_id *root_vni
 		err = ERR_NO_MEMORY;
 		goto err;
 	}
-	
+
 	fs->id = id;
 	fs->next_vnode_id = 0;
 
@@ -262,7 +259,7 @@ static int devfs_mount(fs_cookie *_fs, fs_id id, void *flags, vnode_id *root_vni
 	if(err < 0) {
 		goto err1;
 	}
-	
+
 	fs->vnode_list_hash = hash_init(BOOTFS_HASH_SIZE, (addr)&v->all_next - (addr)v,
 		&devfs_vnode_compare_func, &devfs_vnode_hash_func);
 	if(fs->vnode_list_hash == NULL) {
@@ -277,9 +274,9 @@ static int devfs_mount(fs_cookie *_fs, fs_id id, void *flags, vnode_id *root_vni
 		goto err3;
 	}
 
-	// set it up	
+	// set it up
 	v->parent = v;
-	
+
 	// create a dir stream for it to hold
 	v->stream.type = STREAM_TYPE_DIR;
 	v->stream.u.dir.dir_head = NULL;
@@ -292,16 +289,16 @@ static int devfs_mount(fs_cookie *_fs, fs_id id, void *flags, vnode_id *root_vni
 	*_fs = fs;
 
 	thedevfs = fs;
-	
+
 	return 0;
-	
+
 err4:
 	devfs_delete_vnode(fs, v, true);
 err3:
 	hash_uninit(fs->vnode_list_hash);
 err2:
 	mutex_destroy(&fs->lock);
-err1:	
+err1:
 	kfree(fs);
 err:
 	return err;
@@ -312,27 +309,27 @@ int devfs_unmount(fs_cookie _fs)
 	struct devfs *fs = _fs;
 	struct devfs_vnode *v;
 	struct hash_iterator i;
-	
+
 	TRACE(("devfs_unmount: entry fs = 0x%x\n", fs));
-	
+
 	// delete all of the vnodes
 	hash_open(fs->vnode_list_hash, &i);
 	while((v = (struct devfs_vnode *)hash_next(fs->vnode_list_hash, &i)) != NULL) {
 		devfs_delete_vnode(fs, v, true);
 	}
 	hash_close(fs->vnode_list_hash, &i, false);
-	
+
 	hash_uninit(fs->vnode_list_hash);
 	mutex_destroy(&fs->lock);
 	kfree(fs);
-	
+
 	return 0;
 }
 
 static int devfs_sync(fs_cookie fs)
 {
 	TRACE(("devfs_sync: entry\n"));
-	
+
 	return 0;
 }
 
@@ -401,7 +398,7 @@ static int devfs_putvnode(fs_cookie _fs, fs_vnode _v, bool r)
 	struct devfs_vnode *v = (struct devfs_vnode *)_v;
 
 	TRACE(("devfs_putvnode: entry on vnode 0x%x 0x%x, r %d\n", v->id, r));
-	
+
 	return 0; // whatever
 }
 
@@ -454,7 +451,7 @@ static int devfs_open(fs_cookie _fs, fs_vnode _v, file_cookie *_cookie, stream_t
 		goto err;
 	}
 
-	mutex_lock(&fs->lock);	
+	mutex_lock(&fs->lock);
 
 	cookie->s = &v->stream;
 	switch(v->stream.type) {
@@ -464,7 +461,7 @@ static int devfs_open(fs_cookie _fs, fs_vnode _v, file_cookie *_cookie, stream_t
 		case STREAM_TYPE_DEVICE:
 			// call the device call, but unlock the devfs first
 			mutex_unlock(&fs->lock);
-			err = v->stream.u.dev.calls->dev_open(v->stream.u.dev.full_name, &cookie->u.dev.dcookie);
+			err = v->stream.u.dev.calls->dev_open(v->stream.u.dev.ident, &cookie->u.dev.dcookie);
 			mutex_lock(&fs->lock);
 			break;
 		default:
@@ -476,7 +473,7 @@ static int devfs_open(fs_cookie _fs, fs_vnode _v, file_cookie *_cookie, stream_t
 
 err1:
 	mutex_unlock(&fs->lock);
-err:	
+err:
 	return err;
 }
 
@@ -547,13 +544,13 @@ static ssize_t devfs_read(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, void 
 				err = ERR_VFS_INSUFFICIENT_BUF;
 				goto err;
 			}
-			
+
 			err = user_strcpy(buf, cookie->u.dir.ptr->name);
 			if(err < 0)
 				goto err;
 
 			err = strlen(cookie->u.dir.ptr->name) + 1;
-			
+
 			cookie->u.dir.ptr = cookie->u.dir.ptr->dir_next;
 			break;
 		}
@@ -578,7 +575,7 @@ static ssize_t devfs_write(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, cons
 	struct devfs_cookie *cookie = _cookie;
 
 	TRACE(("devfs_write: vnode 0x%x, cookie 0x%x, pos 0x%x 0x%x, len 0x%x\n", v, cookie, pos, len));
-	
+
 	if(v->stream.type == STREAM_TYPE_DEVICE) {
 		return v->stream.u.dev.calls->dev_write(cookie->u.dev.dcookie, buf, pos, len);
 	} else {
@@ -594,7 +591,7 @@ static int devfs_seek(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, off_t pos
 	int err = 0;
 
 	TRACE(("devfs_seek: vnode 0x%x, cookie 0x%x, pos 0x%x 0x%x, seek_type %d\n", v, cookie, pos, st));
-	
+
 	switch(cookie->s->type) {
 		case STREAM_TYPE_DIR:
 			mutex_lock(&fs->lock);
@@ -650,7 +647,7 @@ static int devfs_canpage(fs_cookie _fs, fs_vnode _v)
 	if(v->stream.type == STREAM_TYPE_DEVICE) {
 		if(!v->stream.u.dev.calls->dev_canpage)
 			return 0;
-		return v->stream.u.dev.calls->dev_canpage();
+		return v->stream.u.dev.calls->dev_canpage(v->stream.u.dev.ident);
 	} else {
 		return 0;
 	}
@@ -666,7 +663,7 @@ static ssize_t devfs_readpage(fs_cookie _fs, fs_vnode _v, iovecs *vecs, off_t po
 	if(v->stream.type == STREAM_TYPE_DEVICE) {
 		if(!v->stream.u.dev.calls->dev_readpage)
 			return ERR_NOT_ALLOWED;
-		return v->stream.u.dev.calls->dev_readpage(vecs, pos);
+		return v->stream.u.dev.calls->dev_readpage(v->stream.u.dev.ident, vecs, pos);
 	} else {
 		return ERR_NOT_ALLOWED;
 	}
@@ -682,7 +679,7 @@ static ssize_t devfs_writepage(fs_cookie _fs, fs_vnode _v, iovecs *vecs, off_t p
 	if(v->stream.type == STREAM_TYPE_DEVICE) {
 		if(!v->stream.u.dev.calls->dev_writepage)
 			return ERR_NOT_ALLOWED;
-		return v->stream.u.dev.calls->dev_writepage(vecs, pos);
+		return v->stream.u.dev.calls->dev_writepage(v->stream.u.dev.ident, vecs, pos);
 	} else {
 		return ERR_NOT_ALLOWED;
 	}
@@ -739,7 +736,7 @@ static struct fs_calls devfs_calls = {
 	&devfs_getvnode,
 	&devfs_putvnode,
 	&devfs_removevnode,
-	
+
 	&devfs_open,
 	&devfs_close,
 	&devfs_freecookie,
@@ -766,13 +763,13 @@ int bootstrap_devfs()
 {
 	region_id rid;
 	vm_region_info rinfo;
-	
+
 	dprintf("bootstrap_devfs: entry\n");
-		
+
 	return vfs_register_filesystem("devfs", &devfs_calls);
 }
 
-int devfs_publish_device(const char *path, struct dev_calls *calls)
+int devfs_publish_device(const char *path, dev_ident ident, struct dev_calls *calls)
 {
 	int err = 0;
 	int i, last;
@@ -782,7 +779,7 @@ int devfs_publish_device(const char *path, struct dev_calls *calls)
 	bool at_leaf;
 
 	TRACE(("devfs_publish_device: entry path '%s', hooks 0x%x\n", path, calls));
-	
+
 	if(!thedevfs) {
 		panic("devfs_publish_device called before devfs mounted\n");
 		return ERR_GENERAL;
@@ -813,7 +810,7 @@ int devfs_publish_device(const char *path, struct dev_calls *calls)
 		}
 
 		TRACE(("\tpath component '%s'\n", &temp[last]));
-	
+
 		// we have a path component
 		v = devfs_find_in_dir(dir, &temp[last]);
 		if(v) {
@@ -843,13 +840,7 @@ int devfs_publish_device(const char *path, struct dev_calls *calls)
 		if(at_leaf) {
 			// this is the last component
 			v->stream.type = STREAM_TYPE_DEVICE;
-			v->stream.u.dev.full_name = kmalloc(strlen(path) + 1);
-			if(!v->stream.u.dev.full_name) {
-				devfs_delete_vnode(thedevfs, v, false);
-				err = ERR_NO_MEMORY;
-				goto err1;
-			}
-			strcpy(v->stream.u.dev.full_name, path);
+			v->stream.u.dev.ident = ident;
 			v->stream.u.dev.calls = calls;
 		} else {
 			// this is a dir

@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -32,12 +32,12 @@ int arch_cpu_init2(kernel_args *ka)
 	region_id rid;
 	struct tss_descriptor *tss_d;
 	unsigned int i;
-	
+
 	// account for the segment descriptors
-	gdt = (unsigned int *)ka->arch_args.vir_gdt;	
+	gdt = (unsigned int *)ka->arch_args.vir_gdt;
 	vm_create_anonymous_region(vm_get_kernel_aspace_id(), "gdt", (void **)&gdt,
 		REGION_ADDR_EXACT_ADDRESS, PAGE_SIZE, REGION_WIRING_WIRED_ALREADY, LOCK_RW|LOCK_KERNEL);
-	
+
 	tss = kmalloc(sizeof(struct tss *) * ka->num_cpus);
 	if(tss == NULL) {
 		panic("arch_cpu_init2: could not allocate buffer for tss pointers\n");
@@ -50,10 +50,10 @@ int arch_cpu_init2(kernel_args *ka)
 		return ERR_NO_MEMORY;
 	}
 	memset(tss_loaded, 0, sizeof(int) * ka->num_cpus);
-	
+
 	for(i=0; i<ka->num_cpus; i++) {
 		char tss_name[16];
-		
+
 		sprintf(tss_name, "tss%d", i);
 		rid = vm_create_anonymous_region(vm_get_kernel_aspace_id(), tss_name, (void **)&tss[i],
 			REGION_ADDR_ANY_ADDRESS, PAGE_SIZE, REGION_WIRING_WIRED, LOCK_RW|LOCK_KERNEL);
@@ -61,10 +61,10 @@ int arch_cpu_init2(kernel_args *ka)
 			panic("arch_cpu_init2: unable to create region for tss\n");
 			return ERR_NO_MEMORY;
 		}
-		
+
 		memset(tss[i], 0, sizeof(struct tss));
 		tss[i]->ss0 = KERNEL_DATA_SEG;
-	
+
 		// add TSS descriptor for this new TSS
 		tss_d = (struct tss_descriptor *)&gdt[10 + i*2];
 		tss_d->limit_00_15 = sizeof(struct tss) & 0xffff;
@@ -163,7 +163,7 @@ error:
 	return ERR_VM_BAD_USER_MEMORY;
 }
 
-void *arch_cpu_user_memset(void *s, char c, size_t count, addr *fault_handler)
+int arch_cpu_user_memset(void *s, char c, size_t count, addr *fault_handler)
 {
 	char *xs = (char *) s;
 
@@ -174,7 +174,7 @@ void *arch_cpu_user_memset(void *s, char c, size_t count, addr *fault_handler)
 
 	*fault_handler = 0;
 
-	return s;
+	return 0;
 error:
 	*fault_handler = 0;
 	return ERR_VM_BAD_USER_MEMORY;

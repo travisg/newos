@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -6,10 +6,11 @@
 #include <boot/stage2.h>
 #include <kernel/heap.h>
 #include <kernel/fs/devfs.h>
+#include <kernel/vm.h>
 #include <libc/string.h>
 #include <sys/errors.h>
 
-static int zero_open(const char *name, dev_cookie *cookie)
+static int zero_open(dev_ident ident, dev_cookie *cookie)
 {
 	*cookie = NULL;
 	return 0;
@@ -38,7 +39,7 @@ static int zero_ioctl(dev_cookie cookie, int op, void *buf, size_t len)
 static ssize_t zero_read(dev_cookie cookie, void *buf, off_t pos, ssize_t len)
 {
 	int rc;
-	
+
 	rc = user_memset(buf, 0, len);
 	if(rc < 0)
 		return rc;
@@ -68,7 +69,7 @@ static struct dev_calls zero_hooks = {
 int zero_dev_init(kernel_args *ka)
 {
 	// create device node
-	devfs_publish_device("zero", &zero_hooks);
+	devfs_publish_device("zero", NULL, &zero_hooks);
 
 	return 0;
 }

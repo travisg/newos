@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -80,7 +80,7 @@ static ssize_t _keyboard_read(void *_buf, size_t len)
 
 	if(len > sizeof(keyboard_buf) - 1)
 		len = sizeof(keyboard_buf) - 1;
-	
+
 retry:
 	// block here until data is ready
 	rc = sem_acquire_etc(keyboard_sem, 1, SEM_FLAG_INTERRUPTABLE, 0, NULL);
@@ -90,7 +90,7 @@ retry:
 
 	// critical section
 	mutex_lock(&keyboard_read_mutex);
-	
+
 	saved_tail = tail;
 	if(head == saved_tail) {
 		mutex_unlock(&keyboard_read_mutex);
@@ -101,7 +101,7 @@ retry:
 			copy_len = min(len, saved_tail - head);
 		else
 			copy_len = min(len, sizeof(keyboard_buf) - head);
-		memcpy(buf, &keyboard_buf[head], copy_len);	
+		memcpy(buf, &keyboard_buf[head], copy_len);
 		copied_bytes = copy_len;
 		head = (head + copy_len) % sizeof(keyboard_buf);
 		if(head == 0 && saved_tail > 0 && copied_bytes < len) {
@@ -117,10 +117,10 @@ retry:
 		// we did not empty the keyboard queue
 		sem_release_etc(keyboard_sem, 1, SEM_FLAG_NO_RESCHED);
 	}
-	
+
 	mutex_unlock(&keyboard_read_mutex);
-	
-	return copied_bytes;	
+
+	return copied_bytes;
 }
 
 static void insert_in_buf(char c)
@@ -142,7 +142,7 @@ int handle_keyboard_interrupt()
 {
 	unsigned char key;
 	int retval = INT_NO_RESCHEDULE;
-	
+
 	key = in8(0x60);
 //	dprintf("handle_keyboard_interrupt: key = 0x%x\n", key);
 
@@ -185,13 +185,13 @@ int handle_keyboard_interrupt()
 				break;
 			default: {
 				char ascii;
-				
+
 				if(shift || (leds & LED_CAPS))
 					ascii = shifted_keymap[key];
 				else
 					ascii = unshifted_keymap[key];
-				
-//					dprintf("ascii = 0x%x, '%c'\n", ascii, ascii);	
+
+//					dprintf("ascii = 0x%x, '%c'\n", ascii, ascii);
 				if(ascii != 0) {
 					insert_in_buf(ascii);
 					retval = INT_RESCHEDULE;
@@ -202,7 +202,7 @@ int handle_keyboard_interrupt()
 	return retval;
 }
 
-static int keyboard_open(const char *name, dev_cookie *cookie)
+static int keyboard_open(dev_ident ident, dev_cookie *cookie)
 {
 	*cookie = NULL;
 	return 0;
@@ -260,16 +260,16 @@ int setup_keyboard()
 	keyboard_sem = sem_create(0, "keyboard_sem");
 	if(keyboard_sem < 0)
 		panic("could not create keyboard sem!\n");
-	
+
 	if(mutex_init(&keyboard_read_mutex, "keyboard_read_mutex") < 0)
 		panic("could not create keyboard read mutex!\n");
-	
+
 	shift = 0;
 	leds = 0;
 	set_leds();
-	
+
 	head = tail = 0;
-	
+
 	return 0;
 }
 
@@ -278,7 +278,7 @@ int	keyboard_dev_init(kernel_args *ka)
 	setup_keyboard();
 	int_set_io_interrupt_handler(0x21,&handle_keyboard_interrupt);
 
-	devfs_publish_device("keyboard", &keyboard_hooks);
+	devfs_publish_device("keyboard", NULL, &keyboard_hooks);
 
 	return 0;
-}	
+}

@@ -15,11 +15,11 @@
 /* allow multiple 8139s */
 static rtl8139 *rtl = NULL;
 
-static int rtl8139_open(const char *name, dev_cookie *cookie)
+static int rtl8139_open(dev_ident ident, dev_cookie *cookie)
 {
 	if(!rtl)
 		return ERR_IO_ERROR;
-	
+
 	return 0;
 }
 
@@ -68,7 +68,7 @@ static int rtl8139_ioctl(dev_cookie cookie, int op, void *buf, size_t len)
 
 	if(!rtl)
 		return ERR_IO_ERROR;
-	
+
 	switch(op) {
 		case 10000: // get the ethernet MAC address
 			if(len >= sizeof(rtl->mac_addr)) {
@@ -81,7 +81,7 @@ static int rtl8139_ioctl(dev_cookie cookie, int op, void *buf, size_t len)
 		default:
 			err = ERR_INVALID_ARGS;
 	}
-	
+
 	return err;
 }
 
@@ -103,7 +103,7 @@ int rtl8139_dev_init(kernel_args *ka)
 {
 	rtl8139 *rtl;
 	int fd;
-	
+
 	dprintf("rtl8139_dev_init: entry\n");
 
 	// detect and setup the device
@@ -112,11 +112,11 @@ int rtl8139_dev_init(kernel_args *ka)
 		dprintf("rtl8139_dev_init: no device found\n");
 		return 0;
 	}
-	
+
 	rtl8139_init(rtl);
 
 	// create device node
-	devfs_publish_device("net/rtl8139/0", &rtl8139_hooks);
+	devfs_publish_device("net/rtl8139/0", NULL, &rtl8139_hooks);
 
 	return 0;
 }

@@ -202,7 +202,7 @@ int vm_put_physical_page(addr vaddr);
 int user_memcpy(void *to, void *from, size_t size);
 int user_strcpy(char *to, const char *from);
 int user_strncpy(char *to, const char *from, size_t size);
-void *user_memset(void *s, char c, size_t count);
+int user_memset(void *s, char c, size_t count);
 
 region_id user_vm_create_anonymous_region(char *uname, void **uaddress, int addr_type,
 	addr size, int wiring, int lock);

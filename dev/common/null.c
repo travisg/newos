@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -8,7 +8,7 @@
 #include <kernel/fs/devfs.h>
 #include <sys/errors.h>
 
-static int null_open(const char *name, dev_cookie *cookie)
+static int null_open(dev_ident ident, dev_cookie *cookie)
 {
 	*cookie = NULL;
 	return 0;
@@ -61,7 +61,7 @@ static struct dev_calls null_hooks = {
 int null_dev_init(kernel_args *ka)
 {
 	// create device node
-	devfs_publish_device("null", &null_hooks);
+	devfs_publish_device("null", NULL, &null_hooks);
 
 	return 0;
 }
