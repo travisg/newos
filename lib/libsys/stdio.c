@@ -4,17 +4,19 @@
 */
 #include <libc/printf.h>
 #include <libc/string.h>
+#include <libsys/stdio.h>
 #include <libsys/syscalls.h>
 
-//static int infd = -1;
-//static int outfd = -1;
+int __stdio_init(void);	 /* keep the compiler happy, these two are not supposed */
+int __stdio_deinit(void);/* to be called by anyone except crt0, and crt0 will change soon */
 
-int __stdio_init()
+
+int __stdio_init(void)
 {
 	return 0;
 }
 
-int __stdio_deinit()
+int __stdio_deinit(void)
 {
 	return 0;
 }
@@ -34,7 +36,7 @@ int printf(const char *fmt, ...)
 	return i;
 }
 
-char getc()
+char getc(void)
 {
 	char c;
 	int len;

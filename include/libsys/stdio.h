@@ -8,7 +8,7 @@
 #include <libc/stdarg.h>
 
 int printf(const char *fmt, ...);
-char getc();
+char getc(void);
 
 #endif
 

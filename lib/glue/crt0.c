@@ -2,9 +2,9 @@
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
-extern int __stdio_init();
-extern int __stdio_deinit();
-extern int __heap_init();
+extern int __stdio_init(void);
+extern int __stdio_deinit(void);
+extern int __heap_init(void);
 extern void sys_exit(int retcode);
 
 extern void (*__ctor_list)(void);
@@ -12,9 +12,10 @@ extern void (*__ctor_end)(void);
 
 extern int main();
 
-void _call_ctors();
+int _start(void);
+void _call_ctors(void);
 
-int _start()
+int _start(void)
 {
 	int retcode;
 
@@ -30,7 +31,7 @@ int _start()
 	return 0;
 }
 
-void _call_ctors()
+void _call_ctors(void)
 { 
 	void (**f)();
         
