@@ -72,12 +72,11 @@ ssize_t Term::WriteEscaped(const char *inbuf)
 	return Write(buf);
 }
 
-
 void Term::SetScrollRegion(int y, int height)
 {
 	char buf[256];
 
-	sprintf(buf, "[%d;%dr", y, y + height);
+	sprintf(buf, "[%d;%dr", y, y + height - 1);
 	WriteEscaped(buf);
 }
 
@@ -86,6 +85,22 @@ void Term::SetCursor(int x, int y)
 	char buf[256];
 
 	sprintf(buf, "[%d;%dH", y, x);
+	WriteEscaped(buf);
+}
+
+void Term::ScrollUp(int count)
+{
+	char buf[256];
+
+	sprintf(buf, "[%dM", count);
+	WriteEscaped(buf);
+}
+
+void Term::ScrollDown(int count)
+{
+	char buf[256];
+
+	sprintf(buf, "[%dL", count);
 	WriteEscaped(buf);
 }
 
@@ -104,8 +119,32 @@ TermWindow::~TermWindow()
 
 void TermWindow::Clear()
 {
-	int i;
+	ScrollUp(mHeight);
+}
 
+void TermWindow::SetScrollRegion()
+{
+	mTerm->SetScrollRegion(mY, mHeight);
+}
+
+void TermWindow::ScrollUp(int count)
+{
+	mTerm->Lock();
+
+	SetScrollRegion();
+
+	mTerm->SaveCursor();
+	mTerm->SetCursor(1, mY + mHeight - 1);
+
+	mTerm->ScrollUp(count);
+
+	mTerm->RestoreCursor();
+
+	mTerm->Unlock();
+}
+
+void TermWindow::ScrollDown(int count)
+{
 	mTerm->Lock();
 
 	SetScrollRegion();
@@ -113,18 +152,11 @@ void TermWindow::Clear()
 	mTerm->SaveCursor();
 	mTerm->SetCursor(1, mY);
 
-	// scroll this screen off
-	for(i = 0; i < mHeight; i++)
-		mTerm->Write("\n");
+	mTerm->ScrollDown(count);
 
 	mTerm->RestoreCursor();
 
 	mTerm->Unlock();
-}
-
-void TermWindow::SetScrollRegion()
-{
-	mTerm->SetScrollRegion(mY, mHeight);
 }
 
 void TermWindow::Write(const char *buf, bool atLastLine)
@@ -135,7 +167,7 @@ void TermWindow::Write(const char *buf, bool atLastLine)
 	mTerm->SaveCursor();
 
 	if(atLastLine)
-		mTerm->SetCursor(1, mY + mHeight);
+		mTerm->SetCursor(1, mY + mHeight - 1);
 
 	mTerm->Write(buf);
 
@@ -156,7 +188,7 @@ void TermWindow::SetCursor(int x, int y)
 	if(y > mHeight)
 		y = mHeight;
 
-	mTerm->SetCursor(mX + x, mY + y);
+	mTerm->SetCursor(mX + x - 1, mY + y - 1);
 
 	mTerm->Unlock();
 }

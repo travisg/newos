@@ -80,7 +80,7 @@ static struct console_desc {
 static void gotoxy(struct console_desc *con, int new_x, int new_y)
 {
 	if(new_x >= con->columns)
-		new_x = con->columns;
+		new_x = con->columns - 1;
 	if(new_x < 0)
 		new_x = 0;
 	if(new_y >= con->lines)
@@ -92,34 +92,41 @@ static void gotoxy(struct console_desc *con, int new_x, int new_y)
 	con->y = new_y;
 }
 
+/* scroll from the cursor line up to the top of the scroll region up one line */
 static void scrup(struct console_desc *con)
 {
-	ASSERT(con->scroll_top <= con->scroll_bottom);
+	// see if cursor is outside of scroll region
+	if((con->y < con->scroll_top) || (con->y > con->scroll_bottom))
+		return;
 
-	if(con->scroll_bottom - con->scroll_top > 1) {
+	if(con->y - con->scroll_top > 1) {
 		// move the screen up one
-		con->funcs->blt(0, con->scroll_top + 1, con->columns, con->scroll_bottom - con->scroll_top, 0, con->scroll_top);
+		con->funcs->blt(0, con->scroll_top + 1, con->columns, con->y - con->scroll_top, 0, con->scroll_top);
 	}
 
 	// clear the bottom line
-	con->funcs->fill_glyph(0, con->scroll_bottom, con->columns, 1, ' ', con->attr);
+	con->funcs->fill_glyph(0, con->y, con->columns, 1, ' ', con->attr);
 }
 
+/* scroll from the cursor line down to the bottom of the scroll region down one line */
 static void scrdown(struct console_desc *con)
 {
-	ASSERT(con->scroll_top <= con->scroll_bottom);
+	// see if cursor is outside of scroll region
+	if((con->y < con->scroll_top) || (con->y > con->scroll_bottom))
+		return;
 
-	if(con->scroll_bottom - con->scroll_top > 1) {
+	if(con->scroll_bottom - con->y > 1) {
 		// move the screen down one
-		con->funcs->blt(0, con->scroll_top, con->columns, con->scroll_bottom - con->scroll_top, 0, con->scroll_top+1);
+		con->funcs->blt(0, con->y, con->columns, con->scroll_bottom - con->y, 0, con->y + 1);
 	}
 
 	// clear the top line
-	con->funcs->fill_glyph(0, con->scroll_top, con->columns, 1, ' ', con->attr);
+	con->funcs->fill_glyph(0, con->y, con->columns, 1, ' ', con->attr);
 }
 
 static void lf(struct console_desc *con)
 {
+//	dprintf("lf: y %d x %d scroll_top %d scoll_bottom %d\n", con->y, con->x, con->scroll_top, con->scroll_bottom);
 	if(con->y == con->scroll_bottom ) {
  		// we hit the bottom of our scroll region
  		scrup(con);
@@ -337,50 +344,93 @@ static void set_vt100_attributes(struct console_desc *con, int *args, int arg_pt
 	}
 }
 
-static bool process_vt100_command(struct console_desc *con, const char c, bool seen_bracket, int *args, int arg_ptr)
+static bool process_vt100_command(struct console_desc *con, const char c, bool seen_bracket, int *args, int num_args)
 {
 	bool ret = true;
 
+//	dprintf("process_vt100_command: c '%c', num_args %d, arg[0] %d, arg[1] %d, seen_bracket %d\n",
+//		c, num_args, args[0], args[1], seen_bracket);
+
 	if(seen_bracket) {
 		switch(c) {
-			case 'H':
-			case 'f':
-				if(arg_ptr < 1) {
-					args[0] = 1;
-					args[1] = 1;
-				}
-				gotoxy(con, args[1] - 1, args[0] - 1);
+			case 'H': /* set cursor position */
+			case 'f': {
+				int row = (num_args > 0) ? args[0] : 1;
+				int col = (num_args > 1) ? args[1] : 1;
+				if(row > 0) row--;
+				if(col > 0) col--;
+				gotoxy(con, col, row);
 				break;
-			case 'A':
-				if(arg_ptr < 0)
-					args[0] = 1;
-				gotoxy(con, con->x, con->y - args[0]);
+			}
+			case 'A': { /* move up */
+				int deltay = (num_args > 0) ? -args[0] : -1;
+				if(deltay == 0) deltay = -1;
+				gotoxy(con, con->x, con->y + deltay);
 				break;
-			case 'B':
-				if(arg_ptr < 0)
-					args[0] = 1;
-				gotoxy(con, con->x, con->y + args[0]);
+			}
+			case 'e':
+			case 'B': { /* move down */
+				int deltay = (num_args > 0) ? args[0] : 1;
+				if(deltay == 0) deltay = 1;
+				gotoxy(con, con->x, con->y + deltay);
 				break;
-			case 'C':
-				if(arg_ptr < 0)
-					args[0] = 1;
-				gotoxy(con, con->x + args[0], con->y);
+			}
+			case 'D': { /* move left */
+				int deltax = (num_args > 0) ? -args[0] : -1;
+				if(deltax == 0) deltax = -1;
+				gotoxy(con, con->x + deltax, con->y);
 				break;
-			case 's':
+			}
+			case 'a':
+			case 'C': { /* move right */
+				int deltax = (num_args > 0) ? args[0] : 1;
+				if(deltax == 0) deltax = 1;
+				gotoxy(con, con->x + deltax, con->y);
+				break;
+			}
+			case '`':
+			case 'G': { /* set X position */
+				int newx = (num_args > 0) ? args[0] : 1;
+				if(newx > 0) newx--;
+				gotoxy(con, newx, con->y);
+				break;
+			}
+			case 'd': { /* set y position */
+				int newy = (num_args > 0) ? args[0] : 1;
+				if(newy > 0) newy--;
+				gotoxy(con, con->x, newy);
+				break;
+			}
+			case 's': /* save current cursor */
 				save_cur(con, false);
 				break;
-			case 'u':
+			case 'u': /* restore cursor */
 				restore_cur(con, false);
 				break;
-			case 'r':
-				if(arg_ptr < 1) {
-					args[0] = 0;
-					args[1] = con->lines;
-				}
-				set_scroll_region(con, args[0] - 1, args[1] - 1);
+			case 'r': { /* set scroll region */
+				int low = (num_args > 0) ? args[0] : 1;
+				int high = (num_args > 1) ? args[1] : con->lines;
+				if(low <= high) set_scroll_region(con, low - 1, high - 1);
 				break;
+			}
+			case 'L': { /* scroll virtual down at cursor */
+				int lines = (num_args > 0) ? args[0] : 1;
+				while(lines > 0) {
+					scrdown(con);
+					lines--;
+				}
+				break;
+			}
+			case 'M': { /* scroll virtual up at cursor */
+				int lines = (num_args > 0) ? args[0] : 1;
+				while(lines > 0) {
+					scrup(con);
+					lines--;
+				}
+				break;
+			}
 			case 'K':
-				if(arg_ptr < 0) {
+				if(num_args < 0) {
 					// erase to end of line
 					erase_line(con, LINE_ERASE_RIGHT);
 				} else {
@@ -391,7 +441,7 @@ static bool process_vt100_command(struct console_desc *con, const char c, bool s
 				}
 				break;
 			case 'J':
-				if(arg_ptr < 0) {
+				if(num_args < 0) {
 					// erase to end of screen
 					erase_screen(con, SCREEN_ERASE_DOWN);
 				} else {
@@ -402,8 +452,8 @@ static bool process_vt100_command(struct console_desc *con, const char c, bool s
 				}
 				break;
 			case 'm':
-				if(arg_ptr >= 0) {
-					set_vt100_attributes(con, args, arg_ptr);
+				if(num_args >= 0) {
+					set_vt100_attributes(con, args, num_args);
 				}
 				break;
 			default:
@@ -473,7 +523,7 @@ static ssize_t _console_write(struct console_desc *con, const void *buf, size_t 
 					con->state = CONSOLE_STATE_SEEN_BRACKET;
 					break;
 				default:
-					process_vt100_command(con, *c, false, con->args, con->arg_ptr);
+					process_vt100_command(con, *c, false, con->args, con->arg_ptr + 1);
 					con->state = CONSOLE_STATE_NORMAL;
 			}
 			break;
@@ -485,7 +535,7 @@ static ssize_t _console_write(struct console_desc *con, const void *buf, size_t 
 					con->state = CONSOLE_STATE_PARSING_ARG;
 					break;
 				default:
-					process_vt100_command(con, *c, true, con->args, con->arg_ptr);
+					process_vt100_command(con, *c, true, con->args, con->arg_ptr + 1);
 					con->state = CONSOLE_STATE_NORMAL;
 			}
 			break;
@@ -501,7 +551,7 @@ static ssize_t _console_write(struct console_desc *con, const void *buf, size_t 
 					con->state = CONSOLE_STATE_PARSING_ARG;
 					break;
 				default:
-					process_vt100_command(con, *c, true, con->args, con->arg_ptr);
+					process_vt100_command(con, *c, true, con->args, con->arg_ptr + 1);
 					con->state = CONSOLE_STATE_NORMAL;
 			}
 			break;
@@ -516,7 +566,7 @@ static ssize_t _console_write(struct console_desc *con, const void *buf, size_t 
 					con->state = CONSOLE_STATE_NEW_ARG;
 					break;
 				default:
-					process_vt100_command(con, *c, true, con->args, con->arg_ptr);
+					process_vt100_command(con, *c, true, con->args, con->arg_ptr + 1);
 					con->state = CONSOLE_STATE_NORMAL;
 			}
 		}

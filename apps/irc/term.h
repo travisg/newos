@@ -17,6 +17,8 @@ public:
 	void RestoreCursor();
 	void SetScrollRegion(int y, int height);
 	void SetCursor(int x, int y);
+	void ScrollUp(int count);
+	void ScrollDown(int count);
 
 private:
 	int mFd;
@@ -32,6 +34,8 @@ public:
 
 	void Clear();
 	void SetCursor(int x, int y);
+	void ScrollUp(int count = 1);
+	void ScrollDown(int count = 1);
 	void Write(const char *buf, bool atLastLine);
 
 private:

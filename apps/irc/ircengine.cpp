@@ -152,8 +152,6 @@ int IRCEngine::SocketError(int error)
 
 ssize_t IRCEngine::WriteData(const char *data)
 {
-	mTextWindow->Write(data, true);
-
 	return write(mSocket, data, strlen(data));
 }
 
@@ -173,9 +171,9 @@ int IRCEngine::ReceivedSocketData(char *line, int len)
 	while(isspace(line[pos]))
 		pos++;
 
-	// trim the trailing \n
+	// trim the trailing \r\n
 	for(i = pos; line[i] != 0; i++) {
-		if(line[i] == '\n') {
+		if(line[i] == '\n' || line[i] == '\r') {
 			line[i] = 0;
 			break;
 		}
@@ -247,10 +245,12 @@ int IRCEngine::ReceivedSocketData(char *line, int len)
 		// rest of the line is the string
 		char outbuf[4096];
 
-		sprintf(outbuf, "%s (%s): %s\n", target, address, &line[pos]);
+		sprintf(outbuf, "%s (%s): %s", target, address, &line[pos]);
+		mTextWindow->ScrollUp();
 		mTextWindow->Write(outbuf, true);
 	} else {
 		// Display the raw line
+		mTextWindow->ScrollUp();
 		mTextWindow->Write(line, true);
 	}
 
@@ -298,6 +298,7 @@ int IRCEngine::ProcessKeyboardInput(char *line)
 	int pos = 0;
 	int len = strlen(line);
 	char outbuf[4096];
+	bool echo_outbuf = false;
 
 	if(len == 0)
 		return 0;
@@ -309,9 +310,9 @@ int IRCEngine::ProcessKeyboardInput(char *line)
 	if(pos == len)
 		return 0;
 
-	// trim the trailing \n
+	// trim the trailing \r\n
 	for(int i = pos; line[i] != 0; i++) {
-		if(line[i] == '\n') {
+		if(line[i] == '\n' || line[i] == '\r') {
 			line[i] = 0;
 			len = i;
 			break;
@@ -324,6 +325,8 @@ int IRCEngine::ProcessKeyboardInput(char *line)
 		if(strlen(mCurrentChannel) > 0) {
 			sprintf(outbuf, "PRIVMSG %s :%s\n", mCurrentChannel, line);
 			WriteData(outbuf);
+			sprintf(outbuf, "%s (%s): %s", mCurrentChannel, mNick, line);
+			echo_outbuf = true;
 		}
 	} else {
 		// leading '/'
@@ -334,30 +337,35 @@ int IRCEngine::ProcessKeyboardInput(char *line)
 				sprintf(outbuf, "JOIN %s\n", &line[pos]);
 				WriteData(outbuf);
 				strlcpy(mCurrentChannel, &line[pos], sizeof(mCurrentChannel));
+				echo_outbuf = true;
 			}
 		} else if(strncasecmp(&line[pos], "PART ", strlen("PART ")) == 0) {
 			pos += strlen("PART ");
 			if(strlen(&line[pos]) > 0) {
 				sprintf(outbuf, "PART %s\n", &line[pos]);
 				WriteData(outbuf);
+				echo_outbuf = true;
 			}
 		} else if(strncasecmp(&line[pos], "NICK ", strlen("NICK ")) == 0) {
 			pos += strlen("NICK ");
 			if(strlen(&line[pos]) > 0) {
 				sprintf(outbuf, "NICK %s\n", &line[pos]);
 				WriteData(outbuf);
+				echo_outbuf = true;
 			}
 		} else if(strncasecmp(&line[pos], "ME ", strlen("ME ")) == 0) {
 			pos += strlen("ME ");
 			if(strlen(&line[pos]) > 0) {
 				sprintf(outbuf, "PRIVMSG %s :%cACTION %s%c\n", mCurrentChannel, 0x01, &line[pos], 0x01);
 				WriteData(outbuf);
+				echo_outbuf = true;
 			}
 		} else if(strncasecmp(&line[pos], "RAW ", strlen("RAW ")) == 0) {
 			pos += strlen("RAW ");
 			if(strlen(&line[pos]) > 0) {
 				sprintf(outbuf, "%s\n", &line[pos]);
 				WriteData(outbuf);
+				echo_outbuf = true;
 			}
 		} else if(strncasecmp(&line[pos], "QUIT", strlen("QUIT")) == 0) {
 			WriteData("QUIT\n");
@@ -365,6 +373,20 @@ int IRCEngine::ProcessKeyboardInput(char *line)
 		} else if(strncasecmp(&line[pos], "CLEAR", strlen("CLEAR")) == 0) {
 			mTextWindow->Clear();
 		}
+	}
+
+	// echo the command to the main window
+	if(echo_outbuf) {
+		// trim any trailing CRLFs
+		for(int i = 0; outbuf[i] != 0; i++) {
+			if(outbuf[i] == '\r' || outbuf[i] == '\n') {
+				outbuf[i] = 0;
+				break;
+			}
+		}
+
+		mTextWindow->ScrollUp();
+		mTextWindow->Write(outbuf, true);
 	}
 
 	return 0;
