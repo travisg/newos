@@ -1,5 +1,5 @@
 /*
-** Copyright 2003, Travis Geiselbrecht. All rights reserved.
+** Copyright 2003-2004, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #include <string.h>
@@ -40,6 +40,7 @@ static test_option opts[] = {
 	{ "3", "spawn threads, self terminating", &thread_spawn_test, 2 },
 	{ "4", "syscall benchmark", &syscall_bench, 0 },
 	{ "5", "test signals", &sig_test, 0 },
+	{ "6", "fpu safety test", &fpu_test, 0 },
 	{ 0, 0, 0, 0 }
 };
 

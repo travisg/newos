@@ -25,7 +25,6 @@ typedef union cpu_ent {
 		// remember which thread's fpu state we hold
 		// NULL means we dont hold any state
 		struct thread *fpu_state_thread;
-		bool fpu_active;
 
 		// timer.c: per-cpu timer queues
 		struct timer_event * volatile timer_events;

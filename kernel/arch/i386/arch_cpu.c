@@ -1,5 +1,5 @@
 /*
-** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2004, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #include <kernel/kernel.h>
@@ -52,6 +52,11 @@ static const struct cpu_vendor_info vendor_info[VENDOR_NUM] = {
 	{ "Transmeta", { "GenuineTMx86", "TransmetaCPU" } },
 	{ "NSC", { "Geode by NSC" } },
 };
+
+/* fsave vs fxsave function pointers */
+static void (*fsave_swap_func)(void *old_fpu_state, void *new_fpu_state);
+static void (*fsave_func)(void *fpu_state);
+static void (*frstor_func)(void *fpu_state);
 
 int arch_cpu_preboot_init(kernel_args *ka)
 {
@@ -347,6 +352,23 @@ int arch_cpu_init2(kernel_args *ka)
 
 	i386_set_task_gate(8, DOUBLE_FAULT_TSS);
 
+	/* decide if we should use f* or fx* fpu save/restore instructions */
+	if(i386_check_feature(X86_FXSR, FEATURE_COMMON)) {
+		fsave_swap_func = &i386_fxsave_swap;
+		fsave_func = &i386_fxsave;
+		frstor_func = &i386_fxrstor;
+	} else {
+		fsave_swap_func = &i386_fsave_swap;
+		fsave_func = &i386_fsave;
+		frstor_func = &i386_frstor;
+	}
+
+	// enable lazy fpu
+	unsigned int cr0;
+	read_cr0(cr0);
+	cr0 |= 0x2; // monitor coprocessor bit
+	write_cr0(cr0);
+
 	// set up a few debug commands (in, out)
 	dbg_add_command(&dbg_in, "in", "read I/O port");
 	dbg_add_command(&dbg_out, "out", "write I/O port");
@@ -379,6 +401,21 @@ void i386_set_kstack(addr_t kstack)
 
 	tss[curr_cpu]->sp0 = kstack;
 //	dprintf("done\n");
+}
+
+void i386_save_fpu_context(void *fpu_state)
+{
+	(*fsave_func)(fpu_state);
+}
+
+void i386_load_fpu_context(void *fpu_state)
+{
+	(*frstor_func)(fpu_state);
+}
+
+void i386_swap_fpu_context(void *old_fpu_state, void *new_fpu_state)
+{
+	(*fsave_swap_func)(old_fpu_state, new_fpu_state);
 }
 
 void arch_cpu_invalidate_TLB_range(addr_t start, addr_t end)

@@ -300,7 +300,7 @@ static struct thread *create_thread_struct(const char *name)
 	t->proc = NULL;
 	t->cpu = NULL;
 	t->fpu_cpu = NULL;
-	t->fpu_state = FPU_STATE_UNINITIALIZED;
+	t->fpu_state_saved = true;
 	t->sem_blocking = -1;
 	t->fault_handler = 0;
 	t->kernel_stack_region_id = -1;
@@ -1300,6 +1300,13 @@ static void thread_exit2(void *_args)
 	// set the next state to be gone. Will return the thread structure to a ready pool upon reschedule
 	args.t->next_state = THREAD_STATE_FREE_ON_RESCHED;
 
+	// throw away our fpu context
+	if(args.t->fpu_cpu) {
+		args.t->fpu_cpu->info.fpu_state_thread = NULL;
+		args.t->fpu_cpu = NULL;
+		args.t->fpu_state_saved = true; // a lie actually
+	}
+
 	// return the death stack and reschedule one last time
 	put_death_stack_and_reschedule(args.death_stack);
 	// never get to here
@@ -1622,6 +1629,20 @@ static void thread_context_switch(struct thread *t_from, struct thread *t_to)
 		t_from->user_time += now - t_from->last_time;
 	t_to->last_time = now;
 
+	// XXX remove this?
+
+	// remember that this cpu will hold the current fpu state if 
+	// a) it's not already saved in the thread structure
+	// b) it's not on another cpu
+	if(!t_from->fpu_state_saved) {
+		if(t_from->fpu_cpu == NULL) {	// does another cpu "own" our state?
+			cpu_ent *cpu = get_curr_cpu_struct();
+
+			// the current cpu *has* to own our state
+			ASSERT(cpu->info.fpu_state_thread == t_from);
+		}
+	}
+ 
 	// set the current cpu and thread pointer
 	t_to->cpu = t_from->cpu;
 	arch_thread_set_current_thread(t_to);

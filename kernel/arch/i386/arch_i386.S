@@ -103,6 +103,20 @@ FUNCTION(i386_cycles_to_time):
 	popl	%ebx
 	ret
 
+/* void i386_set_task_switched(void); */
+FUNCTION(i386_set_task_switched):
+	movl	%cr0,%eax
+	or		$0x4,%eax
+	movl	%eax,%cr0
+	ret
+
+/* void i386_clear_task_switched(void); */
+FUNCTION(i386_clear_task_switched):
+	movl	%cr0,%eax
+	and		$0xfffffffb,%eax
+	movl	%eax,%cr0
+	ret
+
 /* void arch_cpu_global_TLB_invalidate(); */
 FUNCTION(arch_cpu_global_TLB_invalidate):
 	movl	%cr3,%eax

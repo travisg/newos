@@ -199,11 +199,28 @@ void i386_frstor(void *fpu_state);
 void i386_fxrstor(void *fpu_state);
 void i386_fsave_swap(void *old_fpu_state, void *new_fpu_state);
 void i386_fxsave_swap(void *old_fpu_state, void *new_fpu_state);
+void i386_save_fpu_context(void *fpu_state);
+void i386_load_fpu_context(void *fpu_state);
+void i386_swap_fpu_context(void *old_fpu_state, void *new_fpu_state);
 desc_table *i386_get_gdt(void);
 void i386_set_task_gate(int n, uint32 seg);
 uint64 i386_rdtsc(void);
 void i386_cpuid(unsigned int selector, unsigned int *data);
 bool i386_check_feature(uint32 feature, enum i386_feature_type type);
+void i386_set_task_switched(void);
+void i386_clear_task_switched(void);
+
+#define read_cr0(value) \
+	__asm__("movl	%%cr0,%0" : "=r" (value))
+
+#define write_cr0(value) \
+	__asm__("movl	%0,%%cr0" :: "r" (value))
+
+#define read_cr2(value) \
+	__asm__("movl	%%cr2,%0" : "=r" (value))
+
+#define write_cr2(value) \
+	__asm__("movl	%0,%%cr2" :: "r" (value))
 
 #define read_cr3(value) \
 	__asm__("movl	%%cr3,%0" : "=r" (value))

@@ -138,6 +138,9 @@ void i386_handle_trap(struct iframe frame)
 //	if(frame.vector != 0x20)
 //		dprintf("i386_handle_trap: vector 0x%x, ip 0x%x, cpu %d\n", frame.vector, frame.eip, smp_get_current_cpu());
 	switch(frame.vector) {
+		case 7:
+			ret = i386_device_not_available();
+			break;
 		case 8:
 			ret = i386_double_fault(frame.error_code);
 			break;
@@ -148,7 +151,7 @@ void i386_handle_trap(struct iframe frame)
 			unsigned int cr2;
 			addr_t newip;
 
-			asm ("movl %%cr2, %0" : "=r" (cr2) );
+			read_cr2(cr2);
 
 			if(!kernel_startup && (frame.flags & 0x200) == 0) {
 				// ints are were disabled when the page fault was taken, that is very bad

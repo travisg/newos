@@ -7,6 +7,7 @@ ifeq ($(call FINDINLIST,$(MY_TARGET),$(ALL)),1)
 MY_OBJS := \
 	main.o \
 	misctests.o \
+	fputests.o \
 	pipetests.o \
 	porttests.o \
 	sigtests.o \
