@@ -9,22 +9,30 @@
 
 static void alarm_handler(int sig, void *arg)
 {
-	printf("alarm %d %d\n", sig, arg);
+	char temp[128];
+	sprintf(temp, "alarm %d %d\n", sig, arg);
+	write(0, temp, strlen(temp));
 }
 
 static void term_handler(int sig, void *arg)
 {
-	printf("TERM %d %d\n", sig, arg);
+	char temp[128];
+	sprintf(temp, "TERM %d %d\n", sig, arg);
+	write(0, temp, strlen(temp));
 }
 
 static void chld_handler(int sig, void *arg)
 {
-	printf("SIGCHLD %d\n", sig);
+	char temp[128];
+	sprintf(temp,"SIGCHLD %d\n", sig);
+	write(0, temp, strlen(temp));
 }
 
 static void winch_handler(int sig, void *arg)
 {
-	printf("SIGWINCH %d\n", sig);
+	char temp[128];
+	sprintf(temp, "SIGWINCH %d\n", sig);
+	write(0, temp, strlen(temp));
 }
 
 int sig_test(int arg)
