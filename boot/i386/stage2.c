@@ -557,8 +557,82 @@ slow_sample:
 	expired = ((s_high<<8)|s_low) - ((high<<8)|low);
 	p3*= TIMER_CLKNUM_HZ;
 
-	/* time in usecs per CPU cycle * 2^32 */
-	cv_factor = ((uint64)1000000<<32) * expired / p3;
+	/*
+	 * cv_factor contains time in usecs per CPU cycle * 2^32
+	 *
+	 * The code below is a bit fancy. Originally Michael Noistering
+	 * had it like:
+	 *
+	 *     cv_factor = ((uint64)1000000<<32) * expired / p3;
+	 *
+	 * whic is perfect, but unfortunately 1000000ULL<<32*expired
+	 * may overflow in fast cpus with the long sampling period
+	 * i put there for being as accurate as possible under
+	 * vmware.
+	 *
+	 * The below calculation is based in that we are trying
+	 * to calculate:
+	 *
+	 *     (C*expired)/p3 -> (C*(x0<<k + x1))/p3 ->
+	 *     (C*(x0<<k))/p3 + (C*x1)/p3
+	 *
+	 * Now the term (C*(x0<<k))/p3 is rewritten as:
+	 *
+	 *     (C*(x0<<k))/p3 -> ((C*x0)/p3)<<k + reminder
+	 *
+	 * where reminder is:
+	 *
+	 *     floor((1<<k)*decimalPart((C*x0)/p3))
+	 *  
+	 * which is approximated as:
+	 *
+	 *     floor((1<<k)*decimalPart(((C*x0)%p3)/p3)) ->
+	 *     (((C*x0)%p3)<<k)/p3
+	 *
+	 * So the final expression is:
+	 *
+	 *     ((C*x0)/p3)<<k + (((C*x0)%p3)<<k)/p3 + (C*x1)/p3
+	 *
+	 * Just to make things fancier we choose k based on the input
+	 * parameters (we use log2(expired)/3.)
+	 *
+	 * Of course, you are not expected to understand any of this.
+	 */
+	{
+		unsigned i;
+		unsigned k;
+		uint64 C;
+		uint64 x0;
+		uint64 x1;
+		uint64 a, b, c;
+
+		/* first calculate k*/
+		k= 0;
+		for(i= 0; i< 32; i++) {
+			if(expired & (1<<i)) {
+				k= i;
+			}
+		}
+		k/= 3;
+
+		C = 1000000ULL<<32;
+		x0= expired>> k;
+		x1= expired&((1<<k)-1);
+
+		a= ((C*x0)/p3)<<k;
+		b= (((C*x0)%p3)<<k)/p3;
+		c= (C*x1)/p3;
+#if 0
+		dprintf("a=%Ld\n", a);
+		dprintf("b=%Ld\n", b);
+		dprintf("c=%Ld\n", c);
+		dprintf("%d %Ld\n", expired, p3);
+#endif
+		cv_factor= a + b + c;
+#if 0
+		dprintf("cvf=%Ld\n", cv_factor);
+#endif
+	}
 
 	if(p3/expired/1000000000LL) {
 		dprintf("CPU at %Ld.%03Ld GHz\n", p3/expired/1000000000LL, ((p3/expired)%1000000000LL)/1000000LL);
