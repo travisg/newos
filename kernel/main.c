@@ -72,6 +72,7 @@ int _start(kernel_args *oldka, int cpu)
 		vfs_init(&ka);
 		thread_init(&ka);
 		vm_init_postthread(&ka);
+		elf_init(&ka);
 
 		// start a thread to finish initializing the rest of the system
 		{

@@ -41,7 +41,7 @@ unsigned int *pgtable = 0;
 // function decls for this module
 void calculate_cpu_conversion_factor();
 void load_elf_image(void *data, unsigned int *next_paddr,
-	addr_range *ar0, addr_range *ar1, unsigned int *start_addr);
+	addr_range *ar0, addr_range *ar1, unsigned int *start_addr, addr_range *dynamic_section);
 int mmu_init(kernel_args *ka, unsigned int *next_paddr);
 void mmu_map_page(unsigned int vaddr, unsigned int paddr);
 
@@ -98,7 +98,7 @@ void _start(unsigned int mem, char *str)
 
 	// load the kernel (3rd entry in the bootdir)
 	load_elf_image((void *)(bootdir[2].be_offset * PAGE_SIZE + BOOTDIR_ADDR), &next_paddr,
-			&ka->kernel_seg0_addr, &ka->kernel_seg1_addr, &kernel_entry);
+			&ka->kernel_seg0_addr, &ka->kernel_seg1_addr, &kernel_entry, &ka->kernel_dynamic_section_addr);
 
 	if(ka->kernel_seg1_addr.size > 0)
 		next_vaddr = ROUNDUP(ka->kernel_seg1_addr.start + ka->kernel_seg1_addr.size, PAGE_SIZE);
@@ -247,7 +247,7 @@ void _start(unsigned int mem, char *str)
 		: : "g" (ka), "g" (kernel_entry));
 }
 
-void load_elf_image(void *data, unsigned int *next_paddr, addr_range *ar0, addr_range *ar1, unsigned int *start_addr)
+void load_elf_image(void *data, unsigned int *next_paddr, addr_range *ar0, addr_range *ar1, unsigned int *start_addr, addr_range *dynamic_section)
 {
 	struct Elf32_Ehdr *imageHeader = (struct Elf32_Ehdr*) data;
 	struct Elf32_Phdr *segments = (struct Elf32_Phdr*)(imageHeader->e_phoff + (unsigned) imageHeader);
@@ -256,13 +256,21 @@ void load_elf_image(void *data, unsigned int *next_paddr, addr_range *ar0, addr_
 
 	ar0->size = 0;
 	ar1->size = 0;
+	dynamic_section->size = 0;
 
 	for (segmentIndex = 0; segmentIndex < imageHeader->e_phnum; segmentIndex++) {
 		struct Elf32_Phdr *segment = &segments[segmentIndex];
 		unsigned segmentOffset;
 
-		if(segment->p_type != PT_LOAD)
-			continue;
+		switch(segment->p_type) {
+			case PT_LOAD:
+				break;
+			case PT_DYNAMIC:
+				dynamic_section->start = segment->p_vaddr;
+				dynamic_section->size = segment->p_memsz;
+			default:
+				continue;
+		}
 
 //		dprintf("segment %d\n", segmentIndex);
 //		dprintf("p_vaddr 0x%x p_paddr 0x%x p_filesz 0x%x p_memsz 0x%x\n",
@@ -290,7 +298,7 @@ void load_elf_image(void *data, unsigned int *next_paddr, addr_range *ar0, addr_
 		for (; segmentOffset < ROUNDUP(segment->p_memsz, PAGE_SIZE); segmentOffset += PAGE_SIZE) {
 //			dprintf("mapping zero page at va 0x%x\n", segment->p_vaddr + segmentOffset);
 			mmu_map_page(segment->p_vaddr + segmentOffset, *next_paddr);
-			memset(segment->p_vaddr + segmentOffset, 0, PAGE_SIZE);
+			memset((void *)(segment->p_vaddr + segmentOffset), 0, PAGE_SIZE);
 			(*next_paddr) += PAGE_SIZE;
 		}
 		switch(foundSegmentIndex) {

@@ -1461,12 +1461,12 @@ int vm_init(kernel_args *ka)
 		HEAP_SIZE, REGION_WIRING_WIRED_ALREADY, LOCK_RW|LOCK_KERNEL);
 
 	null_addr = (void *)ROUNDOWN(ka->kernel_seg0_addr.start, PAGE_SIZE);
-	vm_create_anonymous_region(vm_get_kernel_aspace_id(), "kernel_seg0", &null_addr, REGION_ADDR_EXACT_ADDRESS,
+	vm_create_anonymous_region(vm_get_kernel_aspace_id(), "kernel_ro", &null_addr, REGION_ADDR_EXACT_ADDRESS,
 		PAGE_ALIGN(ka->kernel_seg0_addr.size), REGION_WIRING_WIRED_ALREADY, LOCK_RW|LOCK_KERNEL);
 
 	if(ka->kernel_seg1_addr.size > 0) {
 		null_addr = (void *)ROUNDOWN(ka->kernel_seg1_addr.start, PAGE_SIZE);
-		vm_create_anonymous_region(vm_get_kernel_aspace_id(), "kernel_seg1", &null_addr, REGION_ADDR_EXACT_ADDRESS,
+		vm_create_anonymous_region(vm_get_kernel_aspace_id(), "kernel_rw", &null_addr, REGION_ADDR_EXACT_ADDRESS,
 			PAGE_ALIGN(ka->kernel_seg1_addr.size), REGION_WIRING_WIRED_ALREADY, LOCK_RW|LOCK_KERNEL);
 	}
 	for(i=0; i < ka->num_cpus; i++) {

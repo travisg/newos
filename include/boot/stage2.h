@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -16,8 +16,9 @@ typedef struct {
 	unsigned int cons_line;
 	char *str;
 	addr_range bootdir_addr;
-	addr_range kernel_seg0_addr;    
-	addr_range kernel_seg1_addr;    
+	addr_range kernel_seg0_addr;
+	addr_range kernel_seg1_addr;
+	addr_range kernel_dynamic_section_addr;
 	unsigned int num_phys_mem_ranges;
 	addr_range phys_mem_range[MAX_PHYS_MEM_ADDR_RANGE];
 	unsigned int num_phys_alloc_ranges;

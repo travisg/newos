@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -126,6 +126,8 @@ struct Elf32_Sym {
 #define STT_LOPROC 13
 #define STT_HIPROC 15
 
+#define STN_UNDEF 0
+
 struct Elf32_Rel {
 	Elf32_Addr r_offset;
 	Elf32_Word r_info;
@@ -140,5 +142,40 @@ struct Elf32_Rela {
 #define ELF32_R_SYM(i) ((i) >> 8)
 #define ELF32_R_TYPE(i) ((unsigned char)(i))
 #define ELF32_R_INFO(s, t) (((s) << 8) + (unsigned char)(t))
+
+struct Elf32_Dyn {
+	Elf32_Sword d_tag;
+	union {
+		Elf32_Word d_val;
+		Elf32_Addr d_ptr;
+	} d_un;
+};
+
+#define DT_NULL 0
+#define DT_NEEDED 1
+#define DT_PLTRELSZ 2
+#define DT_PLTGOT 3
+#define DT_HASH 4
+#define DT_STRTAB 5
+#define DT_SYMTAB 6
+#define DT_RELA 7
+#define DT_RELASZ 8
+#define DT_RELAENT 9
+#define DT_STRSZ 10
+#define DT_SYMENT 11
+#define DT_INIT 12
+#define DT_FINI 13
+#define DT_SONAME 14
+#define DT_RPATH 15
+#define DT_SYMBOLIC 16
+#define DT_REL 17
+#define DT_RELSZ 18
+#define DT_RELENT 19
+#define DT_PLTREL 20
+#define DT_DEBUG 21
+#define DT_TEXTREL 22
+#define DT_JMPREL 23
+#define DT_LOPROC 0x70000000
+#define DT_HIPROC 0x7fffffff
 
 #endif
