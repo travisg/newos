@@ -18,7 +18,7 @@
 #include <kernel/arch/smp.h>
 
 #include <kernel/arch/i386/smp_priv.h>
-#include <kernel/arch/i386/timer.h>
+//#include <kernel/arch/i386/timer.h>
 
 static int num_cpus = 1;
 static unsigned int *apic = NULL;
