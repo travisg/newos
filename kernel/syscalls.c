@@ -232,12 +232,6 @@ int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_re
 		case SYSCALL_FDDUP2:
 			*call_ret = user_dup2(arg0, arg1);
 			break;
-		case SYSCALL_PROC_GET_ARGUMENT:
-			*call_ret = (addr)user_proc_get_arguments();
-			break;
-		case SYSCALL_PROC_GET_ARG_COUNT:
-			*call_ret = (addr)user_proc_get_arg_count();
-			break;
 		case SYSCALL_GET_PROC_TABLE:
 			*call_ret = user_proc_get_table((struct proc_info *)arg0, (size_t)arg1);
 			break;

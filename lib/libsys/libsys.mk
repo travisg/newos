@@ -20,6 +20,8 @@ $(LIBSYS): $(LIBSYS_OBJS) $(LIBHOARD)
 LIBS += $(LIBSYS) 
 LINK_LIBS += $(LIBSYS) 
 
+LIBS_SYSCALLS = $(LIBSYS_OBJ_DIR)/syscalls.o
+
 libsysclean: libhoardclean
 	rm -f $(LIBSYS_OBJS) $(LIBSYS)
 

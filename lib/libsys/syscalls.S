@@ -84,6 +84,4 @@ SYSCALL3(sys_sem_get_next_sem_info, 58)
 SYSCALL2(sys_set_sem_owner, 59)
 SYSCALL1(sys_dup, 60)
 SYSCALL2(sys_dup2, 61)
-SYSCALL0(sys_proc_get_arguments,62)
-SYSCALL0(sys_proc_get_arguments_count,63);
-SYSCALL2(sys_proc_get_table, 64);
+SYSCALL2(sys_proc_get_table, 62);

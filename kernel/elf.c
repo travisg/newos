@@ -537,19 +537,55 @@ int elf_load_uspace(const char *path, struct proc *p, int flags, addr *entry)
 		sprintf(region_name, "%s_seg%d", path, i);
 
 		region_addr = (char *)ROUNDOWN(pheaders[i].p_vaddr, PAGE_SIZE);
-		id = vm_create_anonymous_region(p->aspace_id, region_name, (void **)&region_addr, REGION_ADDR_EXACT_ADDRESS,
-			ROUNDUP(pheaders[i].p_memsz + (pheaders[i].p_vaddr % PAGE_SIZE), PAGE_SIZE), REGION_WIRING_LAZY, LOCK_RW);
-		if(id < 0) {
-			dprintf("error allocating region!\n");
-			err = ERR_INVALID_BINARY;
-			goto error;
-		}
+		if(pheaders[i].p_flags & PF_W) {
+			/*
+			 * rw segment
+			 */
+			id = vm_create_anonymous_region(
+				p->aspace_id,
+				region_name,
+				(void **)&region_addr,
+				REGION_ADDR_EXACT_ADDRESS,
+				ROUNDUP(pheaders[i].p_memsz + (pheaders[i].p_vaddr % PAGE_SIZE), PAGE_SIZE),
+				REGION_WIRING_LAZY, LOCK_RW
+			);
+			if(id < 0) {
+				dprintf("error allocating region!\n");
+				err = ERR_INVALID_BINARY;
+				goto error;
+			}
 
-		len = sys_read(fd, region_addr + (pheaders[i].p_vaddr % PAGE_SIZE), pheaders[i].p_offset, pheaders[i].p_filesz);
-		if(len < 0) {
-			err = len;
-			dprintf("error reading in seg %d\n", i);
-			goto error;
+			len = sys_read(
+				fd,
+				region_addr + (pheaders[i].p_vaddr % PAGE_SIZE),
+				pheaders[i].p_offset,
+				pheaders[i].p_filesz
+			);
+			if(len < 0) {
+				err = len;
+				dprintf("error reading in seg %d\n", i);
+				goto error;
+			}
+		} else {
+			/*
+			 * assume rx segment
+			 */
+			id= vm_map_file(
+				p->aspace_id,
+				region_name,
+				(void **)&region_addr,
+				REGION_ADDR_EXACT_ADDRESS,
+				ROUNDUP(pheaders[i].p_memsz + (pheaders[i].p_vaddr % PAGE_SIZE), PAGE_SIZE),
+				LOCK_RO,
+				REGION_PRIVATE_MAP,
+				path,
+				ROUNDOWN(pheaders[i].p_offset, PAGE_SIZE)
+			);
+			if(id < 0) {
+				dprintf("error mapping text!\n");
+				err = ERR_INVALID_BINARY;
+				goto error;
+			}
 		}
 	}
 

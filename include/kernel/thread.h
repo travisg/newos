@@ -51,8 +51,6 @@ struct proc {
 	int state;
 	int pending_signals;
 	char *name;
-	char **args;
-	int  argc;
 	void *ioctx;
 	sem_id proc_creation_sem;
 	aspace_id aspace_id;

@@ -18,6 +18,7 @@
 #include <kernel/vfs.h>
 #include <kernel/elf.h>
 #include <kernel/heap.h>
+#include <kernel/user_runtime.h>
 #include <sys/errors.h>
 #include <boot/stage2.h>
 #include <libc/string.h>
@@ -1552,8 +1553,6 @@ static struct proc *create_proc_struct(const char *name, bool kernel)
 	p->main_thread = NULL;
 	p->state = PROC_STATE_BIRTH;
 	p->pending_signals = SIG_NONE;
-	p->args =NULL;
-	p->argc =0;
 	p->proc_creation_sem = sem_create(0, "proc_creation_sem");
 	if(p->proc_creation_sem < 0)
 		goto error2;
@@ -1582,7 +1581,7 @@ static int get_arguments_data_size(char **args,int argc)
 	for(cnt = 0;cnt < argc;cnt++) tot_size += strlen(args[cnt]) + 1;
 	tot_size += (argc + 1)*sizeof(char *);
 
-	return tot_size;
+	return tot_size+sizeof(struct uspace_prog_args_t);
 }
 
 static int proc_create_proc2(void *args)
@@ -1597,6 +1596,7 @@ static int proc_create_proc2(void *args)
 	int tot_top_size;
 	char **uargs;
 	char *udest;
+	struct uspace_prog_args_t *uspa;
 	unsigned int  cnt;
 
 	t = thread_get_current_thread();
@@ -1617,8 +1617,9 @@ static int proc_create_proc2(void *args)
 		return t->user_stack_region_id;
 	}
 
-	uargs = (char **)(t->user_stack_base + STACK_SIZE);
-	udest = (char *)(t->user_stack_base+STACK_SIZE+(pargs->argc + 1)*sizeof(char *));
+	uspa  = (struct uspace_prog_args_t *)(t->user_stack_base + STACK_SIZE);
+	uargs = (char **)(uspa + 1);
+	udest = (char  *)(uargs + pargs->argc + 1);
 //	dprintf("addr: stack base=0x%x uargs = 0x%x  udest=0x%x tot_top_size=%d \n\n",t->user_stack_base,uargs,udest,tot_top_size);
 
 	for(cnt = 0;cnt < pargs->argc;cnt++){
@@ -1628,8 +1629,12 @@ static int proc_create_proc2(void *args)
 	}
 	uargs[cnt] = NULL;
 
-	p->args = uargs;
-	p->argc = pargs->argc;
+	user_memcpy(uspa->prog_name, p->name, sizeof(uspa->prog_name));
+	user_memcpy(uspa->prog_path, pargs->path, sizeof(uspa->prog_path));
+	uspa->argc = cnt;
+	uspa->argv = uargs;
+	uspa->envc = 0;
+	uspa->envp = 0;
 
 	if(pargs->args != NULL)
 		free_arg_list(pargs->args,pargs->argc);
@@ -1637,7 +1642,7 @@ static int proc_create_proc2(void *args)
 	path = pargs->path;
 	dprintf("proc_create_proc2: loading elf binary '%s'\n", path);
 
-	err = elf_load_uspace(path, p, 0, &entry);
+	err = elf_load_uspace("/boot/libexec/rld.so", p, 0, &entry);
 	if(err < 0){
 		// XXX clean up proc
 		sem_delete_etc(p->proc_creation_sem, -1);
@@ -1658,7 +1663,7 @@ static int proc_create_proc2(void *args)
 	p->proc_creation_sem = -1;
 
 	// jump to the entry point in user space
-	arch_thread_enter_uspace(entry, NULL, t->user_stack_base + STACK_SIZE);
+	arch_thread_enter_uspace(entry, uspa, t->user_stack_base + STACK_SIZE);
 
 	// never gets here
 	return 0;
@@ -1772,60 +1777,6 @@ error:
 	return rc;
 }
 
-static char *proc_get_argument(int arg_no)
-{
-   struct proc *p;
-	char   *ret;
-	int state = int_disable_interrupts();
-	GRAB_PROC_LOCK();
-
-	p = thread_get_current_thread()->proc;
-
-	if(arg_no > p->argc ) {
-		ret= NULL;
-	} else if(arg_no == 0){
-		ret = p->name;
-	} else {
-		ret = (p->args)[arg_no - 1];
-	}
-
-	RELEASE_PROC_LOCK();
-	int_restore_interrupts(state);
-	return ret;
-
-}
-
-int user_proc_get_arg_count(void)
-{
-	bool state;
-	int err;
-
-	state = int_disable_interrupts();
-	GRAB_PROC_LOCK();
-
-	err = thread_get_current_thread()->proc->argc;
-
-	RELEASE_PROC_LOCK();
-	int_restore_interrupts(state);
-
-	return err;
-}
-
-
-char **user_proc_get_arguments(void)
-{
-	char **args;
-	int  state;
-
-	state = int_disable_interrupts();
-	GRAB_PROC_LOCK();
-
-	args = thread_get_current_thread()->proc->args;
-
-	RELEASE_PROC_LOCK();
-	int_restore_interrupts(state);
-	return args;
-}
 
 // used by PS command any anthing else interested in a process list
 int user_proc_get_table(struct proc_info *pbuf, size_t len)

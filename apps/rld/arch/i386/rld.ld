@@ -1,11 +1,11 @@
 OUTPUT_FORMAT("elf32-i386", "elf32-i386", "elf32-i386")
 OUTPUT_ARCH(i386)
 
-ENTRY(_start)
+ENTRY(__RLD_STARTUP)
 SEARCH_DIR("libgcc");
 SECTIONS
 {
-	. = 0x00200000 + SIZEOF_HEADERS;
+	. = 0x00100000 + SIZEOF_HEADERS;
 
 	.interp : { *(.interp) }
 	.hash : { *(.hash) }
@@ -48,8 +48,7 @@ SECTIONS
 	__ctor_list = .;
 	PROVIDE (_ctor_list = .);
 	.ctors : { *(.ctors) }
-	__ctor_end = .;
-	PROVIDE (_ctor_end = .);
+	PROVIDE (__ctor_end = .);
 
 
 	/* unintialized data (in same segment as writable data) */

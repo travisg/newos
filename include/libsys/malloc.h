@@ -5,6 +5,8 @@
 #ifndef _MALLOC_H
 #define _MALLOC_H
 
+#include <types.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif

@@ -3,6 +3,7 @@
 ** Distributed under the terms of the NewOS License.
 */
 
+#include <kernel/user_runtime.h>
 #include <libsys/syscalls.h>
 
 extern int __stdio_init(void);
@@ -16,18 +17,20 @@ extern void (*__ctor_end)(void);
 
 extern int main(int argc,char **argv);
 
-int _start(void);
+int _start(struct uspace_prog_args_t *);
 void _call_ctors(void);
 
-int _start(void)
+int _start(struct uspace_prog_args_t *uspa)
 {
+	int i;
 	int retcode;
 	_call_ctors();
 
 	__heap_init();
 	__stdio_init();
 
-	retcode = main(sys_proc_get_arguments_count(),sys_proc_get_arguments());
+
+	retcode = main(uspa->argc, uspa->argv);
 
 	__stdio_deinit();
 	sys_exit(retcode);
@@ -36,7 +39,7 @@ int _start(void)
 
 void _call_ctors(void)
 { 
-	void (**f)();
+	void (**f)(void);
 
         for(f = &__ctor_list; f < &__ctor_end; f++) {
                 (**f)();
