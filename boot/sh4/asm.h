@@ -9,6 +9,7 @@ unsigned int get_sp();
 void set_sp(unsigned int sp);
 unsigned int get_p();
 void set_pr(unsigned int pr);
+unsigned int get_spc();
 
 #endif
 

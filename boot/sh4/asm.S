@@ -3,6 +3,7 @@
 .globl _get_vbr,_set_vbr
 .globl _get_sp,_set_sp
 .globl _get_pr,_set_pr
+.globl _get_spc
 
 _get_sr:
 	stc	sr,r0
@@ -43,3 +44,9 @@ _set_pr:
 	lds	r4,pr
 	rts
 	nop
+
+_get_spc:
+	stc	spc,r0
+	rts
+	nop
+

@@ -208,7 +208,7 @@ void mmu_map_page_64k(unsigned int vaddr, unsigned int paddr)
 	_mmu_map_page(vaddr, paddr, PAGE_SIZE_64K);
 }
 
-void mmu_map_page_4k(unsigned int vaddr, unsigned int paddr)
+void mmu_map_page(unsigned int vaddr, unsigned int paddr)
 {
 	_mmu_map_page(vaddr, paddr, PAGE_SIZE_4K);
 }

@@ -173,7 +173,7 @@ int serial_get(u1 *buf)
 	int c;
 	int state;
 	int escape;
-	int count;
+	int count = 0;
 	int l;
 	
 	state = 3;

@@ -45,8 +45,11 @@ void int_handler()
 		case 0x40:
 		case 0x60:
 			dprintf("TEA = 0x%x\r\n", *(unsigned int *)0xff00000c);
+			dprintf("PC = 0x%x\r\n", get_spc());
 			for(;;);
 			break;
+		case 0x1a0:
+			dprintf("illegal slot exception: PC = 0x%x\r\n", get_spc());
 		case 0x100:
 			for(;;);
 		default:
