@@ -191,6 +191,8 @@ SYSCALL2(sys_sem_get_count, 56)
 SYSCALL2(sys_sem_get_sem_info, 57)
 SYSCALL3(sys_sem_get_next_sem_info, 58)
 SYSCALL2(sys_set_sem_owner, 59)
+SYSCALL1(sys_dup, 60)
+SYSCALL2(sys_dup2, 61)
 
 /* we will optimize by just passing a ptr to the place where the caller
 ** would have dumped the args */

@@ -529,8 +529,10 @@ static int new_fd(struct ioctx *ioctx, struct file_descriptor *f)
 			break;
 		}
 	}
-	if(fd < 0)
+	if(fd < 0) {
+		fd = ERR_NOMORE_HANDLES;
 		goto err;
+	}
 
 	ioctx->fds[fd] = f;
 	ioctx->num_used_fds++;
@@ -1659,6 +1661,103 @@ err:
 	return rc;
 }
 
+static int vfs_dup(int fd, bool kernel)
+{
+	struct ioctx* curr_ioctx;
+	struct file_descriptor *f;
+	int rc;
+
+#if MAKE_NOIZE
+	dprintf("vfs_dup: fd=%d\n", fd);
+#endif
+
+	// Get current io context
+	curr_ioctx = get_current_ioctx(kernel);
+
+	// Try to get the fd structure 
+	f = get_fd(curr_ioctx, fd);
+	if(!f) {
+		rc = ERR_INVALID_HANDLE;
+		goto err;
+	}
+
+	// now put the fd in place
+	rc = new_fd(curr_ioctx, f);
+
+	if(rc < 0) {
+		put_fd(f);
+	}
+
+err:
+	return rc;
+}
+
+static int vfs_dup2(int ofd, int nfd, bool kernel)
+{
+	struct ioctx* curr_ioctx;
+	struct file_descriptor *evicted;
+	int rc;
+
+#if MAKE_NOIZE
+	dprintf("vfs_dup2: ofd=%d nfd=%d\n", ofd, nfd);
+#endif
+
+	// quick check
+	if((ofd < 0) || (nfd < 0)) {
+		rc= ERR_INVALID_HANDLE;
+		goto err;
+	}
+
+	// Get current io context and lock
+	curr_ioctx = get_current_ioctx(kernel);
+	mutex_lock(&curr_ioctx->io_mutex);
+
+	
+	// Check for upper boundary, we do in the locked part
+	// because in the future the fd table might be resizeable
+	if((ofd >= curr_ioctx->table_size) || !curr_ioctx->fds[ofd]) {
+		rc= ERR_INVALID_HANDLE;
+		goto err_1;
+	}
+	if((nfd >= curr_ioctx->table_size)) {
+		rc= ERR_INVALID_HANDLE;
+		goto err_1;
+	}
+
+
+	// Check for identity, note that it cannot be made above
+	// because we always want to return an error on invalid
+	// handles
+	if(ofd == nfd) {
+		goto success;
+	}
+	
+
+	// Now do the work
+	evicted= curr_ioctx->fds[nfd];
+	curr_ioctx->fds[nfd]= curr_ioctx->fds[ofd];
+	atomic_add(&curr_ioctx->fds[ofd]->ref_count, 1);
+	
+
+	// Unlock the ioctx
+	mutex_unlock(&curr_ioctx->io_mutex);
+	
+
+	// Say bye bye to the evicted fd
+	if(evicted) {
+		put_fd(evicted);
+	}
+
+success:
+	rc= nfd;
+	return nfd;
+
+err_1:
+	mutex_unlock(&curr_ioctx->io_mutex);
+err:
+	return rc;
+}
+
 int sys_mount(const char *path, const char *device, const char *fs_name, void *args)
 {
 	char buf[SYS_MAX_PATH_LEN+1];
@@ -1812,6 +1911,16 @@ int sys_setcwd(const char* _path)
 
 	// Call vfs to set new working directory
 	return vfs_set_cwd(path,true);
+}
+
+int sys_dup(int fd)
+{
+	return vfs_dup(fd, true);
+}
+
+int sys_dup2(int ofd, int nfd)
+{
+	return vfs_dup2(ofd, nfd, true);
 }
 
 int user_mount(const char *upath, const char *udevice, const char *ufs_name, void *args)
@@ -2083,6 +2192,16 @@ int user_setcwd(const char* upath)
 
 	// Call vfs to set new working directory
 	return vfs_set_cwd(path,false);
+}
+
+int user_dup(int fd)
+{
+	return vfs_dup(fd, false);
+}
+
+int user_dup2(int ofd, int nfd)
+{
+	return vfs_dup2(ofd, nfd, false);
 }
 
 image_id vfs_load_fs_module(const char *name)

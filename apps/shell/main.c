@@ -49,15 +49,25 @@ enum {
 	PARSE_STATE_DONE
 };
 
-static int parse_line(char *buf, char *argv[], int max_args)
+enum {
+	FIELD_ARG = 0,
+	FIELD_INPUT,
+	FIELD_OUTPUT
+};
+
+static int parse_line(char *buf, char *argv[], int max_args, char *redirect_in, char *redirect_out)
 {
 	int state = PARSE_STATE_INITIAL;
 	int curr_char = 0;
 	int curr_field = 0;
 	int field_start = 0;
 	int field_end = 0;
+	int field_type = 0;
 	int c = 0;
 
+
+	redirect_in[0]= 0;
+	redirect_out[0]= 0;
 	for(;;) {
 		// read in the next char if we're in the proper state
 		switch(state) {
@@ -80,6 +90,18 @@ static int parse_line(char *buf, char *argv[], int max_args)
 				if(!isspace(c)) {
 					// we see a non-space char, we gots to transition
 					state = PARSE_STATE_NEW_FIELD;
+					switch(c) {
+						case '>':
+							field_type = FIELD_OUTPUT;
+							state = PARSE_STATE_SCANNING_SPACE;
+							break;
+						case '<':
+							field_type = FIELD_INPUT;
+							state = PARSE_STATE_SCANNING_SPACE;
+							break;
+						default:
+							break;
+					}
 				} else if(c == '\0')
 					state = PARSE_STATE_DONE;
 				break;
@@ -102,14 +124,24 @@ static int parse_line(char *buf, char *argv[], int max_args)
 				break;
 			case PARSE_STATE_FIELD_DONE:
 				// point the args at the spot in the buffer
-				argv[curr_field++] = &buf[field_start];
 				buf[field_end] = 0;
-				if(curr_field == max_args)
-					return curr_field;
+				switch(field_type) {
+					case FIELD_OUTPUT:
+						strcpy(redirect_out, buf+field_start);
+						break;
+					case FIELD_INPUT:
+						strcpy(redirect_in, buf+field_start);
+						break;
+					case FIELD_ARG:
+						argv[curr_field++] = &buf[field_start];
+						if(curr_field == max_args)
+							return curr_field;
+				}
 				if(c != '\0')
 					state = PARSE_STATE_SCANNING_SPACE;
 				else
 					state = PARSE_STATE_DONE;
+				field_type = FIELD_ARG;
 				break;
 			case PARSE_STATE_SCANNING_STRING:
 				if(c == '"' || c == '\0') {
@@ -123,6 +155,58 @@ static int parse_line(char *buf, char *argv[], int max_args)
 		}
 	}
 	return -1;
+}
+
+static int launch(int (*cmd)(int, char **), int argc, char **argv, char *r_in, char *r_out)
+{
+	int saved_in;
+	int saved_out;
+	int new_in;
+	int new_out;
+	int retval= 0;
+
+	if(strcmp(r_in, "")!= 0) {
+		new_in = sys_open(r_in, STREAM_TYPE_ANY, 0);
+	} else {
+		new_in = sys_dup(0);
+	}
+	if(new_in < 0) {
+		printf("%s: %s\n", r_in, strerror(new_in));
+		goto err_1;
+	}
+
+	if(strcmp(r_out, "")!= 0) {
+		new_out = sys_open(r_out, STREAM_TYPE_ANY, 0);
+	} else {
+		new_out = sys_dup(1);
+	}
+	if(new_out < 0) {
+		printf("%s: %s\n", r_out, strerror(new_out));
+		goto err_2;
+	}
+
+
+	saved_in = sys_dup(0);
+	saved_out= sys_dup(1);
+
+	sys_dup2(new_in, 0);
+	sys_dup2(new_out, 1);
+	sys_close(new_in);
+	sys_close(new_out);
+
+	retval= cmd(argc, argv);
+
+	sys_dup2(saved_in, 0);
+	sys_dup2(saved_out, 1);
+	sys_close(saved_in);
+	sys_close(saved_out);
+
+	return retval;
+
+err_2:
+	sys_close(new_in);
+err_1:
+	return 0;
 }
 
 static int shell_parse(char *buf, int len)
@@ -164,10 +248,11 @@ static int shell_parse(char *buf, int len)
 					// we need to parse the command
 					int argc;
 					char *argv[64];
+					char redirect_in[256];
+					char redirect_out[256];
 
-					argc = parse_line(buf, argv, 64);
-					if(cmds[i].cmd_handler(argc, argv) != 0)
-						return -1;
+					argc = parse_line(buf, argv, 64, redirect_in, redirect_out);
+					launch(cmds[i].cmd_handler, argc, argv, redirect_in, redirect_out);
 				}
 				found_command = true;
 				break;
@@ -176,10 +261,12 @@ static int shell_parse(char *buf, int len)
 			// we need to parse the command
 			int argc;
 			char *argv[64];
+			char redirect_in[256];
+			char redirect_out[256];
 
 			argv[0]= "exec";
-			argc = 1+parse_line(buf, argv+1, 63);
-			cmds[i].cmd_handler(argc, argv);
+			argc = 1+parse_line(buf, argv+1, 63, redirect_in, redirect_out);
+			launch(cmds[i].cmd_handler, argc, argv, redirect_in, redirect_out);
 			found_command = true;
 			break;
 			

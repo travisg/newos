@@ -106,6 +106,8 @@ int sys_rstat(const char *path, struct file_stat *stat);
 int sys_wstat(const char *path, struct file_stat *stat, int stat_mask);
 int sys_getcwd(char* buf, size_t size);
 int sys_setcwd(const char* path);
+int sys_dup(int fd);
+int sys_dup2(int ofd, int nfd);
 
 time_t sys_system_time();
 int sys_snooze(time_t time);

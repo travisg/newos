@@ -22,6 +22,7 @@
 #define ERR_TOO_BIG              ERR_GENERAL-11
 #define ERR_NOT_FOUND            ERR_GENERAL-12
 #define ERR_NOT_IMPLEMENTED_YET  ERR_GENERAL-13
+#define ERR_NOMORE_HANDLES       ERR_GENERAL-14
 
 /* Semaphore errors */
 #define ERR_SEM_GENERAL          -1024

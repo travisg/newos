@@ -226,6 +226,12 @@ int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_re
 		case SYSCALL_SEM_SET_SEM_OWNER:
 			*call_ret = user_set_sem_owner((sem_id)arg0, (proc_id)arg1);
 			break;
+		case SYSCALL_FDDUP:
+			*call_ret = user_dup(arg0);
+			break;
+		case SYSCALL_FDDUP2:
+			*call_ret = user_dup2(arg0, arg1);
+			break;
 		default:
 			*call_ret = -1;
 	}

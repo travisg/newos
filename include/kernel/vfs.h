@@ -142,6 +142,8 @@ int sys_rstat(const char *path, struct file_stat *stat);
 int sys_wstat(const char *path, struct file_stat *stat, int stat_mask);
 char *sys_getcwd(char *buf, size_t size);
 int sys_setcwd(const char* path);
+int sys_dup(int fd);
+int sys_dup2(int ofd, int nfd);
 
 /* calls the syscall dispatcher should use for user file I/O */
 int user_mount(const char *path, const char *device, const char *fs_name, void *args);
@@ -161,6 +163,8 @@ int user_rstat(const char *path, struct file_stat *stat);
 int user_wstat(const char *path, struct file_stat *stat, int stat_mask);
 int user_getcwd(char *buf, size_t size);
 int user_setcwd(const char* path);
+int user_dup(int fd);
+int user_dup2(int ofd, int nfd);
 
 #endif
 
