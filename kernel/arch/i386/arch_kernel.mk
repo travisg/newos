@@ -9,7 +9,6 @@ KERNEL_OBJS += \
 	$(KERNEL_ARCH_DIR)/arch_i386.o \
 	$(KERNEL_ARCH_DIR)/arch_interrupts.o \
 	$(KERNEL_ARCH_DIR)/arch_int.o \
-	$(KERNEL_ARCH_DIR)/arch_keyboard.o \
 	$(KERNEL_ARCH_DIR)/arch_pmap.o \
 	$(KERNEL_ARCH_DIR)/arch_smp.o \
 	$(KERNEL_ARCH_DIR)/arch_timer.o \

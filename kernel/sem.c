@@ -39,7 +39,7 @@ void dump_sem_list(int argc, char **argv)
 
 	for(i=0; i<MAX_SEMS; i++) {
 		if(sems[i].id >= 0) {
-			dprintf("0x%x\tid: 0x%x\tname: '%s'\n", &sems[i], sems[i].id, sems[i].name);
+			dprintf("0x%x\tid: 0x%x\t\tname: '%s'\n", &sems[i], sems[i].id, sems[i].name);
 		}
 	}
 }
@@ -208,7 +208,7 @@ int sem_delete(sem_id id)
 			released_threads++;
 			
 			if(ready_threads_count == READY_THREAD_CACHE_SIZE) {
-				// put a batch of em in the runq a once				
+				// put a batch of em in the runq at once				
 				GRAB_THREAD_LOCK();
 				for(; ready_threads_count > 0; ready_threads_count--)
 					thread_enqueue_run_q(ready_threads[ready_threads_count - 1]);
@@ -256,6 +256,12 @@ static void sem_timeout(void *data)
 	
 //	dprintf("sem_timeout: called on 0x%x sem %d, tid %d\n", to, to->sem_id, to->thread_id);
 	
+	if(sems[slot].id != t->blocked_sem_id) {
+		// this thread was not waiting on this semaphore
+		panic("sem_timeout: thid %d was trying to wait on sem %d which doesn't exist!\n",
+			t->id, t->blocked_sem_id);
+	}
+	
 	t = thread_dequeue_id(&sems[slot].q, t->id);
 	if(t != NULL) {
 		sems[slot].count += t->sem_count;
@@ -298,6 +304,7 @@ int sem_acquire_etc(sem_id id, int count, int flags, long long timeout)
 	if((sems[slot].count -= count) < 0) {
 		// we need to block
 		struct thread *t = thread_get_current_thread();
+		struct timer_event timer; // stick it on the heap, since we may be blocking here
 		
 		t->next_state = THREAD_STATE_WAITING;
 		t->sem_count = count;
@@ -308,8 +315,8 @@ int sem_acquire_etc(sem_id id, int count, int flags, long long timeout)
 //			dprintf("sem_acquire_etc: setting timeout sem for %d %d usecs, semid %d, tid %d\n",
 //				timeout, sem_id, t->id);
 			// set up an event to go off, with the thread struct as the data
-			timer_setup_timer(&sem_timeout, (void *)t, &t->timer);
-			timer_set_event(timeout, TIMER_MODE_ONESHOT, &t->timer);
+			timer_setup_timer(&sem_timeout, (void *)t, &timer);
+			timer_set_event(timeout, TIMER_MODE_ONESHOT, &timer);
 		}
 
 		RELEASE_SEM_LOCK(sems[slot]);
@@ -385,8 +392,8 @@ int sem_release_etc(sem_id id, int count, int flags)
 	}
 	RELEASE_SEM_LOCK(sems[slot]);
 	if(released_threads > 0) {
-		GRAB_THREAD_LOCK();
 		// put any leftovers in the runq
+		GRAB_THREAD_LOCK();
 		if(ready_threads_count > 0) {
 			for(; ready_threads_count > 0; ready_threads_count--)
 				thread_enqueue_run_q(ready_threads[ready_threads_count - 1]);

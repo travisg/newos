@@ -370,6 +370,14 @@ void arch_con_puts_xy(const char *s, int x, int y)
 	restore_cur();
 }
 
+int handle_keyboard_interrupt()
+{
+	dprintf("keyboard interrupt\n");
+	// XXX remove
+	panic("keyboard panic!\n");
+	return INT_NO_RESCHEDULE;
+}
+
 /*
  *  void arch_con_init(void);
  */
@@ -387,19 +395,13 @@ int arch_con_init(kernel_args *ka)
 	gotoxy(0, ka->cons_line);
 
 	// Setup keyboard interrupt
-	int_set_io_interrupt_handler(1,&_keyboard_interrupt);
+	int_set_io_interrupt_handler(0x21,&handle_keyboard_interrupt);
 /*
 	outb_p(inb_p(0x21)&0xfd,0x21);
 	a=inb_p(0x61);
 	outb_p(a|0x80,0x61);
 	outb(a,0x61);
 */
-	return 0;
-}
-
-int handle_keyboard_interrupt()
-{
-	dprintf("keyboard interrupt\n");
 	return 0;
 }
 

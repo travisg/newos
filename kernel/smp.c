@@ -403,7 +403,8 @@ int smp_get_num_cpus()
 
 int smp_enable_ici()
 {
-	ici_enabled = true;
+	if(smp_num_cpus > 1) // dont actually do it if we only have one cpu
+		ici_enabled = true;
 }
 
 int smp_disable_ici()

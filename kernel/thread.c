@@ -535,9 +535,20 @@ static void thread_context_switch(struct thread *t_from, struct thread *t_to)
 	arch_thread_context_switch(t_from, t_to);
 }
 
+#define NUM_TEST_THREADS 16
 /* thread TEST code */
-static sem_id thread_test_sem;
+static sem_id thread_test_sems[NUM_TEST_THREADS];
 static thread_id thread_test_first_thid;
+
+int test_thread_starter_thread()
+{
+	thread_snooze(1000000); // wait a second
+	
+	// start the chain of threads by releasing one of them
+	sem_release(thread_test_sems[0], 1);
+
+	return 0;	
+}
 
 int test_thread()
 {
@@ -565,6 +576,20 @@ int test_thread()
 		thread_snooze(10000 * tid);
 #endif
 #if 1
+		sem_acquire(thread_test_sems[tid - thread_test_first_thid], 1);
+
+		// release the next semaphore
+		{
+			sem_id sem_to_release;			
+
+			sem_to_release = tid - thread_test_first_thid + 1;
+			if(sem_to_release >= NUM_TEST_THREADS)
+				sem_to_release = 0;
+			sem_to_release = thread_test_sems[sem_to_release];
+			sem_release(sem_to_release, 1);
+		}	
+#endif
+#if 0
 		switch(tid - thread_test_first_thid) {
 			case 2: case 4:
 				if((a % 2048) == 0)
@@ -607,12 +632,15 @@ int thread_test()
 		if(i == 0) {
 			thread_test_first_thid = t->id;
 		}
+		sprintf(temp, "test sem %d", i);
+		thread_test_sems[i] = sem_create(0, temp);
 	}	
-
-	t = create_kernel_thread("panic thread", &panic_thread, THREAD_MAX_PRIORITY);
+	t = create_kernel_thread("test starter thread", &test_thread_starter_thread, THREAD_MAX_PRIORITY);
 	thread_enqueue_run_q(t);
+
+//	t = create_kernel_thread("panic thread", &panic_thread, THREAD_MAX_PRIORITY);
+//	thread_enqueue_run_q(t);
 	
-	thread_test_sem = sem_create(1, "test");
 	return 0;
 }
 

@@ -33,7 +33,6 @@ struct thread {
 	int next_state;
 	int sem_count;
 	sem_id blocked_sem_id;
-	struct timer_event timer;
 	struct proc *proc;
 	struct area *kernel_stack_area;
 	struct area *user_stack_area;
