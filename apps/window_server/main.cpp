@@ -329,7 +329,7 @@ int vesa_find(Renderer **renderer)
 	int err;
 	void *framebuffer;
 
-	fd = _kern_open("/dev/graphics/vesa/fb/0", 0);
+	fd = open("/dev/graphics/vesa/fb/0", 0);
 	if(fd < 0) {
 		printf("error opening vesa device\n");
 		return -1;

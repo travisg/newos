@@ -71,7 +71,7 @@ static int do_ls(const char *arg)
 
 			fd = _kern_opendir(arg);
 			if(fd < 0) {
-				//printf("ls: _kern_open() returned error: %s!\n", strerror(fd));
+				//printf("ls: opendir() returned error: %s!\n", strerror(fd));
 				break;
 			}
 

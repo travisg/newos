@@ -112,9 +112,9 @@ int cmd_cat(int argc, char *argv[])
 		return 0;
 	}
 
-	fd = _kern_open(argv[1], 0);
+	fd = open(argv[1], 0);
 	if(fd < 0) {
-		printf("cat: _kern_open() returned error: %s!\n", strerror(fd));
+		printf("cat: open() returned error: %s!\n", strerror(fd));
 		goto done_cat;
 	}
 

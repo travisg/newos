@@ -111,7 +111,7 @@ int foo(int argc, char **argv)
 #endif
 
 #if 0
-	fd = _kern_open("/dev/net/rtl8139/0", "", STREAM_TYPE_DEVICE);
+	fd = open("/dev/net/rtl8139/0", "", STREAM_TYPE_DEVICE);
 	if(fd >= 0) {
 		for(;;) {
 			size_t len;
@@ -129,7 +129,7 @@ int foo(int argc, char **argv)
 	}
 #endif
 #if 0
-	fd = _kern_open("/dev/net/rtl8139/0", "", STREAM_TYPE_DEVICE);
+	fd = open("/dev/net/rtl8139/0", "", STREAM_TYPE_DEVICE);
 	if(fd >= 0) {
 		int foo = 0;
 		for(;;) {
@@ -150,7 +150,7 @@ int foo(int argc, char **argv)
 		size_t bytes_read;
 
 		printf("opening /dev/bus/ide/0/0/raw\n");
-		fd = _kern_open("/dev/bus/ide/0/0/raw", "", STREAM_TYPE_DEVICE);
+		fd = open("/dev/bus/ide/0/0/raw", "", STREAM_TYPE_DEVICE);
 		printf("fd = %d\n", fd);
 
 		bytes_read = 512;
@@ -205,7 +205,7 @@ int foo(int argc, char **argv)
 		int rc;
 		int len = 512;
 
-		fd = _kern_open("/boot/testapp", "", STREAM_TYPE_FILE);
+		fd = open("/boot/testapp", "", STREAM_TYPE_FILE);
 
 		rc = pread(fd, buf, &len, 0);
 		printf("rc from read = 0x%x\n", rc);
@@ -217,7 +217,7 @@ int foo(int argc, char **argv)
 		char data;
 		int fd;
 
-		fd = _kern_open("/dev/audio/pcbeep/1", STREAM_TYPE_DEVICE, 0);
+		fd = open("/dev/audio/pcbeep/1", STREAM_TYPE_DEVICE, 0);
 		if(fd >= 0) {
 			printf("writing to the speaker\n");
 			data = 3;
@@ -240,7 +240,7 @@ int foo(int argc, char **argv)
 		int fd, bytes_read;
 		char buf[3];
 
-		fd = _kern_open("/dev/ps2mouse", STREAM_TYPE_DEVICE, 0);
+		fd = open("/dev/ps2mouse", STREAM_TYPE_DEVICE, 0);
 		if(fd < 0) {
 			printf("failed to open device\n");
 			return -1;
@@ -261,7 +261,7 @@ int foo(int argc, char **argv)
 		int buf[512/4];
 		int i, j;
 
-		fd = _kern_open("/dev/disk/netblock/0/raw", STREAM_TYPE_DEVICE, 0);
+		fd = open("/dev/disk/netblock/0/raw", STREAM_TYPE_DEVICE, 0);
 		if(fd < 0) {
 			printf("could not open netblock\n");
 			return -1;
@@ -440,7 +440,7 @@ int foo(int argc, char **argv)
 		int err;
 		void *framebuffer;
 
-		fd = _kern_open("/dev/graphics/fb/0", STREAM_TYPE_DEVICE, 0);
+		fd = open("/dev/graphics/fb/0", 0);
 		if(fd < 0) {
 			printf("error opening framebuffer device\n");
 			return -1;
