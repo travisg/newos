@@ -3,7 +3,7 @@
 ** Distributed under the terms of the NewOS License.
 */
 #include <string.h>
-#include <libc/ctype.h>
+#include <ctype.h>
 
 int
 strnicmp(char const *s1, char const *s2, size_t len)

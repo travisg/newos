@@ -5,7 +5,7 @@
 #include <types.h>
 #include <libc/stdarg.h>
 #include <libc/string.h>
-#include <libc/ctype.h>
+#include <ctype.h>
 #include <libc/printf.h>
 
 #if 0

@@ -7,8 +7,8 @@
 #include <kernel/debug.h>
 #include <kernel/arch/cpu.h>
 
-#include <libc/string.h>
-#include <libc/ctype.h>
+#include <nulibc/string.h>
+#include <nulibc/ctype.h>
 #include <libc/printf.h>
 
 void vm_test()

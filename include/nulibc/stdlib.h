@@ -16,7 +16,10 @@ extern "C" {
 #endif
 
 
-int	atoi(char const *); 
+int	      atoi(char const *); 
+unsigned int  atoui(const char *num);
+long          atol(const char *num);
+unsigned long atoul(const char *num);
 
 
 #ifdef __cplusplus

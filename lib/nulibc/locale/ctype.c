@@ -2,7 +2,7 @@
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
-#include <libc/ctype.h>
+#include <ctype.h>
 
 #define _U	0x01	/* upper */
 #define _L	0x02	/* lower */

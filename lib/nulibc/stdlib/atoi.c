@@ -3,7 +3,7 @@
 ** Distributed under the terms of the NewOS License.
 */
 #include <libc/string.h>
-#include <libc/ctype.h>
+#include <ctype.h>
 
 static int hexval(char c)
 {

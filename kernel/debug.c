@@ -17,8 +17,8 @@
 
 #include <libc/stdarg.h>
 #include <libc/printf.h>
-#include <libc/string.h>
-#include <libc/ctype.h>
+#include <nulibc/string.h>
+#include <nulibc/ctype.h>
 
 
 int dbg_register_file[2][14]; /* XXXmpetit -- must be made generic */

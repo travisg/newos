@@ -6,7 +6,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <libc/printf.h>
-#include <libc/ctype.h>
+#include <ctype.h>
 #include <sys/syscalls.h>
 #include <libsys/stdio.h>
 

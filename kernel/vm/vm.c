@@ -26,8 +26,9 @@
 #include <kernel/arch/cpu.h>
 #include <kernel/arch/vm.h>
 
-#include <libc/string.h>
-#include <libc/ctype.h>
+#include <nulibc/string.h>
+#include <nulibc/ctype.h>
+#include <nulibc/stdlib.h>
 #include <libc/printf.h>
 
 #define HEAP_SIZE	0x00400000

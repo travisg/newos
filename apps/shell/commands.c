@@ -7,7 +7,7 @@
 #include <sys/syscalls.h>
 #include <libsys/stdio.h>
 #include <libsys/malloc.h>
-#include <libc/ctype.h>
+#include <ctype.h>
 
 #include "commands.h"
 
