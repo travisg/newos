@@ -10,6 +10,10 @@ strerror(int errnum)
 {
 	switch(errnum) {
 		/* General Errors */
+		case NO_ERROR:
+			return "No Error";
+		;
+		
 		case ERR_GENERAL:
 			return "General Error";
 		;
