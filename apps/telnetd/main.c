@@ -147,6 +147,7 @@ int main(int argc, char **argv)
 	int spawn_argc;
 	int i;
 	proc_id pid;
+	thread_id tid;
 
 	if(argc < 2) {
 		printf("%s: not enough arguments\n", argv[0]);
@@ -211,8 +212,13 @@ int main(int argc, char **argv)
 	if(pid < 0)
 		return -1;
 
-	sys_thread_resume_thread(sys_thread_create_thread("telnet reader", &telnet_reader, NULL));
-	sys_thread_resume_thread(sys_thread_create_thread("telnet writer", &telnet_writer, NULL));
+	tid = sys_thread_create_thread("telnet reader", &telnet_reader, NULL);
+	sys_thread_set_priority(tid, 30);
+	sys_thread_resume_thread(tid);
+
+	tid = sys_thread_create_thread("telnet writer", &telnet_writer, NULL);
+	sys_thread_set_priority(tid, 30);
+	sys_thread_resume_thread(tid);
 
 	sys_proc_wait_on_proc(pid, NULL);
 

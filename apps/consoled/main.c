@@ -113,6 +113,8 @@ static int start_console(struct console *con)
 	if(con->console_writer < 0)
 		return -8;
 
+	sys_thread_set_priority(con->keyboard_reader, 32);
+	sys_thread_set_priority(con->console_writer, 32);
 	sys_thread_resume_thread(con->keyboard_reader);
 	sys_thread_resume_thread(con->console_writer);
 
