@@ -113,3 +113,5 @@ depsclean:
 	rm -f $(KERNEL_DEPS) $(LIB_DEPS) $(STAGE2_DEPS)
 	
 allclean: depsclean clean toolsclean
+	rm -f `find . -type f -name '*.d'`
+	rm -f `find . -type f -name '*.o'`
