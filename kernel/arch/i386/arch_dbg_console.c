@@ -5,6 +5,7 @@
 #include <kernel/kernel.h>
 #include <kernel/int.h>
 #include <kernel/arch/cpu.h>
+#include <kernel/arch/dbg_console.h>
 
 #include <boot/stage2.h>
 
@@ -26,7 +27,7 @@ int arch_dbg_con_init(kernel_args *ka)
 	return 0;
 }
 
-char arch_dbg_con_read()
+char arch_dbg_con_read(void)
 {
 	while ((in8(0x3fd) & 1) == 0)
 		;

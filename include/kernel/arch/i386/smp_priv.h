@@ -6,9 +6,9 @@
 #define _I386_SMP_PRIV_H
 
 int i386_smp_interrupt(int vector);
-void arch_smp_ack_interrupt();
+void arch_smp_ack_interrupt(void);
 int arch_smp_set_apic_timer(time_t relative_timeout);
-int arch_smp_clear_apic_timer();
+int arch_smp_clear_apic_timer(void);
 
 #define MP_FLT_SIGNATURE '_PM_'
 #define MP_CTH_SIGNATURE 'PCMP'

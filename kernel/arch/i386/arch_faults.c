@@ -12,8 +12,10 @@
 
 #include <kernel/arch/cpu.h>
 #include <kernel/arch/int.h>
+#include <kernel/arch/faults.h>
 
 #include <kernel/arch/i386/interrupts.h>
+#include <kernel/arch/i386/faults.h>
 
 #include <boot/stage2.h>
 

@@ -102,7 +102,7 @@ int arch_smp_init(kernel_args *ka)
 	return 0;
 }
 
-void arch_smp_send_broadcast_ici()
+void arch_smp_send_broadcast_ici(void)
 {
 	int config;
 	int state;
@@ -131,7 +131,7 @@ void arch_smp_send_ici(int target_cpu)
 	int_restore_interrupts(state);
 }
 
-int arch_smp_get_current_cpu()
+int arch_smp_get_current_cpu(void)
 {
 	if(apic == NULL)
 		return 0;
@@ -139,7 +139,7 @@ int arch_smp_get_current_cpu()
 		return cpu_os_id[(apic_read(APIC_ID) & 0xffffffff) >> 24];
 }
 
-void arch_smp_ack_interrupt()
+void arch_smp_ack_interrupt(void)
 {
 	apic_write(APIC_EOI, 0);
 }
@@ -178,7 +178,7 @@ int arch_smp_set_apic_timer(time_t relative_timeout)
 	return 0;
 }
 
-int arch_smp_clear_apic_timer()
+int arch_smp_clear_apic_timer(void)
 {
 	unsigned int config;
 	int state;

@@ -51,7 +51,7 @@ struct int_frame {
 
 static desc_table *idt = NULL;
 
-void interrupt_ack(int n)
+static void interrupt_ack(int n)
 {
 	if(n >= 0x20 && n < 0x30) {
 		// 8239 controlled interrupt
@@ -148,6 +148,7 @@ bool arch_int_is_interrupts_enabled(void)
 	return flags & 0x200 ? 1 : 0;
 }
 
+void i386_handle_trap(struct int_frame frame); /* keep the compiler happy, this function must be called only from assembly */
 void i386_handle_trap(struct int_frame frame)
 {
 	int ret = INT_NO_RESCHEDULE;
