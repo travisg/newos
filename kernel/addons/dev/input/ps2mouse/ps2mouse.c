@@ -354,6 +354,14 @@ int dev_bootstrap(void)
    // init device driver
 	memset(&md_int, 0, sizeof(mouse_data));
 
+	// empty Output buffer by reading from it
+	if ( isa->read_io_8(PS2_PORT_CTRL) & 0x1 )
+		isa->read_io_8(PS2_PORT_DATA);
+
+	// XXX
+	// There is a small race condition right here.
+	// Does writing a control byte really require the Output buffer to be empty?
+
 	// enable auxilary device, IRQs and PS/2 mouse
    write_command_byte(PS2_CMD_DEV_INIT);
 	write_aux_byte(PS2_CMD_ENABLE_MOUSE);
