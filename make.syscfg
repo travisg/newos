@@ -219,6 +219,16 @@ $(warning download the appropriate toolchain for your build environment)
 $(warning at http://newos.sourceforge.net/download.php)
 endif
 
+ifneq ($(USE_DISTCC),)
+$(warning using distcc)
+	CC := distcc $(CC)
+endif
+
+ifneq ($(USE_CCACHE),)
+$(warning using ccache)
+	CC := ccache $(CC)
+endif
+
 GLOBAL_CFLAGS += -finline -nostdinc -fno-builtin
 GLOBAL_CFLAGS += -Wall -W -Wno-multichar -Wno-unused-parameter -Wmissing-prototypes
 GLOBAL_CFLAGS += -DARCH_$(ARCH) -DNEWOS=1 -D__ARCH__=$(ARCH) -U$(ARCH)
