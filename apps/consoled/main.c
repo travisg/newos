@@ -70,46 +70,54 @@ static int console_writer(void *arg)
 	return 0;
 }
 
-static int start_console(struct console *con)
+static int start_console(struct console *con, int *stage)
 {
 	memset(con, 0, sizeof(struct console));
 
+	*stage = 0;
 	con->wait_sem = _kern_sem_create(0, "console wait sem");
 	if(con->wait_sem < 0)
-		return -1;
+		return con->wait_sem;
 
+	*stage = 1;
 	con->console_fd = open("/dev/console", 0);
 	if(con->console_fd < 0)
-		return -2;
+		return con->console_fd;
 
+	*stage = 2;
 	con->keyboard_fd = open("/dev/keyboard", 0);
 	if(con->keyboard_fd < 0)
-		return -3;
+		return con->keyboard_fd;
 
+	*stage = 3;
 	con->tty_master_fd = open("/dev/tty/master", 0);
 	if(con->tty_master_fd < 0)
-		return -4;
+		return con->tty_master_fd;
 
+	*stage = 4;
 	con->tty_num = ioctl(con->tty_master_fd, _TTY_IOCTL_GET_TTY_NUM, NULL, 0);
 	if(con->tty_num < 0)
-		return -5;
+		return con->tty_num;
 
+	*stage = 5;
 	{
 		char temp[128];
 		sprintf(temp, "/dev/tty/slave/%d", con->tty_num);
 
 		con->tty_slave_fd = open(temp, 0);
 		if(con->tty_slave_fd < 0)
-			return -6;
+			return con->tty_slave_fd;
 	}
 
+	*stage = 6;
 	con->keyboard_reader = _kern_thread_create_thread("console reader", &console_reader, con);
 	if(con->keyboard_reader < 0)
-		return -7;
+		return con->keyboard_reader;
 
+	*stage = 7;
 	con->console_writer = _kern_thread_create_thread("console writer", &console_writer, con);
 	if(con->console_writer < 0)
-		return -8;
+		return con->console_writer;
 
 	_kern_thread_set_priority(con->keyboard_reader, 32);
 	_kern_thread_set_priority(con->console_writer, 32);
@@ -148,10 +156,16 @@ static proc_id start_process(const char *path, const char *name, char **argv, in
 int main(void)
 {
 	int err;
+	int stage = 0;
 
-	err = start_console(&theconsole);
+	err = start_console(&theconsole, &stage);
 	if(err < 0) {
-		printf("consoled: error %d starting console\n", err);
+		int console_fd = open("/dev/console", 0);
+		if(console_fd >= 0) {
+			char buf[128];
+			sprintf(buf, "consoled: error %d at stage %d starting console\n", err, stage);
+			write(console_fd, buf, strlen(buf));
+		}
 		return err;
 	}
 
