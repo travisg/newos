@@ -15,8 +15,8 @@ int tcp_open(void **prot_data);
 int tcp_bind(void *prot_data, sockaddr *addr);
 int tcp_connect(void *prot_data, sockaddr *addr);
 int tcp_close(void *prot_data);
-//ssize_t udp_recvfrom(void *prot_data, void *buf, ssize_t len, sockaddr *saddr, int flags, bigtime_t timeout);
-//ssize_t udp_sendto(void *prot_data, const void *buf, ssize_t len, sockaddr *addr);
+ssize_t tcp_recvfrom(void *prot_data, void *buf, ssize_t len, sockaddr *saddr, int flags, bigtime_t timeout);
+ssize_t tcp_sendto(void *prot_data, const void *buf, ssize_t len, sockaddr *addr);
 int tcp_init(void);
 
 #endif

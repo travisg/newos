@@ -93,16 +93,31 @@ static int net_test_thread4(void *unused)
 	thread_snooze(2000000);
 
 	id = socket_create(SOCK_PROTO_TCP, 0);
-//	socket_bind(id, &addr);
 	dprintf("net_test_thread4: id %d\n", id);
 
 	memset(&addr, 0, sizeof(addr));
 	addr.addr.len = 4;
 	addr.addr.type = ADDR_TYPE_IP;
-	addr.port = 9;
-	NETADDR_TO_IPV4(addr.addr) = IPV4_DOTADDR_TO_ADDR(192,168,0,3);
+	addr.port = 19;
+	NETADDR_TO_IPV4(addr.addr) = IPV4_DOTADDR_TO_ADDR(192,168,0,70);
 
 	socket_connect(id, &addr);
+
+	for(;;) {
+		char buf2[1024];
+		ssize_t len;
+
+		len = socket_recvfrom(id, buf2, sizeof(buf2), NULL);
+		dprintf("*** net test 4: len %d\n", len);
+		len = socket_recvfrom(id, buf2, sizeof(buf2), NULL);
+		dprintf("*** net test 4: len %d\n", len);
+		len = socket_recvfrom(id, buf2, sizeof(buf2), NULL);
+		dprintf("*** net test 4: len %d\n", len);
+		len = socket_recvfrom(id, buf2, sizeof(buf2), NULL);
+		dprintf("*** net test 4: len %d\n", len);
+
+		thread_snooze(4000000);
+	}
 
 	return 0;
 }

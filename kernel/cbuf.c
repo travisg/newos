@@ -26,12 +26,15 @@ static cbuf *cbuf_region;
 static region_id cbuf_bitmap_region_id;
 static uint8 *cbuf_bitmap;
 
+/* initialize most of the cbuf structure */
+/* does not initialize the next pointer, because it may already be in a chain */
 static void initialize_cbuf(cbuf *buf)
 {
 	buf->len = sizeof(buf->dat);
+	buf->total_len = 0;
 	buf->data = buf->dat;
 	buf->flags = 0;
-	buf->total_len = 0;
+	buf->packet_next = 0;
 }
 
 static void *_cbuf_alloc(size_t *size)
@@ -704,14 +707,15 @@ uint16 cbuf_ones_cksum16_2(cbuf *buf, void *buff, int len1, size_t offset, size_
 	return ~_cbuf_ones_cksum16(buf, offset, len2, sum);
 }
 
-int cbuf_truncate_head(cbuf *buf, size_t trunc_bytes)
+cbuf *cbuf_truncate_head(cbuf *buf, size_t trunc_bytes)
 {
 	cbuf *head = buf;
+	cbuf *free_chain = NULL;
 
 	if(!buf)
-		return ERR_INVALID_ARGS;
+		return head;
 	if((buf->flags & CBUF_FLAG_CHAIN_HEAD) == 0)
-		return ERR_INVALID_ARGS;
+		return head;
 
 	while(buf && trunc_bytes > 0) {
 		int to_trunc;
@@ -723,10 +727,25 @@ int cbuf_truncate_head(cbuf *buf, size_t trunc_bytes)
 
 		trunc_bytes -= to_trunc;
 		head->total_len -= to_trunc;
+
 		buf = buf->next;
+		if(buf && head->len == 0) {
+			// the head cbuf is now zero length
+			buf->total_len = head->total_len;
+			buf->flags |= CBUF_FLAG_CHAIN_HEAD;
+			buf->packet_next = head->packet_next;
+
+			head->next = free_chain;
+			free_chain = head;
+
+			head = buf;
+  		}
 	}
 
-	return 0;
+	if(free_chain)
+		cbuf_free_chain(free_chain);
+
+	return head;
 }
 
 int cbuf_truncate_tail(cbuf *buf, size_t trunc_bytes)

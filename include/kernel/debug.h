@@ -27,7 +27,7 @@ extern void dbg_save_registers(int *);	/* arch provided */
 
 #if DEBUG
 #define ASSERT(x) \
-	{ if(!(x)) panic("ASSERT FAILED (%s:%d): %s", __FILE__, __LINE__, #x); }
+	{ if(!(x)) panic("ASSERT FAILED (%s:%d): %s\n", __FILE__, __LINE__, #x); }
 #else
 #define ASSERT(x)
 #endif

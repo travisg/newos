@@ -13,6 +13,7 @@
 #include <kernel/net/tcp.h>
 #include <kernel/net/ipv4.h>
 #include <kernel/net/misc.h>
+#include <kernel/net/net_timer.h>
 #include <string.h>
 #include <stdlib.h>
 
@@ -73,6 +74,10 @@ typedef struct tcp_socket {
 	sem_id read_sem;
 	uint32 rx_win_size;
 	uint32 rx_win_low;
+	uint32 rx_win_high;
+	cbuf *reassembly_q;
+	cbuf *read_buffer;
+	net_timer_event ack_delay_timer;
 
 	/* tx */
 	sem_id write_sem;
@@ -87,40 +92,14 @@ typedef struct tcp_socket_key {
 	uint16 remote_port;
 } tcp_socket_key;
 
-#if 0
-typedef struct udp_queue_elem {
-	struct udp_queue_elem *next;
-	struct udp_queue_elem *prev;
-	ipv4_addr src_address;
-	ipv4_addr target_address;
-	uint16 src_port;
-	uint16 target_port;
-	int len;
-	cbuf *buf;
-} udp_queue_elem;
-
-typedef struct udp_queue {
-	udp_queue_elem *next;
-	udp_queue_elem *prev;
-	int count;
-} udp_queue;
-
-typedef struct udp_endpoint {
-	struct udp_endpoint *next;
-	mutex lock;
-	sem_id blocking_sem;
-	uint16 port;
-	udp_queue q;
-	int ref_count;
-} udp_endpoint;
-#endif
-
 static tcp_socket *socket_table;
 static mutex socket_table_lock;
 static int next_ephemeral_port = 1024;
 
 #define SYN_RETRANSMIT_TIMEOUT 1000000
+#define ACK_DELAY 500
 #define DEFAULT_RX_WINDOW_SIZE (32*1024)
+#define MAX_SEGMENT_SIZE 2048
 
 #define SEQUENCE_GTE(a, b) ((int)((a) - (b)) >= 0)
 #define SEQUENCE_LTE(a, b) ((int)((a) - (b)) <= 0)
@@ -133,8 +112,11 @@ static void tcp_send(ipv4_addr dest_addr, uint16 dest_port, ipv4_addr src_addr, 
 static void tcp_socket_send(tcp_socket *s, cbuf *data, tcp_flags flags, const void *options, uint16 options_length, uint32 sequence);
 static void handle_ack(tcp_socket *s, uint32 sequence, uint32 window_size, bool with_data);
 static void handle_data(tcp_socket *s, cbuf *buf);
+static void handle_ack_delay_timeout(void *_socket);
 static int destroy_tcp_socket(tcp_socket *s);
 static tcp_socket *create_tcp_socket(void);
+static void send_ack(tcp_socket *s);
+static void tcp_remote_close(tcp_socket *s);
 
 
 static int tcp_socket_compare_func(void *_s, const void *_key)
@@ -219,6 +201,8 @@ static tcp_socket *create_tcp_socket(void)
 	if(!s)
 		return NULL;
 
+	memset(s, 0, sizeof(tcp_socket));
+
 	// set up the new socket structure
 	s->next = NULL;
 	s->state = STATE_CLOSED;
@@ -237,6 +221,7 @@ static tcp_socket *create_tcp_socket(void)
 	s->remote_port = 0;
 	s->rx_win_size = DEFAULT_RX_WINDOW_SIZE;
 	s->rx_win_low = 0;
+	s->rx_win_high = 0;
 	s->tx_win_low = rand();
 
 	return s;
@@ -298,7 +283,7 @@ int tcp_input(cbuf *buf, ifnet *i, ipv4_addr source_address, ipv4_addr target_ad
 #endif
 
 	// deal with the checksum check
-	if(header->checksum) {
+	{
 		tcp_pseudo_header pheader;
 		uint16 checksum;
 
@@ -338,6 +323,24 @@ int tcp_input(cbuf *buf, ifnet *i, ipv4_addr source_address, ipv4_addr target_ad
 	// lock the socket
 	mutex_lock(&s->lock);
 
+	// see if the other side wants to reset the connection
+	if(packet_flags & PKT_RST) {
+		if(s->state != STATE_CLOSED && s->state != STATE_LISTEN) {
+			tcp_remote_close(s);
+		}
+		goto ditch_packet;
+	}
+
+	// check for out of window packets
+	if(!(packet_flags & PKT_SYN)) {
+		if(SEQUENCE_LT(ntohl(header->seq_num), s->rx_win_low)
+			|| SEQUENCE_GTE(ntohl(header->seq_num), s->rx_win_high)) {
+			/* out of window, ack it */
+			send_ack(s);
+			goto ditch_packet;
+		}
+	}
+
 #if NET_CHATTY
 	dprintf("tcp_input: socket %p, state 0x%x\n", s, s->state);
 #endif
@@ -363,6 +366,7 @@ int tcp_input(cbuf *buf, ifnet *i, ipv4_addr source_address, ipv4_addr target_ad
 			s->tx_win_low++;
 			if(packet_flags & PKT_SYN) {
 				s->rx_win_low = ntohl(header->seq_num) + 1;
+				s->rx_win_high = s->rx_win_low + s->rx_win_size - 1;
 				if(packet_flags & PKT_ACK) {
 					// they're acking our SYN
 					if(ntohl(header->ack_num) != s->tx_win_low)
@@ -531,86 +535,74 @@ int tcp_close(void *prot_data)
 	return 0;
 }
 
-
-#if 0
-int udp_open(netaddr *addr, uint16 port, void **prot_data)
+ssize_t tcp_recvfrom(void *prot_data, void *buf, ssize_t len, sockaddr *saddr, int flags, bigtime_t timeout)
 {
-	udp_endpoint *e;
-
-	e = kmalloc(sizeof(udp_endpoint));
-	if(!e)
-		return ERR_NO_MEMORY;
-
-	mutex_init(&e->lock, "udp endpoint lock");
-	e->blocking_sem = sem_create(0, "udp endpoint sem");
-	e->port = port;
-	e->ref_count = 1;
-	udp_init_queue(&e->q);
-
-	mutex_lock(&endpoints_lock);
-	hash_insert(endpoints, e);
-	mutex_unlock(&endpoints_lock);
-
-	*prot_data = e;
-
-	return 0;
-}
-
-int udp_close(void *prot_data)
-{
-	udp_endpoint *e = prot_data;
-
-	mutex_lock(&endpoints_lock);
-	hash_remove(endpoints, e);
- 	mutex_unlock(&endpoints_lock);
-
-	udp_endpoint_release_ref(e);
-
-	return 0;
-}
-
-ssize_t udp_recvfrom(void *prot_data, void *buf, ssize_t len, sockaddr *saddr, int flags, bigtime_t timeout)
-{
-	udp_endpoint *e = prot_data;
-	udp_queue_elem *qe;
+	tcp_socket *s = prot_data;
 	int err;
-	ssize_t ret;
+	ssize_t bytes_read = 0;
+	int avail;
+	ssize_t to_copy;
+	uint32 new_rx_win_size;
 
-retry:
-	if(flags & SOCK_FLAG_TIMEOUT)
-		err = sem_acquire_etc(e->blocking_sem, 1, SEM_FLAG_TIMEOUT, timeout, NULL);
-	else
-		err = sem_acquire(e->blocking_sem, 1);
-	if(err < 0)
-		return err;
+	inc_socket_ref(s);
+	mutex_lock(&s->lock);
 
-	// pop an item off the list, if there are any
-	mutex_lock(&e->lock);
-	qe = udp_queue_pop(&e->q);
-	mutex_unlock(&e->lock);
-
-	if(!qe)
-		goto retry;
-
-	// we have the data, copy it out
-	cbuf_memcpy_from_chain(buf, qe->buf, 0, min(qe->len, len));
-	ret = qe->len;
-
-	// copy the address out
-	if(saddr) {
-		saddr->addr.len = 4;
-		saddr->addr.type = ADDR_TYPE_IP;
-		NETADDR_TO_IPV4(&saddr->addr) = qe->src_address;
-		saddr->port = qe->src_port;
+	if(s->state != STATE_ESTABLISHED) {
+		bytes_read = 0;
+		goto out;
 	}
 
-	// free this queue entry
-	cbuf_free_chain(qe->buf);
-	kfree(qe);
+	/* wait for the buffer to have something in it, or timeout */
+	while(s->state == STATE_ESTABLISHED && s->read_buffer == NULL) {
+		mutex_unlock(&s->lock);
+		if(flags & SOCK_FLAG_TIMEOUT)
+			err = sem_acquire_etc(s->read_sem, 1, SEM_FLAG_TIMEOUT, timeout, NULL);
+		else
+			err = sem_acquire(s->read_sem, 1);
+		mutex_lock(&s->lock);
+		if(err < 0) {
+			bytes_read = err;
+			goto out;
+		}
+	}
 
-	return ret;
+	/* copy as much data as we can */
+	avail = cbuf_get_len(s->read_buffer);
+	to_copy = min(avail, len);
+	err = cbuf_user_memcpy_from_chain(buf, s->read_buffer, 0, to_copy);
+	if(err < 0) {
+		bytes_read = err;
+		goto out;
+	}
+
+	/* truncate the read buffer */
+	s->read_buffer = cbuf_truncate_head(s->read_buffer, to_copy);
+	if(cbuf_get_len(s->read_buffer) == 0) {
+		cbuf_free_chain(s->read_buffer);
+		s->read_buffer = NULL;
+	}
+	bytes_read = to_copy;
+
+	/* update the receive window */
+	new_rx_win_size = s->rx_win_size - cbuf_get_len(s->read_buffer);
+
+	/* see if the window is opening, and needs an ack to be sent */
+	if(new_rx_win_size >= MAX_SEGMENT_SIZE && s->rx_win_high - s->rx_win_low < MAX_SEGMENT_SIZE)
+		send_ack(s);
+
+out:
+	mutex_unlock(&s->lock);
+	dec_socket_ref(s);
+	return bytes_read;
 }
 
+ssize_t tcp_sendto(void *prot_data, const void *inbuf, ssize_t len, sockaddr *toaddr)
+{
+
+	return ERR_UNIMPLEMENTED;
+}
+
+#if 0
 ssize_t udp_sendto(void *prot_data, const void *inbuf, ssize_t len, sockaddr *toaddr)
 {
 	udp_endpoint *e = prot_data;
@@ -662,18 +654,73 @@ ssize_t udp_sendto(void *prot_data, const void *inbuf, ssize_t len, sockaddr *to
 }
 #endif
 
+static void send_ack(tcp_socket *s)
+{
+	ASSERT_LOCKED_MUTEX(&s->lock);
+
+	if(cancel_net_timer(&s->ack_delay_timer) >= 0)
+		dec_socket_ref(s);
+
+	if(s->state != STATE_ESTABLISHED)
+		return;
+
+	// XXX handle sending any pending data here, have the ack piggyback that
+	tcp_socket_send(s, NULL, PKT_ACK, NULL, 0, s->tx_win_low);
+}
+
+
 static void handle_ack(tcp_socket *s, uint32 sequence, uint32 window_size, bool with_data)
 {
-	// XXX handle
+	// XXX implement
+	ASSERT_LOCKED_MUTEX(&s->lock);
+}
+
+static void handle_ack_delay_timeout(void *_socket)
+{
+	tcp_socket *s = (tcp_socket *)_socket;
+
+	mutex_lock(&s->lock);
+	send_ack(s);
+	mutex_unlock(&s->lock);
+	dec_socket_ref(s);
 }
 
 static void handle_data(tcp_socket *s, cbuf *buf)
 {
-	tcp_header *header;
+	tcp_header header;
+	int header_length;
+	uint32 seq_low, seq_high;
 
-	header = (tcp_header *)cbuf_get_ptr(buf, 0);
+	ASSERT_LOCKED_MUTEX(&s->lock);
+
+	// copy the header
+	memcpy(&header, cbuf_get_ptr(buf, 0), sizeof(header));
+	header_length = ((ntohs(header.length_flags) >> 12) % 0xf) * 4;
+	seq_low = ntohl(header.seq_num);
+	seq_high = seq_low + cbuf_get_len(buf) - header_length - 1;
+
+	if(SEQUENCE_LTE(seq_low, s->rx_win_low) && SEQUENCE_GTE(seq_high, s->rx_win_low)) {
+		// it's in order, so truncate from the head and add to the receive buffer
+		buf = cbuf_truncate_head(buf, header_length + (s->rx_win_low - seq_low));
+		s->rx_win_low += cbuf_get_len(buf);
+		s->read_buffer = cbuf_merge_chains(s->read_buffer, buf);
+
+		sem_release(s->read_sem, 1);
+
+		// XXX see if any reassembly packets need to be dealt with
 
 
+		// set up a delayed ack
+		if((int)(s->rx_win_low + s->rx_win_size - s->rx_win_high) > (int)s->rx_win_size / 2) {
+			send_ack(s);
+		} else if(set_net_timer(&s->ack_delay_timer, ACK_DELAY, handle_ack_delay_timeout, s, NET_TIMER_PENDING_IGNORE) >= 0) {
+			// a delayed ack timeout was set
+			inc_socket_ref(s);
+		}
+	} else {
+		// XXX packet out of order, deal with it
+
+	}
 }
 
 static void tcp_send(ipv4_addr dest_addr, uint16 dest_port, ipv4_addr src_addr, uint16 source_port, cbuf *buf, tcp_flags flags,
@@ -720,10 +767,60 @@ error:
 
 static void tcp_socket_send(tcp_socket *s, cbuf *data, tcp_flags flags, const void *options, uint16 options_length, uint32 sequence)
 {
+	uint32 rx_win_high;
+	uint16 win_size;
+
+	ASSERT_LOCKED_MUTEX(&s->lock);
+
+	// calculate the new right edge of the rx window
+	rx_win_high = s->rx_win_low + s->rx_win_size - cbuf_get_len(s->read_buffer);
+
+#if NET_CHATTY
+	dprintf("** s->rx_win_low %ud s->rx_win_size %ud read_buf_len %d, new win high %ud\n",
+		s->rx_win_low, s->rx_win_size, cbuf_get_len(s->read_buffer), rx_win_high);
+#endif
+	if(SEQUENCE_GTE(rx_win_high, s->rx_win_high)) {
+		s->rx_win_high = rx_win_high;
+		win_size = rx_win_high - s->rx_win_low;
+	} else {
+		// the window size has shrunk, but we can't move the
+		// right edge of the window backwards
+		win_size = s->rx_win_high - s->rx_win_low;
+	}
+
+	// we are piggybacking a pending ACK, so clear the delayed ACK timer
+	if(flags & PKT_ACK) {
+		if(cancel_net_timer(&s->ack_delay_timer) == 0)
+			dec_socket_ref(s);
+	}
+
 	mutex_unlock(&s->lock);
 	tcp_send(s->remote_addr, s->remote_port, s->local_addr, s->local_port, data, flags, s->rx_win_low,
-			options, options_length, sequence, s->rx_win_size);
+			options, options_length, sequence, win_size);
 	mutex_lock(&s->lock);
+}
+
+static void tcp_remote_close(tcp_socket *s)
+{
+
+	ASSERT_LOCKED_MUTEX(&s->lock);
+
+	if(s->state == STATE_CLOSED)
+		return;
+
+	inc_socket_ref(s);
+	mutex_unlock(&s->lock);
+
+	// pull the socket out of the hash table
+	mutex_lock(&socket_table_lock);
+	hash_remove(socket_table, s);
+	mutex_unlock(&socket_table_lock);
+
+	mutex_lock(&s->lock);
+
+	s->state = STATE_CLOSED;
+
+	dec_socket_ref(s);
 }
 
 int tcp_init(void)
@@ -735,6 +832,8 @@ int tcp_init(void)
 	socket_table = hash_init(256, (addr)&s.next - (addr)&s, &tcp_socket_compare_func, &tcp_socket_hash_func);
 	if(!socket_table)
 		return ERR_NO_MEMORY;
+
+	next_ephemeral_port = rand() % 32000 + 1024;
 	return 0;
 }
 

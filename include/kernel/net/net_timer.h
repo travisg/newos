@@ -22,9 +22,11 @@ typedef struct net_timer_event {
 	bool pending;
 } net_timer_event;
 
+#define NET_TIMER_PENDING_IGNORE 0x1
+
 int net_timer_init(void);
 
-int set_net_timer(net_timer_event *e, unsigned int delay_ms, net_timer_callback callback, void *args);
+int set_net_timer(net_timer_event *e, unsigned int delay_ms, net_timer_callback callback, void *args, int flags);
 int cancel_net_timer(net_timer_event *e);
 
 void clear_net_timer(net_timer_event *e);

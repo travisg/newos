@@ -18,7 +18,11 @@ typedef struct cbuf {
 	size_t total_len;
 	void *data;
 	int flags;
-	char dat[CBUF_LEN - sizeof(struct cbuf *) - 2*sizeof(int) - sizeof(void *) - sizeof(int)];
+
+	/* used by the network stack to chain a list of these together */
+	struct cbuf *packet_next;
+
+	char dat[CBUF_LEN - 2*sizeof(struct cbuf *) - 2*sizeof(size_t) - sizeof(void *) - sizeof(int)];
 } cbuf;
 
 int cbuf_init(void);
@@ -43,7 +47,7 @@ uint16 cbuf_ones_cksum16_2(cbuf *buf, void *buff, int len1, size_t offset, size_
 cbuf *cbuf_merge_chains(cbuf *chain1, cbuf *chain2);
 cbuf *cbuf_duplicate_chain(cbuf *chain, size_t offset, size_t len);
 
-int cbuf_truncate_head(cbuf *chain, size_t trunc_bytes);
+cbuf *cbuf_truncate_head(cbuf *chain, size_t trunc_bytes);
 int cbuf_truncate_tail(cbuf *chain, size_t trunc_bytes);
 
 void cbuf_test(void);

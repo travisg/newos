@@ -42,18 +42,20 @@ int ethernet_input(cbuf *buf, ifnet *i)
 {
 	int err;
 	ethernet2_header *e2_head;
+	uint16 type;
 
 	if(cbuf_get_len(buf) < MIN_ETHERNET2_LEN)
 		return -1;
 
 	e2_head = cbuf_get_ptr(buf, 0);
+	type = ntohs(e2_head->type);
 
 	dump_ethernet_header(e2_head);
 
 	// strip out the ethernet header
-	cbuf_truncate_head(buf, sizeof(ethernet2_header));
+	buf = cbuf_truncate_head(buf, sizeof(ethernet2_header));
 
-	switch(ntohs(e2_head->type)) {
+	switch(type) {
 		case PROT_TYPE_IPV4:
 			err = ipv4_input(buf, i);
 			break;
@@ -61,7 +63,7 @@ int ethernet_input(cbuf *buf, ifnet *i)
 			err = arp_input(buf, i);
 			break;
 		default:
-			dprintf("ethernet_receive: unknown ethernet type 0x%x\n", ntohs(e2_head->type));
+			dprintf("ethernet_receive: unknown ethernet type 0x%x\n", type);
 			err = -1;
 	}
 

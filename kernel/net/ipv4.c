@@ -497,7 +497,7 @@ done_frag_spot_search:
 		if(last) {
 			if(last->offset + last->len == offset) {
 				// merge it
-				cbuf_truncate_head(inbuf, ((header->version_length & 0xf) * 4));
+				inbuf = cbuf_truncate_head(inbuf, ((header->version_length & 0xf) * 4));
 				last->buf = cbuf_merge_chains(last->buf, inbuf);
 				inbuf = last->buf;
 				last->len += len;
@@ -513,7 +513,7 @@ done_frag_spot_search:
 			if(offset + len == temp->offset) {
 				// merge it
 				ipv4_header *next_header = cbuf_get_ptr(temp->buf, 0);
-				cbuf_truncate_head(temp->buf, ((next_header->version_length & 0xf) * 4));
+				temp->buf = cbuf_truncate_head(temp->buf, ((next_header->version_length & 0xf) * 4));
 				temp->buf = cbuf_merge_chains(inbuf, temp->buf);
 				inbuf = temp->buf;
 				header = (ipv4_header *)cbuf_get_ptr(inbuf, 0);
@@ -531,7 +531,7 @@ done_frag_spot_search:
 			if(last->offset + len == temp->offset) {
 				// merge them
 				ipv4_header *next_header = cbuf_get_ptr(temp->buf, 0);
-				cbuf_truncate_head(temp->buf, ((next_header->version_length & 0xf) * 4));
+				temp->buf = cbuf_truncate_head(temp->buf, ((next_header->version_length & 0xf) * 4));
 				last->buf = cbuf_merge_chains(last->buf, temp->buf);
 				inbuf = last->buf;
 				header = (ipv4_header *)cbuf_get_ptr(inbuf, 0);
@@ -605,6 +605,8 @@ int ipv4_input(cbuf *buf, ifnet *i)
 {
 	int err;
 	ipv4_header *header;
+	ipv4_addr src, dest;
+	uint8 protocol;
 
 	header = (ipv4_header *)cbuf_get_ptr(buf, 0);
 
@@ -691,19 +693,24 @@ int ipv4_input(cbuf *buf, ifnet *i)
 		}
 	}
 
+	// save some data
+	protocol = header->protocol;
+	src = ntohl(header->src);
+	dest = ntohl(header->dest);
+
 	// strip off the ip header
 	cbuf_truncate_head(buf, (header->version_length & 0xf) * 4);
 
 	// demultiplex and hand to the proper module
-	switch(header->protocol) {
+	switch(protocol) {
 		case IP_PROT_ICMP:
-			return icmp_input(buf, i, ntohl(header->src));
+			return icmp_input(buf, i, src);
 		case IP_PROT_TCP:
-			return tcp_input(buf, i, ntohl(header->src), ntohl(header->dest));
+			return tcp_input(buf, i, src, dest);
 		case IP_PROT_UDP:
-			return udp_input(buf, i, ntohl(header->src), ntohl(header->dest));
+			return udp_input(buf, i, src, dest);
 		default:
-			dprintf("ipv4_receive: packet with unknown protocol (%d)\n", header->protocol);
+			dprintf("ipv4_receive: packet with unknown protocol (%d)\n", protocol);
 			err = ERR_NET_BAD_PACKET;
 			goto ditch_packet;
 	}

@@ -57,12 +57,19 @@ static net_timer_event *peek_queue_head(void)
 	return e;
 }
 
-int set_net_timer(net_timer_event *e, unsigned int delay_ms, net_timer_callback callback, void *args)
+int set_net_timer(net_timer_event *e, unsigned int delay_ms, net_timer_callback callback, void *args, int flags)
 {
+	int err = NO_ERROR;
+
 	recursive_lock_lock(&net_q.lock);
 
-	if(e->pending)
+	if(e->pending) {
+		if(flags & NET_TIMER_PENDING_IGNORE) {
+			err = ERR_GENERAL;
+			goto out;
+		}
 		cancel_net_timer(e);
+	}
 
 	// set up the timer
 	e->func = callback;
@@ -72,9 +79,10 @@ int set_net_timer(net_timer_event *e, unsigned int delay_ms, net_timer_callback 
 
 	add_to_queue(e);
 
+out:
 	recursive_lock_unlock(&net_q.lock);
 
-	return 0;
+	return err;
 }
 
 int cancel_net_timer(net_timer_event *e)
@@ -84,7 +92,7 @@ int cancel_net_timer(net_timer_event *e)
 	recursive_lock_lock(&net_q.lock);
 
 	if(!e->pending) {
-		err = NO_ERROR;
+		err = ERR_GENERAL;
 		goto out;
 	}
 

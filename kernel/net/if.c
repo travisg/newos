@@ -17,8 +17,15 @@
 #include <kernel/net/ethernet.h>
 #include <kernel/net/if.h>
 #include <string.h>
+#include <stdlib.h>
 
 #define TX_QUEUE_SIZE 64
+
+#define LOSE_RX_PACKETS 0
+#define LOSE_RX_PERCENTAGE 5
+
+#define LOSE_TX_PACKETS 0
+#define LOSE_TX_PERCENTAGE 5
 
 static void *iflist;
 static if_id next_id;
@@ -146,6 +153,13 @@ static int if_tx_thread(void *args)
 			if(!buf)
 				break;
 
+#if LOSE_TX_PACKETS
+			if(rand() % 100 < LOSE_TX_PERCENTAGE) {
+				cbuf_free_chain(buf);
+				continue;
+			}
+#endif
+
 			// put the cbuf chain into a flat buffer
 			len = cbuf_get_len(buf);
 			cbuf_memcpy_from_chain(i->tx_buf, buf, 0, len);
@@ -179,6 +193,13 @@ static int if_rx_thread(void *args)
 		}
 		if(len == 0)
 			continue;
+
+#if LOSE_RX_PACKETS
+		if(rand() % 100 < LOSE_RX_PERCENTAGE) {
+			dprintf("if_rx_thread: purposely lost packet, size %d\n", len);
+			continue;
+		}
+#endif
 
 		// check to see if we have a link layer address attached to us
 		if(!i->link_addr)

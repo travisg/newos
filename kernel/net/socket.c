@@ -165,6 +165,9 @@ ssize_t socket_recvfrom(sock_id id, void *buf, ssize_t len, sockaddr *addr)
 		case SOCK_PROTO_UDP:
 			err = udp_recvfrom(s->prot_data, buf, len, addr, 0, 0);
 			break;
+		case SOCK_PROTO_TCP:
+			err = tcp_recvfrom(s->prot_data, buf, len, addr, 0, 0);
+			break;
 		default:
 			err = ERR_INVALID_ARGS;
 	}
@@ -184,6 +187,9 @@ ssize_t socket_recvfrom_etc(sock_id id, void *buf, ssize_t len, sockaddr *addr, 
 		case SOCK_PROTO_UDP:
 			err = udp_recvfrom(s->prot_data, buf, len, addr, flags, timeout);
 			break;
+		case SOCK_PROTO_TCP:
+			err = tcp_recvfrom(s->prot_data, buf, len, addr, flags, timeout);
+			break;
 		default:
 			err = ERR_INVALID_ARGS;
 	}
@@ -202,6 +208,9 @@ ssize_t socket_sendto(sock_id id, const void *buf, ssize_t len, sockaddr *addr)
 	switch(s->type) {
 		case SOCK_PROTO_UDP:
 			err = udp_sendto(s->prot_data, buf, len, addr);
+			break;
+		case SOCK_PROTO_TCP:
+			err = tcp_sendto(s->prot_data, buf, len, addr);
 			break;
 		default:
 			err = ERR_INVALID_ARGS;
