@@ -505,7 +505,7 @@ void makeboot(section *s, char *outfile)
             die("unrecognized section type \"%s\"",type);
         }
 
-		printf(" %8s %8d %s\n", type, LENDIAN_TO_HOST32(centry.be_vsize), centry.be_name);
+		printf(" %8s %8d %s\n", type, fix(centry.be_vsize), centry.be_name);
 		
         c++;
         s = s->next;

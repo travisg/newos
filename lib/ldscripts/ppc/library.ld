@@ -5,7 +5,7 @@ ENTRY(_start)
 SEARCH_DIR("libgcc");
 SECTIONS
 {
-	. = 0x80000000 + SIZEOF_HEADERS;
+	. = 0x00200000 + SIZEOF_HEADERS;
 
 	.interp : { *(.interp) }
 	.hash : { *(.hash) }
@@ -35,31 +35,39 @@ SECTIONS
 	.plt : { *(.plt) }
 
 	/* text/read-only data */
-	.text :	{ *(.text .gnu.linkonce.t.*) } =0x9090
+	.text :	{ *(.text .gnu.linkonce.t.*) }
 
 	.rodata : { *(.rodata) }
 
 	/* writable data  */
-	. = ALIGN(0x1000);
+  	. = ALIGN(0x1000) + (. & (0x1000 - 1));
 	__data_start = .;
+	PROVIDE(_data_start = .);
 	.data : { *(.data .gnu.linkonce.d.*) }
 
 	__ctor_list = .;
+	PROVIDE (_ctor_list = .);
 	.ctors : { *(.ctors) }
 	__ctor_end = .;
+	PROVIDE (_ctor_end = .);
+
 	__dtor_list = .;
+	PROVIDE (_dtor_list = .);
 	.dtors : { *(.dtors) }
 	__dtor_end = .;
-	.got : { *(.got.plt) *(.got) }
+	PROVIDE (_dtor_end = .);
+
+    .got	 : { *(.got.plt) *(.got) }
 	.dynamic : { *(.dynamic) }
-	
+
+
 	/* unintialized data (in same segment as writable data) */
-	__bss_start = .;
+	PROVIDE (__bss_start = .);
 	.bss : { *(.bss) }
 
 	. = ALIGN(0x1000);
-	_end = . ;
+	PROVIDE (_end = .);
 
 	/* Strip unnecessary stuff */
-	/DISCARD/ : { *(.comment .note .eh_frame) }
+	/DISCARD/ : { *(.comment .note .eh_frame .dtors) }
 }

@@ -35,7 +35,7 @@ typedef int bool;
 #endif
 
 #ifdef ARCH_ppc
-#define __SIZE_T_LONG       1
+#define __SIZE_T_INT        1
 #endif
 
 #ifdef ARCH_sh4

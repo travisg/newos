@@ -5,6 +5,8 @@
 #include <kernel/kernel.h>
 #include <boot/stage2.h>
 
+#include <kernel/arch/vm.h>
+
 int arch_vm_init(kernel_args *ka)
 {
 	return 0;
@@ -20,3 +22,6 @@ int arch_vm_init_endvm(kernel_args *ka)
 	return 0;
 }
 
+void arch_vm_aspace_swap(vm_address_space *aspace)
+{
+}

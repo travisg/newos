@@ -5,7 +5,16 @@
 #ifndef _PPC_CPU_H
 #define _PPC_CPU_H
 
-#define PAGE_SIZE 4096
+#include <arch/cpu.h>
+
+struct arch_cpu_info {
+	// empty
+};
+
+
+struct iframe {
+	// empty
+};
 
 #endif
 

@@ -6,7 +6,7 @@
 
 #include <kernel/int.h>
 
-bool arch_int_is_interrupts_enabled(void)
+bool arch_int_are_interrupts_enabled(void)
 {
 	return true;
 }

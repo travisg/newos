@@ -33,7 +33,16 @@ void arch_thread_dump_info(void *info)
 {
 }
 
-void arch_thread_enter_uspace(addr entry, addr ustack_top)
+void arch_thread_enter_uspace(struct thread *t, addr entry, void *args, addr ustack_top)
+{
+}
+
+struct thread *arch_thread_get_current_thread(void)
+{
+	return NULL;
+}
+
+void arch_thread_set_current_thread(struct thread *t)
 {
 }
 

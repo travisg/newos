@@ -26,6 +26,8 @@ MY_GLUE :=
 
 include templates/app.mk
 
+CONFIG_FILE := $(BOOT_SRCDIR)/config.ini
+
 SEMIFINAL := $(BOOT_TARGETDIR)/final.bootdir
 
 $(SEMIFINAL): $(STAGE2) $(ALL) $(TOOLS) $(MAKEFLOP) $(CONFIG_FILE)
@@ -44,12 +46,12 @@ ALL_DEPS := $(ALL_DEPS) $(STAGE1_OBJS:.o=.d)
 $(FINAL): $(STAGE1_OBJS)
 	$(LD) $(GLOBAL_LDFLAGS) -dN --script=$(BOOT_SRCDIR)/stage1.ld $(STAGE1_OBJS) -o $@
 
-$(MY_TARGETDIR)/stage1.o: $(BOOT_SRCDIR)/stage1.S $(FINAL_ASMINCLUDE)
-	@mkdir -p $(BOOT_OBJ_DIR)
+$(BOOT_TARGETDIR)/stage1.o: $(BOOT_SRCDIR)/stage1.S $(FINAL_ASMINCLUDE)
+	@mkdir -p $(BOOT_TARGETDIR)
 	$(CC) $(GLOBAL_CFLAGS) -g -I. -Iinclude -I$(BOOT_TARGETDIR) -c $< -o $@
 
-$(MY_TARGETDIR)/stage1.d: $(BOOT_SRCDIR)/stage1.S
-	@mkdir -p $(BOOT_OBJ_DIR)
+$(BOOT_TARGETDIR)/stage1.d: $(BOOT_SRCDIR)/stage1.S
+	@mkdir -p $(BOOT_TARGETDIR)
 	@echo "making deps for $<..."
 	($(ECHO) -n $(dir $@);$(CC) $(GLOBAL_CFLAGS) -g -Iinclude -I$(BOOT_TARGETDIR) -M -MG $<) > $@
 

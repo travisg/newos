@@ -46,6 +46,15 @@ static int protect_tmap(vm_translation_map *map, addr base, addr top, unsigned i
 	return -1;
 }
 
+static int clear_flags_tmap(vm_translation_map *map, addr va, unsigned int flags)
+{
+	return 0;
+}
+
+static void flush_tmap(vm_translation_map *map)
+{
+}
+
 static int get_physical_page_tmap(addr pa, addr *va, int flags)
 {
 	return 0;
@@ -65,6 +74,8 @@ static vm_translation_map_ops tmap_ops = {
 	query_tmap,
 	get_mapped_size_tmap,
 	protect_tmap,
+	clear_flags_tmap,
+	flush_tmap,
 	get_physical_page_tmap,
 	put_physical_page_tmap
 };
@@ -81,7 +92,6 @@ int vm_translation_map_module_init(kernel_args *ka)
 
 void vm_translation_map_module_init_post_sem(kernel_args *ka)
 {
-	return 0;
 }
 
 int vm_translation_map_module_init2(kernel_args *ka)

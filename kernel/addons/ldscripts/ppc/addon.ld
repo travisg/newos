@@ -5,7 +5,7 @@ ENTRY(_start)
 SEARCH_DIR("libgcc");
 SECTIONS
 {
-	. = 0x80000000 + SIZEOF_HEADERS;
+	. = 0x00000000 + SIZEOF_HEADERS;
 
 	.interp : { *(.interp) }
 	.hash : { *(.hash) }
@@ -40,7 +40,7 @@ SECTIONS
 	.rodata : { *(.rodata) }
 
 	/* writable data  */
-	. = ALIGN(0x1000);
+  	. = ALIGN(0x1000) + (. & (0x1000 - 1));
 	__data_start = .;
 	.data : { *(.data .gnu.linkonce.d.*) }
 
