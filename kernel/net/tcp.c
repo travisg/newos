@@ -284,44 +284,6 @@ static int destroy_tcp_socket(tcp_socket *s)
 
 static void dump_socket(tcp_socket *s)
 {
-#if 0
-typedef struct tcp_socket {
-	struct tcp_socket *next;
-	tcp_state state;
-	mutex lock;
-	int ref_count;
-
-	ipv4_addr local_addr;
-	ipv4_addr remote_addr;
-	uint16 local_port;
-	uint16 remote_port;
-
-	uint32 mss;
-
-	/* rx */
-	sem_id read_sem;
-	uint32 rx_win_size;
-	uint32 rx_win_low;
-	uint32 rx_win_high;
-	cbuf *reassembly_q;
-	cbuf *read_buffer;
-	net_timer_event ack_delay_timer;
-
-	/* tx */
-	mutex write_lock;
-	sem_id write_sem;
-	bool writers_waiting;
-	uint32 tx_win_low;
-	uint32 tx_win_high;
-	uint32 retransmit_tx_seq;
-	int tx_write_buf_size;
-	int unacked_data_len;
-	cbuf *write_buffer;
-	net_timer_event retransmit_timer;
-	net_timer_event persist_timer;
-} tcp_socket;
-#endif
-
 	dprintf("tcp dump_socket on socket @ %p\n", s);
 	dprintf("\tstate %d ref_count %d\n", s->state, s->ref_count);
 	dprintf("\tlocal_addr: "); dump_ipv4_addr(s->local_addr); dprintf(".%d\n", s->local_port);
@@ -448,12 +410,21 @@ int tcp_input(cbuf *buf, ifnet *i, ipv4_addr source_address, ipv4_addr target_ad
 		}
 	}
 
+	// convert the tcp header data to host format
+	header->source_port = ntohs(header->source_port);
+	header->dest_port = ntohs(header->dest_port);
+	header->seq_num = ntohl(header->seq_num);
+	header->ack_num = ntohl(header->ack_num);
+	header->length_flags = ntohs(header->length_flags);
+	header->win_size = ntohs(header->win_size);
+	header->urg_pointer = ntohs(header->urg_pointer);
+
 	// get some data from the packet
-	packet_flags = ntohs(header->length_flags) & 0x3f;
+	packet_flags = header->length_flags & 0x3f;
 	data_len = cbuf_get_len(buf) - header_len;
 
 	// see if it matches a socket we have
-	s = lookup_socket(source_address, target_address, ntohs(header->source_port), ntohs(header->dest_port));
+	s = lookup_socket(source_address, target_address, header->source_port, header->dest_port);
 	if(!s) {
 		// send a RST packet
 		goto send_reset;
@@ -472,9 +443,9 @@ int tcp_input(cbuf *buf, ifnet *i, ipv4_addr source_address, ipv4_addr target_ad
 
 	// check for out of window packets
 	if(!(packet_flags & PKT_SYN)) {
-		if(SEQUENCE_LT(ntohl(header->seq_num), s->rx_win_low)
-			|| SEQUENCE_GT(ntohl(header->seq_num), s->rx_win_high)
-			&& !(data_len == 0 && ntohl(header->seq_num) != s->rx_win_high + 1)) {
+		if(SEQUENCE_LT(header->seq_num, s->rx_win_low)
+			|| SEQUENCE_GT(header->seq_num, s->rx_win_high)
+			&& !(data_len == 0 && header->seq_num != s->rx_win_high + 1)) {
 			/* out of window, ack it */
 			send_ack(s);
 			goto ditch_packet;
@@ -505,13 +476,13 @@ int tcp_input(cbuf *buf, ifnet *i, ipv4_addr source_address, ipv4_addr target_ad
 		case STATE_SYN_SENT:
 			s->tx_win_low++;
 			s->retransmit_tx_seq = s->tx_win_low;
-			s->tx_win_high = s->tx_win_low + htons(header->win_size);
+			s->tx_win_high = s->tx_win_low + header->win_size;
 			if(packet_flags & PKT_SYN) {
-				s->rx_win_low = ntohl(header->seq_num) + 1;
+				s->rx_win_low = header->seq_num + 1;
 				s->rx_win_high = s->rx_win_low + s->rx_win_size - 1;
 				if(packet_flags & PKT_ACK) {
 					// they're acking our SYN
-					if(ntohl(header->ack_num) != s->tx_win_low)
+					if(header->ack_num != s->tx_win_low)
 						goto send_reset;
 
 					tcp_socket_send(s, NULL, PKT_ACK, NULL, 0, s->tx_win_low);
@@ -529,7 +500,7 @@ int tcp_input(cbuf *buf, ifnet *i, ipv4_addr source_address, ipv4_addr target_ad
 			break;
 		case STATE_ESTABLISHED: {
 			if(packet_flags & PKT_ACK)
-				handle_ack(s, ntohl(header->ack_num), ntohs(header->win_size), data_len > 0);
+				handle_ack(s, header->ack_num, header->win_size, data_len > 0);
 
 			if(data_len > 0) {
 				handle_data(s, buf);
@@ -558,8 +529,8 @@ int tcp_input(cbuf *buf, ifnet *i, ipv4_addr source_address, ipv4_addr target_ad
 
 send_reset:
 	if(!(packet_flags & PKT_RST))
-		tcp_send(source_address, ntohs(header->source_port), target_address, ntohs(header->dest_port),
-			NULL, PKT_RST|PKT_ACK, ntohl(header->seq_num) + 1, NULL, 0, ntohl(header->ack_num), 0);
+		tcp_send(source_address, header->source_port, target_address, header->dest_port,
+			NULL, PKT_RST|PKT_ACK, header->seq_num + 1, NULL, 0, header->ack_num, 0);
 ditch_packet:
 	cbuf_free_chain(buf);
 	if(s) {
@@ -963,8 +934,8 @@ static void handle_data(tcp_socket *s, cbuf *buf)
 
 	// copy the header
 	memcpy(&header, cbuf_get_ptr(buf, 0), sizeof(header));
-	header_length = ((ntohs(header.length_flags) >> 12) % 0xf) * 4;
-	seq_low = ntohl(header.seq_num);
+	header_length = ((header.length_flags >> 12) % 0xf) * 4;
+	seq_low = header.seq_num;
 	seq_high = seq_low + cbuf_get_len(buf) - header_length - 1;
 
 	if(SEQUENCE_LTE(seq_low, s->rx_win_low) && SEQUENCE_GTE(seq_high, s->rx_win_low)) {
@@ -978,8 +949,8 @@ static void handle_data(tcp_socket *s, cbuf *buf)
 		// see if any reassembly packets can now be dealt with
 		while(s->reassembly_q) {
 			tcp_header *q_header = (tcp_header *)cbuf_get_ptr(s->reassembly_q, 0);
-			int packet_header_len = ((ntohs(q_header->length_flags) >> 12) % 0xf) * 4;
-			uint32 packet_low = ntohl(q_header->seq_num);
+			int packet_header_len = ((q_header->length_flags >> 12) % 0xf) * 4;
+			uint32 packet_low = q_header->seq_num;
 			uint32 packet_high = packet_low + cbuf_get_len(s->reassembly_q) - packet_header_len;
 
 			if(SEQUENCE_LT(packet_high, s->rx_win_low)) {
@@ -1015,7 +986,7 @@ static void handle_data(tcp_socket *s, cbuf *buf)
 	} else {
 		// packet is out of order, stick it on the reassembly queue
 		if(s->reassembly_q == NULL ||
-		   SEQUENCE_GT(ntohl(((tcp_header *)cbuf_get_ptr(s->reassembly_q, 0))->seq_num), seq_low)) {
+		   SEQUENCE_GT(((tcp_header *)cbuf_get_ptr(s->reassembly_q, 0))->seq_num, seq_low)) {
 			// stick it on the head of the queue
 			buf->packet_next = s->reassembly_q;
 			s->reassembly_q = buf;
@@ -1025,7 +996,7 @@ static void handle_data(tcp_socket *s, cbuf *buf)
 
 			for(; last; last = last->packet_next) {
 				cbuf *next = last->packet_next;
-				if(next == NULL || SEQUENCE_GT(ntohl(((tcp_header *)cbuf_get_ptr(next, 0))->seq_num), seq_low)) {
+				if(next == NULL || SEQUENCE_GT(((tcp_header *)cbuf_get_ptr(next, 0))->seq_num, seq_low)) {
 					// we found a spot
 					buf->packet_next = next;
 					last->packet_next = buf;
