@@ -2,8 +2,6 @@
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
-// Huge sections stolen from OpenBLT
-// Will be redone later
 #include <boot/stage2.h>
 #include <kernel/kernel.h>
 #include <kernel/console.h>

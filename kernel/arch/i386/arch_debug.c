@@ -6,3 +6,4 @@
 #include <kernel/debug.h>
 #include <kernel/arch/debug.h>
 
+// XXX will put stack trace and disassembly routines here

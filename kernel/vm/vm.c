@@ -373,28 +373,6 @@ vm_region *vm_map_physical_memory(vm_address_space *aspace, char *name, void **a
 		REGION_WIRING_WIRED_PHYSICAL, lock, phys_addr);
 }
 
-#if 0	
-vm_region *vm_create_region(vm_address_space *aspace, char *name, void **address, int addr_type,
-	unsigned int size, unsigned int lock, int flags)
-{
-	if(addr_type == AREA_ALREADY_MAPPED) {
-		return _vm_create_region(aspace, name, address, REGION_ADDR_EXACT_ADDRESS, size, lock, 0, SRC_ADDR_MAPPED_ALREADY);
-	} else {
-		if(flags == AREA_FLAGS_CONTIG)
-			return _vm_create_region(aspace, name, address, addr_type, size, lock, 0, SRC_ADDR_CONTIGUOUS);
-		else
-			return _vm_create_region(aspace, name, address, addr_type, size, lock, 0, 0);
-	}
-
-}
-
-vm_region *vm_map_physical_memory(vm_address_space *aspace, char *name, void **address, int addr_type,
-	unsigned int size, unsigned int lock, unsigned int phys_addr)
-{
-	return _vm_create_region(aspace, name, address, addr_type, size, lock, phys_addr, SRC_ADDR_PHYSICAL);
-}
-#endif
-
 int vm_get_page_mapping(vm_address_space *aspace, addr vaddr, addr *paddr)
 {
 	unsigned int null_flags;

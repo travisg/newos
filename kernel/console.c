@@ -66,12 +66,6 @@ int con_init(kernel_args *ka)
 
 	console_fd = sys_open("/dev/console", "", STREAM_TYPE_DEVICE);
 	dprintf("console_fd = %d\n", console_fd);
-	
-/*
-	console_sem = sem_create(1, "console_sem");
-	if(console_sem < 0)
-		panic("error creating console semaphore\n");
-	return arch_con_init(ka);
-*/
+
 	return 0;
 }

@@ -19,12 +19,10 @@
 
 #include <libc/string.h>
 
+// XXX this module is largely outdated. Will probably be removed later.
+
 int arch_faults_init(kernel_args *ka)
 {
-/* now hardcoded in arch_int.c
-	set_intr_gate(8, &_double_fault_int);
-	set_intr_gate(13, &_general_protection_fault_int);
-*/
 	return 0;
 }
 

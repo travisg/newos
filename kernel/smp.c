@@ -69,7 +69,6 @@ static int find_free_message(struct smp_msg **msg)
 {
 	int state;
 
-	// XXX remove
 //	dprintf("find_free_message: entry\n");
 
 retry:
@@ -118,7 +117,6 @@ int smp_intercpu_int_handler()
 #define BCAST 2
 	int mailbox_found_in = 0;
 
-	// XXX remove
 //	dprintf("smp_intercpu_int_handler: entry on cpu %d\n", curr_cpu);
 
 	acquire_spinlock(&cpu_msg_spinlock[curr_cpu]);	

@@ -76,8 +76,6 @@ int _start(kernel_args *oldka, int cpu)
 		thread_test();
 #endif
 		kprintf("Welcome to the kernel!\n");
-	
-//		vm_dump_areas(vm_get_kernel_aspace());
 		
 		smp_wake_up_all_non_boot_cpus();
 		smp_enable_ici(); // ici's were previously being ignored
@@ -85,48 +83,6 @@ int _start(kernel_args *oldka, int cpu)
 	}
 	int_enable_interrupts();
 
-#if 0
-	if(1) {
-		#define _PACKED __attribute__((packed)) 	
-		struct gdt_idt_descr {
-			unsigned short a;
-			unsigned int *b;
-		} _PACKED descr;		
-		unsigned int foo;
-		int i;
-
-		dprintf("I'm cpu %d!\n", cpu);
-						
-		asm("sgdt %0;"
-			: : "m" (descr));
-		
-		dprintf("gdt %d: len = %d, addr = 0x%x\n", cpu, descr.a, descr.b);
-
-		asm("sidt %0;"
-			: : "m" (descr));
-		
-		dprintf("idt %d: len = %d, addr = 0x%x\n", cpu, descr.a, descr.b);
-//		for(i=0; i < 32; i++)
-//			dprintf("0x%x ", descr.b[i]);		
-//		dprintf("\n");
-
-		asm("mov %%cr3,%0"
-			: "=g" (foo));
-		dprintf("%d pgdir at 0x%x\n", cpu, foo);
-		
-		asm("mov %%esp,%0"
-			: "=g" (foo));
-		dprintf("%d esp at 0x%x\n", cpu, foo);
-
-		asm("mov %%cr0,%0"
-			: "=g" (foo));
-		dprintf("%d cr0 = 0x%x\n", cpu, foo);
-
-		asm("mov %%cr4,%0"
-			: "=g" (foo));
-		dprintf("%d cr4 = 0x%x\n", cpu, foo);
-	}
-#endif
 #if 0
 	if(cpu == 1) {
 		dprintf("sending intercpu interrupt\n");
@@ -138,18 +94,6 @@ int _start(kernel_args *oldka, int cpu)
 	panic("debugger_test\n");	
 #endif
 	dprintf("main: done... spinning forever on cpu %d\n", cpu);
-/*
-	{
-		static char c[] = "a";
-		
-		for(;;) {
-			c[0]++;
-			if(c[0] > 'z')
-				c[0] = 'a';
-			con_puts_xy(c, 79-cpu, 23);
-		}
-	}
-*/
 	for(;;);
 	
 	return 0;
