@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -23,7 +23,7 @@ static spinlock_t timer_spinlock[SMP_MAX_CPUS] = { 0, };
 int timer_init(kernel_args *ka)
 {
 	dprintf("init_timer: entry\n");
-	
+
 	return arch_init_timer(ka);
 }
 
@@ -56,19 +56,19 @@ int timer_interrupt()
 	spinlock_t *spinlock;
 	int curr_cpu = smp_get_current_cpu();
 	int rc = INT_NO_RESCHEDULE;
-	
+
 //	dprintf("timer_interrupt: time 0x%x 0x%x, cpu %d\n", system_time(), smp_get_current_cpu());
 
 	spinlock = &timer_spinlock[curr_cpu];
-	
+
 	acquire_spinlock(spinlock);
-		
+
 restart_scan:
 	event = events[curr_cpu];
 	if(event != NULL && event->sched_time < curr_time) {
 		// this event needs to happen
 		int mode = event->mode;
-		
+
 		events[curr_cpu] = event->next;
 		event->sched_time = 0;
 
@@ -78,12 +78,12 @@ restart_scan:
 		// note: if the event is not periodic, it is ok
 		// to delete the event structure inside the callback
 		if(event->func != NULL) {
-			if(event->func(event->data) == INT_RESCHEDULE) 
+			if(event->func(event->data) == INT_RESCHEDULE)
 				rc = INT_RESCHEDULE;
 		}
 
 		acquire_spinlock(spinlock);
-	
+
 		if(mode == TIMER_MODE_PERIODIC) {
 			// we need to adjust it and add it back to the list
 			event->sched_time = system_time() + event->periodic_time;
@@ -92,7 +92,7 @@ restart_scan:
 				                       // to hit zero, set it to one, since
 				                       // zero represents not scheduled
 			add_event_to_list(event, &events[curr_cpu]);
-		}			
+		}
 
 		goto restart_scan; // the list may have changed
 	}
@@ -100,7 +100,7 @@ restart_scan:
 	// setup the next hardware timer
 	if(events[curr_cpu] != NULL)
 		arch_timer_set_hardware_timer(events[curr_cpu]->sched_time - system_time());
-	
+
 	release_spinlock(spinlock);
 
 	return rc;
@@ -117,9 +117,12 @@ int timer_set_event(time_t relative_time, timer_mode mode, struct timer_event *e
 {
 	int state;
 	int curr_cpu;
-	
+
 	if(event == NULL)
 		return ERR_INVALID_ARGS;
+
+	if(relative_time < 0)
+		relative_time = 0;
 
 	if(event->sched_time != 0)
 		panic("timer_set_event: event 0x%x in list already!\n", event);
@@ -181,7 +184,7 @@ int timer_cancel_event(struct timer_event *event)
 					events[cpu] = e->next;
 					// we'll need to reset the local timer if
 					// this is in the local timer queue
-					if(cpu == curr_cpu) 
+					if(cpu == curr_cpu)
 						reset_timer = true;
 				} else {
 					last->next = e->next;
@@ -206,6 +209,6 @@ done:
 
 	release_spinlock(&timer_spinlock[curr_cpu]);
 	int_restore_interrupts(state);
-	
+
 	return (foundit ? 0 : ERR_GENERAL);
 }

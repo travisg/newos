@@ -345,7 +345,7 @@ int sem_acquire_etc(sem_id id, int count, int flags, time_t timeout, int *delete
 		goto err;
 	}
 
-	if(sems[slot].count - count < 0 && (flags & SEM_FLAG_TIMEOUT) != 0 && timeout == 0) {
+	if(sems[slot].count - count < 0 && (flags & SEM_FLAG_TIMEOUT) != 0 && timeout <= 0) {
 		// immediate timeout
 		err = ERR_SEM_TIMED_OUT;
 		goto err;
