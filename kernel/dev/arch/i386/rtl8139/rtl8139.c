@@ -9,7 +9,6 @@
 #include <kernel/fs/devfs.h>
 #include <libc/string.h>
 #include <sys/errors.h>
-#include <kernel/net/if.h>
 #include <kernel/dev/arch/i386/rtl8139/rtl8139_dev.h>
 
 #include "rtl8139_priv.h"
