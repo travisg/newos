@@ -583,6 +583,23 @@ pci_set_power_state(uint8 bus, uint8 dev, uint8 func, int state)
 	return 0;
 }
 
+/* pci_set_bus_master
+ * This sets the bus master bit in the command configuration register
+ * if it isn't already set.
+ */
+
+static void
+pci_set_bus_master(uint8 bus, uint8 dev, uint8 func)
+{
+        uint16 command;
+
+	command = read_pci_config(bus, dev, func, PCI_command, 2);
+
+	// if the bus master bit isn't already set, set it and write back.
+        if ( (command & PCI_command_master) != PCI_command_master)
+		write_pci_config(bus, dev, func, PCI_command, 2, 
+				 command | PCI_command_master);
+}
 
 /* This used to be fixup_host_bridges, but some PCI-PCI bridges need
  * to be adjusted as well so I'll make it more general.
@@ -1101,6 +1118,14 @@ pci_device_probe(uint8 bus, uint8 dev, uint8 func)
 			pci_devices = pcid;
 	}
 	pci_set_power_state(bus, dev, func, PCI_pm_state_d0);
+
+	// if the device appears to want to be a bus master, we'll set
+	// it as one.
+	// XXX This may not be the right place to do this, but as nowhere else
+	//     seems to attempt to do configuration of the device beyond powering
+	//     up, and that's done here, it seems like as good a place as any.
+	if (pcii->u.h0.max_latency != 0 && pcii->u.h0.min_grant != 0)
+		pci_set_bus_master(bus, dev, func);
 
 	debug_show_device(pcii);
 }
