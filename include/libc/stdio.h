@@ -26,7 +26,6 @@ namespace std
 #define _STDIO_ERROR 0x0008
 #define _STDIO_UNGET 0x0010
 
-
 typedef off_t fpos_t;
 
 struct __FILE {
@@ -108,6 +107,7 @@ int getchar(void);
 
 #if defined(__cplusplus) && !defined(_NEWOS_NO_LIBC_COMPAT)
 using ::std::FILE;
+using ::std::fpos_t;
 
 using ::std::stdin;
 using ::std::stdout;
