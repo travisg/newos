@@ -207,6 +207,7 @@ static int page_scrubber()
 			acquire_spinlock(&page_lock);
 			
 			for(i=0; i<scrub_count; i++) {
+				page[i]->state = PAGE_STATE_CLEAR;
 				enqueue_page(&page_clear_queue, page[i]);
 			}
 	
