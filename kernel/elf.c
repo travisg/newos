@@ -79,6 +79,23 @@ static void insert_image_in_list(struct elf_image_info *image)
 	mutex_unlock(&image_lock);
 }
 
+static void remove_image_from_list(struct elf_image_info *image)
+{
+	struct elf_image_info **ptr;
+
+	mutex_lock(&image_lock);
+
+	for(ptr = &kernel_images; *ptr; ptr = &(*ptr)->next) {
+		if(*ptr == image) {
+			*ptr = image->next;
+			image->next = 0;
+			break;
+		}
+	}
+
+	mutex_unlock(&image_lock);
+}
+
 static struct elf_image_info *find_image(image_id id)
 {
 	struct elf_image_info *image;
@@ -769,7 +786,7 @@ static int elf_unlink_relocs( struct elf_image_info *image )
 	return NO_ERROR;
 }
 
-static int elf_unload_image_final( struct elf_image_info *image )
+static void elf_unload_image_final( struct elf_image_info *image )
 {
 	int i;
 	
@@ -779,7 +796,8 @@ static int elf_unload_image_final( struct elf_image_info *image )
 
 	if( image->vnode )
 		vfs_put_vnode_ptr( image->vnode );
-		
+
+	remove_image_from_list(image);
 	kfree( image->eheader );
 	kfree( image );
 }
@@ -788,9 +806,11 @@ static int elf_unload_image( struct elf_image_info *image )
 {
 	if( atomic_add( &image->ref_count, -1 ) > 0 )
 		return NO_ERROR;
-	
+
 	elf_unlink_relocs( image );
-	elf_unload_image( image );
+	elf_unload_image_final( image );
+
+	return NO_ERROR;
 }
 
 int elf_unload_kspace( const char *path )
