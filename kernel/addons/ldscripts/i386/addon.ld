@@ -40,7 +40,10 @@ SECTIONS
 	.rodata : { *(.rodata) }
 
 	/* writable data  */
-  	. = ALIGN(0x1000) + (. & (0x1000 - 1));
+	/* dont align the sections, this will force the binary to have a single
+	 * program header to work around a limitation in the kernel loader
+     */
+/*  	. = ALIGN(0x1000) + (. & (0x1000 - 1)); */
 	__data_start = .;
 	.data : { *(.data .gnu.linkonce.d.*) }
 
