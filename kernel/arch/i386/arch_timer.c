@@ -53,7 +53,7 @@ int apic_timer_interrupt()
 	return timer_interrupt();
 }
 
-void arch_timer_set_hardware_timer(time_t timeout)
+void arch_timer_set_hardware_timer(bigtime_t timeout)
 {
 	// try the apic timer first
 	if(arch_smp_set_apic_timer(timeout) < 0) {

@@ -321,7 +321,7 @@ int sem_acquire(sem_id id, int count)
 	return sem_acquire_etc(id, count, 0, 0, NULL);
 }
 
-int sem_acquire_etc(sem_id id, int count, int flags, time_t timeout, int *deleted_retcode)
+int sem_acquire_etc(sem_id id, int count, int flags, bigtime_t timeout, int *deleted_retcode)
 {
 	int slot = id % MAX_SEMS;
 	int state;
@@ -812,7 +812,7 @@ int user_sem_acquire(sem_id id, int count)
 	return user_sem_acquire_etc(id, count, 0, 0, NULL);
 }
 
-int user_sem_acquire_etc(sem_id id, int count, int flags, time_t timeout, int *deleted_retcode)
+int user_sem_acquire_etc(sem_id id, int count, int flags, bigtime_t timeout, int *deleted_retcode)
 {
 	if(deleted_retcode != NULL && ((addr)deleted_retcode >= KERNEL_BASE && (addr)deleted_retcode <= KERNEL_TOP))
 		return ERR_VM_BAD_USER_MEMORY;

@@ -120,7 +120,7 @@ ssize_t socket_recvfrom(sock_id id, void *buf, ssize_t len, sockaddr *addr)
 	return err;
 }
 
-ssize_t socket_recvfrom_etc(sock_id id, void *buf, ssize_t len, sockaddr *addr, int flags, time_t timeout)
+ssize_t socket_recvfrom_etc(sock_id id, void *buf, ssize_t len, sockaddr *addr, int flags, bigtime_t timeout)
 {
 	netsocket *s;
 	ssize_t err;

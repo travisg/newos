@@ -1041,13 +1041,13 @@ void thread_start_threading(void)
 	int_restore_interrupts(state);
 }
 
-int user_thread_snooze(time_t time)
+int user_thread_snooze(bigtime_t time)
 {
 	thread_snooze(time);
 	return NO_ERROR;
 }
 
-void thread_snooze(time_t time)
+void thread_snooze(bigtime_t time)
 {
 	sem_acquire_etc(snooze_sem, 1, SEM_FLAG_TIMEOUT, time, NULL);
 }
@@ -1462,7 +1462,7 @@ void thread_resched(void)
 	int last_thread_pri = -1;
 	struct thread *old_thread = CURR_THREAD;
 	int i;
-	time_t quantum;
+	bigtime_t quantum;
 
 //	dprintf("top of thread_resched: cpu %d, cur_thread = 0x%x\n", smp_get_current_cpu(), CURR_THREAD);
 

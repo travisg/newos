@@ -55,7 +55,7 @@ typedef struct ipv4_fragment {
 	cbuf *buf;
 	uint16 offset;
 	uint16 len;
-	time_t entry_time;
+	bigtime_t entry_time;
 	uint16 total_len;
 	// copied from the header, enough data to uniquely identify the frag
 	ipv4_addr src;

@@ -146,7 +146,7 @@ void arch_smp_ack_interrupt(void)
 
 #define MIN_TIMEOUT 1000
 
-int arch_smp_set_apic_timer(time_t relative_timeout)
+int arch_smp_set_apic_timer(bigtime_t relative_timeout)
 {
 	unsigned int config;
 	int state;

@@ -175,14 +175,14 @@ int _beos_atomic_add(volatile int *val, int incr);
 int _beos_atomic_and(volatile int *val, int incr);
 int _beos_atomic_or(volatile int *val, int incr);
 int _beos_acquire_sem(sem_id id);
-int _beos_acquire_sem_etc(sem_id id, uint32 count, uint32 flags, time_t timeout);
+int _beos_acquire_sem_etc(sem_id id, uint32 count, uint32 flags, bigtime_t timeout);
 sem_id _beos_create_sem(uint32 count, const char *name);
 int _beos_delete_sem(sem_id id);
 int _beos_get_sem_count(sem_id id, int32 *count);
 int _beos_release_sem(sem_id id);
 int _beos_release_sem_etc(sem_id id, int32 count, uint32 flags);
 int _beos_strcmp(const char *cs, const char *ct);
-void _beos_spin(time_t microseconds);
+void _beos_spin(bigtime_t microseconds);
 int _beos_get_module(const char *path, module_info **vec);
 int _beos_put_module(const char *path);
 

@@ -123,7 +123,7 @@ int thread_resume_thread(thread_id id);
 int thread_set_priority(thread_id id, int priority);
 void thread_resched(void);
 void thread_start_threading(void);
-void thread_snooze(time_t time);
+void thread_snooze(bigtime_t time);
 int thread_init(kernel_args *ka);
 void thread_exit(int retcode);
 int thread_kill_thread(thread_id id);
@@ -150,7 +150,7 @@ int user_thread_wait_on_thread(thread_id id, int *uretcode);
 proc_id user_proc_create_proc(const char *path, const char *name, char **args, int argc, int priority);
 int user_proc_wait_on_proc(proc_id id, int *uretcode);
 thread_id user_thread_create_user_thread(char *uname, proc_id pid, addr entry, void *args);
-int user_thread_snooze(time_t time);
+int user_thread_snooze(bigtime_t time);
 int user_proc_get_table(struct proc_info *pi, size_t len);
 
 #if 1

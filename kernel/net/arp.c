@@ -45,7 +45,7 @@ typedef struct arp_cache_entry {
 	struct arp_cache_entry *all_next;
 	ipv4_addr ip_addr;
 	netaddr link_addr;
-	time_t last_used_time;
+	bigtime_t last_used_time;
 } arp_cache_entry;
 
 // arp cache
@@ -57,7 +57,7 @@ typedef struct arp_wait_request {
 	struct arp_wait_request *next;
 	ipv4_addr sender_ipaddr;
 	ipv4_addr ip_addr;
-	time_t last_attempt_time;
+	bigtime_t last_attempt_time;
 	int attempt_count;
 	void (*callback)(int code, void *, ifnet *, netaddr *);
 	void *callback_args;
@@ -374,7 +374,7 @@ static int arp_retransmit_thread(void *unused)
 	arp_wait_request *removed_waiters;
 	arp_wait_request *last;
 	arp_wait_request *temp;
-	time_t now;
+	bigtime_t now;
 	bool empty_queue;
 
 	for(;;) {
@@ -440,7 +440,7 @@ static int arp_cleanup_thread(void *unused)
 	arp_cache_entry *last;
 	arp_cache_entry *temp;
 	arp_cache_entry *free_list;
-	time_t now;
+	bigtime_t now;
 
 	for(;;) {
 		thread_snooze(1000000 * 60); // 1 min

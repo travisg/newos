@@ -85,7 +85,7 @@ int main(void)
 		region_id region;
 		region_id region2;
 		void *ptr, *ptr2;
-		time_t t;
+		bigtime_t t;
 
 		printf("running some timing tests on region creation/deletion.\n");
 		printf("you'll want to make sure serial debugging is off or the test will take forever,\n");

@@ -7,7 +7,7 @@
 
 #include <boot/stage2.h>
 
-void arch_timer_set_hardware_timer(time_t timeout);
+void arch_timer_set_hardware_timer(bigtime_t timeout);
 void arch_timer_clear_hardware_timer(void);
 int arch_init_timer(kernel_args *ka);
 

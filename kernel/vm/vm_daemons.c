@@ -129,7 +129,7 @@ static int page_daemon()
 	addr mapped_size;
 	addr free_memory_target;
 	int faults_per_second;
-	time_t now;
+	bigtime_t now;
 
 	dprintf("page daemon starting\n");
 

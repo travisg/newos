@@ -51,7 +51,7 @@ static void add_event_to_list(struct timer_event *event, struct timer_event * vo
 
 int timer_interrupt()
 {
-	time_t curr_time = system_time();
+	bigtime_t curr_time = system_time();
 	struct timer_event *event;
 	spinlock_t *spinlock;
 	int curr_cpu = smp_get_current_cpu();
@@ -113,7 +113,7 @@ void timer_setup_timer(timer_callback func, void *data, struct timer_event *even
 	event->sched_time = 0;
 }
 
-int timer_set_event(time_t relative_time, timer_mode mode, struct timer_event *event)
+int timer_set_event(bigtime_t relative_time, timer_mode mode, struct timer_event *event)
 {
 	int state;
 	int curr_cpu;

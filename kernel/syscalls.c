@@ -89,7 +89,7 @@ int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_re
 			*call_ret = system_time();
 			break;
 		case SYSCALL_SNOOZE:
-			*call_ret = user_thread_snooze((time_t)INT32TOINT64(arg0, arg1));
+			*call_ret = user_thread_snooze((bigtime_t)INT32TOINT64(arg0, arg1));
 			break;
 		case SYSCALL_SEM_CREATE:
 			*call_ret = user_sem_create((int)arg0, (const char *)arg1);
@@ -101,7 +101,7 @@ int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_re
 			*call_ret = user_sem_acquire_etc((sem_id)arg0, (int)arg1, 0, 0, NULL);
 			break;
 		case SYSCALL_SEM_ACQUIRE_ETC:
-			*call_ret = user_sem_acquire_etc((sem_id)arg0, (int)arg1, (int)arg2, (time_t)INT32TOINT64(arg3, arg4), (int *)arg5);
+			*call_ret = user_sem_acquire_etc((sem_id)arg0, (int)arg1, (int)arg2, (bigtime_t)INT32TOINT64(arg3, arg4), (int *)arg5);
 			break;
 		case SYSCALL_SEM_RELEASE:
 			*call_ret = user_sem_release((sem_id)arg0, (int)arg1);
@@ -194,7 +194,7 @@ int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_re
 			*call_ret = user_port_buffer_size_etc((port_id)arg0, PORT_FLAG_INTERRUPTABLE, 0);
 			break;
 		case SYSCALL_PORT_BUFFER_SIZE_ETC:
-			*call_ret = user_port_buffer_size_etc((port_id)arg0, (uint32)arg1 | PORT_FLAG_INTERRUPTABLE, (time_t)INT32TOINT64(arg2, arg3));
+			*call_ret = user_port_buffer_size_etc((port_id)arg0, (uint32)arg1 | PORT_FLAG_INTERRUPTABLE, (bigtime_t)INT32TOINT64(arg2, arg3));
 			break;
 		case SYSCALL_PORT_COUNT:
 			*call_ret = user_port_count((port_id)arg0);
@@ -203,7 +203,7 @@ int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_re
 			*call_ret = user_port_read_etc((port_id)arg0, (int32*)arg1, (void*)arg2, (size_t)arg3, PORT_FLAG_INTERRUPTABLE, 0);
 			break;
 		case SYSCALL_PORT_READ_ETC:
-			*call_ret = user_port_read_etc((port_id)arg0, (int32*)arg1, (void*)arg2, (size_t)arg3, (uint32)arg4 | PORT_FLAG_INTERRUPTABLE, (time_t)INT32TOINT64(arg5, arg6));
+			*call_ret = user_port_read_etc((port_id)arg0, (int32*)arg1, (void*)arg2, (size_t)arg3, (uint32)arg4 | PORT_FLAG_INTERRUPTABLE, (bigtime_t)INT32TOINT64(arg5, arg6));
 			break;
 		case SYSCALL_PORT_SET_OWNER:
 			*call_ret = user_port_set_owner((port_id)arg0, (proc_id)arg1);
@@ -212,7 +212,7 @@ int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_re
 			*call_ret = user_port_write_etc((port_id)arg0, (int32)arg1, (void *)arg2, (size_t)arg3, PORT_FLAG_INTERRUPTABLE, 0);
 			break;
 		case SYSCALL_PORT_WRITE_ETC:
-			*call_ret = user_port_write_etc((port_id)arg0, (int32)arg1, (void *)arg2, (size_t)arg3, (uint32)arg4 | PORT_FLAG_INTERRUPTABLE, (time_t)INT32TOINT64(arg5, arg6));
+			*call_ret = user_port_write_etc((port_id)arg0, (int32)arg1, (void *)arg2, (size_t)arg3, (uint32)arg4 | PORT_FLAG_INTERRUPTABLE, (bigtime_t)INT32TOINT64(arg5, arg6));
 			break;
 		case SYSCALL_SEM_GET_COUNT:
 			*call_ret = user_sem_get_count((sem_id)arg0, (int32*)arg1);

@@ -260,7 +260,7 @@ int udp_close(void *prot_data)
 	return 0;
 }
 
-ssize_t udp_recvfrom(void *prot_data, void *buf, ssize_t len, sockaddr *saddr, int flags, time_t timeout)
+ssize_t udp_recvfrom(void *prot_data, void *buf, ssize_t len, sockaddr *saddr, int flags, bigtime_t timeout)
 {
 	udp_endpoint *e = prot_data;
 	udp_queue_elem *qe;

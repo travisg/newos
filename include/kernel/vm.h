@@ -130,7 +130,7 @@ typedef struct vm_address_space {
 	addr working_set_size;
 	addr max_working_set;
 	addr min_working_set;
-	time_t last_working_set_adjust;
+	bigtime_t last_working_set_adjust;
 	struct vm_address_space *hash_next;
 } vm_address_space;
 

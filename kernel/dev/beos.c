@@ -124,10 +124,10 @@ int _beos_acquire_sem(sem_id id)
 	return newos2beos_err(sem_acquire(id, 1));
 }
 
-int _beos_acquire_sem_etc(sem_id id, uint32 count, uint32 flags, time_t timeout)
+int _beos_acquire_sem_etc(sem_id id, uint32 count, uint32 flags, bigtime_t timeout)
 {
 	int nuflags = 0;
-	time_t nutimeout = timeout;
+	bigtime_t nutimeout = timeout;
 
 	if(flags & B_CAN_INTERRUPT)
 		nuflags |= SEM_FLAG_INTERRUPTABLE;
@@ -180,9 +180,9 @@ int _beos_strcmp(const char *cs, const char *ct)
 	return strcmp(cs, ct);
 }
 
-void _beos_spin(time_t microseconds)
+void _beos_spin(bigtime_t microseconds)
 {
-	time_t time = system_time();
+	bigtime_t time = system_time();
 
 	while((system_time() - time) < microseconds)
 		;

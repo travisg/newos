@@ -19,7 +19,7 @@ typedef int image_id;
 typedef uint64 vnode_id;
 typedef uint32 fs_id;
 
-typedef int64 time_t;
+typedef int64 bigtime_t;
 
 // Handled in arch_ktypes.h
 

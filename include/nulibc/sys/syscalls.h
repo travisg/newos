@@ -118,14 +118,14 @@ int sys_setcwd(const char* path);
 int sys_dup(int fd);
 int sys_dup2(int ofd, int nfd);
 
-time_t sys_system_time();
-int sys_snooze(time_t time);
+bigtime_t sys_system_bigtime();
+int sys_snooze(bigtime_t time);
 
 /* sem functions */
 sem_id sys_sem_create(int count, const char *name);
 int sys_sem_delete(sem_id id);
 int sys_sem_acquire(sem_id id, int count);
-int sys_sem_acquire_etc(sem_id id, int count, int flags, time_t timeout);
+int sys_sem_acquire_etc(sem_id id, int count, int flags, bigtime_t timeout);
 int sys_sem_release(sem_id id, int count);
 int sys_sem_release_etc(sem_id id, int count, int flags);
 int sys_sem_get_count(sem_id id, int32* thread_count);
@@ -162,13 +162,13 @@ port_id		sys_port_find(const char *port_name);
 int			sys_port_get_info(port_id id, struct port_info *info);
 int		 	sys_port_get_next_port_info(proc_id proc, uint32 *cookie, struct port_info *info);
 ssize_t		sys_port_buffer_size(port_id port);
-ssize_t		sys_port_buffer_size_etc(port_id port, uint32 flags, time_t timeout);
+ssize_t		sys_port_buffer_size_etc(port_id port, uint32 flags, bigtime_t timeout);
 int32		sys_port_count(port_id port);
 ssize_t		sys_port_read(port_id port, int32 *msg_code, void *msg_buffer, size_t buffer_size);
-ssize_t		sys_port_read_etc(port_id port,	int32 *msg_code, void *msg_buffer, size_t buffer_size, uint32 flags, time_t timeout);
+ssize_t		sys_port_read_etc(port_id port,	int32 *msg_code, void *msg_buffer, size_t buffer_size, uint32 flags, bigtime_t timeout);
 int			sys_port_set_owner(port_id port, proc_id proc);
 int			sys_port_write(port_id port, int32 msg_code, void *msg_buffer, size_t buffer_size);
-int			sys_port_write_etc(port_id port, int32 msg_code, void *msg_buffer, size_t buffer_size, uint32 flags, time_t timeout);
+int			sys_port_write_etc(port_id port, int32 msg_code, void *msg_buffer, size_t buffer_size, uint32 flags, bigtime_t timeout);
 
 #ifdef __cplusplus
 }

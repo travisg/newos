@@ -24,7 +24,7 @@ typedef struct sockaddr {
 int socket_init(void);
 sock_id socket_create(int type, int flags, sockaddr *addr);
 ssize_t socket_recvfrom(sock_id id, void *buf, ssize_t len, sockaddr *addr);
-ssize_t socket_recvfrom_etc(sock_id id, void *buf, ssize_t len, sockaddr *addr, int flags, time_t timeout);
+ssize_t socket_recvfrom_etc(sock_id id, void *buf, ssize_t len, sockaddr *addr, int flags, bigtime_t timeout);
 ssize_t socket_sendto(sock_id id, const void *buf, ssize_t len, sockaddr *addr);
 
 #endif
