@@ -86,13 +86,15 @@ typedef unsigned long       ulong;
 /* system types */
 typedef int64 bigtime_t;
 typedef uint64 vnode_id;
-typedef int thread_id;
-typedef int region_id;
-typedef int aspace_id;
-typedef int proc_id;
-typedef int sem_id;
-typedef int port_id;
-typedef int image_id;
+typedef int region_id;      // vm region id
+typedef int aspace_id;      // address space id
+typedef int thread_id;      // thread id
+typedef int proc_id;        // process id
+typedef int pgrp_id;        // process group id
+typedef int sess_id;        // session id
+typedef int sem_id;         // semaphore id
+typedef int port_id;        // ipc port id
+typedef int image_id;       // binary image id
 
 # include <stddef.h>
 

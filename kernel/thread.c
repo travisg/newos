@@ -1031,6 +1031,13 @@ int thread_init(kernel_args *ka)
 		panic("could not create kernel proc!\n");
 	kernel_proc->state = PROC_STATE_NORMAL;
 
+	// the kernel_proc is it's own parent
+	kernel_proc->parent = kernel_proc;
+
+	// it's part of the kernel process group/session
+	kernel_proc->pgid = kernel_proc->id;
+	kernel_proc->sid = kernel_proc->id;
+
 	kernel_proc->ioctx = vfs_new_ioctx(NULL);
 	if(kernel_proc->ioctx == NULL)
 		panic("could not create ioctx for kernel proc!\n");
@@ -1073,6 +1080,7 @@ int thread_init(kernel_args *ka)
 		t->state = THREAD_STATE_RUNNING;
 		t->next_state = THREAD_STATE_READY;
 		t->int_disable_level = 1; // ints are disabled until the int_restore_interrupts in main()
+		t->last_time = system_time();
 		sprintf(temp, "idle_thread%d_kstack", i);
 		t->kernel_stack_region_id = vm_find_region_by_name(vm_get_kernel_aspace_id(), temp);
 		region = vm_get_region_by_id(t->kernel_stack_region_id);
@@ -1716,6 +1724,8 @@ static struct proc *create_proc_struct(const char *name, bool kernel)
 	list_initialize(&p->children);
 	p->parent = NULL;
 	p->id = atomic_add(&next_proc_id, 1);
+	p->pgid = -1;
+	p->sid = -1;
 	strncpy(&p->name[0], name, SYS_MAX_OS_NAME_LEN-1);
 	p->name[SYS_MAX_OS_NAME_LEN-1] = 0;
 	p->num_threads = 0;
@@ -1760,7 +1770,10 @@ int proc_get_proc_info(proc_id id, struct proc_info *outinfo)
 	}
 
 	/* found the proc, copy the data out */
-	info.id = id;
+	info.pid = id;
+	info.ppid = p->parent->id;
+	info.pgid = p->pgid;
+	info.sid = p->sid;
 	strncpy(info.name, p->name, SYS_MAX_OS_NAME_LEN-1);
 	info.name[SYS_MAX_OS_NAME_LEN-1] = '\0';
 	info.state = p->state;
@@ -1825,7 +1838,10 @@ int proc_get_next_proc_info(uint32 *cookie, struct proc_info *outinfo)
 	}
 
 	// we have the proc structure, copy the data out of it
-	info.id = p->id;
+	info.pid = p->id;
+	info.ppid = p->parent->id;
+	info.pgid = p->pgid;
+	info.sid = p->sid;
 	strncpy(info.name, p->name, SYS_MAX_OS_NAME_LEN-1);
 	info.name[SYS_MAX_OS_NAME_LEN-1] = '\0';
 	info.state = p->state;
@@ -1996,6 +2012,10 @@ proc_id proc_create_proc(const char *path, const char *name, char **args, int ar
 	// add it to the parent's list
 	curr_proc = proc_get_proc_struct_locked(curr_proc_id);
 	insert_proc_into_parent(curr_proc, p);
+
+	// inheirit the creating processes's process group, session
+	p->pgid = curr_proc->pgid;
+	p->sid = curr_proc->sid;
 
 	RELEASE_PROC_LOCK();
 	int_restore_interrupts();

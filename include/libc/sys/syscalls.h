@@ -65,10 +65,13 @@ typedef struct port_info {
 } port_info;
 
 struct proc_info {
-	proc_id id;
-	char name[SYS_MAX_OS_NAME_LEN];
+	proc_id pid;
+	proc_id ppid;
+	pgrp_id pgid;
+	sess_id sid;
 	int state;
 	int num_threads;
+	char name[SYS_MAX_OS_NAME_LEN];
 };
 
 struct thread_info {

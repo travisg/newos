@@ -59,7 +59,12 @@ struct proc {
 	struct proc *parent;
 	struct list_node siblings_node;	
 	struct list_node children;
+
+	// process id, process group id, session id
 	proc_id id;
+	pgrp_id pgid;
+	sess_id sid;
+
 	char name[SYS_MAX_OS_NAME_LEN];
 	int num_threads;
 	int state;
@@ -118,10 +123,13 @@ struct thread {
 };
 
 struct proc_info {
-	proc_id id;
-	char name[SYS_MAX_OS_NAME_LEN];
+	proc_id pid;
+	proc_id ppid;
+	pgrp_id pgid;
+	sess_id sid;
 	int state;
 	int num_threads;
+	char name[SYS_MAX_OS_NAME_LEN];
 };
 
 struct thread_info {

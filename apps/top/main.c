@@ -118,7 +118,7 @@ static int gather_info(void)
 
 		cookie2 = 0;
 		for(;;) {
-			err = _kern_thread_get_next_thread_info(&cookie2, pi.id, &ti);
+			err = _kern_thread_get_next_thread_info(&cookie2, pi.pid, &ti);
 			if(err < 0)
 				break;
 
@@ -168,14 +168,14 @@ static int display_info(void)
 	printf("%c[2J%c[H", 0x1b, 0x1b);
 
 	// print the thread dump
-	printf("----------------------------------\n");
+	printf("   tid   pid   pri    usertime  kerneltime                            name\n");
 	for(tt = times; tt; tt = tt->next) {
-		printf("%d\t%d\t%d\t%32s\t%Ld\t%Ld\n",
-			tt->info.id, tt->info.owner_proc_id, tt->info.priority, tt->info.name, tt->delta_user_time, tt->delta_kernel_time);
+		printf("%6d%6d%6d%12Ld%12Ld%32s\n",
+			tt->info.id, tt->info.owner_proc_id, tt->info.priority, tt->delta_user_time, tt->delta_kernel_time, tt->info.name);
 		total_user += tt->delta_user_time;
 		total_kernel += tt->delta_kernel_time;
 	}
-	printf("\t\t\t%32s\t%Ld\t%Ld\n", "total:", total_user, total_kernel);
+	printf("%18s%12Ld%12Ld\n", "total:", total_user, total_kernel);
 
 	return 0;
 }
