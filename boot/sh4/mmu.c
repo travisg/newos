@@ -3,7 +3,12 @@
 #include "serial.h"
 #include "mmu.h"
 
-unsigned int next_utlb_ent;
+unsigned int next_utlb_ent = 0;
+
+#define PAGE_SIZE_1K	0
+#define PAGE_SIZE_4K	1
+#define PAGE_SIZE_64K	2
+#define PAGE_SIZE_1M	3
 
 #define PTEH 	0xff000000
 #define PTEL 	0xff000004
@@ -168,9 +173,11 @@ void sniff_mmu()
 	dprintf("MMUCR = 0x%x\r\n", *(int *)MMUCR);
 }
 
-void mmu_map_page(unsigned int vaddr, unsigned int paddr)
+static void _mmu_map_page(unsigned int vaddr, unsigned int paddr, unsigned int page_size)
 {
 	struct utlb_data data;
+
+	dprintf("mmu_map_page: mapping 0x%x to 0x%x, page_size %d\r\n", paddr, vaddr, page_size);
 
 	memset(&data, 0, sizeof(data));
 
@@ -179,7 +186,8 @@ void mmu_map_page(unsigned int vaddr, unsigned int paddr)
 	data.a.valid = 1;
 	
 	data.da1.ppn = paddr >> 10;
-	data.da1.psize0 = 1; // 4k page
+	data.da1.psize0 = page_size & 0x1;
+	data.da1.psize1 = (page_size & 0x2) ? 1 : 0; 
 	data.da1.prot_key = 3;
 	data.da1.valid = 1;
 	data.da1.dirty = 1;
@@ -193,6 +201,16 @@ void mmu_map_page(unsigned int vaddr, unsigned int paddr)
 	*((int *)(UTLB1 | (next_utlb_ent << UTLB_ADDR_SHIFT))) = *(int *)&data.da1;
 	*((int *)(UTLB2 | (next_utlb_ent << UTLB_ADDR_SHIFT))) = *(int *)&data.da2;
 	next_utlb_ent++;
+}
+
+void mmu_map_page_64k(unsigned int vaddr, unsigned int paddr)
+{
+	_mmu_map_page(vaddr, paddr, PAGE_SIZE_64K);
+}
+
+void mmu_map_page_4k(unsigned int vaddr, unsigned int paddr)
+{
+	_mmu_map_page(vaddr, paddr, PAGE_SIZE_4K);
 }
 
 void mmu_init()

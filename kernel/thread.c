@@ -820,6 +820,7 @@ void thread_resched()
 			break;
 		default:
 //			dprintf("not enqueueing thread 0x%x into run q. next_state = %d\n", old_thread, old_thread->next_state);
+			;
 	}
 	old_thread->state = old_thread->next_state;
 

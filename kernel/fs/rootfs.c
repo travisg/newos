@@ -600,7 +600,7 @@ int rootfs_create(void *_fs, void *_base_vnode, const char *path, const char *st
 			break;
 		case STREAM_TYPE_FILE:
 		default:
-			// not supported
+			; // not supported
 	}
 	
 	sem_release(fs->sem, 1);

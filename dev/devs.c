@@ -5,17 +5,20 @@
 
 #include <string.h>
 
+#ifdef ARCH_i386
 #include <pci_bus.h>
 #include <console_dev.h>
+#endif
 #include <null.h>
 #include <zero.h>
 
 int devs_init(kernel_args *ka)
 {
+#ifdef ARCH_i386
 	pci_bus_init(ka);
 
 	console_dev_init(ka);
-	
+#endif	
 	null_dev_init(ka);
 	zero_dev_init(ka);
 

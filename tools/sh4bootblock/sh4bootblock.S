@@ -1,4 +1,4 @@
-#define ENTRY (0x8c000000 + 0x1200)
+#define ENTRY (0x8c000000 + 0x2080)
 .text
 
 start:

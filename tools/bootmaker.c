@@ -79,7 +79,7 @@ void *loadfile(char *file, int *size)
 
 int writesh4bootblock(FILE *fp, unsigned int blocks)
 {
-	unsigned char bb[0x200];
+	unsigned char bb[0x1000];
 
 	memset(bb, 0, sizeof(bb));
 	memcpy(bb, sh4bootblock, sizeof(sh4bootblock));

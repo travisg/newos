@@ -1,9 +1,11 @@
 #ifndef _ARCH_TIMER_H
 #define _ARCH_TIMER_H
 
-//int arch_init_timer(struct kernel_args *ka);
+#include <stage2.h>
 
-#define arch_init_timer(ka) ((int)0)
+void arch_timer_set_hardware_timer(time_t timeout);
+void arch_timer_clear_hardware_timer();
+int arch_init_timer(kernel_args *ka);
 
 #endif
 

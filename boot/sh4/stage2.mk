@@ -12,11 +12,8 @@ STAGE2_ARCH = boot/$(ARCH)/stage2
 $(STAGE2): $(STAGE2_ARCH)
 	ln -sf ../$< $@  
 
-$(STAGE2_ARCH).elf: $(STAGE2_OBJS) $(LIBC)
-	$(LD) $(GLOBAL_LDFLAGS) -dN -Ttext=0x8c001200 -L $(LIBGCC_PATH) $(STAGE2_OBJS) $(LIBC) $(LIBGCC) -o $@ 
-
-$(STAGE2_ARCH): $(STAGE2_ARCH).elf
-	$(OBJCOPY) -O binary $< $@	
+$(STAGE2_ARCH): $(STAGE2_OBJS) $(LIBC)
+	$(LD) $(GLOBAL_LDFLAGS) -dN --script=$(STAGE2_DIR)/stage2.ld -L $(LIBGCC_PATH) $(STAGE2_OBJS) $(LIBC) $(LIBGCC) -o $@ 
 
 stage2clean:
 	rm -f $(STAGE2_OBJS) $(STAGE2_ARCH) $(STAGE2_ARCH).elf
