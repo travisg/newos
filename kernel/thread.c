@@ -101,20 +101,12 @@ void thread_enqueue(struct thread *t, struct list_node *q)
 
 struct thread *thread_lookat_queue(struct list_node *q)
 {
-	struct list_node *node = list_peek_head(q);
-	if(node)
-		return container_of(node, struct thread, q_node);
-	else
-		return NULL;
+	return list_peek_head_type(q, struct thread, q_node);
 }
 
 struct thread *thread_dequeue(struct list_node *q)
 {
-	struct list_node *node = list_remove_head(q);
-	if(node)
-		return container_of(node, struct thread, q_node);
-	else
-		return NULL;
+	return list_remove_head_type(q, struct thread, q_node);
 }
 
 void thread_dequeue_thread(struct thread *t)
@@ -635,7 +627,6 @@ int thread_get_next_thread_info(uint32 *_cookie, proc_id pid, struct thread_info
 	struct thread *t;
 	struct proc *p;
 	struct thread_info info;
-	struct list_node *node;
 	int err;
 	thread_id cookie;
 
@@ -653,19 +644,12 @@ int thread_get_next_thread_info(uint32 *_cookie, proc_id pid, struct thread_info
 	/* find the next thread in the list of threads in the proc structure */
 	t = NULL;
 	if(cookie == 0) {
-		node = list_peek_head(&p->thread_list);
-		if(node)
-			t = container_of(node, struct thread, proc_node);
+		t = list_peek_head_type(&p->thread_list, struct thread, proc_node);
 	} else {
-		for(node = list_peek_head(&p->thread_list); node != &p->thread_list; node = node->next) {
-			t = container_of(node, struct thread, proc_node);
+		list_for_every_entry(&p->thread_list, t, struct thread, proc_node) {
 			if(t->id == cookie) {
 				/* we found what the last search got us, walk one past the last search */
-				node = node->next;
-				if(node != &p->thread_list)
-					t = container_of(node, struct thread, proc_node);
-				else
-					t = NULL;
+				t = list_next_type(&p->thread_list, &t->proc_node, struct thread, proc_node);
 				break;
 			}
 		}
@@ -946,7 +930,6 @@ static void dump_next_thread_in_all_list(int argc, char **argv)
 static void dump_next_thread_in_proc(int argc, char **argv)
 {
 	struct thread *t = last_thread_dumped;
-	struct list_node *node;
 
 	if(t == NULL) {
 		dprintf("no thread previously dumped. Examine a thread first.\n");
@@ -955,9 +938,9 @@ static void dump_next_thread_in_proc(int argc, char **argv)
 
 	dprintf("next thread in proc after thread @ %p\n", t);
 
-	node = list_next(&t->proc->thread_list, &t->proc_node); 
-	if(!node)
-		_dump_thread_info(container_of(node, struct thread, proc_node));
+	t = list_next_type(&t->proc->thread_list, &t->proc_node, struct thread, proc_node);
+	if(t)
+		_dump_thread_info(t);
 	else
 		dprintf("NULL\n");
 }
@@ -1328,17 +1311,14 @@ void thread_exit(int retcode)
 			// there are other threads still in this process,
 			// cycle through and signal kill on each of the threads
 			// XXX this can be optimized. There's got to be a better solution.
-			struct list_node *node;
+			struct thread *temp_thread;
 
 			int_disable_interrupts();
 			GRAB_PROC_LOCK();
 			// we can safely walk the list because of the lock. no new threads can be created
 			// because of the PROC_STATE_DEATH flag on the process
-			node = list_peek_head(&p->thread_list);
-			while(node) {
-				struct thread *temp_thread = container_of(node, struct thread, proc_node);
+			list_for_every_entry(&p->thread_list, temp_thread, struct thread, proc_node) {
 				thread_kill_thread_nowait(temp_thread->id);
-				node = list_next(&p->thread_list, node);
 			}
 
 			RELEASE_PROC_LOCK();
@@ -2168,14 +2148,11 @@ thread_id proc_get_main_thread(proc_id id)
 // NOTE: must have PROC lock held
 void proc_reparent_children(struct proc *p)
 {
-	struct list_node *node;
+	struct proc *child, *next;
 
-	node = list_peek_head(&p->children);
-	while(node) {
-		struct proc *child = container_of(node, struct proc, siblings_node);
+	list_for_every_entry_safe(&p->children, child, next, struct proc, siblings_node) {
 		remove_proc_from_parent(p, child);
 		insert_proc_into_parent(p->parent, child);
-		node = list_peek_head(&p->children);
 	}
 }
 
