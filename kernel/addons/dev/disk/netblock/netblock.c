@@ -18,7 +18,7 @@
 #include <string.h>
 #include <stdio.h>
 
-#define NB_TRACE 1
+#define NB_TRACE 0
 #if NB_TRACE
 #define TRACE(x) dprintf x
 #else
@@ -116,7 +116,7 @@ retry:
 	if(err < 0)
 		return err;
 
-	err = socket_recvfrom_etc(dev->sockfd, recv_buf, recv_len, &fromaddr, SOCK_FLAG_TIMEOUT, 250000); // 1/4 sec
+	err = socket_recvfrom_etc(dev->sockfd, recv_buf, recv_len, &fromaddr, SOCK_FLAG_TIMEOUT, 10000000); // 10 secs
 	if(err < 0)
 		goto retry;
 
@@ -151,6 +151,8 @@ static int read_block(struct netblock_dev *dev, off_t offset, void *out_buf)
 	char buf[sizeof(message) + BLOCKSIZE];
 	message *rmsg = (message *)buf;
 
+//	TRACE(("read_block: offset 0x%Lx\n", offset));
+
 	init_message(&msg, CMD_READBLOCK);
 
 	msg.arg = htonl(offset);
@@ -168,6 +170,8 @@ static int write_block(struct netblock_dev *dev, off_t offset, const void *out_b
 	message *msg;
 	char buf[sizeof(message) + BLOCKSIZE];
 	char buf2[sizeof(message) + BLOCKSIZE];
+
+//	TRACE(("write_block: offset 0x%Lx\n", offset));
 
 	msg = (message *)buf;
 
@@ -196,6 +200,8 @@ static int netblock_open(dev_ident ident, dev_cookie *_cookie)
 
 	cookie->dev->size = get_device_size(cookie->dev);
 
+	TRACE(("netblock_open: cookie %p, size 0x%Lx\n", cookie, cookie->dev->size));
+
 	*_cookie = cookie;
 
 	return 0;
@@ -218,28 +224,18 @@ static int netblock_seek(dev_cookie _cookie, off_t pos, seek_type st)
 	mutex_lock(&cookie->dev->lock);
 
 	switch(st) {
+		case _SEEK_CUR:
+			pos += cookie->curr_pos;
+			goto __set;
+		case _SEEK_END:
+			pos += cookie->dev->size;
+__set:
 		case _SEEK_SET:
 			if(pos > cookie->dev->size)
 				pos = cookie->dev->size;
 			if(pos < 0)
 				pos = 0;
 			cookie->curr_pos = pos;
-			break;
-		case _SEEK_CUR:
-			if(cookie->curr_pos + pos > cookie->dev->size)
-				cookie->curr_pos = cookie->dev->size;
-			else if(cookie->curr_pos + pos < 0)
-				cookie->curr_pos = 0;
-			else
-				cookie->curr_pos = cookie->curr_pos + pos;
-			break;
-		case _SEEK_END:
-			if(cookie->dev->size - pos > cookie->dev->size)
-				cookie->curr_pos = cookie->dev->size;
-			else if(cookie->dev->size + pos < 0)
-				cookie->curr_pos = 0;
-			else
-				cookie->curr_pos = cookie->dev->size - pos;
 			break;
 		default:
 			err = ERR_INVALID_ARGS;
@@ -292,6 +288,8 @@ static ssize_t _netblock_readwrite(struct netblock_dev *dev, bool write, void *_
 {
 	uint8 *buf = _buf;
 	ssize_t bytes_transferred = 0;
+
+//	TRACE(("_netblock_readwrite: write %d, pos 0x%Lx, len %d\n", write, pos, len));
 
 	if(pos % BLOCKSIZE > 0){
 		// partial first buffer
@@ -350,7 +348,6 @@ static ssize_t netblock_read(dev_cookie _cookie, void *_buf, off_t pos, ssize_t 
 {
 	struct netblock_cookie *cookie = _cookie;
 	ssize_t bytes_read = 0;
-	bool update_pos = false;
 
 	TRACE(("netblock_read: cookie %p, buf %p, pos 0x%Ld, len %lu\n", cookie, _buf, pos, (long)len));
 
@@ -359,7 +356,6 @@ static ssize_t netblock_read(dev_cookie _cookie, void *_buf, off_t pos, ssize_t 
 	// trim the pos and len to be proper
 	if(pos < 0) {
 		pos = cookie->curr_pos;
-		update_pos = true;
 	}
 	if(pos > cookie->dev->size) {
 		bytes_read = 0;
@@ -375,10 +371,12 @@ static ssize_t netblock_read(dev_cookie _cookie, void *_buf, off_t pos, ssize_t 
 
 	bytes_read = _netblock_readwrite(cookie->dev, false, _buf, pos, len);
 
-	if(update_pos && bytes_read > 0)
+	if(bytes_read > 0)
 		cookie->curr_pos += bytes_read;
 
 out:
+//	TRACE(("netblock_read: exit, curr_pos is now 0x%Lx, bytes_read %ld\n", cookie->curr_pos, bytes_read));
+	
 	mutex_unlock(&cookie->dev->lock);
 
 	return bytes_read;
@@ -388,7 +386,6 @@ static ssize_t netblock_write(dev_cookie _cookie, const void *_buf, off_t pos, s
 {
 	struct netblock_cookie *cookie = _cookie;
 	ssize_t bytes_written = 0;
-	bool update_pos = false;
 
 	TRACE(("netblock_write: cookie %p, buf %p, pos 0x%Ld, len %lu\n", cookie, _buf, pos, (long)len));
 
@@ -397,7 +394,6 @@ static ssize_t netblock_write(dev_cookie _cookie, const void *_buf, off_t pos, s
 	// trim the pos and len to be proper
 	if(pos < 0) {
 		pos = cookie->curr_pos;
-		update_pos = true;
 	}
 	if(pos > cookie->dev->size) {
 		bytes_written = 0;
@@ -413,10 +409,12 @@ static ssize_t netblock_write(dev_cookie _cookie, const void *_buf, off_t pos, s
 
 	bytes_written = _netblock_readwrite(cookie->dev, true, (void *)_buf, pos, len);
 
-	if(update_pos && bytes_written > 0)
+	if(bytes_written > 0)
 		cookie->curr_pos += bytes_written;
 
 out:
+//	TRACE(("netblock_write: exit, curr_pos is now 0x%Lx, bytes_written %ld\n", cookie->curr_pos, bytes_written));
+
 	mutex_unlock(&cookie->dev->lock);
 
 	return bytes_written;

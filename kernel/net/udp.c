@@ -396,7 +396,14 @@ ssize_t udp_sendto(void *prot_data, const void *inbuf, ssize_t len, sockaddr *to
 		header->checksum = 0xffff;
 
 	// send it away
-	return ipv4_output(buf, NETADDR_TO_IPV4(toaddr->addr), IP_PROT_UDP);
+	err = ipv4_output(buf, NETADDR_TO_IPV4(toaddr->addr), IP_PROT_UDP);
+
+	// if it returns ARP_QUEUED, then it's actually okay
+	if(err == ERR_NET_ARP_QUEUED) {
+		err = 0;
+	}
+
+	return err;
 }
 
 int udp_init(void)
