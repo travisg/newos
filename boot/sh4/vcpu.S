@@ -14,7 +14,7 @@ exception_ent_1:
 	shlr2	r0
 	shlr	r0			/* shift the exception code over 3 bits */
 
-	cmp/eq	#0x10,r0		/* test if it's a initial page write */
+	cmp/eq	#0x10,r0		/* test if its a initial page write */
 	bt	_tlb_ipw
 	nop
 
@@ -173,9 +173,9 @@ interrupt_ent:
 
 switch_banks_and_enter_kernel:
 	/* disable interrupts */
-	mov.l	imask,r1
+	mov.l	imask,r3
 	stc	sr,r2
-	or	r1,r2
+	or	r3,r2
 	ldc	r2,sr
 
 	/* save the saved registers into memory */
@@ -271,7 +271,7 @@ _after_r0r7_save:
 	sts.l	fpscr,@-r15
 
 	/* can save most of the special registers we need in r8-r14 */
-	/* the abi we're working with saves r8-14 on function calls */
+	/* the abi we are working with saves r8-14 on function calls */
 	stc.l	gbr,@-r15
 	sts.l	mach,@-r15
 	sts.l	macl,@-r15
@@ -413,8 +413,8 @@ tra_addr:	.long	0xff000020
 imask:		.long	0x000000f0
 
 /* the next memory addresses are used for temporary storage or
-   data structures for the kernel to write in. They're in the
-   text segment, I know, but it's much faster if we can reference
+   data structures for the kernel to write in. They are in the
+   text segment, I know, but its much faster if we can reference
    them pcrel. */
 saved_pfault:	.long	0
 saved_excode:	.long	0

@@ -17,6 +17,7 @@
 #endif
 #ifdef ARCH_sh4
 #include <kernel/dev/arch/sh4/maple/maple_bus.h>
+#include <kernel/dev/arch/i386/keyboard/keyboard.h>
 #include <kernel/dev/arch/sh4/console/console_dev.h>
 #include <kernel/dev/arch/sh4/rtl8139/rtl8139_dev.h>
 #endif
@@ -38,7 +39,8 @@ int devs_init(kernel_args *ka)
 
 #ifdef ARCH_sh4
 //	maple_bus_init(ka);
-	console_dev_init(ka);
+	keyboard_dev_init(ka);
+//	console_dev_init(ka);
 //	rtl8139_dev_init(ka);
 #endif
 	fb_console_dev_init(ka);

@@ -9,13 +9,13 @@ FUNC(reboot)
 	mov.l	disable_exceptions_addr,r1
 	jsr	@r1
 	nop
-	mov	#0,r0
-	mov.l	r1,@r0
-	trapa	#5			/* trap, thus causing a reset */
+
+	mov.l	reboot_vector,r0
+	jmp		@r0
 	nop
-	/* no return */
 
 .align 2
+reboot_vector: .long 0xa0000000
 disable_exceptions_addr:	.long	_disable_exceptions
 
 FUNC(atomic_add)
@@ -212,6 +212,21 @@ FUNC(arch_int_disable_interrupts)
 	rts
 	and	r2,r0			/* make sure the return value contains only the imask part */
 
+FUNC(arch_int_is_interrupts_enabled)
+	mov.l	imask_bit_mask,r2
+	stc	sr,r0			/* load the sr register */
+	and	r2,r0			/* mask out just the interrupt level */
+	cmp/eq #0,r0		/* check for zero */
+	bt 	_ints_is_enabled
+	nop
+
+	rts
+	mov	#0,r0			/* return false */
+
+_ints_is_enabled:
+	rts
+	mov	#1,r0			/* return true */
+
 .align 2
 imask_bit_mask:	.long	0x000000f0
 
@@ -232,6 +247,8 @@ FUNC(sh4_context_switch)
 	fmov.s	fr14,@-r15
 	fmov.s	fr15,@-r15
 	sts.l	fpscr,@-r15
+	sts.l	mach,@-r15
+	sts.l	macl,@-r15
 	mov.l	r8,@-r15
 	mov.l	r9,@-r15
 	mov.l	r10,@-r15
@@ -252,6 +269,8 @@ FUNC(sh4_context_switch)
 	mov.l	@r15+,r10
 	mov.l	@r15+,r9
 	mov.l	@r15+,r8
+	lds.l	@r15+,macl
+	lds.l	@r15+,mach
 	lds.l	@r15+,fpscr
 	fmov.s	@r15+,fr15
 	fmov.s	@r15+,fr14

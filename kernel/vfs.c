@@ -25,7 +25,7 @@
 #include <libc/printf.h>
 #include <libc/ctype.h>
 
-#define MAKE_NOIZE 0
+#define MAKE_NOIZE 1
 
 struct vnode {
 	struct vnode *next;
@@ -1797,7 +1797,7 @@ int user_mount(const char *upath, const char *udevice, const char *ufs_name, voi
 		if((addr)udevice >= KERNEL_BASE && (addr)udevice <= KERNEL_TOP)
 			return ERR_VM_BAD_USER_MEMORY;
 	}
-	
+
 	rc = user_strncpy(path, upath, SYS_MAX_PATH_LEN);
 	if(rc < 0)
 		return rc;

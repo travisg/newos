@@ -58,6 +58,10 @@ static int sh4_handle_exception(void *_frame)
 			uint64 retcode;
 			unsigned int args[MAX_ARGS];
 
+			int_enable_interrupts();
+
+			thread_atkernel_entry();
+
 			// XXX redo this to be stack-based
 			args[0] = frame->r4;
 			args[1] = frame->r5;
@@ -109,7 +113,12 @@ static int sh4_handle_exception(void *_frame)
 		case EXCEPTION_PAGE_FAULT_READ:
 		case EXCEPTION_PAGE_FAULT_WRITE: {
 			addr newip;
-			int_enable_interrupts();
+/*
+			if(!(frame->ssr & 0x000000f0)) {
+				dprintf("page_fault: enabling interrupts\n");
+				int_enable_interrupts();
+			}
+*/
 			ret = vm_page_fault(frame->page_fault_addr, frame->spc,
 				frame->excode == EXCEPTION_PAGE_FAULT_WRITE, (frame->ssr & 0x40000000) == 0, &newip);
 			if(newip != 0)
@@ -125,6 +134,9 @@ static int sh4_handle_exception(void *_frame)
 		thread_resched();
 		RELEASE_THREAD_LOCK();
 		int_restore_interrupts(state);
+	}
+	if(!(frame->ssr & 0x40000000) || (frame->excode == 11)) {
+		thread_atkernel_exit();
 	}
 
 	return 0;

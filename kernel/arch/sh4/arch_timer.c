@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -23,7 +23,7 @@ time_t system_time()
 	time_t outtime;
 	uint32 timer_val;
 	int state = int_disable_interrupts();
-	
+
 restart:
 	timer_val = SYSTEM_TIME_TIMER_QUANTA - *(uint32 *)TCNT1;
 
@@ -85,7 +85,7 @@ static void setup_timer(int timer, time_t relative_timeout)
 			break;
 		default:
 			break;
-	}	
+	}
 }
 
 void arch_timer_set_hardware_timer(time_t timeout)
@@ -127,17 +127,17 @@ int arch_init_timer(kernel_args *ka)
 	uint16 old_val16;
 	dprintf("arch_init_timer: entry\n");
 
-	int_set_io_interrupt_handler(32, &timer_interrupt0);
-	int_set_io_interrupt_handler(33, &timer_interrupt1);
+	int_set_io_interrupt_handler(32, &timer_interrupt0, NULL);
+	int_set_io_interrupt_handler(33, &timer_interrupt1, NULL);
 
 	// stop all of the timers
 	*(uint8 *)TSTR = 0;
-	
+
 	// enable the interrupt on timer 0 & 1 & disable 2
 	old_val16 = *(uint16 *)IPRA;
 	*(uint16 *)IPRA = (old_val16 & 0x000f) | 0xef00;
 
-	// start timer 1 counting forever 
+	// start timer 1 counting forever
 	base_system_time = 0;
 	setup_system_time_timer();
 	start_timer(1);

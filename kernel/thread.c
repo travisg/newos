@@ -1541,8 +1541,8 @@ void thread_resched()
 	timer_set_event(quantum, TIMER_MODE_ONESHOT, &LOCAL_CPU_TIMER);
 
 	if(next_thread != old_thread) {
-//		dprintf("thread_resched: cpu %d switching from thread %d to %d\n",
-//			smp_get_current_cpu(), old_thread->id, next_thread->id);
+		dprintf("thread_resched: cpu %d switching from thread %d to %d\n",
+			smp_get_current_cpu(), old_thread->id, next_thread->id);
 		CURR_THREAD = next_thread;
 		thread_context_switch(old_thread, next_thread);
 	}

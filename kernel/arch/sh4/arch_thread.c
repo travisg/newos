@@ -57,7 +57,7 @@ int arch_thread_initialize_kthread_stack(struct thread *t, int (*start_func)(voi
 	*kstack_top = (unsigned int)entry_func;
 
 	// simulate the important registers being pushed
-	for(i=0; i<7+5; i++) {
+	for(i=0; i<7+2+5; i++) {
 		kstack_top--;
 		*kstack_top = 0;
 	}
@@ -90,6 +90,8 @@ void arch_thread_context_switch(struct thread *t_from, struct thread *t_to)
 
 	if(t_to->proc->aspace != NULL) {
 		sh4_set_user_pgdir(vm_translation_map_get_pgdir(&t_to->proc->aspace->translation_map));
+	} else {
+		sh4_set_user_pgdir(NULL);
 	}
 	sh4_context_switch(&t_from->arch_info.sp, t_to->arch_info.sp);
 }

@@ -15,6 +15,7 @@ void sh4_set_kstack(addr kstack);
 void sh4_enter_uspace(addr entry, addr ustack_top);
 void sh4_set_user_pgdir(addr pgdir);
 void sh4_invl_page(addr va);
+void sh4_switch_stack_and_call(addr stack, void (*func)(void *), void *arg);
 
 #endif
 

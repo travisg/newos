@@ -1692,8 +1692,8 @@ int vm_page_fault(addr address, addr fault_address, bool is_write, bool is_user,
 
 	err = vm_soft_fault(address, is_write, is_user);
 	if(err < 0) {
-		dprintf("vm_page_fault: vm_soft_fault returned error %d on fault at 0x%x, ip 0x%x, write %d, user %d\n",
-			err, address, fault_address, is_write, is_user);
+		dprintf("vm_page_fault: vm_soft_fault returned error %d on fault at 0x%x, ip 0x%x, write %d, user %d, thread 0x%x\n",
+			err, address, fault_address, is_write, is_user, thread_get_current_thread_id());
 		if(!is_user) {
 			struct thread *t = thread_get_current_thread();
 			if(t && t->fault_handler != 0) {
@@ -1715,7 +1715,7 @@ int vm_page_fault(addr address, addr fault_address, bool is_write, bool is_user,
 	return INT_NO_RESCHEDULE;
 }
 
-#define TRACE_PFAULT 0
+#define TRACE_PFAULT 1
 
 #if TRACE_PFAULT
 #define TRACE dprintf("in pfault at line %d\n", __LINE__)
@@ -1737,8 +1737,8 @@ static int vm_soft_fault(addr address, bool is_write, bool is_user)
 	int change_count;
 	int err;
 
-//	dprintf("vm_soft_fault: thid 0x%x address 0x%x, is_write %d, is_user %d\n",
-//		thread_get_current_thread_id(), address, is_write, is_user);
+	dprintf("vm_soft_fault: thid 0x%x address 0x%x, is_write %d, is_user %d\n",
+		thread_get_current_thread_id(), address, is_write, is_user);
 
 	address = ROUNDOWN(address, PAGE_SIZE);
 
@@ -1824,11 +1824,15 @@ static int vm_soft_fault(addr address, bool is_write, bool is_user)
 			if(page == NULL)
 				break;
 
+			TRACE;
+
 			// page must be busy
 			mutex_unlock(&cache_ref->lock);
 			thread_snooze(20000);
 			mutex_lock(&cache_ref->lock);
 		}
+
+		TRACE;
 
 		if(page != NULL)
 			break;

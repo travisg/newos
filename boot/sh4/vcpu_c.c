@@ -9,7 +9,7 @@
 #include <libc/string.h>
 #include <arch/sh4/sh4.h>
 
-#define CHATTY_TLB 0
+#define CHATTY_TLB 1
 
 extern vcpu_struct kernel_struct;
 
@@ -29,46 +29,46 @@ void set_vbr(unsigned int vbr);
 unsigned int get_sgr();
 unsigned int get_ssr();
 unsigned int get_spc();
-asm("
-.globl _get_sr,_set_sr
-.globl _get_vbr,_set_vbr
-.globl _get_sgr
+asm(
+".globl _get_sr,_set_sr\n"
+".globl _get_vbr,_set_vbr\n"
+".globl _get_sgr\n"
 
-_get_sr:
-        stc     sr,r0
-        rts
-        nop
+"_get_sr:\n"
+"        stc     sr,r0\n"
+"        rts\n"
+"        nop\n"
 
-_set_sr:
-        ldc     r4,sr
-        rts
-        nop
+"_set_sr:\n"
+"        ldc     r4,sr\n"
+"        rts\n"
+"        nop\n"
 
-_get_vbr:
-        stc     vbr,r0
-        rts
-        nop
+"_get_vbr:\n"
+"        stc     vbr,r0\n"
+"        rts\n"
+"        nop\n"
 
-_set_vbr:
-        ldc     r4,vbr
-        rts
-        nop
+"_set_vbr:\n"
+"        ldc     r4,vbr\n"
+"        rts\n"
+"        nop\n"
 
-_get_sgr:
-	stc	sgr,r0
-	rts
-	nop
+"_get_sgr:\n"
+"	stc	sgr,r0\n"
+"	rts\n"
+"	nop\n"
 
-_get_ssr:
-	stc	ssr,r0
-	rts
-	nop
+"_get_ssr:\n"
+"	stc	ssr,r0\n"
+"	rts\n"
+"	nop\n"
 
-_get_spc:
-	stc spc,r0
-	rts
-	nop
-");
+"_get_spc:\n"
+"	stc spc,r0\n"
+"	rts\n"
+"	nop\n"
+);
 
 static int default_vector(void *_frame)
 {
@@ -259,6 +259,9 @@ unsigned int tlb_miss(unsigned int excode, unsigned int pc)
 	if(next_utlb_ent >= UTLB_COUNT)
 		next_utlb_ent = 0;
 
+#if CHATTY_TLB
+	dprintf("tlb_miss exit\n");
+#endif
 	return excode;
 }
 

@@ -98,7 +98,7 @@ static void render_line32(char *line, int line_num)
 	int x;
 	int y;
 	int i;
-	uint32 *fb_spot = (uint16 *)(console.fb + line_num * CHAR_HEIGHT * console.fb_x * 4);
+	uint32 *fb_spot = (uint32 *)(console.fb + line_num * CHAR_HEIGHT * console.fb_x * 4);
 
 	for(y = 0; y < CHAR_HEIGHT; y++) {
 		uint32 *render_spot = console.render_buf;
@@ -342,9 +342,12 @@ int fb_console_dev_init(kernel_args *ka)
 
 		memset(&console, 0, sizeof(console));
 
-		// save some data
-		vm_map_physical_memory(vm_get_kernel_aspace_id(), "vesa_fb", (void *)&console.fb, REGION_ADDR_ANY_ADDRESS,
-			ka->fb.mapping.size, LOCK_RW|LOCK_KERNEL, ka->fb.mapping.start);
+		if(ka->fb.already_mapped) {
+			console.fb = ka->fb.mapping.start;
+		} else {
+			vm_map_physical_memory(vm_get_kernel_aspace_id(), "vesa_fb", (void *)&console.fb, REGION_ADDR_ANY_ADDRESS,
+				ka->fb.mapping.size, LOCK_RW|LOCK_KERNEL, ka->fb.mapping.start);
+		}
 
 		console.fb_x = ka->fb.x_size;
 		console.fb_y = ka->fb.y_size;
@@ -369,9 +372,6 @@ int fb_console_dev_init(kernel_args *ka)
 
 		dprintf("framebuffer mapped at 0x%x\n", console.fb);
 
-		// clear it out (this will also page it in)
-		memset((void *)console.fb, 0, console.fb_size);
-
 		// figure out the number of rows/columns we have
 		console.rows = console.fb_y / CHAR_HEIGHT;
 		console.columns = console.fb_x / CHAR_WIDTH;
@@ -386,6 +386,7 @@ int fb_console_dev_init(kernel_args *ka)
 
 		// allocate some memory for this
 		console.render_buf = kmalloc(console.fb_x * console.fb_pixel_bytes);
+		memset((void *)console.render_buf, 0, console.fb_x * console.fb_pixel_bytes);
 		console.buf = kmalloc(console.rows * (console.columns+1));
 		memset(console.buf, 0, console.rows * (console.columns+1));
 		console.lines = kmalloc(console.rows * sizeof(char *));
@@ -393,10 +394,12 @@ int fb_console_dev_init(kernel_args *ka)
 		// set up the line pointers
 		for(i=0; i<console.rows; i++) {
 			console.lines[i] = (char *)((addr)console.buf + i*(console.columns+1));
-			console.dirty_lines[i] = 0;
+			console.dirty_lines[i] = 1;
 		}
 		console.num_lines = console.rows;
 		console.first_line = 0;
+
+		repaint();
 
 		mutex_init(&console.lock, "console_lock");
 		console.keyboard_fd = sys_open("/dev/keyboard", STREAM_TYPE_DEVICE, 0);

@@ -180,36 +180,42 @@ static int query_tmap(vm_translation_map *map, addr va, addr *out_physical, unsi
 	struct ptent *pt;
 	unsigned int index;
 
+	// default the flags to not present
+	*out_flags = 0;
+	*out_physical = 0;
+
 	if(map->arch_data->is_user) {
 		if(va >= P1_AREA) {
 			// invalid
-			return -1;
+			return ERR_VM_GENERAL;
 		}
 		pd = (struct pdent *)map->arch_data->pgdir_phys;
 		index = va >> 22;
 	} else {
 		if(va < P3_AREA && va >= P4_AREA) {
-			return -1;
+			return ERR_VM_GENERAL;
 		}
 		pd = (struct pdent *)vcpu->kernel_pgdir;
 		index = (va & 0x7fffffff) >> 22;
 	}
 
 	if(pd[index].v == 0) {
-		return -1;
+		return NO_ERROR;
 	}
 
 	// get the pagetable
 	pt = (struct ptent *)PHYS_TO_P1(pd[index].ppn << 12);
 	index = (va >> 12) & 0x000003ff;
 
-	if(pt[index].v == 0) {
-		return -1;
-	}
 	*out_physical = pt[index].ppn  << 12;
 
-	// XXX fill this
+	// read in the page state flags, clearing the modified and accessed flags in the process
 	*out_flags = 0;
+	*out_flags |= (pt[index].pr & 0x1) ? LOCK_RW : LOCK_RO;
+	*out_flags |= (pt[index].pr & 0x2) ? 0 : LOCK_KERNEL;
+	*out_flags |= pt[index].d ? PAGE_MODIFIED : 0;
+//	*out_flags |= pt[index].accessed ? PAGE_ACCESSED : 0; // not emulating the accessed bit yet
+	*out_flags |= pt[index].v ? PAGE_PRESENT : 0;
 
 	return 0;
 }
@@ -223,6 +229,57 @@ static int protect_tmap(vm_translation_map *map, addr base, addr top, unsigned i
 {
 	// XXX finish
 	return -1;
+}
+
+static int clear_flags_tmap(vm_translation_map *map, addr va, unsigned int flags)
+{
+	struct pdent *pd;
+	struct ptent *pt;
+	unsigned int index;
+	int tlb_flush = false;
+
+	if(map->arch_data->is_user) {
+		if(va >= P1_AREA) {
+			// invalid
+			return ERR_VM_GENERAL;
+		}
+		pd = (struct pdent *)map->arch_data->pgdir_phys;
+		index = va >> 22;
+	} else {
+		if(va < P3_AREA && va >= P4_AREA) {
+			return ERR_VM_GENERAL;
+		}
+		pd = (struct pdent *)vcpu->kernel_pgdir;
+		index = (va & 0x7fffffff) >> 22;
+	}
+
+	if(pd[index].v == 0) {
+		return NO_ERROR;
+	}
+
+	// get the pagetable
+	pt = (struct ptent *)PHYS_TO_P1(pd[index].ppn << 12);
+	index = (va >> 12) & 0x000003ff;
+
+	// clear out the flags we've been requested to clear
+	if(flags & PAGE_MODIFIED) {
+		pt[index].d = 0;
+		tlb_flush = true;
+	}
+	if(flags & PAGE_ACCESSED) {
+//		pt[index].accessed = 0;
+//		tlb_flush = true;
+	}
+
+	if(tlb_flush)
+		sh4_invl_page(va);
+
+	return 0;
+}
+
+static void flush_tmap(vm_translation_map *map)
+{
+	// no-op, we aren't caching any tlb invalidations
 }
 
 static int get_physical_page_tmap(addr pa, addr *va, int flags)
@@ -249,6 +306,8 @@ static vm_translation_map_ops tmap_ops = {
 	query_tmap,
 	get_mapped_size_tmap,
 	protect_tmap,
+	clear_flags_tmap,
+	flush_tmap,
 	get_physical_page_tmap,
 	put_physical_page_tmap
 };
@@ -278,7 +337,7 @@ int vm_translation_map_create(vm_translation_map *new_map, bool kernel)
 		}
 		if(((addr)new_map->arch_data->pgdir_virt % PAGE_SIZE) != 0)
 			panic("vm_translation_map_create: malloced pgdir and found it wasn't aligned!\n");
-		vm_get_page_mapping(vm_get_kernel_aspace(), (addr)new_map->arch_data->pgdir_virt, (addr *)&new_map->arch_data->pgdir_phys);
+		vm_get_page_mapping(vm_get_kernel_aspace_id(), (addr)new_map->arch_data->pgdir_virt, (addr *)&new_map->arch_data->pgdir_phys);
 		new_map->arch_data->pgdir_phys = PHYS_TO_P1(new_map->arch_data->pgdir_phys);
 		// zero out the new pgdir
 		memset((void *)new_map->arch_data->pgdir_virt, 0, PAGE_SIZE);
@@ -304,6 +363,10 @@ int vm_translation_map_module_init(kernel_args *ka)
 int vm_translation_map_module_init2(kernel_args *ka)
 {
 	return 0;
+}
+
+void vm_translation_map_module_init_post_sem(kernel_args *ka)
+{
 }
 
 // XXX horrible back door to map a page quickly regardless of translation map object, etc.

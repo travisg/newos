@@ -103,6 +103,7 @@ void _start(unsigned int mem, int in_vesa, unsigned int vesa_ptr)
 		ka->fb.bit_depth = mode_info->bits_per_pixel;
 		ka->fb.mapping.start = mode_info->phys_base_ptr;
 		ka->fb.mapping.size = ka->fb.x_size * ka->fb.y_size * (ka->fb.bit_depth/8);
+		ka->fb.already_mapped = 0;
 	} else {
 		ka->fb.enabled = 0;
 	}

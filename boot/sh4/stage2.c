@@ -91,6 +91,14 @@ int _start()
 	ka->virt_alloc_range[1].size  = next_vaddr - ka->virt_alloc_range[1].start;
 	ka->num_virt_alloc_ranges = 2;
 
+	ka->fb.enabled = 1;
+	ka->fb.x_size = 640;
+	ka->fb.y_size = 480;
+	ka->fb.bit_depth = 16;
+	ka->fb.mapping.start = 0xa5000000;
+	ka->fb.mapping.size = ka->fb.x_size * ka->fb.y_size * 2;
+	ka->fb.already_mapped = 1;
+
 	ka->cons_line = 0;
 	ka->str = 0;
 	ka->bootdir_addr.start = P1_TO_PHYS_ADDR(BOOTDIR);
@@ -119,16 +127,14 @@ int _start()
 	return 0;
 }
 
-asm("
-.text
-.align 2
-_switch_stacks_and_call:
-	mov	r4,r15
-	mov	r5,r1
-	mov	r6,r4
-	jsr	@r1
-	mov	r7,r5
-");
+asm(".text\n"
+".align 2\n"
+"_switch_stacks_and_call:\n"
+"	mov	r4,r15\n"
+"	mov	r5,r1\n"
+"	mov	r6,r4\n"
+"	jsr	@r1\n"
+"	mov	r7,r5");
 
 void load_elf_image(void *data, unsigned int *next_paddr, addr_range *ar0, addr_range *ar1, unsigned int *start_addr, addr_range *dynamic_section)
 {

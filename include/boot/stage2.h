@@ -34,6 +34,7 @@ typedef struct {
 		int x_size;
 		int y_size;
 		int bit_depth;
+		int already_mapped;
 		addr_range mapping;
 	} fb;
 	// architecture specific
