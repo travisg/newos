@@ -6,15 +6,19 @@
 #define _TYPES_H
 
 #ifdef __i386__
+#undef i386
 #define INC_ARCH(path, x) <path/i386/x>
 #endif
 #ifdef __ppc__
+#undef ppc
 #define INC_ARCH(path, x) <path/ppc/x>
 #endif
 #ifdef __x86_64__
+#undef x86_64
 #define INC_ARCH(path, x) <path/x86_64/x>
 #endif
 #ifdef __arm__
+#undef arm
 #define INC_ARCH(path, x) <path/arm/x>
 #endif
 
