@@ -1,12 +1,12 @@
 /*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Copyright 2002,  Rob Judd <judd@ob-wan.com>
 ** Distributed under the terms of the NewOS License.
 **
-** Modified Feb 2002 by Rob Judd <judd@ob-wan.com>
 */
 
-#ifndef __PARTITION_H__
-#define __PARTITION_H__
+#ifndef _PARTITION_H
+#define _PARTITION_H
 
 #define  PART_IDENT_OFFSET  0x01fe
 #define  PARTITION_OFFSET   0x01be
@@ -66,8 +66,6 @@ typedef enum PartitionTypes
   PTDOSSecondary =     0xf2,
   PTBBT =              0xff
 } partitionTypes;
-
-#define PartitionIsExtended(P) ((P)->PartitionType == PTDosExtended)
 
 typedef struct sPartition
 {
