@@ -86,7 +86,8 @@ static char sccsid[] = "@(#)support.c	8.1 (Berkeley) 6/4/93";
     static const double novf=1.7E308, nunf=3.0E-308,zero=0.0;
 #endif	/* defined(vax)||defined(tahoe) */
 
-double scalb(double x, double N)
+double
+scalb(double x, double N)
 {
         int k;
 
@@ -109,32 +110,38 @@ double scalb(double x, double N)
         if( (k= *px & mexp ) != mexp ) {
             if( N<-2100) return(nunf*nunf); else if(N>2100) return(novf+novf);
             if( k == 0 ) {
-                 x *= scalb(1.0,(int)prep1);  N -= prep1; return(scalb(x,N));}
+                x *= scalb(1.0,(int)prep1);
+		N -= prep1;
+		return(scalb(x,N));
+	    }
 #endif	/* defined(vax)||defined(tahoe) */
 
-            if((k = (k>>gap)+ N) > 0 )
+            if((k = (k>>gap)+ N) > 0 ) {
                 if( k < (mexp>>gap) ) *px = (*px&~mexp) | (k<<gap);
                 else x=novf+novf;               /* overflow */
-            else
-                if( k > -prep1 )
-                                        /* gradual underflow */
-                    {*px=(*px&~mexp)|(short)(1<<gap); x *= scalb(1.0,k-1);}
-                else
-                return(nunf*nunf);
-            }
+            } else {
+                if( k > -prep1 ) {
+                    /* gradual underflow */
+                    *px=(*px&~mexp)|(short)(1<<gap);
+		    x *= scalb(1.0,k-1);
+		} else {
+                    return(nunf*nunf);
+		}
+	    }
+        }
         return(x);
 }
 
 
-double copysign(x,y)
-double x,y;
+double
+copysign(double x, double y)
 {
 #ifdef national
-        unsigned short  *px=(unsigned short *) &x+3,
-                        *py=(unsigned short *) &y+3;
+        unsigned short  *px=(unsigned short *) &x+3;
+	unsigned short	*py=(unsigned short *) &y+3;
 #else	/* national */
-        unsigned short  *px=(unsigned short *) &x,
-                        *py=(unsigned short *) &y;
+        unsigned short  *px=(unsigned short *) &x;
+	unsigned short	*py=(unsigned short *) &y;
 #endif	/* national */
 
 #if defined(vax)||defined(tahoe)
@@ -145,14 +152,16 @@ double x,y;
         return(x);
 }
 
-double logb(x)
-double x;
+double
+logb(double x)
 {
 
 #ifdef national
-        short *px=(short *) &x+3, k;
+        short *px=(short *) &x+3;
+	short k;
 #else	/* national */
-        short *px=(short *) &x, k;
+        short *px=(short *) &x;
+	short k;
 #endif	/* national */
 
 #if defined(vax)||defined(tahoe)
@@ -172,8 +181,8 @@ double x;
 #endif	/* defined(vax)||defined(tahoe) */
 }
 
-finite(x)
-double x;
+int
+finite(double x)
 {
 #if defined(vax)||defined(tahoe)
         return(1);
@@ -186,24 +195,24 @@ double x;
 #endif	/* defined(vax)||defined(tahoe) */
 }
 
-double drem(x,p)
-double x,p;
+double
+drem(double x, double p)
 {
         short sign;
-        double hp,dp,tmp;
+        double hp;
+	double dp;
+	double tmp;
         unsigned short  k;
 #ifdef national
-        unsigned short
-              *px=(unsigned short *) &x  +3,
-              *pp=(unsigned short *) &p  +3,
-              *pd=(unsigned short *) &dp +3,
-              *pt=(unsigned short *) &tmp+3;
+        unsigned short *px=(unsigned short *) &x  +3;
+	unsigned short *pp=(unsigned short *) &p  +3;
+	unsigned short *pd=(unsigned short *) &dp +3;
+	unsigned short *pt=(unsigned short *) &tmp+3;
 #else	/* national */
-        unsigned short
-              *px=(unsigned short *) &x  ,
-              *pp=(unsigned short *) &p  ,
-              *pd=(unsigned short *) &dp ,
-              *pt=(unsigned short *) &tmp;
+        unsigned short *px=(unsigned short *) &x;
+	unsigned short *pp=(unsigned short *) &p;
+	unsigned short *pd=(unsigned short *) &dp;
+	unsigned short *pt=(unsigned short *) &tmp;
 #endif	/* national */
 
         *pp &= msign ;
@@ -267,13 +276,18 @@ double x,p;
 }
 
 
-double sqrt(x)
-double x;
+double
+sqrt(double x)
 {
-        double q,s,b,r;
+        double q;
+	double s;
+	double b;
+	double r;
         double t;
 	double const zero=0.0;
-        int m,n,i;
+        int m;
+	int n;
+	int i;
 #if defined(vax)||defined(tahoe)
         int k=54;
 #else	/* defined(vax)||defined(tahoe) */
@@ -315,7 +329,8 @@ double x;
 
     /* generate the last bit and determine the final rounding */
             r/=2; x *= 4;
-            if(x==zero) goto end; 100+r; /* trigger inexact flag */
+            if(x==zero) goto end;
+	    (void volatile)(100+r); /* trigger inexact flag */
             if(s<x) {
                 q+=r; x -=s; s += 2; s *= 2; x *= 4;
                 t = (x-s)-5;

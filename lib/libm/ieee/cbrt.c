@@ -55,28 +55,32 @@ static char sccsid[] = "@(#)cbrt.c	8.1 (Berkeley) 6/4/93";
  */
 #if !defined(vax)&&!defined(tahoe)
 
-static const unsigned long
-		     B1 = 715094163, /* B1 = (682-0.03306235651)*2**20 */
-	             B2 = 696219795; /* B2 = (664-0.03306235651)*2**20 */
-static const double
-	    C= 19./35.,
-	    D= -864./1225.,
-	    E= 99./70.,
-	    F= 45./28.,
-	    G= 5./14.;
+static unsigned long const B1 = 715094163; /* B1 = (682-0.03306235651)*2**20 */
+static unsigned long const B2 = 696219795; /* B2 = (664-0.03306235651)*2**20 */
+static double const C= 19./35.;
+static double const D= -864./1225.;
+static double const E= 99./70.;
+static double const F= 45./28.;
+static double const G= 5./14.;
 
-double cbrt(x)
-double x;
+double
+cbrt(double x)
 {
-	double r,s,t=0.0,w;
-	unsigned long *px = (unsigned long *) &x,
-	              *pt = (unsigned long *) &t,
-		      mexp,sign;
+	double r;
+	double s;
+	double t=0.0;
+	double w;
+	unsigned long *px = (unsigned long *) &x;
+	unsigned long *pt = (unsigned long *) &t;
+	unsigned long mexp;
+	unsigned long sign;
 
 #ifdef national /* ordering of words in a floating points number */
-	const int n0=1,n1=0;
+	const int n0=1;
+	const int n1=0;
 #else	/* national */
-	const int n0=0,n1=1;
+	const int n0=0;
+	const int n1=1;
 #endif	/* national */
 
 	mexp=px[n0]&0x7ff00000;
@@ -88,12 +92,14 @@ double x;
 
 
     /* rough cbrt to 5 bits */
-	if(mexp==0) 		/* subnormal number */
-	  {pt[n0]=0x43500000; 	/* set t= 2**54 */
-	   t*=x; pt[n0]=pt[n0]/3+B2;
-	  }
-	else
-	  pt[n0]=px[n0]/3+B1;
+	if(mexp==0) {
+ 	   /* subnormal number */
+	    pt[n0]=0x43500000; 	/* set t= 2**54 */
+	    t*=x;
+	    pt[n0]=pt[n0]/3+B2;
+	} else {
+	   pt[n0]=px[n0]/3+B1;
+	}
 
 
     /* new cbrt to 23 bits, may be implemented in single precision */

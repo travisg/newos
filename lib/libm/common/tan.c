@@ -37,10 +37,13 @@ static char sccsid[] = "@(#)tan.c	8.1 (Berkeley) 6/4/93";
 
 #include "trig.h"
 double
-tan(x)
-double x;
+tan(double x)
 {
-	double a,z,ss,cc,c;
+	double a;
+	double z;
+	double ss;
+	double cc;
+	double c;
 	int k;
 
 	if(!finite(x))		/* tan(NaN) and tan(INF) must be NaN */
@@ -54,7 +57,7 @@ double x;
 	else {
 		k = 0;
 		if (a < small) {
-			big+a;
+			(void volatile)(big+a);
 			return x;
 		}
 	}
@@ -63,12 +66,13 @@ double x;
 	ss = sin__S(z);
 	z *= half;			/* Next get c = cos(x) accurately */
 	c = (z >= thresh ? half-((z-half)-cc) : one-(z-cc));
-	if (k == 0)
+	if (k == 0) {
 		return x+(x*(z-(cc-ss)))/c;	/* ... sin/cos */
 #ifdef national
-	else if (x == zero)
+	} else if (x == zero) {
 		return copysign(fmax,x);	/* no inf on 32k */
 #endif	/* national */
-	else
+	} else {
 		return c/(x+x*ss);		/* ... cos/sin */
+	}
 }

@@ -175,10 +175,12 @@ extern double scalbn(double, int);
 /*
  * BSD math library entry points
  */
-extern double cabs();
+struct complex { double x, y; };
+extern double cabs(struct complex);
 extern double drem(double, double);
 extern double expm1(double);
 extern double log1p(double);
+extern double z_abs(struct complex const *); /* complete non standard */
 
 /*
  * Reentrant version of gamma & lgamma; passes signgam back by reference

@@ -172,8 +172,8 @@ ic(a11,    1.6438029044759730479E-2  ,  -6,  1.0D52174A1BB54)
 #define	a12	vccast(a12)
 #endif
 
-double atan2(y,x)
-double  y,x;
+double
+atan2(double y, double x)
 {
 	static const double zero=0, one=1, small=1.0E-9, big=1.0E18;
 	double t,z,signy,signx,hi,lo;
@@ -198,11 +198,12 @@ double  y,x;
 	if(x==zero) return(copysign(PIo2,signy));
 
     /* when x is INF */
-	if(!finite(x))
+	if(!finite(x)) {
 	    if(!finite(y))
 		return(copysign((signx==one)?PIo4:3*PIo4,signy));
 	    else
 		return(copysign((signx==one)?zero:PI,signy));
+	}
 
     /* when y is INF */
 	if(!finite(y)) return(copysign(PIo2,signy));
@@ -225,9 +226,10 @@ begin:
 	    /* t is in [0,7/16] */
 	    case 0:
 	    case 1:
-		if (t < small)
-		    { big + small ;  /* raise inexact flag */
-		      return (copysign((signx>zero)?t:PI-t,signy)); }
+		if (t < small) {
+		    (void volatile)(big + small) ;  /* raise inexact flag */
+		    return (copysign((signx>zero)?t:PI-t,signy));
+		}
 
 		hi = zero;  lo = zero;  break;
 
@@ -257,12 +259,13 @@ begin:
 	    hi = PIo2; lo = zero;
 
 	    /* t is in [2.4375, big] */
-	    if (t <= big)  t = - x / y;
-
-	    /* t is in [big, INF] */
-	    else
-	      { big+small;	/* raise inexact flag */
-		t = zero; }
+	    if (t <= big) {
+		t = - x / y; 
+	    } else {
+	    	/* t is in [big, INF] */
+		(void volatile)(big+small);	/* raise inexact flag */
+		t = zero;
+	    }
 	}
     /* end of argument reduction */
 

@@ -59,7 +59,7 @@ sin(double x)
 	}
 
 	if (a < small) {		/* rtn. S(x) */
-		big+a;
+		(void volatile)(big+a);
 		return x;
 	}
 	return x+x*sin__S(x*x);
@@ -85,7 +85,7 @@ cos(double x)
 		}
 	}
 	if (a < small) {
-		big+a;
+		(void volatile)(big+a);
 		return s;		/* rtn. s*C(a) */
 	}
 	z = a*a;
