@@ -10,5 +10,8 @@
 #ifdef ARCH_sparc64
 #include <boot/arch/sparc64/stage2.h>
 #endif
+#ifdef ARCH_mips
+#include <boot/arch/mips/stage2.h>
+#endif
 
 #endif

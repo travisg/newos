@@ -16,6 +16,9 @@
 #ifdef ARCH_sparc64
 #include <arch/sparc64/types.h>
 #endif
+#ifdef ARCH_mips
+#include <arch/mips/types.h>
+#endif
 
 #ifndef NULL
 #define NULL 0

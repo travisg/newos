@@ -13,6 +13,9 @@
 #ifdef ARCH_sparc64
 #include <kernel/arch/sparc64/thread_struct.h>
 #endif
+#ifdef ARCH_mips
+#include <kernel/arch/mips/thread_struct.h>
+#endif
 
 #endif
 

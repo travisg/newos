@@ -13,6 +13,9 @@
 #ifdef ARCH_sparc64
 #include <kernel/arch/sparc64/ktypes.h>
 #endif
+#ifdef ARCH_mips
+#include <kernel/arch/mips/ktypes.h>
+#endif
 
 #endif
 

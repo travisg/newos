@@ -92,9 +92,22 @@ ifeq ($(ARCH),alpha)
 	LIBGCC_PATH = lib/libgcc/$(ARCH)
 endif
 
+ifeq ($(ARCH),mips)
+	ifneq ($(HOSTTYPE),mips)
+		CC = mips-elf-gcc
+		LD = mips-elf-ld
+		AS = mips-elf-as
+		AR = mips-elf-ar
+	endif
+	GLOBAL_CFLAGS = -fno-pic -mips4 -meb -G 0
+	GLOBAL_LDFLAGS =
+	LIBGCC = -lgcc
+	LIBGCC_PATH = lib/libgcc/$(ARCH)
+endif
+
 OBJ_DIR = obj.$(ARCH)
 
-GLOBAL_CFLAGS += -pipe -Wall -W -Wno-multichar -Wno-unused -nostdinc -fno-builtin -DARCH_$(ARCH)
+GLOBAL_CFLAGS += -pipe -Werror -Wall -W -Wno-multichar -Wno-unused -nostdinc -fno-builtin -DARCH_$(ARCH)
 
 FINAL = boot/$(ARCH)/final
 

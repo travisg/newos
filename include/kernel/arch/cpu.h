@@ -16,6 +16,9 @@
 #ifdef ARCH_sparc64
 #include <kernel/arch/sparc64/cpu.h>
 #endif
+#ifdef ARCH_mips
+#include <kernel/arch/mips/cpu.h>
+#endif
 
 #define PAGE_ALIGN(x) (((x) + (PAGE_SIZE-1)) & ~(PAGE_SIZE-1))
 
