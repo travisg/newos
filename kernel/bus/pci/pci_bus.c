@@ -128,10 +128,21 @@ static const char *pci_class_to_string(uint8 base_class)
 		case 0: return "legacy";
 		case 1: return "mass storage";
 		case 2: return "network";
-		case 3: return "video";
+		case 3: return "display";
 		case 4: return "multimedia";
 		case 5: return "memory";
 		case 6: return "bridge";
+		case 7: return "communications";
+		case 8: return "system";
+		case 9: return "input";
+		case 10: return "docking";
+		case 11: return "processor";
+		case 12: return "serial bus";
+		case 13: return "wireless";
+		case 14: return "I2O";
+		case 15: return "satcom";
+		case 16: return "crypto";
+		case 17: return "dasp";
 		default: return "unknown";
 	}
 }
@@ -140,48 +151,100 @@ static const char *pci_subclass_to_string(uint8 base_class, uint8 sub_class)
 {
 	switch(base_class) {
 		case 0: // legacy
-			return "unknown";
+			switch(sub_class) {
+				case 0: return "non-vga";
+				case 1: return "vga";
+			}
 		case 1: // mass storage
 			switch(sub_class) {
 				case 0: return "scsi";
 				case 1: return "ide";
 				case 2: return "floppy";
 				case 3: return "ipi";
-				default: return "unknown";
+				case 4: return "raid";
+				case 5: return "ata";
+				case 6: return "sata";
+				case 0x80: return "other";
 			}
+			break;
 		case 2: // network
 			switch(sub_class) {
 				case 0: return "ethernet";
-				case 1: return "token_ring";
+				case 1: return "token ring";
 				case 2: return "fddi";
-				default: return "unknown";
+				case 3: return "atm";
+				case 4: return "isdn";
+				case 0x80: return "other";
 			}
+			break;
 		case 3: // video
 			switch(sub_class) {
 				case 0: return "vga";
 				case 1: return "xga";
-				default: return "unknown";
+				case 2: return "3d";
+				case 0x80: return "other";
 			}
+			break;
 		case 4: // multimedia
-			return "unknown";
+			switch(sub_class) {
+				case 0: return "video";
+				case 1: return "audio";
+				case 2: return "telephony";
+				case 0x80: return "other";
+			}
+			break;
 		case 5: // memory
 			switch(sub_class) {
-				case 1: return "ram";
-				default: return "unknown";
+				case 0: return "ram";
+				case 1: return "flash";
+				case 0x80: return "other";
 			}
+			break;
 		case 6: // bridge
 			switch(sub_class) {
 				case 0: return "host";
 				case 1: return "isa";
 				case 2: return "eisa";
 				case 3: return "mca";
-				case 4: return "pcipci";
+				case 4: return "pci";
 				case 5: return "pcmcia";
+				case 6: return "nubus";
+				case 7: return "cardbus";
+				case 8: return "raceway";
+				case 9: return "stpci";
+				case 10: return "infiniband";
 				case 0x80: return "other";
-				default: return "unknown";
 			}
-		default: return "unknown";
+			break;
+		case 7: // comm
+			switch(sub_class) {
+				case 0: return "uart";
+				case 1: return "par";
+				case 2: return "uart 16550a";
+				case 3: return "modem";
+				case 4: return "gpib";
+				case 5: return "smartcard";
+				case 0x80: return "other";
+			}
+			break;
+		case 8: // base peripheral
+			switch(sub_class) {
+				case 0: return "pic";
+				case 1: return "dma";
+				case 2: return "timer";
+				case 3: return "rtc";
+				case 4: return "pci hotplug";
+				case 0x80: return "other";
+			}
+		case 12: // serial bus
+			switch(sub_class) {
+				case 0: return "firewire";
+				case 3: return "usb";
+				case 4: return "fibrechannel";
+			}
+			break;
 	}
+	return "unknown";
 }
 
 void dump_pci_config(struct pci_cfg *cfg)
@@ -236,7 +299,7 @@ int pci_probe(uint8 bus, uint8 unit, uint8 function, struct pci_cfg *cfg)
 	if(pci_read_config(bus, unit, function, cfg) < 0)
 		return -1;
 
-//	dump_pci_config(&cfg);
+	dump_pci_config(cfg);
 
 	return 0;
 }
