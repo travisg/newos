@@ -6,7 +6,7 @@
 #include <unistd.h>
 #include <sys/syscalls.h>
 #include <libsys/stdio.h>
-#include <libsys/malloc.h>
+#include <stdlib.h>
 #include <ctype.h>
 
 #include "commands.h"

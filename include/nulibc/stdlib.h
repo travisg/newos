@@ -21,9 +21,24 @@ unsigned int  atoui(const char *num);
 long          atol(const char *num);
 unsigned long atoul(const char *num);
 
+void * malloc(size_t);
+void   free(void *);
+void * realloc(void *, size_t);
+void * calloc(size_t, size_t);
+void * memalign(size_t, size_t);
+void * valloc(size_t);
+
 
 #ifdef __cplusplus
 } /* extern "C" */
+#endif
+
+
+#ifdef __cplusplus
+void * operator new (size_t);
+void * operator new[] (size_t);
+void operator delete (void *);
+void operator delete[] (void *);
 #endif
 
 
