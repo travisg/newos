@@ -15,6 +15,7 @@ include $(addsuffix /makefile, $(addprefix $(APPS_DIR)/, \
 	true \
 	unmount \
 	vmtest \
+	rm \
 ))
 
 
