@@ -1352,7 +1352,7 @@ static void handle_fin_retransmit(void *_socket)
 
 	mutex_lock(&s->lock);
 
-	if(s->state != STATE_LAST_ACK && s->state != STATE_FIN_WAIT_1)
+	if(s->state != STATE_LAST_ACK && s->state != STATE_FIN_WAIT_1 && s->state != STATE_CLOSING)
 		goto out;
 
 	if(set_net_timer(&s->fin_retransmit_timer, FIN_RETRANSMIT_TIMEOUT, &handle_fin_retransmit, s, NET_TIMER_PENDING_IGNORE) >= 0)
