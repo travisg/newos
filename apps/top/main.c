@@ -158,6 +158,10 @@ static int display_info(void)
 {
 	thread_time *tt;
 
+	// clear and home the screen
+	printf("%c[2J%c[H", 0x1b, 0x1b);
+
+	// print the thread dump
 	printf("----------------------------------\n");
 	for(tt = times; tt; tt = tt->next) {
 		printf("%d\t%d\t%32s\t%Ld\t%Ld\n",
