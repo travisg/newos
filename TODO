@@ -1,60 +1,67 @@
 Implement:
 
 PORTS:
+ m68k port (NeXT slab)
  ppc port (iMac)
+ ARM
  mips port (SGI Indy)
- sparc v8 port
  sparc v9 port
+ sparc v8 port
  alpha port (DEC Multia)
-user-space loader
-disk based filesystem
-kernel ports/pipes (IPC)
-arguments to new processes
-process environment variables
 dreamcast drivers:
- maple bus layer
- keyboard
- mouse
  cdrom
+ rtl8139
 sh4 cache enable - dreamcast
 statistic gathering:
  process
  thread
-SMP mailbox check during spin
+ VM
+process environment variables
 scheduler updates:
  better quantum handling
  priority boost on sem block
 improved kernel debugger support:
  symbol lookups
  stack tracing
-rtl8139 driver - dreamcast
-TCP/IP stack
 kernel slab allocator
 vfs:
  vnode caching
  getcwd
- attributes (?)
+ attributes
  CLOEXEC
 VM:
  cache layer
+ better region creation args (range of virtual addresses, etc)
+ reserve regions
+ swap
+ page out
+Improved bus managers (BeOS style)
+Fully relocatable kernel, stage2 relocates
 
 In Progress:
 
 signals
 tty layer
+disk based filesystem
 kernel module loading:
  modules
-VM:
- swap
- page out
 RLD
  lazy binding
  so initialization
  dl_open() et load_addon()
-
+TCP/IP stack:
+ TCP protocol
+ better initialization
+ user space punch-down
+new build system
+IDE bus manager
 
 Finish:
 
-sh4 console - dreamcast
+use fxsave instead of fsave where appropriate
+move more per-cpu stuff to the global cpu[] array
 
 Fix:
+
+Places in kernel where page fault with ints off happens
+Random reboot on heavy fibo usage
