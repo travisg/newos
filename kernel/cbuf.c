@@ -19,7 +19,7 @@
 #endif
 
 #define ALLOCATE_CHUNK (PAGE_SIZE * 16)
-#define CBUF_REGION_SIZE (4*1024*1024)
+#define CBUF_REGION_SIZE (1*1024*1024)
 #define CBUF_BITMAP_SIZE (CBUF_REGION_SIZE / CBUF_LEN)
 
 static cbuf *cbuf_free_list;

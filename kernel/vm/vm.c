@@ -31,7 +31,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#define HEAP_SIZE	0x00400000
+
+/* global data about the vm, used for informational purposes */
+vm_info_t vm_info;
 
 static vm_address_space *kernel_aspace;
 
@@ -1556,6 +1558,7 @@ int vm_init(kernel_args *ka)
 	int last_used_virt_range = -1;
 	int last_used_phys_range = -1;
 	addr heap_base;
+	addr heap_size;
 	void *null_addr;
 
 	dprintf("vm_init: entry\n");
@@ -1570,14 +1573,21 @@ int vm_init(kernel_args *ka)
 	aspace_hash_sem = -1;
 	max_commit = 0; // will be increased in vm_page_init
 	max_commit_lock = 0;
+	memset(&vm_info, 0, sizeof(vm_info));
+
+	// figure the size of memory
+	vm_page_init(ka);
 
 	// map in the new heap and initialize it
-	heap_base = vm_alloc_from_ka_struct(ka, HEAP_SIZE, LOCK_KERNEL|LOCK_RW);
-	dprintf("heap at 0x%lx\n", heap_base);
-	heap_init(heap_base, HEAP_SIZE);
+	heap_size = ROUNDUP(vm_get_mem_size() / 32, 1*1024*1024);
+	if(heap_size > 16*1024*1024)
+		heap_size = 16*1024*1024;
+	heap_base = vm_alloc_from_ka_struct(ka, heap_size, LOCK_KERNEL|LOCK_RW);
+	dprintf("heap at 0x%lx, size 0x%lx\n", heap_base, heap_size);
+	heap_init(heap_base, heap_size);
 
-	// initialize the free page list and physical page mapper
-	vm_page_init(ka);
+	// initialize the free page list and page allocator
+	vm_page_init_postheap(ka);
 
 	// initialize the hash table that stores the pages mapped to caches
 	vm_cache_init(ka);
@@ -1617,7 +1627,7 @@ int vm_init(kernel_args *ka)
 	// allocate regions to represent stuff that already exists
 	null_addr = (void *)ROUNDOWN(heap_base, PAGE_SIZE);
 	vm_create_anonymous_region(vm_get_kernel_aspace_id(), "kernel_heap", &null_addr, REGION_ADDR_EXACT_ADDRESS,
-		HEAP_SIZE, REGION_WIRING_WIRED_ALREADY, LOCK_RW|LOCK_KERNEL);
+		heap_size, REGION_WIRING_WIRED_ALREADY, LOCK_RW|LOCK_KERNEL);
 
 	null_addr = (void *)ROUNDOWN(ka->kernel_seg0_addr.start, PAGE_SIZE);
 	vm_create_anonymous_region(vm_get_kernel_aspace_id(), "kernel_ro", &null_addr, REGION_ADDR_EXACT_ADDRESS,
@@ -1755,6 +1765,8 @@ static int vm_soft_fault(addr address, bool is_write, bool is_user)
 
 //	dprintf("vm_soft_fault: thid 0x%x address 0x%x, is_write %d, is_user %d\n",
 //		thread_get_current_thread_id(), address, is_write, is_user);
+
+	atomic_add(&vm_info.page_faults, 1);
 
 	address = ROUNDOWN(address, PAGE_SIZE);
 
@@ -2069,6 +2081,7 @@ void vm_increase_max_commit(addr delta)
 	state = int_disable_interrupts();
 	acquire_spinlock(&max_commit_lock);
 	max_commit += delta;
+	vm_info.committed_mem += delta;
 	release_spinlock(&max_commit_lock);
 	int_restore_interrupts(state);
 }
@@ -2091,5 +2104,10 @@ int user_strncpy(char *to, const char *from, size_t size)
 int user_memset(void *s, char c, size_t count)
 {
 	return arch_cpu_user_memset(s, c, count, &thread_get_current_thread()->fault_handler);
+}
+
+addr vm_get_mem_size(void)
+{
+	return vm_info.physical_page_size * vm_info.physical_pages;
 }
 

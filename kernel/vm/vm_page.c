@@ -121,6 +121,8 @@ static int pageout_daemon()
 		acquire_spinlock(&page_lock);
 		page = dequeue_page(&page_modified_queue);
 		page->state = PAGE_STATE_BUSY;
+		vm_info.modified_pages--;
+		vm_info.busy_pages++;
 		vm_cache_acquire_ref(page->cache_ref, true);
 		release_spinlock(&page_lock);
 		int_restore_interrupts(state);
@@ -134,6 +136,8 @@ static int pageout_daemon()
 			acquire_spinlock(&page_lock);
 			enqueue_page(&page_modified_queue, page);
 			page->state = PAGE_STATE_MODIFIED;
+			vm_info.busy_pages--;
+			vm_info.modified_pages++;
 			release_spinlock(&page_lock);
 			int_restore_interrupts(state);
 			vm_cache_release_ref(page->cache_ref);
@@ -165,10 +169,13 @@ static int pageout_daemon()
 
 		state = int_disable_interrupts();
 		acquire_spinlock(&page_lock);
+		vm_info.busy_pages--;
 		if(page->ref_count > 0) {
 			page->state = PAGE_STATE_ACTIVE;
+			vm_info.active_pages++;
 		} else {
 			page->state = PAGE_STATE_INACTIVE;
+			vm_info.inactive_pages++;
 		}
 		enqueue_page(&page_active_queue, page);
 		release_spinlock(&page_lock);
@@ -212,10 +219,23 @@ int vm_page_init(kernel_args *ka)
 		num_pages = last_phys_page - physical_page_offset;
 	}
 
+	// set up the global info structure about physical memory
+	vm_info.physical_page_size = PAGE_SIZE;
+	vm_info.physical_pages = num_pages;
+
+	dprintf("vm_page_init: exit\n");
+
+	return 0;
+}
+
+int vm_page_init_postheap(kernel_args *ka)
+{
+	unsigned int i;
+
 	// map in the new free page table
 	all_pages = (vm_page *)vm_alloc_from_ka_struct(ka, num_pages * sizeof(vm_page), LOCK_KERNEL|LOCK_RW);
 
-	dprintf("vm_init: putting free_page_table @ %p, # ents %d (size 0x%x)\n",
+	dprintf("vm_page_init_postheap: putting free_page_table @ %p, # ents %d (size 0x%x)\n",
 		all_pages, num_pages, (unsigned int)(num_pages * sizeof(vm_page)));
 
 	// initialize the free page table
@@ -224,10 +244,9 @@ int vm_page_init(kernel_args *ka)
 		all_pages[i].type = PAGE_TYPE_PHYSICAL;
 		all_pages[i].state = PAGE_STATE_FREE;
 		all_pages[i].ref_count = 0;
+		vm_info.free_pages++;
 		enqueue_page(&page_free_queue, &all_pages[i]);
 	}
-
-	dprintf("initialized table\n");
 
 	// mark some of the page ranges inuse
 	for(i = 0; i < ka->num_phys_alloc_ranges; i++) {
@@ -238,10 +257,11 @@ int vm_page_init(kernel_args *ka)
 	// set the global max_commit variable
 	vm_increase_max_commit(num_pages*PAGE_SIZE);
 
-	dprintf("vm_page_init: exit\n");
+	dprintf("vm_page_init_postheap: exit\n");
 
 	return 0;
 }
+
 
 int vm_page_init2(kernel_args *ka)
 {
@@ -298,6 +318,7 @@ static int page_scrubber(void *unused)
 				page[i] = dequeue_page(&page_free_queue);
 				if(page[i] == NULL)
 					break;
+				vm_info.free_pages--;
 			}
 
 			release_spinlock(&page_lock);
@@ -315,6 +336,7 @@ static int page_scrubber(void *unused)
 			for(i=0; i<scrub_count; i++) {
 				page[i]->state = PAGE_STATE_CLEAR;
 				enqueue_page(&page_clear_queue, page[i]);
+				vm_info.clear_pages++;
 			}
 
 			release_spinlock(&page_lock);
@@ -407,9 +429,11 @@ vm_page *vm_page_allocate_specific_page(addr page_num, int page_state)
 	switch(p->state) {
 		case PAGE_STATE_FREE:
 			remove_page_from_queue(&page_free_queue, p);
+			vm_info.free_pages--;
 			break;
 		case PAGE_STATE_CLEAR:
 			remove_page_from_queue(&page_clear_queue, p);
+			vm_info.clear_pages--;
 			break;
 		case PAGE_STATE_UNUSED:
 			break;
@@ -422,6 +446,7 @@ vm_page *vm_page_allocate_specific_page(addr page_num, int page_state)
 
 	old_page_state = p->state;
 	p->state = PAGE_STATE_BUSY;
+	vm_info.busy_pages++;
 
 	if(old_page_state != PAGE_STATE_UNUSED)
 		enqueue_page(&page_active_queue, p);
@@ -451,10 +476,12 @@ vm_page *vm_page_allocate_page(int page_state)
 		case PAGE_STATE_FREE:
 			q = &page_free_queue;
 			q_other = &page_clear_queue;
+			vm_info.free_pages--;
 			break;
 		case PAGE_STATE_CLEAR:
 			q = &page_clear_queue;
 			q_other = &page_free_queue;
+			vm_info.clear_pages--;
 			break;
 		default:
 			return NULL; // invalid
@@ -475,6 +502,7 @@ vm_page *vm_page_allocate_page(int page_state)
 
 	old_page_state = p->state;
 	p->state = PAGE_STATE_BUSY;
+	vm_info.busy_pages++;
 
 	enqueue_page(&page_active_queue, p);
 
@@ -551,19 +579,32 @@ static int vm_page_set_state_nolock(vm_page *page, int page_state)
 
 	switch(page->state) {
 		case PAGE_STATE_BUSY:
+			vm_info.busy_pages--;
+			goto removefromactive;
 		case PAGE_STATE_ACTIVE:
+			vm_info.active_pages--;
+			goto removefromactive;
 		case PAGE_STATE_INACTIVE:
+			vm_info.inactive_pages--;
+			goto removefromactive;
 		case PAGE_STATE_WIRED:
+			vm_info.wired_pages--;
+			goto removefromactive;
 		case PAGE_STATE_UNUSED:
+			vm_info.unused_pages--;
+removefromactive:
 			from_q = &page_active_queue;
 			break;
 		case PAGE_STATE_MODIFIED:
+			vm_info.modified_pages--;
 			from_q = &page_modified_queue;
 			break;
 		case PAGE_STATE_FREE:
+			vm_info.free_pages--;
 			from_q = &page_free_queue;
 			break;
 		case PAGE_STATE_CLEAR:
+			vm_info.clear_pages--;
 			from_q = &page_clear_queue;
 			break;
 		default:
@@ -572,19 +613,32 @@ static int vm_page_set_state_nolock(vm_page *page, int page_state)
 
 	switch(page_state) {
 		case PAGE_STATE_BUSY:
+			vm_info.busy_pages++;
+			goto addtoactive;
 		case PAGE_STATE_ACTIVE:
+			vm_info.active_pages++;
+			goto addtoactive;
 		case PAGE_STATE_INACTIVE:
+			vm_info.inactive_pages++;
+			goto addtoactive;
 		case PAGE_STATE_WIRED:
+			vm_info.wired_pages++;
+			goto addtoactive;
 		case PAGE_STATE_UNUSED:
+			vm_info.unused_pages++;
+addtoactive:
 			to_q = &page_active_queue;
 			break;
 		case PAGE_STATE_MODIFIED:
+			vm_info.modified_pages++;
 			to_q = &page_modified_queue;
 			break;
 		case PAGE_STATE_FREE:
+			vm_info.free_pages++;
 			to_q = &page_free_queue;
 			break;
 		case PAGE_STATE_CLEAR:
+			vm_info.clear_pages++;
 			to_q = &page_clear_queue;
 			break;
 		default:

@@ -229,6 +229,31 @@ region_id user_vm_map_file(char *uname, void **uaddress, int addr_type,
 	addr size, int lock, int mapping, const char *upath, off_t offset);
 int user_vm_get_region_info(region_id id, vm_region_info *uinfo);
 
+// state of the vm, for informational purposes only
+typedef struct {
+	// info about the size of memory in the system
+	int physical_page_size;
+	int physical_pages;
+
+	// amount of committed mem in the system
+	int committed_mem;
+
+	// info about the page queues
+	int active_pages;
+	int inactive_pages;
+	int busy_pages;
+	int unused_pages;
+	int modified_pages;
+	int free_pages;
+	int clear_pages;
+	int wired_pages;
+
+	// info about vm activity
+	int page_faults;
+} vm_info_t;
+
+addr vm_get_mem_size(void);
+
 // XXX remove later
 void vm_test(void);
 

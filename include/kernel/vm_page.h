@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -10,6 +10,7 @@
 #include <kernel/vm.h>
 
 int vm_page_init(kernel_args *ka);
+int vm_page_init_postheap(kernel_args *ka);
 int vm_page_init2(kernel_args *ka);
 int vm_page_init_postthread(kernel_args *ka);
 
