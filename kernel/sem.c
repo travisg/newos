@@ -31,11 +31,6 @@ static int sem_spinlock = 0;
 // used in functions that may put a bunch of threads in the run q at once
 #define READY_THREAD_CACHE_SIZE 16
 
-struct sem_timeout {
-	sem_id     id;
-	thread_id  thr_id;
-};
-
 void dump_sem_list(int argc, char **argv)
 {
 	int i;
@@ -131,6 +126,11 @@ sem_id sem_create(int count, const char *name)
 	
 	if(sems_active == false)
 		return -1;
+
+	temp_name = (char *)kmalloc(strlen(name)+1);
+	if(temp_name == NULL) 
+		return -1;
+	strcpy(temp_name, name);
 	
 	state = int_disable_interrupts();
 	GRAB_SEM_LIST_LOCK();
@@ -144,44 +144,29 @@ sem_id sem_create(int count, const char *name)
 			} else {
 				next_sem += MAX_SEMS - (next_sem % MAX_SEMS - i);
 			}
-
 			sems[i].id = next_sem++;
 			
 			sems[i].lock = 0;
 			GRAB_SEM_LOCK(sems[i]);
 			RELEASE_SEM_LIST_LOCK();
 			
+			sems[i].q.tail = NULL;
+			sems[i].q.head = NULL;
 			sems[i].count = count;
-			sems[i].name = (char *)temp_sem_name;
+			sems[i].name = temp_name;
 			retval = sems[i].id;
-			RELEASE_SEM_LOCK(sems[i]);
 						
-			temp_name = (char *)kmalloc(strlen(name)+1);
-			if(temp_name == NULL) {
-				sem_delete(retval);
-				retval = -1;
-				goto err;
-			}		
-			strcpy(temp_name, name);
-
-			GRAB_SEM_LOCK(sems[i]);
-			if(sems[i].id == retval) {
-				sems[i].name = temp_name;
-				RELEASE_SEM_LOCK(sems[i]);
-			} else {
-				// the sem must have been deleted and possibly reused,
-				// our string is now worthless
-				RELEASE_SEM_LOCK(sems[i]);
-				kfree(temp_name);
-				retval = -1;							
-			}
+			RELEASE_SEM_LOCK(sems[i]);
 			break;
 		}
 	}
 	if(i >= MAX_SEMS)
 		RELEASE_SEM_LIST_LOCK();
 
-err:
+	if(retval < 0) {
+		kfree(temp_name);
+	}
+
 	int_restore_interrupts(state);
 
 	return retval;
@@ -269,7 +254,7 @@ int sem_delete_etc(sem_id id, int return_code)
 }
 
 // Called from a timer handler. Wakes up a semaphore
-static void sem_timeout(void *data)
+static int sem_timeout(void *data)
 {
 	struct thread *t = (struct thread *)data;
 	int slot = t->blocked_sem_id % MAX_SEMS;
@@ -297,6 +282,8 @@ static void sem_timeout(void *data)
 
 	RELEASE_SEM_LOCK(sems[slot]);
 	int_restore_interrupts(state);
+
+	return INT_RESCHEDULE;
 }
 
 int sem_acquire(sem_id id, int count)
@@ -327,6 +314,12 @@ int sem_acquire_etc(sem_id id, int count, int flags, time_t timeout, int *delete
 		err = -1;
 		goto err;
 	}
+
+	if(sems[slot].count - count < 0 && (flags & SEM_FLAG_TIMEOUT) != 0 && timeout == 0) {
+		// immediate timeout
+		err = -1;
+		goto err;
+	}
 	
 	if((sems[slot].count -= count) < 0) {
 		// we need to block
@@ -351,6 +344,12 @@ int sem_acquire_etc(sem_id id, int count, int flags, time_t timeout, int *delete
 		GRAB_THREAD_LOCK();
 		thread_resched();
 		RELEASE_THREAD_LOCK();
+
+		if((flags & SEM_FLAG_TIMEOUT) != 0) {
+			// cancel the timer event, in case the sem was deleted and a timer in still active
+			timer_cancel_event(&timer);
+		}
+
 		int_restore_interrupts(state);
 		if(deleted_retcode != NULL)
 			*deleted_retcode = t->sem_deleted_retcode;

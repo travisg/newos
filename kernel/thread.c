@@ -1256,8 +1256,7 @@ int thread_test()
 	return 0;
 }
 
-static int
-_rand()
+static int _rand()
 {
 	static int next = 0;
 
@@ -1266,6 +1265,13 @@ _rand()
 
 	next = next * 1103515245 + 12345;
 	return((next >> 16) & 0x7FFF);
+}
+
+static int reschedule_event(void *unused)
+{
+	// this function is called as a result of the timer event set by the scheduler
+	// returning this causes a reschedule on the timer event
+	return INT_RESCHEDULE;
 }
 
 // NOTE: expects thread_spinlock to be held
@@ -1328,7 +1334,7 @@ void thread_resched()
 	quantum = 10000;
 
 	timer_cancel_event(&LOCAL_CPU_TIMER);
-	timer_setup_timer(NULL, NULL, &LOCAL_CPU_TIMER);
+	timer_setup_timer(&reschedule_event, NULL, &LOCAL_CPU_TIMER);
 	timer_set_event(quantum, TIMER_MODE_ONESHOT, &LOCAL_CPU_TIMER);
 
 	if(next_thread != old_thread) {
