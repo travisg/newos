@@ -38,7 +38,7 @@ int devs_init(kernel_args *ka)
 #endif
 
 #ifdef ARCH_sh4
-//	maple_bus_init(ka);
+	maple_bus_init(ka);
 	keyboard_dev_init(ka);
 //	console_dev_init(ka);
 //	rtl8139_dev_init(ka);

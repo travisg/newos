@@ -54,6 +54,7 @@ static int sh4_handle_exception(void *_frame)
 		case 10: // TLB multi hit
 		case 12: // illegal instruction
 		case 13: // slot illegal instruction
+			dprintf("about to gpf at pc 0x%x\n", frame->spc);
 			ret = general_protection_fault(frame->excode);
 			break;
 		case 11:  { // TRAPA
