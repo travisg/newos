@@ -44,34 +44,18 @@ int arch_thread_init_thread_struct(struct thread *t)
 	return 0;
 }
 
-int arch_thread_initialize_kthread_stack(struct thread *t, int (*start_func)(void), void (*entry_func)(void), void (*exit_func)(void))
+int arch_thread_initialize_kthread_stack(struct thread *t, int (*start_func)(void))
 {
 	unsigned int *kstack = (unsigned int *)t->kernel_stack_base;
 	unsigned int kstack_size = KSTACK_SIZE;
 	unsigned int *kstack_top = kstack + kstack_size / sizeof(unsigned int);
 	int i;
 
-//	dprintf("arch_thread_initialize_kthread_stack: kstack 0x%p, start_func 0x%p, entry_func 0x%p\n",
-//		kstack, start_func, entry_func);
-
-	// clear the kernel stack
-	memset(kstack, 0, kstack_size);
-
-	// set the final return address to be thread_kthread_exit
-	kstack_top--;
-	*kstack_top = (unsigned int)exit_func;
+//	dprintf("arch_thread_initialize_kthread_stack: kstack 0x%p, start_func %p\n", kstack, start_func);
 
 	// set the return address to be the start of the first function
 	kstack_top--;
 	*kstack_top = (unsigned int)start_func;
-
-	// set the return address to be the start of the entry (thread setup) function
-	kstack_top--;
-	*kstack_top = (unsigned int)entry_func;
-
-	// simulate pushfl
-//	kstack_top--;
-//	*kstack_top = 0x00; // interrupts still disabled after the switch
 
 	// simulate initial popad
 	for(i=0; i<8; i++) {
@@ -86,7 +70,7 @@ int arch_thread_initialize_kthread_stack(struct thread *t, int (*start_func)(voi
 	return 0;
 }
 
-void arch_thread_switch_kstack_and_call(struct thread *t, addr_t new_kstack, void (*func)(void *), void *arg)
+void arch_thread_switch_kstack_and_call(addr_t new_kstack, void (*func)(void *), void *arg)
 {
 	i386_switch_stack_and_call(new_kstack, func, arg);
 }

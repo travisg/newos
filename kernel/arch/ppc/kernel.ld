@@ -11,33 +11,37 @@ SECTIONS
 	.hash : { *(.hash) }
 	.dynsym : { *(.dynsym) }
 	.dynstr : { *(.dynstr) }
+	.rel.init : { *(.rel.init) }
+	.rela.init : { *(.rela.init) }
 	.rel.text : { *(.rel.text) *(.rel.gnu.linkonce.t*) }
 	.rela.text : { *(.rela.text) *(.rela.gnu.linkonce.t*) }
-	.rel.data : { *(.rel.data) *(.rel.gnu.linkonce.d*) }
-	.rela.data : { *(.rela.data) *(.rela.gnu.linkonce.d*) }
+	.rel.fini : { *(.rel.fini) }
+	.rela.fini : { *(.rela.fini) }
 	.rel.rodata : { *(.rel.rodata) *(.rel.gnu.linkonce.r*) }
 	.rela.rodata : { *(.rela.rodata) *(.rela.gnu.linkonce.r*) }
-	.rel.got : { *(.rel.got) }
-	.rela.got : { *(.rela.got) }
+	.rel.data : { *(.rel.data) *(.rel.gnu.linkonce.d*) }
+	.rela.data : { *(.rela.data) *(.rela.gnu.linkonce.d*) }
 	.rel.ctors : { *(.rel.ctors) }
 	.rela.ctors : { *(.rela.ctors) }
 	.rel.dtors : { *(.rel.dtors) }
 	.rela.dtors : { *(.rela.dtors) }
-	.rel.init : { *(.rel.init) }
-	.rela.init : { *(.rela.init) }
-	.rel.fini : { *(.rel.fini) }
-	.rela.fini : { *(.rela.fini) }
+	.rel.sdata : { *(.rel.sdata) }
+	.rela.sdata : { *(.rela.sdata) }
+	.rel.got : { *(.rel.got) }
+	.rela.got : { *(.rela.got) }
 	.rel.bss : { *(.rel.bss) }
 	.rela.bss : { *(.rela.bss) }
 	.rel.plt : { *(.rel.plt) }
 	.rela.plt : { *(.rela.plt) }
-	.init : { *(.init) } =0x9090
+	.init : { *(.init) }
 	.plt : { *(.plt) }
 
 	/* text/read-only data */
-	.text :	{ *(.text .gnu.linkonce.t.*) } =0x9090
+	.text :	{ *(.text) *(.text.*) *(.stub) *(.gnu.linkonce.t.*) } = 0
+	.fini : { *(.fini) }
 
-	.rodata : { *(.rodata) }
+	.rodata : { *(.rodata) *(.rodata.*) *(.gnu.linkonce.r.*) }
+	.rodata1 : { *(.rodata1) }
 
 	/* writable data  */
 	. = ALIGN(0x1000);
@@ -52,10 +56,13 @@ SECTIONS
 	__dtor_end = .;
 	.got : { *(.got.plt) *(.got) }
 	.dynamic : { *(.dynamic) }
-	
+	.sdata : { *(.sdata) *(.sdata.*) *(.gnu.linkonce.s.*) }
+
+	.sbss : { *(.dynsbss) *(.sbss) *(.sbss.*) *(.gnu.linkonce.sb.*) *(.scommon) }
+
 	/* unintialized data (in same segment as writable data) */
 	__bss_start = .;
-	.bss : { *(.bss) }
+	.bss : { *(.dynbss) *(.bss) *(.bss.*) *(.gnu.linkonce.b.*) *(COMMON) }
 
 	. = ALIGN(0x1000);
 	_end = . ;

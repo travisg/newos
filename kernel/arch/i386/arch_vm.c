@@ -34,6 +34,11 @@ int arch_vm_init2(kernel_args *ka)
 	return 0;
 }
 
+int arch_vm_init_existing_maps(kernel_args *ka)
+{
+	return 0;
+}
+
 int arch_vm_init_endvm(kernel_args *ka)
 {
 	region_id id;

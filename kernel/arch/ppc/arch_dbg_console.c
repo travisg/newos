@@ -3,6 +3,7 @@
 ** Distributed under the terms of the NewOS License.
 */
 #include <kernel/kernel.h>
+#include <kernel/vm.h>
 #include <boot/stage2.h>
 #include <string.h>
 
@@ -221,7 +222,28 @@ int arch_dbg_con_init(kernel_args *ka)
 
 #endif
 
-	return 0;
+	return NO_ERROR;
+}
+
+int arch_dbg_con_init2(kernel_args *ka)
+{
+#if 0
+#if FRAMEBUFFER_DBG_CONSOLE
+	region_id fb_region;
+	void *new_framebuffer;
+
+	/* remap the framebuffer into kernel space and remove the BAT entry mapping it currently */
+	fb_region = vm_map_physical_memory(vm_get_kernel_aspace_id(), "framebuffer", &new_framebuffer,
+		REGION_ADDR_ANY_ADDRESS, ka->fb.phys_addr.size, LOCK_RW|LOCK_KERNEL, ka->fb.phys_addr.start);
+	if(fb_region < 0)
+		panic("arch_dbg_con_init2: unable to remap framebuffer into kernel space\n");
+	dprintf("framebuffer now at %p, phys addr 0x%x\n", new_framebuffer, ka->fb.phys_addr.start);
+
+	dprintf("compare %d\n", memcmp(framebuffer, new_framebuffer, ka->fb.phys_addr.size));
+
+#endif
+#endif
+	return NO_ERROR;
 }
 
 char arch_dbg_con_read()

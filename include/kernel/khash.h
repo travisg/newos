@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -22,6 +22,7 @@ struct hash_iterator *hash_open(void *_hash_table, struct hash_iterator *i);
 void hash_close(void *_hash_table, struct hash_iterator *i, bool free_iterator);
 void *hash_next(void *_hash_table, struct hash_iterator *i);
 void hash_rewind(void *_hash_table, struct hash_iterator *i);
+void hash_dump(void *_hash_table);
 
 /* function ptrs must look like this:
 	// hash function should calculate hash on either e or key,

@@ -12,6 +12,7 @@ char arch_dbg_con_putch(char c);
 void arch_dbg_con_puts(const char *s);
 ssize_t arch_dbg_con_write(const void *buf, ssize_t len);
 int arch_dbg_con_init(kernel_args *ka);
+int arch_dbg_con_init2(kernel_args *ka);
 
 #endif
 

@@ -24,6 +24,8 @@ $(MY_TARGET_IN): $(_TEMP_OBJS) $(MY_LIBS_IN)
 	@$(MKDIR)
 	@echo linking $@
 	@$(LD) $(GLOBAL_LDFLAGS) -Bdynamic -export-dynamic -dynamic-linker /foo/bar -T $(MY_LINKSCRIPT_IN) -L $(LIBGCC_PATH) -o $@ $(_TEMP_OBJS) $(MY_LIBS_IN) $(LIBGCC)
+	@echo creating listing file $@.lst
+	@$(OBJDUMP) -d $@ > $@.lst
 
 $(MY_TARGETLIB_IN): MY_LIBS_IN:=$(MY_LIBS_IN)
 $(MY_TARGETLIB_IN): MY_LINKSCRIPT_IN:=$(MY_LINKSCRIPT_IN)

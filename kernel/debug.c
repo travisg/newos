@@ -371,20 +371,29 @@ static void cmd_help(int argc, char **argv)
 
 int dbg_init(kernel_args *ka)
 {
+	int ret;
+
 	commands = NULL;
 
-	return arch_dbg_con_init(ka);
+	ret = arch_dbg_con_init(ka);
+	if(ret < 0)
+		return ret;
+	return arch_dbg_init(ka);
 }
 
 int dbg_init2(kernel_args *ka)
 {
+	int ret;
+
 	dbg_add_command(&cmd_help, "help", "List all debugger commands");
 	dbg_add_command(&cmd_reboot, "reboot", "Reboot");
 	dbg_add_command(&cmd_gdb, "gdb", "Connect to remote gdb. May supply an optional iframe.");
 
-	arch_dbg_init(ka);
+	ret = arch_dbg_con_init2(ka);
+	if(ret < 0)
+		return ret;
 
-	return NO_ERROR;
+	return arch_dbg_init2(ka);
 }
 
 bool dbg_set_serial_debug(bool new_val)

@@ -14,7 +14,7 @@
 **  load saved msr into r0
 **  see if was in kernel mode
 **  if not,
-**   load kernel stack from XXX into r1
+**   load kernel stack from EAR into r1
 **  restore cr from r2
 **  set up in BAT 0 (instruction and data) a identity mapping of 0x0
 **  load old msr

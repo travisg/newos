@@ -11,7 +11,6 @@ struct arch_cpu_info {
 	// empty
 };
 
-
 struct iframe {
 	unsigned long srr0;
 	unsigned long srr1;
@@ -71,6 +70,8 @@ void sethid0(unsigned int val);
 unsigned int getl2cr(void);
 void setl2cr(unsigned int val);
 long long get_time_base(void);
+
+void ppc_context_switch(addr_t *old_sp, addr_t new_sp);
 
 #endif
 

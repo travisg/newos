@@ -36,6 +36,7 @@ HOST_LD := $(LD)
 HOST_AS := $(AS)
 HOST_AR := $(AR)
 HOST_OBJCOPY := objcopy
+HOST_OBJDUMP := objdump
 HOST_STRIP := strip
 HOST_SIZE := size
 
@@ -56,6 +57,7 @@ LD = $(HOST_LD)
 AS = $(HOST_AS)
 AR = $(HOST_AR)
 OBJCOPY = $(HOST_OBJCOPY)
+OBJDUMP = $(HOST_OBJDUMP)
 STRIP = $(HOST_STRIP)
 SIZE = $(HOST_SIZE)
 
@@ -208,6 +210,7 @@ $(warning found newos toolchain!)
 	AS = $(TOOLCHAIN_ARCH)-newos-as
 	AR = $(TOOLCHAIN_ARCH)-newos-ar
 	OBJCOPY = $(TOOLCHAIN_ARCH)-newos-objcopy
+	OBJDUMP = $(TOOLCHAIN_ARCH)-newos-objdump
 	STRIP = $(TOOLCHAIN_ARCH)-newos-strip
 	SIZE = $(TOOLCHAIN_ARCH)-newos-size
 else

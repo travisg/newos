@@ -929,11 +929,15 @@ int elf_init(kernel_args *ka)
 
 	// data segment
 	kernel_image->regions[1].id = vm_find_region_by_name(vm_get_kernel_aspace_id(), "kernel_rw");
-	if(kernel_image->regions[1].id < 0)
-		panic("elf_init: could not look up kernel data segment region\n");
-	vm_get_region_info(kernel_image->regions[1].id, &rinfo);
-	kernel_image->regions[1].start = rinfo.base;
-	kernel_image->regions[1].size = rinfo.size;
+	if(kernel_image->regions[1].id >= 0) {
+		vm_get_region_info(kernel_image->regions[1].id, &rinfo);
+		kernel_image->regions[1].start = rinfo.base;
+		kernel_image->regions[1].size = rinfo.size;
+	} else {
+		// there is no region 1 in kernel
+		kernel_image->regions[1].start = 0;
+		kernel_image->regions[1].size = 0;
+	}
 
 	// we know where the dynamic section is
 	kernel_image->dynamic_ptr = (addr_t)ka->kernel_dynamic_section_addr.start;

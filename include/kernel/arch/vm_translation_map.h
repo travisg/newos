@@ -42,7 +42,10 @@ void vm_translation_map_module_init_post_sem(kernel_args *ka);
 int vm_translation_map_quick_map(kernel_args *ka, addr_t va, addr_t pa, unsigned int attributes, addr_t (*get_free_page)(kernel_args *));
 
 // quick function to return the physical pgdir of a mapping, needed for a context switch
-addr_t vm_translation_map_get_pgdir(vm_translation_map *map);
+// XXX both are arch dependant
+addr_t vm_translation_map_get_pgdir(vm_translation_map *map);	// x86
+void vm_translation_map_change_asid(vm_translation_map *map);	// ppc
+
 
 #endif
 

@@ -156,6 +156,7 @@ int thread_set_priority(thread_id id, int priority);
 void thread_resched(void);
 void thread_start_threading(void);
 void thread_snooze(bigtime_t time);
+void thread_yield(void);
 int thread_init(kernel_args *ka);
 int thread_init_percpu(int cpu_num);
 void thread_exit(int retcode);
@@ -198,12 +199,9 @@ int user_proc_wait_on_proc(proc_id id, int *uretcode);
 thread_id user_thread_create_user_thread(char *uname, proc_id pid, addr_t entry, void *args);
 int user_thread_set_priority(thread_id id, int priority);
 int user_thread_snooze(bigtime_t time);
+int user_thread_yield(void);
 int user_getrlimit(int resource, struct rlimit * rlp);
 int user_setrlimit(int resource, const struct rlimit * rlp);
 
-#if 1
-// XXX remove later
-int thread_test(void);
-#endif
 #endif
 

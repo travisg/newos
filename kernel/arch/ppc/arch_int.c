@@ -6,6 +6,9 @@
 
 #include <kernel/int.h>
 #include <kernel/vm.h>
+#include <kernel/vm_priv.h>
+#include <kernel/timer.h>
+#include <kernel/thread.h>
 
 #include <string.h>
 
@@ -43,7 +46,10 @@ static void print_iframe(struct iframe *frame)
 void ppc_exception_entry(int vector, struct iframe *iframe);
 void ppc_exception_entry(int vector, struct iframe *iframe)
 {
-	dprintf("ppc_exception_entry: vector 0x%x, iframe %p\n", vector, iframe);
+	int ret = INT_NO_RESCHEDULE;
+
+	if(vector != 0x900)
+		dprintf("ppc_exception_entry: time %Ld vector 0x%x, iframe %p\n", system_time(), vector, iframe);
 
 	switch(vector) {
 		case 0x100: // system reset
@@ -53,10 +59,20 @@ void ppc_exception_entry(int vector, struct iframe *iframe)
 			panic("machine check exception\n");
 			break;
 		case 0x300: // DSI
-		case 0x400: // ISI
-			print_iframe(iframe);
-			panic("DSI/ISI exception: unimplemented\n");
+		case 0x400: { // ISI
+			addr_t newip;
+
+			ret = vm_page_fault(iframe->dar, iframe->srr0,
+				iframe->dsisr & (1 << 25), // store or load
+				iframe->srr1 & (1 << 14), // was the system in user or supervisor
+				&newip);
+			if(newip != 0) {
+				// the page fault handler wants us to modify the iframe to set the
+				// IP the cpu will return to to be this ip
+				iframe->srr0 = newip;
+			}
  			break;
+		}
 		case 0x500: // external interrupt
 			panic("external interrrupt exception: unimplemented\n");
 			break;
@@ -70,7 +86,7 @@ void ppc_exception_entry(int vector, struct iframe *iframe)
 			panic("FP unavailable exception: unimplemented\n");
 			break;
 		case 0x900: // decrementer exception
-			panic("decrementer exception: unimplemented\n");
+			ret = timer_interrupt();
 			break;
 		case 0xc00: // system call
 			panic("system call exception: unimplemented\n");
@@ -108,6 +124,14 @@ void ppc_exception_entry(int vector, struct iframe *iframe)
 			dprintf("unhandled exception type 0x%x\n", vector);
 			print_iframe(iframe);
 			panic("unhandled exception type\n");
+	}
+
+	if(ret == INT_RESCHEDULE) {
+		int_disable_interrupts();
+		GRAB_THREAD_LOCK();
+		thread_resched();
+		RELEASE_THREAD_LOCK();
+		int_restore_interrupts();
 	}
 }
 
@@ -151,7 +175,7 @@ int arch_int_init2(kernel_args *ka)
 	ex_handlers = (void *)ka->arch_args.exception_handlers.start;
 	exception_region = vm_create_anonymous_region(vm_get_kernel_aspace_id(), "exception_handlers",
 		&ex_handlers, REGION_ADDR_EXACT_ADDRESS,
-		ka->arch_args.exception_handlers.size, REGION_WIRING_WIRED_ALREADY, LOCK_RW);
+		ka->arch_args.exception_handlers.size, REGION_WIRING_WIRED_ALREADY, LOCK_RW|LOCK_KERNEL);
 	if(exception_region < 0)
 		panic("arch_int_init2: could not create exception handler region\n");
 

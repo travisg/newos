@@ -76,6 +76,11 @@ static void dbg_stack_trace(int argc, char **argv)
 
 int arch_dbg_init(kernel_args *ka)
 {
+	return NO_ERROR;
+}
+
+int arch_dbg_init2(kernel_args *ka)
+{
 	// at this stage, the debugger command system is alive
 
 	dbg_add_command(&dbg_stack_trace, "bt", "Stack crawl for current thread");

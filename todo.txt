@@ -49,7 +49,6 @@ net:
  dns lookup
 bootmaker improvements (remove config.ini, slurp from directory)
 better kernel ASSERTS
-change 'addr' typedef to be 'addr_t'
 improved module bootup calls (int_module(ka, initialization level))
 system info syscall, centralize storage
 better solution for user space heap growth

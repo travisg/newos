@@ -6,6 +6,7 @@
 #define _NEWOS_KERNEL_ARCH_DEBUG
 
 int arch_dbg_init(kernel_args *ka);
+int arch_dbg_init2(kernel_args *ka);
 
 #include INC_ARCH(kernel/arch,debug.h)
 

@@ -16,6 +16,11 @@ static addr_t ptable_size;
 static unsigned int ptable_hash_mask;
 static region_id ptable_region;
 
+// 512 MB of iospace
+#define IOSPACE_SIZE (512*1024*1024)
+// put it 512 MB into kernel space
+#define IOSPACE_BASE (KERNEL_BASE + IOSPACE_SIZE)
+
 #define MAX_ASIDS (PAGE_SIZE * 8)
 static uint32 asid_bitmap[MAX_ASIDS / (sizeof(uint32) * 8)];
 spinlock_t asid_bitmap_lock;
@@ -190,6 +195,8 @@ static int unmap_tmap(vm_translation_map *map, addr_t start, addr_t end)
 	start = ROUNDOWN(start, PAGE_SIZE);
 	end = ROUNDUP(end, PAGE_SIZE);
 
+	dprintf("vm_translation_map.unmap_tmap: start 0x%lx, end 0x%lx\n", start, end);
+
 	while(start < end) {
 		pte = lookup_pagetable_entry(map, start);
 		if(pte) {
@@ -223,6 +230,8 @@ static int query_tmap(vm_translation_map *map, addr_t va, addr_t *out_physical, 
 	*out_flags |= pte->c ? PAGE_MODIFIED : 0;
 	*out_flags |= pte->r ? PAGE_ACCESSED : 0;
 	*out_flags |= pte->v ? PAGE_PRESENT : 0;
+
+	*out_physical = pte->ppn * PAGE_SIZE;
 
 	return 0;
 }
@@ -263,13 +272,20 @@ static void flush_tmap(vm_translation_map *map)
 
 static int get_physical_page_tmap(addr_t pa, addr_t *va, int flags)
 {
-	PANIC_UNIMPLEMENTED();
+	pa = ROUNDOWN(pa, PAGE_SIZE);
+
+	if(pa > IOSPACE_SIZE)
+		panic("get_physical_page_tmap: asked for pa 0x%lx, cannot provide\n", pa);
+
+	*va = (IOSPACE_BASE + pa);
 	return 0;
 }
 
 static int put_physical_page_tmap(addr_t va)
 {
-	PANIC_UNIMPLEMENTED();
+	if(va < IOSPACE_BASE || va >= IOSPACE_BASE + IOSPACE_SIZE)
+		panic("put_physical_page_tmap: va 0x%lx out of iospace region\n", va);
+
 	return 0;
 }
 
@@ -348,9 +364,33 @@ void vm_translation_map_module_init_post_sem(kernel_args *ka)
 
 int vm_translation_map_module_init2(kernel_args *ka)
 {
+	void *temp;
+
 	// create a region to cover the page table
 	ptable_region = vm_create_anonymous_region(vm_get_kernel_aspace_id(), "ppc_htable", (void **)&ptable,
 		REGION_ADDR_EXACT_ADDRESS, ptable_size, REGION_WIRING_WIRED_ALREADY, LOCK_KERNEL|LOCK_RW);
+
+	// XXX for now just map 0 - 512MB of physical memory to the iospace region
+	{
+		int ibats[8], dbats[8];
+
+		getibats(ibats);
+		getdbats(dbats);
+
+		// use bat 2 & 3 to do this
+		ibats[4] = dbats[4] = IOSPACE_BASE | BATU_LEN_256M | BATU_VS;
+		ibats[5] = dbats[5] = 0x0 | BATL_MC | BATL_PP_RW;
+		ibats[6] = dbats[6] = (IOSPACE_BASE + 256*1024*1024) | BATU_LEN_256M | BATU_VS;
+		ibats[7] = dbats[7] = (256*1024*1024) | BATL_MC | BATL_PP_RW;
+
+		setibats(ibats);
+		setdbats(dbats);
+	}
+
+	// create a region to cover the iospace
+	temp = (void *)IOSPACE_BASE;
+	vm_create_null_region(vm_get_kernel_aspace_id(), "iospace", &temp,
+		REGION_ADDR_EXACT_ADDRESS, IOSPACE_SIZE);
 
 	return 0;
 }
@@ -409,5 +449,23 @@ static int vm_translation_map_quick_query(addr_t va, addr_t *out_physical)
 {
 	PANIC_UNIMPLEMENTED();
 	return 0;
+}
+
+void vm_translation_map_change_asid(vm_translation_map *map)
+{
+// this code depends on the kernel being at 0x80000000, fix if we change that
+#if KERNEL_BASE != 0x80000000
+#error fix me
+#endif
+	int asid_base = map->arch_data->asid_base;
+
+	asm("mtsr	0,%0" :: "g"(asid_base));
+	asm("mtsr	1,%0" :: "g"(asid_base+1));
+	asm("mtsr	2,%0" :: "g"(asid_base+2));
+	asm("mtsr	3,%0" :: "g"(asid_base+3));
+	asm("mtsr	4,%0" :: "g"(asid_base+4));
+	asm("mtsr	5,%0" :: "g"(asid_base+5));
+	asm("mtsr	6,%0" :: "g"(asid_base+6));
+	asm("mtsr	7,%0" :: "g"(asid_base+7));
 }
 

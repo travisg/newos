@@ -31,10 +31,14 @@ extern cpu_ent cpu[MAX_BOOT_CPUS];
 int cpu_preboot_init(kernel_args *ka);
 int cpu_init(kernel_args *ka);
 
+// XXX these seem to be deprecated. It's easier to find the local cpu structure by dereferencing
+// it from the current thread structure, which holds a pointer to the current cpu struct
+/*
 cpu_ent *get_curr_cpu_struct(void);
 extern inline cpu_ent *get_curr_cpu_struct(void) { return &cpu[smp_get_current_cpu()]; }
 cpu_ent *get_cpu_struct(int cpu_num);
 extern inline cpu_ent *get_cpu_struct(int cpu_num) { return &cpu[cpu_num]; }
+*/
 
 /* manual implementations of the atomic_* ops */
 int user_atomic_add(int *val, int incr);

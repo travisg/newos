@@ -37,7 +37,12 @@ int arch_dbg_con_init(kernel_args *ka)
 	out8(3, 0x2fb);		/* 8N1 */
 #endif
 
-	return 0;
+	return NO_ERROR;
+}
+
+int arch_dbg_con_init2(kernel_args *ka)
+{
+	return NO_ERROR;
 }
 
 char arch_dbg_con_read(void)

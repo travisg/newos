@@ -83,11 +83,9 @@ static struct thread_queue run_q[THREAD_NUM_PRIORITY_LEVELS] = { { NULL, NULL },
 static struct thread_queue dead_q;
 
 static int _rand(void);
-static void thread_entry(void);
 static struct thread *thread_get_thread_struct_locked(thread_id id);
 //static struct proc *proc_get_proc_struct(proc_id id); // unused
 static struct proc *proc_get_proc_struct_locked(proc_id id);
-static void thread_kthread_exit(void);
 static void deliver_signal(struct thread *t, int signal);
 
 // insert a thread onto the tail of a queue
@@ -365,6 +363,11 @@ static int _create_user_thread_kentry(void)
 {
 	struct thread *t;
 
+	// simulates the thread spinlock release that would occur if the thread had been
+	// rescheded from. The resched didn't happen because the thread is new.
+	RELEASE_THREAD_LOCK();
+	int_restore_interrupts(); // this essentially simulates a return-from-interrupt
+
 	t = thread_get_current_thread();
 
 	// start tracking kernel time
@@ -377,7 +380,7 @@ static int _create_user_thread_kentry(void)
 	// jump to the entry point in user space
 	arch_thread_enter_uspace(t, (addr_t)t->entry, t->args, t->user_stack_base + STACK_SIZE);
 
-	// never get here
+	// never get here, the thread will exit by calling the thread_exit syscall
 	return 0;
 }
 
@@ -385,17 +388,27 @@ static int _create_kernel_thread_kentry(void)
 {
 	int (*func)(void *args);
 	struct thread *t;
+	int retcode;
 
-	t = thread_get_current_thread();
+	// simulates the thread spinlock release that would occur if the thread had been
+	// rescheded from. The resched didn't happen because the thread is new.
+	RELEASE_THREAD_LOCK();
+	int_restore_interrupts(); // this essentially simulates a return-from-interrupt
 
 	// start tracking kernel time
+	t = thread_get_current_thread();
 	t->last_time = system_time();
 	t->last_time_type = KERNEL_TIME;
 
 	// call the entry function with the appropriate args
 	func = (void *)t->entry;
+	retcode = func(t->args);
 
-	return func(t->args);
+	// we're done, exit
+	thread_exit(retcode);
+
+	// shoudn't get to here
+	return 0;
 }
 
 static thread_id _create_thread(const char *name, proc_id pid, addr_t entry, void *args, bool kernel)
@@ -452,7 +465,7 @@ static thread_id _create_thread(const char *name, proc_id pid, addr_t entry, voi
 
 	if(kernel) {
 		// this sets up an initial kthread stack that runs the entry
-		arch_thread_initialize_kthread_stack(t, &_create_kernel_thread_kentry, &thread_entry, &thread_kthread_exit);
+		arch_thread_initialize_kthread_stack(t, &_create_kernel_thread_kentry);
 	} else {
 		// create user stack
 		// XXX make this better. For now just keep trying to create a stack
@@ -476,7 +489,7 @@ static thread_id _create_thread(const char *name, proc_id pid, addr_t entry, voi
 		// copy the user entry over to the args field in the thread struct
 		// the function this will call will immediately switch the thread into
 		// user space.
-		arch_thread_initialize_kthread_stack(t, &_create_user_thread_kentry, &thread_entry, &thread_kthread_exit);
+		arch_thread_initialize_kthread_stack(t, &_create_user_thread_kentry);
 	}
 
 	// set the interrupt disable level of the new thread to one (as if it had had int_disable_interrupts called)
@@ -1072,12 +1085,23 @@ static void put_death_stack_and_reschedule(unsigned int index)
 	thread_resched();
 }
 
+static int test_thread(void *args)
+{
+	thread_id tid = thread_get_current_thread_id();
+
+	for(;;) {
+		dprintf("test thread %d\n", tid);
+//		thread_yield();
+		thread_snooze(250000);
+	}
+}
+
 int thread_init(kernel_args *ka)
 {
 	struct thread *t;
 	unsigned int i;
 
-//	dprintf("thread_init: entry\n");
+	dprintf("thread_init: entry\n");
 
 	// create the process hash table
 	proc_hash = hash_init(15, (addr_t)&kernel_proc->next - (addr_t)kernel_proc,
@@ -1184,6 +1208,21 @@ int thread_init(kernel_args *ka)
 	dbg_add_command(dump_next_thread_in_proc, "next_proc", "dump the next thread in the process of the last thread viewed");
 	dbg_add_command(dump_proc_info, "proc", "list info about a particular process");
 
+#if 0
+	// start two threads to test context switching
+	{
+		thread_id tid;
+
+		tid = thread_create_kernel_thread("test thread 1", &test_thread, NULL);
+		thread_set_priority(tid, THREAD_MAX_RT_PRIORITY);
+		thread_resume_thread(tid);
+
+		tid = thread_create_kernel_thread("test thread 2", &test_thread, NULL);
+		thread_set_priority(tid, THREAD_MAX_RT_PRIORITY);
+		thread_resume_thread(tid);
+	}
+#endif
+
 	return 0;
 }
 
@@ -1227,13 +1266,21 @@ void thread_snooze(bigtime_t time)
 	sem_acquire_etc(snooze_sem, 1, SEM_FLAG_TIMEOUT, time, NULL);
 }
 
-// this function gets run by a new thread before anything else
-static void thread_entry(void)
+int user_thread_yield(void)
 {
-	// simulates the thread spinlock release that would occur if the thread had been
-	// rescheded from. The resched didn't happen because the thread is new.
+	thread_yield();
+	return NO_ERROR;
+}
+
+void thread_yield(void)
+{
+	int_disable_interrupts();
+	GRAB_THREAD_LOCK();
+
+	thread_resched();
+
 	RELEASE_THREAD_LOCK();
-	int_restore_interrupts(); // this essentially simulates a return-from-interrupt
+	int_restore_interrupts();
 }
 
 // used to pass messages between thread_exit and thread_exit2
@@ -1383,7 +1430,7 @@ void thread_exit(int retcode)
 		t->kernel_stack_base = death_stacks[death_stack].address;
 
 		// we will continue in thread_exit2(), on the new stack
-		arch_thread_switch_kstack_and_call(t, t->kernel_stack_base + KSTACK_SIZE, thread_exit2, &args);
+		arch_thread_switch_kstack_and_call(t->kernel_stack_base + KSTACK_SIZE, thread_exit2, &args);
 	}
 
 	panic("never can get here\n");
@@ -1433,11 +1480,6 @@ int thread_kill_thread(thread_id id)
 int thread_kill_thread_nowait(thread_id id)
 {
 	return _thread_kill_thread(id, false);
-}
-
-static void thread_kthread_exit(void)
-{
-	thread_exit(0);
 }
 
 int user_thread_wait_on_thread(thread_id id, int *uretcode)

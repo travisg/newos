@@ -10,6 +10,7 @@
 
 int arch_vm_init(kernel_args *ka);
 int arch_vm_init2(kernel_args *ka);
+int arch_vm_init_existing_maps(kernel_args *ka);
 int arch_vm_init_endvm(kernel_args *ka);
 void arch_vm_aspace_swap(vm_address_space *aspace);
 

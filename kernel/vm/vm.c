@@ -337,7 +337,7 @@ static int map_backing_store(vm_address_space *aspace, vm_store *store, void **v
 	VERIFY_VM_ASPACE(aspace);
 	VERIFY_VM_STORE(store);
 
-//	dprintf("map_backing_store: aspace 0x%x, store 0x%x, *vaddr 0x%x, offset 0x%Lx, size %d, addr_type %d, wiring %d, lock %d, _region 0x%x, region_name '%s'\n",
+//	dprintf("map_backing_store: aspace %p, store %p, *vaddr %p, offset 0x%Lx, size 0x%lx, addr_type %d, wiring %d, lock %d, _region %p, region_name '%s'\n",
 //		aspace, store, *vaddr, offset, size, addr_type, wiring, lock, _region, region_name);
 
 	region = _vm_create_region_struct(aspace, region_name, wiring, lock);
@@ -519,7 +519,8 @@ region_id vm_create_anonymous_region(aspace_id aid, char *name, void **address, 
 	vm_address_space *aspace;
 	vm_cache_ref *cache_ref;
 
-	dprintf("create_anonymous_region: size 0x%lx\n", size);
+	dprintf("create_anonymous_region: name '%s', type %d, size 0x%lx, wiring %d, lock %d\n",
+		name, addr_type, size, wiring, lock);
 
 	if(addr_type != REGION_ADDR_ANY_ADDRESS && addr_type != REGION_ADDR_EXACT_ADDRESS)
 		return ERR_INVALID_ARGS;
@@ -561,7 +562,7 @@ region_id vm_create_anonymous_region(aspace_id aid, char *name, void **address, 
 			break;
 	}
 
-	dprintf("create_anonymous_region: calling map_backing store\n");
+//	dprintf("create_anonymous_region: calling map_backing store\n");
 
 	vm_cache_acquire_ref(cache_ref, true);
 	err = map_backing_store(aspace, store, address, 0, size, addr_type, wiring, lock, REGION_NO_PRIVATE_MAP, &region, name);
@@ -571,7 +572,7 @@ region_id vm_create_anonymous_region(aspace_id aid, char *name, void **address, 
 		return err;
 	}
 
-	dprintf("create_anonymous_region: done calling map_backing store\n");
+//	dprintf("create_anonymous_region: done calling map_backing store\n");
 
 	cache_ref = store->cache->ref;
 	switch(wiring) {
@@ -583,7 +584,7 @@ region_id vm_create_anonymous_region(aspace_id aid, char *name, void **address, 
 			addr_t va;
 			// XXX remove
 			for(va = region->base; va < region->base + region->size; va += PAGE_SIZE) {
-//				dprintf("mapping wired pages: region 0x%x, cache_ref 0x%x 0x%x\n", region, cache_ref, region->cache_ref);
+				dprintf("mapping wired pages: region %p, cache_ref %p %p, address 0x%lx\n", region, cache_ref, region->cache_ref, va);
 				vm_soft_fault(va, false, false);
 			}
 			break;
@@ -608,6 +609,7 @@ region_id vm_create_anonymous_region(aspace_id aid, char *name, void **address, 
 //					dprintf("vm_create_anonymous_region: error looking up mapping for va 0x%x\n", va);
 					continue;
 				}
+//				dprintf("vm_create_anonymous_region: looked up page at va 0x%lx. pa 0x%lx\n", va, pa);
 				page = vm_lookup_page(pa / PAGE_SIZE);
 				if(page == NULL) {
 //					dprintf("vm_create_anonymous_region: error looking up vm_page structure for pa 0x%x\n", pa);
@@ -1747,6 +1749,10 @@ int vm_init(kernel_args *ka)
 		vm_create_anonymous_region(vm_get_kernel_aspace_id(), temp, &null_addr, REGION_ADDR_EXACT_ADDRESS,
 			ka->cpu_kstack[i].size, REGION_WIRING_WIRED_ALREADY, LOCK_RW|LOCK_KERNEL);
 	}
+
+	arch_vm_init_existing_maps(ka);
+
+	// map in the boot dir
 	{
 		void *null;
 		vm_map_physical_memory(vm_get_kernel_aspace_id(), "bootdir", &null, REGION_ADDR_ANY_ADDRESS,
