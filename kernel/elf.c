@@ -450,7 +450,18 @@ static int verify_eheader(struct Elf32_Ehdr *eheader)
 	if(memcmp(eheader->e_ident, ELF_MAGIC, 4) != 0)
 		return ERR_INVALID_BINARY;
 
-	if(eheader->e_ident[4] != ELFCLASS32)
+	if(eheader->e_ident[EI_CLASS] != ELFCLASS32)
+		return ERR_INVALID_BINARY;
+
+#if _LITTLE_ENDIAN
+	if(eheader->e_ident[EI_DATA] != ELFDATA2LSB)
+		return ERR_INVALID_BINARY;
+#elif _BIG_ENDIAN
+	if(eheader->e_ident[EI_DATA] != ELFDATA2MSB)
+		return ERR_INVALID_BINARY;
+#endif
+
+	if(eheader->e_ident[EI_VERSION] != EV_CURRENT)
 		return ERR_INVALID_BINARY;
 
 	if(eheader->e_phoff == 0)
@@ -637,6 +648,8 @@ image_id elf_load_kspace(const char *path, const char *sym_prepend)
 	int err;
 	int i;
 	ssize_t len;
+	addr_t lowest_address = 0;
+	addr_t highest_address = 0;
 
 	dprintf("elf_load_kspace: entry path '%s'\n", path);
 
@@ -738,8 +751,8 @@ image_id elf_load_kspace(const char *path, const char *sym_prepend)
 			rw_segment_handled = true;
 			image_region = 1;
 			lock = LOCK_RW|LOCK_KERNEL;
-			sprintf(region_name, "%s_rw", path);
-		} else if((pheaders[i].p_flags & (PF_R | PF_W | PF_X)) == (PF_R | PF_X)) {
+			sprintf(region_name, "%s_seg1", path);
+		} else if((pheaders[i].p_flags & (PF_R | PF_X)) == (PF_R | PF_X)) {
 			// this is the non-writable segment
 			if(ro_segment_handled) {
 				// we've already created this segment
@@ -749,7 +762,7 @@ image_id elf_load_kspace(const char *path, const char *sym_prepend)
 			image_region = 0;
 //			lock = LOCK_RO|LOCK_KERNEL;
 			lock = LOCK_RW|LOCK_KERNEL;
-			sprintf(region_name, "%s_ro", path);
+			sprintf(region_name, "%s_seg0", path);
 		} else {
 			dprintf("weird program header flags 0x%x\n", pheaders[i].p_flags);
 			continue;
@@ -774,6 +787,11 @@ image_id elf_load_kspace(const char *path, const char *sym_prepend)
 			dprintf("error reading in seg %d\n", i);
 			goto error4;
 		}
+
+		if(lowest_address == 0 || image->regions[image_region].start < lowest_address)
+			lowest_address = image->regions[image_region].start;
+		if(highest_address == 0 || (image->regions[image_region].start + image->regions[image_region].size) > highest_address)
+			highest_address = image->regions[image_region].start + image->regions[image_region].size;
 	}
 
 	if(image->regions[1].start != 0) {
@@ -805,6 +823,9 @@ image_id elf_load_kspace(const char *path, const char *sym_prepend)
 
 done:
 	mutex_unlock(&image_load_lock);
+
+	dprintf("elf_load_kspace: syncing icache from 0x%lx to 0x%lx\n", lowest_address, highest_address);
+	arch_cpu_sync_icache((void *)lowest_address, highest_address - lowest_address);
 
 	dprintf("elf_load_kspace: done!\n");
 
@@ -920,7 +941,7 @@ int elf_init(kernel_args *ka)
 	kernel_image = create_image_struct();
 
 	// text segment
-	kernel_image->regions[0].id = vm_find_region_by_name(vm_get_kernel_aspace_id(), "kernel_ro");
+	kernel_image->regions[0].id = vm_find_region_by_name(vm_get_kernel_aspace_id(), "kernel_seg0");
 	if(kernel_image->regions[0].id < 0)
 		panic("elf_init: could not look up kernel text segment region\n");
 	vm_get_region_info(kernel_image->regions[0].id, &rinfo);
@@ -928,7 +949,7 @@ int elf_init(kernel_args *ka)
 	kernel_image->regions[0].size = rinfo.size;
 
 	// data segment
-	kernel_image->regions[1].id = vm_find_region_by_name(vm_get_kernel_aspace_id(), "kernel_rw");
+	kernel_image->regions[1].id = vm_find_region_by_name(vm_get_kernel_aspace_id(), "kernel_seg1");
 	if(kernel_image->regions[1].id >= 0) {
 		vm_get_region_info(kernel_image->regions[1].id, &rinfo);
 		kernel_image->regions[1].start = rinfo.base;

@@ -22,6 +22,32 @@ int arch_cpu_init2(kernel_args *ka)
 	return 0;
 }
 
+#define CACHELINE 32
+
+void arch_cpu_sync_icache(void *address, size_t len)
+{
+	int l, off;
+	char *p;
+
+	off = (unsigned int)address & (CACHELINE - 1);
+	len += off;
+
+	l = len;
+	p = (char *)address - off;
+	do {
+		asm volatile ("dcbst 0,%0" :: "r"(p));
+		p += CACHELINE;
+	} while((l -= CACHELINE) > 0);
+	asm volatile ("sync");
+	p = (char *)address - off;
+	do {
+		asm volatile ("icbi 0,%0" :: "r"(p));
+		p += CACHELINE;
+	} while((len -= CACHELINE) > 0);
+	asm volatile ("sync");
+	asm volatile ("isync");
+}
+
 void arch_cpu_invalidate_TLB_range(addr_t start, addr_t end)
 {
 	asm volatile("sync");

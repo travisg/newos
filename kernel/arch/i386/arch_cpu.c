@@ -256,6 +256,11 @@ void arch_cpu_idle(void)
 	}
 }
 
+void arch_cpu_sync_icache(void *address, size_t len)
+{
+	// instruction cache is always consistent on x86
+}
+
 static void dbg_in(int argc, char **argv)
 {
 	int value;

@@ -140,32 +140,6 @@ int arch_int_init(kernel_args *ka)
 	return 0;
 }
 
-#define CACHELINE 32
-
-static void syncicache(void *address, int len)
-{
-	int l, off;
-	char *p;
-
-	off = (unsigned int)address & (CACHELINE - 1);
-	len += off;
-
-	l = len;
-	p = (char *)address - off;
-	do {
-		asm volatile ("dcbst 0,%0" :: "r"(p));
-		p += CACHELINE;
-	} while((l -= CACHELINE) > 0);
-	asm volatile ("sync");
-	p = (char *)address - off;
-	do {
-		asm volatile ("icbi 0,%0" :: "r"(p));
-		p += CACHELINE;
-	} while((len -= CACHELINE) > 0);
-	asm volatile ("sync");
-	asm volatile ("isync");
-}
-
 int arch_int_init2(kernel_args *ka)
 {
 	region_id exception_region;
@@ -183,7 +157,7 @@ int arch_int_init2(kernel_args *ka)
 
 	// copy the handlers into this area
 	memcpy(ex_handlers, &__irqvec_start, ka->arch_args.exception_handlers.size);
-	syncicache(0, 0x3000);
+	arch_cpu_sync_icache(0, 0x3000);
 
 	// make sure the IP bit isn't set (putting the exceptions at 0x0)
 	setmsr(getmsr() & ~MSR_IP);

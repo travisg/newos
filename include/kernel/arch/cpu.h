@@ -27,6 +27,8 @@ void arch_cpu_invalidate_TLB_range(addr_t start, addr_t end);
 void arch_cpu_invalidate_TLB_list(addr_t pages[], int num_pages);
 void arch_cpu_global_TLB_invalidate(void);
 
+void arch_cpu_sync_icache(void *address, size_t len);
+
 int arch_cpu_user_memcpy(void *to, const void *from, size_t size, addr_t *fault_handler);
 int arch_cpu_user_strcpy(char *to, const char *from, addr_t *fault_handler);
 int arch_cpu_user_strncpy(char *to, const char *from, size_t size, addr_t *fault_handler);
