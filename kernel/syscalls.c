@@ -126,18 +126,21 @@ int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_re
 			*call_ret = user_proc_wait_on_proc((proc_id)arg0, (int *)arg1);
 			break;
 		case SYSCALL_VM_CREATE_ANONYMOUS_REGION:
-			*call_ret = user_vm_create_anonymous_region(vm_get_current_user_aspace_id(),
+			*call_ret = user_vm_create_anonymous_region(
 				(char *)arg0, (void **)arg1, (int)arg2,
 				(addr)arg3, (int)arg4, (int)arg5);
 			break;
 		case SYSCALL_VM_CLONE_REGION:
-			*call_ret = user_vm_clone_region(vm_get_current_user_aspace_id(),
+			*call_ret = user_vm_clone_region(
 				(char *)arg0, (void **)arg1, (int)arg2,
-				(region_id)arg3, (int)arg4);
+				(region_id)arg3, (int)arg4, (int)arg5);
 			break;
-		case SYSCALL_VM_MMAP_FILE:
-			// XXX unimplemented
-			*call_ret = -1;
+		case SYSCALL_VM_MAP_FILE:
+			*call_ret = user_vm_map_file(
+				(char *)arg0, (void **)arg1, (int)arg2,
+				(addr)arg3, (int)arg4, (int)arg5, (const char *)arg6,
+				(off_t)INT32TOINT64(arg7, arg8));
+			break;
 			break;
 		case SYSCALL_VM_DELETE_REGION:
 			*call_ret = vm_delete_region(vm_get_current_user_aspace_id(), (region_id)arg0);

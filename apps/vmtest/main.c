@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -30,31 +30,31 @@ int main()
 		region_id region2;
 		vm_region_info info;
 		void *ptr, *ptr2;
-		
+
 		region = sys_vm_create_anonymous_region("foo", &ptr, REGION_ADDR_ANY_ADDRESS,
 			16*4096, REGION_WIRING_LAZY, LOCK_RW);
 		printf("region = 0x%x @ 0x%x\n", region, (unsigned int)ptr);
 		region2 = sys_vm_clone_region("foo2", &ptr2, REGION_ADDR_ANY_ADDRESS,
-			region, LOCK_RW);
+			region, REGION_NO_PRIVATE_MAP, LOCK_RW);
 		printf("region2 = 0x%x @ 0x%x\n", region2, (unsigned int)ptr2);
-		
+
 		sys_vm_get_region_info(region, &info);
 		printf("info.base = 0x%x info.size = 0x%x\n", (unsigned int)info.base, (unsigned int)info.size);
-		
+
 		sys_vm_delete_region(region);
 		sys_vm_delete_region(region2);
 		printf("deleting both regions\n");
 	}
 #endif
 #if 1
-	printf("doing some commitment tests (will only be proper on 128Mb machines)\n");
+	printf("doing some commitment tests (will only be proper on 512Mb machines)\n");
 	{
 		region_id region;
 		region_id region2;
 		void *ptr, *ptr2;
 
 		region = sys_vm_create_anonymous_region("large", &ptr, REGION_ADDR_ANY_ADDRESS,
-			100*1024*1024, REGION_WIRING_LAZY, LOCK_RW);
+			450*1024*1024, REGION_WIRING_LAZY, LOCK_RW);
 		if(region < 0) {
 			printf("error %d creating large region\n", region);
 		} else {

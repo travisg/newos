@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -39,7 +39,7 @@ typedef struct vm_region_info {
 	addr size;
 	int lock;
 	int wiring;
-	char name[SYS_MAX_OS_NAME_LEN];	
+	char name[SYS_MAX_OS_NAME_LEN];
 } vm_region_info;
 
 // args for the create_area funcs
@@ -57,8 +57,8 @@ enum {
 };
 
 enum {
-	PHYSICAL_PAGE_NO_WAIT = 0,
-	PHYSICAL_PAGE_CAN_WAIT,
+	REGION_NO_PRIVATE_MAP = 0,
+	REGION_PRIVATE_MAP
 };
 
 #define LOCK_RO        0x0
@@ -110,8 +110,9 @@ int sys_proc_wait_on_proc(proc_id pid, int *retcode);
 region_id sys_vm_create_anonymous_region(char *name, void **address, int addr_type,
 	addr size, int wiring, int lock);
 region_id sys_vm_clone_region(char *name, void **address, int addr_type,
-	region_id source_region, int lock);	
-// mmap file
+	region_id source_region, int mapping, int lock);
+region_id sys_vm_map_file(char *name, void **address, int addr_type,
+	addr size, int lock, int mapping, const char *path, off_t offset);
 int sys_vm_delete_region(region_id id);
 int sys_vm_get_region_info(region_id id, vm_region_info *info);
 

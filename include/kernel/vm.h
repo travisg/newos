@@ -204,10 +204,12 @@ int user_strcpy(char *to, const char *from);
 int user_strncpy(char *to, const char *from, size_t size);
 void *user_memset(void *s, char c, size_t count);
 
-region_id user_vm_create_anonymous_region(aspace_id aid, char *uname, void **uaddress, int addr_type,
+region_id user_vm_create_anonymous_region(char *uname, void **uaddress, int addr_type,
 	addr size, int wiring, int lock);
-region_id user_vm_clone_region(aspace_id aid, char *uname, void **uaddress, int addr_type,
-	region_id source_region, int lock);
+region_id user_vm_clone_region(char *uname, void **uaddress, int addr_type,
+	region_id source_region, int mapping, int lock);
+region_id user_vm_map_file(char *uname, void **uaddress, int addr_type,
+	addr size, int lock, int mapping, const char *upath, off_t offset);
 int user_vm_get_region_info(region_id id, vm_region_info *uinfo);
 
 // XXX remove later

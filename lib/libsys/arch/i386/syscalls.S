@@ -60,6 +60,69 @@ name: \
 	movl	$n,%eax; \
 	jmp		syscall6
 
+#define SYSCALL8(name, n) \
+.globl name; \
+.align 8; \
+name: \
+	movl	$n,%eax; \
+	jmp		syscall8
+
+#define SYSCALL9(name, n) \
+.globl name; \
+.align 8; \
+name: \
+	movl	$n,%eax; \
+	jmp		syscall9
+
+#define SYSCALL10(name, n) \
+.globl name; \
+.align 8; \
+name: \
+	movl	$n,%eax; \
+	jmp		syscall10
+
+#define SYSCALL11(name, n) \
+.globl name; \
+.align 8; \
+name: \
+	movl	$n,%eax; \
+	jmp		syscall11
+
+#define SYSCALL12(name, n) \
+.globl name; \
+.align 8; \
+name: \
+	movl	$n,%eax; \
+	jmp		syscall12
+
+#define SYSCALL13(name, n) \
+.globl name; \
+.align 8; \
+name: \
+	movl	$n,%eax; \
+	jmp		syscall13
+
+#define SYSCALL14(name, n) \
+.globl name; \
+.align 8; \
+name: \
+	movl	$n,%eax; \
+	jmp		syscall14
+
+#define SYSCALL15(name, n) \
+.globl name; \
+.align 8; \
+name: \
+	movl	$n,%eax; \
+	jmp		syscall15
+
+#define SYSCALL16(name, n) \
+.globl name; \
+.align 8; \
+name: \
+	movl	$n,%eax; \
+	jmp		syscall16
+
 SYSCALL0(sys_null, 0)
 SYSCALL2(sys_mount, 1)
 SYSCALL1(sys_unmount, 2)
@@ -90,8 +153,8 @@ SYSCALL3(sys_proc_create_proc, 26)
 SYSCALL2(sys_thread_wait_on_thread, 27)
 SYSCALL2(sys_proc_wait_on_proc, 28)
 SYSCALL6(sys_vm_create_anonymous_region, 29)
-SYSCALL5(sys_vm_clone_region, 30);
-//SYSCALL0(sys_vm_mmap_file, 31);
+SYSCALL6(sys_vm_clone_region, 30);
+SYSCALL9(sys_vm_map_file, 31);
 SYSCALL1(sys_vm_delete_region, 32);
 SYSCALL2(sys_vm_get_region_info, 33);
 SYSCALL3(sys_thread_create_thread, 34);

@@ -421,7 +421,7 @@ err:
 	return err;
 }
 
-region_id user_vm_create_anonymous_region(aspace_id aid, char *uname, void **uaddress, int addr_type,
+region_id user_vm_create_anonymous_region(char *uname, void **uaddress, int addr_type,
 	addr size, int wiring, int lock)
 {
 	char name[SYS_MAX_OS_NAME_LEN];
@@ -440,7 +440,7 @@ region_id user_vm_create_anonymous_region(aspace_id aid, char *uname, void **uad
 	if(rc < 0)
 		return rc;
 
-	rc = vm_create_anonymous_region(aid, name, &address, addr_type, size, wiring, lock);
+	rc = vm_create_anonymous_region(vm_get_current_user_aspace_id(), name, &address, addr_type, size, wiring, lock);
 	if(rc < 0)
 		return rc;
 
@@ -738,8 +738,8 @@ region_id user_vm_map_file(char *uname, void **uaddress, int addr_type,
 	return rc;
 }
 
-region_id user_vm_clone_region(aspace_id aid, char *uname, void **uaddress, int addr_type,
-	region_id source_region, int lock)
+region_id user_vm_clone_region(char *uname, void **uaddress, int addr_type,
+	region_id source_region, int mapping, int lock)
 {
 	char name[SYS_MAX_OS_NAME_LEN];
 	void *address;
@@ -760,7 +760,7 @@ region_id user_vm_clone_region(aspace_id aid, char *uname, void **uaddress, int 
 	if(rc < 0)
 		return rc;
 
-	rc = vm_clone_region(aid, name, &address, addr_type, source_region, REGION_NO_PRIVATE_MAP, lock);
+	rc = vm_clone_region(vm_get_current_user_aspace_id(), name, &address, addr_type, source_region, mapping, lock);
 	if(rc < 0)
 		return rc;
 
