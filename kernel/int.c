@@ -5,6 +5,7 @@
 #include "debug.h"
 #include "stage2.h"
 #include "vm.h"
+#include "spinlock.h"
 #include "arch_int.h"
 
 #define NUM_IO_HANDLERS 256
@@ -15,10 +16,14 @@ struct io_handler {
 };
 
 static struct io_handler **io_handlers = NULL;
+static int int_handler_list_spinlock = 0;
 
 int int_init(struct kernel_args *ka)
 {
 	dprintf("init_int_handlers: entry\n");
+
+	int_handler_list_spinlock = 0;
+
 	return arch_int_init(ka);
 }
 
@@ -44,8 +49,11 @@ int int_set_io_interrupt_handler(int vector, int (*func)(void))
 	if(io == NULL)
 		return -1;
 	io->func = func;
+
+	acquire_spinlock(&int_handler_list_spinlock);
 	io->next = io_handlers[vector];
 	io_handlers[vector] = io;
+	release_spinlock(&int_handler_list_spinlock);
 
 	arch_int_enable_io_interrupt(vector);
 

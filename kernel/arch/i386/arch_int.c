@@ -128,8 +128,8 @@ void i386_handle_trap(struct int_frame frame)
 {
 	int ret;
 
-	if(frame.vector != 0x20)
-		dprintf("i386_handle_trap: vector 0x%x, cpu %d\n", frame.vector, smp_get_current_cpu());
+//	if(frame.vector != 0x20)
+//		dprintf("i386_handle_trap: vector 0x%x, cpu %d\n", frame.vector, smp_get_current_cpu());
 	switch(frame.vector) {
 		case 8:
 			ret = i386_double_fault(frame.error_code);

@@ -118,6 +118,7 @@ static struct thread *create_kernel_thread(char *name, int (*func)(void *param),
 		return NULL;
 	t->proc = proc_get_kernel_proc();
 	t->priority = priority;
+	t->state = THREAD_STATE_RUN;
 
 	sprintf(stack_name, "%s_kstack", name);
 	vm_create_area(t->proc->aspace, stack_name, (void **)&kstack_addr,
@@ -133,6 +134,7 @@ static struct thread *create_kernel_thread(char *name, int (*func)(void *param),
 int thread_init(struct kernel_args *ka)
 {
 	struct thread *t;
+	int i;
 	
 	dprintf("thread_init: entry\n");
 
@@ -140,26 +142,27 @@ int thread_init(struct kernel_args *ka)
 	memset(run_q_head, 0, sizeof(run_q_head));
 	memset(run_q_tail, 0, sizeof(run_q_tail));
 
-	// create thread 0 (idle thread)
-	t = create_thread_struct("idle_thread");
-	t->proc = proc_get_kernel_proc();
-	t->priority = THREAD_IDLE_PRIORITY;
-	t->kernel_stack_area = vm_find_area_by_name(t->proc->aspace, "idle_thread0_kstack");		
-	insert_thread_into_proc(t->proc, t);
-
 	// allocate as many CUR_THREAD slots as there are cpus
 	cur_thread = (struct thread **)kmalloc(sizeof(struct thread *) * smp_get_num_cpus());
 	if(cur_thread == NULL)
 		return -1;
 	memset(cur_thread, 0, sizeof(struct thread *) * smp_get_num_cpus());
 
-	// set current thread
-	CURR_THREAD = t;
+	// create an idle thread for each cpu
+	for(i=0; i<ka->num_cpus; i++) {
+		char temp[64];
+		
+		sprintf(temp, "idle_thread%d", i);
+		t = create_thread_struct(temp);
+		t->proc = proc_get_kernel_proc();
+		t->priority = THREAD_IDLE_PRIORITY;
+		t->state = THREAD_STATE_RUN;
+		sprintf(temp, "idle_thread%d_kstack", i);
+		t->kernel_stack_area = vm_find_area_by_name(t->proc->aspace, temp);		
+		insert_thread_into_proc(t->proc, t);
+		cur_thread[i] = t;
+	}
 
-#if 0
-	// XXX remove
-	idle_thread = t;
-#endif
 	return 0;
 }
 
@@ -215,7 +218,6 @@ int thread_test()
 	enqueue_run_q(t);
 	t = create_kernel_thread("test_thread8", &test_thread, 64);
 	enqueue_run_q(t);
-
 	return 0;
 }
 
@@ -232,34 +234,48 @@ _rand()
 int thread_resched()
 {
 	struct thread *next_thread = NULL;
+	int last_thread_pri = -1;
+	struct thread *old_thread = CURR_THREAD;
 	int i;
 	
 	acquire_spinlock(&thread_spinlock);
 	
-	for(i = THREAD_MAX_PRIORITY; i >= 0; i--) {
+	if(old_thread->state == THREAD_STATE_RUN)
+		enqueue_run_q(old_thread);
+
+	for(i = THREAD_MAX_PRIORITY; i > THREAD_IDLE_PRIORITY; i--) {
 		next_thread = _lookat_queue_thread(&run_q_head[i], &run_q_tail[i]);
 		if(next_thread != NULL) {
 			// skip it sometimes
-			if(_rand() < 0x2000) {
+			if(_rand() > 0x3000) {
 				next_thread = _dequeue_thread(&run_q_head[i], &run_q_tail[i]);
 				break;
 			}
+			last_thread_pri = i;
 			next_thread = NULL;
 		}
 	}
-	if(next_thread != NULL) {
-		struct thread *old_thread = CURR_THREAD;
-		
-//		dprintf("thread_resched: switching from thread %d to %d\n",
-//			CURR_THREAD->id, next_thread->id);
+	if(next_thread == NULL) {
+		if(last_thread_pri != -1) {
+			next_thread = _dequeue_thread(&run_q_head[last_thread_pri],
+				&run_q_tail[last_thread_pri]);
+		} else {
+			next_thread = _dequeue_thread(&run_q_head[THREAD_IDLE_PRIORITY],
+				&run_q_tail[THREAD_IDLE_PRIORITY]);
+		}
+	}
 
-		enqueue_run_q(old_thread);
+	if(next_thread != old_thread) {
+//		dprintf("thread_resched: switching from thread %d to %d\n",
+//			old_thread->id, next_thread->id);
+
 		CURR_THREAD = next_thread;
 		release_spinlock(&thread_spinlock);
 		thread_context_switch(old_thread, next_thread);
 	} else {
+//		dprintf("thread_resched: keeping old thread %d\n", old_thread->id);
 		release_spinlock(&thread_spinlock);
-	}		
-
+	}
+	
 	return 0;
 }

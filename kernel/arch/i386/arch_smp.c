@@ -10,6 +10,7 @@
 #include "string.h"
 #include "int.h"
 #include "spinlock.h"
+#include "smp.h"
 
 #include "arch_cpu.h"
 #include "arch_vm.h"
@@ -26,15 +27,16 @@ static unsigned int *ioapic = NULL;
 static int i386_ici_interrupt()
 {
 	// gin-u-wine inter-cpu interrupt
-	dprintf("inter-cpu interrupt on cpu %d\n", arch_smp_get_current_cpu());
+//	dprintf("inter-cpu interrupt on cpu %d\n", arch_smp_get_current_cpu());
 	arch_smp_ack_interrupt();
-	return INT_NO_RESCHEDULE;
+
+	return smp_intercpu_int_handler();
 }
 
 static int i386_spurious_interrupt()
 {
 	// spurious interrupt
-	dprintf("spurious interrupt on cpu %d\n", arch_smp_get_current_cpu());
+//	dprintf("spurious interrupt on cpu %d\n", arch_smp_get_current_cpu());
 	arch_smp_ack_interrupt();
 	return INT_NO_RESCHEDULE;
 }
@@ -42,7 +44,7 @@ static int i386_spurious_interrupt()
 static int i386_smp_error_interrupt()
 {
 	// smp error interrupt
-	dprintf("smp error interrupt on cpu %d\n", arch_smp_get_current_cpu());
+//	dprintf("smp error interrupt on cpu %d\n", arch_smp_get_current_cpu());
 	arch_smp_ack_interrupt();
 	return INT_NO_RESCHEDULE;
 }

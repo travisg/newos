@@ -9,6 +9,11 @@
 #define THREAD_NUM_PRIORITY_LEVELS 64
 #define THREAD_MAX_PRIORITY (THREAD_NUM_PRIORITY_LEVELS - 1)
 
+enum {
+	THREAD_STATE_RUN = 0,
+	THREAD_STATE_BLOCKED
+};
+
 struct thread {
 	struct thread *all_next;
 	struct thread *proc_next;
@@ -16,6 +21,7 @@ struct thread {
 	char *name;
 	int id;
 	int priority;
+	int state;
 	struct proc *proc;
 	struct area *kernel_stack_area;
 	struct area *user_stack_area;

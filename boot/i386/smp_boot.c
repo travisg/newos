@@ -74,7 +74,7 @@ static unsigned int *smp_probe(unsigned int base, unsigned int limit)
 
 	for (ptr = (unsigned int *) base; (unsigned int) ptr < limit; ptr++) {
 		if (*ptr == MP_FLT_SIGNATURE) {
-			dprintf("smp_probe: found floating pointer structure at %x\n", ptr);
+			dprintf("smp_probe: found floating pointer structure at 0x%x\n", ptr);
 			return ptr;
 		}
 	}
@@ -99,7 +99,6 @@ static void smp_do_config(struct kernel_args *ka)
 	 */
 	ka->num_cpus = 0;
 
-	dprintf("mp_flt_ptr->mpc = 0x%x\n", mp_flt_ptr->mpc);
 	mpc = mp_phys_to_virt(mp_flt_ptr->mpc);
 
 	/* print out our new found configuration. */
@@ -154,43 +153,42 @@ static void smp_do_config(struct kernel_args *ka)
 		(unsigned int)ka->apic_phys, (unsigned int)ka->ioapic_phys, ka->num_cpus);
 }
 
-#define MP_SPOT1_START 0x9fc00
-#define MP_SPOT1_END   0xa0000
-#define MP_SPOT1_LEN   (MP_SPOT1_END-MP_SPOT1_START)
-#define MP_SPOT2_START 0xf0000
-#define MP_SPOT2_END   0x100000
-#define MP_SPOT2_LEN   (MP_SPOT2_END-MP_SPOT2_START)
+struct smp_scan_spots_struct {
+	unsigned int start;
+	unsigned int stop;
+	unsigned int len;
+};
+
+static struct smp_scan_spots_struct smp_scan_spots[] = {
+	{ 0x9fc00, 0xa0000, 0xa0000 - 0x9fc00 },
+	{ 0xf0000, 0x100000, 0x100000 - 0xf0000 },
+	{ 0, 0, 0 }
+};
 
 static int smp_find_mp_config(struct kernel_args *ka)
 {
-	unsigned int ptr;
-
+	int i;
+	
 	// XXX for now, assume the memory is identity mapped by the 1st stage
-#if 0
-	vm_map_physical_memory(vm_get_kernel_aspace(), "smptemp1", &ptr, AREA_ANY_ADDRESS,
-		MP_SPOT1_LEN, 0, MP_SPOT1_START);
-	dprintf("ptr = 0x%x\n", ptr);
-	smp_probe(*ptr, *ptr + MP_SPOT1_LEN);
-
-	vm_map_physical_memory(vm_get_kernel_aspace(), "smp_mp", (void **)&ptr, AREA_ANY_ADDRESS,
-		MP_SPOT2_LEN, 0, MP_SPOT2_START);
-	dprintf("ptr = 0x%x\n", ptr);
-#else
-	ptr = MP_SPOT2_START;
-#endif
-	mp_flt_ptr = (struct mp_flt_struct *)smp_probe(ptr, ptr + MP_SPOT2_LEN);
+	for(i=0; smp_scan_spots[i].len > 0; i++) {
+		mp_flt_ptr = (struct mp_flt_struct *)smp_probe(smp_scan_spots[i].start,
+			smp_scan_spots[i].stop);
+		if(mp_flt_ptr != NULL)
+			break;
+	}
 	if(mp_flt_ptr != NULL) {
-		mp_mem_phys = MP_SPOT2_START;
-		mp_mem_virt = ptr;
+		mp_mem_phys = smp_scan_spots[i].start;
+		mp_mem_virt = smp_scan_spots[i].start;
 
 		dprintf ("smp_boot: intel mp version %s, %s", (mp_flt_ptr->mp_rev == 1) ? "1.1" :
 			"1.4", (mp_flt_ptr->mp_feature_2 & 0x80) ?
 			"imcr and pic compatibility mode.\n" : "virtual wire compatibility mode.\n");
 		if (mp_flt_ptr->mpc == 0) {		
 			// XXX need to implement
+#if 1
 			ka->num_cpus = 1;
 			return 1;
-#if 0
+#else
 			/* this system conforms to one of the default configurations */
 //			mp_num_def_config = mp_flt_ptr->mp_feature_1;
 			dprintf ("smp: standard configuration %d\n", mp_flt_ptr->mp_feature_1);
@@ -245,7 +243,7 @@ static int smp_setup_apic(struct kernel_args *ka)
 	config = apic_read(APIC_SIVR);
 	apic_write(APIC_EOI, 0);
 
-	dprintf("done\n");
+//	dprintf("done\n");
 	return 0;
 }
 
@@ -265,8 +263,8 @@ static int smp_cpu_ready()
 
 	// Important.  Make sure supervisor threads can fault on read only pages...
 	asm("movl %%eax, %%cr0" : : "a" ((1 << 31) | (1 << 16) | (1 << 5) | 1));
-	asm("cld");			// Ain't nothing but a GCC thang.
-	asm("fninit");		// initialize floating point unit
+	asm("cld");
+	asm("fninit");
 
 	smp_setup_apic(ka);
 
@@ -306,7 +304,7 @@ static int smp_boot_all_cpus(struct kernel_args *ka)
 
 	// allocate a stack and a code area for the smp trampoline
 	// (these have to be < 1M physical)
-	trampoline_code = 0x9f000; // 640kB - 4096 == 0x9f000
+	trampoline_code = 0x9f000; 	// 640kB - 4096 == 0x9f000
 	trampoline_stack = 0x9e000; // 640kB - 8192 == 0x9e000
 	map_page(ka, 0x9f000, 0x9f000);
 	map_page(ka, 0x9e000, 0x9e000);
@@ -343,7 +341,6 @@ static int smp_boot_all_cpus(struct kernel_args *ka)
 		
 		// set the trampoline stack up
 		tramp_stack_ptr = (unsigned int *)(trampoline_stack + PAGE_SIZE - 4);
-//		dprintf("tramp_stack top = 0x%x\n", tramp_stack_ptr);
 		// final location of the stack
 		*tramp_stack_ptr = ((unsigned int)final_stack) + STACK_SIZE * PAGE_SIZE - sizeof(unsigned int);
 		tramp_stack_ptr--;
@@ -351,28 +348,18 @@ static int smp_boot_all_cpus(struct kernel_args *ka)
 		*tramp_stack_ptr = ka->pgdir;
 		tramp_stack_ptr--;
 
-//		dprintf("tramp_stack = 0x%x, 0x%x\n", *(tramp_stack_ptr + 1), *(tramp_stack_ptr + 2));
-		
 		// put a gdt descriptor at the bottom of the stack
 		*((unsigned short *)trampoline_stack) = 0x18-1; // LIMIT
 		*((unsigned int *)(trampoline_stack + 2)) = trampoline_stack + 8;
 		// put the gdt at the bottom
 		memcpy(&((unsigned int *)trampoline_stack)[2], (void *)ka->vir_gdt, 6*4);
 
-/*
-		{
-			unsigned int *foo = (unsigned int *)(trampoline_stack + 8);
-			dprintf("gdt == 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x\n",
-				foo[0], foo[1], foo[2], foo[3], foo[4], foo[5]);
-		}
-*/
 		/* clear apic errors */
 		if(ka->cpu_apic_version[i] & 0xf0) {
 			apic_write(APIC_ESR, 0);
 			apic_read(APIC_ESR);
 		}
 
-//dprintf("sending INIT\n");
 		/* send (aka assert) INIT IPI */
 		config = (apic_read(APIC_ICR2) & 0x00ffffff) | (ka->cpu_apic_id[i] << 24);
 		apic_write(APIC_ICR2, config); /* set target pe */
@@ -382,30 +369,26 @@ static int smp_boot_all_cpus(struct kernel_args *ka)
 		// wait for pending to end
 		while((apic_read(APIC_ICR1) & 0x00001000) == 0x00001000);
 
-//dprintf("deasserting INIT\n");
 		/* deassert INIT */
 		config = (apic_read(APIC_ICR2) & 0x00ffffff) | (ka->cpu_apic_id[i] << 24);
 		apic_write(APIC_ICR2, config);
 		config = (apic_read(APIC_ICR1) & 0xfff00000) | 0x00008500;
 
 		// wait for pending to end
-		while((apic_read(APIC_ICR1) & 0x00001000) == 0x00001000)
-			dprintf("0x%x\n", apic_read(APIC_ICR1));
-
+		while((apic_read(APIC_ICR1) & 0x00001000) == 0x00001000);
+//			dprintf("0x%x\n", apic_read(APIC_ICR1));
+		
 		/* wait 10ms */
 //		u_sleep (10000);
 		for(j=0; j<100000000; j++)
 			j=j;
-//dprintf("done waiting\n");
 
 		/* is this a local apic or an 82489dx ? */
 		num_startups = (ka->cpu_apic_version[i] & 0xf0) ? 2 : 0;
-//dprintf("going to send %d STARTUPs\n", num_startups);
 		for (j = 0; j < num_startups; j++) {
 			int j1;
 			
 			/* it's a local apic, so send STARTUP IPIs */
-//			dprintf("smp: sending STARTUP\n");
 			apic_write(APIC_ESR, 0);
 
 			/* set target pe */

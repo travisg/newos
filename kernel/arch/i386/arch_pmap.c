@@ -89,3 +89,8 @@ int pmap_unmap_page(unsigned int vaddr)
 	return 0;
 }
 
+void arch_pmap_invl_page(unsigned int vaddr)
+{
+	invalidate_TLB(vaddr);
+}
+

@@ -584,6 +584,7 @@ static void dump_free_page_table()
 int vm_page_fault(int address, unsigned int fault_address)
 {
 	dprintf("PAGE FAULT: faulted on address 0x%x. ip = 0x%x. Killing system.\n", address, fault_address);
+	kprintf("PAGE FAULT: faulted on address 0x%x. ip = 0x%x. Killing system.\n", address, fault_address);
 	vm_dump_areas(vm_get_kernel_aspace());
 //	cli();
 	for(;;);

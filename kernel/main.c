@@ -95,7 +95,7 @@ int _start(struct kernel_args *oldka, int cpu)
 #if 0
 	if(cpu == 1) {
 		dprintf("sending intercpu interrupt\n");
-		smp_send_ici(0);
+		smp_send_ici(0, SMP_MSG_INVL_PAGE, 0x80000000, NULL);
 	}
 #endif
 	kprintf("main: done... spinning forever on cpu %d\n", cpu);
