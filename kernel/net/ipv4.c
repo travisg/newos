@@ -6,6 +6,7 @@
 #include <kernel/debug.h>
 #include <kernel/lock.h>
 #include <kernel/heap.h>
+#include <kernel/khash.h>
 #include <kernel/arch/cpu.h>
 #include <kernel/net/misc.h>
 #include <kernel/net/ethernet.h>
@@ -44,11 +45,63 @@ typedef struct ipv4_routing_entry {
 
 #define ROUTE_FLAGS_GW 1
 
+// routing table
 static ipv4_routing_entry *route_table;
 static mutex route_table_mutex;
 
+typedef struct ipv4_fragment {
+	struct ipv4_fragment *hash_next;
+	struct ipv4_fragment *frag_next;
+	cbuf *buf;
+	uint16 offset;
+	uint16 len;
+	time_t entry_time;
+	uint16 total_len;
+	// copied from the header, enough data to uniquely identify the frag
+	ipv4_addr src;
+	ipv4_addr dest;
+	uint16 identification;
+	uint8 protocol;
+} ipv4_fragment;
+
+typedef struct ipv4_fragment_key {
+	ipv4_addr src;
+	ipv4_addr dest;
+	uint16 identification;
+	uint8 protocol;
+} ipv4_fragment_key;
+
 // current ip identification number
 static uint32 curr_identification;
+
+// fragment hash table
+static void *frag_table;
+static mutex frag_table_mutex;
+
+static int frag_compare_func(void *_frag, void *_key)
+{
+	ipv4_fragment *frag = _frag;
+	ipv4_fragment_key *key = _key;
+
+	if(frag->src == key->src && frag->dest == key->dest &&
+	   frag->identification == key->identification && frag->protocol == key->protocol) {
+		return 0;
+	} else {
+		return -1;
+	}
+}
+
+// XXX lameo hash
+static unsigned int frag_hash_func(void *_frag, void *_key, int range)
+{
+	ipv4_fragment *frag = _frag;
+	ipv4_fragment_key *key = _key;
+
+	if(frag)
+		return (frag->src ^ frag->dest ^ frag->protocol ^ frag->identification) % range;
+	else
+		return (key->src ^ key->dest ^ key->protocol ^ key->identification) % range;
+}
 
 // expects hosts order
 void dump_ipv4_addr(ipv4_addr addr)
@@ -68,7 +121,7 @@ static void dump_ipv4_header(ipv4_header *head)
 	dprintf(" dest ");
 	dump_ipv4_addr(ntohl(head->dest));
 	dprintf(" prot %d, cksum 0x%x, len 0x%x, ident 0x%x, frag offset 0x%x\n",
-		head->protocol, ntohs(head->header_checksum), ntohs(head->total_length), ntohs(head->identification), ntohs(head->flags_frag_offset & 0x1fff));
+		head->protocol, ntohs(head->header_checksum), ntohs(head->total_length), ntohs(head->identification), ntohs(head->flags_frag_offset) & 0x1fff);
 #endif
 }
 
@@ -194,11 +247,15 @@ int ipv4_output(cbuf *buf, ipv4_addr target_addr, int protocol)
 	ipv4_addr transmit_addr;
 	ipv4_addr if_addr;
 	int err;
+	uint16 len;
+	uint16 curr_offset;
+	uint16 identification;
+	bool must_frag = false;
 
 #if NET_CHATTY
 	dprintf("ipv4_output: buf %p, target_addr ", buf);
 	dump_ipv4_addr(target_addr);
-	dprintf(", protocol %d\n", protocol);
+	dprintf(", protocol %d, len %d\n", protocol, cbuf_get_len(buf));
 #endif
 
 	// figure out what interface we will send this over
@@ -213,47 +270,323 @@ int ipv4_output(cbuf *buf, ipv4_addr target_addr, int protocol)
 		return ERR_NO_MEMORY;
 	}
 
+	// figure out the total len
+	len = cbuf_get_len(buf);
+	if(len > i->mtu)
+		must_frag = true;
+
 //	dprintf("did route match, result iid %d, i 0x%x, transmit_addr 0x%x, if_addr 0x%x\n", iid, i, transmit_addr, if_addr);
 
-	header_buf = cbuf_get_chain(sizeof(ipv4_header));
-	if(!header_buf) {
-		cbuf_free_chain(buf);
-		return ERR_NO_MEMORY;
+	identification = htons(atomic_add(&curr_identification, 1));
+
+	curr_offset = 0;
+	while(len > 0) {
+		uint16 packet_len;
+		uint16 header_len;
+		cbuf *send_buf;
+
+		header_len = sizeof(ipv4_header);
+		header_buf = cbuf_get_chain(header_len);
+		if(!header_buf) {
+			cbuf_free_chain(buf);
+			return ERR_NO_MEMORY;
+		}
+		header = cbuf_get_ptr(header_buf, 0);
+
+		packet_len = min(i->mtu, len + header_len);
+		packet_len = ROUNDOWN(packet_len - header_len, 8) + header_len;
+
+		header->version_length = 0x4 << 4 | 5;
+		header->tos = 0;
+		header->total_length = htons(packet_len);
+		header->identification = identification;
+		header->flags_frag_offset = htons((curr_offset / 8) & IPV4_FRAG_OFFSET_MASK);
+		if(packet_len != len + header_len)
+			header->flags_frag_offset |= htons(IPV4_FLAG_MORE_FRAGS);
+		header->ttl = 255;
+		header->protocol = protocol;
+		header->header_checksum = 0;
+		header->src = htonl(if_addr);
+		header->dest = htonl(target_addr);
+
+		// calculate the checksum
+		header->header_checksum = cksum16(header, (header->version_length & 0xf) * 4);
+
+		if(must_frag) {
+			send_buf = cbuf_duplicate_chain(buf, curr_offset, packet_len - header_len);
+			if(!send_buf) {
+				cbuf_free_chain(header_buf);
+				cbuf_free_chain(buf);
+				return ERR_NO_MEMORY;
+			}
+		} else {
+			send_buf = buf;
+		}
+		send_buf = cbuf_merge_chains(header_buf, send_buf);
+
+		// do the arp thang
+		err = arp_lookup(i, if_addr, transmit_addr, &link_addr, &ipv4_arp_callback, send_buf);
+		if(err == ERR_NET_ARP_QUEUED) {
+			// the arp request is queued up so we can just exit here
+			// and the rest of the work will be done via the arp callback
+		} else if(err < 0) {
+	#if NET_CHATTY
+			dprintf("ipv4_output: failed arp lookup\n");
+	#endif
+			cbuf_free_chain(send_buf);
+		} else {
+			// we got the link layer address, send the packet
+			i->link_output(send_buf, i, &link_addr, PROT_TYPE_IPV4);
+		}
+
+		dprintf("curr_offset %d, len %d\n", curr_offset, len);
+
+		// update the offset
+		curr_offset += packet_len - header_len;
+		len -= packet_len - header_len;
 	}
-	header = cbuf_get_ptr(header_buf, 0);
 
-	header->version_length = 0x4 << 4 | 5;
-	header->tos = 0;
-	header->total_length = htons(cbuf_get_len(buf) + cbuf_get_len(header_buf));
-	header->identification = htons(atomic_add(&curr_identification, 1));
-	header->flags_frag_offset = htons(0x2 << 13 | 0); // dont fragment bit
-	header->ttl = 255;
-	header->protocol = protocol;
-	header->header_checksum = 0;
-	header->src = htonl(if_addr);
-	header->dest = htonl(target_addr);
+out:
 
-	// calculate the checksum
-	header->header_checksum = cksum16(header, (header->version_length & 0xf) * 4);
+	return err;
+}
 
-	buf = cbuf_merge_chains(header_buf, buf);
+static ipv4_fragment *ipv4_create_frag_struct(ipv4_fragment_key *key, cbuf *buf, uint16 offset, uint16 len, bool last_frag)
+{
+	ipv4_fragment *frag;
 
-	// do the arp thang
-	err = arp_lookup(i, if_addr, transmit_addr, &link_addr, &ipv4_arp_callback, buf);
-	if(err == ERR_NET_ARP_QUEUED) {
-		// the arp request is queued up so we can just exit here
-		// and the rest of the work will be done via the arp callback
-		return NO_ERROR;
-	} else if(err < 0) {
-#if NET_CHATTY
-		dprintf("ipv4_output: failed arp lookup\n");
-#endif
-		cbuf_free_chain(buf);
-		return ERR_NET_FAILED_ARP;
+	// create a new frag
+	frag = kmalloc(sizeof(ipv4_fragment));
+	if(!frag)
+		return NULL;
+
+	frag->hash_next = NULL;
+	frag->frag_next = NULL;
+	frag->buf = buf;
+	frag->offset = offset;
+	frag->len = len;
+	frag->entry_time = system_time();
+	frag->src = key->src;
+	frag->dest = key->dest;
+	frag->identification = key->identification;
+	frag->protocol = key->protocol;
+
+	// if this was the last frag, we now know the total len
+	if(last_frag)
+		frag->total_len = frag->offset + frag->len;
+	else
+		frag->total_len = 0;
+
+	return frag;
+}
+
+static int ipv4_process_frag(cbuf *inbuf, ifnet *i, cbuf **outbuf)
+{
+	int err;
+	ipv4_header *header;
+	ipv4_fragment_key key;
+	ipv4_fragment *frag;
+	ipv4_fragment *temp;
+	ipv4_fragment *last;
+	uint16 offset;
+	uint16 len;
+	bool last_frag;
+
+	*outbuf = NULL;
+
+	dprintf("ipv4_process_frag: inbuf %p, i %p, outbuf %p\n", inbuf, i, outbuf);
+
+	header = (ipv4_header *)cbuf_get_ptr(inbuf, 0);
+	offset = (ntohs(header->flags_frag_offset) & IPV4_FRAG_OFFSET_MASK) * 8;
+	len = ntohs(header->total_length) - ((header->version_length & 0xf) * 4);
+	last_frag = (ntohs(header->flags_frag_offset) & IPV4_FLAG_MORE_FRAGS) ? false : true;
+
+	// look in the hash table to see if there are any frags this will help complete
+	key.src = ntohl(header->src);
+	key.dest = ntohl(header->dest);
+	key.identification = ntohs(header->identification);
+	key.protocol = header->protocol;
+
+	dprintf("ipv4_process_frag frag: src 0x%x dest 0x%x ident %d prot %d offset %d len %d last_frag %d\n",
+		key.src, key.dest, key.identification, key.protocol, offset, len, last_frag);
+
+	mutex_lock(&frag_table_mutex);
+
+	frag = hash_lookup(frag_table, &key);
+	if(frag) {
+		// this is part of an older frag
+		bool bad_frag = false;
+		bool found_spot = false;
+
+		// find the spot where this frag would be in the frag list
+		for(last = NULL, temp = frag; temp; last = temp, temp = temp->frag_next) {
+
+			dprintf("last %p, temp %p\n", last, temp);
+			dprintf("bad_frag %d, found_spot %d\n", bad_frag, found_spot);
+
+			// if we haven't already found a spot, look for it, and make sure
+			// the new frag would insert properly (no cross-overs, etc)
+			if(!found_spot) {
+				// first, make sure it would insert into the list cleanly
+				// see if this frag is the same as one we've received already
+				if(last) {
+					if(offset < last->offset + last->len) {
+						bad_frag = true;
+						goto done_frag_spot_search;
+					}
+				}
+				if(temp->offset > offset && (offset + len > temp->offset)) {
+					bad_frag = true;
+					goto done_frag_spot_search;
+				}
+
+				// now, see if we can stop here
+				if(last && offset > last->offset && offset < temp->offset) {
+					found_spot = true;
+				} else if(offset < temp->offset) {
+					found_spot = true;
+				}
+			}
+		}
+		// if we still hadn't found a spot, do a last check to see if it'll tack on
+		// to the end of the frag list properly
+		dprintf("out of loop: last %p, temp %p, found_spot %d, bad_frag %d\n", last, temp, found_spot, bad_frag);
+		if(!found_spot) {
+			if(offset < last->offset + last->len) {
+				// crosses last in list
+				bad_frag = true;
+				goto done_frag_spot_search;
+			}
+			// see if it's valid to tack on to the end of the list
+			if(frag->total_len > 0) {
+				// this frag chain had already received the end of frag packet
+				if(offset + len > frag->total_len) {
+					bad_frag = true;
+					goto done_frag_spot_search;
+				}
+			} else {
+				if(last_frag) {
+					// we now know the full size of this fragment chain
+					frag->total_len = offset + len;
+				}
+			}
+		}
+
+done_frag_spot_search:
+		if(bad_frag) {
+			dprintf("ipv4_process_frag: received fragment is bad\n");
+			cbuf_free_chain(inbuf);
+			err = ERR_NET_BAD_PACKET;
+			goto out;
+		}
+
+		// now we know we have the spot
+		// see if we can merge it with one of the others
+
+		// will it merge with the last one?
+		if(last) {
+			if(last->offset + last->len == offset) {
+				// merge it
+				cbuf_truncate_head(inbuf, ((header->version_length & 0xf) * 4));
+				last->buf = cbuf_merge_chains(last->buf, inbuf);
+				inbuf = last->buf;
+				last->len += len;
+				header = (ipv4_header *)cbuf_get_ptr(inbuf, 0);
+				header->total_length = htons(ntohs(header->total_length) + len);
+
+				// the free floating frag has been 'eaten'
+				len = 0;
+			}
+		}
+		// will it merge with the next one?
+		if(len > 0 && temp) {
+			if(offset + len == temp->offset) {
+				// merge it
+				ipv4_header *next_header = cbuf_get_ptr(temp->buf, 0);
+				cbuf_truncate_head(temp->buf, ((next_header->version_length & 0xf) * 4));
+				temp->buf = cbuf_merge_chains(inbuf, temp->buf);
+				inbuf = temp->buf;
+				header = (ipv4_header *)cbuf_get_ptr(inbuf, 0);
+				header->total_length = htons(ntohs(header->total_length) + temp->len);
+				temp->len += len;
+				temp->offset = offset;
+
+				// the free floating frag has been 'eaten'
+				len = 0;
+			}
+		}
+
+		// see if last and next frag will merge
+		if(last && temp) {
+			if(last->offset + len == temp->offset) {
+				// merge them
+				ipv4_header *next_header = cbuf_get_ptr(temp->buf, 0);
+				cbuf_truncate_head(temp->buf, ((next_header->version_length & 0xf) * 4));
+				last->buf = cbuf_merge_chains(last->buf, temp->buf);
+				inbuf = last->buf;
+				header = (ipv4_header *)cbuf_get_ptr(inbuf, 0);
+				header->total_length = htons(ntohs(header->total_length) + temp->len);
+				last->len += temp->len;
+
+				// delete the next frag structure
+				last->frag_next = temp->frag_next;
+				kfree(temp);
+			}
+		}
+
+		// if we still have a free floating frag, create a new frag.
+		// otherwise, see if we've completed a frag
+		if(len > 0) {
+			// create a new frag and put it in the list
+			ipv4_fragment *newfrag;
+
+			newfrag = ipv4_create_frag_struct(&key, inbuf, offset, len, last_frag);
+			if(!frag) {
+				cbuf_free_chain(inbuf);
+				err = ERR_NO_MEMORY;
+				goto out;
+			}
+
+			// are we at the beginning of the frag chain
+			if(!last) {
+				// we are, so this will be the new head of the list
+				hash_remove(frag_table, frag);
+				newfrag->frag_next = frag;
+				newfrag->total_len = frag->total_len;
+				hash_insert(frag_table, newfrag);
+			} else {
+				newfrag->frag_next = temp;
+				last->frag_next = newfrag;
+			}
+		} else {
+			// we ate the frag in some way, so see if we completed the list
+			if(frag->offset == 0 && frag->total_len == frag->len) {
+				// we have completed the frag
+				hash_remove(frag_table, frag);
+				*outbuf = frag->buf;
+				if(frag->frag_next)
+					panic("ipv4_process_frag: found completed frag but still has a chain! frag %p\n", frag);
+				kfree(frag);
+			}
+		}
 	} else {
-		// we got the link later address, send the packet
-		return i->link_output(buf, i, &link_addr, PROT_TYPE_IPV4);
+		// create a new frag
+		frag = ipv4_create_frag_struct(&key, inbuf, offset, len, last_frag);
+		if(!frag) {
+			cbuf_free_chain(inbuf);
+			err = ERR_NO_MEMORY;
+			goto out;
+		}
+
+		// add it to the list
+		hash_insert(frag_table, frag);
 	}
+
+out:
+	mutex_unlock(&frag_table_mutex);
+
+	return err;
+
 }
 
 int ipv4_input(cbuf *buf, ifnet *i)
@@ -301,10 +634,21 @@ int ipv4_input(cbuf *buf, ifnet *i)
 
 	// see if it's a fragment
 	if(ntohs(header->flags_frag_offset) & IPV4_FLAG_MORE_FRAGS ||
-		(ntohs(header->flags_frag_offset) & IPV4_FRAG_OFFSET_MASK) != 0) {
-		dprintf("ipv4 packet is fragmented, cannot handle that now\n");
-		err = ERR_UNIMPLEMENTED;
-		goto ditch_packet;
+	  (ntohs(header->flags_frag_offset) & IPV4_FRAG_OFFSET_MASK) != 0) {
+		cbuf *new_buf;
+
+		err = ipv4_process_frag(buf, i, &new_buf);
+		if(err < 0)
+			goto ditch_packet;
+		if(new_buf) {
+			// it processed the frag, and built us a complete packet
+			buf = new_buf;
+			header = cbuf_get_ptr(buf, 0);
+		} else {
+			// it ate the frag, so we're done here
+			err = NO_ERROR;
+			goto out;
+		}
 	}
 
 	// strip off the ip header
@@ -326,16 +670,22 @@ int ipv4_input(cbuf *buf, ifnet *i)
 
 ditch_packet:
 	cbuf_free_chain(buf);
-
+out:
 	return err;
 }
 
 int ipv4_init(void)
 {
+	ipv4_fragment frag;
+
 	mutex_init(&route_table_mutex, "ipv4 routing table mutex");
+	mutex_init(&frag_table_mutex, "ipv4 fragment table mutex");
 
 	route_table = NULL;
 	curr_identification = system_time();
+
+	frag_table = hash_init(256, (addr)&frag.hash_next - (addr)&frag,
+		&frag_compare_func, &frag_hash_func);
 
 	return 0;
 }

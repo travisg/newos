@@ -37,7 +37,10 @@ int cbuf_memcpy_from_chain(void *dest, cbuf *chain, size_t offset, size_t len);
 int cbuf_user_memcpy_to_chain(cbuf *chain, size_t offset, const void *_src, size_t len);
 int cbuf_user_memcpy_from_chain(void *dest, cbuf *chain, size_t offset, size_t len);
 
+uint16 cbuf_ones_cksum16(cbuf *chain, size_t offset, size_t len);
+
 cbuf *cbuf_merge_chains(cbuf *chain1, cbuf *chain2);
+cbuf *cbuf_duplicate_chain(cbuf *chain, size_t offset, size_t len);
 
 int cbuf_truncate_head(cbuf *chain, size_t trunc_bytes);
 int cbuf_truncate_tail(cbuf *chain, size_t trunc_bytes);

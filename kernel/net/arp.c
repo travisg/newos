@@ -92,7 +92,7 @@ static unsigned int arp_cache_hash(void *_e, void *_key, int range)
 		addr = key;
 
 	// XXX make this smarter
-	return ((*addr) ^ (*addr >> 8) ^ (*addr >> 16) ^ (*addr > 24)) % range;
+	return ((*addr) ^ (*addr >> 8) ^ (*addr >> 16) ^ (*addr >> 24)) % range;
 }
 
 static void dump_arp_packet(arp_packet *arp)

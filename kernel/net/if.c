@@ -61,10 +61,12 @@ ifnet *if_register_interface(const char *path, int type)
 		case IF_TYPE_LOOPBACK:
 			i->link_input = &loopback_input;
 			i->link_output = &loopback_output;
+			i->mtu = 65535;
 			break;
 		case IF_TYPE_ETHERNET:
 			i->link_input = &ethernet_input;
 			i->link_output = &ethernet_output;
+			i->mtu = 1434;
 			break;
 		default:
 			kfree(i);
@@ -102,13 +104,20 @@ void if_bind_link_address(ifnet *i, ifaddr *addr)
 int if_output(cbuf *b, ifnet *i)
 {
 	bool release_sem = false;
+	bool enqueue_failed = false;
 
 	// stick the buffer on a transmit queue
 	mutex_lock(&i->tx_queue_lock);
-	fixed_queue_enqueue(&i->tx_queue, b);
+	if(fixed_queue_enqueue(&i->tx_queue, b) < 0)
+		enqueue_failed = true;
 	if(i->tx_queue.count == 1)
 		release_sem = true;
 	mutex_unlock(&i->tx_queue_lock);
+
+	if(enqueue_failed) {
+		cbuf_free_chain(b);
+		return ERR_NO_MEMORY;
+	}
 
 	if(release_sem)
 		sem_release(i->tx_queue_sem, 1);
@@ -127,22 +136,24 @@ static int if_tx_thread(void *args)
 		return -1;
 
 	for(;;) {
-		sem_acquire(i->tx_queue_sem, 1);
+ 		sem_acquire(i->tx_queue_sem, 1);
 
-		// pull a packet out of the queue
-		mutex_lock(&i->tx_queue_lock);
-		buf = fixed_queue_dequeue(&i->tx_queue);
-		mutex_unlock(&i->tx_queue_lock);
-		if(!buf)
-			continue;
+		for(;;) {
+	 		// pull a packet out of the queue
+			mutex_lock(&i->tx_queue_lock);
+			buf = fixed_queue_dequeue(&i->tx_queue);
+			mutex_unlock(&i->tx_queue_lock);
+			if(!buf)
+				break;
 
-		// put the cbuf chain into a flat buffer
-		len = cbuf_get_len(buf);
-		cbuf_memcpy_from_chain(i->tx_buf, buf, 0, len);
+			// put the cbuf chain into a flat buffer
+			len = cbuf_get_len(buf);
+			cbuf_memcpy_from_chain(i->tx_buf, buf, 0, len);
 
-		cbuf_free_chain(buf);
+			cbuf_free_chain(buf);
 
-		sys_write(i->fd, i->tx_buf, 0, len);
+			sys_write(i->fd, i->tx_buf, 0, len);
+		}
 	}
 }
 

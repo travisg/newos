@@ -5,6 +5,7 @@
 #include <kernel/int.h>
 #include <kernel/debug.h>
 #include <kernel/cbuf.h>
+#include <kernel/net/misc.h> // for cksum16
 #include <kernel/arch/cpu.h>
 #include <sys/errors.h>
 
@@ -486,6 +487,82 @@ int cbuf_user_memcpy_from_chain(void *_dest, cbuf *chain, size_t offset, size_t 
 	return err;
 }
 
+cbuf *cbuf_duplicate_chain(cbuf *chain, size_t offset, size_t len)
+{
+	cbuf *buf;
+	cbuf *newbuf;
+	cbuf *destbuf;
+	int dest_buf_offset;
+	int buf_offset;
+
+	if(!chain)
+		return NULL;
+	if((chain->flags & CBUF_FLAG_CHAIN_HEAD) == 0)
+		return NULL;
+	if(offset >= chain->total_len)
+		return NULL;
+	len = min(len, chain->total_len - offset);
+
+	newbuf = cbuf_get_chain(len);
+	if(!newbuf)
+		return NULL;
+
+	// find the starting cbuf in the chain to copy from
+	buf = chain;
+	buf_offset = 0;
+	while(offset > 0) {
+		if(buf == NULL) {
+			cbuf_free_chain(newbuf);
+			dprintf("cbuf_duplicate_chain: end of chain reached too early!\n");
+			return NULL;
+		}
+		if(offset < buf->len) {
+			// this is the one
+			buf_offset = offset;
+			break;
+		}
+		offset -= buf->len;
+		buf = buf->next;
+	}
+
+	destbuf = newbuf;
+	dest_buf_offset = 0;
+	while(len > 0) {
+		size_t to_copy;
+
+		if(buf == NULL) {
+			cbuf_free_chain(newbuf);
+			dprintf("cbuf_duplicate_chain: end of source chain reached too early!\n");
+			return NULL;
+		}
+		if(destbuf == NULL) {
+			cbuf_free_chain(newbuf);
+			dprintf("cbuf_duplicate_chain: end of destination chain reached too early!\n");
+			return NULL;
+		}
+
+		to_copy = min(destbuf->len - dest_buf_offset, buf->len - buf_offset);
+		to_copy = min(to_copy, len);
+		memcpy((char *)destbuf->data + dest_buf_offset, (char *)buf->data + buf_offset, to_copy);
+
+		len -= to_copy;
+		if(to_copy + buf_offset == buf->len) {
+			buf = buf->next;
+			buf_offset = 0;
+		} else {
+			buf_offset += to_copy;
+		}
+		if(to_copy + dest_buf_offset == destbuf->len) {
+			destbuf = destbuf->next;
+			dest_buf_offset = 0;
+		} else {
+			dest_buf_offset += to_copy;
+		}
+	}
+
+	return newbuf;
+}
+
 
 cbuf *cbuf_merge_chains(cbuf *chain1, cbuf *chain2)
 {
@@ -567,6 +644,40 @@ int cbuf_is_contig_region(cbuf *buf, size_t start, size_t end)
 		buf = buf->next;
 	}
 	return 0;
+}
+
+uint16 cbuf_ones_cksum16(cbuf *buf, size_t offset, size_t len)
+{
+	uint32 sum = 0;
+
+	if(!buf)
+		return 0;
+	if((buf->flags & CBUF_FLAG_CHAIN_HEAD) == 0)
+		return 0;
+
+	// find the start ptr
+	while(buf) {
+		if(buf->len > offset)
+			break;
+		if(buf->len > offset)
+			return 0;
+		offset -= buf->len;
+		buf = buf->next;
+	}
+
+	// start checksumming
+	while(buf && len > 0) {
+		void *ptr = (void *)((addr)buf->data + offset);
+		size_t plen = min(len, buf->len - offset);
+
+		sum = ones_sum16(sum, ptr, plen);
+
+		len -= plen;
+		offset = 0;
+		buf = buf->next;
+	}
+
+	return ~((uint16)sum);
 }
 
 int cbuf_truncate_head(cbuf *buf, size_t trunc_bytes)
