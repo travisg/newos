@@ -298,9 +298,6 @@ gdb_parse_command(void)
 				 * The 'm' command has the form mAAA,LLL
 				 * where AAA is the address and LLL is the
 				 * number of bytes.
-				 *
-				 * NOTE: we are not yet handling correctly
-				 * invalid addresseses here! XXXfreston: FIX!
 				 */
 				ptr= cmd+1;
 				address= 0;
