@@ -108,7 +108,7 @@ struct arch_cpu_info {
 
 void setup_system_time(unsigned int cv_factor);
 bigtime_t i386_cycles_to_time(uint64 cycles);
-void i386_context_switch(struct arch_thread *old, struct arch_thread *new, addr_t new_pgdir);
+void i386_context_switch(struct arch_thread *old, struct arch_thread *new);
 void i386_enter_uspace(addr_t entry, void *args, addr_t ustack_top);
 void i386_set_kstack(addr_t kstack);
 void i386_switch_stack_and_call(addr_t stack, void (*func)(void *), void *arg);
