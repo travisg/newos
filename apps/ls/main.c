@@ -5,8 +5,11 @@
 #include <sys/syscalls.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
+/* globals */
 void (*disp_func)(const char *, struct file_stat *) = NULL;
+bool full_list = false;
 
 static void display_l(const char *filename, struct file_stat *stat)
 {
@@ -33,64 +36,79 @@ static void display_l(const char *filename, struct file_stat *stat)
 }
 
 // unused
-#if 0
 static void display(const char *filename, struct file_stat *stat)
 {
 	printf("%s\n", filename);
 }
-#endif
 
-int main(int argc, char *argv[])
+static void usage(const char *progname)
+{
+	printf("usage:\n");
+	printf("%s [-al] [file ...]\n", progname);
+
+	exit(1);
+}
+
+static int do_ls(const char *arg)
 {
 	int rc;
 	int rc2;
-	int count = 0;
 	struct file_stat stat;
-	char *arg;
-
-	if(argc == 1) {
-		arg = ".";
-	} else {
-		arg = argv[1];
-	}
-
-	// for now, use the '-l' version of the display func
-	disp_func = display_l;
+	int count = 0;
 
 	rc = sys_rstat(arg, &stat);
 	if(rc < 0) {
 		printf("sys_rstat() returned error: %s!\n", strerror(rc));
-		goto err_ls;
+		return rc;
 	}
 
 	switch(stat.type) {
 		case STREAM_TYPE_DIR: {
 			int fd;
-			char buf[1024];
+			char filename[1024];
+			bool done_dot, done_dotdot;
 
 			fd = sys_open(arg, STREAM_TYPE_DIR, 0);
 			if(fd < 0) {
-				printf("ls: sys_open() returned error: %s!\n", strerror(fd));
+				//printf("ls: sys_open() returned error: %s!\n", strerror(fd));
 				break;
 			}
 
+			if(strcmp(arg, ".") != 0) {
+				printf("%s:\n", arg);
+			}
+
+			if(full_list) {
+				done_dot = done_dotdot = false;
+			} else {
+				done_dot = done_dotdot = true;
+			}
+
 			for(;;) {
-				char buf2[1024];
+				char full_path[1024];
 
-				rc = sys_read(fd, buf, -1, sizeof(buf));
-				if(rc <= 0)
-					break;
-
-				buf2[0] = 0;
-				if(strcmp(arg, ".") != 0) {
-					strlcpy(buf2, arg, sizeof(buf2));
-					strlcat(buf2, "/", sizeof(buf2));
+				if(!done_dot) {
+					strlcpy(filename, ".", sizeof(filename));
+					done_dot = true;
+				} else if(!done_dotdot) {
+					strlcpy(filename, "..", sizeof(filename));
+					done_dotdot = true;
+				} else {
+					rc = sys_read(fd, filename, -1, sizeof(filename));
+					if(rc <= 0)
+						break;
 				}
-				strlcat(buf2, buf, sizeof(buf2));
 
-				rc2 = sys_rstat(buf2, &stat);
+				full_path[0] = 0;
+				if(strcmp(arg, ".") != 0) {
+					strlcpy(full_path, arg, sizeof(full_path));
+					strlcat(full_path, "/", sizeof(full_path));
+				}
+				strlcat(full_path, filename, sizeof(full_path));
+
+				rc2 = sys_rstat(full_path, &stat);
 				if(rc2 >= 0) {
-					(*disp_func)(buf2, &stat);
+					(*disp_func)(filename, &stat);
 				}
 				count++;
 			}
@@ -100,11 +118,41 @@ int main(int argc, char *argv[])
 			break;
 		}
 		default:
-			(*disp_func)(argv[1], &stat);
+			(*disp_func)(arg, &stat);
 			break;
 	}
 
-err_ls:
+	return 0;
+}
+
+int main(int argc, char *argv[])
+{
+	char c;
+
+	disp_func = &display;
+
+	while((c = getopt(argc, argv, "al")) >= 0) {
+		switch(c) {
+			case 'a':
+				full_list = true;
+				break;
+			case 'l':
+				disp_func = &display_l;
+				break;
+			default:
+				usage(argv[0]);
+		}
+	}
+
+	if(optind >= argc) {
+		// no arguments to ls. ls the current dir
+		do_ls(".");
+	} else {
+		for(; optind < argc; optind++) {
+			do_ls(argv[optind]);
+		}
+	}
+
 	return 0;
 }
 
