@@ -60,6 +60,14 @@ name: \
 	movl	$n,%eax; \
 	jmp		syscall6
 
+
+#define SYSCALL7(name, n) \
+.globl name; \
+.align 8; \
+name: \
+	movl	$n,%eax; \
+	jmp		syscall7
+
 #define SYSCALL8(name, n) \
 .globl name; \
 .align 8; \
@@ -153,18 +161,32 @@ SYSCALL3(sys_proc_create_proc, 26)
 SYSCALL2(sys_thread_wait_on_thread, 27)
 SYSCALL2(sys_proc_wait_on_proc, 28)
 SYSCALL6(sys_vm_create_anonymous_region, 29)
-SYSCALL6(sys_vm_clone_region, 30);
-SYSCALL9(sys_vm_map_file, 31);
-SYSCALL1(sys_vm_delete_region, 32);
-SYSCALL2(sys_vm_get_region_info, 33);
-SYSCALL3(sys_thread_create_thread, 34);
-SYSCALL1(sys_thread_kill_thread, 35);
-SYSCALL1(sys_thread_suspend_thread, 36);
-SYSCALL1(sys_thread_resume_thread, 37);
-SYSCALL1(sys_proc_kill_proc, 38);
-SYSCALL0(sys_get_current_proc_id, 39);
-SYSCALL2(sys_getcwd, 40);
-SYSCALL1(sys_setcwd, 41);
+SYSCALL6(sys_vm_clone_region, 30)
+SYSCALL9(sys_vm_map_file, 31)
+SYSCALL1(sys_vm_delete_region, 32)
+SYSCALL2(sys_vm_get_region_info, 33)
+SYSCALL3(sys_thread_create_thread, 34)
+SYSCALL1(sys_thread_kill_thread, 35)
+SYSCALL1(sys_thread_suspend_thread, 36)
+SYSCALL1(sys_thread_resume_thread, 37)
+SYSCALL1(sys_proc_kill_proc, 38)
+SYSCALL0(sys_get_current_proc_id, 39)
+SYSCALL2(sys_getcwd, 40)
+SYSCALL1(sys_setcwd, 41)
+SYSCALL2(sys_port_create, 42)
+SYSCALL1(sys_port_close, 43)
+SYSCALL1(sys_port_delete, 44)
+SYSCALL1(sys_port_find, 45)
+SYSCALL2(sys_port_get_info, 46)
+SYSCALL3(sys_port_get_next_port_info, 47)
+SYSCALL1(sys_port_buffer_size, 48)
+SYSCALL4(sys_port_buffer_size_etc, 49)
+SYSCALL1(sys_port_count, 50)
+SYSCALL4(sys_port_read, 51)
+SYSCALL7(sys_port_read_etc, 52)
+SYSCALL2(sys_port_set_owner, 53)
+SYSCALL4(sys_port_write, 54)
+SYSCALL7(sys_port_write_etc, 55)
 
 /* we will optimize by just passing a ptr to the place where the caller
 ** would have dumped the args */

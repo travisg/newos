@@ -22,6 +22,7 @@ KERNEL_OBJS = \
         $(KERNEL_OBJ_DIR)/dev.o \
         $(KERNEL_OBJ_DIR)/queue.o \
         $(KERNEL_OBJ_DIR)/timer.o \
+        $(KERNEL_OBJ_DIR)/port.o \
         $(KERNEL_OBJ_DIR)/sem.o \
         $(KERNEL_OBJ_DIR)/smp.o \
         $(KERNEL_OBJ_DIR)/syscalls.o \
@@ -80,3 +81,4 @@ $(KERNEL_OBJ_DIR)/%.d: $(KERNEL_DIR)/%.c
 	@($(ECHO) -n $(dir $@); $(CC) $(GLOBAL_CFLAGS) $(KERNEL_CFLAGS) $(KERNEL_INCLUDES) -M -MG $<) > $@
 
 endif
+

@@ -42,6 +42,15 @@ typedef struct vm_region_info {
 	char name[SYS_MAX_OS_NAME_LEN];
 } vm_region_info;
 
+typedef struct port_info {
+	port_id id;
+	proc_id owner;
+	char name[SYS_MAX_OS_NAME_LEN];
+	int32 capacity;
+	int32 queue_count;
+	int32 total_count;
+} port_info;
+
 // args for the create_area funcs
 enum {
 	REGION_ADDR_ANY_ADDRESS = 0,
@@ -120,6 +129,22 @@ region_id sys_vm_map_file(char *name, void **address, int addr_type,
 	addr size, int lock, int mapping, const char *path, off_t offset);
 int sys_vm_delete_region(region_id id);
 int sys_vm_get_region_info(region_id id, vm_region_info *info);
+
+/* kernel port functions */
+port_id		sys_port_create(int32 queue_length, const char *name);
+int			sys_port_close(port_id id);
+int			sys_port_delete(port_id id);
+port_id		sys_port_find(const char *port_name);
+int			sys_port_get_info(port_id id, struct port_info *info);
+int		 	sys_port_get_next_port_info(proc_id proc, uint32 *cookie, struct port_info *info);
+ssize_t		sys_port_buffer_size(port_id port);
+ssize_t		sys_port_buffer_size_etc(port_id port, uint32 flags, time_t timeout);
+int32		sys_port_count(port_id port);
+ssize_t		sys_port_read(port_id port, int32 *msg_code, void *msg_buffer, size_t buffer_size);
+ssize_t		sys_port_read_etc(port_id port,	int32 *msg_code, void *msg_buffer, size_t buffer_size, uint32 flags, time_t timeout);
+int			sys_port_set_owner(port_id port, proc_id proc);
+int			sys_port_write(port_id port, int32 msg_code, void *msg_buffer, size_t buffer_size);
+int			sys_port_write_etc(port_id port, int32 msg_code, void *msg_buffer, size_t buffer_size, uint32 flags, time_t timeout);
 
 #ifdef __cplusplus
 }

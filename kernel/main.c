@@ -13,6 +13,7 @@
 #include <kernel/timer.h>
 #include <kernel/smp.h>
 #include <kernel/sem.h>
+#include <kernel/port.h>
 #include <kernel/vfs.h>
 #include <kernel/dev.h>
 #include <kernel/net/net.h>
@@ -70,6 +71,8 @@ int _start(kernel_args *oldka, int cpu)
 		cbuf_init();
 		vfs_init(&ka);
 		thread_init(&ka);
+		port_init(&ka);
+
 		vm_init_postthread(&ka);
 		elf_init(&ka);
 
@@ -129,6 +132,9 @@ static int main2()
 #endif
 #if 0
 	cbuf_test();
+#endif
+#if 1
+	port_test();
 #endif
 	// start the init process
 	{

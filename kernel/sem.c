@@ -512,6 +512,39 @@ outnolock:
 	return err;
 }
 
+int
+sem_get_count(sem_id id)
+{
+	int slot;
+	int state;
+	int count;
+
+	if(sems_active == false)
+		return ERR_SEM_NOT_ACTIVE;
+	if(id < 0)
+		return ERR_INVALID_HANDLE;
+
+	slot = id % MAX_SEMS;
+
+	state = int_disable_interrupts();
+	GRAB_SEM_LOCK(sems[slot]);
+
+	if(sems[slot].id != id) {
+		RELEASE_SEM_LOCK(sems[slot]);
+		int_restore_interrupts(state);
+		dprintf("sem_get_count: invalid sem_id %d\n", id);
+		return ERR_INVALID_HANDLE;
+	}
+	
+	count = sems[slot].count;
+
+	RELEASE_SEM_LOCK(sems[slot]);
+	int_restore_interrupts(state);
+
+	return count;
+}
+
+
 // Wake up a thread that's blocked on a semaphore
 // this function must be entered with interrupts disabled and THREADLOCK held
 int sem_interrupt_thread(struct thread *t)

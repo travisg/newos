@@ -9,6 +9,7 @@
 #include <kernel/vfs.h>
 #include <kernel/thread.h>
 #include <kernel/sem.h>
+#include <kernel/port.h>
 #include <kernel/arch/cpu.h>
 
 #define INT32TOINT64(x, y) ((int64)(x) | ((int64)(y) << 32))
@@ -171,6 +172,48 @@ int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_re
 			break;
 		case SYSCALL_SETCWD:
 			*call_ret = user_setcwd((const char*)arg0);
+			break;
+		case SYSCALL_PORT_CREATE:
+			*call_ret = user_port_create((int32)arg0, (const char *)arg1);
+			break;
+		case SYSCALL_PORT_CLOSE:
+			*call_ret = user_port_close((port_id)arg0);
+			break;
+		case SYSCALL_PORT_DELETE:
+			*call_ret = user_port_delete((port_id)arg0);
+			break;
+		case SYSCALL_PORT_FIND:
+			*call_ret = user_port_find((const char *)arg0);
+			break;
+		case SYSCALL_PORT_GET_INFO:
+			*call_ret = user_port_get_info((port_id)arg0, (struct port_info *)arg1);
+			break;
+		case SYSCALL_PORT_GET_NEXT_PORT_INFO:
+			*call_ret = user_port_get_next_port_info((port_id)arg0, (uint32 *)arg1, (struct port_info *)arg2);
+			break;
+		case SYSCALL_PORT_BUFFER_SIZE:
+			*call_ret = user_port_buffer_size_etc((port_id)arg0, PORT_FLAG_INTERRUPTABLE, 0);
+			break;
+		case SYSCALL_PORT_BUFFER_SIZE_ETC:
+			*call_ret = user_port_buffer_size_etc((port_id)arg0, (uint32)arg1 | PORT_FLAG_INTERRUPTABLE, (time_t)INT32TOINT64(arg2, arg3));
+			break;
+		case SYSCALL_PORT_COUNT:
+			*call_ret = user_port_count((port_id)arg0);
+			break;
+		case SYSCALL_PORT_READ:
+			*call_ret = user_port_read_etc((port_id)arg0, (int32*)arg1, (void*)arg2, (size_t)arg3, PORT_FLAG_INTERRUPTABLE, 0);
+			break;
+		case SYSCALL_PORT_READ_ETC:
+			*call_ret = user_port_read_etc((port_id)arg0, (int32*)arg1, (void*)arg2, (size_t)arg3, (uint32)arg4 | PORT_FLAG_INTERRUPTABLE, (time_t)INT32TOINT64(arg5, arg6));
+			break;
+		case SYSCALL_PORT_SET_OWNER:
+			*call_ret = user_port_set_owner((port_id)arg0, (proc_id)arg1);
+			break;
+		case SYSCALL_PORT_WRITE:
+			*call_ret = user_port_write_etc((port_id)arg0, (int32)arg1, (void *)arg2, (size_t)arg3, PORT_FLAG_INTERRUPTABLE, 0);
+			break;
+		case SYSCALL_PORT_WRITE_ETC:
+			*call_ret = user_port_write_etc((port_id)arg0, (int32)arg1, (void *)arg2, (size_t)arg3, (uint32)arg4 | PORT_FLAG_INTERRUPTABLE, (time_t)INT32TOINT64(arg5, arg6));
 			break;
 		default:
 			*call_ret = -1;

@@ -14,6 +14,7 @@
 #include <kernel/arch/cpu.h>
 #include <kernel/arch/int.h>
 #include <kernel/sem.h>
+#include <kernel/port.h>
 #include <kernel/vfs.h>
 #include <kernel/elf.h>
 #include <kernel/heap.h>
@@ -1064,6 +1065,7 @@ void thread_exit(int retcode)
 		}
 		vm_put_aspace(p->aspace);
 		vm_delete_aspace(p->aspace_id);
+		port_delete_owned_ports(p->id);
 		sem_delete_owned_sems(p->id);
 		vfs_free_ioctx(p->ioctx);
 		kfree(p);
