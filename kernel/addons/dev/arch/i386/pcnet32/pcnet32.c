@@ -5,6 +5,7 @@
 #include <kernel/kernel.h>
 #include <boot/stage2.h>
 #include <kernel/debug.h>
+#include <kernel/module.h>
 #include <kernel/heap.h>
 #include <kernel/fs/devfs.h>
 #include <string.h>
@@ -115,11 +116,21 @@ static struct dev_calls pcnet32_hooks = {
 
 int dev_bootstrap(void)
 {
+	int err = 0;
 	pcnet32 *nic = NULL;
+	isa_bus_manager *isa_bus = NULL;
 
 	SHOW_FLOW0(3, "entry");
+	
+	err = module_get(ISA_MODULE_NAME, 0, (void **)&isa_bus);
+        if(err < 0)
+	{
+                SHOW_FLOW(3, "Error finding ISA bus module: %d", err);
+                return err;
+        }
+	SHOW_FLOW(3, "Got ISA bus module: %p", isa_bus);
 
-	nic = pcnet32_new(
+	nic = pcnet32_new(isa_bus,
 		PCNET_INIT_MODE0 | PCNET_INIT_RXLEN_128 | PCNET_INIT_TXLEN_32,
 		2048, 2048);
 
