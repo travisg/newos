@@ -8,7 +8,7 @@
 
 #include <kernel/bus/scsi/endian.h>
 #include <kernel/heap.h>
-#include <nulibc/string.h>
+#include <string.h>
 
 #include "queuing.h"
 #include "sync.h"

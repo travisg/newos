@@ -8,7 +8,7 @@
 #include <kernel/heap.h>
 #include <kernel/vfs.h>
 #include <kernel/bus/bus.h>
-#include <nulibc/string.h>
+#include <string.h>
 #include <newos/errors.h>
 
 #include <kernel/bus/pci/pci_bus.h>

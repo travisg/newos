@@ -12,8 +12,8 @@
 #include <kernel/cbuf.h>
 #include <newos/errors.h>
 
-#include <nulibc/string.h>
-#include <nulibc/stdlib.h>
+#include <string.h>
+#include <stdlib.h>
 
 struct port_msg {
 	int		msg_code;

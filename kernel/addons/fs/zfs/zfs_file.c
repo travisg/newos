@@ -9,7 +9,7 @@
 #include <kernel/vm.h>
 #include <kernel/debug.h>
 
-#include <nulibc/string.h>
+#include <string.h>
 
 #include "zfs.h"
 

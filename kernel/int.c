@@ -10,8 +10,8 @@
 #include <kernel/arch/int.h>
 #include <newos/errors.h>
 #include <boot/stage2.h>
-#include <nulibc/string.h>
-#include <nulibc/stdio.h>
+#include <string.h>
+#include <stdio.h>
 
 #define NUM_IO_HANDLERS 256
 

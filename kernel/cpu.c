@@ -8,7 +8,7 @@
 #include <kernel/arch/cpu.h>
 #include <boot/stage2.h>
 
-#include <nulibc/string.h>
+#include <string.h>
 
 /* global per-cpu structure */
 cpu_ent cpu[MAX_BOOT_CPUS];

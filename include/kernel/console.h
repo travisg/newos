@@ -6,7 +6,7 @@
 #define _KERNEL_CONSOLE_H
 
 #include <boot/stage2.h>
-#include <nulibc/sys/cdefs.h>
+#include <sys/cdefs.h>
 
 int con_init(kernel_args *ka);
 int kprintf(const char *fmt, ...) __PRINTFLIKE(1,2);

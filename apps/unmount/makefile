@@ -7,7 +7,7 @@ ifeq ($(call FINDINLIST,$(MY_TARGET),$(ALL)),1)
 MY_OBJS := \
 	main.o
 
-MY_INCLUDES := -Iinclude -Iinclude/nulibc
+MY_INCLUDES := $(STDINCLUDE)
 MY_CFLAGS := $(USER_CFLAGS)
 MY_LIBS := $(ULIBS)
 MY_LIBPATHS :=

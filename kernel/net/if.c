@@ -16,7 +16,7 @@
 #include <kernel/net/loopback.h>
 #include <kernel/net/ethernet.h>
 #include <kernel/net/if.h>
-#include <nulibc/string.h>
+#include <string.h>
 
 #define TX_QUEUE_SIZE 64
 

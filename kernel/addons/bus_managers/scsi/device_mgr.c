@@ -10,7 +10,7 @@
 #include "device_mgr.h"
 
 #include <kernel/heap.h>
-#include <nulibc/string.h>
+#include <string.h>
 
 #include "blocking.h"
 #include "periph_interface.h"

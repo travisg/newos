@@ -8,7 +8,7 @@
 #include "queuing.h"
 
 #include <kernel/heap.h>
-#include <nulibc/string.h>
+#include <string.h>
 
 #include "basic_prot.h"
 #include "ide_sim.h"

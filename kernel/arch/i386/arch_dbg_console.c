@@ -12,7 +12,7 @@
 
 #include <boot/stage2.h>
 
-#include <nulibc/string.h>
+#include <string.h>
 
 #define BOCHS_E9_HACK 0
 

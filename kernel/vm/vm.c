@@ -26,10 +26,10 @@
 #include <kernel/arch/cpu.h>
 #include <kernel/arch/vm.h>
 
-#include <nulibc/string.h>
-#include <nulibc/ctype.h>
-#include <nulibc/stdlib.h>
-#include <nulibc/stdio.h>
+#include <string.h>
+#include <ctype.h>
+#include <stdlib.h>
+#include <stdio.h>
 
 #define HEAP_SIZE	0x00400000
 

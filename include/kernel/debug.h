@@ -7,7 +7,7 @@
 
 #include <kernel/kernel.h>
 #include <boot/stage2.h>
-#include <nulibc/sys/cdefs.h>
+#include <sys/cdefs.h>
 
 extern int dbg_register_file[2][14]; /* XXXmpetit -- must be made generic */
 

@@ -7,7 +7,7 @@
 #include "ide_sim.h"
 
 #include <kernel/bus/scsi/scsi_cmds.h>
-#include <nulibc/string.h>
+#include <string.h>
 
 #include "sync.h"
 #include "queuing.h"

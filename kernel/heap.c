@@ -12,7 +12,7 @@
 
 #include <boot/stage2.h>
 
-#include <nulibc/string.h>
+#include <string.h>
 
 #define PARANOID_KFREE 1
 #define MAKE_NOIZE 0

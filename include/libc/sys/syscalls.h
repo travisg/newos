@@ -8,7 +8,7 @@
 #include <kernel/ktypes.h>
 #include <newos/types.h>
 #include <newos/defines.h>
-#include <nulibc/sys/resource.h>
+#include <sys/resource.h>
 
 typedef enum {
 	STREAM_TYPE_ANY = 0,

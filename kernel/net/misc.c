@@ -5,7 +5,7 @@
 #include <kernel/ktypes.h>
 #include <kernel/debug.h>
 #include <kernel/net/misc.h>
-#include <nulibc/string.h>
+#include <string.h>
 
 uint16 ones_sum16(uint32 sum, const void *_buf, int len)
 {

@@ -25,7 +25,7 @@
 #include <kernel/bus/bus.h>
 #include <kernel/module.h>
 
-#include <nulibc/string.h>
+#include <string.h>
 
 #include <kernel/arch/cpu.h>
 

@@ -4,8 +4,8 @@
 ** Distributed under the terms of the NewOS License.
 */
 
-#ifndef __newos__nulibc_assert__hh__
-#define __newos__nulibc_assert__hh__
+#ifndef __newos__libc_assert__hh__
+#define __newos__libc_assert__hh__
 
 
 #ifdef __cplusplus

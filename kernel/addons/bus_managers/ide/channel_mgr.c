@@ -7,7 +7,7 @@
 #include "channel_mgr.h"
 
 #include <kernel/heap.h>
-#include <nulibc/string.h>
+#include <string.h>
 #include <kernel/module.h>
 
 #include "sync.h"

@@ -15,10 +15,10 @@
 #include <kernel/arch/debug.h>
 #include <kernel/arch/cpu.h>
 
-#include <nulibc/stdarg.h>
-#include <nulibc/stdio.h>
-#include <nulibc/string.h>
-#include <nulibc/ctype.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <string.h>
+#include <ctype.h>
 
 
 int dbg_register_file[2][14]; /* XXXmpetit -- must be made generic */

@@ -8,7 +8,7 @@ MY_SRCDIR := $(LIBS_DIR)/glue
 MY_OBJS := \
 	crt0.o
 
-MY_INCLUDES := -Iinclude -Iinclude/nulibc
+MY_INCLUDES := $(STDINCLUDE)
 MY_CFLAGS := 
 
 include templates/combined_object.mk
@@ -23,7 +23,7 @@ MY_SRCDIR := $(LIBS_DIR)/glue
 MY_OBJS := \
 	lib0.o
 
-MY_INCLUDES := -Iinclude -Iinclude/nulibc
+MY_INCLUDES := $(STDINCLUDE)
 MY_CFLAGS := 
 
 include templates/combined_object.mk

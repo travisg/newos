@@ -7,8 +7,8 @@
 #include <kernel/debug.h>
 #include <kernel/arch/cpu.h>
 #include <kernel/heap.h>
-#include <nulibc/stdio.h>
-#include <nulibc/string.h>
+#include <stdio.h>
+#include <string.h>
 #include <kernel/dev/blkman.h>
 #include <kernel/module.h>
 

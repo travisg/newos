@@ -5,7 +5,7 @@
 #include <string.h>
 #include <sys/types.h>
 
-#if !_ASM_MEMCPY
+#if !_ASM_MEMMOVE
 
 typedef int word;
 

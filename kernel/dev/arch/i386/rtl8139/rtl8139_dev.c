@@ -13,7 +13,7 @@
 #include <kernel/arch/i386/cpu.h>
 
 #include <kernel/bus/bus.h>
-#include <nulibc/string.h>
+#include <string.h>
 
 #include "rtl8139_dev.h"
 #include "rtl8139_priv.h"

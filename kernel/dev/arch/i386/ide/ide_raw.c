@@ -12,7 +12,7 @@
 #include <kernel/debug.h>
 #include "ide_raw.h"
 #include "partition.h"
-#include <nulibc/string.h>
+#include <string.h>
 
 
 // ATA register bits

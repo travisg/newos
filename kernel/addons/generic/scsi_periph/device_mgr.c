@@ -7,8 +7,8 @@
 
 #include <kernel/dev/blkman.h>
 
-#include <nulibc/string.h>
-#include <nulibc/stdio.h>
+#include <string.h>
+#include <stdio.h>
 #include <kernel/heap.h>
 
 char *compose_device_name( scsi_device_info *device, const char *prefix )

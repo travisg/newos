@@ -3,11 +3,11 @@ MY_STATIC_TARGET := $(LIBS_BUILD_DIR)/libc/libc.a
 ifeq ($(call FINDINLIST,$(MY_TARGET),$(ALL)),1)
 
 MY_TARGETDIR := $(LIBS_BUILD_DIR)/libc
-MY_SRCDIR := $(LIBS_DIR)/nulibc
+MY_SRCDIR := $(LIBS_DIR)/libc
 MY_OBJS := \
-	nulibc_init.o
+	libc_init.o
 
-MY_INCLUDES := -Iinclude -Iinclude/nulibc
+MY_INCLUDES := -Iinclude -Iinclude/libc
 MY_CFLAGS := 
 MY_LINKSCRIPT := $(LIBS_LDSCRIPT)
 

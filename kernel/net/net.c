@@ -18,7 +18,7 @@
 #include <kernel/net/socket.h>
 #include <kernel/net/misc.h>
 #include <boot/stage2.h>
-#include <nulibc/string.h>
+#include <string.h>
 
 thread_id rx_thread_id;
 int net_fd;

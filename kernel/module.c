@@ -17,7 +17,7 @@
 
 #include <kernel/elf.h>
 
-#include <nulibc/string.h>
+#include <string.h>
 
 #define debug_level_flow -1
 #define debug_level_error 0

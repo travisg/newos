@@ -17,7 +17,7 @@
 #include <kernel/arch/smp.h>
 //#include <kernel/arch/pmap.h>
 
-#include <nulibc/string.h>
+#include <string.h>
 
 #define MSG_POOL_SIZE (SMP_MAX_CPUS * 4)
 

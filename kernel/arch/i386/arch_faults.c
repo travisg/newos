@@ -19,7 +19,7 @@
 
 #include <boot/stage2.h>
 
-#include <nulibc/string.h>
+#include <string.h>
 
 // XXX this module is largely outdated. Will probably be removed later.
 

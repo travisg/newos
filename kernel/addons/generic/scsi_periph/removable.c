@@ -6,7 +6,7 @@
 #include "scsi_periph_int.h"
 
 #include <kernel/dev/blkman.h>
-#include <nulibc/string.h>
+#include <string.h>
 
 static err_res wait_for_ready( scsi_device_info *device, CCB_SCSIIO *request );
 

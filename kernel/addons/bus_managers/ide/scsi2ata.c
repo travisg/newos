@@ -7,7 +7,7 @@
 #include "ide_internal.h"
 #include "ata.h"
 
-#include <nulibc/string.h>
+#include <string.h>
 
 #include "ide_sim.h"
 #include "ide_cmds.h"

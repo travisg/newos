@@ -10,8 +10,8 @@
 #include <kernel/heap.h>
 #include <kernel/fs/devfs.h>
 #include <kernel/dev/beos.h>
-#include <nulibc/string.h>
-#include <nulibc/stdio.h>
+#include <string.h>
+#include <stdio.h>
 
 #ifdef ARCH_i386
 

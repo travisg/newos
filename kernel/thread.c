@@ -23,10 +23,10 @@
 #include <newos/user_runtime.h>
 #include <newos/errors.h>
 #include <boot/stage2.h>
-#include <nulibc/string.h>
-#include <nulibc/stdio.h>
-#include <nulibc/stdlib.h>
-#include <nulibc/sys/resource.h>
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/resource.h>
 
 struct proc_key {
 	proc_id id;

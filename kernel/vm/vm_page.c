@@ -17,7 +17,7 @@
 #include <newos/errors.h>
 #include <boot/stage2.h>
 
-#include <nulibc/string.h>
+#include <string.h>
 
 typedef struct page_queue {
 	vm_page *head;

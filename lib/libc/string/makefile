@@ -27,3 +27,7 @@ MY_OBJS += \
 	$(LIBC_STRING_DIR)/strspn.o \
 	$(LIBC_STRING_DIR)/strstr.o \
 	$(LIBC_STRING_DIR)/strtok.o
+
+include $(addsuffix /makefile, $(addprefix $(MY_SRCDIR)/string/, \
+	arch/$(ARCH) \
+))

@@ -9,8 +9,8 @@
 #include <kernel/int.h>
 #include <kernel/arch/faults.h>
 #include <boot/stage2.h>
-#include <nulibc/string.h>
-#include <nulibc/stdio.h>
+#include <string.h>
+#include <stdio.h>
 
 int faults_init(kernel_args *ka)
 {

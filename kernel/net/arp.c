@@ -13,7 +13,7 @@
 #include <kernel/net/ethernet.h>
 #include <kernel/net/ipv4.h>
 #include <kernel/net/arp.h>
-#include <nulibc/string.h>
+#include <string.h>
 
 #define MIN_ARP_SIZE 28
 

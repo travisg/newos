@@ -4,13 +4,13 @@
 ** Distributed under the terms of the NewOS License.
 */
 
-#ifndef __newos__nulibc_stdio__hh__
-#define __newos__nulibc_stdio__hh__
+#ifndef __newos__libc_stdio__hh__
+#define __newos__libc_stdio__hh__
 
 
 #include <newos/types.h>
-#include <nulibc/sys/cdefs.h>
-#include <nulibc/stdarg.h>
+#include <sys/cdefs.h>
+#include <stdarg.h>
 
 
 #ifdef __cplusplus

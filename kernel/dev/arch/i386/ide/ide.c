@@ -16,8 +16,8 @@
 #include <kernel/arch/cpu.h>
 #include <kernel/arch/int.h>
 
-#include <nulibc/string.h>
-#include <nulibc/stdio.h>
+#include <string.h>
+#include <stdio.h>
 
 #include <kernel/dev/arch/i386/ide/ide_bus.h>
 

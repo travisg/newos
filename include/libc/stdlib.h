@@ -4,8 +4,8 @@
 ** Distributed under the terms of the NewOS License.
 */
 
-#ifndef __newos__nulibc_stdlib__hh__
-#define __newos__nulibc_stdlib__hh__
+#ifndef __newos__libc_stdlib__hh__
+#define __newos__libc_stdlib__hh__
 
 
 #include <newos/types.h>

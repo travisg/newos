@@ -3,8 +3,8 @@
 ** Distributed under the terms of the NewOS License.
 */
 
-#include <nulibc/sys/resource.h>
-#include <nulibc/sys/syscalls.h>
+#include <sys/resource.h>
+#include <sys/syscalls.h>
 
 int getrlimit(int resource, struct rlimit * rlp)
 {

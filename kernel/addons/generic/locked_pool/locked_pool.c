@@ -10,7 +10,7 @@
 #include <kernel/lock.h>
 #include <kernel/sem.h>
 #include <kernel/heap.h>
-#include <nulibc/string.h>
+#include <string.h>
 #include <kernel/module.h>
 
 #define debug_level_flow 0

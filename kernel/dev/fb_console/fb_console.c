@@ -15,8 +15,8 @@
 #include <kernel/arch/cpu.h>
 #include <kernel/arch/int.h>
 
-#include <nulibc/string.h>
-#include <nulibc/stdio.h>
+#include <string.h>
+#include <stdio.h>
 
 #include "font.h"
 

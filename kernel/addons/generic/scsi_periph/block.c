@@ -5,7 +5,7 @@
 
 #include "scsi_periph_int.h"
 
-#include <nulibc/string.h>
+#include <string.h>
 
 int scsi_check_capacity( scsi_device_info *device, CCB_HEADER *ccb )
 {

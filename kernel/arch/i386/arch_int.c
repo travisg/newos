@@ -23,7 +23,7 @@
 
 #include <boot/stage2.h>
 
-#include <nulibc/string.h>
+#include <string.h>
 
 #define MAX_ARGS 16
 

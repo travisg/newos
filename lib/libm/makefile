@@ -6,7 +6,7 @@ MY_TARGETDIR := $(LIBS_BUILD_DIR)/libm
 MY_SRCDIR := $(LIBS_DIR)/libm
 MY_OBJS :=
 
-MY_INCLUDES := -Iinclude -Iinclude/nulibc -I$(MY_SRCDIR)/common_source
+MY_INCLUDES := $(STDINCLUDE) -I$(MY_SRCDIR)/common_source
 MY_CFLAGS := 
 MY_LINKSCRIPT := $(LIBS_LDSCRIPT)
 

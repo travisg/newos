@@ -12,8 +12,8 @@
 
 #include <boot/stage2.h>
 
-#include <nulibc/string.h>
-#include <nulibc/stdio.h>
+#include <string.h>
+#include <stdio.h>
 
 static struct tss **tss;
 static int *tss_loaded;

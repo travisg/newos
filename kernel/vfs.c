@@ -21,10 +21,10 @@
 
 #include <kernel/fs/rootfs.h>
 
-#include <nulibc/string.h>
-#include <nulibc/stdio.h>
-#include <nulibc/ctype.h>
-#include <nulibc/sys/resource.h>
+#include <string.h>
+#include <stdio.h>
+#include <ctype.h>
+#include <sys/resource.h>
 
 #define MAKE_NOIZE 0
 

@@ -31,7 +31,7 @@ MY_OBJS := \
 	vfs.o \
 	module.o
 
-MY_INCLUDES := -Iinclude
+MY_INCLUDES := $(STDINCLUDE)
 MY_CFLAGS := $(KERNEL_CFLAGS)
 MY_LIBS := $(LINKHACK).so $(KLIBS)
 MY_LINKSCRIPT := $(KERNEL_DIR)/arch/$(ARCH)/kernel.ld

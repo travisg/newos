@@ -5,7 +5,7 @@
 
 #include "xpt_internal.h"
 
-#include <nulibc/string.h>
+#include <string.h>
 #include <kernel/module.h>
 
 #include "xpt_io.h"

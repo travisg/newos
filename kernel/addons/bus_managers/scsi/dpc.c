@@ -7,7 +7,7 @@
 #include "dpc.h"
 
 #include <kernel/heap.h>
-#include <nulibc/string.h>
+#include <string.h>
 
 int xpt_alloc_dpc( xpt_dpc_info **dpc )
 {

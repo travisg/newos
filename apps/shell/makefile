@@ -14,7 +14,7 @@ MY_OBJS := \
 	script.o \
 	args.o
 
-MY_INCLUDES := -Iinclude -Iinclude/nulibc
+MY_INCLUDES := $(STDINCLUDE)
 MY_CFLAGS := $(USER_CFLAGS)
 MY_LIBS := $(ULIBS)
 MY_LIBPATHS :=

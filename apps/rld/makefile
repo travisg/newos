@@ -13,7 +13,7 @@ MY_OBJS := \
 	rldheap.o \
 	rldaux.o
 
-MY_INCLUDES := -Iinclude -Iinclude/nulibc
+MY_INCLUDES := $(STDINCLUDE)
 MY_CFLAGS := $(USER_CFLAGS)
 MY_LIBS := $(LIBC_STATIC)
 MY_LIBPATHS :=

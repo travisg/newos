@@ -4,12 +4,12 @@
 ** Distributed under the terms of the NewOS License.
 */
 
-#ifndef __newos__nulibc_string__hh__
-#define __newos__nulibc_string__hh__
+#ifndef __newos__libc_string__hh__
+#define __newos__libc_string__hh__
 
 
 #include <newos/types.h>
-
+#include <libc/arch/string.h>
 
 #ifdef __cplusplus
 extern "C" {

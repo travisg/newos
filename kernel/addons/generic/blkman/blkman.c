@@ -4,7 +4,7 @@
 #include <kernel/vm.h>
 #include <kernel/lock.h>
 #include <kernel/sem.h>
-#include <nulibc/string.h>
+#include <string.h>
 #include <kernel/module.h>
 #include <kernel/partitions/partitions.h>
 #include <kernel/generic/locked_pool.h>

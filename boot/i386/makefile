@@ -14,7 +14,7 @@ MY_OBJS := \
 	smp_boot.o \
 	smp_trampoline.o
 
-MY_INCLUDES := -Iinclude -Iinclude/nulibc
+MY_INCLUDES := $(STDINCLUDE)
 MY_CFLAGS := $(KERNEL_CFLAGS)
 MY_LDFLAGS := -dN
 MY_LIBS := $(KLIBS)

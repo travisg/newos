@@ -14,7 +14,7 @@
 #include <kernel/net/icmp.h>
 #include <kernel/net/udp.h>
 #include <kernel/net/arp.h>
-#include <nulibc/string.h>
+#include <string.h>
 
 typedef struct ipv4_header {
 	uint8 version_length;

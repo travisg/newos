@@ -6,7 +6,7 @@
 #include "xpt_internal.h"
 #include "scsi_lock.h"
 
-#include <nulibc/string.h>
+#include <string.h>
 
 bool ref_lock_excl_lock( ref_lock *lock, mutex *global_lock )
 {

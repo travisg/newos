@@ -6,7 +6,7 @@
 #include "xpt_internal.h"
 #include "sg_mgr.h"
 
-#include <nulibc/string.h>
+#include <string.h>
 
 locked_pool_cookie temp_sg_pool;
 

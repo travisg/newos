@@ -9,7 +9,7 @@
 #include <kernel/arch/cpu.h>
 #include <newos/errors.h>
 
-#include <nulibc/string.h>
+#include <string.h>
 
 #define ALLOCATE_CHUNK (PAGE_SIZE * 16)
 #define CBUF_REGION_SIZE (4*1024*1024)

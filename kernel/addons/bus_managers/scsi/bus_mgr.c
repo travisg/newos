@@ -7,7 +7,7 @@
 #include "bus_mgr.h"
 
 #include <kernel/heap.h>
-#include <nulibc/string.h>
+#include <string.h>
 #include <kernel/module.h>
 
 #include "dpc.h"
