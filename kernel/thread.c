@@ -702,7 +702,7 @@ static void _dump_thread_info(struct thread *t)
 	dprintf("next_state:  %s\n", state_to_text(t->next_state));
 	dprintf("cpu:         %p ", t->cpu);
 	if(t->cpu)
-		dprintf("(%d)\n", t->cpu->cpu_num);
+		dprintf("(%d)\n", t->cpu->info.cpu_num);
 	else
 		dprintf("\n");
 	dprintf("pending_signals:  0x%x\n", t->pending_signals);
@@ -777,7 +777,7 @@ static void dump_thread_list(int argc, char **argv)
 		dprintf("\t0x%x", t->id);
 		dprintf("\t%16s", state_to_text(t->state));
 		if(t->cpu)
-			dprintf("\t%d", t->cpu->cpu_num);
+			dprintf("\t%d", t->cpu->info.cpu_num);
 		else
 			dprintf("\tNOCPU");
 		dprintf("\t0x%lx\n", t->kernel_stack_base);
@@ -1427,6 +1427,7 @@ static int reschedule_event(void *unused)
 {
 	// this function is called as a result of the timer event set by the scheduler
 	// returning this causes a reschedule on the timer event
+	thread_get_current_thread()->cpu->info.preempted= 1;
 	return INT_RESCHEDULE;
 }
 
@@ -1503,8 +1504,11 @@ found_thread:
 	quantum = 10000;
 
 	// get the quantum timer for this cpu
-	quantum_timer = &old_thread->cpu->quantum_timer;
-	timer_cancel_event(quantum_timer);
+	quantum_timer = &old_thread->cpu->info.quantum_timer;
+	if(!old_thread->cpu->info.preempted) {
+		_local_timer_cancel_event(old_thread->cpu->info.cpu_num, quantum_timer);
+	}
+	old_thread->cpu->info.preempted= 0;
 	timer_setup_timer(&reschedule_event, NULL, quantum_timer);
 	timer_set_event(quantum, TIMER_MODE_ONESHOT, quantum_timer);
 

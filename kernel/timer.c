@@ -155,15 +155,61 @@ int timer_set_event(bigtime_t relative_time, timer_mode mode, struct timer_event
 	return 0;
 }
 
+/* this is a fast path to be called from reschedule and from timer_cancel_event */
+/* must always be invoked with interrupts disabled */
+int _local_timer_cancel_event(int curr_cpu, struct timer_event *event)
+{
+	struct timer_event *last = NULL;
+	struct timer_event *e;
+	bool foundit = false;
+
+	acquire_spinlock(&timer_spinlock[curr_cpu]);
+	e = events[curr_cpu];
+	while(e != NULL) {
+		if(e == event) {
+			// we found it
+			foundit = true;
+			if(e == events[curr_cpu]) {
+				events[curr_cpu] = e->next;
+			} else {
+				last->next = e->next;
+			}
+			e->next = NULL;
+			// break out of the whole thing
+			goto done;
+		}
+		last = e;
+		e = e->next;
+	}
+	release_spinlock(&timer_spinlock[curr_cpu]);
+done:
+
+	if(events[curr_cpu] == NULL) {
+		arch_timer_clear_hardware_timer();
+	} else {
+		arch_timer_set_hardware_timer(events[curr_cpu]->sched_time - system_time());
+	}
+
+	if(foundit) {
+		release_spinlock(&timer_spinlock[curr_cpu]);
+	}
+
+	return (foundit ? 0 : ERR_GENERAL);
+}
+
+int local_timer_cancel_event(struct timer_event *event)
+{
+	return _local_timer_cancel_event(smp_get_current_cpu(), event);
+}
+
 int timer_cancel_event(struct timer_event *event)
 {
 	int state;
 	struct timer_event *last = NULL;
 	struct timer_event *e;
-	bool reset_timer = false;
 	bool foundit = false;
 	int num_cpus = smp_get_num_cpus();
-	int cpu;
+	int cpu= 0;
 	int curr_cpu;
 
 	if(event->sched_time == 0)
@@ -174,44 +220,35 @@ int timer_cancel_event(struct timer_event *event)
 
 	// walk through all of the cpu's timer queues
 	//
-	// XXXfreston, probably we should start by peeking our
-	//             own queue, aiming for a cheap match,
-	//             rather than start harassing other cpus.
+	// We start by peeking our own queue, aiming for
+	// a cheap match. If this fails, we start harassing
+	// other cpus.
 	//
-	for(cpu = 0; cpu < num_cpus; cpu++) {
-		acquire_spinlock(&timer_spinlock[cpu]);
-		e = events[cpu];
-		while(e != NULL) {
-			if(e == event) {
-				// we found it
-				foundit = true;
-				if(e == events[cpu]) {
-					events[cpu] = e->next;
-					// we'll need to reset the local timer if
-					// this is in the local timer queue
-					if(cpu == curr_cpu)
-						reset_timer = true;
-				} else {
-					last->next = e->next;
+	if(_local_timer_cancel_event(curr_cpu, event) < 0) {
+		for(cpu = 0; cpu < num_cpus; cpu++) {
+			if(cpu== curr_cpu) continue;
+			acquire_spinlock(&timer_spinlock[cpu]);
+			e = events[cpu];
+			while(e != NULL) {
+				if(e == event) {
+					// we found it
+					foundit = true;
+					if(e == events[cpu]) {
+						events[cpu] = e->next;
+					} else {
+						last->next = e->next;
+					}
+					e->next = NULL;
+					// break out of the whole thing
+					goto done;
 				}
-				e->next = NULL;
-				// break out of the whole thing
-				goto done;
+				last = e;
+				e = e->next;
 			}
-			last = e;
-			e = e->next;
+			release_spinlock(&timer_spinlock[cpu]);
 		}
-		release_spinlock(&timer_spinlock[cpu]);
 	}
 done:
-
-	if(reset_timer == true) {
-		if(events[curr_cpu] == NULL) {
-			arch_timer_clear_hardware_timer();
-		} else {
-			arch_timer_set_hardware_timer(events[curr_cpu]->sched_time - system_time());
-		}
-	}
 
 	if(foundit) {
 		release_spinlock(&timer_spinlock[cpu]);

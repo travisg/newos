@@ -478,7 +478,7 @@ int smp_get_current_cpu(void)
 {
 	struct thread *t = thread_get_current_thread();
 	if(t)
-		return t->cpu->cpu_num;
+		return t->cpu->info.cpu_num;
 	else
 		return 0;
 }

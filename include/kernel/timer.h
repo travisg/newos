@@ -29,5 +29,11 @@ void timer_setup_timer(timer_callback func, void *data, struct timer_event *even
 int timer_set_event(bigtime_t relative_time, timer_mode mode, struct timer_event *event);
 int timer_cancel_event(struct timer_event *event);
 
+/*
+ * these two are only to be used by the scheduler
+ */
+int local_timer_cancel_event(struct timer_event *event);
+int _local_timer_cancel_event(int curr_cpu, struct timer_event *event);
+
 #endif
 

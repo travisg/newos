@@ -11,11 +11,16 @@
 
 // one per cpu. put per cpu stuff here, to keep the data local and reduce
 // the amount of cache thrashing that goes on otherwise.
-typedef struct cpu_ent {
-	int cpu_num;
+typedef union cpu_ent {
+	struct {
+		int cpu_num;
 
-	// thread.c: used to force a reschedule at quantum expiration time
-	struct timer_event quantum_timer;
+		// thread.c: used to force a reschedule at quantum expiration time
+		int preempted;
+		struct timer_event quantum_timer;
+	} info;
+
+	uint32 align[16];
 } cpu_ent;
 
 extern cpu_ent cpu[MAX_BOOT_CPUS];

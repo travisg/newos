@@ -75,7 +75,7 @@ struct thread {
 	int priority;
 	int state;
 	int next_state;
-	struct cpu_ent *cpu;
+	union cpu_ent *cpu;
 	int pending_signals;
 	bool in_kernel;
 	sem_id sem_blocking;
