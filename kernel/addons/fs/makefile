@@ -4,5 +4,6 @@ KERNEL_FS_ADDONS_BUILD_DIR := $(KERNEL_ADDONS_BUILD_DIR)/fs
 # include sub makefiles
 include $(addsuffix /makefile, $(addprefix $(KERNEL_FS_ADDONS_DIR)/, \
 	iso9660 \
+	nfs \
 	zfs \
 ))

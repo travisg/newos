@@ -124,8 +124,7 @@ int cmd_cat(int argc, char *argv[])
 		if(rc <= 0)
 			break;
 
-		buf[rc] = '\0';
-		printf("%s", buf);
+		write(1, buf, rc);
 	}
 	sys_close(fd);
 

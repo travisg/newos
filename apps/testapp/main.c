@@ -60,7 +60,6 @@ int main(int argc, char **argv)
 	char c;
 	int rc = 0;
 	int cnt;
-
 	printf("testapp\n");
 
 	for(cnt = 0; cnt< argc; cnt++) {
@@ -410,7 +409,7 @@ int main(int argc, char **argv)
 #if 0
 	rc = pipe_test();
 #endif
-#if 1
+#if 0
 	{
 		int i,j,k;
 		int fd;
@@ -444,6 +443,31 @@ int main(int argc, char **argv)
 					row[j] = color;
 				}
 				memcpy(framebuffer + i*fb.width*2, row, sizeof(row));
+			}
+		}
+	}
+#endif
+#if 1
+	{
+		int err;
+
+		printf("mounting nfs filesystem\n");
+
+		sys_create("/nfs", STREAM_TYPE_DIR);
+		err = sys_mount("/nfs", "192.168.0.4:/disk", "nfs", NULL);
+		printf("mount returns %d\n", err);
+
+		{
+			int i;
+			int fd;
+			char buf[1024];
+
+			fd = sys_open("/nfs", STREAM_TYPE_DIR, 0);
+
+			for(i=0; i<16; i++) {
+				memset(buf, 0, sizeof(buf));
+				err = sys_read(fd, buf, -1, sizeof(buf));
+				printf("read returns %d '%s'\n", err, buf);
 			}
 		}
 	}
