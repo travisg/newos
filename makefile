@@ -25,6 +25,7 @@ endif
 BOOTMAKER = tools/bootmaker
 NETBOOT = tools/netboot
 BIN2H = tools/bin2h
+BIN2ASM = tools/bin2asm
 
 CC = $(HOST_CC)
 LD = $(HOST_LD)
@@ -132,7 +133,7 @@ final1: $(FINAL)
 	rm -f final.$(ARCH);ln -sf $(FINAL) final.$(ARCH)
 	rm -f system.$(ARCH);ln -sf $(KERNEL) system.$(ARCH)
 
-tools: $(NETBOOT) $(BOOTMAKER) $(BIN2H)
+tools: $(NETBOOT) $(BOOTMAKER) $(BIN2H) $(BIN2ASM)
 
 $(BOOTMAKER): $(BOOTMAKER).c tools/sh4bootblock.h tools/sparcbootblock.h
 	$(HOST_CC) -O3 -o $@ $(BOOTMAKER).c
@@ -148,11 +149,14 @@ endif
 $(NETBOOT): $(NETBOOT).c
 	$(HOST_CC) -O3 -o $@ $(NETBOOT).c $(NETBOOT_LINK_ARGS)
 
+$(BIN2ASM): $(BIN2ASM).c
+	$(HOST_CC) -O3 -o $@ $(BIN2ASM).c
+
 $(BIN2H): $(BIN2H).c
 	$(HOST_CC) -O3 -o $@ $(BIN2H).c
 
 toolsclean:
-	rm -f $(BOOTMAKER) $(NETBOOT) $(NETBOOT_DC) $(BIN2H)
+	rm -f $(BOOTMAKER) $(NETBOOT) $(NETBOOT_DC) $(BIN2H) $(BIN2ASM)
 
 CLEAN += toolsclean
 

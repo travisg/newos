@@ -27,12 +27,34 @@ stage2clean:
 
 CLEAN += stage2clean
 
-stage1:
+SEMIFINAL = $(BOOT_DIR)/final.bootdir
+
+$(SEMIFINAL): $(STAGE2) $(KERNEL) $(APPS) tools 
+	$(BOOTMAKER) $(BOOT_DIR)/config.ini -o $(SEMIFINAL)
+
+STAGE1_OBJS = \
+	$(BOOT_OBJ_DIR)/stage1.o
+
+DEPS += $(STAGE1_OBJS:.o=.d)
 
 FINAL = $(BOOT_DIR)/final
 
-$(FINAL): $(STAGE2) $(KERNEL) $(APPS) tools 
-	$(BOOTMAKER) $(BOOT_DIR)/config.ini -o $(FINAL)
+$(FINAL): $(STAGE1_OBJS)
+	$(LD) -dN --script=$(BOOT_DIR)/stage1.ld $(STAGE1_OBJS) -o $@
+	
+FINAL_ASMINCLUDE = $(FINAL).asminclude
+
+$(FINAL_ASMINCLUDE): $(SEMIFINAL) tools
+	$(BIN2ASM) < $(SEMIFINAL) > $(FINAL_ASMINCLUDE)
+
+$(BOOT_OBJ_DIR)/stage1.o: $(BOOT_DIR)/stage1.S $(FINAL_ASMINCLUDE)
+	@mkdir -p $(BOOT_OBJ_DIR)
+	$(CC) -c $< $(GLOBAL_CFLAGS) -Iinclude -I$(BOOT_DIR) -o $@
+
+finalclean:
+	rm -f $(STAGE1_OBJS) $(FINAL) $(SEMIFINAL) $(FINAL_ASMINCLUDE)
+
+CLEAN += finalclean
 
 # 
 $(BOOT_OBJ_DIR)/%.o: $(BOOT_DIR)/%.c 
