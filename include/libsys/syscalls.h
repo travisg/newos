@@ -39,3 +39,4 @@ int sys_sem_release_etc(sem_id id, int count, int flags);
 thread_id sys_get_current_thread_id();
 
 #endif
+
