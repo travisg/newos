@@ -1,5 +1,5 @@
 /*
-** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2004, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #ifndef _KERNEL_THREAD_H
@@ -55,6 +55,9 @@ enum {
 
 struct proc {
 	struct proc *next;
+	struct proc *siblings_next;	
+	struct proc *parent;
+	struct proc *children;
 	proc_id id;
 	char name[SYS_MAX_OS_NAME_LEN];
 	int num_threads;

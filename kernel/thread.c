@@ -44,9 +44,12 @@ struct proc_arg {
 	unsigned int argc;
 };
 
+static void insert_proc_into_parent(struct proc *parent, struct proc *p);
+static void remove_proc_from_parent(struct proc *parent, struct proc *p);
 static struct proc *create_proc_struct(const char *name, bool kernel);
 static int proc_struct_compare(void *_p, const void *_key);
 static unsigned int proc_struct_hash(void *_p, const void *_key, unsigned int range);
+void proc_reparent_children(struct proc *p);
 
 // global
 spinlock_t thread_spinlock = 0;
@@ -767,6 +770,8 @@ static void _dump_proc_info(struct proc *p)
 	dprintf("id:          0x%x\n", p->id);
 	dprintf("name:        '%s'\n", p->name);
 	dprintf("next:        %p\n", p->next);
+	dprintf("parent:      %p\n", p->parent);
+	dprintf("children:    %p\n", p->children);
 	dprintf("num_threads: %d\n", p->num_threads);
 	dprintf("state:       %d\n", p->state);
 	dprintf("ioctx:       %p\n", p->ioctx);
@@ -1289,6 +1294,7 @@ void thread_exit(int retcode)
 {
 	struct thread *t = thread_get_current_thread();
 	struct proc *p = t->proc;
+	proc_id parent_pid = -1;
 	bool delete_proc = false;
 	unsigned int death_stack;
 
@@ -1322,7 +1328,17 @@ void thread_exit(int retcode)
 			delete_proc = true;
 			hash_remove(proc_hash, p);
 			p->state = PROC_STATE_DEATH;
+
+			// reparent each of our children
+			proc_reparent_children(p);
+
+			// remember who our parent was so we can send a signal
+			parent_pid = p->parent->id;
+
+			// remove us from our parent
+			remove_proc_from_parent(p->parent, p);
 		}
+
 		RELEASE_PROC_LOCK();
 		// swap address spaces, to make sure we're running on the kernel's pgdir
 		vm_aspace_swap(kernel_proc->kaspace);
@@ -1349,6 +1365,7 @@ void thread_exit(int retcode)
 				thread_kill_thread_nowait(temp_thread->id);
 				temp_thread = next;
 			}
+
 			RELEASE_PROC_LOCK();
 			int_restore_interrupts();
 
@@ -1365,6 +1382,9 @@ void thread_exit(int retcode)
 		vfs_free_ioctx(p->ioctx);
 		kfree(p);
 	}
+
+	// send a signal to the parent
+	send_proc_signal_etc(parent_pid, SIGCHLD, SIG_FLAG_NO_RESCHED);
 
 	// delete the sem that others will use to wait on us and get the retcode
 	{
@@ -1679,6 +1699,31 @@ found_thread:
 	}
 }
 
+static void insert_proc_into_parent(struct proc *parent, struct proc *p)
+{
+	p->siblings_next = parent->children;
+	parent->children = p;
+	p->parent = parent;
+}
+
+static void remove_proc_from_parent(struct proc *parent, struct proc *p)
+{
+	struct proc *temp, *last = NULL;
+
+	for(temp = parent->children; temp != NULL; temp = temp->siblings_next) {
+		if(temp == p) {
+			if(last == NULL) {
+				parent->children = temp->siblings_next;
+			} else {
+				last->siblings_next = temp->siblings_next;
+			}
+			p->parent = NULL;
+			break;
+		}
+		last = temp;
+	}
+}
+
 static int proc_struct_compare(void *_p, const void *_key)
 {
 	struct proc *p = _p;
@@ -1724,6 +1769,10 @@ static struct proc *create_proc_struct(const char *name, bool kernel)
 	p = (struct proc *)kmalloc(sizeof(struct proc));
 	if(p == NULL)
 		goto error;
+	p->next = NULL;
+	p->siblings_next = NULL;
+	p->children = NULL;
+	p->parent = NULL;
 	p->id = atomic_add(&next_proc_id, 1);
 	strncpy(&p->name[0], name, SYS_MAX_OS_NAME_LEN-1);
 	p->name[SYS_MAX_OS_NAME_LEN-1] = 0;
@@ -1980,8 +2029,10 @@ static int proc_create_proc2(void *args)
 proc_id proc_create_proc(const char *path, const char *name, char **args, int argc, int priority)
 {
 	struct proc *p;
+	struct proc *curr_proc;
 	thread_id tid;
 	proc_id pid;
+	proc_id curr_proc_id;
 	int err;
 	struct proc_arg *pargs;
 
@@ -1992,10 +2043,18 @@ proc_id proc_create_proc(const char *path, const char *name, char **args, int ar
 		return ERR_NO_MEMORY;
 
 	pid = p->id;
+	curr_proc_id = proc_get_current_proc_id();
 
 	int_disable_interrupts();
 	GRAB_PROC_LOCK();
+
+	// insert this proc into the global list
 	hash_insert(proc_hash, p);
+
+	// add it to the parent's list
+	curr_proc = proc_get_proc_struct_locked(curr_proc_id);
+	insert_proc_into_parent(curr_proc, p);
+
 	RELEASE_PROC_LOCK();
 	int_restore_interrupts();
 
@@ -2141,6 +2200,20 @@ thread_id proc_get_main_thread(proc_id id)
 	int_restore_interrupts();
 
 	return tid;
+}
+
+// reparent each of our children
+// NOTE: must have PROC lock held
+void proc_reparent_children(struct proc *p)
+{
+	struct proc *child;
+
+	child = p->children;
+	while(child != NULL) {
+		remove_proc_from_parent(p, child);
+		insert_proc_into_parent(p->parent, child);
+		child = p->children;
+	}
 }
 
 // called in the int handler code when a thread enters the kernel for any reason

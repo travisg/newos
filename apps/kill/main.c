@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <signal.h>
 
-void usage(int argc, char **argv)
+static void usage(int argc, char **argv)
 {
 	printf("invalid args, usage: %s <process id>\n", argv[1]);	
 

@@ -98,6 +98,9 @@ handle_signals(struct thread *thread)
 				}
 			}
 
+			// XXX it's not safe to call arch_setup_signal_frame with interrupts disabled
+			// since it writes to the user stack and may page fault.
+			//
 			// User defined signal handler
 			dprintf("### Setting up custom signal handler frame...\n");
 			arch_setup_signal_frame(thread, handler, sig, thread->sig_block_mask);
@@ -105,8 +108,7 @@ handle_signals(struct thread *thread)
 			if (handler->sa_flags & SA_ONESHOT)
 				handler->sa_handler = SIG_DFL;
 			if (!(handler->sa_flags & SA_NOMASK))
-				thread->sig_block_mask |= (handler->sa_mask | (1L << sig)) & BLOCKABLE_SIGS;
-				// ToDo: is that really (1L << sig) and not (1L << (sig-1)) ???
+				thread->sig_block_mask |= (handler->sa_mask | (1L << (sig-1))) & BLOCKABLE_SIGS;
 
 			return global_resched;
 		} else
@@ -137,7 +139,7 @@ send_signal_etc(thread_id threadID, uint signal, uint32 flags)
 	}
 	// XXX check permission
 
-	dprintf("SIG: sending signal %s to thread 0x%x\n", sigstr[signal], thread->id);
+	dprintf("SIG: sending signal %s to thread 0x%x (pending 0x%x, \n", sigstr[signal], thread->id);
 
 	if (thread->proc == proc_get_kernel_proc()) {
 		// Signals to kernel threads will only wake them up
@@ -205,11 +207,17 @@ send_signal(thread_id tid, uint signal)
 	return send_signal_etc(tid, signal, 0);
 }
 
+int
+send_proc_signal_etc(proc_id pid, uint signal, uint32 flags)
+{
+	thread_id tid = proc_get_main_thread(pid);
+	return send_signal_etc(tid, signal, flags);
+}
+
 static int
 send_proc_signal(proc_id pid, uint signal)
 {
-	thread_id tid = proc_get_main_thread(pid);
-	return send_signal_etc(tid, signal, 0);
+	return send_proc_signal_etc(pid, signal, 0);
 }
 
 static int

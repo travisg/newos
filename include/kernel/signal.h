@@ -15,6 +15,7 @@ extern int handle_signals(struct thread *t);
 #define SIG_FLAG_NO_RESCHED 0x1
 
 int send_signal_etc(thread_id tid, uint signal, uint32 flags);
+int send_proc_signal_etc(proc_id pid, uint signal, uint32 flags);
 
 int user_send_signal(thread_id tid, uint sig);
 int user_send_proc_signal(thread_id tid, uint sig);
