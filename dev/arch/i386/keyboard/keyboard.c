@@ -164,10 +164,13 @@ int handle_keyboard_interrupt()
 				set_leds();
 				break;
 			case SCRLOCK:
-				if(leds & LED_SCROLL)
+				if(leds & LED_SCROLL) {
 					leds &= ~LED_SCROLL;
-				else
+					dbg_set_serial_debug(false);
+				} else {
 					leds |= LED_SCROLL;
+					dbg_set_serial_debug(true);
+				}
 				set_leds();
 				break;
 			case NUMLOCK:
@@ -266,6 +269,9 @@ int setup_keyboard()
 
 	shift = 0;
 	leds = 0;
+	// have the scroll lock reflect the state of serial debugging
+	if(dbg_get_serial_debug())
+		leds |= LED_SCROLL;
 	set_leds();
 
 	head = tail = 0;

@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -13,6 +13,7 @@ int dbg_init2(kernel_args *ka);
 char dbg_putch(char c);
 void dbg_puts(const char *s);
 bool dbg_set_serial_debug(bool new_val);
+bool dbg_get_serial_debug();
 int dprintf(const char *fmt, ...);
 int panic(const char *fmt, ...);
 void kernel_debugger();

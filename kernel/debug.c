@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -43,7 +43,7 @@ static char parse_line[LINE_BUF_SIZE] = "";
 static int cur_line = 0;
 static char *args[MAX_ARGS] = { NULL, };
 
-#define distance(a, b) ((a) < (b) ? (b) - (a) : (a) - (b)) 
+#define distance(a, b) ((a) < (b) ? (b) - (a) : (a) - (b))
 
 static int debug_read_line(char *buf, int max_len)
 {
@@ -51,7 +51,7 @@ static int debug_read_line(char *buf, int max_len)
 	int ptr = 0;
 	bool done = false;
 	int cur_history_spot = cur_line;
-	
+
 	while(!done) {
 		c = arch_dbg_con_read();
 		switch(c) {
@@ -89,7 +89,7 @@ static int debug_read_line(char *buf, int max_len)
 					case 66: // down arrow
 					{
 						int history_line = 0;
-						
+
 //						dprintf("1c %d h %d ch %d\n", cur_line, history_line, cur_history_spot);
 
 						if(c == 65) {
@@ -107,27 +107,27 @@ static int debug_read_line(char *buf, int max_len)
 								break; // nothing to do here
 							}
 						}
-	
+
 //						dprintf("2c %d h %d ch %d\n", cur_line, history_line, cur_history_spot);
-	
+
 						// swap the current line with something from the history
 						if(ptr > 0)
 							dprintf("\x1b[%dD", ptr); // move to beginning of line
-						
+
 						strcpy(buf, line_buf[history_line]);
 						ptr = strlen(buf);
 						dprintf("%s\x1b[K", buf); // print the line and clear the rest
 						cur_history_spot = history_line;
 						break;
 					}
-					default:	
+					default:
 						break;
 				}
 				break;
 			default:
 				buf[ptr++] = c;
 				dbg_putch(c);
-		}				
+		}
 		if(ptr >= max_len - 2) {
 			buf[ptr++] = '\0';
 			dbg_puts("\n");
@@ -155,19 +155,19 @@ static int debug_parse_line(char *buf, char **argv, int *argc, int max_args)
 		if(isspace(parse_line[pos])) {
 			parse_line[pos] = '\0';
 			// scan all of the whitespace out of this
-			while(isspace(parse_line[++pos])) 
+			while(isspace(parse_line[++pos]))
 				;
 			if(parse_line[pos] == '\0')
 				break;
 			argv[*argc] = &parse_line[pos];
 			(*argc)++;
-			
+
 			if(*argc >= max_args - 1)
 				break;
 		}
-		pos++;		
+		pos++;
 	}
-	
+
 	return *argc;
 }
 
@@ -175,7 +175,7 @@ void kernel_debugger()
 {
 	int argc;
 	struct debugger_command *cmd;
-	
+
 	int_disable_interrupts();
 
 	dprintf("kernel debugger on cpu %d\n", smp_get_current_cpu());
@@ -183,7 +183,7 @@ void kernel_debugger()
 
 	for(;;) {
 		dprintf("> ");
-		debug_read_line(line_buf[cur_line], LINE_BUF_SIZE);		
+		debug_read_line(line_buf[cur_line], LINE_BUF_SIZE);
 		debug_parse_line(line_buf[cur_line], args, &argc, MAX_ARGS);
 		if(argc <= 0)
 			continue;
@@ -205,7 +205,7 @@ void kernel_debugger()
 
 int panic(const char *fmt, ...)
 {
-	int ret = 0; 
+	int ret = 0;
 	va_list args;
 	char temp[128];
 	int state;
@@ -218,7 +218,7 @@ int panic(const char *fmt, ...)
 		va_end(args);
 
 		dprintf("PANIC%d: %s", smp_get_current_cpu(), temp);
-		
+
 		if(debugger_on_cpu != smp_get_current_cpu()) {
 			// halt all of the other cpus
 
@@ -226,7 +226,7 @@ int panic(const char *fmt, ...)
 			// through. Otherwise it'll hang
 			smp_send_broadcast_ici(SMP_MSG_CPU_HALT, 0, 0, 0, NULL, SMP_MSG_FLAG_SYNC);
 		}
-		
+
 		kernel_debugger();
 	}
 	int_restore_interrupts(state);
@@ -237,13 +237,13 @@ int dprintf(const char *fmt, ...)
 {
 	va_list args;
 	char temp[128];
-	int ret = 0; 
+	int ret = 0;
 
 	if(serial_debug_on) {
 		va_start(args, fmt);
 		ret = vsprintf(temp, fmt, args);
 		va_end(args);
-	
+
 		dbg_puts(temp);
 	}
 	return ret;
@@ -254,7 +254,7 @@ char dbg_putch(char c)
 	char ret;
 	int flags = int_disable_interrupts();
 	acquire_spinlock(&dbg_spinlock);
-	
+
 	if(serial_debug_on)
 		ret = arch_dbg_con_putch(c);
 	else
@@ -270,7 +270,7 @@ void dbg_puts(const char *s)
 {
 	int flags = int_disable_interrupts();
 	acquire_spinlock(&dbg_spinlock);
-	
+
 	if(serial_debug_on)
 		arch_dbg_con_puts(s);
 
@@ -282,7 +282,7 @@ int dbg_add_command(void (*func)(int, char **), const char *name, const char *de
 {
 	int flags;
 	struct debugger_command *cmd;
-	
+
 	cmd = (struct debugger_command *)kmalloc(sizeof(struct debugger_command));
 	if(cmd == NULL)
 		return ERR_NO_MEMORY;
@@ -293,7 +293,7 @@ int dbg_add_command(void (*func)(int, char **), const char *name, const char *de
 
 	flags = int_disable_interrupts();
 	acquire_spinlock(&dbg_spinlock);
-	
+
 	cmd->next = commands;
 	commands = cmd;
 
@@ -301,7 +301,7 @@ int dbg_add_command(void (*func)(int, char **), const char *name, const char *de
 	int_restore_interrupts(flags);
 
 	return NO_ERROR;
-}	
+}
 
 static void cmd_reboot(int argc, char **argv)
 {
@@ -323,7 +323,7 @@ static void cmd_help(int argc, char **argv)
 int dbg_init(kernel_args *ka)
 {
 	commands = NULL;
-	
+
 	return arch_dbg_con_init(ka);
 }
 
@@ -331,7 +331,7 @@ int dbg_init2(kernel_args *ka)
 {
 	dbg_add_command(&cmd_help, "help", "List all debugger commands");
 	dbg_add_command(&cmd_reboot, "reboot", "Reboot");
-	
+
 	return NO_ERROR;
 }
 
@@ -340,5 +340,10 @@ bool dbg_set_serial_debug(bool new_val)
 	int temp = serial_debug_on;
 	serial_debug_on = new_val;
 	return temp;
+}
+
+bool dbg_get_serial_debug()
+{
+	return serial_debug_on;
 }
 
