@@ -5,6 +5,7 @@
 #include <boot/bootdir.h>
 #include <boot/stage2.h>
 #include "stage2_priv.h"
+#include "vesa.h"
 
 #include <libc/string.h>
 #include <libc/stdarg.h>
@@ -51,7 +52,7 @@ void mmu_map_page(unsigned int vaddr, unsigned int paddr);
 //   mmu disabled
 //   stack somewhere below 1 MB
 //   supervisor mode
-void _start(unsigned int mem, char *str)
+void _start(unsigned int mem, int in_vesa, unsigned int vesa_ptr)
 {
 	unsigned int new_stack;
 	unsigned int *idt;
@@ -68,7 +69,7 @@ void _start(unsigned int mem, char *str)
 
 	clearscreen();
 	dprintf("stage2 bootloader entry.\n");
-	dprintf("memsize = 0x%x\n", mem);
+	dprintf("memsize = 0x%x, in_vesa %d, vesa_ptr 0x%x\n", mem, in_vesa, vesa_ptr);
 
 	// calculate the conversion factor that translates rdtsc time to real microseconds
 	calculate_cpu_conversion_factor();
@@ -91,6 +92,20 @@ void _start(unsigned int mem, char *str)
 	ka->bootdir_addr.size = bootdir_pages * PAGE_SIZE;
 
 	next_paddr = BOOTDIR_ADDR + bootdir_pages * PAGE_SIZE;
+
+	if(in_vesa) {
+		struct VBEInfoBlock *info = (struct VBEInfoBlock *)vesa_ptr;
+		struct VBEModeInfoBlock *mode_info = (struct VBEModeInfoBlock *)(vesa_ptr + 0x200);
+
+		ka->fb.enabled = 1;
+		ka->fb.x_size = mode_info->x_resolution;
+		ka->fb.y_size = mode_info->y_resolution;
+		ka->fb.bit_depth = mode_info->bits_per_pixel;
+		ka->fb.mapping.start = mode_info->phys_base_ptr;
+		ka->fb.mapping.size = ka->fb.x_size * ka->fb.y_size * (ka->fb.bit_depth/8);
+	} else {
+		ka->fb.enabled = 0;
+	}
 
 	mmu_init(ka, &next_paddr);
 
@@ -200,7 +215,7 @@ void _start(unsigned int mem, char *str)
 	ka->phys_mem_range[0].start = 0;
 	ka->phys_mem_range[0].size = mem;
 	ka->num_phys_mem_ranges = 1;
-	ka->str = str;
+	ka->str = NULL;
 	ka->phys_alloc_range[0].start = BOOTDIR_ADDR;
 	ka->phys_alloc_range[0].size = next_paddr - BOOTDIR_ADDR;
 	ka->num_phys_alloc_ranges = 1;
@@ -318,7 +333,7 @@ void load_elf_image(void *data, unsigned int *next_paddr, addr_range *ar0, addr_
 
 // allocate a page directory and page table to facilitate mapping
 // pages to the 0x80000000 - 0x80400000 region.
-// also identity maps the first 4MB of memory 
+// also identity maps the first 4MB of memory
 int mmu_init(kernel_args *ka, unsigned int *next_paddr)
 {
 	int i;

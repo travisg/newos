@@ -55,7 +55,7 @@ static int device_fault(struct vm_store *store, struct vm_address_space *aspace,
 	vm_cache_ref *cache_ref = store->cache->ref;
 	vm_region *region;
 
-	dprintf("device_fault: offset 0x%x 0x%x + base_addr 0x%x\n", offset, d->base_addr);
+//	dprintf("device_fault: offset 0x%x 0x%x + base_addr 0x%x\n", offset, d->base_addr);
 
 	// figure out which page needs to be mapped where
 	mutex_lock(&cache_ref->lock);
@@ -65,9 +65,9 @@ static int device_fault(struct vm_store *store, struct vm_address_space *aspace,
 	for(region = cache_ref->region_list; region != NULL; region = region->cache_next) {
 		// make sure this page in the cache that was faulted on is covered in this region
 		if(offset >= region->cache_offset && (offset - region->cache_offset) < region->size) {
-			dprintf("device_fault: mapping paddr 0x%x to vaddr 0x%x\n",
-				(addr)(d->base_addr + offset),
-				(addr)(region->base + (offset - region->cache_offset)));
+//			dprintf("device_fault: mapping paddr 0x%x to vaddr 0x%x\n",
+//				(addr)(d->base_addr + offset),
+//				(addr)(region->base + (offset - region->cache_offset)));
 			(*aspace->translation_map.ops->map)(&aspace->translation_map,
 				region->base + (offset - region->cache_offset),
 				d->base_addr + offset, region->lock);
@@ -77,7 +77,7 @@ static int device_fault(struct vm_store *store, struct vm_address_space *aspace,
 	(*aspace->translation_map.ops->unlock)(&aspace->translation_map);
 	mutex_unlock(&cache_ref->lock);
 
-	dprintf("device_fault: done\n");
+//	dprintf("device_fault: done\n");
 
 	return 0;
 }

@@ -24,7 +24,7 @@
 ; ** (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 ; ** THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-; /* 
+; /*
 ; ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ; ** Distributed under the terms of the NewOS License.
 ; */
@@ -33,6 +33,10 @@
 ; ** Reviewed, documented and some minor modifications and bug-fixes
 ; ** applied by Michael Noisternig on 2001-09-02.
 ; */
+
+%define VESA_X_TARGET 800
+%define VESA_Y_TARGET 600
+%define VESA_BIT_DEPTH_TARGET 32
 
 SECTION
 CODE16
@@ -51,34 +55,48 @@ start:
 	mov		eax,cr0          ; switch to protected mode
 	or		al,0x1           ;   by setting 'protected mode enable' bit
 	mov		cr0,eax          ;   and writing back
-	jmp		dword 0x8:a      ; do the actual switch into protected mode
+	jmp		dword 0x8:unreal32  ; do the actual switch into protected mode
     ; The switch into protected mode and back is to get the processor into 'unreal' mode
     ; where it is in 16-bit mode but with segments that are larger than 64k.
     ; this way, the floppy code can load the image directly into memory >1Mb.
-a:
+unreal32:
 	mov		bx,0x10          ; load all of the data segments with large 32-bit segment
 	mov		ds,bx
 	mov		es,bx
 	mov		ss,bx
 	and		al,0xfe          ; switch back to real mode
 	mov		cr0,eax
-	jmp		0x7c0:b-0x7c00   ; actually go back to 16-bit
-b:
+	jmp		0x7c0:unreal-0x7c00   ; actually go back to 16-bit
+unreal:
 	xor		ax,ax            ; load NULL-descriptor (base 0) into ds, es, ss
 	mov		es,ax            ; the processor doesn't clear the internal high size bits on these descriptors
 	mov		ds,ax            ; so the descriptors can now reference 4Gb of memory, with size extensions
 	mov		ss,ax
-	mov		edi,0x100000     ; destination buffer (at 4 MB) for sector reading in func3
-	mov		bx,0x2           ;   start at sector 2 (and cylinder 0)
+
+	; read in the second half of this stage of the bootloader
+	xor		dx,dx            ; start at head 0
+	mov		bx,0x2           ; start at sector 2 for the second half of this loader
+	mov     cx,1             ; one sector
+	mov		edi,0x7e00       ; right after this one
+	sti
+	call	load_floppy
+
+	; read in the rest of the disk
+	mov		edi,0x100000     ; destination buffer (at 1 MB) for sector reading in load_floppy
+	mov		bx,0x3           ;   start at sector 3 (and cylinder 0)
 	mov		cx,[sectors]     ;   read that much sectors
 	xor		dx,dx            ;   start at head 0
 	sti
 	mov		si,loadmsg
 	call	print
-	call	func3            ; read remaining sectors at address edi
+	call	load_floppy      ; read remaining sectors at address edi
+	call 	disable_floppy_motor
 	mov		si,okmsg
 	call	print
 	cli
+
+	; call	enable_vesa
+	mov		[in_vesa],al
 
 	mov		ebx,[dword 0x100074] ; load dword at rel. address 0x74 from read-destination-buffer
 	add		ebx,0x101000         ; for stage2 entry
@@ -87,8 +105,8 @@ b:
 	mov		[ds:gdt+22],al       ;   to 32-bit segment
 	lgdt	[ds:gdt]             ; load global descriptor table
 
-	mov		eax,1 ;0x80000001
-	mov		cr0,eax              ; re-enter protected mode with paging enabled
+	mov		eax,1
+	mov		cr0,eax              ; enter protected mode
 	jmp		dword 0x8:code32     ; flush prefetch queue
 code32:
 BITS 32
@@ -100,8 +118,13 @@ BITS 32
 	mov		ss,ax
 	mov		ebp,0x10000
 	mov		esp,ebp
-	mov		edx,kernel_args
-	push	edx              ; pkx: this is the "char *str" arg to _start() in stage2.c
+
+	mov		eax,[vesa_info]
+	push	eax
+
+	xor		eax,eax
+	mov		al,[in_vesa]
+	push	eax
 
 	call	find_mem_size
 	push	eax
@@ -130,25 +153,11 @@ _fms_loop_out:
 	ret
 
 BITS 16
-gdt:
-	; the first entry serves 2 purposes: as the GDT header and as the first descriptor
-	; note that the first descriptor (descriptor 0) is always a NULL-descriptor
-	db 0xFF        ; full size of GDT used
-	db 0xff        ;   which means 8192 descriptors * 8 bytes = 2^16 bytes
-	dw gdt         ;   address of GDT (dword)
-	dd 0
-	; descriptor 1:
-	dd 0x0000ffff  ; base - limit: 0 - 0xfffff * 4K
-	dd 0x008f9a00  ; type: 16 bit, exec-only conforming, <present>, privilege 0
-	; descriptor 2:
-	dd 0x0000ffff  ; base - limit: 0 - 0xfffff * 4K
-	dd 0x008f9200  ; type: 16 bit, data read/write, <present>, privilege 0
-
 ; read sectors into memory
 ; IN: bx = sector # to start with: should be 2 as sector 1 (bootsector) was read by BIOS
 ;     cx = # of sectors to read
 ;     edi = buffer
-func3:
+load_floppy:
 	push	bx
 	push	cx
 tryagain:
@@ -182,7 +191,10 @@ bar6:
 	mov		bl,0x1           ; read: sector 1
 	xor		ah,ah
 	sub		cx,ax            ; substract # of read sectors
-	jg		func3             ;   sectors left to read ?
+	jg		load_floppy      ;   sectors left to read ?
+	ret
+
+disable_floppy_motor:
 	xor		al,al
 	mov		dx,0x3f2         ; disable floppy motor
 	out		dx,al
@@ -233,14 +245,105 @@ _c:
 _enable_a20_done:
 	ret
 
-loadmsg		db	"Loading ",0
-errormsg	db	0x0a,0x0d,"Error reading disk, press any key to reboot",0x0a,0x0d,0
-okmsg		db	" OK",0x0a,0x0d,0
+loadmsg		db	"Loading",0
+errormsg	db	0x0a,0x0d,"Error reading disk.",0x0a,0x0d,0
+okmsg		db	"OK",0x0a,0x0d,0
 dot			db	".",0
-
-kernel_args	db	"put kernel args here",0
+gdt:
+	; the first entry serves 2 purposes: as the GDT header and as the first descriptor
+	; note that the first descriptor (descriptor 0) is always a NULL-descriptor
+	db 0xFF        ; full size of GDT used
+	db 0xff        ;   which means 8192 descriptors * 8 bytes = 2^16 bytes
+	dw gdt         ;   address of GDT (dword)
+	dd 0
+	; descriptor 1:
+	dd 0x0000ffff  ; base - limit: 0 - 0xfffff * 4K
+	dd 0x008f9a00  ; type: 16 bit, exec-only conforming, <present>, privilege 0
+	; descriptor 2:
+	dd 0x0000ffff  ; base - limit: 0 - 0xfffff * 4K
+	dd 0x008f9200  ; type: 16 bit, data read/write, <present>, privilege 0
 
 retrycnt	db 3
+in_vesa     db 0
+vesa_info	dw 0
 
 	times 510-($-$$) db 0  ; filler for boot sector
 	dw	0xaa55             ; magic number for boot sector
+
+; Starting here is the second sector of the boot code
+
+; fool around with vesa mode
+enable_vesa:
+	; put the VBEInfo struct at 0x30000
+	mov		eax,0x30000
+	mov		[vesa_info],eax
+	mov		dx,0x3000
+	mov		es,dx
+	mov		ax,0x4f00
+	mov		di,0
+	int		0x10
+
+	; check the return code
+	cmp		al,0x4f
+	jne		done_vesa_bad
+	cmp		ah,0x00
+	jne		done_vesa_bad
+
+	; check the signature on the data structure
+	mov		eax,[es:00]
+	cmp		eax,0x41534556   ; 'VESA'
+	je		vesa_sig_ok
+	cmp		eax,0x32454256   ; 'VBE2'
+	jne		done_vesa_bad
+
+vesa_sig_ok:
+	; scan through each mode and grab the info on them
+	les		bx,[es:14]	; calculate the pointer to the mode list
+	mov		di,0x200	; push the buffer up a little to be past the VBEInfo struct
+
+mode_loop:
+	mov		cx,[es:bx]	; grab the next mode in the list
+	cmp		cx,0xffff
+	je		done_vesa_bad
+	and		cx,0x01ff
+	mov		ax,0x4f01
+	int		0x10
+
+	; if it's 1024x768x32, go for it
+	mov		ax,[es:di]
+	test	ax,0x1        ; test the supported bit
+	jz		next_mode
+	test	ax,0x08       ; test the linear frame mode bit
+	mov		ax,[es:di+18]
+	cmp		ax,VESA_X_TARGET       ; x
+	jne		next_mode
+	mov		ax,[es:di+20]
+	cmp		ax,VESA_Y_TARGET       ; y
+	jne		next_mode
+	mov		al,[es:di+25]
+	cmp		al,VESA_BIT_DEPTH_TARGET         ; bit_depth
+	jne		next_mode
+
+	; looks good, switch into it
+	mov		ax,0x4f02
+	mov		bx,cx
+	or		bx,0x4000     ; add the linear mode bit
+	int		0x10
+	jmp		done_vesa_good
+
+next_mode:
+	; get ready to try the next mode
+	inc		bx
+	inc		bx
+	jmp		mode_loop
+
+done_vesa_good:
+	mov		ax,0x1
+	ret
+
+done_vesa_bad:
+	xor		ax,ax
+	ret
+
+	times 1024-($-$$) db 0  ; filler for second sector of the loader
+

@@ -22,6 +22,7 @@
 #endif
 #include <kernel/dev/common/null.h>
 #include <kernel/dev/common/zero.h>
+#include <kernel/dev/fb_console/fb_console.h>
 
 int devs_init(kernel_args *ka)
 {
@@ -40,6 +41,7 @@ int devs_init(kernel_args *ka)
 	console_dev_init(ka);
 //	rtl8139_dev_init(ka);
 #endif
+	fb_console_dev_init(ka);
 
 	return 0;
 }

@@ -27,6 +27,15 @@ typedef struct {
 	addr_range virt_alloc_range[MAX_VIRT_ALLOC_ADDR_RANGE];
 	unsigned int num_cpus;
 	addr_range cpu_kstack[MAX_BOOT_CPUS];
+
+	// framebuffer stuff
+	struct framebuffer {
+		int enabled;
+		int x_size;
+		int y_size;
+		int bit_depth;
+		addr_range mapping;
+	} fb;
 	// architecture specific
 	arch_kernel_args arch_args;
 } kernel_args;

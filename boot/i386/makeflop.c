@@ -21,6 +21,7 @@ int main(int argc, char *argv[])
 	struct stat st;
 	int err;
 	unsigned int blocks;
+	unsigned char bootsector[1024];
 	unsigned char buf[512];
 	size_t read_size;
 	int infd;
@@ -50,8 +51,9 @@ int main(int argc, char *argv[])
 		printf("error: cannot open bootblock file '%s'\n", argv[1]);
 		return -1;
 	}
-	if(read(infd, buf, 512) < 512 || lseek(infd, 0, SEEK_END) != 512) {
-		printf ("error: size of bootblock file '%s' must match 512 bytes.\n", argv[1]);
+	if(read(infd, bootsector, sizeof(bootsector)) < sizeof(bootsector)
+	  || lseek(infd, 0, SEEK_END) != sizeof(bootsector)) {
+		printf ("error: size of bootblock file '%s' must match %d bytes.\n", argv[1], sizeof(bootsector));
 		return -1;
 	}
 	close(infd);
@@ -59,10 +61,10 @@ int main(int argc, char *argv[])
 	// patch the size of the output into bytes 3 & 4 of the bootblock
 	blocks = st.st_size / 512;
 	blocks++;
-	buf[2] = (blocks & 0x00ff);
-	buf[3] = (blocks & 0xff00) >> 8;
+	bootsector[2] = (blocks & 0x00ff);
+	bootsector[3] = (blocks & 0xff00) >> 8;
 
-	write(outfd, buf, 512);
+	write(outfd, bootsector, sizeof(bootsector));
 
 	infd = open(argv[2], O_BINARY|O_RDONLY);
 	if(infd < 0) {

@@ -20,7 +20,7 @@
 
 #include <kernel/dev/arch/i386/console/console_dev.h>
 
-unsigned int origin = 0;
+static unsigned int origin = 0;
 
 #define SCREEN_START 0xb8000
 #define SCREEN_END   0xc0000
@@ -239,7 +239,7 @@ static int console_ioctl(dev_cookie cookie, int op, void *buf, size_t len)
 	return err;
 }
 
-struct dev_calls console_hooks = {
+static struct dev_calls console_hooks = {
 	&console_open,
 	&console_close,
 	&console_freecookie,
@@ -255,23 +255,25 @@ struct dev_calls console_hooks = {
 
 int console_dev_init(kernel_args *ka)
 {
-	dprintf("con_init: mapping vid mem\n");
-	vm_map_physical_memory(vm_get_kernel_aspace_id(), "vid_mem", (void *)&origin, REGION_ADDR_ANY_ADDRESS,
-		SCREEN_END - SCREEN_START, LOCK_RW|LOCK_KERNEL, SCREEN_START);
-	dprintf("con_init: mapped vid mem to virtual address 0x%x\n", origin);
+	if(!ka->fb.enabled) {
+		dprintf("con_init: mapping vid mem\n");
+		vm_map_physical_memory(vm_get_kernel_aspace_id(), "vid_mem", (void *)&origin, REGION_ADDR_ANY_ADDRESS,
+			SCREEN_END - SCREEN_START, LOCK_RW|LOCK_KERNEL, SCREEN_START);
+		dprintf("con_init: mapped vid mem to virtual address 0x%x\n", origin);
 
-	pos = origin;
+		pos = origin;
 
-	gotoxy(0, ka->cons_line);
-	update_cursor(x, y);
+		gotoxy(0, ka->cons_line);
+		update_cursor(x, y);
 
-	mutex_init(&console_lock, "console_lock");
-	keyboard_fd = sys_open("/dev/keyboard", STREAM_TYPE_DEVICE, 0);
-	if(keyboard_fd < 0)
-		panic("console_dev_init: error opening /dev/keyboard\n");
+		mutex_init(&console_lock, "console_lock");
+		keyboard_fd = sys_open("/dev/keyboard", STREAM_TYPE_DEVICE, 0);
+		if(keyboard_fd < 0)
+			panic("console_dev_init: error opening /dev/keyboard\n");
 
-	// create device node
-	devfs_publish_device("console", NULL, &console_hooks);
+		// create device node
+		devfs_publish_device("console", NULL, &console_hooks);
+	}
 
 	return 0;
 }
