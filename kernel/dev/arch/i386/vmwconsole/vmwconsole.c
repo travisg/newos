@@ -91,7 +91,6 @@ static void copy_bitmap(uint32 id, uint32 src_x, uint32 src_y, uint32 dst_x, uin
 #define TEXT_CURSOR_HI 0x0e
 
 static mutex console_lock;
-static int keyboard_fd = -1;
 
 static void setup_bit_reversed(void)
 {
@@ -337,7 +336,7 @@ static int console_close(dev_cookie cookie)
 
 static ssize_t console_read(dev_cookie cookie, void *buf, off_t pos, ssize_t len)
 {
-	return sys_read(keyboard_fd, buf, 0, len);
+	return ERR_NOT_ALLOWED;
 }
 
 static ssize_t _console_write(const void *buf, size_t len)
@@ -349,7 +348,6 @@ static ssize_t _console_write(const void *buf, size_t len)
 		c = &((const char *)buf)[i];
 		switch(*c) {
 			case '\n':
-				cr();
 				lf();
 				break;
 			case '\r':
@@ -596,9 +594,6 @@ int console_dev_init(kernel_args *ka)
 		show_cursor(0);
 
 		mutex_init(&console_lock, "console_lock");
-		keyboard_fd = sys_open("/dev/keyboard", STREAM_TYPE_DEVICE, 0);
-		if(keyboard_fd < 0)
-			panic("console_dev_init: error opening /dev/keyboard\n");
 
 		// create device node
 		devfs_publish_device("console", NULL, &console_hooks);

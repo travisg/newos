@@ -70,7 +70,6 @@ struct console_desc {
 	void (*render_line)(char *line, int line_num);
 
 	mutex lock;
-	int keyboard_fd;
 };
 
 static struct console_desc console;
@@ -264,7 +263,7 @@ static int console_close(dev_cookie cookie)
 
 static ssize_t console_read(dev_cookie cookie, void *buf, off_t pos, ssize_t len)
 {
-	return sys_read(console.keyboard_fd, buf, 0, len);
+	return ERR_NOT_ALLOWED;
 }
 
 static ssize_t _console_write(const void *buf, size_t len)
@@ -276,7 +275,6 @@ static ssize_t _console_write(const void *buf, size_t len)
 		c = &((const char *)buf)[i];
 		switch(*c) {
 			case '\n':
-				cr();
 				lf();
 				break;
 			case '\r':
@@ -427,9 +425,6 @@ int fb_console_dev_init(kernel_args *ka)
 		repaint();
 
 		mutex_init(&console.lock, "console_lock");
-		console.keyboard_fd = sys_open("/dev/keyboard", STREAM_TYPE_DEVICE, 0);
-		if(console.keyboard_fd < 0)
-			panic("fb_console_dev_init: error opening /dev/keyboard\n");
 
 		// create device node
 		devfs_publish_device("console", NULL, &console_hooks);

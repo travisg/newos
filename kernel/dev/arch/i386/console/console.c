@@ -47,7 +47,6 @@ static unsigned int columns=COLUMNS;
 static unsigned char attr=0x07;
 
 static mutex console_lock;
-static int keyboard_fd = -1;
 
 static void update_cursor(unsigned int x, unsigned int y)
 {
@@ -176,7 +175,7 @@ static int console_close(dev_cookie cookie)
 
 static ssize_t console_read(dev_cookie cookie, void *buf, off_t pos, ssize_t len)
 {
-	return sys_read(keyboard_fd, buf, 0, len);
+	return ERR_NOT_ALLOWED;
 }
 
 static ssize_t _console_write(const void *buf, size_t len)
@@ -281,9 +280,6 @@ int console_dev_init(kernel_args *ka)
 		update_cursor(x, y);
 
 		mutex_init(&console_lock, "console_lock");
-		keyboard_fd = sys_open("/dev/keyboard", STREAM_TYPE_DEVICE, 0);
-		if(keyboard_fd < 0)
-			panic("console_dev_init: error opening /dev/keyboard\n");
 
 		// create device node
 		devfs_publish_device("console", NULL, &console_hooks);
