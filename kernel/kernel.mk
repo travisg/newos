@@ -3,6 +3,7 @@ _KERNEL_MAKE = 1
 
 # include targets we depend on
 include lib/lib.mk
+include bus/bus.mk
 include dev/dev.mk
 
 KERNEL_DIR = kernel
@@ -40,8 +41,8 @@ KERNEL = $(KERNEL_OBJ_DIR)/system
 
 kernel:	$(KERNEL)
 
-$(KERNEL): $(KERNEL_OBJS) $(KLIBS) $(DEV)
-	$(LD) -dN --script=$(KERNEL_ARCH_DIR)/kernel.ld -L $(LIBGCC_PATH) -o $@ $(KERNEL_OBJS) $(LINK_KLIBS) $(DEV) $(LIBGCC)
+$(KERNEL): $(KERNEL_OBJS) $(KLIBS) $(DEV) $(BUS)
+	$(LD) -dN --script=$(KERNEL_ARCH_DIR)/kernel.ld -L $(LIBGCC_PATH) -o $@ $(KERNEL_OBJS) $(LINK_KLIBS) $(DEV) $(BUS) $(LIBGCC)
 
 kernelclean:
 	rm -f $(KERNEL_OBJS)

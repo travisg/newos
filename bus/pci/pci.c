@@ -18,7 +18,7 @@
 #include <libc/string.h>
 #include <libc/printf.h>
 
-#include <dev/arch/i386/pci/pci_bus.h>
+#include <bus/pci/pci_bus.h>
 
 #include "pci_p.h" // private includes
 

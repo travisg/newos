@@ -15,6 +15,7 @@
 #include <kernel/vfs.h>
 #include <kernel/dev.h>
 #include <dev/devs.h>
+#include <bus/bus.h>
 
 #include <libc/string.h>
 
@@ -62,6 +63,7 @@ int _start(kernel_args *oldka, int cpu)
 		vfs_init(&ka);
 		thread_init(&ka);
 		dev_init(&ka);
+		bus_init(&ka);
 		devs_init(&ka);
 		con_init(&ka);
 
