@@ -231,6 +231,7 @@ static struct thread *create_thread_struct(const char *name)
 	strcpy(t->name, name);
 	t->id = atomic_add(&next_thread_id, 1);
 	t->proc = NULL;
+	t->sem_blocking = -1;
 	t->kernel_stack_region_id = -1;
 	t->kernel_stack_base = 0;
 	t->user_stack_region_id = -1;
@@ -449,6 +450,61 @@ int thread_resume_thread(thread_id id)
 	return retval;
 }
 
+static void _dump_proc_info(struct proc *p)
+{
+	dprintf("PROC: 0x%x\n", p);
+	dprintf("id:          0x%x\n", p->id);
+	dprintf("name:        '%s'\n", p->name);
+	dprintf("next:        0x%x\n", p->next);
+	dprintf("num_threads: %d\n", p->num_threads);
+	dprintf("state:       %d\n", p->state);
+	dprintf("pending_signals: 0x%x\n", p->pending_signals);
+	dprintf("ioctx:       0x%x\n", p->ioctx);
+	dprintf("args:        0x%x\n", p->args);
+	dprintf("proc_creation_sem: 0x%x\n", p->proc_creation_sem);
+	dprintf("aspace_id:   0x%x\n", p->aspace_id);
+	dprintf("aspace:      0x%x\n", p->aspace);
+	dprintf("kaspace:     0x%x\n", p->kaspace);
+	dprintf("main_thread: 0x%x\n", p->main_thread);
+	dprintf("thread_list: 0x%x\n", p->thread_list);
+}
+
+static void dump_proc_info(int argc, char **argv)
+{
+	struct proc *p;
+	int id = -1;
+	unsigned long num;
+	struct hash_iterator i;
+
+	if(argc < 2) {
+		dprintf("proc: not enough arguments\n");
+		return;
+	}
+
+	// if the argument looks like a hex number, treat it as such
+	if(strlen(argv[1]) > 2 && argv[1][0] == '0' && argv[1][1] == 'x') {
+		num = atoul(argv[1]);
+		if(num > vm_get_kernel_aspace()->virtual_map.base) {
+			// XXX semi-hack
+			_dump_proc_info((struct proc*)num);
+			return;
+		} else {
+			id = num;
+		}
+	}
+	
+	// walk through the thread list, trying to match name or id
+	hash_open(proc_hash, &i);
+	while((p = hash_next(proc_hash, &i)) != NULL) {
+		if((p->name && strcmp(argv[1], p->name) == 0) || p->id == id) {
+			_dump_proc_info(p);
+			break;
+		}
+	}
+	hash_close(proc_hash, &i, false);
+}
+
+
 static const char *state_to_text(int state)
 {
 	switch(state) {
@@ -474,15 +530,22 @@ static struct thread *last_thread_dumped = NULL;
 static void _dump_thread_info(struct thread *t)
 {
 	dprintf("THREAD: 0x%x\n", t);
-	dprintf("name: %s\n", t->name);
+	dprintf("id:          0x%x\n", t->id);
+	dprintf("name:        '%s'\n", t->name);
 	dprintf("all_next:    0x%x\nproc_next:  0x%x\nq_next:     0x%x\n",
 		t->all_next, t->proc_next, t->q_next);
-	dprintf("id:          0x%x\n", t->id);
 	dprintf("priority:    0x%x\n", t->priority);
 	dprintf("state:       %s\n", state_to_text(t->state));
 	dprintf("next_state:  %s\n", state_to_text(t->next_state));
+	dprintf("pending_signals:  0x%x\n", t->pending_signals);
+	dprintf("in_kernel:   %d\n", t->in_kernel);
+	dprintf("sem_blocking:0x%x\n", t->sem_blocking);
 	dprintf("sem_count:   0x%x\n", t->sem_count);
+	dprintf("sem_deleted_retcode: 0x%x\n", t->sem_deleted_retcode);
+	dprintf("sem_errcode: 0x%x\n", t->sem_errcode);
+	dprintf("args:        0x%x\n", t->args);
 	dprintf("proc:        0x%x\n", t->proc);
+	dprintf("return_code_sem: 0x%x\n", t->return_code_sem);
 	dprintf("kernel_stack_region_id: 0x%x\n", t->kernel_stack_region_id);
 	dprintf("kernel_stack_base: 0x%x\n", t->kernel_stack_base);
 	dprintf("user_stack_region_id:   0x%x\n", t->user_stack_region_id);
@@ -764,6 +827,7 @@ int thread_init(kernel_args *ka)
 	dbg_add_command(dump_next_thread_in_q, "next_q", "dump the next thread in the queue of last thread viewed");
 	dbg_add_command(dump_next_thread_in_all_list, "next_all", "dump the next thread in the global list of the last thread viewed");
 	dbg_add_command(dump_next_thread_in_proc, "next_proc", "dump the next thread in the process of the last thread viewed");
+	dbg_add_command(dump_proc_info, "proc", "list info about a particular process");
 
 	return 0;
 }

@@ -108,19 +108,17 @@ int sem_init(kernel_args *ka)
 		panic("unable to allocate semaphore table!\n");
 	}
 
-	dprintf("memsetting len %d @ 0x%x\n", sizeof(struct sem_entry) * MAX_SEMS, sems);
 	memset(sems, 0, sizeof(struct sem_entry) * MAX_SEMS);
-	dprintf("done\n");
 	for(i=0; i<MAX_SEMS; i++)
 		sems[i].id = -1;
-
-	sems_active = true;
 
 	// add debugger commands
 	dbg_add_command(&dump_sem_list, "sems", "Dump a list of all active semaphores");
 	dbg_add_command(&dump_sem_info, "sem", "Dump info about a particular semaphore");
 
 	dprintf("sem_init: exit\n");
+
+	sems_active = true;
 
 	return 0;
 }
@@ -218,6 +216,7 @@ int sem_delete_etc(sem_id id, int return_code)
 
 		while((t = thread_dequeue(&sems[slot].q)) != NULL) {
 			t->state = THREAD_STATE_READY;
+			t->sem_errcode = ERR_SEM_DELETED;
 			t->sem_deleted_retcode = return_code;
 			t->sem_count = 0;
 			ready_threads[ready_threads_count++] = t;
@@ -288,6 +287,7 @@ static int sem_timeout(void *data)
 	if(t != NULL) {
 		sems[slot].count += args->sem_count;
 		t->state = THREAD_STATE_READY;
+		t->sem_errcode = ERR_SEM_TIMED_OUT;
 		GRAB_THREAD_LOCK();
 		thread_enqueue_run_q(t);
 		RELEASE_THREAD_LOCK();
@@ -343,8 +343,10 @@ int sem_acquire_etc(sem_id id, int count, int flags, time_t timeout, int *delete
 		struct sem_timeout_args args;
 
 		t->next_state = THREAD_STATE_WAITING;
+		t->sem_blocking = id;
 		t->sem_count = min(-sems[slot].count, count); // store the count we need to restore upon release
 		t->sem_deleted_retcode = 0;
+		t->sem_errcode = NO_ERROR;
 		thread_enqueue(t, &sems[slot].q);
 
 		if((flags & SEM_FLAG_TIMEOUT) != 0) {
@@ -364,14 +366,16 @@ int sem_acquire_etc(sem_id id, int count, int flags, time_t timeout, int *delete
 		RELEASE_THREAD_LOCK();
 
 		if((flags & SEM_FLAG_TIMEOUT) != 0) {
-			// cancel the timer event, in case the sem was deleted and a timer in still active
-			timer_cancel_event(&timer);
+			if(t->sem_errcode == ERR_SEM_DELETED) {
+				// cancel the timer event, the sem may have been deleted with the timer still active
+				timer_cancel_event(&timer);
+			}
 		}
 
 		int_restore_interrupts(state);
 		if(deleted_retcode != NULL)
 			*deleted_retcode = t->sem_deleted_retcode;
-		return 0;
+		return t->sem_errcode;
 	}
 
 err:
