@@ -663,7 +663,7 @@ int test_thread3()
 	char buf[1024];
 	size_t len;
 
-	kprintf("\n\n\n");
+	kprintf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
 	fd = vfs_open(NULL, "/boot/testfile", "", STREAM_TYPE_FILE);
 	if(fd < 0)
 		panic("could not open /boot/testfile\n");
@@ -706,7 +706,7 @@ int test_thread()
 //		a += tid;
 		a++;
 #if 1
-		kprintf_xy(0, tid-1, "thread%d - %d    - %d %d - cpu %d", tid, a, system_time(), smp_get_current_cpu());
+		kprintf_xy(0, tid-1, "thread%d - %d    - 0x%x 0x%x - cpu %d", tid, a, system_time(), smp_get_current_cpu());
 #endif
 #if 0
 		dprintf("thread%d - %d    - %d %d - cpu %d\n", tid, a, system_time(), smp_get_current_cpu());
