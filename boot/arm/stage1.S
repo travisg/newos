@@ -3,67 +3,66 @@
 ** Distributed under the terms of the NewOS License.
 */
 
-#define BASE 0x0
-#define BOOTDIR_BASE (BASE + 0x1000)
-#define STAGE2_BOOTDIR_ENTRY    (BOOTDIR_BASE + 0x80)
-#define STAGE2_BOOTDIR_PAGE (STAGE2_BOOTDIR_ENTRY + 0x60)
-#define STAGE2_OFFSET       (STAGE2_BOOTDIR_ENTRY + 0x74)
+#define SRAM_START 0x20000000
+#define TEMPSTACK (SRAM_START + 0x1000)
+#define RELOCATION_TARGET (TEMPSTACK+0x74) // relocate us to just above the stack in sram
+#define RELOCATION_SIZE 0x10000 // should be big enough to get the important data
+
+#define LED_DISPLAY(pos, char) \
+	ldr		r11,=(0x08000100 + (3-pos) * 2); \
+	ldr		r12,=char; \
+	strh	r12,[r11];
+
+#define LED_DISPLAY_REG(pos, reg, byte) \
+	ldr		r12,=(0x08000100 + (pos) * 2); \
+	ldr		r10,=0xf; \
+	and		r11,r10,reg, lsr #(byte * 4); \
+	ldr		r10,='0'; \
+	add		r11,r11,r10; \
+	strh	r11,[r12];
 
 .text
 .globl _start
 _start:
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+
+	LED_DISPLAY(0, ' ')
+	LED_DISPLAY(1, ' ')
+	LED_DISPLAY(2, ' ')
+	LED_DISPLAY(3, ' ')
+
+	LED_DISPLAY(0, '0')
+	
 	/* load our new stack */
-	ldr		sp,=tempstack_end
+	ldr		sp,=TEMPSTACK
 
-	ldr		r2,=BOOTDIR_BASE
-	ldr		r3,=STAGE2_BOOTDIR_PAGE
-	ldr		r3,[r3]
-	ldr		r4,=STAGE2_OFFSET
-	ldr		r4,[r4]
+	/* copy ourself to sram and jump */
+	ldr		r1,=0
+	ldr		r2,=RELOCATION_TARGET
+	ldr		r3,=RELOCATION_SIZE
+_loop:
+//	LED_DISPLAY_REG(0, r3, 0)
+//	LED_DISPLAY_REG(1, r3, 1)
+//	LED_DISPLAY_REG(2, r3, 2)
+//	LED_DISPLAY_REG(3, r3, 3)
+	ldr		r4,[r1], #4
+	str		r4,[r2], #4
+	sub		r3,r3,#4
+	cmp		r3,#0
+	bpl		_loop
 
-	/* add them all together */
-	add		r5,r2,r3, lsr #12 /* BOOTDIR_BASE + STAGE2_BOOTDIR_PAGE * 4096 */
-	add		r5,r5,r4		 /* + STAGE2_OFFSET */
+	LED_DISPLAY(0, '1')
 
 	/* branch */
+	ldr		r5,=_decompress_start
 	mov		lr,pc
 	bx		r5
 
 __spin:
 	b		__spin
-	
-#if 0	
-	lis		r1,tempstack_end@ha		/* load the new stack */
-	ori		r1,r1,tempstack_end@l
-
-	/* load the base of the bootdir */
-	lis		r8,BOOTDIR_BASE@ha
-	ori		r8,r8,BOOTDIR_BASE@l
-
-	/* load the offset the stage2 will start into the bootdir */
-	lis		r9,STAGE2_BOOTDIR_PAGE@ha
-	ori		r9,r9,STAGE2_BOOTDIR_PAGE@l
-	lwz		r9,0(r9)
-	mulli	r9,r9,4096
-
-	/* load the offset into that page the stage2 entry point will be */
-	lis		r10,STAGE2_OFFSET@ha
-	ori		r10,r10,STAGE2_OFFSET@l
-	lwz		r10,0(r10)
-
-	/* add them all together */
-	add		r11,r8,r9
-	add		r11,r11,r10
-
-	/* jump there */
-	mtlr	r11
-	blr
-#endif
-
-.align 4
-tempstack:
-	.skip 0x800
-tempstack_end:
-
-.data
-#include "build/arm/boot/final.asminclude"

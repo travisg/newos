@@ -4,7 +4,7 @@ OUTPUT_ARCH(arm)
 ENTRY(_start)
 SECTIONS
 {
-	. = 0x00000000;
+	. = 0x20001000 + SIZEOF_HEADERS;
 
 	/* text/read-only data */
 	.text :	{ *(.text .gnu.linkonce.t.*) }
@@ -22,9 +22,7 @@ SECTIONS
 
 	/* unintialized data (in same segment as writable data) */
 	__bss_start = .;
-	.bss : { *(.bss) }
-
-	. = ALIGN(0x1000);
+	.data : { *(.bss) }
 	_end = . ;
 
 	/* Strip unnecessary stuff */
