@@ -328,6 +328,9 @@ static struct thread *create_thread_struct(const char *name)
 	t->args = NULL;
 	t->pending_signals = SIG_NONE;
 	t->in_kernel = true;
+	t->user_time = 0;
+	t->kernel_time = 0;
+	t->last_time = 0;
 	{
 		char temp[64];
 
@@ -721,6 +724,8 @@ static void _dump_thread_info(struct thread *t)
 	dprintf("kernel_stack_base: 0x%lx\n", t->kernel_stack_base);
 	dprintf("user_stack_region_id:   0x%x\n", t->user_stack_region_id);
 	dprintf("user_stack_base:   0x%lx\n", t->user_stack_base);
+	dprintf("kernel_time:       %Ld\n", t->kernel_time);
+	dprintf("user_time:         %Ld\n", t->user_time);
 	dprintf("architecture dependant section:\n");
 	arch_thread_dump_info(&t->arch_info);
 
@@ -1406,6 +1411,13 @@ static struct proc *proc_get_proc_struct_locked(proc_id id)
 
 static void thread_context_switch(struct thread *t_from, struct thread *t_to)
 {
+	bigtime_t now;
+
+	// track kernel time
+	now = system_time();
+	t_from->kernel_time += now - t_from->last_time;
+	t_to->last_time = now;
+
 	t_to->cpu = t_from->cpu;
 	arch_thread_set_current_thread(t_to);
 	t_from->cpu = NULL;
@@ -1926,12 +1938,19 @@ void thread_atkernel_entry(void)
 {
 	int state;
 	struct thread *t;
+	bigtime_t now;
 
 //	dprintf("thread_atkernel_entry: entry thread 0x%x\n", t->id);
 
 	t = thread_get_current_thread();
 
 	state = int_disable_interrupts();
+
+	// track user time
+	now = system_time();
+	t->user_time += now - t->last_time;
+	t->last_time = now;
+
 	GRAB_THREAD_LOCK();
 
 	t->in_kernel = true;
@@ -1947,6 +1966,7 @@ void thread_atkernel_exit(void)
 {
 	int state;
 	struct thread *t;
+	bigtime_t now;
 
 //	dprintf("thread_atkernel_exit: entry\n");
 
@@ -1960,6 +1980,12 @@ void thread_atkernel_exit(void)
 	t->in_kernel = false;
 
 	RELEASE_THREAD_LOCK();
+
+	// track kernel time
+	now = system_time();
+	t->kernel_time += now - t->last_time;
+	t->last_time = now;
+
 	int_restore_interrupts(state);
 }
 

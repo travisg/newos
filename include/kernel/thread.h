@@ -93,6 +93,11 @@ struct thread {
 	addr kernel_stack_base;
 	region_id user_stack_region_id;
 	addr user_stack_base;
+
+	bigtime_t user_time;
+	bigtime_t kernel_time;
+	bigtime_t last_time;
+
 	// architecture dependant section
 	struct arch_thread arch_info;
 };
