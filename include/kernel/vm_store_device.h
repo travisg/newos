@@ -8,7 +8,7 @@
 #include <kernel/kernel.h>
 #include <kernel/vm.h>
 
-vm_store *vm_store_create_device();
+vm_store *vm_store_create_device(addr base_addr);
 
 #endif
 

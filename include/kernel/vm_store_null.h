@@ -8,7 +8,7 @@
 #include <kernel/kernel.h>
 #include <kernel/vm.h>
 
-vm_store *vm_store_create_null();
+vm_store *vm_store_create_null(void);
 
 #endif
 

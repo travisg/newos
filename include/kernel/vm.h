@@ -183,10 +183,10 @@ int vm_init_postthread(kernel_args *ka);
 
 aspace_id vm_create_aspace(const char *name, addr base, addr size, bool kernel);
 int vm_delete_aspace(aspace_id);
-vm_address_space *vm_get_kernel_aspace();
-aspace_id vm_get_kernel_aspace_id();
-vm_address_space *vm_get_current_user_aspace();
-aspace_id vm_get_current_user_aspace_id();
+vm_address_space *vm_get_kernel_aspace(void);
+aspace_id vm_get_kernel_aspace_id(void);
+vm_address_space *vm_get_current_user_aspace(void);
+aspace_id vm_get_current_user_aspace_id(void);
 vm_address_space *vm_get_aspace_from_id(aspace_id aid);
 void vm_put_aspace(vm_address_space *aspace);
 
@@ -221,7 +221,7 @@ region_id user_vm_map_file(char *uname, void **uaddress, int addr_type,
 int user_vm_get_region_info(region_id id, vm_region_info *uinfo);
 
 // XXX remove later
-void vm_test();
+void vm_test(void);
 
 #endif
 

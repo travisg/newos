@@ -24,14 +24,14 @@ enum {
 
 int smp_init(kernel_args *ka);
 int smp_trap_non_boot_cpus(kernel_args *ka, int cpu);
-void smp_wake_up_all_non_boot_cpus();
+void smp_wake_up_all_non_boot_cpus(void);
 void smp_wait_for_ap_cpus(kernel_args *ka);
 void smp_send_ici(int target_cpu, int message, unsigned long data, unsigned long data2, unsigned long data3, void *data_ptr, int flags);
 void smp_send_broadcast_ici(int message, unsigned long data, unsigned long data2, unsigned long data3, void *data_ptr, int flags);
-int smp_enable_ici();
-int smp_disable_ici();
+int smp_enable_ici(void);
+int smp_disable_ici(void);
 
-int smp_get_num_cpus();
+int smp_get_num_cpus(void);
 void smp_set_num_cpus(int num_cpus);
 
 #include <kernel/arch/smp.h>

@@ -24,7 +24,7 @@ struct timer_event {
 };
 
 int timer_init(kernel_args *ka);
-int timer_interrupt();
+int timer_interrupt(void);
 void timer_setup_timer(timer_callback func, void *data, struct timer_event *event);
 int timer_set_event(time_t relative_time, timer_mode mode, struct timer_event *event);
 int timer_cancel_event(struct timer_event *event);

@@ -99,11 +99,11 @@ struct fs_calls {
 };
 
 int vfs_init(kernel_args *ka);
-int vfs_bootstrap_all_filesystems();
+int vfs_bootstrap_all_filesystems(void);
 int vfs_register_filesystem(const char *name, struct fs_calls *calls);
-void *vfs_new_ioctx();
+void *vfs_new_ioctx(void);
 int vfs_free_ioctx(void *ioctx);
-int vfs_test();
+int vfs_test(void);
 
 image_id vfs_load_fs_module(const char *path);
 
@@ -127,7 +127,7 @@ int vfs_set_cache_ptr(void *vnode, void *cache);
 /* calls kernel code should make for file I/O */
 int sys_mount(const char *path, const char *device, const char *fs_name, void *args);
 int sys_unmount(const char *path);
-int sys_sync();
+int sys_sync(void);
 int sys_open(const char *path, stream_type st, int omode);
 int sys_close(int fd);
 int sys_fsync(int fd);
@@ -145,7 +145,7 @@ int sys_setcwd(const char* path);
 /* calls the syscall dispatcher should use for user file I/O */
 int user_mount(const char *path, const char *device, const char *fs_name, void *args);
 int user_unmount(const char *path);
-int user_sync();
+int user_sync(void);
 int user_open(const char *path, stream_type st, int omode);
 int user_close(int fd);
 int user_fsync(int fd);

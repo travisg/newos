@@ -16,10 +16,10 @@ int dbg_init2(kernel_args *ka);
 char dbg_putch(char c);
 void dbg_puts(const char *s);
 bool dbg_set_serial_debug(bool new_val);
-bool dbg_get_serial_debug();
+bool dbg_get_serial_debug(void);
 int dprintf(const char *fmt, ...);
 int panic(const char *fmt, ...);
-void kernel_debugger();
+void kernel_debugger(void);
 int dbg_add_command(void (*func)(int, char **), const char *cmd, const char *desc);
 
 extern void dbg_save_registers(int *);	/* arch provided */

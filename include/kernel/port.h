@@ -71,7 +71,7 @@ int port_delete_owned_ports(proc_id owner);
 
 
 // temp: test
-void port_test();
+void port_test(void);
 int	 port_test_thread_func(void* arg);
 
 // user-level API

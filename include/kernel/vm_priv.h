@@ -34,15 +34,15 @@
 // Should only be used by vm internals
 int vm_page_fault(addr address, addr fault_address, bool is_write, bool is_user, addr *newip);
 void vm_increase_max_commit(addr delta);
-int vm_daemon_init();
+int vm_daemon_init(void);
 
 // used by the page daemon to walk the list of address spaces
 int vm_aspace_walk_start(struct hash_iterator *i);
 vm_address_space *vm_aspace_walk_next(struct hash_iterator *i);
 
 // get some data about the number of pages in the system
-addr vm_page_num_pages();
-addr vm_page_num_free_pages();
+addr vm_page_num_pages(void);
+addr vm_page_num_free_pages(void);
 
 // allocates memory from the ka structure
 addr vm_alloc_from_ka_struct(kernel_args *ka, unsigned int size, int lock);

@@ -17,7 +17,7 @@ typedef struct cbuf {
 	char dat[CBUF_LEN - sizeof(struct cbuf *) - 2*sizeof(int) - sizeof(void *) - sizeof(int)];
 } cbuf;
 
-int cbuf_init();
+int cbuf_init(void);
 cbuf *cbuf_get_chain(size_t len);
 cbuf *cbuf_get_chain_noblock(size_t len);
 void cbuf_free_chain_noblock(cbuf *buf);
@@ -38,7 +38,7 @@ cbuf *cbuf_merge_chains(cbuf *chain1, cbuf *chain2);
 int cbuf_truncate_head(cbuf *chain, size_t trunc_bytes);
 int cbuf_truncate_tail(cbuf *chain, size_t trunc_bytes);
 
-void cbuf_test();
+void cbuf_test(void);
 
 #endif
 

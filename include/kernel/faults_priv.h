@@ -17,7 +17,7 @@ enum fpu_faults {
 };
 int fpu_fault(int fpu_fault);
 
-int fpu_disable_fault();
+int fpu_disable_fault(int errorcode);
 
 #endif
 
