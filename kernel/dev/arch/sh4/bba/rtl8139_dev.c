@@ -18,7 +18,7 @@
 #include "rtl8139_dev.h"
 #include "rtl8139_priv.h"
 
-#if 1
+
 #define RTL_WRITE_8(rtl, reg, dat) \
 	*(uint8 *)((rtl)->virt_base + (reg)) = (dat)
 #define RTL_WRITE_16(rtl, reg, dat) \
@@ -32,88 +32,93 @@
 	*(uint16 *)((rtl)->virt_base + reg)
 #define RTL_READ_32(rtl, reg) \
 	*(uint32 *)((rtl)->virt_base + reg)
-#else
-#define RTL_WRITE_8(rtl, reg, dat) \
-	out8(dat, (rtl)->io_port + (reg))
-#define RTL_WRITE_16(rtl, reg, dat) \
-	out16(dat, (rtl)->io_port + (reg))
-#define RTL_WRITE_32(rtl, reg, dat) \
-	out32(dat, (rtl)->io_port + (reg))
-
-#define RTL_READ_8(rtl, reg) \
-	in8((rtl)->io_port + (reg))
-#define RTL_READ_16(rtl, reg) \
-	in16((rtl)->io_port + (reg))
-#define RTL_READ_32(rtl, reg) \
-	in32((rtl)->io_port + (reg))
-#endif
-
-#define TAILREG_TO_TAIL(in) \
-	(uint16)(((uint32)(in) + 16) % 0x10000)
-#define TAIL_TO_TAILREG(in) \
-	(uint16)((uint16)(in) - 16)
 
 #define MYRT_INTS (RT_INT_PCIERR | RT_INT_RX_ERR | RT_INT_RX_OK | RT_INT_TX_ERR | RT_INT_TX_OK | RT_INT_RXBUF_OVERFLOW)
 
+#define RXBUFMASK 0x7fff
+#define RXBUFSIZE 0x8000
+
+#define ADDR_RXBUF 0x01840000
+#define ADDR_TXBUF0 0x01846000
+
+
+#define TAILREG_TO_TAIL(in) \
+	(uint16)(((uint32)(in) + 16) % RXBUFSIZE)
+#define TAIL_TO_TAILREG(in) \
+	(uint16)((uint16)(in) - 16)
+
+
 static int rtl8139_int(void*);
+
+#define REGL(a) (volatile unsigned long *)(a)
+#define vul volatile unsigned long
+#define REGS(a) (volatile unsigned short *)(a)
+#define vus volatile unsigned short
+#define REGC(a) (volatile unsigned char *)(a)
+#define vuc volatile unsigned char
+
+static int gaps_init()
+{
+	vuc * const g28 = REGC(0xa1000000);
+	vus * const g216 = REGS(0xa1000000);
+	vul * const g232 = REGL(0xa1000000);
+	int i;
+	
+	/* Initialize the "GAPS" PCI glue controller.
+	   It ain't pretty but it works. */
+	g232[0x1418/4] = 0x5a14a501;		/* M */
+	i = 10000;
+	while (!(g232[0x1418/4] & 1) && i > 0)
+		i--;
+	if (!(g232[0x1418/4] & 1)) {
+		dprintf("gaps_init() - no pci glue available\n");
+		return -1;
+	}
+	g232[0x1420/4] = 0x01000000;
+	g232[0x1424/4] = 0x01000000;
+	g232[0x1428/4] = 0x01840000;		/* DMA Base */
+	g232[0x142c/4] = 0x01840000 + 32*1024;	/* DMA End */
+	g232[0x1414/4] = 0x00000001;
+	g232[0x1434/4] = 0x00000001;
+
+	/* Configure PCI bridge (very very hacky). If we wanted to be proper,
+	   we ought to implement a full PCI subsystem. In this case that is
+	   ridiculous for accessing a single card that will probably never
+	   change. Considering that the DC is now out of production officially,
+	   there is a VERY good chance it will never change. */
+	g216[0x1606/2] = 0xf900;
+	g232[0x1630/4] = 0x00000000;
+	g28[0x163c] = 0x00;
+	g28[0x160d] = 0xf0;
+	(void)g216[0x04/2];
+	g216[0x1604/2] = 0x0006;
+	g232[0x1614/4] = 0x01000000;
+	(void)g28[0x1650];
+
+	dprintf("gaps_init() - pci glue controller detected\n");
+	return 0 ;
+}
 
 int rtl8139_detect(rtl8139 **rtl)
 {
-	id_list *vendor_ids;
-	id_list *device_ids;
-	int err;
-	device dev;
-	int i;
-
-	dprintf("rtl8139_detect!\n");
-	
-	vendor_ids = kmalloc(sizeof(id_list) + sizeof(uint32));
-	vendor_ids->num_ids = 1;
-	vendor_ids->id[0] = RT_VENDORID;
-	device_ids = kmalloc(sizeof(id_list) + sizeof(uint32));
-	device_ids->num_ids = 1;
-	device_ids->id[0] = RT_DEVICEID_8139;
-
-	err = bus_find_device(1, vendor_ids, device_ids, &dev);
-	if(err < 0) {
-		err = -1;
-		goto err;
-	}
+	if(gaps_init() != 0) return -1;
 
 	// we found one
-	dprintf("rtl8139_detect: found device at '%s'\n", dev.dev_path);
+	dprintf("rtl8139_detect: found device at '%s'\n", "gaps/0");
 
 	*rtl = kmalloc(sizeof(rtl8139));
 	if(*rtl == NULL) {
-		err = -1;
-		goto err;
+		return -1;
 	}
 	memset(*rtl, 0, sizeof(rtl8139));
-	(*rtl)->irq = dev.irq;
-	// find the memory-mapped base
-	for(i=0; i<MAX_DEV_IO_RANGES; i++) {
-		if(dev.base[i] > 0xffff) {
-			(*rtl)->phys_base = dev.base[i];
-			(*rtl)->phys_size = dev.size[i];
-			break;
-		} else if(dev.base[i] > 0) {
-			(*rtl)->io_port = dev.base[i];
-		}
-	}
-	if((*rtl)->phys_base == 0) {
-		kfree(*rtl);
-		*rtl = NULL;
-		err = -1;
-		goto err;
-	}
+	(*rtl)->irq = 0;
+	(*rtl)->phys_base = 0x01001700;
+	(*rtl)->phys_size = 0x100;	
+	
+	dprintf("detected rtl8139 at irq %d, memory base 0x%lx, size 0x%lx\n",
+			(*rtl)->irq, (*rtl)->phys_base, (*rtl)->phys_size);
 
-	dprintf("detected rtl8139 at irq %d, memory base 0x%lx, size 0x%lx\n", (*rtl)->irq, (*rtl)->phys_base, (*rtl)->phys_size);
-
-err:
-	kfree(vendor_ids);
-	kfree(device_ids);
-
-	return err;
+	return 0;
 }
 
 int rtl8139_init(rtl8139 *rtl)
@@ -140,16 +145,23 @@ int rtl8139_init(rtl8139 *rtl)
 		thread_snooze(10000); // 10ms
 		if(system_time() - time > 1000000) {
 			err = -1;
+			dprintf("rtl8139 reset timed out\n");
 			goto err1;
 		}
 	} while((RTL_READ_8(rtl, RT_CHIPCMD) & RT_CMD_RESET));
 
 	// create a rx and tx buf
+#if 1	
+	rtl->rxbuf = PHYS_ADDR_TO_P1(ADDR_RXBUF);
+	rtl->txbuf = PHYS_ADDR_TO_P1(ADDR_TXBUF0);
+#else
 	rtl->rxbuf_region = vm_create_anonymous_region(vm_get_kernel_aspace_id(), "rtl8139_rxbuf", (void **)&rtl->rxbuf,
 		REGION_ADDR_ANY_ADDRESS, 64*1024 + 16, REGION_WIRING_WIRED_CONTIG, LOCK_KERNEL|LOCK_RW);
 	rtl->txbuf_region = vm_create_anonymous_region(vm_get_kernel_aspace_id(), "rtl8139_txbuf", (void **)&rtl->txbuf,
 		REGION_ADDR_ANY_ADDRESS, 8*1024, REGION_WIRING_WIRED, LOCK_KERNEL|LOCK_RW);
+#endif
 
+		
 	// set up the transmission buf and sem
 	rtl->tx_sem = sem_create(4, "rtl8139_txsem");
 	mutex_init(&rtl->lock, "rtl8139");
@@ -159,8 +171,10 @@ int rtl8139_init(rtl8139 *rtl)
 	rtl->reg_spinlock = 0;
 
 	// set up the interrupt handler
-	int_set_io_interrupt_handler(rtl->irq + 0x20, &rtl8139_int, rtl);
-
+#if 0
+	nt_set_io_interrupt_handler(rtl->irq + 0x20, &rtl8139_int, rtl);
+#endif
+	
 	// read the mac address
 	rtl->mac_addr[0] = RTL_READ_8(rtl, RT_IDR0);
 	rtl->mac_addr[1] = RTL_READ_8(rtl, RT_IDR0 + 1);
@@ -182,9 +196,14 @@ int rtl8139_init(rtl8139 *rtl)
 	// Enable receive and transmit functions
 	RTL_WRITE_8(rtl, RT_CHIPCMD, RT_CMD_RX_ENABLE | RT_CMD_TX_ENABLE);
 
+#if 1
+	// Set Rx FIFO threashold to 1K, Rx size to  8k+16, 1024 byte DMA burst
+	RTL_WRITE_32(rtl, RT_RXCONFIG, 0x0000c600); /* ??? c680 -- WRAP mode? */
+#else
 	// Set Rx FIFO threashold to 1K, Rx size to 64k+16, 1024 byte DMA burst
 	RTL_WRITE_32(rtl, RT_RXCONFIG, 0x0000de00);
-
+#endif
+	
 	// Set Tx 1024 byte DMA burst
 	RTL_WRITE_32(rtl, RT_TXCONFIG, 0x03000600);
 
@@ -197,6 +216,16 @@ int rtl8139_init(rtl8139 *rtl)
 	// go back to normal mode
 	RTL_WRITE_8(rtl, RT_CFG9346, 0);
 
+#if 1
+		// Setup RX buffers
+	dprintf("rx buffer will be at 0x%lx\n", ADDR_RXBUF);
+	RTL_WRITE_32(rtl, RT_RXBUF, ADDR_RXBUF);	
+		// Setup TX buffers
+	RTL_WRITE_32(rtl, RT_TXADDR0, ADDR_TXBUF0);
+	RTL_WRITE_32(rtl, RT_TXADDR1, ADDR_TXBUF0 + 2*1024);
+	RTL_WRITE_32(rtl, RT_TXADDR2, ADDR_TXBUF0 + 4*1024);
+	RTL_WRITE_32(rtl, RT_TXADDR3, ADDR_TXBUF0 + 6*1024);
+#else
 	// Setup RX buffers
 	*(int *)rtl->rxbuf = 0;
 	vm_get_page_mapping(vm_get_kernel_aspace_id(), rtl->rxbuf, &temp);
@@ -212,7 +241,7 @@ int rtl8139_init(rtl8139 *rtl)
 	vm_get_page_mapping(vm_get_kernel_aspace_id(), rtl->txbuf + 4*1024, &temp);
 	RTL_WRITE_32(rtl, RT_TXADDR2, temp);
 	RTL_WRITE_32(rtl, RT_TXADDR3, temp + 2*1024);
-
+#endif
 	// Reset RXMISSED counter
 	RTL_WRITE_32(rtl, RT_RXMISSED, 0);
 
@@ -275,7 +304,7 @@ restart:
 	sem_acquire(rtl->tx_sem, 1);
 	mutex_lock(&rtl->lock);
 
-#if 0
+#if 1
 	dprintf("XMIT %d %x (%d)\n",rtl->txbn, ptr, len);
 
 	dprintf("dumping packet:");
@@ -391,19 +420,19 @@ restart:
 		release_sem = true;
 		goto out;
 	}
-	if(tail + len > 0xffff) {
+	if(tail + len > RXBUFMASK) {
 		int pos = 0;
 
 //		dprintf("packet wraps around\n");
-		memcpy(buf, (const void *)&entry->data[0], 0x10000 - (tail + 4));
-		memcpy((uint8 *)buf + 0x10000 - (tail + 4), (const void *)rtl->rxbuf, len - (0x10000 - (tail + 4)));
+		memcpy(buf, (const void *)&entry->data[0], RXBUFSIZE - (tail + 4));
+		memcpy((uint8 *)buf + RXBUFSIZE - (tail + 4), (const void *)rtl->rxbuf, len - (RXBUFSIZE - (tail + 4)));
 	} else {
 		memcpy(buf, (const void *)&entry->data[0], len);
 	}
 	rc = len;
 
 	// calculate the new tail
-	tail = ((tail + entry->len + 4 + 3) & ~3) % 0x10000;
+	tail = ((tail + entry->len + 4 + 3) & ~3) % RXBUFSIZE;
 //	dprintf("new tail at 0x%x, tailreg will say 0x%x\n", tail, TAIL_TO_TAILREG(tail));
 	RTL_WRITE_16(rtl, RT_RXBUFTAIL, TAIL_TO_TAILREG(tail));
 
