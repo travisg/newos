@@ -39,7 +39,7 @@ static int apic_timer_interrupt()
 	return timer_interrupt();
 }
 
-int arch_timer_set_hardware_timer(long long timeout)
+void arch_timer_set_hardware_timer(long long timeout)
 {
 	set_isa_hardware_timer(timeout);
 }

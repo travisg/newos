@@ -57,7 +57,7 @@ ifeq ($(ARCH),alpha)
 	LIBGCC_PATH = libgcc/$(ARCH)
 endif
 
-GLOBAL_CFLAGS += -Wall -W -Werror -nostdinc -O -fno-builtin -DARCH_$(ARCH)
+GLOBAL_CFLAGS += -Wall -W -Werror -Wno-multichar -nostdinc -O -fno-builtin -DARCH_$(ARCH)
 
 FINAL = boot/final
 

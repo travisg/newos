@@ -3,7 +3,7 @@
 
 #include "stage2.h"
 
-int arch_timer_set_hardware_timer(time_t timeout);
+void arch_timer_set_hardware_timer(time_t timeout);
 int arch_init_timer(kernel_args *ka);
 
 #endif
