@@ -133,7 +133,7 @@ ifeq ($(ARCH),m68k)
 		STRIP = m68k-elf-strip
 		SIZE = m68k-elf-size
 	endif
-	GLOBAL_CFLAGS = -O0 -g
+	GLOBAL_CFLAGS = -O0 -g -m68040
 	KERNEL_CFLAGS = -fno-pic
 	USER_CFLAGS = -fpic
 	GLOBAL_LDFLAGS = -g
@@ -221,6 +221,7 @@ GLOBAL_CPPFLAGS = $(GLOBAL_CFLAGS) -fno-rtti
 LIBGCC := -lgcc
 LIBGCC_PATH := $(dir $(shell $(CC) $(GLOBAL_CFLAGS) -print-libgcc-file-name))
 $(warning LIBGCC_PATH = $(LIBGCC_PATH))
+GLOBAL_CFLAGS += -I$(LIBGCC_PATH)/include
 
 # print some info
 $(warning ARCH = $(ARCH))
