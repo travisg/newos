@@ -355,6 +355,14 @@ err:
 	return NULL;
 }
 
+static void delete_thread_struct(struct thread *t)
+{
+	if(t->return_code_sem >= 0)
+		sem_delete_etc(t->return_code_sem, -1);
+	kfree(t->name);
+	kfree(t);
+}
+
 static int _create_user_thread_kentry(void)
 {
 	struct thread *t;
@@ -423,8 +431,7 @@ static thread_id _create_thread(const char *name, proc_id pid, addr entry, void 
 	}
 	int_restore_interrupts(state);
 	if(abort) {
-		kfree(t->name);
-		kfree(t);
+		delete_thread_struct(t);
 		return ERR_TASK_PROC_DELETED;
 	}
 
@@ -574,7 +581,6 @@ int thread_resume_thread(thread_id id)
 
 int thread_set_priority(thread_id id, int priority)
 {
-	int state;
 	struct thread *t;
 	int retval;
 
@@ -584,26 +590,34 @@ int thread_set_priority(thread_id id, int priority)
 	if(priority < THREAD_MIN_PRIORITY)
 		priority = THREAD_MIN_PRIORITY;
 
-	state = int_disable_interrupts();
-	GRAB_THREAD_LOCK();
-
-	t = thread_get_thread_struct_locked(id);
-	if(t) {
-		if(t->state == THREAD_STATE_READY && t->priority != priority) {
-			// this thread is in a ready queue right now, so it needs to be reinserted
-			thread_dequeue_id(&run_q[t->priority], t->id);
-			t->priority = priority;
-			thread_enqueue_run_q(t);
-		} else {
-			t->priority = priority;
-		}
+	t = thread_get_current_thread();
+	if(t->id == id) {
+		// it's ourself, so we know we aren't in a run queue, and we can manipulate
+		// our structure directly
+		t->priority = priority;
 		retval = NO_ERROR;
 	} else {
-		retval = ERR_INVALID_HANDLE;
-	}
+		int state = int_disable_interrupts();
+		GRAB_THREAD_LOCK();
 
-	RELEASE_THREAD_LOCK();
-	int_restore_interrupts(state);
+		t = thread_get_thread_struct_locked(id);
+		if(t) {
+			if(t->state == THREAD_STATE_READY && t->priority != priority) {
+				// this thread is in a ready queue right now, so it needs to be reinserted
+				thread_dequeue_id(&run_q[t->priority], t->id);
+				t->priority = priority;
+				thread_enqueue_run_q(t);
+			} else {
+				t->priority = priority;
+			}
+			retval = NO_ERROR;
+		} else {
+			retval = ERR_INVALID_HANDLE;
+		}
+
+		RELEASE_THREAD_LOCK();
+		int_restore_interrupts(state);
+	}
 
 	return retval;
 }
@@ -861,7 +875,6 @@ static void put_death_stack_and_reschedule(unsigned int index)
 
 	if(index >= num_death_stacks || death_stacks[index].in_use == false)
 		panic("put_death_stack_and_reschedule: passed invalid stack index %d\n", index);
-	death_stacks[index].in_use = false;
 
 	// disable the interrupts around the semaphore release to prevent the get_death_stack
 	// function from allocating this stack before the reschedule. Kind of a hack, but localized
@@ -873,6 +886,8 @@ static void put_death_stack_and_reschedule(unsigned int index)
 
 	GRAB_THREAD_LOCK();
 	release_spinlock(&death_stack_spinlock);
+
+	death_stacks[index].in_use = false;
 
 	thread_resched();
 }
@@ -1068,8 +1083,7 @@ static void thread_exit2(void *_args)
 	// delete the name
 	temp = args.t->name;
 	args.t->name = NULL;
-	if(temp != NULL)
-		kfree(temp);
+	kfree(temp);
 
 	dprintf("thread_exit2: removing thread 0x%x from global lists\n", args.t->id);
 
@@ -1096,12 +1110,15 @@ static void thread_exit2(void *_args)
 void thread_exit(int retcode)
 {
 	int state;
-	struct thread *t = CURR_THREAD;
+	struct thread *t = thread_get_current_thread();
 	struct proc *p = t->proc;
 	bool delete_proc = false;
 	unsigned int death_stack;
 
 	dprintf("thread 0x%x exiting w/return code 0x%x\n", t->id, retcode);
+
+	// boost our priority to get this over with
+	thread_set_priority(t->id, THREAD_HIGH_PRIORITY);
 
 	// delete the user stack region first
 	if(p->aspace_id >= 0 && t->user_stack_region_id >= 0) {
@@ -1116,7 +1133,6 @@ void thread_exit(int retcode)
 		state = int_disable_interrupts();
 		GRAB_PROC_LOCK();
 		remove_thread_from_proc(p, t);
-		t->proc = kernel_proc;
 		insert_thread_into_proc(kernel_proc, t);
 		if(p->main_thread == t) {
 			// this was main thread in this process
@@ -1332,21 +1348,36 @@ int proc_wait_on_proc(proc_id id, int *retcode)
 	RELEASE_PROC_LOCK();
 	int_restore_interrupts(state);
 
+	if(tid < 0)
+		return tid;
+
 	return thread_wait_on_thread(tid, retcode);
 }
 
 thread_id thread_get_current_thread_id(void)
 {
+	struct thread *t;
+	int state;
+
 	if(cur_thread == NULL)
 		return 0;
-	return CURR_THREAD->id;
+	state = int_disable_interrupts();
+	t = CURR_THREAD;
+	int_restore_interrupts(state);
+	return t->id;
 }
 
 struct thread *thread_get_current_thread(void)
 {
+	struct thread *t;
+	int state;
+
 	if(cur_thread == NULL)
 		return 0;
-	return CURR_THREAD;
+	state = int_disable_interrupts();
+	t = CURR_THREAD;
+	int_restore_interrupts(state);
+	return t;
 }
 
 struct thread *thread_get_thread_struct(thread_id id)
@@ -1528,7 +1559,7 @@ proc_id proc_get_kernel_proc_id(void)
 
 proc_id proc_get_current_proc_id(void)
 {
-	return CURR_THREAD->proc->id;
+	return thread_get_current_thread()->proc->id;
 }
 
 static struct proc *create_proc_struct(const char *name, bool kernel)
@@ -1572,16 +1603,24 @@ error:
 	return NULL;
 }
 
+static void delete_proc_struct(struct proc *p)
+{
+	if(p->proc_creation_sem >= 0)
+		sem_delete(p->proc_creation_sem);
+	kfree(p->name);
+	kfree(p);
+}
 
 static int get_arguments_data_size(char **args,int argc)
 {
 	int cnt;
 	int tot_size = 0;
 
-	for(cnt = 0;cnt < argc;cnt++) tot_size += strlen(args[cnt]) + 1;
-	tot_size += (argc + 1)*sizeof(char *);
+	for(cnt = 0; cnt < argc; cnt++)
+		tot_size += strlen(args[cnt]) + 1;
+	tot_size += (argc + 1) * sizeof(char *);
 
-	return tot_size+sizeof(struct uspace_prog_args_t);
+	return tot_size + sizeof(struct uspace_prog_args_t);
 }
 
 static int proc_create_proc2(void *args)
@@ -1693,41 +1732,38 @@ proc_id proc_create_proc(const char *path, const char *name, char **args, int ar
 	// copy the args over
 	pargs = kmalloc(sizeof(struct proc_arg));
 	if(pargs == NULL){
-		//XXX clean up proc
-		return ERR_NO_MEMORY;
+		err = ERR_NO_MEMORY;
+		goto err1;
 	}
 	pargs->path = kstrdup(path);
 	if(pargs->path == NULL){
-		//XXX clean up proc
-		kfree(pargs);
-		return ERR_NO_MEMORY;
+		err = ERR_NO_MEMORY;
+		goto err2;
 	}
 	pargs->argc = argc;
 	pargs->args = args;
 
-	// create a kernel thread, but under the context of the new process
-	tid = thread_create_kernel_thread_etc(name, proc_create_proc2, pargs, p);
-	if(tid < 0) {
-		// XXX clean up proc
-		return tid;
-	}
-
 	// create a new ioctx for this process
 	p->ioctx = vfs_new_ioctx(thread_get_current_thread()->proc->ioctx);
 	if(!p->ioctx) {
-		// XXX clean up proc
-		panic("proc_create_proc: could not create new ioctx\n");
-		return ERR_NO_MEMORY;
+		err = ERR_NO_MEMORY;
+		goto err3;
 	}
 
 	// create an address space for this process
 	p->aspace_id = vm_create_aspace(p->name, USER_BASE, USER_SIZE, false);
 	if(p->aspace_id < 0) {
-		// XXX clean up proc
-		panic("proc_create_proc: could not create user address space\n");
-		return p->aspace_id;
+		err = p->aspace_id;
+		goto err4;
 	}
 	p->aspace = vm_get_aspace_from_id(p->aspace_id);
+
+	// create a kernel thread, but under the context of the new process
+	tid = thread_create_kernel_thread_etc(name, proc_create_proc2, pargs, p);
+	if(tid < 0) {
+		err = tid;
+		goto err5;
+	}
 
 	thread_resume_thread(tid);
 
@@ -1739,6 +1775,26 @@ proc_id proc_create_proc(const char *path, const char *name, char **args, int ar
 
 	// this will either contain the process id, or an error code
 	return sem_retcode;
+
+err5:
+	vm_put_aspace(p->aspace);
+	vm_delete_aspace(p->aspace_id);
+err4:
+	vfs_free_ioctx(p->ioctx);
+err3:
+	kfree(pargs->path);
+err2:
+	kfree(pargs);
+err1:
+	// remove the proc structure from the proc hash table and delete the proc structure
+	state = int_disable_interrupts();
+	GRAB_PROC_LOCK();
+	hash_remove(proc_hash, p);
+	RELEASE_PROC_LOCK();
+	int_restore_interrupts(state);
+	delete_proc_struct(p);
+err:
+	return err;
 }
 
 proc_id user_proc_create_proc(const char *upath, const char *uname, char **args, int argc, int priority)
@@ -1842,27 +1898,6 @@ int proc_kill_proc(proc_id id)
 	// just kill the main thread in the process. The cleanup code there will
 	// take care of the process
 	return thread_kill_thread(tid);
-#if 0
-	// now suspend all of the threads in this process. It's safe to walk this process's
-	// thread list without the lock held because the state of this process is now DEATH
-	// so all of the operations that involve changing the thread list are blocked
-	// also, it's ok to 'suspend' this thread, if we belong to this process, since we're
-	// in the kernel now, we won't be suspended until we leave the kernel. By then,
-	// we will have passed the kill signal to this thread.
-	for(t = p->thread_list; t; t = t->proc_next) {
-		thread_suspend_thread(t->id);
-	}
-
-	// XXX cycle through the list of threads again, killing each thread.
-	// Note: this wont kill the current thread, if it's one of them, since we're in the
-	// kernel.
-	// If we actually kill the last thread and not just deliver a signal to it, remove
-	// the process along with it, otherwise the last thread that belongs to the process
-	// will clean it up when it dies.
-
-	// XXX not finished
-#endif
-	return retval;
 }
 
 // sets the pending signal flag on a thread and possibly does some work to wake it up, etc.
@@ -1920,13 +1955,14 @@ static void _check_for_thread_sigs(struct thread *t, int state)
 void thread_atkernel_entry(void)
 {
 	int state;
-	struct thread *t = CURR_THREAD;
+	struct thread *t;
 
 //	dprintf("thread_atkernel_entry: entry thread 0x%x\n", t->id);
 
 	state = int_disable_interrupts();
 	GRAB_THREAD_LOCK();
 
+	t = CURR_THREAD;
 	t->in_kernel = true;
 
 	_check_for_thread_sigs(t, state);
@@ -1939,16 +1975,18 @@ void thread_atkernel_entry(void)
 void thread_atkernel_exit(void)
 {
 	int state;
-	struct thread *t = CURR_THREAD;
+	struct thread *t;
 
 //	dprintf("thread_atkernel_exit: entry\n");
 
 	state = int_disable_interrupts();
 	GRAB_THREAD_LOCK();
 
-	t->in_kernel = false;
+	t = CURR_THREAD;
 
 	_check_for_thread_sigs(t, state);
+
+	t->in_kernel = false;
 
 	RELEASE_THREAD_LOCK();
 	int_restore_interrupts(state);
