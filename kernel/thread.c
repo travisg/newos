@@ -570,8 +570,13 @@ void thread_start_threading()
 {
 	int state;
 	
+	// XXX may not be the best place for this
+	// invalidate all of the other processors' TLB caches
+	smp_send_broadcast_ici(SMP_MSG_GLOBAL_INVL_PAGE, 0, 0, 0, NULL, SMP_MSG_FLAG_SYNC);
+	arch_cpu_global_TLB_invalidate();
+	
 	// start the other processors
-	smp_send_broadcast_ici(SMP_MSG_RESCHEDULE, 0, NULL, SMP_MSG_FLAG_ASYNC);
+	smp_send_broadcast_ici(SMP_MSG_RESCHEDULE, 0, 0, 0, NULL, SMP_MSG_FLAG_ASYNC);
 
 	state = int_disable_interrupts();
 	GRAB_THREAD_LOCK();

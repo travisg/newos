@@ -403,6 +403,11 @@ int vm_delete_region(vm_address_space *aspace, vm_region *region)
 	
 	vm_cache_release_ref(region->cache_ref);
 
+	(*aspace->translation_map.ops->lock)(&aspace->translation_map);
+	(*aspace->translation_map.ops->unmap)(&aspace->translation_map, region->base,
+		region->base + (region->size - 1));
+	(*aspace->translation_map.ops->unlock)(&aspace->translation_map);
+
 	if(region->name)
 		kfree(region->name);
 	kfree(region);

@@ -20,7 +20,9 @@
 struct smp_msg {
 	struct smp_msg *next;
 	int            message;
-	unsigned int   data;
+	unsigned long   data;
+	unsigned long   data2;
+	unsigned long   data3;
 	void           *data_ptr;
 	int            flags;
 	int            ref_count;
@@ -154,9 +156,14 @@ int smp_intercpu_int_handler()
 
 //	dprintf("  message = %d\n", msg->message);
 	switch(msg->message) {
-		case SMP_MSG_INVL_PAGE:
-			// XXX fix
-//			arch_pmap_invl_page(msg->data);
+		case SMP_MSG_INVL_PAGE_RANGE:
+			arch_cpu_invalidate_TLB_range((addr)msg->data, (addr)msg->data2); 
+			break;
+		case SMP_MSG_INVL_PAGE_LIST:
+			arch_cpu_invalidate_TLB_list((addr *)msg->data, (int)msg->data2);
+			break;
+		case SMP_MSG_GLOBAL_INVL_PAGE:
+			arch_cpu_global_TLB_invalidate();
 			break;
 		case SMP_MSG_RESCHEDULE:
 			retval = INT_RESCHEDULE;
@@ -245,7 +252,7 @@ int smp_intercpu_int_handler()
 	return retval;
 }
 
-void smp_send_ici(int target_cpu, int message, unsigned int data, void *data_ptr, int flags)
+void smp_send_ici(int target_cpu, int message, unsigned long data, unsigned long data2, unsigned long data3, void *data_ptr, int flags)
 {
 	struct smp_msg *msg;
 
@@ -261,6 +268,8 @@ void smp_send_ici(int target_cpu, int message, unsigned int data, void *data_ptr
 		// set up the message
 		msg->message = message;
 		msg->data = data;
+		msg->data = data2;
+		msg->data = data3;
 		msg->data_ptr = data_ptr;
 		msg->ref_count = 1;
 		msg->flags = flags;
@@ -289,7 +298,7 @@ void smp_send_ici(int target_cpu, int message, unsigned int data, void *data_ptr
 	}	
 }
 
-void smp_send_broadcast_ici(int message, unsigned int data, void *data_ptr, int flags)
+void smp_send_broadcast_ici(int message, unsigned long data, unsigned long data2, unsigned long data3, void *data_ptr, int flags)
 {
 	struct smp_msg *msg;
 	
@@ -301,6 +310,8 @@ void smp_send_broadcast_ici(int message, unsigned int data, void *data_ptr, int 
 
 		msg->message = message;
 		msg->data = data;
+		msg->data2 = data2;
+		msg->data3 = data3;
 		msg->data_ptr = data_ptr;
 		msg->ref_count = smp_num_cpus - 1;
 		msg->flags = flags;

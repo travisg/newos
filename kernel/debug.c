@@ -222,7 +222,7 @@ int panic(const char *fmt, ...)
 
 			// XXX need to flush current smp mailbox to make sure this goes
 			// through. Otherwise it'll hang
-			smp_send_broadcast_ici(SMP_MSG_CPU_HALT, 0, NULL, SMP_MSG_FLAG_SYNC);
+			smp_send_broadcast_ici(SMP_MSG_CPU_HALT, 0, 0, 0, NULL, SMP_MSG_FLAG_SYNC);
 		}
 		
 		kernel_debugger();

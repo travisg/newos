@@ -41,10 +41,14 @@ static ptentry *iospace_pgtables = NULL;
 mutex iospace_mutex;
 sem_id iospace_full_sem;
 
+#define PAGE_INVALIDATE_CACHE_SIZE 64
+
 // vm_translation object stuff
 typedef struct vm_translation_map_arch_info_struct {
 	pdentry *pgdir_virt;
 	pdentry *pgdir_phys;
+	int num_invalidate_pages;
+	addr pages_to_invalidate[PAGE_INVALIDATE_CACHE_SIZE];
 } vm_translation_map_arch_info;
 
 static ptentry *page_hole = NULL;
@@ -69,11 +73,6 @@ static int tmap_list_lock;
 #define NUM_KERNEL_PGDIR_ENTS   (VADDR_TO_PDENT(KERNEL_SIZE))
 
 static int vm_translation_map_quick_query(addr va, addr *out_physical);
-
-static void invl_page(addr vaddr)
-{
-	invalidate_TLB(vaddr);
-}
 
 static void init_pdentry(pdentry *e)
 {
@@ -103,13 +102,33 @@ static void _update_all_pgdirs(int index, pdentry e)
 
 static int lock_tmap(vm_translation_map *map)
 {
-	recursive_lock_lock(&map->lock);
+//	dprintf("lock_tmap: map 0x%x\n", map);
+	if(recursive_lock_lock(&map->lock) == true) {
+		// we were the first one to grab the lock
+//		dprintf("clearing invalidated page count\n");
+		map->arch_data->num_invalidate_pages = 0;
+	}
+	
 	return 0;
 }
 
 static int unlock_tmap(vm_translation_map *map)
 {
-	recursive_lock_unlock(&map->lock);
+//	dprintf("unlock_tmap: map 0x%x\n", map);
+	if(recursive_lock_unlock(&map->lock) == true) {
+		// we were the last one to release the lock
+		if(map->arch_data->num_invalidate_pages > PAGE_INVALIDATE_CACHE_SIZE) {
+			// invalidate all pages
+//			dprintf("unlock_tmap: %d pages to invalidate, doing global invalidation\n", map->arch_data->num_invalidate_pages);
+			arch_cpu_global_TLB_invalidate();
+			smp_send_broadcast_ici(SMP_MSG_GLOBAL_INVL_PAGE, 0, 0, 0, NULL, SMP_MSG_FLAG_SYNC);
+		} else {
+//			dprintf("unlock_tmap: %d pages to invalidate, doing local invalidation\n", map->arch_data->num_invalidate_pages);
+			arch_cpu_invalidate_TLB_list(map->arch_data->pages_to_invalidate, map->arch_data->num_invalidate_pages);
+			smp_send_broadcast_ici(SMP_MSG_INVL_PAGE_LIST, (unsigned long)map->arch_data->pages_to_invalidate,
+				map->arch_data->num_invalidate_pages, 0, NULL, SMP_MSG_FLAG_SYNC);
+		}
+	}
 	return 0;
 }
 
@@ -227,8 +246,10 @@ static int map_tmap(vm_translation_map *map, addr va, addr pa, unsigned int attr
 
 	vm_put_physical_page((addr)pt);
 
-	invl_page(va);
-	smp_send_broadcast_ici(SMP_MSG_INVL_PAGE, va, NULL, SMP_MSG_FLAG_ASYNC);
+	if(map->arch_data->num_invalidate_pages < PAGE_INVALIDATE_CACHE_SIZE) {
+		map->arch_data->pages_to_invalidate[map->arch_data->num_invalidate_pages] = va;
+	}
+	map->arch_data->num_invalidate_pages++;
 	
 	map->map_count++;
 
@@ -265,9 +286,10 @@ restart:
 		pt[index].present = 0;
 		map->map_count--;
 
-		// XXX should optimize this stuff
-		invl_page(start);
-		smp_send_broadcast_ici(SMP_MSG_INVL_PAGE, start, NULL, SMP_MSG_FLAG_ASYNC);
+		if(map->arch_data->num_invalidate_pages < PAGE_INVALIDATE_CACHE_SIZE) {
+			map->arch_data->pages_to_invalidate[map->arch_data->num_invalidate_pages] = start;
+		}
+		map->arch_data->num_invalidate_pages++;
 
 		if(start >= end)
 			break;
@@ -340,11 +362,11 @@ static int map_iospace_chunk(addr va, addr pa)
 		pt[i].supervisor = 0;
 		pt[i].rw = 1;
 		pt[i].present = 1;
-
-		// XXX optimize this
-		invl_page(va);
-		smp_send_broadcast_ici(SMP_MSG_INVL_PAGE, va, NULL, SMP_MSG_FLAG_ASYNC);
 	}
+	
+	arch_cpu_invalidate_TLB_range(va, va + (IOSPACE_CHUNK_SIZE - PAGE_SIZE));
+	smp_send_broadcast_ici(SMP_MSG_INVL_PAGE_RANGE, va, va + (IOSPACE_CHUNK_SIZE - PAGE_SIZE), 0,
+		NULL, SMP_MSG_FLAG_SYNC);
 
 	return 0;
 }
@@ -467,6 +489,8 @@ int vm_translation_map_create(vm_translation_map *new_map, bool kernel)
 	new_map->arch_data = kmalloc(sizeof(vm_translation_map_arch_info));
 	if(new_map == NULL)
 		panic("vm_translation_map_create: error allocating translation map object!\n");
+
+	new_map->arch_data->num_invalidate_pages = 0;
 
 	if(!kernel) {
 		// user
@@ -659,7 +683,7 @@ int vm_translation_map_quick_map(kernel_args *ka, addr va, addr pa, unsigned int
 	pentry->rw = attributes & LOCK_RW;
 	pentry->present = 1;
 
-	invl_page(va);
+	arch_cpu_invalidate_TLB_range(va, va+1);
 
 	return 0;
 }

@@ -98,3 +98,18 @@ void i386_set_kstack(addr kstack)
 	tss[curr_cpu]->sp0 = kstack;
 //	dprintf("done\n");
 }
+
+void arch_cpu_invalidate_TLB_range(addr start, addr end)
+{
+	for(; start < end; start += PAGE_SIZE) {
+		invalidate_TLB(start);
+	}
+}
+
+void arch_cpu_invalidate_TLB_list(addr pages[], int num_pages)
+{
+	int i;
+	for(i=0; i<num_pages; i++) {
+		invalidate_TLB(pages[i]);
+	}
+}

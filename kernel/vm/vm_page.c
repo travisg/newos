@@ -223,7 +223,7 @@ static void clear_page(addr pa)
 {
 	addr va;
 
-	dprintf("clear_page: clearing page 0x%x\n", pa);
+//	dprintf("clear_page: clearing page 0x%x\n", pa);
 
 	vm_get_physical_page(pa, &va, PHYSICAL_PAGE_CAN_WAIT);
 	

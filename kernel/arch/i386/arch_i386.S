@@ -109,6 +109,13 @@ system_time:
 	popl	%ebx
 	ret
 
+// void arch_cpu_global_TLB_invalidate();
+.global arch_cpu_global_TLB_invalidate
+arch_cpu_global_TLB_invalidate:
+	movl	%cr3,%eax
+	movl	%eax,%cr3
+	ret
+
 // void i386_context_switch(unsigned int **old_esp, unsigned int *new_esp, unsigned int *new_pgdir);
 .global i386_context_switch
 i386_context_switch:

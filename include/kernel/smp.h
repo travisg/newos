@@ -9,7 +9,9 @@
 
 // intercpu messages
 enum {
-	SMP_MSG_INVL_PAGE = 0,
+	SMP_MSG_INVL_PAGE_RANGE = 0,
+	SMP_MSG_INVL_PAGE_LIST,
+	SMP_MSG_GLOBAL_INVL_PAGE,
 	SMP_MSG_RESCHEDULE,
 	SMP_MSG_CPU_HALT,
 	SMP_MSG_1,
@@ -24,8 +26,8 @@ int smp_init(kernel_args *ka);
 int smp_trap_non_boot_cpus(kernel_args *ka, int cpu);
 void smp_wake_up_all_non_boot_cpus();
 void smp_wait_for_ap_cpus(kernel_args *ka);
-void smp_send_ici(int target_cpu, int message, unsigned int data, void *data_ptr, int flags);
-void smp_send_broadcast_ici(int message, unsigned int data, void *data_ptr, int flags);
+void smp_send_ici(int target_cpu, int message, unsigned long data, unsigned long data2, unsigned long data3, void *data_ptr, int flags);
+void smp_send_broadcast_ici(int message, unsigned long data, unsigned long data2, unsigned long data3, void *data_ptr, int flags);
 int smp_enable_ici();
 int smp_disable_ici();
 
