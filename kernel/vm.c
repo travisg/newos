@@ -479,6 +479,7 @@ int vm_init_postsem(kernel_args *ka)
 	if(heap_sem < 0) {
 		panic("error creating heap semaphore\n");
 	}
+	return 0;
 }
 
 static char *raw_alloc(unsigned int size, int bin_index)
