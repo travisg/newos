@@ -6,7 +6,7 @@
 #define TTY_TRACE 0
 
 #define NUM_TTYS 8
-#define TTY_BUFFER_SIZE 512
+#define TTY_BUFFER_SIZE 4096
 
 #define AVAILABLE_READ(buf)  (((buf)->line_start + (buf)->len - (buf)->tail) % (buf)->len)
 #define AVAILABLE_WRITE(buf) (((buf)->tail + (buf)->len - (buf)->head - 1) % (buf)->len)

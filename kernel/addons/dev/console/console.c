@@ -154,8 +154,17 @@ static void del(struct console_desc *con)
 {
 	if (con->x > 0) {
 		con->x--;
-		con->funcs->put_glyph(con->x, con->y, ' ', con->attr);
-	}
+	} else if(con->y > 0) {
+        con->y--;
+        con->x = con->columns - 1;
+    } else {
+        //This doesn't work...
+        //scrdown(con);
+        //con->y--;
+        //con->x = con->columns - 1;
+        return;
+    }
+	con->funcs->put_glyph(con->x, con->y, ' ', con->attr);
 }
 
 typedef enum {

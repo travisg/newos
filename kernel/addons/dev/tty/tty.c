@@ -2,6 +2,7 @@
 ** Copyright 2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
+/* Modified by Justin Smith 2003-07-08 */
 #include <kernel/kernel.h>
 #include <kernel/console.h>
 #include <kernel/debug.h>
@@ -200,16 +201,72 @@ err:
 	return bytes_read;
 }
 
+static ssize_t check_lbuf_write(char c, struct line_buffer* lbuf, struct line_buffer* other_lbuf);
+static ssize_t check_lbuf_write(char c, struct line_buffer* lbuf, struct line_buffer* other_lbuf)
+{
+    TRACE(("TTY check_lbuf_write: %c\r\n", c));
+    if(AVAILABLE_WRITE(lbuf) > 0) {
+        if((lbuf->flags & TTY_FLAG_ECHO)) {
+            if(AVAILABLE_WRITE(other_lbuf) > 0) {
+                tty_insert_char(lbuf, c, c == '\n');
+                tty_insert_char(other_lbuf, c, true);
+                return 1;
+            }
+            return 0;
+        }
+
+        tty_insert_char(lbuf, c, c == '\n');
+        return 1;
+    }
+    return 0;
+}
+
+static ssize_t lbuf_write(char c, struct line_buffer* lbuf, struct line_buffer* other_lbuf, int thresh);
+static ssize_t lbuf_write(char c, struct line_buffer* lbuf, struct line_buffer* other_lbuf, int thresh)
+{
+    TRACE(("TTY write: %c\r\n", c));
+    ASSERT(thresh >= 0);
+    if(c == '\n') {
+        if(lbuf->flags & TTY_FLAG_NLCR) {
+            return      check_lbuf_write('\r', lbuf, other_lbuf)
+                    +   check_lbuf_write('\n', lbuf, other_lbuf);
+        }
+        return check_lbuf_write('\n', lbuf, other_lbuf);
+    }
+    if(c == '\r')
+    {
+        if(lbuf->flags & TTY_FLAG_CRNL) {
+            return      check_lbuf_write('\r', lbuf, other_lbuf)
+                    +   check_lbuf_write('\n', lbuf, other_lbuf);
+        }
+        return 0;
+    }
+    if(AVAILABLE_WRITE(lbuf) > thresh) {
+        if((lbuf->flags & TTY_FLAG_ECHO)) {
+            if(AVAILABLE_WRITE(other_lbuf) > thresh) {
+                tty_insert_char(lbuf, c, !(lbuf->flags & TTY_FLAG_CANON));
+                tty_insert_char(other_lbuf, c, true);
+                return 1;
+            }
+            return 0;
+        }
+
+        tty_insert_char(lbuf, c, !(lbuf->flags & TTY_FLAG_CANON));
+        return 1;
+    }
+    return 0;
+}
+
 ssize_t tty_write(tty_desc *tty, const void *buf, ssize_t len, int endpoint)
 {
 	struct line_buffer *lbuf;
 	struct line_buffer *other_lbuf;
-	int buf_pos = 0;
+	ssize_t buf_pos = 0;
 	ssize_t bytes_written = 0;
 	int err;
-	char c;
+    bool acquired_sem_other_lbuf = false;
 
-	if(len < 0)
+    if(len < 0)
 		return ERR_INVALID_ARGS;
 
 	if(len == 0)
@@ -217,15 +274,25 @@ ssize_t tty_write(tty_desc *tty, const void *buf, ssize_t len, int endpoint)
 
 	ASSERT(endpoint == ENDPOINT_MASTER_WRITE || endpoint == ENDPOINT_SLAVE_WRITE);
 	lbuf = &tty->buf[endpoint];
-	other_lbuf = &tty->buf[(endpoint == ENDPOINT_MASTER_WRITE) ? ENDPOINT_SLAVE_WRITE : ENDPOINT_MASTER_WRITE];
+    other_lbuf = &tty->buf[(endpoint == ENDPOINT_MASTER_WRITE) ? ENDPOINT_SLAVE_WRITE : ENDPOINT_MASTER_WRITE];
 
-restart:
-	// wait on space in the circular buffer
-	err = sem_acquire_etc(lbuf->write_sem, 1, SEM_FLAG_INTERRUPTABLE, 0, NULL);
-	if(err == ERR_SEM_INTERRUPTED)
-		return err;
+restart_loop:
 
-	mutex_lock(&tty->lock);
+    // wait on space in the circular buffer
+    err = sem_acquire_etc(lbuf->write_sem, 1, SEM_FLAG_INTERRUPTABLE, 0, NULL);
+    if(err == ERR_SEM_INTERRUPTED)
+        return err;
+
+    if(lbuf->flags & TTY_FLAG_ECHO) {
+        err = sem_acquire_etc(other_lbuf->write_sem, 1, SEM_FLAG_INTERRUPTABLE, 0, NULL);
+        acquired_sem_other_lbuf = true;
+        if(err == ERR_SEM_INTERRUPTED) {
+            sem_release(lbuf->write_sem, 1);
+            return err;
+        }
+    }
+
+    mutex_lock(&tty->lock);
 
 	// quick sanity check
 	ASSERT(lbuf->len > 0);
@@ -233,143 +300,64 @@ restart:
 	ASSERT(lbuf->tail < lbuf->len);
 	ASSERT(lbuf->line_start < lbuf->len);
 
-	if(AVAILABLE_WRITE(lbuf) == 0)
-		goto exit_loop;
-
-tty_write_special_state:
-	// process any pending state
-	while(lbuf->state != TTY_STATE_NORMAL) {
-		bool wrote_char = false;
-
-		TRACE(("tty_write: special state machine: tty %p, lbuf %p, state %d\n", tty, lbuf, lbuf->state));
-		TRACE(("\tlbuf %p, head %d, tail %d, line_start %d\n", lbuf, lbuf->head, lbuf->tail, lbuf->line_start));
-		switch(lbuf->state) {
-			case TTY_STATE_NORMAL:
-				// fall through and enter the regular write routine
-				break;
-			case TTY_STATE_WRITE_CR:
-				// stick it in the ring buffer
-				c = '\r';
-				tty_insert_char(lbuf, c, false);
-				wrote_char = true;
-
-				lbuf->state = TTY_STATE_WRITE_LF;
-				break;
-			case TTY_STATE_WRITE_LF:
-				// stick a LF in the ring buffer
-				c = '\n';
-				tty_insert_char(lbuf, c, true); // move the line ptr up, since we are done with the line
-				wrote_char = true;
-
-				lbuf->state = TTY_STATE_NORMAL;
-				break;
-			default:
-				panic("tty_write: unhandled tty state %d on tty %p\n", lbuf->state, tty);
-		}
-		if(wrote_char) {
-			if(lbuf->flags & TTY_FLAG_ECHO) {
-				if(AVAILABLE_WRITE(other_lbuf) == 0) {
-					// XXX deal with this case
-				}
-				tty_insert_char(other_lbuf, c, true);
-			}
-		}
-		if(AVAILABLE_WRITE(lbuf) == 0)
-			goto exit_loop;
-
-	}
-
 	while(buf_pos < len) {
-		bool wrote_char = false;
+	    char c;
 
-		TRACE(("tty_write: regular loop: tty %p, lbuf %p, buf_pos %d, len %d\n", tty, lbuf, buf_pos, len));
+        TRACE(("tty_write: regular loop: tty %p, lbuf %p, buf_pos %d, len %d\n", tty, lbuf, buf_pos, len));
 		TRACE(("\tlbuf %p, flags 0x%x, head %d, tail %d, line_start %d\n", lbuf, lbuf->flags, lbuf->head, lbuf->tail, lbuf->line_start));
-		if(AVAILABLE_WRITE(lbuf) == 0)
-			goto exit_loop;
+
 		// process this data one at a time
 		err = user_memcpy(&c, (char *)buf + buf_pos, sizeof(c));	// XXX make this more efficient
-		if(err < 0) {
-			sem_release(lbuf->write_sem, 1);
-			goto err;
-		}
+		if(err < 0)
+			goto exit_loop;
 		buf_pos++; // advance to next character
-		bytes_written++;
 
 		TRACE(("tty_write: char 0x%x\n", c));
 
 		if(lbuf->flags & TTY_FLAG_CANON) {
 			// do line editing
 			switch(c) {
-				case '\n': // end of line
-					if(lbuf->flags & TTY_FLAG_NLCR) {
-						lbuf->state = TTY_STATE_WRITE_CR;
-						goto tty_write_special_state;
-					}
-					// fall through and write it normally
-				default:
-					// stick it in the ring buffer
-					tty_insert_char(lbuf, c, false);
-					wrote_char = true;
-					break;
 				case 0x08: // backspace
 					// back the head pointer up one if it can
 					if(lbuf->head != lbuf->line_start) {
+                        bytes_written--;
 						DEC_HEAD(lbuf);
-						wrote_char = true;
+                        if(AVAILABLE_WRITE(other_lbuf) > 0 && lbuf->flags & TTY_FLAG_ECHO)
+                            tty_insert_char(other_lbuf, c, true);
 					}
 					break;
-				case '\r': // CR
-					if(lbuf->flags & TTY_FLAG_CRNL) {
-						lbuf->state = TTY_STATE_WRITE_CR;
-						goto tty_write_special_state;
-					}
-					// eat it otherwise
 				case 0:
 					// eat it
 					break;
+				default:
+					// stick it in the ring buffer
+                    bytes_written += lbuf_write(c, lbuf, other_lbuf, 2);
+
 			}
 		} else {
-			// no line editing
-			switch(c) {
-				case '\n': // end of line
-					if(lbuf->flags & TTY_FLAG_NLCR) {
-						lbuf->state = TTY_STATE_WRITE_CR;
-						goto tty_write_special_state;
-					}
-					break;
-				case '\r':
-					if(lbuf->flags & TTY_FLAG_CRNL) {
-						lbuf->state = TTY_STATE_WRITE_CR;
-						goto tty_write_special_state;
-					}
-					break;
-			}
-			tty_insert_char(lbuf, c, true);
-			wrote_char = true;
-		}
-		if(wrote_char) {
-			if(lbuf->flags & TTY_FLAG_ECHO) {
-				if(AVAILABLE_WRITE(other_lbuf) == 0) {
-					// XXX deal with this case
-				}
-				tty_insert_char(other_lbuf, c, true);
-			}
-		}
+            int bw = lbuf_write(c, lbuf, other_lbuf, 0);
+            // The carriage return can be safely ignored in TTY_FLAG_NLCR.
+            if(bw == 0 && c != '\r')
+            {
+                buf_pos--;
+                goto exit_loop;
+            }
+            else
+                bytes_written += bw;
+			break;
+
+        }
 	}
 
 exit_loop:
-	// is there more space available?
-	if(AVAILABLE_WRITE(lbuf) > 0)
-		sem_release(lbuf->write_sem, 1);
-
-	// did we process everything for the request?
-	if(buf_pos < len) {
-		mutex_unlock(&tty->lock);
-		goto restart;
-	}
-
-err:
 	mutex_unlock(&tty->lock);
+    if(acquired_sem_other_lbuf) {
+        sem_release(other_lbuf->write_sem, 1);
+    }
+    sem_release(lbuf->write_sem, 1);
+
+    if(buf_pos < len)
+        goto restart_loop;
 
 	return bytes_written;
 }
