@@ -476,11 +476,7 @@ int tcp_input(cbuf *buf, ifnet *i, ipv4_addr source_address, ipv4_addr target_ad
 		pheader.protocol = IP_PROT_TCP;
 		pheader.tcp_length = htons(length);
 
-		if(length % 2) {
-			// make sure the pad byte is zero
-			((uint8 *)header)[length] = 0;
-		}
-		checksum = cksum16_2(&pheader, sizeof(pheader), header, ROUNDUP(length, 2));
+		checksum = cksum16_2(&pheader, sizeof(pheader), header, length);
 		if(checksum != 0) {
 #if NET_CHATTY
 			dprintf("tcp_receive: packet failed checksum\n");
