@@ -128,8 +128,8 @@ static int do_if(int argc, const char *argv[], int curr_arg)
 		return usage(argv);
 	}
 
-	printf("do_if: op %d, interface_name '%s', if_addr 0x%x, mask_addr 0x%x, broadcast_addr 0x%x\n",
-		op, interface_name, if_addr, mask_addr, broadcast_addr);
+//	printf("do_if: op %d, interface_name '%s', if_addr 0x%x, mask_addr 0x%x, broadcast_addr 0x%x\n",
+//		op, interface_name, if_addr, mask_addr, broadcast_addr);
 
 	// fill out the control structure
 	memset(&control, 0, sizeof(control));
@@ -159,7 +159,11 @@ static int do_if(int argc, const char *argv[], int curr_arg)
 		err = sys_ioctl(fd, op, &control, sizeof(control));
 		sys_close(fd);
 
-		printf("do_if: ioctl returned %d\n", err);
+		if(err < 0) {
+			printf("error calling ioctl %d (%s)\n", err, strerror(err));
+		}
+
+//		printf("do_if: ioctl returned %d\n", err);
 		return err;
 	}
 }
@@ -226,8 +230,8 @@ static int do_route(int argc, const char *argv[], int curr_arg)
 		return usage(argv);
 	}
 
-	printf("do_route: op %d, net_addr 0x%x, mask_addr 0x%x, if_addr 0x%x, interface_name '%s'\n",
-		op, net_addr, mask_addr, if_addr, interface_name);
+//	printf("do_route: op %d, net_addr 0x%x, mask_addr 0x%x, if_addr 0x%x, interface_name '%s'\n",
+//		op, net_addr, mask_addr, if_addr, interface_name);
 
 	// fill out the control structure
 	memset(&control, 0, sizeof(control));
@@ -257,7 +261,11 @@ static int do_route(int argc, const char *argv[], int curr_arg)
 		err = sys_ioctl(fd, op, &control, sizeof(control));
 		sys_close(fd);
 
-		printf("do_if: ioctl returned %d\n", err);
+		if(err < 0) {
+			printf("error calling ioctl %d (%s)\n", err, strerror(err));
+		}
+
+//		printf("do_if: ioctl returned %d\n", err);
 		return err;
 	}
 
