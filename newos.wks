@@ -29,6 +29,8 @@ AddFile "arch_dev.mk" "/build/ossrc/newos/dev/arch/i386/arch_dev.mk"
 AddFile "console.c" "/build/ossrc/newos/dev/arch/i386/console/console.c"
 AddFile "keyboard.c" "/build/ossrc/newos/dev/arch/i386/keyboard/keyboard.c"
 AddFile "pci.c" "/build/ossrc/newos/dev/arch/i386/pci/pci.c"
+AddFile "ide.c" "/build/ossrc/newos/dev/arch/i386/ide/ide.c"
+AddFile "ide_raw.c" "/build/ossrc/newos/dev/arch/i386/ide/ide_raw.c"
 EndFileGroup "dev-x86"
 AddFileGroup "x86-boot" "/build/ossrc/newos/boot/i386" -nomake
 AddFile "config.ini" "/build/ossrc/newos/boot/i386/config.ini"
