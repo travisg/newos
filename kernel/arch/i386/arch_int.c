@@ -133,8 +133,8 @@ void i386_handle_trap(struct int_frame frame)
 		case 14: {
 			unsigned int cr2;
 		
-			asm volatile("movl %%cr2, %0" : "=g" (cr2));
-			ret = i386_page_fault(cr2, frame.error_code);
+			asm volatile("movl %%cr2, %0;" : "=g" (cr2));
+			ret = i386_page_fault(cr2, frame.eip);
 			break;
 		}
 		case 0x20: case 0x21: case 0x22: case 0x23: case 0x24: case 0x25: case 0x26: case 0x27:

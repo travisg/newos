@@ -64,7 +64,7 @@ int pmap_map_page(unsigned int paddr, unsigned int vaddr)
 		pgdir[vaddr / PAGE_SIZE / 1024] = (pgtable & ADDR_MASK) | DEFAULT_PAGE_FLAGS;
 
 		// zero it out in it's new mapping
-		memset((unsigned int *)((unsigned int)page_hole + vaddr / 1024), 0, PAGE_SIZE);
+		memset((unsigned int *)((unsigned int)page_hole + (vaddr / PAGE_SIZE / 1024) * PAGE_SIZE), 0, PAGE_SIZE);
 //		memset((unsigned int *)pgtable, 0, PAGE_SIZE);
 	}
 	// now, fill in the pentry

@@ -10,6 +10,7 @@ KERNEL_OBJS += \
 	$(KERNEL_ARCH_DIR)/arch_keyboard.o \
 	$(KERNEL_ARCH_DIR)/arch_pmap.o \
 	$(KERNEL_ARCH_DIR)/arch_smp.o \
+	$(KERNEL_ARCH_DIR)/arch_smp_trampoline.o \
 	$(KERNEL_ARCH_DIR)/arch_timer.o \
 	$(KERNEL_ARCH_DIR)/arch_thread.o \
 	$(KERNEL_ARCH_DIR)/arch_vm.o

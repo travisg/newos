@@ -5,144 +5,21 @@
 #include "console.h"
 #include "debug.h"
 #include "vm.h"
+#include "kernel.h"
+#include "printf.h"
+#include "string.h"
 
+#include "arch_cpu.h"
+#include "arch_vm.h"
 #include "arch_smp.h"
+#include "arch_smp_priv.h"
 
-#define SMP_MAX_CPUS 2
 static int num_cpus = 0;
 
-//#define MP_FLT_SIGNATURE   (('_' << 24) | ('P' << 16) | ('M' << 8) | ('_'))
-#define MP_FLT_SIGNATURE '_PM_'
-#define MP_CTH_SIGNATURE   (('P' << 24) | ('C' << 16) | ('M' << 8) | ('P'))
-
-#define APIC_DM_INIT       (5 << 8)
-#define APIC_DM_STARTUP    (6 << 8)
-#define APIC_LEVEL_TRIG    (1 << 14)
-#define APIC_ASSERT        (1 << 13)
-
-#define APIC_ENABLE        0x100
-#define APIC_FOCUS         (~(1 << 9))
-#define APIC_SIV           (0xff)
-
-#define APIC_ID            ((unsigned int *) ((unsigned int) apic + 0x020))
-#define APIC_VERSION       ((unsigned int *) ((unsigned int) apic + 0x030))
-#define APIC_TPRI          ((unsigned int *) ((unsigned int) apic + 0x080))
-#define APIC_EOI           ((unsigned int *) ((unsigned int) apic + 0x0b0))
-#define APIC_SIVR          ((unsigned int *) ((unsigned int) apic + 0x0f0))
-#define APIC_ESR           ((unsigned int *) ((unsigned int) apic + 0x280))
-#define APIC_ICR1          ((unsigned int *) ((unsigned int) apic + 0x300))
-#define APIC_ICR2          ((unsigned int *) ((unsigned int) apic + 0x310))
-#define APIC_LVTT          ((unsigned int *) ((unsigned int) apic + 0x320))
-#define APIC_LINT0         ((unsigned int *) ((unsigned int) apic + 0x350))
-#define APIC_LVT3          ((unsigned int *) ((unsigned int) apic + 0x370))
-#define APIC_ICRT          ((unsigned int *) ((unsigned int) apic + 0x380))
-#define APIC_CCRT          ((unsigned int *) ((unsigned int) apic + 0x390))
-#define APIC_TDCR          ((unsigned int *) ((unsigned int) apic + 0x3e0))
-
-#define APIC_TDCR_2        0x00
-#define APIC_TDCR_4        0x01
-#define APIC_TDCR_8        0x02
-#define APIC_TDCR_16       0x03
-#define APIC_TDCR_32       0x08
-#define APIC_TDCR_64       0x09
-#define APIC_TDCR_128      0x0a
-#define APIC_TDCR_1        0x0b
-
-#define APIC_LVTT_VECTOR   0x000000ff
-#define APIC_LVTT_DS       0x00001000
-#define APIC_LVTT_M        0x00010000
-#define APIC_LVTT_TM       0x00020000
-
-#define APIC_LVT_DM        0x00000700
-#define APIC_LVT_IIPP      0x00002000
-#define APIC_LVT_TM        0x00008000
-#define APIC_LVT_M         0x00010000
-#define APIC_LVT_OS        0x00020000
-
-#define APIC_TPR_PRIO      0x000000ff
-#define APIC_TPR_INT       0x000000f0
-#define APIC_TPR_SUB       0x0000000f
-
-#define APIC_SVR_SWEN      0x00000100
-#define APIC_SVR_FOCUS     0x00000200
-
-#define APIC_DEST_STARTUP  0x00600
-
-#define LOPRIO_LEVEL       0x00000010
-
-#define APIC_DEST_FIELD          (0)
-#define APIC_DEST_SELF           (1 << 18)
-#define APIC_DEST_ALL            (2 << 18)
-#define APIC_DEST_ALL_BUT_SELF   (3 << 18)
-
-#define IOAPIC_ID          0x0
-#define IOAPIC_VERSION     0x1
-#define IOAPIC_ARB         0x2
-#define IOAPIC_REDIR_TABLE 0x10
-
-#define IPI_CACHE_FLUSH    0x40
-#define IPI_INV_TLB        0x41
-#define IPI_INV_PTE        0x42
-#define IPI_INV_RESCHED    0x43
-#define IPI_STOP           0x44
-
-#define MP_EXT_PE          0
-#define MP_EXT_BUS         1
-#define MP_EXT_IO_APIC     2
-#define MP_EXT_IO_INT      3
-#define MP_EXT_LOCAL_INT   4
-
-#define MP_EXT_PE_LEN          20
-#define MP_EXT_BUS_LEN         8
-#define MP_EXT_IO_APIC_LEN     8
-#define MP_EXT_IO_INT_LEN      8
-#define MP_EXT_LOCAL_INT_LEN   8
-
-struct mp_config_table {
-	unsigned int signature;       /* "PCMP" */
-	unsigned short table_len;     /* length of this structure */
-	unsigned char mp_rev;         /* spec supported, 1 for 1.1 or 4 for 1.4 */
-	unsigned char checksum;       /* checksum, all bytes add up to zero */
-	char oem[8];                  /* oem identification, not null-terminated */
-	char product[12];             /* product name, not null-terminated */
-	void *oem_table_ptr;          /* addr of oem-defined table, zero if none */
-	unsigned short oem_len;       /* length of oem table */
-	unsigned short num_entries;   /* number of entries in base table */
-	unsigned int apic;            /* address of apic */
-	unsigned short ext_len;       /* length of extended section */
-	unsigned char ext_checksum;   /* checksum of extended table entries */
-};
-
-struct mp_flt_struct {
-	unsigned int signature;       /* "_MP_" */
-	struct mp_config_table *mpc;  /* address of mp configuration table */
-	unsigned char mpc_len;        /* length of this structure in 16-byte units */
-	unsigned char mp_rev;         /* spec supported, 1 for 1.1 or 4 for 1.4 */
-	unsigned char checksum;       /* checksum, all bytes add up to zero */
-	unsigned char mp_feature_1;   /* mp system configuration type if no mpc */
-	unsigned char mp_feature_2;   /* imcrp */
-	unsigned char mp_feature_3, mp_feature_4, mp_feature_5; /* reserved */
-};
-
-struct mp_ext_pe
-{
-	unsigned char type;
-	unsigned char apic_id;
-	unsigned char apic_version;
-	unsigned char cpu_flags;
-	unsigned int signature;       /* stepping, model, family, each four bits */
-	unsigned int feature_flags;
-	unsigned int res1, res2;
-};
-
-struct mp_ext_ioapic
-{
-	unsigned char type;
-	unsigned char ioapic_id;
-	unsigned char ioapic_version;
-	unsigned char ioapic_flags;
-	unsigned int *addr;
-};
+static const unsigned int temp_gdt[] = {
+								0x00000000, 0x00000000,
+								0x0000ffff, 0x00cf9a00,
+								0x0000ffff, 0x00cf9300 };
 
 static unsigned int mp_mem_phys = 0;
 static unsigned int mp_mem_virt = 0;
@@ -154,6 +31,9 @@ static unsigned int cpu_os_id[SMP_MAX_CPUS] = { 0, 0};
 static unsigned int cpu_apic_version[SMP_MAX_CPUS] = { 0, 0};
 static unsigned int *ioapic_phys = NULL; 
 static unsigned int *ioapic = NULL; 
+
+void smp_trampoline();
+void smp_trampoline_end();
 
 unsigned int apic_read(unsigned int *addr)
 {
@@ -219,12 +99,11 @@ static void smp_do_config (void)
 		ptr[20]);
 	dprintf("smp: base table has %d entries, extended section %d bytes\n",
 		mpc->num_entries, mpc->ext_len);
-	apic_phys = (unsigned int *)mp_phys_to_virt(mpc->apic);
+	apic_phys = (void *)mpc->apic;
 
 	ptr = (char *) ((unsigned int) mpc + sizeof (struct mp_config_table));
-	for (i = 0; i < mpc->num_entries; i++)
-		switch (*ptr)
-		{
+	for (i = 0; i < mpc->num_entries; i++) {
+		switch (*ptr) {
 			case MP_EXT_PE:
 				pe = (struct mp_ext_pe *) ptr;
 				cpu_apic_id[num_cpus] = pe->apic_id;
@@ -253,15 +132,10 @@ static void smp_do_config (void)
 				ptr += 8;
 				break;
 		}
-
+	}
 	dprintf("smp: apic @ 0x%x, i/o apic @ 0x%x, total %d processors detected\n",
 		(unsigned int)apic_phys, (unsigned int)ioapic_phys, num_cpus);
 }
-
-int arch_smp_init(struct kernel_args *ka)
-{
-	unsigned int ptr;
-	dprintf("arch_smp_init: entry\n");
 
 #define MP_SPOT1_START 0x9fc00
 #define MP_SPOT1_END   0xa0000
@@ -270,16 +144,20 @@ int arch_smp_init(struct kernel_args *ka)
 #define MP_SPOT2_END   0x100000
 #define MP_SPOT2_LEN   (MP_SPOT2_END-MP_SPOT2_START)
 
+static int arch_smp_find_mp_config()
+{
+	unsigned int ptr;
+
 /*
 	vm_map_physical_memory(vm_get_kernel_aspace(), "smptemp1", &ptr, AREA_ANY_ADDRESS,
 		MP_SPOT1_LEN, 0, MP_SPOT1_START);
 	dprintf("ptr = 0x%x\n", ptr);
 	smp_probe(*ptr, *ptr + MP_SPOT1_LEN);
 */
-	vm_map_physical_memory(vm_get_kernel_aspace(), "smp_mp", &ptr, AREA_ANY_ADDRESS,
+	vm_map_physical_memory(vm_get_kernel_aspace(), "smp_mp", (void **)&ptr, AREA_ANY_ADDRESS,
 		MP_SPOT2_LEN, 0, MP_SPOT2_START);
 	dprintf("ptr = 0x%x\n", ptr);
-	mp_flt_ptr = smp_probe(ptr, ptr + MP_SPOT2_LEN);
+	mp_flt_ptr = (struct mp_flt_struct *)smp_probe(ptr, ptr + MP_SPOT2_LEN);
 	if(mp_flt_ptr != NULL) {
 		mp_mem_phys = MP_SPOT2_START;
 		mp_mem_virt = ptr;
@@ -302,45 +180,208 @@ int arch_smp_init(struct kernel_args *ka)
 		} else {
 			dprintf("not default config\n");
 			smp_do_config();
-		}		
+		}
+		return num_cpus;
 	} else {
-		num_cpus = 0;
+		num_cpus = 1;
+		return 1;
 	}
+}
 
-	dprintf("post config:\n");
-	dprintf("num_cpus = 0x%p\n", num_cpus);
-	dprintf("apic_phys = 0x%p\n", apic_phys);
-	dprintf("ioapic_phys = 0x%p\n", ioapic_phys);
+static int arch_smp_cpu_ready()
+{
+	dprintf("arch_smp_cpu_ready: entry cpu %d\n", arch_smp_get_current_cpu());
 
-	// map in the apic & ioapic
-	vm_map_physical_memory(vm_get_kernel_aspace(), "local_apic", &apic, AREA_ANY_ADDRESS,
-		4096, 0, (unsigned int)apic_phys);
-	vm_map_physical_memory(vm_get_kernel_aspace(), "ioapic", &ioapic, AREA_ANY_ADDRESS,
-		4096, 0, (unsigned int)ioapic_phys);
+	for(;;);
 
-	// unmap the smp config stuff
-	// vm_free_area(...);
+	return 0;
+}
 
-	dprintf("apic = 0x%p\n", apic);
-	dprintf("ioapic = 0x%p\n", ioapic);
+static unsigned int arch_smp_get_cr3()
+{
+	unsigned int cr3 = 0;
+	
+	asm volatile("movl %%cr3,%0" : "=g" (cr3));
+	return cr3;
+}
 
-	// set up the apic
-	dprintf("setting up the apic...");
-	{
+static int arch_smp_boot_all_cpus()
+{
+	unsigned int trampoline_code_phys;
+	unsigned int trampoline_code_virt;
+	unsigned int trampoline_stack_phys;
+	unsigned int trampoline_stack_virt;
+	int i;
+	
+	// allocate a stack and a code area for the smp trampoline
+	// (these have to be < 1M physical)
+	trampoline_code_phys = 0xa0000 - PAGE_SIZE; // 640kB - 4096
+	vm_map_physical_memory(vm_get_kernel_aspace(), "trampoline code",
+		(void **)&trampoline_code_virt, AREA_ANY_ADDRESS, PAGE_SIZE, 0,
+		trampoline_code_phys);
+	dprintf("trampoline code page at vaddr 0x%p\n", trampoline_code_virt);
+
+	trampoline_stack_phys = 0xa0000 - 2 * PAGE_SIZE; // 640kB - 8192
+	vm_map_physical_memory(vm_get_kernel_aspace(), "trampoline stack",
+		(void **)&trampoline_stack_virt, AREA_ANY_ADDRESS, PAGE_SIZE, 0,
+		trampoline_stack_phys);
+	dprintf("trampoline stack page at vaddr 0x%p\n", trampoline_stack_virt);
+
+	// hack to map the code & stack identity
+	pmap_map_page(trampoline_stack_phys, trampoline_stack_phys);
+	pmap_map_page(trampoline_code_phys, trampoline_code_phys);
+
+
+	// copy the trampoline code over
+	memcpy((char *)trampoline_code_virt, &smp_trampoline,
+		(unsigned int)&smp_trampoline_end - (unsigned int)&smp_trampoline);
+	
+	// boot the cpus
+	for(i = 1; i < num_cpus; i++) {
+		unsigned int *final_stack;
+		unsigned int *tramp_stack_ptr;
 		unsigned int config;
-		config = (apic_read((unsigned int *) APIC_SIVR) & APIC_FOCUS) | APIC_ENABLE |
-			0xff; /* set spurious interrupt vector to 0xff */
-		apic_write(APIC_SIVR, config);
-		config = apic_read(APIC_TPRI) & 0xffffff00; /* accept all interrupts */
-		apic_write(APIC_TPRI, config);
+		int num_startups;
+		int j;
+		char temp[64];
+		
+		// create a final stack the trampoline code will put the ap processor on
+		sprintf(temp, "idle_thread%d_kstack", i);
+		vm_create_area(vm_get_kernel_aspace(), temp, (void **)&final_stack,
+			AREA_ANY_ADDRESS, KSTACK_SIZE, 0);
+			
+		// set this stack up
+		memset(final_stack, 0, KSTACK_SIZE);
+		*(final_stack + (KSTACK_SIZE / sizeof(unsigned int)) - 1) =
+			(unsigned int)&arch_smp_cpu_ready;
+		
+		// set the trampoline stack up
+		tramp_stack_ptr = (unsigned int *)(trampoline_stack_virt + PAGE_SIZE - 4);
+		// final location of the stack
+		*tramp_stack_ptr = ((unsigned int)final_stack) + KSTACK_SIZE - sizeof(unsigned int);
+		tramp_stack_ptr--;
+		// page dir
+		*tramp_stack_ptr = arch_smp_get_cr3();
+		tramp_stack_ptr--;
+		
+		// put a gdt descriptor at the bottom of the stack
+		*((unsigned short *)trampoline_stack_virt) = 0x18-1; // LIMIT
+		*((unsigned int *)(trampoline_stack_virt + 2)) = trampoline_stack_phys + 8;
+		// put the gdt at the bottom
+		memcpy(&((unsigned int *)trampoline_stack_virt)[2], temp_gdt, sizeof(temp_gdt));
+
+		/* clear apic errors */
+		if(cpu_apic_version[i] & 0xf0) {
+			apic_write(APIC_ESR, 0);
+			apic_read(APIC_ESR);
+		}
+
+		/* send (aka assert) INIT IPI */
+		config = (apic_read(APIC_ICR2) & 0x00ffffff) | (cpu_apic_id[i] << 24);
+		apic_write(APIC_ICR2, config); /* set target pe */
+//		config = (apic_read(APIC_ICR1) & 0xfff0f800) | APIC_DM_INIT | 
+//		config = (apic_read(APIC_ICR1) & 0xfff33000) | APIC_DM_INIT | 
+//			APIC_LEVEL_TRIG | APIC_ASSERT;
+		config = (apic_read(APIC_ICR1) & 0xfff00000) | 0x0000c500;
+		apic_write(APIC_ICR1, config);
+
+		// wait for pending to end
+		while((apic_read(APIC_ICR1) & 0x00001000) == 0x00001000);
+
+		/* deassert INIT */
+		config = (apic_read(APIC_ICR2) & 0x00ffffff) | (cpu_apic_id[i] << 24);
+		apic_write(APIC_ICR2, config);
+//		config = (apic_read(APIC_ICR1) & ~0xcdfff) | APIC_LEVEL_TRIG | APIC_DM_INIT;
+		config = (apic_read(APIC_ICR1) & 0xfff00000) | 0x00008500;
+
+		// wait for pending to end
+		while((apic_read(APIC_ICR1) & 0x00001000) == 0x00001000)
+			dprintf("0x%x\n", apic_read(APIC_ICR1));
+
+		/* wait 10ms */
+//		u_sleep (10000);
+		for(j=0; j<100000000; j++)
+			j=j;
+		
+		/* is this a local apic or an 82489dx ? */
+		num_startups = (cpu_apic_version[i] & 0xf0) ? 2 : 0;
+		for (j = 0; j < num_startups; j++) {
+			int j1;
+			
+			/* it's a local apic, so send STARTUP IPIs */
+			dprintf("smp: sending STARTUP\n");
+			apic_write(APIC_ESR, 0);
+
+			/* set target pe */
+			config = (apic_read(APIC_ICR2) & 0xf0ffffff) | (cpu_apic_id[i] << 24);
+			apic_write(APIC_ICR2, config);
+
+			/* send the IPI */
+			config = (apic_read(APIC_ICR1) & 0xfff0f800) | APIC_DM_STARTUP |
+				(0x9f000 >> 12);
+			apic_write(APIC_ICR1, config);
+
+			/* wait */
+			for(j1=0; j1<100000000; j1++)
+				j1=j1;
+//			u_sleep (200);
+			while((apic_read(APIC_ICR1)& 0x00001000) == 0x00001000);
+		}
+	} 
+
+	pmap_unmap_page(trampoline_stack_phys);
+	pmap_unmap_page(trampoline_code_phys);
+
+	return 0;
+}
+
+int arch_smp_init(struct kernel_args *ka)
+{
+	dprintf("arch_smp_init: entry\n");
+
+	if(arch_smp_find_mp_config() > 1) {
+		dprintf("arch_smp_init: had found > 1 cpus\n");
+		dprintf("post config:\n");
+		dprintf("num_cpus = 0x%p\n", num_cpus);
+		dprintf("apic_phys = 0x%p\n", apic_phys);
+		dprintf("ioapic_phys = 0x%p\n", ioapic_phys);
 	
-		apic_read(APIC_SIVR);
-		apic_write(APIC_EOI, 0);
+		// map in the apic & ioapic
+		vm_map_physical_memory(vm_get_kernel_aspace(), "local_apic", (void **)&apic, AREA_ANY_ADDRESS,
+			4096, 0, (unsigned int)apic_phys);
+		vm_map_physical_memory(vm_get_kernel_aspace(), "ioapic", (void **)&ioapic, AREA_ANY_ADDRESS,
+			4096, 0, (unsigned int)ioapic_phys);
 	
-		config = (apic_read(APIC_LVT3) & 0xffffff00) | 0xfe; /* XXX - set vector */
-		apic_write(APIC_LVT3, config);
+		// unmap the smp config stuff
+		// vm_free_area(...);
+	
+		dprintf("apic = 0x%p\n", apic);
+		dprintf("ioapic = 0x%p\n", ioapic);
+	
+		// set up the apic
+		dprintf("setting up the apic...");
+		{
+			unsigned int config;
+			config = apic_read(APIC_SIVR) & 0xfffffc00;
+			config |= APIC_ENABLE | 0xff; /* set spurious interrupt vector to 0xff */
+			dprintf("writing 0x%x\n", config);
+			apic_write(APIC_SIVR, config);
+			config = apic_read(APIC_TPRI) & 0xffffff00; /* accept all interrupts */
+			apic_write(APIC_TPRI, config);
+		
+			config = apic_read(APIC_SIVR);
+			dprintf("reading config back from SIVR = 0x%x\n", apic_read(APIC_SIVR));
+			apic_write(APIC_EOI, 0);
+		
+			config = (apic_read(APIC_LVT3) & 0xffffff00) | 0xfe; /* XXX - set vector */
+			apic_write(APIC_LVT3, config);
+		}
+		dprintf("done\n");
+	
+		dprintf("trampolining other cpus\n");
+		arch_smp_boot_all_cpus();
+		dprintf("done trampolining\n");
 	}
-	dprintf("done\n");
 
 	dprintf("arch_smp_init: exit\n");
 
@@ -354,5 +395,9 @@ int arch_smp_get_num_cpus()
 
 int arch_smp_get_current_cpu()
 {
-	return 0;
+	if(apic == NULL)
+		return 0;
+	else
+		return cpu_os_id[(apic_read(APIC_ID) & 0xffffffff) >> 24];
 }
+

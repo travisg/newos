@@ -16,8 +16,8 @@
 static int next_thread_id = 0;
 
 #define CURR_THREAD cur_thread[smp_get_current_cpu()]
-static struct thread *cur_thread[MAX_CPUS] = { NULL, };
 
+static struct thread **cur_thread = NULL;
 static struct thread *thread_list = NULL;
 
 // thread queues
@@ -142,8 +142,14 @@ int thread_init(struct kernel_args *ka)
 	t = create_thread_struct("idle_thread");
 	t->proc = proc_get_kernel_proc();
 	t->priority = THREAD_IDLE_PRIORITY;
-	t->kernel_stack_area = vm_find_area_by_name(t->proc->aspace, "idle_thread_kstack");		
+	t->kernel_stack_area = vm_find_area_by_name(t->proc->aspace, "idle_thread0_kstack");		
 	insert_thread_into_proc(t->proc, t);
+
+	// allocate as many CUR_THREAD slots as there are cpus
+	cur_thread = (struct thread **)kmalloc(sizeof(struct thread *) * smp_get_num_cpus());
+	if(cur_thread == NULL)
+		return NULL;
+	memset(cur_thread, 0, sizeof(struct thread *) * smp_get_num_cpus());
 
 	// set current thread
 	CURR_THREAD = t;

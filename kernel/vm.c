@@ -157,7 +157,7 @@ static int _vm_create_area(struct aspace *aspace, char *name, void **addr, int a
 	unsigned int base;
 
 	dprintf("_vm_create_area: '%s', *addr = 0x%p, addr_type = %d, size = %d, src_addr = 0x%x\n",
-		name, *addr, addr_type, src_addr);
+		name, *addr, addr_type, size, src_addr);
 
 	switch(addr_type) {
 		case AREA_ANY_ADDRESS: {
@@ -356,7 +356,7 @@ int vm_init(struct kernel_args *ka)
 	_vm_create_area_struct(kernel_aspace, "free_page_table", (unsigned int)free_page_table, free_page_table_size * sizeof(unsigned int), 0);
 	_vm_create_area_struct(kernel_aspace, "kernel_seg0", (unsigned int)ka->kernel_seg0_base, ka->kernel_seg0_size, 0);
 	_vm_create_area_struct(kernel_aspace, "kernel_seg1", (unsigned int)ka->kernel_seg1_base, ka->kernel_seg1_size, 0);
-	_vm_create_area_struct(kernel_aspace, "idle_thread_kstack", (unsigned int)ka->stack_start, ka->stack_end - ka->stack_start, 0);
+	_vm_create_area_struct(kernel_aspace, "idle_thread0_kstack", (unsigned int)ka->stack_start, ka->stack_end - ka->stack_start, 0);
 
 	vm_dump_areas(kernel_aspace);
 
@@ -577,10 +577,10 @@ static void dump_free_page_table()
 */
 }
 
-int vm_page_fault(int address, int errorcode)
+int vm_page_fault(int address, unsigned int fault_address)
 {
-	dprintf("PAGE FAULT: address 0x%x. Killing system.\n", address);
-
+	dprintf("PAGE FAULT: faulted on address 0x%x. ip = 0x%x. Killing system.\n", address, fault_address);
+	vm_dump_areas(vm_get_kernel_aspace());
 //	cli();
 	for(;;);
 	return INT_NO_RESCHEDULE;

@@ -23,7 +23,7 @@ struct area {
 	unsigned int size;
 };
 
-// args for the create_are funcs
+// args for the create_area funcs
 enum {
 	AREA_ANY_ADDRESS = 0,
 	AREA_EXACT_ADDRESS,
@@ -32,7 +32,7 @@ enum {
 
 void vm_dump_areas(struct aspace *aspace);
 int vm_init(struct kernel_args *ka);
-int vm_page_fault(int address, int errorcode);
+int vm_page_fault(int address, unsigned int fault_address);
 int vm_get_free_page(unsigned int *page);
 struct aspace *vm_create_aspace(const char *name, unsigned int base, unsigned int size);
 struct aspace *vm_get_kernel_aspace();

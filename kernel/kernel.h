@@ -5,7 +5,5 @@
 
 #define KSTACK_SIZE (PAGE_SIZE*2)
 
-#define MAX_CPUS 2
-
 #endif
 

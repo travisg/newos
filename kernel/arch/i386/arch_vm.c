@@ -35,8 +35,8 @@ int map_page_into_kspace(unsigned int paddr, unsigned int kaddr)
 	return pmap_map_page(paddr, kaddr);
 }
 
-int i386_page_fault(int cr2reg, int errorcode)
+int i386_page_fault(int cr2reg, unsigned int fault_address)
 {
-	return vm_page_fault(cr2reg, errorcode);
+	return vm_page_fault(cr2reg, fault_address);
 }
 
