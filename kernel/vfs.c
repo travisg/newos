@@ -9,7 +9,6 @@
 #include <arch_cpu.h>
 
 #include <fs/rootfs.h>
-#include <fs/devfs.h>
 
 #define MAKE_NOIZE 1
 
@@ -291,21 +290,6 @@ int vfs_init(kernel_args *ka)
 	if(err < 0)
 		panic("error mounting rootfs!\n");
 
-	return 0;
-}
-
-int vfs_init_devfs()
-{
-	int err;
-	bootstrap_devfs();
-
-	err = vfs_mkdir(NULL, "/dev");
-	if(err < 0)
-		panic("error making /dev!\n");
-	err = vfs_mount("/dev", "devfs");
-	if(err < 0)
-		panic("error mounting devfs!\n");
-	
 	return 0;
 }
 

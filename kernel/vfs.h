@@ -24,7 +24,6 @@ struct fs_calls {
 };
 
 int vfs_init(kernel_args *ka);
-int vfs_init_devfs();
 int vfs_register_filesystem(const char *name, struct fs_calls *calls);
 void *vfs_new_ioctx();
 

@@ -7,6 +7,7 @@ KERNEL_OBJS = \
         $(KERNEL_DIR)/int.o \
         $(KERNEL_DIR)/console.o \
         $(KERNEL_DIR)/debug.o \
+        $(KERNEL_DIR)/dev.o \
         $(KERNEL_DIR)/timer.o \
         $(KERNEL_DIR)/proc.o \
         $(KERNEL_DIR)/sem.o \
@@ -24,8 +25,8 @@ KERNEL_DEPS = $(KERNEL_OBJS:.o=.d)
 
 KERNEL = $(KERNEL_DIR)/system
 
-$(KERNEL): $(KERNEL_LIB) $(LIB)
-	$(LD) -dN --script=$(KERNEL_ARCH_DIR)/kernel.ld -L $(LIBGCC_PATH) -o $@ $(KERNEL_LIB) $(LIB) $(LIBGCC)
+$(KERNEL): $(KERNEL_LIB) $(LIB) $(DEV)
+	$(LD) -dN --script=$(KERNEL_ARCH_DIR)/kernel.ld -L $(LIBGCC_PATH) -o $@ $(KERNEL_LIB) $(LIB) $(DEV) $(LIBGCC)
 
 $(KERNEL_LIB): $(KERNEL_OBJS)
 	$(LD) $(GLOBAL_LDFLAGS) -r -o $@ $(KERNEL_OBJS)

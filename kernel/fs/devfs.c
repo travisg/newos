@@ -7,6 +7,7 @@
 #include <khash.h>
 #include <vm.h>
 #include <sem.h>
+#include <dev.h>
 
 #include "devfs.h"
 
@@ -15,7 +16,7 @@ struct devfs_vnode {
 	int id;
 	char *name;
 	file_type type;
-	struct device_calls *calls;
+	struct device_hooks *hooks;
 	void *redir_vnode;
 	struct devfs_vnode *dir_head;
 	struct devfs_vnode *parent;
@@ -483,7 +484,7 @@ err:
 	return err;
 }
 
-int devfs_create_device_node(const char *path, struct device_calls *calls)
+int devfs_create_device_node(const char *path, struct device_hooks *hooks)
 {
 	struct devfs *fs;
 	struct devfs_vnode *dir;
@@ -496,7 +497,7 @@ int devfs_create_device_node(const char *path, struct device_calls *calls)
 	if(fs == NULL)
 		return -1;
 
-	dprintf("devfs_create_device_node: path '%s', calls 0x%x\n", path, calls);
+	dprintf("devfs_create_device_node: path '%s', hooks 0x%x\n", path, hooks);
 	
 	sem_acquire(fs->sem, 1);
 	
@@ -525,7 +526,7 @@ int devfs_create_device_node(const char *path, struct device_calls *calls)
 		strcpy(new_vnode->name, &path[start]);
 		new_vnode->type = FILE_TYPE_DEVICE;
 		new_vnode->parent = dir;
-		new_vnode->calls = calls;
+		new_vnode->hooks = hooks;
 		devfs_insert_in_dir(dir, new_vnode);
 	}
 	sem_release(fs->sem, 1);

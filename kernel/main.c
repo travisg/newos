@@ -10,6 +10,7 @@
 #include <smp.h>
 #include <sem.h>
 #include <vfs.h>
+#include <dev.h>
 
 #include <arch_cpu.h>
 
@@ -55,8 +56,7 @@ int _start(kernel_args *oldka, int cpu)
 		con_init(&ka); // XXX will move to driver later
 		proc_init(&ka);
 		thread_init(&ka);
-		
-		vfs_init_devfs();
+		dev_init(&ka);
 	
 		// XXX remove
 		vfs_test();

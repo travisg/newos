@@ -1,8 +1,8 @@
+KERNEL_FS_DIR = $(KERNEL_DIR)/fs
 KERNEL_OBJS += \
-		$(KERNEL_DIR)/fs/devfs.o \
-		$(KERNEL_DIR)/fs/rootfs.o
+		$(KERNEL_FS_DIR)/devfs.o \
+		$(KERNEL_FS_DIR)/rootfs.o
 
-KERNEL_FS_DIR = kernel/fs
 
 KERNEL_FS_INCLUDES = -I$(KERNEL_FS_DIR)
 

@@ -64,6 +64,7 @@ FINAL = boot/final
 final: $(FINAL)
 
 include lib/lib.mk
+include dev/dev.mk
 include kernel/kernel.mk
 include boot/$(ARCH)/stage2.mk
 
@@ -106,7 +107,7 @@ toolsclean:
 bootclean: stage2clean
 	rm -f $(STAGE2)
 
-clean: libclean kernelclean bootclean
+clean: libclean kernelclean bootclean devclean
 	rm -f $(KERNEL) $(FINAL)
 
 depsclean:
