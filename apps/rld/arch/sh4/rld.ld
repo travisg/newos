@@ -1,7 +1,7 @@
-OUTPUT_FORMAT("elf32-i386", "elf32-i386", "elf32-i386")
-OUTPUT_ARCH(i386)
+OUTPUT_FORMAT("elf32-shl", "elf32-shl", "elf32-shl")
+OUTPUT_ARCH(sh)
 
-ENTRY(RLD_STARTUP)
+ENTRY(_RLD_STARTUP)
 SEARCH_DIR("libgcc");
 SECTIONS
 {

@@ -14,6 +14,7 @@
 #define NEWOS_MAGIC_APPNAME	"__NEWOS_APP__"
 
 typedef unsigned dynmodule_id;
+int RLD_STARTUP(void *);
 int rldmain(void *arg);
 
 dynmodule_id load_program(char const *path, void **entry);
