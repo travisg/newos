@@ -331,6 +331,7 @@ static struct thread *create_thread_struct(const char *name)
 	t->user_time = 0;
 	t->kernel_time = 0;
 	t->last_time = 0;
+	t->last_time_type = KERNEL_TIME;
 	{
 		char temp[64];
 
@@ -366,6 +367,10 @@ static int _create_user_thread_kentry(void)
 
 	t = thread_get_current_thread();
 
+	// start tracking kernel time
+	t->last_time = system_time();
+	t->last_time_type = KERNEL_TIME;
+
 	// a signal may have been delivered here
 	thread_atkernel_exit();
 
@@ -382,6 +387,10 @@ static int _create_kernel_thread_kentry(void)
 	struct thread *t;
 
 	t = thread_get_current_thread();
+
+	// start tracking kernel time
+	t->last_time = system_time();
+	t->last_time_type = KERNEL_TIME;
 
 	// call the entry function with the appropriate args
 	func = (void *)t->entry;
@@ -583,8 +592,8 @@ int thread_set_priority(thread_id id, int priority)
 	int retval;
 
 	// make sure the passed in priority is within bounds
-	if(priority > THREAD_MAX_PRIORITY)
-		priority = THREAD_MAX_PRIORITY;
+	if(priority > THREAD_MAX_RT_PRIORITY)
+		priority = THREAD_MAX_RT_PRIORITY;
 	if(priority < THREAD_MIN_PRIORITY)
 		priority = THREAD_MIN_PRIORITY;
 
@@ -620,6 +629,14 @@ int thread_set_priority(thread_id id, int priority)
 	return retval;
 }
 
+int user_thread_set_priority(thread_id id, int priority)
+{
+	// clamp the priority levels the user can set their threads to
+	if(priority > THREAD_MAX_PRIORITY)
+		priority = THREAD_MAX_PRIORITY;
+	return thread_set_priority(id, priority);
+}
+
 int thread_get_thread_info(thread_id id, struct thread_info *outinfo)
 {
 	struct thread *t;
@@ -641,6 +658,7 @@ int thread_get_thread_info(thread_id id, struct thread_info *outinfo)
 	strncpy(info.name, t->name, SYS_MAX_OS_NAME_LEN-1);
 	info.name[SYS_MAX_OS_NAME_LEN-1] = '\0';
 	info.state = t->state;
+	info.priority = t->priority;
 	info.user_stack_base = t->user_stack_base;
 	info.user_time = t->user_time;
 	info.kernel_time = t->kernel_time;
@@ -721,6 +739,7 @@ int thread_get_next_thread_info(uint32 *_cookie, proc_id pid, struct thread_info
 	strncpy(info.name, t->name, SYS_MAX_OS_NAME_LEN-1);
 	info.name[SYS_MAX_OS_NAME_LEN-1] = '\0';
 	info.state = t->state;
+	info.priority = t->priority;
 	info.user_stack_base = t->user_stack_base;
 	info.user_time = t->user_time;
 	info.kernel_time = t->kernel_time;
@@ -1563,7 +1582,10 @@ static void thread_context_switch(struct thread *t_from, struct thread *t_to)
 
 	// track kernel time
 	now = system_time();
-	t_from->kernel_time += now - t_from->last_time;
+	if(t_from->last_time_type == KERNEL_TIME)
+		t_from->kernel_time += now - t_from->last_time;
+	else
+		t_from->user_time += now - t_from->last_time;
 	t_to->last_time = now;
 
 	t_to->cpu = t_from->cpu;
@@ -2190,6 +2212,7 @@ void thread_atkernel_entry(void)
 	now = system_time();
 	t->user_time += now - t->last_time;
 	t->last_time = now;
+	t->last_time_type = KERNEL_TIME;
 
 	GRAB_THREAD_LOCK();
 
@@ -2224,6 +2247,7 @@ void thread_atkernel_exit(void)
 	now = system_time();
 	t->kernel_time += now - t->last_time;
 	t->last_time = now;
+	t->last_time_type = USER_TIME;
 
 	int_restore_interrupts();
 }

@@ -76,6 +76,7 @@ struct thread_info {
 
 	char name[SYS_MAX_OS_NAME_LEN];
 	int state;
+	int priority;
 
 	addr user_stack_base;
 
@@ -154,6 +155,7 @@ thread_id sys_get_current_thread_id();
 void sys_exit(int retcode);
 proc_id sys_proc_create_proc(const char *path, const char *name, char **args, int argc, int priority);
 thread_id sys_thread_create_thread(const char *name, int (*func)(void *args), void *args);
+int sys_thread_set_priority(thread_id tid, int priority);
 int sys_thread_wait_on_thread(thread_id tid, int *retcode);
 int sys_thread_suspend_thread(thread_id tid);
 int sys_thread_resume_thread(thread_id tid);

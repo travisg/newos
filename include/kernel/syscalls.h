@@ -79,6 +79,7 @@ enum {
 	SYSCALL_THREAD_GET_NEXT_THREAD_INFO, /* 70 */
 	SYSCALL_PROC_GET_PROC_INFO,
 	SYSCALL_PROC_GET_NEXT_PROC_INFO,
+	SYSCALL_THREAD_SET_PRIORITY,
 };
 
 int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_ret);

@@ -267,6 +267,9 @@ int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_re
 		case SYSCALL_PROC_GET_NEXT_PROC_INFO:
 			*call_ret = user_proc_get_next_proc_info((uint32 *)arg0, (struct proc_info *)arg1);
 			break;
+		case SYSCALL_THREAD_SET_PRIORITY:
+			*call_ret = user_thread_set_priority((thread_id)arg0, (int)arg1);
+			break;
 		default:
 			*call_ret = -1;
 	}

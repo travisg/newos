@@ -46,6 +46,11 @@ enum {
 	PROC_STATE_DEATH	// being killed
 };
 
+enum {
+	KERNEL_TIME,
+	USER_TIME
+};
+
 #define SIG_NONE 0
 #define SIG_SUSPEND	1
 #define SIG_KILL 2
@@ -101,6 +106,7 @@ struct thread {
 	bigtime_t user_time;
 	bigtime_t kernel_time;
 	bigtime_t last_time;
+	int last_time_type; // KERNEL_TIME or USER_TIME
 
 	// architecture dependant section
 	struct arch_thread arch_info;
@@ -124,6 +130,7 @@ struct thread_info {
 
 	char name[SYS_MAX_OS_NAME_LEN];
 	int state;
+	int priority;
 
 	addr user_stack_base;
 
@@ -189,6 +196,7 @@ int user_thread_wait_on_thread(thread_id id, int *uretcode);
 proc_id user_proc_create_proc(const char *path, const char *name, char **args, int argc, int priority);
 int user_proc_wait_on_proc(proc_id id, int *uretcode);
 thread_id user_thread_create_user_thread(char *uname, proc_id pid, addr entry, void *args);
+int user_thread_set_priority(thread_id id, int priority);
 int user_thread_snooze(bigtime_t time);
 int user_getrlimit(int resource, struct rlimit * rlp);
 int user_setrlimit(int resource, const struct rlimit * rlp);

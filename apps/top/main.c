@@ -157,6 +157,8 @@ static int gather_info(void)
 static int display_info(void)
 {
 	thread_time *tt;
+	bigtime_t total_user = 0;
+	bigtime_t total_kernel = 0;
 
 	// clear and home the screen
 	printf("%c[2J%c[H", 0x1b, 0x1b);
@@ -164,9 +166,12 @@ static int display_info(void)
 	// print the thread dump
 	printf("----------------------------------\n");
 	for(tt = times; tt; tt = tt->next) {
-		printf("%d\t%d\t%32s\t%Ld\t%Ld\n",
-			tt->info.id, tt->info.owner_proc_id, tt->info.name, tt->delta_user_time, tt->delta_kernel_time);
+		printf("%d\t%d\t%d\t%32s\t%Ld\t%Ld\n",
+			tt->info.id, tt->info.owner_proc_id, tt->info.priority, tt->info.name, tt->delta_user_time, tt->delta_kernel_time);
+		total_user += tt->delta_user_time;
+		total_kernel += tt->delta_kernel_time;
 	}
+	printf("\t\t\t%32s\t%Ld\t%Ld\n", "total:", total_user, total_kernel);
 
 	return 0;
 }
