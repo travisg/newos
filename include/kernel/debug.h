@@ -25,4 +25,12 @@ int dbg_add_command(void (*func)(int, char **), const char *cmd, const char *des
 
 extern void dbg_save_registers(int *);	/* arch provided */
 
+#if DEBUG
+#define ASSERT(x) \
+	{ if(!(x)) panic("ASSERT FAILED (%s:%d): %s", __FILE__, __LINE__, #x); }
+#else
+#define ASSERT(x)
 #endif
+
+#endif
+
