@@ -36,7 +36,7 @@ bootclean:
 
 CLEAN += bootclean
 
-$(MAKEFLOP): $(MAKEFLOP).c $(BOOT_DIR)/bootblock.h
+$(MAKEFLOP): $(MAKEFLOP).c
 	$(HOST_CC) -O3 $(MAKEFLOP).c -o $@
 
 $(FINAL): $(STAGE2) $(KERNEL) $(APPS) tools
@@ -44,7 +44,7 @@ $(FINAL): $(STAGE2) $(KERNEL) $(APPS) tools
 
 floppy: $(STAGE2) $(KERNEL) $(APPS) tools $(MAKEFLOP)
 	$(BOOTMAKER) $(BOOT_DIR)/config.ini -o $(FINAL).pre
-	$(MAKEFLOP) $(FINAL).pre $(FINAL)
+	$(MAKEFLOP) $(BOOTBLOCK) $(FINAL).pre $(FINAL)
 	rm -f $(FINAL).pre
 	rm -f final.$(ARCH);ln -sf $(FINAL) final.$(ARCH)
 	rm -f system.$(ARCH);ln -sf $(KERNEL) system.$(ARCH)
