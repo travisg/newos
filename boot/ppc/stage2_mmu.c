@@ -45,25 +45,29 @@ static void find_phys_memory_map(kernel_args *ka)
 	struct mem_region {
 		unsigned long pa;
 		int len;
-	} mem_regions[33];
+	} mem_regions[32];
 	unsigned int mem_regions_len = 0;
 
 	// get the physical memory map of the system
-	handle = of_finddevice("/memory");
+	handle = of_finddevice("/chosen");
+	of_getprop(handle, "memory", &handle, sizeof(handle));
+	handle = of_instance_to_package(handle);
 	memset(mem_regions, 0, sizeof(mem_regions));
-	mem_regions_len = of_getprop(handle, "reg", mem_regions, sizeof(mem_regions[0]) * 32);
+	mem_regions_len = of_getprop(handle, "reg", mem_regions, sizeof(mem_regions));
 	mem_regions_len /= sizeof(struct mem_region);
+
+	printf("num mem regions %d\n", mem_regions_len);
 
 	// copy these regions over to the kernel args structure
 	ka->num_phys_mem_ranges = 0;
 	for(i=0; i<mem_regions_len; i++) {
 		if(mem_regions[i].len > 0) {
 			total_ram_size += mem_regions[i].len;
-			if(i > 0) {
+			if(ka->num_phys_mem_ranges > 0) {
 				if(mem_regions[i].pa == ka->phys_mem_range[ka->num_phys_mem_ranges-1].start + ka->phys_mem_range[ka->num_phys_mem_ranges-1].size) {
 					// this range just extends the old one
 					ka->phys_mem_range[ka->num_phys_mem_ranges-1].size += mem_regions[i].len;
-					break;
+					continue;
 				}
 			}
 			ka->phys_mem_range[ka->num_phys_mem_ranges].start = mem_regions[i].pa;
@@ -75,8 +79,9 @@ static void find_phys_memory_map(kernel_args *ka)
 			}
 		}
 	}
+	printf("num phys mem regions %d\n", ka->num_phys_mem_ranges);
 	for(i=0; i<ka->num_phys_mem_ranges; i++) {
-		printf("phys map %d: pa 0x%lx, len 0x%lx\n", i, ka->phys_mem_range[i].start, ka->phys_mem_range[i].size);
+		printf("  phys map %d: pa 0x%lx, len 0x%lx\n", i, ka->phys_mem_range[i].start, ka->phys_mem_range[i].size);
 	}
 }
 
@@ -149,6 +154,8 @@ static void find_used_phys_memory_map(kernel_args *ka)
 	} memmap[64];
 	unsigned int translation_map_len = 0;
 
+	printf("looking for current translations...\n");
+
 	ka->num_phys_alloc_ranges = 0;
 
 	// get the current translation map of the system,
@@ -156,12 +163,13 @@ static void find_used_phys_memory_map(kernel_args *ka)
 	handle = of_finddevice("/chosen");
 	of_getprop(handle, "mmu", &handle, sizeof(handle));
 	handle = of_instance_to_package(handle);
-	memset(&memmap, 0, sizeof(memmap));
+	memset(memmap, 0, sizeof(memmap));
 	translation_map_len = of_getprop(handle, "translations", memmap, sizeof(memmap));
 	translation_map_len /= sizeof(struct translation_map);
+	printf("found %d translations\n", translation_map_len);
 	for(i=0; i<translation_map_len; i++) {
+		printf("package loaded at pa 0x%lx va 0x%lx, len 0x%x\n", memmap[i].pa, memmap[i].va, memmap[i].len);
 		if(is_in_phys_mem(ka, memmap[i].va)) {
-			printf("package loaded at pa 0x%lx va 0x%lx, len 0x%x\n", memmap[i].pa, memmap[i].va, memmap[i].len);
 			// we found the translation that covers the loaded package. Save this.
 			mark_used_phys_mem_range(ka, memmap[i].pa, memmap[i].len);
 		}
@@ -291,7 +299,6 @@ int s2_mmu_init(kernel_args *ka)
 	find_phys_memory_map(ka);
 	find_used_phys_memory_map(ka);
 
-
 #if 0
 	// find the largest address of physical memory, but with a max of 256 MB,
 	// so it'll be within our 256 MB BAT window
@@ -331,6 +338,10 @@ int s2_mmu_init(kernel_args *ka)
 	} else {
 		ptable_size = 32*1024*1024;
 	}
+
+	// look at the old page table
+	printf("old page table at 0x%x, size 0x%x\n", (addr_t)getsdr1() & 0xffff0000,
+		(((addr_t)getsdr1() & 0x1ff) + 1) << 16);
 
 	// figure out where to put the page table
 	printf("allocating a page table using claim\n");
@@ -378,7 +389,16 @@ int s2_mmu_init(kernel_args *ka)
 	}
 	// identity map the first 256MB of RAM
 	dbats[0] = ibats[0] = BATU_LEN_256M | BATU_VS;
-	dbats[1] = ibats[1] = BATL_MC | BATL_PP_RW;
+	dbats[1] = ibats[1] = BATL_CI | BATL_PP_RW;
+
+	// XXX fix
+	dbats[2] = ibats[2] = 0x80000000 | BATU_LEN_256M | BATU_VS;
+	dbats[3] = ibats[3] = 0x80000000 | BATL_CI | BATL_PP_RW;
+	dbats[4] = ibats[4] = 0x90000000 | BATU_LEN_256M | BATU_VS;
+	dbats[5] = ibats[5] = 0x90000000 | BATL_CI | BATL_PP_RW;
+	dbats[6] = ibats[6] = 0xf0000000 | BATU_LEN_256M | BATU_VS;
+	dbats[7] = ibats[7] = 0xf0000000 | BATL_CI | BATL_PP_RW;
+
 
 #if 0
 	// map the framebuffer using a BAT to 256MB
