@@ -17,7 +17,7 @@
 #include <libc/string.h>
 #include <libc/ctype.h>
 
-#define MAKE_NOIZE 0
+#define MAKE_NOIZE 1
 
 struct vnode {
 	struct vnode *next;
@@ -626,7 +626,7 @@ static int vfs_mount(const char *path, const char *fs_name, bool kernel)
 	mount->next = fs_mounts;
 	fs_mounts = mount;	
 
-	// if the mount point is on top of another filesystem (will it will be except for the root),
+	// if the mount point is on top of another filesystem (which it will be except for the root),
 	// register with the underlying fileystem the fact that it's covered and the vnode to
 	// redirect to.
 	if(covered_vnode != NULL) {

@@ -14,6 +14,9 @@
 
 #include <libc/string.h>
 
+#define PARANOID_KFREE 1
+#define MAKE_NOIZE 1
+
 // heap stuff
 // ripped mostly from nujeffos
 
@@ -25,8 +28,9 @@ struct heap_page {
 } PACKED;
 
 static struct heap_page *heap_alloc_table; 
-static unsigned int heap_base;
-static unsigned int heap_size;
+static addr heap_base_ptr;
+static addr heap_base;
+static addr heap_size;
 
 struct heap_bin {
 	unsigned int element_size;
@@ -40,12 +44,9 @@ struct heap_bin {
 static struct heap_bin bins[] = {
 	{16, PAGE_SIZE, 0, 0, 0, 0, 0},
 	{32, PAGE_SIZE, 0, 0, 0, 0, 0},
-	{44, PAGE_SIZE, 0, 0, 0, 0, 0},
 	{64, PAGE_SIZE, 0, 0, 0, 0, 0},
-	{89, PAGE_SIZE, 0, 0, 0, 0, 0},
 	{128, PAGE_SIZE, 0, 0, 0, 0, 0},
 	{256, PAGE_SIZE, 0, 0, 0, 0, 0},
-	{315, PAGE_SIZE, 0, 0, 0, 0, 0},
 	{512, PAGE_SIZE, 0, 0, 0, 0, 0},
 	{1024, PAGE_SIZE, 0, 0, 0, 0, 0},
 	{2048, PAGE_SIZE, 0, 0, 0, 0, 0},
@@ -70,6 +71,31 @@ static struct heap_bin bins[] = {
 static const int bin_count = sizeof(bins) / sizeof(struct heap_bin);
 static mutex heap_lock;
 
+static void dump_bin(int bin_index)
+{
+	struct heap_bin *bin = &bins[bin_index];
+	unsigned int *temp;
+
+	dprintf("%d:\tesize %d\tgrow_size %d\talloc_count %d\tfree_count %d\traw_count %d\traw_list 0x%x\n",
+		bin_index, bin->element_size, bin->grow_size, bin->alloc_count, bin->free_count, bin->raw_count, bin->raw_list);
+	dprintf("free_list: ");
+	for(temp = bin->free_list; temp != NULL; temp = (unsigned int *)*temp) {
+		dprintf("0x%x ", temp);
+	}
+	dprintf("NULL\n");
+}
+
+static void dump_bin_list(int argc, char **argv)
+{
+	int i;
+	
+	dprintf("%d heap bins at 0x%x:\n", bin_count, bins);
+	
+	for(i=0; i<bin_count; i++) {
+		dump_bin(i);
+	}
+}
+
 // called from vm_init. The heap should already be mapped in at this point, we just
 // do a little housekeeping to set up the data structure.
 int heap_init(addr new_heap_base, unsigned int new_heap_size)
@@ -78,15 +104,19 @@ int heap_init(addr new_heap_base, unsigned int new_heap_size)
 	heap_alloc_table = (struct heap_page *)new_heap_base;
 	heap_size = new_heap_size;
 	heap_base = PAGE_ALIGN((unsigned int)heap_alloc_table + (heap_size / PAGE_SIZE) * sizeof(struct heap_page));
-	dprintf("heap_alloc_table = 0x%x, heap_base = 0x%x\n", heap_alloc_table, heap_base);
-	
+	heap_base_ptr = heap_base;
+	dprintf("heap_alloc_table = 0x%x, heap_base = 0x%x, heap_size = 0x%x\n", heap_alloc_table, heap_base, heap_size);
+
 	// zero out the heap alloc table at the base of the heap
 	memset((void *)heap_alloc_table, 0, (heap_size / PAGE_SIZE) * sizeof(struct heap_page));
-	
+
 	// pre-init the mutex to at least fall through any semaphore calls
 	heap_lock.sem = -1;
 	heap_lock.count = 0;
-	
+
+	// set up some debug commands
+	dbg_add_command(&dump_bin_list, "heap_bindump", "dump stats about bin usage");
+
 	return 0;
 }
 
@@ -105,13 +135,13 @@ static char *raw_alloc(unsigned int size, int bin_index)
 	struct heap_page *page;
 	unsigned int addr;
 	
-	new_heap_ptr = heap_base + PAGE_ALIGN(size);
+	new_heap_ptr = heap_base_ptr + PAGE_ALIGN(size);
 	if(new_heap_ptr > heap_base + heap_size) {
 		dprintf("heap overgrew itself! spinning forever...\n");
 		for(;;);
 	}
 
-	for(addr = heap_base; addr < heap_base + size; addr += PAGE_SIZE) {
+	for(addr = heap_base_ptr; addr < new_heap_ptr; addr += PAGE_SIZE) {
 		page = &heap_alloc_table[(addr - heap_base) / PAGE_SIZE];
 		page->in_use = 1;
 		page->cleaning = 0;
@@ -122,8 +152,8 @@ static char *raw_alloc(unsigned int size, int bin_index)
 			page->free_count = 1;
 	}
 	
-	retval = (char *)heap_base;
-	heap_base = new_heap_ptr;
+	retval = (char *)heap_base_ptr;
+	heap_base_ptr = new_heap_ptr;
 	return retval;
 }
 
@@ -134,6 +164,10 @@ void *kmalloc(unsigned int size)
 	unsigned int i;
 	struct heap_page *page;
 
+#if MAKE_NOIZE
+	dprintf("kmalloc: asked to allocate size %d\n", size);
+#endif
+
 	mutex_lock(&heap_lock);
 	
 	for (bin_index = 0; bin_index < bin_count; bin_index++)
@@ -143,6 +177,7 @@ void *kmalloc(unsigned int size)
 	if (bin_index == bin_count) {
 		// XXX fix the raw alloc later.
 		//address = raw_alloc(size, bin_index);
+		panic("kmalloc: asked to allocate too much for now!\n");
 		goto out;
 	} else {
 		if (bins[bin_index].free_list != NULL) {
@@ -162,15 +197,24 @@ void *kmalloc(unsigned int size)
 		
 		bins[bin_index].alloc_count++;
 		page = &heap_alloc_table[((unsigned int)address - heap_base) / PAGE_SIZE];
-		for(i = 0; i < bins[bin_index].element_size / PAGE_SIZE; i++)
+		page[0].free_count--;
+#if MAKE_NOIZE
+		dprintf("kmalloc0: page 0x%x: bin_index %d, free_count %d\n", page, page->bin_index, page->free_count);
+#endif
+		for(i = 1; i < bins[bin_index].element_size / PAGE_SIZE; i++) {
 			page[i].free_count--;
+#if MAKE_NOIZE
+			dprintf("kmalloc1: page 0x%x: bin_index %d, free_count %d\n", page[i], page[i].bin_index, page[i].free_count);
+#endif
+		}
 	}
 
 out:
 	mutex_unlock(&heap_lock);
 	
-//	dprintf("kmalloc: asked to allocate size %d, returning ptr = %p\n", size, address);
-
+#if MAKE_NOIZE
+	dprintf("kmalloc: asked to allocate size %d, returning ptr = %p\n", size, address);
+#endif
 	return address;
 }
 
@@ -183,20 +227,46 @@ void kfree(void *address)
 	if (address == NULL)
 		return;
 
+	if ((addr)address < heap_base || (addr)address >= (heap_base + heap_size))
+		panic("kfree: asked to free invalid address 0x%x\n", address);
+
 	mutex_lock(&heap_lock);
 
-//	dprintf("kfree: asked to free at ptr = %p\n", address);
+#if MAKE_NOIZE
+	dprintf("kfree: asked to free at ptr = %p\n", address);
+#endif
 
 	page = &heap_alloc_table[((unsigned)address - heap_base) / PAGE_SIZE];
-	
-	// XXX fix later
-	if(page[0].bin_index == bin_count)
-		goto out;
+
+#if MAKE_NOIZE	
+	dprintf("kfree: page 0x%x: bin_index %d, free_count %d\n", page, page->bin_index, page->free_count);
+#endif
+
+	if(page[0].bin_index >= bin_count)
+		panic("kfree: page 0x%x: invalid bin_index %d\n", page, page->bin_index);
 
 	bin = &bins[page[0].bin_index];
 
-	for(i = 0; i < bin->element_size / PAGE_SIZE; i++)
+	if((addr)address % bin->element_size != 0)
+		panic("kfree: passed invalid pointer 0x%x! Supposed to be in bin for esize 0x%x\n", address, bin->element_size);
+
+	for(i = 0; i < bin->element_size / PAGE_SIZE; i++) {
+		if(page[i].bin_index != page[0].bin_index)
+			panic("kfree: not all pages in allocation match bin_index\n");
 		page[i].free_count++;
+	}
+
+#if PARANOID_KFREE
+	// walk the free list on this bin to make sure this address doesn't exist already
+	{
+		unsigned int *temp;
+		for(temp = bin->free_list; temp != NULL; temp = (unsigned int *)*temp) {
+			if(temp == (unsigned int *)address) {
+				panic("kfree: address 0x%x already exists in bin free list\n", address);
+			}
+		}
+	}
+#endif
 
 	*(unsigned int *)address = (unsigned int)bin->free_list;
 	bin->free_list = address;
