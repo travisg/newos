@@ -18,9 +18,10 @@
 #include <libc/printf.h>
 
 #include <dev/arch/i386/console/console_dev.h>
-#include "keyboard.h"
+
 
 struct console_fs {
+	int keyboard_fd;
 	fs_id id;
 	mutex lock;
 	void *covered_vnode;
@@ -200,10 +201,9 @@ static int console_read(void *_fs, void *_vnode, void *_cookie, void *buf, off_t
 {
 	char c;
 	int err;
-
-//	dprintf("console_read: entry\n");
+	struct console_fs *fs = _fs;
 	
-	return keyboard_read(buf, len);
+	return sys_read(fs->keyboard_fd,buf,0,len);
 }
 
 static int _console_write(const void *buf, size_t *len)
@@ -292,7 +292,11 @@ static int console_mount(void **fs_cookie, void *flags, void *covered_vnode, fs_
 	fs->covered_vnode = covered_vnode;
 	fs->redir_vnode = NULL;
 	fs->id = id;
-
+	fs->keyboard_fd = sys_open("/dev/keyboard","",STREAM_TYPE_DEVICE);
+	if(fs->keyboard_fd < 0) {
+		err = -1;
+		goto err1;
+	}
 	err = mutex_init(&fs->lock, "console_mutex");
 	if(err < 0) {
 		err = -1;
@@ -313,7 +317,7 @@ err:
 static int console_unmount(void *_fs)
 {
 	struct console_fs *fs = _fs;
-
+	sys_close(fs->keyboard_fd);
 	mutex_destroy(&fs->lock);
 	kfree(fs);
 
@@ -370,10 +374,6 @@ int console_dev_init(kernel_args *ka)
 	pos = origin;
 
 	gotoxy(0, ka->cons_line);
-
-	// Setup keyboard interrupt
-	setup_keyboard();
-	int_set_io_interrupt_handler(0x21,&handle_keyboard_interrupt);
 
 	// create device node
 	vfs_register_filesystem("console_dev_fs", &console_hooks);

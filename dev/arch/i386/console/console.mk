@@ -1,8 +1,7 @@
 CONSOLE_DEV_DIR = $(DEV_ARCH_DIR)/console
 CONSOLE_DEV_OBJ_DIR = $(CONSOLE_DEV_DIR)/$(OBJ_DIR)
 DEV_OBJS += \
-	$(CONSOLE_DEV_OBJ_DIR)/console.o \
-	$(CONSOLE_DEV_OBJ_DIR)/keyboard.o
+	$(CONSOLE_DEV_OBJ_DIR)/console.o 
 
 DEV_SUB_INCLUDES += \
 	-I$(DEV_ARCH_DIR)/console
