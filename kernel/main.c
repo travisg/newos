@@ -55,6 +55,8 @@ int _start(kernel_args *oldka, int cpu)
 		con_init(&ka); // XXX will move to driver later
 		proc_init(&ka);
 		thread_init(&ka);
+		
+		vfs_init_devfs();
 	
 		// XXX remove
 		vfs_test();

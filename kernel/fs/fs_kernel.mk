@@ -1,4 +1,5 @@
 KERNEL_OBJS += \
+		$(KERNEL_DIR)/fs/devfs.o \
 		$(KERNEL_DIR)/fs/rootfs.o
 
 KERNEL_FS_DIR = kernel/fs

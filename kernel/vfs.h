@@ -24,6 +24,7 @@ struct fs_calls {
 };
 
 int vfs_init(kernel_args *ka);
+int vfs_init_devfs();
 int vfs_register_filesystem(const char *name, struct fs_calls *calls);
 void *vfs_new_ioctx();
 
@@ -47,7 +48,8 @@ int vfs_test();
 
 typedef enum {
 	FILE_TYPE_FILE = 0,
-	FILE_TYPE_DIR
+	FILE_TYPE_DIR,
+	FILE_TYPE_DEVICE
 } file_type;
 
 #endif
