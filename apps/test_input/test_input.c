@@ -11,10 +11,10 @@ static void testGets(FILE* f)
 {
     char buf1[1024];
     char buf2[1024];
-    
+
     fgets(buf1, 1024, f);
     fgets(buf2, 1024, f);
-    
+
     printf("type a line: \"%s\"\r\n", buf1);
     printf("type a line: \"%s\"\r\n", buf2);
 }
@@ -23,7 +23,7 @@ static void testScanf(FILE* f)
 {
 	char c[10];
 	char s[11];
-	
+
 	unsigned int u;
 	int i;
 	int d;
@@ -33,11 +33,11 @@ static void testScanf(FILE* f)
 	printf("Read an unsigned int:");
 	scanf("%u", &u);
 	printf("Unsigned Integer value: %u\n", u);
-	
+
 	printf("Read an integer(undetermined base):");
 	scanf("%i", &i);
 	printf("Integer value: %i\n", i);
-	
+
 	printf("Read an integer (base 10):");
 	scanf("%d", &d);
 	printf("Integer value: %i\n", d);
@@ -45,16 +45,16 @@ static void testScanf(FILE* f)
 	printf("Read an integer (base 8):");
 	scanf("%o", &o);
 	printf("Integer value: %i\n", o);
-	
+
 	printf("Read an integer (base 16):");
 	scanf("%x", &x);
 	printf("Integer value: %i\n", x);
-	
+
 	printf("Read a char array (10):");
 	scanf("%10c", c);
 	c[9] = '\0';
 	printf("String value: %s\n", c);
-	
+
 	printf("Read a string (10):");
 	scanf("%10s", s);
 	printf("String value: %s\n", s);
@@ -86,6 +86,6 @@ int main(int argc, char** argv)
     {
         printf("File could not be opened.\r\n" );
     }
-    
+
     return 0;
 }

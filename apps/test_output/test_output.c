@@ -10,7 +10,7 @@ void testFormatting(FILE* f)
 {
     int* ptr;
     ptr = (int*)malloc(sizeof(int));
-    
+
     fprintf(f, "char(10): \'%10c\'\r\n", 'c');
     fprintf(f, "string(5): \"%5s\"\r\n", "Justin Smith");
     fprintf(f, "pointer(10): \"%10p\"\r\n", ptr);
@@ -20,7 +20,7 @@ void testFormatting(FILE* f)
     fprintf(f, "hex(5):-21: \"%5x\"\r\n", -21);
     fprintf(f, "signed int(10):-21: \"%10d\"\r\n", -21);
     fprintf(f, "unsigned int(20):-21: \"%20u\"\r\n", -21);
-    
+
     free(ptr);
 }
 
@@ -76,6 +76,6 @@ int main(int argc, char** argv)
     {
         printf("File could not be opened.\r\n" );
     }
-    
+
     return 0;
 }
