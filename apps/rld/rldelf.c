@@ -241,7 +241,7 @@ count_regions(char const *buff, int phnum, int phentsize)
 				retval+= 1;
 				if(pheaders->p_memsz!= pheaders->p_filesz) {
 					unsigned A= pheaders->p_vaddr+pheaders->p_memsz;
-					unsigned B= pheaders->p_vaddr+pheaders->p_filesz;
+					unsigned B= pheaders->p_vaddr+pheaders->p_filesz-1;
 
 					A= PAGE_BASE(A);
 					B= PAGE_BASE(B);
@@ -361,7 +361,7 @@ parse_program_headers(image_t *image, char *buff, int phnum, int phentsize)
 					 * may require splitting
 					 */
 					unsigned A= pheaders->p_vaddr+pheaders->p_memsz;
-					unsigned B= pheaders->p_vaddr+pheaders->p_filesz;
+					unsigned B= pheaders->p_vaddr+pheaders->p_filesz-1;
 
 					A= PAGE_BASE(A);
 					B= PAGE_BASE(B);
