@@ -1774,14 +1774,15 @@ static int vfs_dup2(int ofd, int nfd, bool kernel)
 	// because we always want to return an error on invalid
 	// handles
 	if(ofd == nfd) {
+		mutex_unlock(&curr_ioctx->io_mutex);
 		goto success;
 	}
 
 
 	// Now do the work
 	evicted= curr_ioctx->fds[nfd];
-	curr_ioctx->fds[nfd]= curr_ioctx->fds[ofd];
 	atomic_add(&curr_ioctx->fds[ofd]->ref_count, 1);
+	curr_ioctx->fds[nfd]= curr_ioctx->fds[ofd];
 
 
 	// Unlock the ioctx
