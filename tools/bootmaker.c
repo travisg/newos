@@ -254,7 +254,7 @@ void *loadstripfile(char *file, int *size)
 
     if(strip_debug) {
         strcpy(temp, "/tmp/mkboot.XXXXXXXX");
-        mktemp(temp);
+        mkstemp(temp);
 
         sprintf(cmd, "cp %s %s; %s %s", file, temp, strip_binary, temp);
         system(cmd);
