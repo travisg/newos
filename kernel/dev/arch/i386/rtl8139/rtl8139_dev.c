@@ -50,8 +50,6 @@
 
 #define MYRT_INTS (RT_INT_PCIERR | RT_INT_RX_ERR | RT_INT_RX_OK | RT_INT_TX_ERR | RT_INT_TX_OK | RT_INT_RXBUF_OVERFLOW)
 
-static rtl8139 *grtl;
-
 static int rtl8139_int(void*);
 
 int rtl8139_detect(rtl8139 **rtl)
@@ -129,12 +127,13 @@ int rtl8139_init(rtl8139 *rtl)
 	// try to reset the device
  	time = system_time();
 	RTL_WRITE_8(rtl, RT_CHIPCMD, RT_CMD_RESET);
-	while((RTL_READ_8(rtl, RT_CHIPCMD) & RT_CMD_RESET)) {
+	do {
+		thread_snooze(10000); // 10ms
 		if(system_time() - time > 1000000) {
 			err = -1;
 			goto err1;
 		}
-	}
+	} while((RTL_READ_8(rtl, RT_CHIPCMD) & RT_CMD_RESET));
 
 	// create a rx and tx buf
 	rtl->rxbuf_region = vm_create_anonymous_region(vm_get_kernel_aspace_id(), "rtl8139_rxbuf", (void **)&rtl->rxbuf,
@@ -150,8 +149,7 @@ int rtl8139_init(rtl8139 *rtl)
 	rtl->rx_sem = sem_create(0, "rtl8139_rxsem");
 
 	// set up the interrupt handler
-	grtl = rtl;
-	int_set_io_interrupt_handler(rtl->irq + 0x20, &rtl8139_int, NULL);
+	int_set_io_interrupt_handler(rtl->irq + 0x20, &rtl8139_int, rtl);
 
 	// read the mac address
 	rtl->mac_addr[0] = RTL_READ_8(rtl, RT_IDR0);
@@ -190,13 +188,17 @@ int rtl8139_init(rtl8139 *rtl)
 	RTL_WRITE_8(rtl, RT_CFG9346, 0);
 
 	// Setup RX buffers
+	*(int *)rtl->rxbuf = 0;
 	vm_get_page_mapping(vm_get_kernel_aspace_id(), rtl->rxbuf, &temp);
+	dprintf("rx buffer will be at 0x%x\n", temp);
 	RTL_WRITE_32(rtl, RT_RXBUF, temp);
 
 	// Setup TX buffers
+	*(int *)rtl->txbuf = 0;
 	vm_get_page_mapping(vm_get_kernel_aspace_id(), rtl->txbuf, &temp);
 	RTL_WRITE_32(rtl, RT_TXADDR0, temp);
 	RTL_WRITE_32(rtl, RT_TXADDR1, temp + 2*1024);
+	*(int *)(rtl->txbuf + 4*1024) = 0;
 	vm_get_page_mapping(vm_get_kernel_aspace_id(), rtl->txbuf + 4*1024, &temp);
 	RTL_WRITE_32(rtl, RT_TXADDR2, temp);
 	RTL_WRITE_32(rtl, RT_TXADDR3, temp + 2*1024);
@@ -307,7 +309,7 @@ restart:
 	// copy the buffer
 	if(entry->len > buf_len) {
 		dprintf("rtl8139_rx: packet too large for buffer\n");
-		RTL_WRITE_16(grtl, RT_RXBUFTAIL, TAILREG_TO_TAIL(RTL_READ_16(grtl, RT_RXBUFHEAD)));
+		RTL_WRITE_16(rtl, RT_RXBUFTAIL, TAILREG_TO_TAIL(RTL_READ_16(rtl, RT_RXBUFHEAD)));
 		mutex_unlock(&rtl->lock);
 		sem_release(rtl->rx_sem, 1);
 		return -1;
@@ -315,7 +317,7 @@ restart:
 	if(tail + entry->len > 0xffff) {
 		int pos = 0;
 
-		dprintf("packet wraps around\n");
+//		dprintf("packet wraps around\n");
 		memcpy(buf, (const void *)&entry->data[0], 0x10000 - tail);
 		memcpy((uint8 *)buf + 0x10000 - tail, (const void *)rtl->rxbuf, entry->len - (0x10000 - tail));
 	} else {
@@ -362,22 +364,22 @@ static int rtl8139_txint(rtl8139 *rtl, uint16 int_status)
 	int rc = INT_NO_RESCHEDULE;
 
 	// transmit ok
-	dprintf("tx\n");
+//	dprintf("tx\n");
 
 	for(i=0; i<4; i++) {
-		if(grtl->last_txbn == grtl->txbn)
+		if(rtl->last_txbn == rtl->txbn)
 			break;
-		txstat = RTL_READ_32(grtl, RT_TXSTATUS0 + grtl->last_txbn*4);
-//		dprintf("txstat[%d] = 0x%x\n", grtl->last_txbn, txstat);
+		txstat = RTL_READ_32(rtl, RT_TXSTATUS0 + rtl->last_txbn*4);
+//		dprintf("txstat[%d] = 0x%x\n", rtl->last_txbn, txstat);
 		if(txstat & RT_TX_HOST_OWNS) {
 //			dprintf("host now owns the buffer\n");
 		} else {
 //			dprintf("host no own\n");
 			break;
 		}
-		if(++grtl->last_txbn >= 4)
-			grtl->last_txbn = 0;
-		sem_release_etc(grtl->tx_sem, 1, SEM_FLAG_NO_RESCHED);
+		if(++rtl->last_txbn >= 4)
+			rtl->last_txbn = 0;
+		sem_release_etc(rtl->tx_sem, 1, SEM_FLAG_NO_RESCHED);
 		rc = INT_RESCHEDULE;
 	}
 	return rc;
@@ -386,31 +388,32 @@ static int rtl8139_txint(rtl8139 *rtl, uint16 int_status)
 static int rtl8139_int(void* data)
 {
 	int rc = INT_NO_RESCHEDULE;
+	rtl8139 *rtl = (rtl8139 *)data;
 
 	// Disable interrupts
-	RTL_WRITE_16(grtl, RT_INTRMASK, 0);
+	RTL_WRITE_16(rtl, RT_INTRMASK, 0);
 
 	for(;;) {
-		uint16 status = RTL_READ_16(grtl, RT_INTRSTATUS);
+		uint16 status = RTL_READ_16(rtl, RT_INTRSTATUS);
 		if(status)
-			RTL_WRITE_16(grtl, RT_INTRSTATUS, status);
+			RTL_WRITE_16(rtl, RT_INTRSTATUS, status);
 		else
 			break;
 
 		if(status & RT_INT_TX_OK || status & RT_INT_TX_ERR) {
-			if(rtl8139_txint(grtl, status) == INT_RESCHEDULE)
+			if(rtl8139_txint(rtl, status) == INT_RESCHEDULE)
 				rc = INT_RESCHEDULE;
 		}
 		if(status & RT_INT_RX_ERR || status & RT_INT_RX_OK) {
-			if(rtl8139_rxint(grtl, status) == INT_RESCHEDULE)
+			if(rtl8139_rxint(rtl, status) == INT_RESCHEDULE)
 				rc = INT_RESCHEDULE;
 		}
 		if(status & RT_INT_RXBUF_OVERFLOW) {
 			dprintf("RX buffer overflow!\n");
 			dprintf("buf 0x%x, head 0x%x, tail 0x%x\n",
-				RTL_READ_32(grtl, RT_RXBUF), RTL_READ_16(grtl, RT_RXBUFHEAD), RTL_READ_16(grtl, RT_RXBUFTAIL));
-			RTL_WRITE_32(grtl, RT_RXMISSED, 0);
-			RTL_WRITE_16(grtl, RT_RXBUFTAIL, TAILREG_TO_TAIL(RTL_READ_16(grtl, RT_RXBUFHEAD)));
+				RTL_READ_32(rtl, RT_RXBUF), RTL_READ_16(rtl, RT_RXBUFHEAD), RTL_READ_16(rtl, RT_RXBUFTAIL));
+			RTL_WRITE_32(rtl, RT_RXMISSED, 0);
+			RTL_WRITE_16(rtl, RT_RXBUFTAIL, TAILREG_TO_TAIL(RTL_READ_16(rtl, RT_RXBUFHEAD)));
 		}
 		if(status & RT_INT_RXFIFO_OVERFLOW) {
 			dprintf("RX fifo overflow!\n");
@@ -421,7 +424,7 @@ static int rtl8139_int(void* data)
 	}
 
 	// reenable interrupts
-	RTL_WRITE_16(grtl, RT_INTRMASK, MYRT_INTS);
+	RTL_WRITE_16(rtl, RT_INTRMASK, MYRT_INTS);
 
 	return rc;
 }

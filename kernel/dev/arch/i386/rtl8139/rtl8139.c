@@ -9,16 +9,16 @@
 #include <kernel/fs/devfs.h>
 #include <libc/string.h>
 #include <sys/errors.h>
+#include <kernel/net/if.h>
+#include <kernel/dev/arch/i386/rtl8139/rtl8139_dev.h>
 
 #include "rtl8139_priv.h"
 
-/* allow multiple 8139s */
-static rtl8139 *rtl = NULL;
-
 static int rtl8139_open(dev_ident ident, dev_cookie *cookie)
 {
-	if(!rtl)
-		return ERR_IO_ERROR;
+	rtl8139 *rtl = (rtl8139 *)ident;
+
+	*cookie = rtl;
 
 	return 0;
 }
@@ -40,21 +40,21 @@ static int rtl8139_close(dev_cookie cookie)
 
 static ssize_t rtl8139_read(dev_cookie cookie, void *buf, off_t pos, ssize_t len)
 {
+	rtl8139 *rtl = (rtl8139 *)cookie;
+
 	if(len < 1500)
 		return ERR_VFS_INSUFFICIENT_BUF;
-	if(!rtl)
-		return ERR_IO_ERROR;
 	return rtl8139_rx(rtl, buf, len);
 }
 
 static ssize_t rtl8139_write(dev_cookie cookie, const void *buf, off_t pos, ssize_t len)
 {
+	rtl8139 *rtl = (rtl8139 *)cookie;
+
 	if(len > 1500)
 		return ERR_VFS_INSUFFICIENT_BUF;
 	if(len < 0)
 		return ERR_INVALID_ARGS;
-	if(!rtl)
-		return ERR_IO_ERROR;
 
 	rtl8139_xmit(rtl, buf, len);
 	return len;
@@ -62,6 +62,7 @@ static ssize_t rtl8139_write(dev_cookie cookie, const void *buf, off_t pos, ssiz
 
 static int rtl8139_ioctl(dev_cookie cookie, int op, void *buf, size_t len)
 {
+	rtl8139 *rtl = (rtl8139 *)cookie;
 	int err;
 
 	dprintf("rtl8139_ioctl: op %d, buf 0x%x, len %d\n", op, buf, len);
@@ -116,7 +117,7 @@ int rtl8139_dev_init(kernel_args *ka)
 	rtl8139_init(rtl);
 
 	// create device node
-	devfs_publish_device("net/rtl8139/0", NULL, &rtl8139_hooks);
+	devfs_publish_device("net/rtl8139/0", rtl, &rtl8139_hooks);
 
 	return 0;
 }
