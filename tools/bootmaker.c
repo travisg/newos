@@ -213,6 +213,7 @@ void *loadstripfile(char *file, int *size)
     if(strip_debug) {
         strcpy(temp, "/tmp/mkboot.XXXXXXXX");
         mktemp(temp);
+
         sprintf(cmd, "cp %s %s; %s %s", file, temp, strip_binary, temp);
         system(cmd);
 
@@ -451,9 +452,6 @@ void makeboot(section *s, char *outfile)
     while(s){
         char *type = getvaldef(s,"type","NONE");
         char *file = getval(s,"file");
-        int vsize;
-        int size;
-        struct stat statbuf;
 
         if(!type) die("section %s has no type",s->name);
 
@@ -472,13 +470,8 @@ void makeboot(section *s, char *outfile)
         if(!rawdata[c])
            die("cannot load \"%s\"",file);
 
-        if(stat(file,&statbuf))
-            die("cannot stat \"%s\"",file);
-        vsize = statbuf.st_size;
-
         centry.be_size = rawsize[c] / 4096 + (rawsize[c] % 4096 ? 1 : 0);
-        centry.be_vsize =
-            (vsize < centry.be_size) ? centry.be_size : vsize;
+		centry.be_vsize = rawsize[c];
 
         centry.be_offset = nextpage;
         nextpage += centry.be_size;
