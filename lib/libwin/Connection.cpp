@@ -79,7 +79,7 @@ void Connection::EndCommand()
 void Connection::Flush()
 {
 	printf("Connection::Flush: port %d, size %d\n", fSendPort, fSendBufferSize);
-	sys_port_write(fSendPort, 0, fSendBuffer, fSendBufferSize);
+	_kern_port_write(fSendPort, 0, fSendBuffer, fSendBufferSize);
 
 	fSendBufferSize = 0;
 }
@@ -88,7 +88,7 @@ void Connection::Receive()
 {
 	int ignore;
 
-	fReceiveBufferSize = sys_port_read(fReceivePort, &ignore, fReceiveBuffer, kReceiveBufferSize);
+	fReceiveBufferSize = _kern_port_read(fReceivePort, &ignore, fReceiveBuffer, kReceiveBufferSize);
 	fReceiveBufferPos = 0;
 }
 

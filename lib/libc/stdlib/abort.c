@@ -9,9 +9,9 @@
 
 void abort(void)
 {
-	proc_id id = sys_get_current_proc_id();
+	proc_id id = _kern_get_current_proc_id();
 
-	sys_proc_kill_proc(id);
+	_kern_proc_kill_proc(id);
 }
 #endif
 

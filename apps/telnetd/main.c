@@ -98,9 +98,9 @@ static int telnet_reader(void *arg)
 			write(tty_master_fd, &buf[output_start], output_len);
 	}
 
-	sys_sem_release(wait_sem, 1);
+	_kern_sem_release(wait_sem, 1);
 
-	sys_exit(0);
+	_kern_exit(0);
 	return 0;
 }
 
@@ -121,9 +121,9 @@ static int telnet_writer(void *arg)
 			break;
 	}
 
-	sys_sem_release(wait_sem, 1);
+	_kern_sem_release(wait_sem, 1);
 
-	sys_exit(0);
+	_kern_exit(0);
 	return 0;
 }
 
@@ -164,7 +164,7 @@ int main(int argc, char **argv)
 		spawn_argv[i] = argv[i + 1];
 	}
 
-	wait_sem = sys_sem_create(0, "telnetd wait sem");
+	wait_sem = _kern_sem_create(0, "telnetd wait sem");
 	if(wait_sem < 0)
 		return -1;
 
@@ -172,16 +172,16 @@ int main(int argc, char **argv)
 	if(tty_master_fd < 0)
 		return -2;
 
-	tty_num = sys_ioctl(tty_master_fd, _TTY_IOCTL_GET_TTY_NUM, NULL, 0);
+	tty_num = _kern_ioctl(tty_master_fd, _TTY_IOCTL_GET_TTY_NUM, NULL, 0);
 	if(tty_num < 0)
 		return -3;
 
 	{
 		struct tty_flags flags;
 
-		sys_ioctl(tty_master_fd, _TTY_IOCTL_GET_TTY_FLAGS, &flags, sizeof(flags));
+		_kern_ioctl(tty_master_fd, _TTY_IOCTL_GET_TTY_FLAGS, &flags, sizeof(flags));
 		flags.input_flags |= TTY_FLAG_CRNL;
-		sys_ioctl(tty_master_fd, _TTY_IOCTL_SET_TTY_FLAGS, &flags, sizeof(flags));
+		_kern_ioctl(tty_master_fd, _TTY_IOCTL_SET_TTY_FLAGS, &flags, sizeof(flags));
 	}
 
 	{
@@ -209,19 +209,19 @@ int main(int argc, char **argv)
 	send_opts();
 
 	// now start the app
-	pid = sys_proc_create_proc(spawn_argv[0], spawn_argv[0], spawn_argv, spawn_argc, 5);
+	pid = _kern_proc_create_proc(spawn_argv[0], spawn_argv[0], spawn_argv, spawn_argc, 5);
 	if(pid < 0)
 		return -1;
 
-	tid = sys_thread_create_thread("telnet reader", &telnet_reader, NULL);
-	sys_thread_set_priority(tid, 30);
-	sys_thread_resume_thread(tid);
+	tid = _kern_thread_create_thread("telnet reader", &telnet_reader, NULL);
+	_kern_thread_set_priority(tid, 30);
+	_kern_thread_resume_thread(tid);
 
-	tid = sys_thread_create_thread("telnet writer", &telnet_writer, NULL);
-	sys_thread_set_priority(tid, 30);
-	sys_thread_resume_thread(tid);
+	tid = _kern_thread_create_thread("telnet writer", &telnet_writer, NULL);
+	_kern_thread_set_priority(tid, 30);
+	_kern_thread_resume_thread(tid);
 
-	sys_proc_wait_on_proc(pid, NULL);
+	_kern_proc_wait_on_proc(pid, NULL);
 
 	return 0;
 }

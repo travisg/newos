@@ -13,13 +13,13 @@
 Term::Term(int fd)
 	: mFd(fd)
 {
-	mSem = sys_sem_create(1, "term lock");
+	mSem = _kern_sem_create(1, "term lock");
 
 	tty_flags flags;
 	flags.input_flags = TTY_FLAG_NLCR | TTY_FLAG_CRNL;
 	flags.output_flags = TTY_FLAG_NLCR;
 
-	sys_ioctl(mFd, _TTY_IOCTL_SET_TTY_FLAGS, &flags, sizeof(flags));
+	_kern_ioctl(mFd, _TTY_IOCTL_SET_TTY_FLAGS, &flags, sizeof(flags));
 }
 
 Term::~Term()
@@ -28,17 +28,17 @@ Term::~Term()
 	flags.input_flags = TTY_FLAG_DEFAULT_INPUT;
 	flags.output_flags = TTY_FLAG_DEFAULT_OUTPUT;
 
-	sys_ioctl(mFd, _TTY_IOCTL_SET_TTY_FLAGS, &flags, sizeof(flags));
+	_kern_ioctl(mFd, _TTY_IOCTL_SET_TTY_FLAGS, &flags, sizeof(flags));
 }
 
 void Term::Lock()
 {
-	sys_sem_acquire(mSem, 1);
+	_kern_sem_acquire(mSem, 1);
 }
 
 void Term::Unlock()
 {
-	sys_sem_release(mSem, 1);
+	_kern_sem_release(mSem, 1);
 }
 
 void Term::ClearScreen()

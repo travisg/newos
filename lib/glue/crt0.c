@@ -9,7 +9,7 @@
 extern int __stdio_init(void);
 extern int __stdio_deinit(void);
 
-extern void sys_exit(int retcode);
+extern void _kern_exit(int retcode);
 
 extern void (*__ctor_list)(void);
 extern void (*__ctor_end)(void);
@@ -41,7 +41,7 @@ int _start(struct uspace_prog_args_t *uspa)
 	retcode = main(uspa->argc, uspa->argv);
 
 	__stdio_deinit();
-	sys_exit(retcode);
+	_kern_exit(retcode);
 	return 0;
 }
 

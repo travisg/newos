@@ -496,12 +496,12 @@ static int launch(int (*cmd)(int, char **), int argc, char **argv, char *r_in, c
    int err;
 
 	if(strcmp(r_in, "")!= 0) {
-		new_in = sys_open(r_in, STREAM_TYPE_ANY, 0);
+		new_in = _kern_open(r_in, STREAM_TYPE_ANY, 0);
 		if(new_in < 0) {
-			new_in = sys_create(r_in,STREAM_TYPE_FILE);
+			new_in = _kern_create(r_in,STREAM_TYPE_FILE);
 		}
 	} else {
-		new_in = sys_dup(0);
+		new_in = _kern_dup(0);
 	}
 	if(new_in < 0) {
 		err = new_in;
@@ -509,12 +509,12 @@ static int launch(int (*cmd)(int, char **), int argc, char **argv, char *r_in, c
 	}
 
 	if(strcmp(r_out, "")!= 0) {
-		new_out = sys_open(r_out, STREAM_TYPE_ANY, 0);
+		new_out = _kern_open(r_out, STREAM_TYPE_ANY, 0);
 		if(new_out < 0){
-			new_out = sys_create(r_out,STREAM_TYPE_FILE);
+			new_out = _kern_create(r_out,STREAM_TYPE_FILE);
 		}
 	} else {
-		new_out = sys_dup(1);
+		new_out = _kern_dup(1);
 	}
 	if(new_out < 0) {
 		err = new_out;
@@ -522,25 +522,25 @@ static int launch(int (*cmd)(int, char **), int argc, char **argv, char *r_in, c
 	}
 
 
-	saved_in = sys_dup(0);
-	saved_out= sys_dup(1);
+	saved_in = _kern_dup(0);
+	saved_out= _kern_dup(1);
 
-	sys_dup2(new_in, 0);
-	sys_dup2(new_out, 1);
-	sys_close(new_in);
-	sys_close(new_out);
+	_kern_dup2(new_in, 0);
+	_kern_dup2(new_out, 1);
+	_kern_close(new_in);
+	_kern_close(new_out);
 
 	retval= cmd(argc, argv);
 
-	sys_dup2(saved_in, 0);
-	sys_dup2(saved_out, 1);
-	sys_close(saved_in);
-	sys_close(saved_out);
+	_kern_dup2(saved_in, 0);
+	_kern_dup2(saved_out, 1);
+	_kern_close(saved_in);
+	_kern_close(saved_out);
 
 	return 0;
 
 err_2:
-	sys_close(new_in);
+	_kern_close(new_in);
 err_1:
 	return err;
 }

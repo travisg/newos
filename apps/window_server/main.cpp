@@ -329,19 +329,19 @@ int vesa_find(Renderer **renderer)
 	int err;
 	void *framebuffer;
 
-	fd = sys_open("/dev/graphics/vesa/fb/0", STREAM_TYPE_DEVICE, 0);
+	fd = _kern_open("/dev/graphics/vesa/fb/0", STREAM_TYPE_DEVICE, 0);
 	if(fd < 0) {
 		printf("error opening vesa device\n");
 		return -1;
 	}
 
-	err = sys_ioctl(fd, IOCTL_DEVFS_GET_FRAMEBUFFER_INFO, &fb, sizeof(fb));
+	err = _kern_ioctl(fd, IOCTL_DEVFS_GET_FRAMEBUFFER_INFO, &fb, sizeof(fb));
 	if(err < 0) {
 		printf("error getting framebuffer info\n");
 		return -2;
 	}
 
-	err = sys_ioctl(fd, IOCTL_DEVFS_MAP_FRAMEBUFFER, &framebuffer, sizeof(framebuffer));
+	err = _kern_ioctl(fd, IOCTL_DEVFS_MAP_FRAMEBUFFER, &framebuffer, sizeof(framebuffer));
 	if(err < 0) {
 		printf("error mapping framebuffer\n");
 		return -3;
@@ -381,13 +381,13 @@ int main(int argc, char **argv)
 		screen->DrawLine(rand() % r.Width(), rand() % r.Height(), rand() % r.Width(), rand() % r.Height(), 0);
 	}
 
-	sys_snooze(2000000);
+	_kern_snooze(2000000);
 
 	for(i = 0; i < 256; i++) {
 		Rect source;
 		Rect dest;
 
-		sys_snooze(10000);
+		_kern_snooze(10000);
 
 		source.SetTo(rand() % r.Width(), rand() % r.Height(), rand() % r.Width(), rand() % r.Height());
 		dest.SetTo(rand() % r.Width(), rand() % r.Height(), rand() % r.Width(), rand() % r.Height());
@@ -401,7 +401,7 @@ int main(int argc, char **argv)
 		screen->CopyRect(source, dest);
 	}
 
-	sys_snooze(1000000);
+	_kern_snooze(1000000);
 
 	{
 		Rect source(300, 300, 400, 400);

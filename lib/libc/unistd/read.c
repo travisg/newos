@@ -12,7 +12,7 @@ read(int fd, void *buf, size_t len)
 {
 	int retval;
 
-	retval= sys_read(fd, buf, -1, len);
+	retval= _kern_read(fd, buf, -1, len);
 
 	if(retval< 0) {
 		// set errno

@@ -30,7 +30,7 @@ static void do_ps(void)
 	if(display_threads)
 		printf("\tid\t name\t user\t kernel\n");
 	for(;;) {
-		err = sys_proc_get_next_proc_info(&cookie, &pi);
+		err = _kern_proc_get_next_proc_info(&cookie, &pi);
 		if(err < 0)
 			break;
 
@@ -41,7 +41,7 @@ static void do_ps(void)
 			// display the threads this proc holds
 			cookie2 = 0;
 			for(;;) {
-				err = sys_thread_get_next_thread_info(&cookie2, pi.id, &ti);
+				err = _kern_thread_get_next_thread_info(&cookie2, pi.id, &ti);
 				if(err < 0)
 					break;
 

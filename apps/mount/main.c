@@ -16,9 +16,9 @@ int main(int argc, char *argv[])
 		return 0;
 	}
 
-	rc = sys_mount(argv[1], argv[2], argv[3], NULL);
+	rc = _kern_mount(argv[1], argv[2], argv[3], NULL);
 	if (rc < 0) {
-		printf("sys_mount() returned error: %s\n", strerror(rc));
+		printf("_kern_mount() returned error: %s\n", strerror(rc));
 	} else {
 		printf("%s successfully mounted on %s.\n", argv[2], argv[1]);
 	}

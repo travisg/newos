@@ -45,7 +45,7 @@ static int console_reader(void *arg)
 		write_len = write(con->tty_master_fd, buf, len);
 	}
 
-	sys_sem_release(con->wait_sem, 1);
+	_kern_sem_release(con->wait_sem, 1);
 
 	return 0;
 }
@@ -65,7 +65,7 @@ static int console_writer(void *arg)
 		write_len = write(con->console_fd, buf, len);
 	}
 
-	sys_sem_release(con->wait_sem, 1);
+	_kern_sem_release(con->wait_sem, 1);
 
 	return 0;
 }
@@ -74,7 +74,7 @@ static int start_console(struct console *con)
 {
 	memset(con, 0, sizeof(struct console));
 
-	con->wait_sem = sys_sem_create(0, "console wait sem");
+	con->wait_sem = _kern_sem_create(0, "console wait sem");
 	if(con->wait_sem < 0)
 		return -1;
 
@@ -90,7 +90,7 @@ static int start_console(struct console *con)
 	if(con->tty_master_fd < 0)
 		return -4;
 
-	con->tty_num = sys_ioctl(con->tty_master_fd, _TTY_IOCTL_GET_TTY_NUM, NULL, 0);
+	con->tty_num = _kern_ioctl(con->tty_master_fd, _TTY_IOCTL_GET_TTY_NUM, NULL, 0);
 	if(con->tty_num < 0)
 		return -5;
 
@@ -103,18 +103,18 @@ static int start_console(struct console *con)
 			return -6;
 	}
 
-	con->keyboard_reader = sys_thread_create_thread("console reader", &console_reader, con);
+	con->keyboard_reader = _kern_thread_create_thread("console reader", &console_reader, con);
 	if(con->keyboard_reader < 0)
 		return -7;
 
-	con->console_writer = sys_thread_create_thread("console writer", &console_writer, con);
+	con->console_writer = _kern_thread_create_thread("console writer", &console_writer, con);
 	if(con->console_writer < 0)
 		return -8;
 
-	sys_thread_set_priority(con->keyboard_reader, 32);
-	sys_thread_set_priority(con->console_writer, 32);
-	sys_thread_resume_thread(con->keyboard_reader);
-	sys_thread_resume_thread(con->console_writer);
+	_kern_thread_set_priority(con->keyboard_reader, 32);
+	_kern_thread_set_priority(con->console_writer, 32);
+	_kern_thread_resume_thread(con->keyboard_reader);
+	_kern_thread_resume_thread(con->console_writer);
 
 	return 0;
 }
@@ -124,23 +124,23 @@ static proc_id start_process(const char *path, const char *name, char **argv, in
 	int saved_stdin, saved_stdout, saved_stderr;
 	proc_id pid;
 
-	saved_stdin = sys_dup(0);
-	saved_stdout = sys_dup(1);
-	saved_stderr = sys_dup(2);
+	saved_stdin = _kern_dup(0);
+	saved_stdout = _kern_dup(1);
+	saved_stderr = _kern_dup(2);
 
-	sys_dup2(con->tty_slave_fd, 0);
-	sys_dup2(con->tty_slave_fd, 1);
-	sys_dup2(con->tty_slave_fd, 2);
+	_kern_dup2(con->tty_slave_fd, 0);
+	_kern_dup2(con->tty_slave_fd, 1);
+	_kern_dup2(con->tty_slave_fd, 2);
 
 	// XXX launch
-	pid = sys_proc_create_proc(path, name, argv, argc, 5);
+	pid = _kern_proc_create_proc(path, name, argv, argc, 5);
 
-	sys_dup2(saved_stdin, 0);
-	sys_dup2(saved_stdout, 1);
-	sys_dup2(saved_stderr, 2);
-	sys_close(saved_stdin);
-	sys_close(saved_stdout);
-	sys_close(saved_stderr);
+	_kern_dup2(saved_stdin, 0);
+	_kern_dup2(saved_stdout, 1);
+	_kern_dup2(saved_stderr, 2);
+	_kern_close(saved_stdin);
+	_kern_close(saved_stdout);
+	_kern_close(saved_stderr);
 
 	return pid;
 }
@@ -156,9 +156,9 @@ int main(void)
 	}
 
 	// move our stdin and stdout to the console
-	sys_dup2(theconsole.tty_slave_fd, 0);
-	sys_dup2(theconsole.tty_slave_fd, 1);
-	sys_dup2(theconsole.tty_slave_fd, 2);
+	_kern_dup2(theconsole.tty_slave_fd, 0);
+	_kern_dup2(theconsole.tty_slave_fd, 1);
+	_kern_dup2(theconsole.tty_slave_fd, 2);
 
 	for(;;) {
 		proc_id shell_process;
@@ -169,10 +169,10 @@ int main(void)
 		argv[1] = "-s";
 		argv[2] = "/boot/loginscript";
 		shell_process = start_process("/boot/bin/shell", "console shell", argv, 3, &theconsole);
-		sys_proc_wait_on_proc(shell_process, &retcode);
+		_kern_proc_wait_on_proc(shell_process, &retcode);
 	}
 
-	sys_sem_acquire(theconsole.wait_sem, 1);
+	_kern_sem_acquire(theconsole.wait_sem, 1);
 
 	return 0;
 }

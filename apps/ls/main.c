@@ -56,9 +56,9 @@ static int do_ls(const char *arg)
 	struct file_stat stat;
 	int count = 0;
 
-	rc = sys_rstat(arg, &stat);
+	rc = _kern_rstat(arg, &stat);
 	if(rc < 0) {
-		printf("sys_rstat() returned error: %s!\n", strerror(rc));
+		printf("_kern_rstat() returned error: %s!\n", strerror(rc));
 		return rc;
 	}
 
@@ -68,9 +68,9 @@ static int do_ls(const char *arg)
 			char filename[1024];
 			bool done_dot, done_dotdot;
 
-			fd = sys_open(arg, STREAM_TYPE_DIR, 0);
+			fd = _kern_open(arg, STREAM_TYPE_DIR, 0);
 			if(fd < 0) {
-				//printf("ls: sys_open() returned error: %s!\n", strerror(fd));
+				//printf("ls: _kern_open() returned error: %s!\n", strerror(fd));
 				break;
 			}
 
@@ -94,7 +94,7 @@ static int do_ls(const char *arg)
 					strlcpy(filename, "..", sizeof(filename));
 					done_dotdot = true;
 				} else {
-					rc = sys_read(fd, filename, -1, sizeof(filename));
+					rc = _kern_read(fd, filename, -1, sizeof(filename));
 					if(rc <= 0)
 						break;
 				}
@@ -106,13 +106,13 @@ static int do_ls(const char *arg)
 				}
 				strlcat(full_path, filename, sizeof(full_path));
 
-				rc2 = sys_rstat(full_path, &stat);
+				rc2 = _kern_rstat(full_path, &stat);
 				if(rc2 >= 0) {
 					(*disp_func)(filename, &stat);
 				}
 				count++;
 			}
-			sys_close(fd);
+			_kern_close(fd);
 
 			printf("%d files found\n", count);
 			break;

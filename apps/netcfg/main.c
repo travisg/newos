@@ -151,13 +151,13 @@ static int do_if(int argc, const char *argv[], int curr_arg)
 		int fd;
 		int err;
 
-		fd = sys_open(NET_CONTROL_DEV, STREAM_TYPE_DEVICE, 0);
+		fd = _kern_open(NET_CONTROL_DEV, STREAM_TYPE_DEVICE, 0);
 		if(fd < 0) {
 			printf("error opening network control device\n");
 			return fd;
 		}
-		err = sys_ioctl(fd, op, &control, sizeof(control));
-		sys_close(fd);
+		err = _kern_ioctl(fd, op, &control, sizeof(control));
+		_kern_close(fd);
 
 		if(err < 0) {
 			printf("error calling ioctl %d (%s)\n", err, strerror(err));
@@ -253,13 +253,13 @@ static int do_route(int argc, const char *argv[], int curr_arg)
 		int fd;
 		int err;
 
-		fd = sys_open(NET_CONTROL_DEV, STREAM_TYPE_DEVICE, 0);
+		fd = _kern_open(NET_CONTROL_DEV, STREAM_TYPE_DEVICE, 0);
 		if(fd < 0) {
 			printf("error opening network control device\n");
 			return fd;
 		}
-		err = sys_ioctl(fd, op, &control, sizeof(control));
-		sys_close(fd);
+		err = _kern_ioctl(fd, op, &control, sizeof(control));
+		_kern_close(fd);
 
 		if(err < 0) {
 			printf("error calling ioctl %d (%s)\n", err, strerror(err));

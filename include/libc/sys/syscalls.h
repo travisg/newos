@@ -111,93 +111,93 @@ enum {
 extern "C" {
 #endif
 
-int sys_null();
+int _kern_null();
 
 /* fs api */
-int sys_mount(const char *path, const char *device, const char *fs_name, void *args);
-int sys_unmount(const char *path);
-int sys_sync();
-int sys_open(const char *path, stream_type st, int omode);
-int sys_close(int fd);
-int sys_fsync(int fd);
-ssize_t sys_read(int fd, void *buf, off_t pos, ssize_t len);
-ssize_t sys_write(int fd, const void *buf, off_t pos, ssize_t len);
-int sys_seek(int fd, off_t pos, seek_type seek_type);
-int sys_ioctl(int fd, int op, void *buf, size_t len);
-int sys_create(const char *path, stream_type stream_type);
-int sys_unlink(const char *path);
-int sys_rename(const char *oldpath, const char *newpath);
-int sys_rstat(const char *path, struct file_stat *stat);
-int sys_wstat(const char *path, struct file_stat *stat, int stat_mask);
-int sys_getcwd(char* buf, size_t size);
-int sys_setcwd(const char* path);
-int sys_dup(int fd);
-int sys_dup2(int ofd, int nfd);
+int _kern_mount(const char *path, const char *device, const char *fs_name, void *args);
+int _kern_unmount(const char *path);
+int _kern_sync();
+int _kern_open(const char *path, stream_type st, int omode);
+int _kern_close(int fd);
+int _kern_fsync(int fd);
+ssize_t _kern_read(int fd, void *buf, off_t pos, ssize_t len);
+ssize_t _kern_write(int fd, const void *buf, off_t pos, ssize_t len);
+int _kern_seek(int fd, off_t pos, seek_type seek_type);
+int _kern_ioctl(int fd, int op, void *buf, size_t len);
+int _kern_create(const char *path, stream_type stream_type);
+int _kern_unlink(const char *path);
+int _kern_rename(const char *oldpath, const char *newpath);
+int _kern_rstat(const char *path, struct file_stat *stat);
+int _kern_wstat(const char *path, struct file_stat *stat, int stat_mask);
+int _kern_getcwd(char* buf, size_t size);
+int _kern_setcwd(const char* path);
+int _kern_dup(int fd);
+int _kern_dup2(int ofd, int nfd);
 
-bigtime_t sys_system_time();
-int sys_snooze(bigtime_t time);
-int sys_getrlimit(int resource, struct rlimit * rlp);
-int sys_setrlimit(int resource, const struct rlimit * rlp);
+bigtime_t _kern_system_time();
+int _kern_snooze(bigtime_t time);
+int _kern_getrlimit(int resource, struct rlimit * rlp);
+int _kern_setrlimit(int resource, const struct rlimit * rlp);
 
 /* sem functions */
-sem_id sys_sem_create(int count, const char *name);
-int sys_sem_delete(sem_id id);
-int sys_sem_acquire(sem_id id, int count);
-int sys_sem_acquire_etc(sem_id id, int count, int flags, bigtime_t timeout);
-int sys_sem_release(sem_id id, int count);
-int sys_sem_release_etc(sem_id id, int count, int flags);
-int sys_sem_get_count(sem_id id, int32* thread_count);
-int sys_sem_get_sem_info(sem_id id, struct sem_info *info);
-int sys_sem_get_next_sem_info(proc_id proc, uint32 *cookie, struct sem_info *info);
-int sys_set_sem_owner(sem_id id, proc_id proc);
+sem_id _kern_sem_create(int count, const char *name);
+int _kern_sem_delete(sem_id id);
+int _kern_sem_acquire(sem_id id, int count);
+int _kern_sem_acquire_etc(sem_id id, int count, int flags, bigtime_t timeout);
+int _kern_sem_release(sem_id id, int count);
+int _kern_sem_release_etc(sem_id id, int count, int flags);
+int _kern_sem_get_count(sem_id id, int32* thread_count);
+int _kern_sem_get_sem_info(sem_id id, struct sem_info *info);
+int _kern_sem_get_next_sem_info(proc_id proc, uint32 *cookie, struct sem_info *info);
+int _kern_set_sem_owner(sem_id id, proc_id proc);
 
-thread_id sys_get_current_thread_id();
-void sys_exit(int retcode);
-proc_id sys_proc_create_proc(const char *path, const char *name, char **args, int argc, int priority);
-thread_id sys_thread_create_thread(const char *name, int (*func)(void *args), void *args);
-int sys_thread_set_priority(thread_id tid, int priority);
-int sys_thread_wait_on_thread(thread_id tid, int *retcode);
-int sys_thread_suspend_thread(thread_id tid);
-int sys_thread_resume_thread(thread_id tid);
-int sys_thread_kill_thread(thread_id tid);
-int sys_thread_get_thread_info(thread_id id, struct thread_info *info);
-int sys_thread_get_next_thread_info(uint32 *cookie, proc_id pid, struct thread_info *info);
-int sys_proc_kill_proc(proc_id pid);
-proc_id sys_get_current_proc_id();
-int sys_proc_wait_on_proc(proc_id pid, int *retcode);
-int sys_proc_get_proc_info(proc_id id, struct proc_info *info);
-int sys_proc_get_next_proc_info(uint32 *cookie, struct proc_info *info);
-region_id sys_vm_create_anonymous_region(const char *name, void **address, int addr_type,
+thread_id _kern_get_current_thread_id();
+void _kern_exit(int retcode);
+proc_id _kern_proc_create_proc(const char *path, const char *name, char **args, int argc, int priority);
+thread_id _kern_thread_create_thread(const char *name, int (*func)(void *args), void *args);
+int _kern_thread_set_priority(thread_id tid, int priority);
+int _kern_thread_wait_on_thread(thread_id tid, int *retcode);
+int _kern_thread_suspend_thread(thread_id tid);
+int _kern_thread_resume_thread(thread_id tid);
+int _kern_thread_kill_thread(thread_id tid);
+int _kern_thread_get_thread_info(thread_id id, struct thread_info *info);
+int _kern_thread_get_next_thread_info(uint32 *cookie, proc_id pid, struct thread_info *info);
+int _kern_proc_kill_proc(proc_id pid);
+proc_id _kern_get_current_proc_id();
+int _kern_proc_wait_on_proc(proc_id pid, int *retcode);
+int _kern_proc_get_proc_info(proc_id id, struct proc_info *info);
+int _kern_proc_get_next_proc_info(uint32 *cookie, struct proc_info *info);
+region_id _kern_vm_create_anonymous_region(const char *name, void **address, int addr_type,
 	addr_t size, int wiring, int lock);
-region_id sys_vm_clone_region(const char *name, void **address, int addr_type,
+region_id _kern_vm_clone_region(const char *name, void **address, int addr_type,
 	region_id source_region, int mapping, int lock);
-region_id sys_vm_map_file(const char *name, void **address, int addr_type,
+region_id _kern_vm_map_file(const char *name, void **address, int addr_type,
 	addr_t size, int lock, int mapping, const char *path, off_t offset);
-int sys_vm_delete_region(region_id id);
-int sys_vm_get_region_info(region_id id, vm_region_info *info);
+int _kern_vm_delete_region(region_id id);
+int _kern_vm_get_region_info(region_id id, vm_region_info *info);
 
 /* kernel port functions */
-port_id		sys_port_create(int32 queue_length, const char *name);
-int			sys_port_close(port_id id);
-int			sys_port_delete(port_id id);
-port_id		sys_port_find(const char *port_name);
-int			sys_port_get_info(port_id id, struct port_info *info);
-int		 	sys_port_get_next_port_info(proc_id proc, uint32 *cookie, struct port_info *info);
-ssize_t		sys_port_buffer_size(port_id port);
-ssize_t		sys_port_buffer_size_etc(port_id port, uint32 flags, bigtime_t timeout);
-int32		sys_port_count(port_id port);
-ssize_t		sys_port_read(port_id port, int32 *msg_code, void *msg_buffer, size_t buffer_size);
-ssize_t		sys_port_read_etc(port_id port,	int32 *msg_code, void *msg_buffer, size_t buffer_size, uint32 flags, bigtime_t timeout);
-int			sys_port_set_owner(port_id port, proc_id proc);
-int			sys_port_write(port_id port, int32 msg_code, void *msg_buffer, size_t buffer_size);
-int			sys_port_write_etc(port_id port, int32 msg_code, void *msg_buffer, size_t buffer_size, uint32 flags, bigtime_t timeout);
+port_id		_kern_port_create(int32 queue_length, const char *name);
+int			_kern_port_close(port_id id);
+int			_kern_port_delete(port_id id);
+port_id		_kern_port_find(const char *port_name);
+int			_kern_port_get_info(port_id id, struct port_info *info);
+int		 	_kern_port_get_next_port_info(proc_id proc, uint32 *cookie, struct port_info *info);
+ssize_t		_kern_port_buffer_size(port_id port);
+ssize_t		_kern_port_buffer_size_etc(port_id port, uint32 flags, bigtime_t timeout);
+int32		_kern_port_count(port_id port);
+ssize_t		_kern_port_read(port_id port, int32 *msg_code, void *msg_buffer, size_t buffer_size);
+ssize_t		_kern_port_read_etc(port_id port,	int32 *msg_code, void *msg_buffer, size_t buffer_size, uint32 flags, bigtime_t timeout);
+int			_kern_port_set_owner(port_id port, proc_id proc);
+int			_kern_port_write(port_id port, int32 msg_code, void *msg_buffer, size_t buffer_size);
+int			_kern_port_write_etc(port_id port, int32 msg_code, void *msg_buffer, size_t buffer_size, uint32 flags, bigtime_t timeout);
 
 /* atomic_* ops (needed for cpus that dont support them directly) */
-int sys_atomic_add(int *val, int incr);
-int sys_atomic_and(int *val, int incr);
-int sys_atomic_or(int *val, int incr);
-int sys_atomic_set(int *val, int set_to);
-int sys_test_and_set(int *val, int set_to, int test_val);
+int _kern_atomic_add(int *val, int incr);
+int _kern_atomic_and(int *val, int incr);
+int _kern_atomic_or(int *val, int incr);
+int _kern_atomic_set(int *val, int set_to);
+int _kern_test_and_set(int *val, int set_to, int test_val);
 
 #ifdef __cplusplus
 }

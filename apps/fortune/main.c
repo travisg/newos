@@ -16,10 +16,10 @@ main(void)
 	unsigned found;
 	struct file_stat stat;
 
-	rc = sys_rstat(FORTUNES, &stat);
+	rc = _kern_rstat(FORTUNES, &stat);
 	if(rc< 0) {
 		printf("Cookie monster was here!!!\n");
-		sys_exit(1);
+		exit(1);
 	}
 
 	buf= malloc(stat.size+1);
@@ -36,7 +36,7 @@ main(void)
 		}
 	}
 
-	found= 1+(sys_system_time()%found);
+	found= 1+(_kern_system_time()%found);
 
 	for(i= 0; i< stat.size; i++) {
 		if(strncmp(buf+i, "#@#", 3)== 0) {

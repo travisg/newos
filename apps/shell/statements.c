@@ -306,7 +306,7 @@ static int handle_exit(scan_info *info)
 
 	}
 
-	sys_exit(exit_value);
+	_kern_exit(exit_value);
 
 
 err:

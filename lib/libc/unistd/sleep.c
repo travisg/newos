@@ -15,16 +15,16 @@ sleep(unsigned seconds)
 	int err;
 	unsigned retval;
 
-	start= sys_system_time();
+	start= _kern_system_time();
 
 	usecs= 1000000;
 	usecs*= (bigtime_t) seconds;
 
-	err= sys_snooze(usecs);
+	err= _kern_snooze(usecs);
 
 	retval= 0;
 	if(err) {
-		retval= (unsigned)(sys_system_time()-start);
+		retval= (unsigned)(_kern_system_time()-start);
 	}
 
 	return retval;

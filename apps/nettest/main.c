@@ -36,7 +36,7 @@ static int read_thread(void *args)
 			printf("%c", buf[i]);
 	}
 
-	sys_sem_release(exit_sem, 1);
+	_kern_sem_release(exit_sem, 1);
 
 	return 0;
 }
@@ -55,7 +55,7 @@ static int write_thread(void *args)
 		}
 	}
 
-	sys_sem_release(exit_sem, 1);
+	_kern_sem_release(exit_sem, 1);
 
 	return 0;
 }
@@ -85,13 +85,13 @@ int nettest1(void)
 	if(err < 0)
 		return err;
 
-	exit_sem = sys_sem_create(0, "exit");
+	exit_sem = _kern_sem_create(0, "exit");
 
-	sys_thread_resume_thread(sys_thread_create_thread("read_thread", &read_thread, NULL));
-	sys_thread_resume_thread(sys_thread_create_thread("write_thread", &write_thread, NULL));
+	_kern_thread_resume_thread(_kern_thread_create_thread("read_thread", &read_thread, NULL));
+	_kern_thread_resume_thread(_kern_thread_create_thread("write_thread", &write_thread, NULL));
 
 	for(;;)
-		sys_sem_acquire(exit_sem, 1);
+		_kern_sem_acquire(exit_sem, 1);
 
 	return 0;
 }
@@ -182,7 +182,7 @@ int nettest4(void)
 	if(err < 0)
 		return err;
 
-	sys_snooze(5000000);
+	_kern_snooze(5000000);
 
 	err = socket_close(fd);
 	printf("socket_close returns %d\n", err);
@@ -226,7 +226,7 @@ int nettest5(void)
 	printf("socket_write returns %d\n", err);
 
 	printf("sleeping for 5 seconds\n");
-	sys_snooze(5000000);
+	_kern_snooze(5000000);
 
 	printf("closing fd %d\n", new_fd);
 	socket_close(new_fd);
@@ -272,26 +272,26 @@ int nettest6(void)
 		if(new_fd < 0)
 			continue;
 
-		saved_stdin = sys_dup(0);
-		saved_stdout = sys_dup(1);
-		saved_stderr = sys_dup(2);
+		saved_stdin = _kern_dup(0);
+		saved_stdout = _kern_dup(1);
+		saved_stderr = _kern_dup(2);
 
-		sys_dup2(new_fd, 0);
-		sys_dup2(new_fd, 1);
-		sys_dup2(new_fd, 2);
-		sys_close(new_fd);
+		_kern_dup2(new_fd, 0);
+		_kern_dup2(new_fd, 1);
+		_kern_dup2(new_fd, 2);
+		_kern_close(new_fd);
 
 		// XXX launch
 		argv = "/boot/bin/shell";
-		err = sys_proc_create_proc("/boot/bin/shell", "shell", &argv, 1, 5);
+		err = _kern_proc_create_proc("/boot/bin/shell", "shell", &argv, 1, 5);
 
-		sys_dup2(saved_stdin, 0);
-		sys_dup2(saved_stdout, 1);
-		sys_dup2(saved_stderr, 2);
-		sys_close(saved_stdin);
-		sys_close(saved_stdout);
-		sys_close(saved_stderr);
-		printf("sys_proc_create_proc returns %d\n", err);
+		_kern_dup2(saved_stdin, 0);
+		_kern_dup2(saved_stdout, 1);
+		_kern_dup2(saved_stderr, 2);
+		_kern_close(saved_stdin);
+		_kern_close(saved_stdout);
+		_kern_close(saved_stderr);
+		printf("_kern_proc_create_proc returns %d\n", err);
 	}
 }
 

@@ -15,13 +15,13 @@
 static int do_delete(const char *name)
 {
 	struct file_stat stat;
-	int err = sys_rstat(name,&stat);
+	int err = _kern_rstat(name,&stat);
 
 	if(err<0) return err;
 
 	if(stat.type == STREAM_TYPE_DIR) return RMS_FILE_IS_DIR;
 
-	return  sys_unlink(name);
+	return  _kern_unlink(name);
 }
 
 int main(int argc,char *argv[])

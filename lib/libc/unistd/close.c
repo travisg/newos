@@ -12,7 +12,7 @@ close(int fd)
 {
 	int retval;
 
-	retval= sys_close(fd);
+	retval= _kern_close(fd);
 
 	if(retval< 0) {
 		// set errno

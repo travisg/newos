@@ -12,7 +12,7 @@ pwrite(int fd, void const *buf, size_t len, off_t pos)
 {
 	int retval;
 
-	retval= sys_write(fd, buf, pos, len);
+	retval= _kern_write(fd, buf, pos, len);
 
 	if(retval< 0) {
 		// set errno

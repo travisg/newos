@@ -40,28 +40,28 @@ WindowManager::WindowManager(Renderer *screenRenderer)
 	fWindowArray[0]->SetColor(0x3a6ea5); // desktop blue
 	fWindowArray[0]->Invalidate(fWindowArray[0]->LocalToScreen(screenRenderer->Bounds()));
 
-	fCursorLock = sys_sem_create(1, "windowmanager_lock");
+	fCursorLock = _kern_sem_create(1, "windowmanager_lock");
 
 	thread_id tid;
 
-	tid = sys_thread_create_thread("draw_thread", StartDispatchThread, this);
+	tid = _kern_thread_create_thread("draw_thread", StartDispatchThread, this);
 	printf("WindowManager::WindowManager: draw_thread id %d\n", tid);
 
-	sys_thread_resume_thread(tid);
+	_kern_thread_resume_thread(tid);
 
-	tid = sys_thread_create_thread("input_thread", StartInputThread, this);
-	sys_thread_resume_thread(tid);
+	tid = _kern_thread_create_thread("input_thread", StartInputThread, this);
+	_kern_thread_resume_thread(tid);
 }
 
 WindowManager::~WindowManager()
 {
-	sys_sem_delete(fCursorLock);
+	_kern_sem_delete(fCursorLock);
 }
 
 int WindowManager::WaitForExit()
 {
 	for(;;)
-		sys_snooze(1000000);
+		_kern_snooze(1000000);
 	return 0;
 }
 
@@ -121,7 +121,7 @@ void WindowManager::ReadServicePort(void *data, int size)
 
 		if (sizeToRead == 0) {
 			int ignore;
-			fReceiveBufferSize = sys_port_read(fServicePort, &ignore, fReceiveBuffer, kReceiveBufferSize);
+			fReceiveBufferSize = _kern_port_read(fServicePort, &ignore, fReceiveBuffer, kReceiveBufferSize);
 			fReceiveBufferPos = 0;
 			continue;
 		}
@@ -137,7 +137,7 @@ void WindowManager::ReadServicePort(void *data, int size)
 
 void WindowManager::Respond(port_id port, void *data, int size)
 {
-	sys_port_write(port, 0, data, size);
+	_kern_port_write(port, 0, data, size);
 }
 
 int WindowManager::ReadInt32()
@@ -163,19 +163,19 @@ char WindowManager::ReadInt8()
 
 void WindowManager::LockCursor()
 {
-	sys_sem_acquire(fCursorLock, 1);
+	_kern_sem_acquire(fCursorLock, 1);
 }
 
 void WindowManager::UnlockCursor()
 {
-	sys_sem_release(fCursorLock, 1);
+	_kern_sem_release(fCursorLock, 1);
 }
 
 void WindowManager::DispatchThread()
 {
 	printf("WindowManager::DispatchThread: entry\n");
 
-    fServicePort = sys_port_create(256, "window_server");
+    fServicePort = _kern_port_create(256, "window_server");
 
 	printf("WindowManager::DispatchThread: fServicePort %d\n", fServicePort);
 
@@ -437,16 +437,16 @@ void WindowManager::InputThread()
 
 	// find the input server
 retry:
-	event_port = sys_port_find("input_event_port");
+	event_port = _kern_port_find("input_event_port");
 	if(event_port < 0) {
-		sys_snooze(1000000);
+		_kern_snooze(1000000);
 		goto retry;
 	}
 
 	while (true) {
 		Event event;
 		int32 msg;
-		sys_port_read(event_port, &msg, &event, sizeof(event));
+		_kern_port_read(event_port, &msg, &event, sizeof(event));
 
 		switch(event.what) {
 			case EVT_MOUSE_MOVED:

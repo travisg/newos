@@ -33,10 +33,10 @@ bool combine_path(const char *path1,const char *path2,char *out,unsigned int max
 
 bool exists_file(const char *file_name)
 {
-	int handle = sys_open(file_name,STREAM_TYPE_FILE,0);
+	int handle = _kern_open(file_name,STREAM_TYPE_FILE,0);
 	bool exists;
 	exists =( handle >= 0);
-	if(exists) sys_close(handle);
+	if(exists) _kern_close(handle);
 	return exists;
 }
 
@@ -70,11 +70,11 @@ int exec_file(int argc,char *argv[],int *retcode)
 
 	if( !find_file_in_path(argv[0],filename,SCAN_SIZE)) return SHE_FILE_NOT_FOUND;
 
-	pid = sys_proc_create_proc(filename,filename, argv, argc, 5);
+	pid = _kern_proc_create_proc(filename,filename, argv, argc, 5);
 
     if(pid < 0) return SHE_CANT_EXECUTE;
 
-	sys_proc_wait_on_proc(pid, retcode);
+	_kern_proc_wait_on_proc(pid, retcode);
 
 	return SHE_NO_ERROR;
 }
@@ -89,22 +89,22 @@ int read_file_in_buffer(const char *filename,char **buffer)
 
 	*buffer = NULL;
 
-	err = sys_rstat(filename,&stat);
+	err = _kern_rstat(filename,&stat);
 	if(err < 0) return err;
 
 	*buffer = malloc(stat.size+1);
 	if(*buffer == NULL) return ERR_NO_MEMORY;
 
-	file_no = sys_open(filename,STREAM_TYPE_FILE,0);
+	file_no = _kern_open(filename,STREAM_TYPE_FILE,0);
 
 	if(file_no < 0){
 		free(*buffer);
 		return file_no;
 	}
 
-	size = sys_read(file_no,*buffer,0,stat.size);
+	size = _kern_read(file_no,*buffer,0,stat.size);
 
-	sys_close(file_no);
+	_kern_close(file_no);
 
 	if(size < 0) free(*buffer);
 

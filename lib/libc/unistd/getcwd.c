@@ -21,7 +21,7 @@ getcwd(char *buf, size_t len)
 	char *_buf;
 
 	_buf= buf?buf:malloc(len);
-	rc= sys_getcwd(_buf, len);
+	rc= _kern_getcwd(_buf, len);
 
 	if(rc< 0) {
 		if(buf!= _buf) {

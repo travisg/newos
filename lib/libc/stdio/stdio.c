@@ -45,7 +45,7 @@ static FILE *__create_FILE_struct(int fd, int flags)
 
     /* Create a semaphore*/
     sprintf(name, "%d :FILE", fd);
-    f->sid = sys_sem_create(1, name);
+    f->sid = _kern_sem_create(1, name);
     if(f->sid < 0)
     {
         free(f->buf);
@@ -64,9 +64,9 @@ static FILE *__create_FILE_struct(int fd, int flags)
     f->next = __open_file_stack_top;
 
     /* Put the FILE in the list*/
-    sys_sem_acquire(__open_file_stack_sem_id, 1);
+    _kern_sem_acquire(__open_file_stack_sem_id, 1);
     __open_file_stack_top = f;
-    sys_sem_release(__open_file_stack_sem_id, 1);
+    _kern_sem_release(__open_file_stack_sem_id, 1);
 	return f;
 }
 
@@ -94,23 +94,23 @@ static int __delete_FILE_struct(int fd)
     }
 
     /* free the FILE space/semaphore*/
-    sys_close(fd);
-    sys_sem_delete(fNode->sid);
+    _kern_close(fd);
+    _kern_sem_delete(fNode->sid);
     free(fNode->buf);
     free(fNode);
 
     /* Remove it from the list*/
     if(fNode == __open_file_stack_top)
     {
-        sys_sem_acquire(__open_file_stack_sem_id, 1);
+        _kern_sem_acquire(__open_file_stack_sem_id, 1);
         __open_file_stack_top = __open_file_stack_top->next;
-        sys_sem_release(__open_file_stack_sem_id, 1);
+        _kern_sem_release(__open_file_stack_sem_id, 1);
     }
     else
     {
-        sys_sem_acquire(__open_file_stack_sem_id, 1);
+        _kern_sem_acquire(__open_file_stack_sem_id, 1);
         fPrev->next = fNode->next;
-        sys_sem_release(__open_file_stack_sem_id, 1);
+        _kern_sem_release(__open_file_stack_sem_id, 1);
     }
     /* Free the space*/
     free(fNode);
@@ -122,7 +122,7 @@ static int __delete_FILE_struct(int fd)
 int __stdio_init(void)
 {
     /* Create semaphore*/
-    __open_file_stack_sem_id = sys_sem_create(1, "__open_file_stack");
+    __open_file_stack_sem_id = _kern_sem_create(1, "__open_file_stack");
     /*initialize stack*/
     __open_file_stack_top = (FILE*)0;
 	stdin = __create_FILE_struct(0, _STDIO_READ);
@@ -138,18 +138,18 @@ int __stdio_deinit(void)
     
     /* Iterate through the list, freeing everything*/
     fNode = __open_file_stack_top;
-    sys_sem_acquire(__open_file_stack_sem_id, 1);
+    _kern_sem_acquire(__open_file_stack_sem_id, 1);
     while(fNode != (FILE*)0)
     {
         fflush(fNode);
         fNext = fNode->next;
         free(fNode->buf);
-        sys_sem_delete(fNode->sid);
+        _kern_sem_delete(fNode->sid);
         free(fNode);
         fNode = fNext;
     } 
-    sys_sem_release(__open_file_stack_sem_id, 1);
-    sys_sem_delete(__open_file_stack_sem_id);
+    _kern_sem_release(__open_file_stack_sem_id, 1);
+    _kern_sem_delete(__open_file_stack_sem_id);
 
 	return 0;
 }
@@ -198,7 +198,7 @@ FILE *fopen(const char *filename, const char *mode)
         return (FILE*)0;
     }
 
-    fd = sys_open(filename, 0, sys_flags);
+    fd = _kern_open(filename, 0, sys_flags);
     if(fd < 0)
     {
         return (FILE*)0;
@@ -207,7 +207,7 @@ FILE *fopen(const char *filename, const char *mode)
     f = __create_FILE_struct(fd, flags);
     if(f == (FILE*)0)
     {
-        sys_close(fd);
+        _kern_close(fd);
     }
 
     return f;
@@ -244,9 +244,9 @@ int fflush(FILE *stream)
     {
         if(stream->flags & _STDIO_WRITE )
         {
-            sys_sem_acquire(stream->sid, 1);
-            err = sys_write(stream->fd, stream->buf, -1, stream->buf_pos);
-            sys_sem_release(stream->sid, 1);
+            _kern_sem_acquire(stream->sid, 1);
+            err = _kern_write(stream->fd, stream->buf, -1, stream->buf_pos);
+            _kern_sem_release(stream->sid, 1);
             stream->buf_pos = 0;
         }
     }
@@ -267,9 +267,9 @@ int printf(const char *fmt, ...)
 	int i;
 
     va_start(args, fmt);
-    sys_sem_acquire(stdout->sid, 1);
+    _kern_sem_acquire(stdout->sid, 1);
 	i = vfprintf(stdout, fmt, args);
-    sys_sem_release(stdout->sid, 1);
+    _kern_sem_release(stdout->sid, 1);
 	va_end(args);
 
 	return i;
@@ -281,9 +281,9 @@ int fprintf(FILE *stream, char const *fmt, ...)
 	int i;
 
 	va_start(args, fmt);
-	sys_sem_acquire(stream->sid, 1);
+	_kern_sem_acquire(stream->sid, 1);
     i = vfprintf(stream, fmt, args);
-    sys_sem_release(stream->sid, 1);    
+    _kern_sem_release(stream->sid, 1);    
 	va_end(args);
 
 	return i;
@@ -292,18 +292,18 @@ int fprintf(FILE *stream, char const *fmt, ...)
 int feof(FILE *stream)
 {
     int i = 0;
-	sys_sem_acquire(stream->sid, 1);
+	_kern_sem_acquire(stream->sid, 1);
     i = stream->flags & _STDIO_EOF;
-    sys_sem_release(stream->sid, 1);    
+    _kern_sem_release(stream->sid, 1);    
     return i;
 }
 
 int ferror (FILE *stream)
 {
     int i = 0;
-	sys_sem_acquire(stream->sid, 1);
+	_kern_sem_acquire(stream->sid, 1);
     i = stream->flags & _STDIO_ERROR;
-    sys_sem_release(stream->sid, 1);
+    _kern_sem_release(stream->sid, 1);
     return i;
 }
 
@@ -311,7 +311,7 @@ int getchar(void)
 {
 	char c;
 
-	sys_read(stdin->fd, &c, -1, 1);
+	_kern_read(stdin->fd, &c, -1, 1);
 	return c;
 }
 
@@ -321,7 +321,7 @@ char* fgets(char* str, int n, FILE * stream)
     int i = n-1;
     tmp = str;
 
-	sys_sem_acquire(stream->sid, 1);
+	_kern_sem_acquire(stream->sid, 1);
 
     for(;i > 0; i--)
     {
@@ -334,7 +334,7 @@ char* fgets(char* str, int n, FILE * stream)
         if (stream->rpos >= stream->buf_pos) 
         {
 
-            int len = sys_read(stream->fd, stream->buf, -1, stream->buf_size);
+            int len = _kern_read(stream->fd, stream->buf, -1, stream->buf_size);
 
             if (len==0) 
             {
@@ -356,7 +356,7 @@ char* fgets(char* str, int n, FILE * stream)
             break;
     }
 
-    sys_sem_release(stream->sid, 1);
+    _kern_sem_release(stream->sid, 1);
 
 
     *tmp = '\0';
@@ -366,10 +366,10 @@ char* fgets(char* str, int n, FILE * stream)
 int fgetc(FILE *stream)
 {
     int c;
-    sys_sem_acquire(stream->sid, 1);
+    _kern_sem_acquire(stream->sid, 1);
     if (stream->rpos >= stream->buf_pos) 
     {
-        int len = sys_read(stream->fd, stream->buf, -1, stream->buf_size);
+        int len = _kern_read(stream->fd, stream->buf, -1, stream->buf_size);
     
         if (len==0) 
         {
@@ -385,7 +385,7 @@ int fgetc(FILE *stream)
         stream->buf_pos=len;
     }
     c = stream->buf[stream->rpos++];
-    sys_sem_release(stream->sid, 1);    
+    _kern_sem_release(stream->sid, 1);    
     return c;
 }
 
@@ -395,9 +395,9 @@ int scanf(char const *fmt, ...)
 	int i;
 
 	va_start(args, fmt);
-	sys_sem_acquire(stdout->sid, 1);
+	_kern_sem_acquire(stdout->sid, 1);
 	i = vfscanf(stdout, fmt, args);
-	sys_sem_release(stdout->sid, 1);    
+	_kern_sem_release(stdout->sid, 1);    
 	va_end(args);
 
 	return i;
@@ -408,9 +408,9 @@ int fscanf(FILE *stream, char const *fmt, ...)
 	int i;
 
 	va_start(args, fmt);
-	sys_sem_acquire(stream->sid, 1);
+	_kern_sem_acquire(stream->sid, 1);
 	i = vfscanf(stream, fmt, args);
-	sys_sem_release(stream->sid, 1);    
+	_kern_sem_release(stream->sid, 1);    
 	va_end(args);
 
 	return i;

@@ -13,7 +13,7 @@ void
 usage(char const *app)
 {
 	printf("usage: %s [-s] ###\n", app);
-	sys_exit(-1);
+	exit(-1);
 }
 
 int
@@ -50,13 +50,13 @@ main(int argc, char *argv[])
 		int  aaargc= 3;
 
 		sprintf(buffer, "%d", num-1);
-		pid= sys_proc_create_proc(aaargv[0], aaargv[0], aaargv, aaargc, 5);
-		sys_proc_wait_on_proc(pid, &retcode);
+		pid= _kern_proc_create_proc(aaargv[0], aaargv[0], aaargv, aaargc, 5);
+		_kern_proc_wait_on_proc(pid, &retcode);
 		result= retcode;
 
 		sprintf(buffer, "%d", num-2);
-		pid= sys_proc_create_proc(aaargv[0], aaargv[0], aaargv, aaargc, 5);
-		sys_proc_wait_on_proc(pid, &retcode);
+		pid= _kern_proc_create_proc(aaargv[0], aaargv[0], aaargv, aaargc, 5);
+		_kern_proc_wait_on_proc(pid, &retcode);
 		result+= retcode;
 	}
 

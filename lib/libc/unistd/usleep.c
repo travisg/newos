@@ -10,5 +10,5 @@
 int
 usleep(unsigned useconds)
 {
-	return sys_snooze((bigtime_t)(useconds));
+	return _kern_snooze((bigtime_t)(useconds));
 }

@@ -14,7 +14,7 @@ int main(void)
 
 	printf("VM test\n");
 
-	printf("my thread id is %d\n", sys_get_current_thread_id());
+	printf("my thread id is %d\n", _kern_get_current_thread_id());
 #if 0
 	printf("writing to invalid page\n");
 	*(int *)0x30000000 = 5;
@@ -27,18 +27,18 @@ int main(void)
 		vm_region_info info;
 		void *ptr, *ptr2;
 
-		region = sys_vm_create_anonymous_region("foo", &ptr, REGION_ADDR_ANY_ADDRESS,
+		region = _kern_vm_create_anonymous_region("foo", &ptr, REGION_ADDR_ANY_ADDRESS,
 			16*4096, REGION_WIRING_LAZY, LOCK_RW);
 		printf("region = 0x%x @ 0x%x\n", region, (unsigned int)ptr);
-		region2 = sys_vm_clone_region("foo2", &ptr2, REGION_ADDR_ANY_ADDRESS,
+		region2 = _kern_vm_clone_region("foo2", &ptr2, REGION_ADDR_ANY_ADDRESS,
 			region, REGION_NO_PRIVATE_MAP, LOCK_RW);
 		printf("region2 = 0x%x @ 0x%x\n", region2, (unsigned int)ptr2);
 
-		sys_vm_get_region_info(region, &info);
+		_kern_vm_get_region_info(region, &info);
 		printf("info.base = 0x%x info.size = 0x%x\n", (unsigned int)info.base, (unsigned int)info.size);
 
-		sys_vm_delete_region(region);
-		sys_vm_delete_region(region2);
+		_kern_vm_delete_region(region);
+		_kern_vm_delete_region(region2);
 		printf("deleting both regions\n");
 	}
 #endif
@@ -49,7 +49,7 @@ int main(void)
 		region_id region2;
 		void *ptr, *ptr2;
 
-		region = sys_vm_create_anonymous_region("large", &ptr, REGION_ADDR_ANY_ADDRESS,
+		region = _kern_vm_create_anonymous_region("large", &ptr, REGION_ADDR_ANY_ADDRESS,
 			450*1024*1024, REGION_WIRING_LAZY, LOCK_RW);
 		if(region < 0) {
 			printf("error %d creating large region\n", region);
@@ -58,8 +58,8 @@ int main(void)
 		}
 
 		printf("pausing for 5 seconds...\n");
-		sys_snooze(5000000);
-		region2 = sys_vm_create_anonymous_region("large2", &ptr2, REGION_ADDR_ANY_ADDRESS,
+		_kern_snooze(5000000);
+		region2 = _kern_vm_create_anonymous_region("large2", &ptr2, REGION_ADDR_ANY_ADDRESS,
 			64*1024*1024, REGION_WIRING_LAZY, LOCK_RW);
 		if(region2 < 0) {
 			printf("error %d creating large region\n", region2);
@@ -70,10 +70,10 @@ int main(void)
 		}
 
 		printf("pausing for 5 seconds...\n");
-		sys_snooze(5000000);
+		_kern_snooze(5000000);
 		printf("deleting both regions\n");
-		sys_vm_delete_region(region);
-		sys_vm_delete_region(region2);
+		_kern_vm_delete_region(region);
+		_kern_vm_delete_region(region2);
 	}
 #endif
 #if 1
@@ -87,31 +87,31 @@ int main(void)
 		printf("you'll want to make sure serial debugging is off or the test will take forever,\n");
 		printf(" use the scroll lock key to toggle it on or off.\n");
 		printf("pausing for 2 seconds...\n");
-		sys_snooze(2000000);
+		_kern_snooze(2000000);
 
-		t = sys_system_time();
-		region = sys_vm_create_anonymous_region("large", &ptr, REGION_ADDR_ANY_ADDRESS,
+		t = _kern_system_time();
+		region = _kern_vm_create_anonymous_region("large", &ptr, REGION_ADDR_ANY_ADDRESS,
 			64*1024*1024, REGION_WIRING_LAZY, LOCK_RW);
-		t = sys_system_time() - t;
+		t = _kern_system_time() - t;
 
 		printf("took %d microseconds to create large region (lazy wiring)\n", (int)t);
 
-		t = sys_system_time();
-		sys_vm_delete_region(region);
-		t = sys_system_time() - t;
+		t = _kern_system_time();
+		_kern_vm_delete_region(region);
+		t = _kern_system_time() - t;
 
 		printf("took %d microseconds to delete it (with no pages allocated)\n", (int)t);
 
-		t = sys_system_time();
-		region = sys_vm_create_anonymous_region("large", &ptr, REGION_ADDR_ANY_ADDRESS,
+		t = _kern_system_time();
+		region = _kern_vm_create_anonymous_region("large", &ptr, REGION_ADDR_ANY_ADDRESS,
 			64*1024*1024, REGION_WIRING_WIRED, LOCK_RW);
-		t = sys_system_time() - t;
+		t = _kern_system_time() - t;
 
 		printf("took %d microseconds to create large region (wired)\n", (int)t);
 
-		t = sys_system_time();
-		sys_vm_delete_region(region);
-		t = sys_system_time() - t;
+		t = _kern_system_time();
+		_kern_vm_delete_region(region);
+		t = _kern_system_time() - t;
 
 		printf("took %d microseconds to delete it (with all allocated)\n", (int)t);
 	}

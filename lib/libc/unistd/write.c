@@ -12,7 +12,7 @@ write(int fd, void const *buf, size_t len)
 {
 	int retval;
 
-	retval= sys_write(fd, buf, -1, len);
+	retval= _kern_write(fd, buf, -1, len);
 
 	if(retval< 0) {
 		// set errno

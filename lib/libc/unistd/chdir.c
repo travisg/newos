@@ -10,5 +10,5 @@
 int
 chdir(char *buf)
 {
-	return sys_setcwd(buf);
+	return _kern_setcwd(buf);
 }

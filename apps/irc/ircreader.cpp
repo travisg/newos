@@ -22,16 +22,16 @@ IRCReader::~IRCReader()
 {
 	// forgive me father...
 	if(mReaderThread >= 0)
-		sys_thread_kill_thread(mReaderThread);
+		_kern_thread_kill_thread(mReaderThread);
 }
 
 int IRCReader::Start()
 {
-	mReaderThread = sys_thread_create_thread("irc reader", &ThreadEntry, (void *)this);
+	mReaderThread = _kern_thread_create_thread("irc reader", &ThreadEntry, (void *)this);
 	if(mReaderThread < 0)
 		return mReaderThread;
 
-	sys_thread_resume_thread(mReaderThread);
+	_kern_thread_resume_thread(mReaderThread);
 
 	return 0;
 }

@@ -108,16 +108,16 @@ int main(int argc, char **argv)
 #if 0
 	for(;;) {
 		for(int i = 0; i < kNumWindows; i++) {
-			sys_snooze(250000);
+			_kern_snooze(250000);
 
 			wins[i]->Hide();
-			sys_snooze(100000);
+			_kern_snooze(100000);
 			wins[i]->Show();
 		}
 	}
 #else
 	for(;;)
-		sys_snooze(1000000);
+		_kern_snooze(1000000);
 #endif
 	return 0;
 }

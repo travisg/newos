@@ -16,7 +16,7 @@ int printf(const char *fmt, ...)
 	i = vsprintf(buf, fmt, args);
 	va_end(args);
 	
-	sys_write(2, buf, 0, strlen(buf));
+	_kern_write(2, buf, 0, strlen(buf));
 	
 	return i;
 }

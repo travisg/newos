@@ -82,23 +82,23 @@ int main(int argc, char **argv)
 		if(new_fd < 0)
 			continue;
 
-		saved_stdin = sys_dup(0);
-		saved_stdout = sys_dup(1);
-		saved_stderr = sys_dup(2);
+		saved_stdin = _kern_dup(0);
+		saved_stdout = _kern_dup(1);
+		saved_stderr = _kern_dup(2);
 
-		sys_dup2(new_fd, 0);
-		sys_dup2(new_fd, 1);
-		sys_dup2(new_fd, 2);
-		sys_close(new_fd);
+		_kern_dup2(new_fd, 0);
+		_kern_dup2(new_fd, 1);
+		_kern_dup2(new_fd, 2);
+		_kern_close(new_fd);
 
-		sys_proc_create_proc(spawn_argv[0], spawn_argv[0], spawn_argv, spawn_argc, 5);
+		_kern_proc_create_proc(spawn_argv[0], spawn_argv[0], spawn_argv, spawn_argc, 5);
 
-		sys_dup2(saved_stdin, 0);
-		sys_dup2(saved_stdout, 1);
-		sys_dup2(saved_stderr, 2);
-		sys_close(saved_stdin);
-		sys_close(saved_stdout);
-		sys_close(saved_stderr);
+		_kern_dup2(saved_stdin, 0);
+		_kern_dup2(saved_stdout, 1);
+		_kern_dup2(saved_stderr, 2);
+		_kern_close(saved_stdin);
+		_kern_close(saved_stdout);
+		_kern_close(saved_stderr);
 	}
 
 	return 0;

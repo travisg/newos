@@ -11,7 +11,7 @@ int sleep_test(int arg)
 {
 	printf("should display 'booyah!' 10 times, one second apart\n");
 	for(int i = 0; i < 10; i++) {
-		sys_snooze(1000000);
+		_kern_snooze(1000000);
 		printf("booyah!");
 	}
 
@@ -31,10 +31,10 @@ static int test_thread(void *args)
 static int test_thread_self_terminate(void *args)
 {
 	int i = (int)args;
-	bigtime_t start_time = sys_system_time();
+	bigtime_t start_time = _kern_system_time();
 
 	for(;;) {
-		if(sys_system_time() - start_time >= 10000000) {
+		if(_kern_system_time() - start_time >= 10000000) {
 			printf("thread %c terminating...\n", 'a' + i);
 			break;
 		}
@@ -89,22 +89,22 @@ int thread_spawn_test(int arg)
 
 	thread_id tids[num_threads];
 	for(i=0; i<num_threads; i++) {
-		tids[i] = sys_thread_create_thread("foo", thread_func, (void *)i);
-		sys_thread_resume_thread(tids[i]);
+		tids[i] = _kern_thread_create_thread("foo", thread_func, (void *)i);
+		_kern_thread_resume_thread(tids[i]);
 	}
 
 	if(arg == 0) {
 		for(;;)
-			sys_snooze(1000000);
+			_kern_snooze(1000000);
 	} else if(arg == 1) {
-		sys_snooze(10000000);
+		_kern_snooze(10000000);
 		for(i=0; i<num_threads; i++) {
 			printf("killing thread %d...\n", tids[i]);
-			sys_thread_kill_thread(tids[i]);
+			_kern_thread_kill_thread(tids[i]);
 		}
 	} else if(arg == 2) {
-		sys_thread_wait_on_thread(tids[0], NULL);
-		sys_snooze(1000000);
+		_kern_thread_wait_on_thread(tids[0], NULL);
+		_kern_snooze(1000000);
 	}
 
 	printf("done\n");

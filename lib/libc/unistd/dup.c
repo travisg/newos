@@ -12,7 +12,7 @@ dup(int fd)
 {
 	int retval;
 
-	retval= sys_dup(fd);
+	retval= _kern_dup(fd);
 
 	if(retval< 0) {
 		// set errno

@@ -12,7 +12,7 @@ pread(int fd, void *buf, size_t len, off_t pos)
 {
 	int retval;
 
-	retval= sys_read(fd, buf, pos, len);
+	retval= _kern_read(fd, buf, pos, len);
 
 	if(retval< 0) {
 		// set errno

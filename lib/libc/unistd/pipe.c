@@ -17,7 +17,7 @@ pipe(int fds[2])
 	if(fd < 0)
 		return fd;
 
-	err = sys_ioctl(fd, _PIPEFS_IOCTL_CREATE_ANONYMOUS, fds, sizeof(int) * 2);
+	err = _kern_ioctl(fd, _PIPEFS_IOCTL_CREATE_ANONYMOUS, fds, sizeof(int) * 2);
 
 	close(fd);
 

@@ -12,7 +12,7 @@ dup2(int ofd, int nfd)
 {
 	int retval;
 
-	retval= sys_dup2(ofd, nfd);
+	retval= _kern_dup2(ofd, nfd);
 
 	if(retval< 0) {
 		// set errno

@@ -32,7 +32,7 @@ int main()
 		args[0] = "/boot/bin/shell";
 		args[1] = "/boot/bootscript";
 
-		pid = sys_proc_create_proc(args[0], "startup shell", args, 2, 5);
+		pid = _kern_proc_create_proc(args[0], "startup shell", args, 2, 5);
 		if(pid < 0) {
 			printf("init: error %d creating shell!\n", pid);
 			return -1;
@@ -43,21 +43,21 @@ int main()
 	if(1) {
 		proc_id pid;
 
-		pid = sys_proc_create_proc("/boot/bin/fortune", "/boot/bin/fortune", NULL, 0, 5);
+		pid = _kern_proc_create_proc("/boot/bin/fortune", "/boot/bin/fortune", NULL, 0, 5);
 		if(pid >= 0) {
 			int retcode;
-			sys_proc_wait_on_proc(pid, &retcode);
+			_kern_proc_wait_on_proc(pid, &retcode);
 		}
 	}
 
 	while(1) {
 		proc_id pid;
 
-		pid = sys_proc_create_proc("/boot/bin/consoled", "/boot/bin/consoled", NULL, 0, 5);
+		pid = _kern_proc_create_proc("/boot/bin/consoled", "/boot/bin/consoled", NULL, 0, 5);
 		if(pid >= 0) {
 			int retcode;
 			printf("init: spawned consoled, pid 0x%x\r\n", pid);
-			sys_proc_wait_on_proc(pid, &retcode);
+			_kern_proc_wait_on_proc(pid, &retcode);
 		}
 	}
 #endif

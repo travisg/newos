@@ -67,12 +67,12 @@ int cmd_create_proc(int argc,char *argv[])
 		}
 	}
 
-	pid = sys_proc_create_proc(filename,filename, argv, argc, 5);
+	pid = _kern_proc_create_proc(filename,filename, argv, argc, 5);
 	if(pid >= 0) {
 		int retcode;
 
 		if(must_wait) {
-			sys_proc_wait_on_proc(pid, &retcode);
+			_kern_proc_wait_on_proc(pid, &retcode);
 		}
 	} else {
 		printf("Error: cannot execute '%s'\n", filename);
@@ -91,9 +91,9 @@ int cmd_mkdir(int argc, char *argv[])
 		return 0;
 	}
 
-	rc = sys_create(argv[1], STREAM_TYPE_DIR);
+	rc = _kern_create(argv[1], STREAM_TYPE_DIR);
 	if (rc < 0) {
-		printf("sys_mkdir() returned error: %s\n", strerror(rc));
+		printf("_kern_mkdir() returned error: %s\n", strerror(rc));
 	} else {
 		printf("%s successfully created.\n", argv[1]);
 	}
@@ -112,20 +112,20 @@ int cmd_cat(int argc, char *argv[])
 		return 0;
 	}
 
-	fd = sys_open(argv[1], STREAM_TYPE_FILE, 0);
+	fd = _kern_open(argv[1], STREAM_TYPE_FILE, 0);
 	if(fd < 0) {
-		printf("cat: sys_open() returned error: %s!\n", strerror(fd));
+		printf("cat: _kern_open() returned error: %s!\n", strerror(fd));
 		goto done_cat;
 	}
 
 	for(;;) {
-		rc = sys_read(fd, buf, -1, sizeof(buf) -1);
+		rc = _kern_read(fd, buf, -1, sizeof(buf) -1);
 		if(rc <= 0)
 			break;
 
 		write(1, buf, rc);
 	}
-	sys_close(fd);
+	_kern_close(fd);
 
 done_cat:
 	return 0;
@@ -140,9 +140,9 @@ int cmd_cd(int argc, char *argv[])
 		return 0;
 	}
 
-	rc = sys_setcwd(argv[1]);
+	rc = _kern_setcwd(argv[1]);
 	if (rc < 0) {
-		printf("cd: sys_setcwd() returned error: %s!\n", strerror(rc));
+		printf("cd: _kern_setcwd() returned error: %s!\n", strerror(rc));
 	}
 
 	return 0;
@@ -154,7 +154,7 @@ int cmd_pwd(int argc, char *argv[])
 
 	cwd= getcwd(NULL, 1024);
 	if (!cwd) {
-		printf("cd: sys_getcwd() returned error: %s!\n", "xx"); //strerror(rc));
+		printf("cd: _kern_getcwd() returned error: %s!\n", "xx"); //strerror(rc));
 	} else {
 		printf("pwd: cwd=\'%s\'\n", cwd);
 	}
@@ -174,7 +174,7 @@ int cmd_stat(int argc, char *argv[])
 		return 0;
 	}
 
-	rc = sys_rstat(argv[1], &stat);
+	rc = _kern_rstat(argv[1], &stat);
 	if(rc >= 0) {
 		printf("stat of file '%s': \n", argv[1]);
 		printf("vnid 0x%x\n", (unsigned int)stat.vnid);

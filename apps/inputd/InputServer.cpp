@@ -16,14 +16,14 @@ using namespace os::gui;
 
 InputServer::InputServer()
 {
-	mEventPort = sys_port_create(64, "input_event_port");
-	mLock = sys_sem_create(1, "input_event_lock");
+	mEventPort = _kern_port_create(64, "input_event_port");
+	mLock = _kern_sem_create(1, "input_event_lock");
 }
 
 InputServer::~InputServer()
 {
-	sys_port_delete(mEventPort);
-	sys_sem_delete(mLock);
+	_kern_port_delete(mEventPort);
+	_kern_sem_delete(mLock);
 }
 
 int InputServer::FindDevices()
@@ -50,7 +50,7 @@ int InputServer::FindDevices()
 
 void InputServer::PostEvent(const Event &event)
 {
-	sys_sem_acquire(mLock, 1);
+	_kern_sem_acquire(mLock, 1);
 
 #if 0
 	printf("InputServer::PostEvent: what %d ", event.what);
@@ -67,9 +67,9 @@ void InputServer::PostEvent(const Event &event)
 	}
 #endif
 
-	sys_port_write(mEventPort, 0, const_cast<Event *>(&event), sizeof(event));
+	_kern_port_write(mEventPort, 0, const_cast<Event *>(&event), sizeof(event));
 
-	sys_sem_release(mLock, 1);
+	_kern_sem_release(mLock, 1);
 }
 
 int InputServer::Run()

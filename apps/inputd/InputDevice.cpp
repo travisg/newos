@@ -8,7 +8,7 @@
 
 int InputDevice::Run()
 {
-	return sys_thread_resume_thread(sys_thread_create_thread("InputDevice", &ThreadEntry, this));
+	return _kern_thread_resume_thread(_kern_thread_create_thread("InputDevice", &ThreadEntry, this));
 }
 
 int InputDevice::ThreadEntry(void *_dev)

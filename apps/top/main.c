@@ -111,13 +111,13 @@ static int gather_info(void)
 	// walk through each thread in the system
 	cookie = 0;
 	for(;;) {
-		err = sys_proc_get_next_proc_info(&cookie, &pi);
+		err = _kern_proc_get_next_proc_info(&cookie, &pi);
 		if(err < 0)
 			break;
 
 		cookie2 = 0;
 		for(;;) {
-			err = sys_thread_get_next_thread_info(&cookie2, pi.id, &ti);
+			err = _kern_thread_get_next_thread_info(&cookie2, pi.id, &ti);
 			if(err < 0)
 				break;
 
@@ -193,7 +193,7 @@ int main(int argc, char **argv)
 		if(err < 0)
 			return err;
 
-		sys_snooze(1000000);
+		_kern_snooze(1000000);
 	}
 }
 

@@ -126,7 +126,7 @@ static struct uspace_prog_args_t const *uspa;
 #define	FATAL(x,y...) \
 	if(x) { \
 		printf("rld.so: " y); \
-		sys_exit(0); \
+		_kern_exit(0); \
 	}
 
 
@@ -494,7 +494,7 @@ map_image(int fd, char const *path, image_t *image, bool fixed)
 		}
 
 		if(image->regions[i].flags & RFLAG_ANON) {
-			image->regions[i].id= sys_vm_create_anonymous_region(
+			image->regions[i].id= _kern_vm_create_anonymous_region(
 				region_name,
 				(void **)&load_address,
 				addr_specifier,
@@ -509,7 +509,7 @@ map_image(int fd, char const *path, image_t *image, bool fixed)
 			image->regions[i].delta  = load_address - image->regions[i].vmstart;
 			image->regions[i].vmstart= load_address;
 		} else {
-			image->regions[i].id= sys_vm_map_file(
+			image->regions[i].id= _kern_vm_map_file(
 				region_name,
 				(void **)&load_address,
 				addr_specifier,
@@ -562,7 +562,7 @@ unmap_image(image_t *image)
 	unsigned i;
 
 	for(i= 0; i< image->num_regions; i++) {
-		sys_vm_delete_region(image->regions[i].id);
+		_kern_vm_delete_region(image->regions[i].id);
 
 		image->regions[i].id= -1;
 	}
@@ -778,17 +778,17 @@ load_container(char const *path, char const *name, bool fixed)
 	printf("rld: load_container: path '%s', name '%s' entry\n", path, name);
 #endif
 
-	fd= sys_open(path, STREAM_TYPE_FILE, 0);
+	fd= _kern_open(path, STREAM_TYPE_FILE, 0);
 	FATAL((fd< 0), "cannot open file %s\n", path);
 
-	len= sys_read(fd, &eheader, 0, sizeof(eheader));
+	len= _kern_read(fd, &eheader, 0, sizeof(eheader));
 	FATAL((len!= sizeof(eheader)), "troubles reading ELF header\n");
 
 	ph_len= parse_eheader(&eheader);
 	FATAL((ph_len<= 0), "incorrect ELF header\n");
 	FATAL((ph_len> (int)sizeof(ph_buff)), "cannot handle Program headers bigger than %lu\n", (long unsigned)sizeof(ph_buff));
 
-	len= sys_read(fd, ph_buff, eheader.e_phoff, ph_len);
+	len= _kern_read(fd, ph_buff, eheader.e_phoff, ph_len);
 	FATAL((len!= ph_len), "troubles reading Program headers\n");
 
 	num_regions= count_regions(ph_buff, eheader.e_phnum, eheader.e_phentsize);
@@ -823,7 +823,7 @@ load_container(char const *path, char const *name, bool fixed)
 	}
 #endif
 
-	sys_close(fd);
+	_kern_close(fd);
 
 	enqueue_image(&loaded_images, image);
 
@@ -1101,5 +1101,5 @@ rldelf_init(struct uspace_prog_args_t const *_uspa)
 {
 	uspa= _uspa;
 
-	rld_sem= sys_sem_create(1, "rld_lock\n");
+	rld_sem= _kern_sem_create(1, "rld_lock\n");
 }

@@ -37,26 +37,26 @@ extern "C" {
 
 int hoardGetThreadID (void)
 {
-  return sys_get_current_thread_id();
+  return _kern_get_current_thread_id();
 }
 
 
 void hoardLockInit (hoardLockType &lock)
 {
  	lock.ben = 0;
-	lock.sem = sys_sem_create(1, "a hoard lock");
+	lock.sem = _kern_sem_create(1, "a hoard lock");
 }
 
 
 void hoardLock (hoardLockType &lock)
 {
-  if((atomic_add(&(lock.ben), 1)) >= 1) sys_sem_acquire(lock.sem, 1);
+  if((atomic_add(&(lock.ben), 1)) >= 1) _kern_sem_acquire(lock.sem, 1);
 }
 
 
 void hoardUnlock (hoardLockType &lock)
 {
-  if((atomic_add(&(lock.ben), -1)) > 1) sys_sem_release(lock.sem, 1);
+  if((atomic_add(&(lock.ben), -1)) > 1) _kern_sem_release(lock.sem, 1);
 }
 
 int hoardGetPageSize (void)
@@ -77,7 +77,7 @@ int __heap_init()
 {
 	// XXX do something better here
 	if(heap_region < 0) {
-		heap_region = sys_vm_create_anonymous_region("heap", (void **)&brk,
+		heap_region = _kern_vm_create_anonymous_region("heap", (void **)&brk,
 			REGION_ADDR_ANY_ADDRESS, 4*1024*1024, REGION_WIRING_LAZY, LOCK_RW);
 	}
 	return 0;

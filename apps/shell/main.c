@@ -55,7 +55,7 @@ int main(int argc,char *argv[])
 
 	if(af_script_file_name != NULL){
 		run_script(af_script_file_name);
-		if(af_exit_after_script) sys_exit(0);
+		if(af_exit_after_script) _kern_exit(0);
 	}
 
 	for(;;) {

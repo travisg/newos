@@ -10,7 +10,7 @@ int getrlimit(int resource, struct rlimit * rlp)
 {
 	int retval;
 
-	retval = sys_getrlimit(resource, rlp);
+	retval = _kern_getrlimit(resource, rlp);
 
 	if(retval < 0) {
 		// set errno
@@ -23,7 +23,7 @@ int setrlimit(int resource, const struct rlimit * rlp)
 {
 	int retval;
 
-	retval = sys_setrlimit(resource, rlp);
+	retval = _kern_setrlimit(resource, rlp);
 
 	if(retval < 0) {
 		// set errno

@@ -99,7 +99,7 @@ int foo(int argc, char **argv)
 #endif
 
 #if 0
-	fd = sys_open("/dev/net/rtl8139/0", "", STREAM_TYPE_DEVICE);
+	fd = _kern_open("/dev/net/rtl8139/0", "", STREAM_TYPE_DEVICE);
 	if(fd >= 0) {
 		for(;;) {
 			size_t len;
@@ -112,12 +112,12 @@ int foo(int argc, char **argv)
 				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 			};
 			len = sizeof(buf);
-			sys_write(fd, buf, 0, &len);
+			_kern_write(fd, buf, 0, &len);
 		}
 	}
 #endif
 #if 0
-	fd = sys_open("/dev/net/rtl8139/0", "", STREAM_TYPE_DEVICE);
+	fd = _kern_open("/dev/net/rtl8139/0", "", STREAM_TYPE_DEVICE);
 	if(fd >= 0) {
 		int foo = 0;
 		for(;;) {
@@ -125,7 +125,7 @@ int foo(int argc, char **argv)
 			char buf[1500];
 
 			len = sizeof(buf);
-			sys_read(fd, buf, 0, &len);
+			_kern_read(fd, buf, 0, &len);
 			printf("%d read %d bytes\n", foo++, len);
 		}
 	}
@@ -138,11 +138,11 @@ int foo(int argc, char **argv)
 		size_t bytes_read;
 
 		printf("opening /dev/bus/ide/0/0/raw\n");
-		fd = sys_open("/dev/bus/ide/0/0/raw", "", STREAM_TYPE_DEVICE);
+		fd = _kern_open("/dev/bus/ide/0/0/raw", "", STREAM_TYPE_DEVICE);
 		printf("fd = %d\n", fd);
 
 		bytes_read = 512;
-		rc = sys_read(fd, buf, 0, &bytes_read);
+		rc = _kern_read(fd, buf, 0, &bytes_read);
 		printf("rc = %d, bytes_read = %d\n", rc, bytes_read);
 
 		buf[0] = 'f';
@@ -152,10 +152,10 @@ int foo(int argc, char **argv)
 		buf[4] = 0;
 
 		bytes_read = 512;
-		rc = sys_write(fd, buf, 1024, &bytes_read);
+		rc = _kern_write(fd, buf, 1024, &bytes_read);
 		printf("rc = %d, bytes_read = %d\n", rc, bytes_read);
 
-		sys_close(fd);
+		_kern_close(fd);
 	}
 #endif
 #if 0
@@ -164,26 +164,26 @@ int foo(int argc, char **argv)
 		int i;
 
 		for(i=0; i<10; i++) {
-			tids[i] = sys_thread_create_thread("foo", &test_thread, (void *)i);
-			sys_thread_resume_thread(tids[i]);
+			tids[i] = _kern_thread_create_thread("foo", &test_thread, (void *)i);
+			_kern_thread_resume_thread(tids[i]);
 		}
 
-		sys_snooze(5000000);
-		sys_proc_kill_proc(sys_get_current_proc_id());
+		_kern_snooze(5000000);
+		_kern_proc_kill_proc(_kern_get_current_proc_id());
 /*
-		sys_snooze(3000000);
+		_kern_snooze(3000000);
 		for(i=0; i<10; i++) {
-			sys_thread_kill_thread(tids[i]);
+			_kern_thread_kill_thread(tids[i]);
 		}
 		printf("thread_is dead\n");
-		sys_snooze(5000000);
+		_kern_snooze(5000000);
 */
 	}
 #endif
 #if 0
 	{
 		for(;;)
-			sys_proc_create_proc("/boot/bin/true", "true", 32);
+			_kern_proc_create_proc("/boot/bin/true", "true", 32);
 	}
 #endif
 #if 0
@@ -193,11 +193,11 @@ int foo(int argc, char **argv)
 		int rc;
 		int len = 512;
 
-		fd = sys_open("/boot/testapp", "", STREAM_TYPE_FILE);
+		fd = _kern_open("/boot/testapp", "", STREAM_TYPE_FILE);
 
-		rc = sys_read(fd, buf, 0, &len);
+		rc = _kern_read(fd, buf, 0, &len);
 		printf("rc from read = 0x%x\n", rc);
-		sys_close(fd);
+		_kern_close(fd);
 	}
 #endif
 #if 0
@@ -205,15 +205,15 @@ int foo(int argc, char **argv)
 		char data;
 		int fd;
 
-		fd = sys_open("/dev/audio/pcbeep/1", STREAM_TYPE_DEVICE, 0);
+		fd = _kern_open("/dev/audio/pcbeep/1", STREAM_TYPE_DEVICE, 0);
 		if(fd >= 0) {
 			printf("writing to the speaker\n");
 			data = 3;
-			sys_write(fd, &data, 0, 1);
-			sys_snooze(1000000);
+			_kern_write(fd, &data, 0, 1);
+			_kern_snooze(1000000);
 			data = 0;
-			sys_write(fd, &data, 0, 1);
-			sys_close(fd);
+			_kern_write(fd, &data, 0, 1);
+			_kern_close(fd);
 		}
 	}
 #endif
@@ -228,13 +228,13 @@ int foo(int argc, char **argv)
 		int fd, bytes_read;
 		char buf[3];
 
-		fd = sys_open("/dev/ps2mouse", STREAM_TYPE_DEVICE, 0);
+		fd = _kern_open("/dev/ps2mouse", STREAM_TYPE_DEVICE, 0);
 		if(fd < 0) {
 			printf("failed to open device\n");
 			return -1;
 		}
 
-		bytes_read = sys_read(fd, buf, -1, 3);
+		bytes_read = _kern_read(fd, buf, -1, 3);
 		if(bytes_read < 3) {
 			printf("failed to read device\n");
 			return -1;
@@ -249,22 +249,22 @@ int foo(int argc, char **argv)
 		int buf[512/4];
 		int i, j;
 
-		fd = sys_open("/dev/disk/netblock/0/raw", STREAM_TYPE_DEVICE, 0);
+		fd = _kern_open("/dev/disk/netblock/0/raw", STREAM_TYPE_DEVICE, 0);
 		if(fd < 0) {
 			printf("could not open netblock\n");
 			return -1;
 		}
 
-		sys_ioctl(fd, 90001, NULL, 0);
+		_kern_ioctl(fd, 90001, NULL, 0);
 
 		for(i=0; i<1*1024*1024; i += 512) {
 			for(j=0; j<512/4; j++)
 				buf[j] = i + j*4;
-			sys_write(fd, buf, -1, sizeof(buf));
+			_kern_write(fd, buf, -1, sizeof(buf));
 		}
 
-//		sys_read(fd, buf, 0, sizeof(buf));
-//		sys_write(fd, buf, 512, sizeof(buf));
+//		_kern_read(fd, buf, 0, sizeof(buf));
+//		_kern_write(fd, buf, 512, sizeof(buf));
 	}
 #endif
 #if 0
@@ -324,7 +324,7 @@ int foo(int argc, char **argv)
 		region_id rid;
 		void *ptr;
 
-		rid = sys_vm_map_file("netblock", &ptr, REGION_ADDR_ANY_ADDRESS, 16*1024, LOCK_RW,
+		rid = _kern_vm_map_file("netblock", &ptr, REGION_ADDR_ANY_ADDRESS, 16*1024, LOCK_RW,
 			REGION_NO_PRIVATE_MAP, "/dev/disk/netblock/0/raw", 0);
 		if(rid < 0) {
 			printf("error mmaping device\n");
@@ -351,16 +351,16 @@ int foo(int argc, char **argv)
 
 			printf("%d...", i);
 
-			t = sys_system_time();
+			t = _kern_system_time();
 
-			id = sys_proc_create_proc("/boot/bin/true", "true", NULL, 0, 20);
+			id = _kern_proc_create_proc("/boot/bin/true", "true", NULL, 0, 20);
 			if(id <= 0x2) {
 				printf("new proc returned 0x%x!\n", id);
 				return -1;
 			}
-			sys_proc_wait_on_proc(id, NULL);
+			_kern_proc_wait_on_proc(id, NULL);
 
-			printf("done (%Ld usecs)\n", sys_system_time() - t);
+			printf("done (%Ld usecs)\n", _kern_system_time() - t);
 		}
 	}
 #endif
@@ -370,8 +370,8 @@ int foo(int argc, char **argv)
 
 		printf("spawning two cpu eaters\n");
 
-//		sys_thread_resume_thread(sys_thread_create_thread("cpu eater 1", &cpu_eater_thread, 0));
-//		sys_thread_resume_thread(sys_thread_create_thread("cpu eater 2", &cpu_eater_thread, 0));
+//		_kern_thread_resume_thread(_kern_thread_create_thread("cpu eater 1", &cpu_eater_thread, 0));
+//		_kern_thread_resume_thread(_kern_thread_create_thread("cpu eater 2", &cpu_eater_thread, 0));
 
 		printf("spawning %d threads\n", 10000);
 
@@ -381,13 +381,13 @@ int foo(int argc, char **argv)
 
 			printf("%d...", i);
 
-			t = sys_system_time();
+			t = _kern_system_time();
 
-			id = sys_thread_create_thread("testthread", &dummy_thread, 0);
-			sys_thread_resume_thread(id);
-			sys_thread_wait_on_thread(id, NULL);
+			id = _kern_thread_create_thread("testthread", &dummy_thread, 0);
+			_kern_thread_resume_thread(id);
+			_kern_thread_wait_on_thread(id, NULL);
 
-			printf("done (%Ld usecs)\n", sys_system_time() - t);
+			printf("done (%Ld usecs)\n", _kern_system_time() - t);
 		}
 	}
 #endif
@@ -398,20 +398,20 @@ int foo(int argc, char **argv)
 
 		printf("spawning a few floating point crunchers\n");
 
-		id = sys_thread_create_thread("fpu thread0", &fpu_cruncher_thread, &f[0]);
-		sys_thread_resume_thread(id);
+		id = _kern_thread_create_thread("fpu thread0", &fpu_cruncher_thread, &f[0]);
+		_kern_thread_resume_thread(id);
 
-		id = sys_thread_create_thread("fpu thread1", &fpu_cruncher_thread, &f[1]);
-		sys_thread_resume_thread(id);
+		id = _kern_thread_create_thread("fpu thread1", &fpu_cruncher_thread, &f[1]);
+		_kern_thread_resume_thread(id);
 
-		id = sys_thread_create_thread("fpu thread2", &fpu_cruncher_thread, &f[2]);
-		sys_thread_resume_thread(id);
+		id = _kern_thread_create_thread("fpu thread2", &fpu_cruncher_thread, &f[2]);
+		_kern_thread_resume_thread(id);
 
-		id = sys_thread_create_thread("fpu thread3", &fpu_cruncher_thread, &f[3]);
-		sys_thread_resume_thread(id);
+		id = _kern_thread_create_thread("fpu thread3", &fpu_cruncher_thread, &f[3]);
+		_kern_thread_resume_thread(id);
 
-		id = sys_thread_create_thread("fpu thread4", &fpu_cruncher_thread, &f[4]);
-		sys_thread_resume_thread(id);
+		id = _kern_thread_create_thread("fpu thread4", &fpu_cruncher_thread, &f[4]);
+		_kern_thread_resume_thread(id);
 
 		getchar();
 		printf("passed the test\n");
@@ -428,19 +428,19 @@ int foo(int argc, char **argv)
 		int err;
 		void *framebuffer;
 
-		fd = sys_open("/dev/graphics/fb/0", STREAM_TYPE_DEVICE, 0);
+		fd = _kern_open("/dev/graphics/fb/0", STREAM_TYPE_DEVICE, 0);
 		if(fd < 0) {
 			printf("error opening framebuffer device\n");
 			return -1;
 		}
 
-		err = sys_ioctl(fd, IOCTL_DEVFS_GET_FRAMEBUFFER_INFO, &fb, sizeof(fb));
+		err = _kern_ioctl(fd, IOCTL_DEVFS_GET_FRAMEBUFFER_INFO, &fb, sizeof(fb));
 		if(err < 0) {
 			printf("error getting framebuffer info\n");
 			return -1;
 		}
 
-		err = sys_ioctl(fd, IOCTL_DEVFS_MAP_FRAMEBUFFER, &framebuffer, sizeof(framebuffer));
+		err = _kern_ioctl(fd, IOCTL_DEVFS_MAP_FRAMEBUFFER, &framebuffer, sizeof(framebuffer));
 		if(err < 0) {
 			printf("error mapping framebuffer\n");
 			return -1;
@@ -464,8 +464,8 @@ int foo(int argc, char **argv)
 
 		printf("mounting nfs filesystem\n");
 
-		sys_create("/nfs", STREAM_TYPE_DIR);
-		err = sys_mount("/nfs", "192.168.0.4:/disk", "nfs", NULL);
+		_kern_create("/nfs", STREAM_TYPE_DIR);
+		err = _kern_mount("/nfs", "192.168.0.4:/disk", "nfs", NULL);
 		printf("mount returns %d\n", err);
 
 		{
@@ -473,11 +473,11 @@ int foo(int argc, char **argv)
 			int fd;
 			char buf[1024];
 
-			fd = sys_open("/nfs", STREAM_TYPE_DIR, 0);
+			fd = _kern_open("/nfs", STREAM_TYPE_DIR, 0);
 
 			for(i=0; i<16; i++) {
 				memset(buf, 0, sizeof(buf));
-				err = sys_read(fd, buf, -1, sizeof(buf));
+				err = _kern_read(fd, buf, -1, sizeof(buf));
 				printf("read returns %d '%s'\n", err, buf);
 			}
 		}

@@ -8,9 +8,16 @@
 #include <stdio.h>
 #include <limits.h>
 #include <ctype.h>
-#include <sys/syscalls.h>
 
 #define MAX_BUFF_SIZE 64
+
+/* gross hack to get this to link inside the kernel */
+#if KERNEL
+#include <kernel/vfs.h>
+#define _kern_read sys_read
+#else
+#include <sys/syscalls.h>
+#endif
 
 int _v_scanf( int (*_read)(void*), void (*_push)(void*, unsigned char),  void* arg, const unsigned char *, va_list);
 
@@ -103,7 +110,7 @@ static int _fscanf_read(void *p)
 
     if (stream->rpos >= stream->buf_pos) 
     {
-        int len = sys_read(stream->fd, stream->buf, -1, stream->buf_size);
+        int len = _kern_read(stream->fd, stream->buf, -1, stream->buf_size);
         if (len==0) 
         {
             stream->flags |= _STDIO_EOF;
@@ -119,9 +126,9 @@ static int _fscanf_read(void *p)
     }
 	c = stream->buf[stream->rpos++];
 /*
-	sys_write(1, "read: \'", -1, 7);
-	sys_write(1, &c, -1, 1);
-	sys_write(1, "\'\r\n", -1, 3);
+	_kern_write(1, "read: \'", -1, 7);
+	_kern_write(1, &c, -1, 1);
+	_kern_write(1, "\'\r\n", -1, 3);
 */
 	val->count++;
     return (int)c;
@@ -344,16 +351,16 @@ int _v_scanf( int (*_read)(void*), void (*_push)(void*, unsigned char),  void* a
 	unsigned int fieldsRead = 0;
 	unsigned char fch;
 
-//	sys_write(1, "\r\n_v_scanf\r\n", -1, 12);
+//	_kern_write(1, "\r\n_v_scanf\r\n", -1, 12);
 
 	while (*format)
 	{
 		long long s_temp = 0;
 		fch = *format++;
 /*
-		sys_write(1, "fch: \'", -1, 6);
-		sys_write(1, &fch, -1, 1);
-		sys_write(1, "\'\r\n", -1, 3);
+		_kern_write(1, "fch: \'", -1, 6);
+		_kern_write(1, &fch, -1, 1);
+		_kern_write(1, "\'\r\n", -1, 3);
 */
 
     	if(isspace(fch))
@@ -381,9 +388,9 @@ keeplooking:
 
 			fch = *format++;
 /*
-			sys_write(1, "fch: \'", -1, 6);
-			sys_write(1, &fch, -1, 1);
-			sys_write(1, "\'\r\n", -1, 3);
+			_kern_write(1, "fch: \'", -1, 6);
+			_kern_write(1, &fch, -1, 1);
+			_kern_write(1, "\'\r\n", -1, 3);
 */
 			switch(fch)
 			{   
@@ -552,7 +559,7 @@ read_signed_int:
 				case 'c':
 				{
 					width = 10;
-//					sys_write(1, "hello", -1, 5);
+//					_kern_write(1, "hello", -1, 5);
 					unsigned char* c = (unsigned char*)va_arg(arg_ptr, unsigned char*);
 					int i = 0;
 					if(width == -1)

@@ -90,14 +90,14 @@ Window::Window(const Rect &loc)
 		fCanvasList(0)
 {
 	port_id windowServerPort;
-	windowServerPort = sys_port_find("window_server");
+	windowServerPort = _kern_port_find("window_server");
 	if(windowServerPort < 0) {
 		printf("couldn't connect to window server\n");
 		return;
 	}
 
-	port_id localReplyPort = sys_port_create(16, "client_syncport");
-	fEventPort = sys_port_create(16, "client_eventport");
+	port_id localReplyPort = _kern_port_create(16, "client_syncport");
+	fEventPort = _kern_port_create(16, "client_eventport");
 
  	fConnection = new Connection(windowServerPort, localReplyPort);
  	fConnection->WriteInt8(OP_CREATE_WINDOW);
@@ -112,10 +112,10 @@ Window::Window(const Rect &loc)
  	fConnection->Flush();
  	fID = fConnection->ReadInt32();
 
- 	fLock = sys_sem_create(1, "window_sem");
+ 	fLock = _kern_sem_create(1, "window_sem");
 
-	thread_id tid = sys_thread_create_thread("window_thread", &EventLoop, this);
-	sys_thread_resume_thread(tid);
+	thread_id tid = _kern_thread_create_thread("window_thread", &EventLoop, this);
+	_kern_thread_resume_thread(tid);
 
 	/* create the default border canvas */
 	fBorderCanvas = new WindowBorderCanvas();
@@ -147,7 +147,7 @@ Window::Window(const Rect &loc)
 
 Window::~Window()
 {
-	sys_sem_acquire(fLock, 1);
+	_kern_sem_acquire(fLock, 1);
 	while (fCanvasList) {
 		Canvas *child = fCanvasList;
 		fCanvasList = fCanvasList->fWinListNext;
@@ -162,7 +162,7 @@ Window::~Window()
 	fConnection->Flush();
 	delete fConnection;
 
- 	sys_sem_delete(fLock);
+ 	_kern_sem_delete(fLock);
 }
 
 
@@ -182,7 +182,7 @@ void Window::WaitEvent(Event *event)
 {
 	int ignore;
 	printf("Window::WaitEvent: waiting on port %d\n", fEventPort);
-	int err = sys_port_read(fEventPort, &ignore, (void *)event, sizeof(Event));
+	int err = _kern_port_read(fEventPort, &ignore, (void *)event, sizeof(Event));
 	printf("Window::WaitEvent: got something from port %d, error %d\n", fEventPort, err);
 }
 
@@ -237,12 +237,12 @@ void Window::RemoveChild(Canvas *child)
 
 void Window::Lock()
 {
-	sys_sem_acquire(fLock, 1);
+	_kern_sem_acquire(fLock, 1);
 }
 
 void Window::Unlock()
 {
-	sys_sem_release(fLock, 1);
+	_kern_sem_release(fLock, 1);
 }
 
 void Window::Hide()
@@ -296,7 +296,7 @@ int Window::EventLoop(void *_window)
 		printf("Window::EventLoop: got event, what %d, target %d, x %d, y %d\n", event.what, event.target, event.x, event.y);
 		if (event.what == EVT_QUIT) {
 			delete window;
-			sys_exit(0);
+			_kern_exit(0);
 		}
 
 		window->Lock();
@@ -311,7 +311,7 @@ void Window::Quit()
 	event.what = EVT_QUIT;
 	event.target = fID;
 
-	sys_port_write(fEventPort, 0, &event, sizeof(Event));
+	_kern_port_write(fEventPort, 0, &event, sizeof(Event));
 }
 
 }

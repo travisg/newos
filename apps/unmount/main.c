@@ -15,9 +15,9 @@ int main(int argc, char *argv[])
 		return 0;
 	}
 
-	rc = sys_unmount(argv[1]);
+	rc = _kern_unmount(argv[1]);
 	if (rc < 0) {
-		printf("sys_unmount() returned error: %s\n", strerror(rc));
+		printf("_kern_unmount() returned error: %s\n", strerror(rc));
 	} else {
 		printf("%s successfully unmounted.\n", argv[1]);
 	}

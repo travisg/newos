@@ -29,7 +29,7 @@ IRCEngine::IRCEngine()
 
 	mCurrentChannel[0] = 0;
 
-	mSem = sys_sem_create(1, "irc engine lock");
+	mSem = _kern_sem_create(1, "irc engine lock");
 }
 
 IRCEngine::~IRCEngine()
@@ -45,17 +45,17 @@ IRCEngine::~IRCEngine()
 	if(mTerm)
 		delete mTerm;
 
-	sys_sem_delete(mSem);
+	_kern_sem_delete(mSem);
 }
 
 void IRCEngine::Lock()
 {
-	sys_sem_acquire(mSem, 1);
+	_kern_sem_acquire(mSem, 1);
 }
 
 void IRCEngine::Unlock()
 {
-	sys_sem_release(mSem, 1);
+	_kern_sem_release(mSem, 1);
 }
 
 int IRCEngine::Run()

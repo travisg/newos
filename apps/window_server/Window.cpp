@@ -293,7 +293,7 @@ void Window::PostEvent(Event *event)
 
 	printf("Window::PostEvent: port %d ID %d, event->what %d\n", fEventPort, fID, event->what);
 
-	sys_port_write(fEventPort, 0, event, sizeof(Event));
+	_kern_port_write(fEventPort, 0, event, sizeof(Event));
 }
 
 Rect Window::LocalToScreen(const Rect &inRect) const
