@@ -46,7 +46,8 @@ floppy: $(STAGE2) $(KERNEL) $(APPS) tools $(MAKEFLOP)
 	$(BOOTMAKER) $(BOOT_DIR)/config.ini -o $(FINAL).pre
 	$(MAKEFLOP) $(FINAL).pre $(FINAL)
 	rm -f $(FINAL).pre
-	rm -f ../../final.$(ARCH); ln -sf $(FINAL) ../../final.$(ARCH)
+    rm -f final.$(ARCH);ln -sf $(FINAL) final.$(ARCH)
+    rm -f system.$(ARCH);ln -sf $(KERNEL) system.$(ARCH)
 
 disk: floppy
 ifeq ($(OSTYPE),cygwin)
