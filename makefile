@@ -145,7 +145,7 @@ endif
 
 OBJ_DIR = obj.$(ARCH)
 
-GLOBAL_CFLAGS += -Wall -W -Wno-multichar -Wno-unused -nostdinc -fno-builtin -DARCH_$(ARCH) -DNEWOS=1
+GLOBAL_CFLAGS += -Wall -W -Wno-multichar -Wno-unused -Wmissing-prototypes -nostdinc -fno-builtin -DARCH_$(ARCH) -DNEWOS=1
 
 # sub makefiles are responsible for adding to these
 DEPS =
