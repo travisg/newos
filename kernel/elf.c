@@ -183,7 +183,7 @@ static int elf_parse_dynamic_section(struct elf_image_info *image)
 	int i;
 	int needed_offset = -1;
 
-	dprintf("top of elf_parse_dynamic_section\n");
+//	dprintf("top of elf_parse_dynamic_section\n");
 
 	image->symhash = 0;
 	image->syms = 0;
@@ -228,7 +228,7 @@ static int elf_parse_dynamic_section(struct elf_image_info *image)
 	if(!image->symhash || !image->syms || !image->strtab)
 		return ERR_GENERAL;
 
-	dprintf("needed_offset = %d\n", needed_offset);
+//	dprintf("needed_offset = %d\n", needed_offset);
 
 	if(needed_offset >= 0)
 		image->needed = STRING(image, needed_offset);
@@ -288,12 +288,12 @@ static int elf_relocate(struct elf_image_info *image)
 
 	S = A = P = 0;
 
-	dprintf("top of elf_relocate\n");
+//	dprintf("top of elf_relocate\n");
 
 	// deal with the rels first
 	if(image->rel) {
 		for(i = 0; i * (int)sizeof(struct Elf32_Rel) < image->rel_len; i++) {
-			dprintf("looking at rel type %d, offset 0x%x\n", ELF32_R_TYPE(image->rel[i].r_info), image->rel[i].r_offset);
+//			dprintf("looking at rel type %d, offset 0x%x\n", ELF32_R_TYPE(image->rel[i].r_info), image->rel[i].r_offset);
 
 			// calc S
 			switch(ELF32_R_TYPE(image->rel[i].r_info)) {
@@ -303,11 +303,9 @@ static int elf_relocate(struct elf_image_info *image)
 				case R_386_JMP_SLOT:
 				case R_386_GOTOFF:
 					sym = SYMBOL(image, ELF32_R_SYM(image->rel[i].r_info));
-					dprintf("rel: R_386_PC32, symbol '%s'\n", SYMNAME(image, sym));
-					dump_symbol(image, sym);
 
 					S = elf_resolve_symbol(image, sym, kernel_image);
-					dprintf("S 0x%x\n", S);
+//					dprintf("S 0x%x\n", S);
 			}
 			// calc A
 			switch(ELF32_R_TYPE(image->rel[i].r_info)) {
@@ -319,7 +317,7 @@ static int elf_relocate(struct elf_image_info *image)
 				case R_386_GOTOFF:
 				case R_386_GOTPC:
 					A = *(addr *)(image->regions[0].delta + image->rel[i].r_offset);
-					dprintf("A 0x%x\n", A);
+//					dprintf("A 0x%x\n", A);
 					break;
 			}
 			// calc P
@@ -329,7 +327,7 @@ static int elf_relocate(struct elf_image_info *image)
 				case R_386_PLT32:
 				case R_386_GOTPC:
 					P = image->regions[0].delta + image->rel[i].r_offset;
-					dprintf("P 0x%x\n", P);
+//					dprintf("P 0x%x\n", P);
 					break;
 			}
 
@@ -515,7 +513,7 @@ image_id elf_load_kspace(const char *path)
 		goto error1;
 	}
 
-	dprintf("reading in program headers at 0x%x, len 0x%x\n", eheader.e_phoff, eheader.e_phnum * eheader.e_phentsize);
+//	dprintf("reading in program headers at 0x%x, len 0x%x\n", eheader.e_phoff, eheader.e_phnum * eheader.e_phentsize);
 	len = sys_read(fd, pheaders, eheader.e_phoff, eheader.e_phnum * eheader.e_phentsize);
 	if(len < 0) {
 		err = len;
@@ -535,7 +533,7 @@ image_id elf_load_kspace(const char *path)
 		int image_region;
 		int lock;
 
-		dprintf("looking at program header %d\n", i);
+//		dprintf("looking at program header %d\n", i);
 
 		switch(pheaders[i].p_type) {
 			case PT_LOAD:
@@ -574,7 +572,6 @@ image_id elf_load_kspace(const char *path)
 			dprintf("weird program header flags 0x%x\n", pheaders[i].p_flags);
 			continue;
 		}
-		dprintf("vaddr 0x%x\n", pheaders[i].p_vaddr);
 		image->regions[image_region].size = ROUNDUP(pheaders[i].p_memsz + (pheaders[i].p_vaddr % PAGE_SIZE), PAGE_SIZE);
 		image->regions[image_region].id = vm_create_anonymous_region(vm_get_kernel_aspace_id(), region_name,
 			(void **)&image->regions[image_region].start, REGION_ADDR_ANY_ADDRESS,
@@ -586,7 +583,7 @@ image_id elf_load_kspace(const char *path)
 		}
 		image->regions[image_region].delta = image->regions[image_region].start - pheaders[i].p_vaddr;
 
-		dprintf("elf_load_kspace: created a region at 0x%x\n", image->regions[image_region].start);
+//		dprintf("elf_load_kspace: created a region at 0x%x\n", image->regions[image_region].start);
 
 		len = sys_read(fd, (void *)(image->regions[image_region].start + (pheaders[i].p_vaddr % PAGE_SIZE)),
 			pheaders[i].p_offset, pheaders[i].p_filesz);
@@ -608,19 +605,15 @@ image_id elf_load_kspace(const char *path)
 	// modify the dynamic ptr by the delta of the regions
 	image->dynamic_ptr += image->regions[0].delta;
 
-	dump_image_info(image);
-
 	err = elf_parse_dynamic_section(image);
 	if(err < 0)
 		goto error3;
-
-	dump_image_info(image);
 
 	err = elf_relocate(image);
 	if(err < 0)
 		goto error3;
 
-	dprintf("elf_load_kspace: done!\n");
+//	dprintf("elf_load_kspace: done!\n");
 
 	err = 0;
 
@@ -682,8 +675,6 @@ int elf_init(kernel_args *ka)
 	insert_image_in_list(kernel_image);
 
 	mutex_init(&image_lock, "kimages_lock");
-
-	dump_image_info(kernel_images);
 
 	return 0;
 }

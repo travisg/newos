@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -11,8 +11,6 @@
 #include <kernel/heap.h>	// for kmalloc / kfree
 #include <kernel/lock.h>	// for mutex handling
 #include <kernel/vm.h>
-
-#include <kernel/fs/isofs.h>
 
 #include <libc/string.h>
 
@@ -47,7 +45,7 @@ struct isofs {
 	int next_vnode_id; // next available vnode id
 	void *vnode_list_hash; // hashtable of all used vnodes
 	struct isofs_vnode *root_vnode; // pointer to private vnode struct of root dir of fs
-	
+
 	// ISO9660 stuff
 	char volumename[33];// name of volume
 	size_t blocksize;	// Size of an ISO sector
@@ -194,7 +192,7 @@ static struct isofs_vnode* isofs_find_in_dir(struct isofs *fs, struct isofs_vnod
 			return v;
 		}
 	}
-	
+
 	return NULL;
 }
 
@@ -208,30 +206,30 @@ static struct isofs_vnode* iso_add_entry(struct isofs* fs, struct isofs_vnode* p
 {
 	struct isofs_vnode* v;
 	char name[33];
-	
+
 	// Create ASCIIZ name
 	strncpy(name, e->name, e->nameLength);
 	name[e->nameLength] = '\0';
 
 	// Create initial vnode
 	v = isofs_create_vnode(fs,name);
-	
+
 	// Fill in the stream member of the vnode
 	v->stream.type = (e->flags & 2) ? STREAM_TYPE_DIR : STREAM_TYPE_FILE;
 	v->stream.desc_pos = desc_pos;
 	v->stream.data_pos = e->dataStartSector[ISO_LSB_INDEX] * fs->blocksize;
 	v->stream.data_len = e->dataLength[ISO_LSB_INDEX];
-	
+
 	// Insert it into the hierarchy
 	if (parent != NULL) {
 		isofs_insert_in_dir(parent,v);
 	} else {
 		v->parent = v;
 	}
-	
+
 	// Insert it into our hashing table
 	hash_insert(fs->vnode_list_hash, v);
-	
+
 	return v;
 }
 
@@ -247,7 +245,7 @@ static void iso_scan_dir(struct isofs* fs, struct isofs_vnode* dir)
 	if (dir->scanned) {
 		return;
 	}
-	
+
 	start = dir->stream.data_pos;
 	end = start + dir->stream.data_len;
 
@@ -267,13 +265,13 @@ static void iso_scan_dir(struct isofs* fs, struct isofs_vnode* dir)
 				strcpy(e->name, "..");
 				e->nameLength = 2;
 			}
-			
+
 			iso_add_entry(fs, dir, e, start);
 			start += e->recordLength;
 			++cnt;
 		}
 	} while( start < end );
-	
+
 	dir->scanned = true;
 }
 
@@ -282,14 +280,14 @@ void iso_init_volume(struct isofs* fs)
 {
 	iso_volume_descriptor voldesc;
 	iso_dir_entry* e;
-	
+
 	// Read ISO9660 volume descriptor
 	sys_read(fs->fd, &voldesc, ISO_VD_START, sizeof(voldesc));
-	
+
 	// Copy volume name
 	strncpy(fs->volumename, voldesc.volumeID, 32);
 	fs->volumename[32] = '\0';
-	
+
 	// Copy block size + # of blocks
 	fs->blocksize = voldesc.sectorSize[ISO_LSB_INDEX];
 	fs->numblocks = voldesc.numSectors[ISO_LSB_INDEX];
@@ -574,7 +572,7 @@ static int isofs_freecookie(fs_cookie _fs, fs_vnode _v, file_cookie _cookie)
 	struct isofs *fs = _fs;
 	struct isofs_vnode *v = _v;
 	struct isofs_cookie *cookie = _cookie;
-	
+
 	TRACE(("isofs_freecookie: entry vnode 0x%x, cookie 0x%x\n", v, cookie));
 
 	if (cookie)
@@ -623,43 +621,43 @@ static ssize_t isofs_read(fs_cookie _fs, fs_vnode _v, file_cookie _cookie,
 			cookie->u.dir.ptr = cookie->u.dir.ptr->dir_next;
 			break;
 		}
-		
+
 		case STREAM_TYPE_FILE:
 			// If size is negative, forget it
 			if(len <= 0) {
 				err = 0;
 				break;
 			}
-			
+
 			// If position is negative, we'll read from current pos
 			if (pos < 0) {
 				// we'll read where the cookie is at
 				pos = cookie->u.file.pos;
 			}
-			
-			
+
+
 			// If position is past filelength, forget it
 			if (pos >= cookie->s->data_len) {
 				err = 0;
 				break;
 			}
-			
+
 			// If read goes partially beyond EOF
 			if (pos + len > cookie->s->data_len) {
 				// trim the read
 				len = cookie->s->data_len - pos;
 			}
-						
+
 			err = sys_read(fs->fd, tempbuf, cookie->s->data_pos + pos, len);
 			if(err < 0) {
 				goto error;
 			}
 			user_memcpy(buf, tempbuf, err);
-			
+
 			// Move to next bit of the file
 			cookie->u.file.pos = pos + err;
 			break;
-			
+
 		default:
 			err = ERR_INVALID_ARGS;
 	}
@@ -880,7 +878,7 @@ static struct fs_calls isofs_calls = {
 };
 
 //--------------------------------------------------------------------------------
-int bootstrap_isofs()
+int fs_bootstrap()
 {
 	dprintf("bootstrap_isofs: entry\n");
 	return vfs_register_filesystem("isofs", &isofs_calls);
