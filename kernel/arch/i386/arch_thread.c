@@ -20,6 +20,18 @@ int arch_proc_init_proc_struct(struct proc *p, bool kernel)
 // from arch_interrupts.S
 extern void	i386_stack_init( struct farcall *interrupt_stack_offset );
 
+void i386_push_iframe(struct thread *t, struct iframe *frame)
+{
+	ASSERT(t->arch_info.iframe_ptr < IFRAME_TRACE_DEPTH);
+	t->arch_info.iframes[t->arch_info.iframe_ptr++] = frame;
+}
+
+void i386_pop_iframe(struct thread *t)
+{
+	ASSERT(t->arch_info.iframe_ptr > 0);
+	t->arch_info.iframe_ptr--;
+}
+
 int arch_thread_init_thread_struct(struct thread *t)
 {
 	// set up an initial state (stack & fpu)

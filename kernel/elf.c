@@ -193,6 +193,83 @@ static void dump_symbol(struct elf_image_info *image, struct Elf32_Sym *sym)
 	dprintf(" st_shndx %d\n", sym->st_shndx);
 }
 
+
+
+#if 0
+#define PRINT(x) dprintf x
+#else
+#define PRINT(x)
+#endif
+
+
+/* Take an address to symbol. Taken from the OpenBeOS version of the newos kernel. */
+int elf_reverse_lookup_symbol(addr address, addr *base_address, char *text, int len)
+{
+	struct elf_image_info **ptr;
+	struct elf_image_info *image;
+	struct Elf32_Sym *sym;
+	struct elf_image_info *found_image;
+	struct Elf32_Sym *found_sym;
+	long found_delta;
+	int i,j,rv;
+
+	PRINT(("looking up %p\n",(void *)address));
+
+	mutex_lock(&image_lock);
+
+	found_sym = 0;
+	found_image = 0;
+	found_delta = 0x7fffffff;
+	for(ptr = &kernel_images; *ptr; ptr = &(*ptr)->next) {
+		image = *ptr;
+
+		PRINT((" image %p, base = %p, size = %p\n", image, (void *)image->regions[0].start, (void *)image->regions[0].size));
+		if ((address < image->regions[0].start) || (address >= (image->regions[0].start + image->regions[0].size)))
+			continue;
+
+		PRINT((" searching...\n"));
+		found_image = image;
+		for (i = 0; i < HASHTABSIZE(image); i++) {
+			for(j = HASHBUCKETS(image)[i]; j != STN_UNDEF; j = HASHCHAINS(image)[j]) {
+				long d;
+				sym = &image->syms[j];
+
+				PRINT(("  %p looking at %s, type = %d, bind = %d, addr = %p\n",sym,SYMNAME(image, sym),ELF32_ST_TYPE(sym->st_info),ELF32_ST_BIND(sym->st_info),(void *)sym->st_value));
+				PRINT(("  symbol: %lx (%x + %lx)\n", sym->st_value + image->regions[0].delta, sym->st_value, image->regions[0].delta));
+
+				if (ELF32_ST_TYPE(sym->st_info) != STT_FUNC)
+					continue;
+
+				d = (long)address - (long)(sym->st_value + image->regions[0].delta);
+				if ((d >= 0) && (d < found_delta)) {
+					found_delta = d;
+					found_sym = sym;
+				}
+			}
+		}
+		break;
+	}
+	if (found_sym == 0) {
+		PRINT(("symbol not found!\n"));
+		strlcpy(text, "symbol not found", len);
+		rv = ERR_NOT_FOUND;
+	} else {
+		PRINT(("symbol at %p, in image %p\n", found_sym, found_image));
+		PRINT(("name index %d, '%s'\n", found_sym->st_name, SYMNAME(found_image, found_sym)));
+		PRINT(("addr = %#lx, offset = %#lx\n",(found_sym->st_value + found_image->regions[0].delta),found_delta));
+		// XXX should honor len here
+//		sprintf(text, "<%#lx:%s + %#lx> %s", (found_sym->st_value + found_image->regions[0].delta), SYMNAME(found_image, found_sym), found_delta, found_image->name);
+		strncpy(text, SYMNAME(found_image, found_sym), len);
+		text[len-1] = 0;
+		*base_address = found_sym->st_value + found_image->regions[0].delta;
+		rv = 0;
+	}
+
+	mutex_unlock(&image_lock);
+	return rv;
+}
+
+
 static struct Elf32_Sym *elf_find_symbol(struct elf_image_info *image, const char *name)
 {
 	unsigned int hash;

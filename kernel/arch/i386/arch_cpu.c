@@ -3,6 +3,7 @@
 ** Distributed under the terms of the NewOS License.
 */
 #include <kernel/kernel.h>
+#include <kernel/cpu.h>
 #include <kernel/arch/cpu.h>
 #include <kernel/heap.h>
 #include <kernel/vm.h>

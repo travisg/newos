@@ -360,6 +360,8 @@ int dbg_init2(kernel_args *ka)
 	dbg_add_command(&cmd_reboot, "reboot", "Reboot");
 	dbg_add_command(&cmd_gdb, "gdb", "Connect to remote gdb");
 
+	arch_dbg_init(ka);
+
 	return NO_ERROR;
 }
 

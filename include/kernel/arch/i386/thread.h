@@ -7,6 +7,9 @@
 
 #include <kernel/arch/cpu.h>
 
+void i386_push_iframe(struct thread *t, struct iframe *frame);
+void i386_pop_iframe(struct thread *t);
+
 extern inline struct thread *arch_thread_get_current_thread(void) {
 	struct thread *t;
 	read_dr3(t);

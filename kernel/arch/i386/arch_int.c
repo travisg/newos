@@ -27,28 +27,6 @@
 
 #define MAX_ARGS 16
 
-struct int_frame {
-	unsigned int gs;
-	unsigned int fs;
-	unsigned int es;
-	unsigned int ds;
-	unsigned int edi;
-	unsigned int esi;
-	unsigned int ebp;
-	unsigned int esp;
-	unsigned int ebx;
-	unsigned int edx;
-	unsigned int ecx;
-	unsigned int eax;
-	unsigned int vector;
-	unsigned int error_code;
-	unsigned int eip;
-	unsigned int cs;
-	unsigned int flags;
-	unsigned int user_esp;
-	unsigned int user_ss;
-};
-
 static desc_table *idt = NULL;
 
 static void interrupt_ack(int n)
@@ -148,10 +126,14 @@ bool arch_int_is_interrupts_enabled(void)
 	return flags & 0x200 ? 1 : 0;
 }
 
-void i386_handle_trap(struct int_frame frame); /* keep the compiler happy, this function must be called only from assembly */
-void i386_handle_trap(struct int_frame frame)
+void i386_handle_trap(struct iframe frame); /* keep the compiler happy, this function must be called only from assembly */
+void i386_handle_trap(struct iframe frame)
 {
 	int ret = INT_NO_RESCHEDULE;
+	struct thread *t = thread_get_current_thread();
+
+	if(t)
+		i386_push_iframe(t, &frame);
 
 //	if(frame.vector != 0x20)
 //		dprintf("i386_handle_trap: vector 0x%x, ip 0x%x, cpu %d\n", frame.vector, frame.eip, smp_get_current_cpu());
@@ -259,6 +241,9 @@ void i386_handle_trap(struct int_frame frame)
 		thread_atkernel_exit();
 	}
 //	dprintf("0x%x cpu %d!\n", thread_get_current_thread_id(), smp_get_current_cpu());
+
+	if(t)
+		i386_pop_iframe(t);
 }
 
 int arch_int_init(kernel_args *ka)
