@@ -33,7 +33,7 @@ enum {
 };
 
 
-typedef 
+typedef
 struct elf_region_t {
 	region_id id;
 	addr start;
@@ -56,7 +56,7 @@ struct image_t {
 	addr entry_point;
 	addr dynamic_ptr; // pointer to the dynamic section
 
-	
+
 	// pointer to symbol participation data structures
 	unsigned int      *symhash;
 	struct Elf32_Sym  *syms;
@@ -76,7 +76,7 @@ struct image_t {
 } image_t;
 
 
-typedef 
+typedef
 struct image_queue_t {
 	image_t *head;
 	image_t *tail;
@@ -121,8 +121,8 @@ enqueue(image_t *img)
 	}
 }
 
-static 
-unsigned long 
+static
+unsigned long
 elf_hash(const unsigned char *name)
 {
 	unsigned long hash = 0;
@@ -192,16 +192,16 @@ count_regions(char const *buff, int phnum, int phentsize)
 				break;
 			case PT_INTERP:
 				/* should check here for appropiate interpreter */
-				break;	
+				break;
 			case PT_NOTE:
 				/* unsupported */
-				break;	
+				break;
 			case PT_SHLIB:
 				/* undefined semantics */
-				break;	
+				break;
 			case PT_PHDR:
 				/* we don't use it */
-				break;	
+				break;
 			default:
 				FATAL(true, "unhandled pheader type 0x%x\n", pheaders[i].p_type);
 				break;
@@ -258,7 +258,7 @@ parse_program_headers(image_t *image, char *buff, int phnum, int phentsize)
 					image->regions[regcount].fdsize = pheaders->p_filesz;
 					image->regions[regcount].delta= 0;
 					image->regions[regcount].flags= 0;
-			       		if(pheaders->p_flags & PF_W) {
+					if(pheaders->p_flags & PF_W) {
 						// this is a writable segment
 						image->regions[regcount].flags|= RFLAG_RW;
 					}
@@ -266,7 +266,7 @@ parse_program_headers(image_t *image, char *buff, int phnum, int phentsize)
 					/*
 					 * may require splitting
 					 */
- 					unsigned A= pheaders->p_vaddr+pheaders->p_memsz;
+					unsigned A= pheaders->p_vaddr+pheaders->p_memsz;
 					unsigned B= pheaders->p_vaddr+pheaders->p_filesz;
 
 					A= PAGE_BASE(A);
@@ -280,7 +280,7 @@ parse_program_headers(image_t *image, char *buff, int phnum, int phentsize)
 					image->regions[regcount].fdsize = pheaders->p_filesz;
 					image->regions[regcount].delta= 0;
 					image->regions[regcount].flags= 0;
-			       		if(pheaders->p_flags & PF_W) {
+					if(pheaders->p_flags & PF_W) {
 						// this is a writable segment
 						image->regions[regcount].flags|= RFLAG_RW;
 					}
@@ -289,19 +289,19 @@ parse_program_headers(image_t *image, char *buff, int phnum, int phentsize)
 						/*
 						 * yeah, it requires splitting
 						 */
-		 				regcount+= 1;
-	 					image->regions[regcount].start  = pheaders->p_vaddr;
-	 					image->regions[regcount].size   = pheaders->p_memsz - pheaders->p_filesz;
-	 					image->regions[regcount].vmstart= image->regions[regcount-1].vmstart + image->regions[regcount-1].vmsize;
-	 					image->regions[regcount].vmsize = ROUNDUP (pheaders->p_memsz + (pheaders->p_vaddr % PAGE_SIZE), PAGE_SIZE) - image->regions[regcount-1].vmsize;
-	 					image->regions[regcount].fdstart= 0;
-	 					image->regions[regcount].fdsize = 0;
-	 					image->regions[regcount].delta= 0;
+						regcount+= 1;
+						image->regions[regcount].start  = pheaders->p_vaddr;
+						image->regions[regcount].size   = pheaders->p_memsz - pheaders->p_filesz;
+						image->regions[regcount].vmstart= image->regions[regcount-1].vmstart + image->regions[regcount-1].vmsize;
+						image->regions[regcount].vmsize = ROUNDUP (pheaders->p_memsz + (pheaders->p_vaddr % PAGE_SIZE), PAGE_SIZE) - image->regions[regcount-1].vmsize;
+						image->regions[regcount].fdstart= 0;
+						image->regions[regcount].fdsize = 0;
+						image->regions[regcount].delta= 0;
 						image->regions[regcount].flags= RFLAG_ANON;
-	 			       		if(pheaders->p_flags & PF_W) {
-	 						// this is a writable segment
-	 						image->regions[regcount].flags|= RFLAG_RW;
-	 					}
+						if(pheaders->p_flags & PF_W) {
+							// this is a writable segment
+							image->regions[regcount].flags|= RFLAG_RW;
+						}
 					}
 				}
 				regcount+= 1;
@@ -311,16 +311,16 @@ parse_program_headers(image_t *image, char *buff, int phnum, int phentsize)
 				break;
 			case PT_INTERP:
 				/* should check here for appropiate interpreter */
-				break;	
+				break;
 			case PT_NOTE:
 				/* unsupported */
-				break;	
+				break;
 			case PT_SHLIB:
 				/* undefined semantics */
-				break;	
+				break;
 			case PT_PHDR:
 				/* we don't use it */
-				break;	
+				break;
 			default:
 				FATAL(true, "unhandled pheader type 0x%x\n", pheaders[i].p_type);
 				break;
@@ -375,7 +375,7 @@ load_image(int fd, char const *path, image_t *image)
 			 * relocatable image... we can afford to place wherever
 			 */
 			if(i== 0) {
-			 	/*
+				/*
 				 * but only the first segment gets a free ride
 				 */
 				load_address= 0;
@@ -443,7 +443,7 @@ load_image(int fd, char const *path, image_t *image)
 			}
 		}
 	}
-	
+
 	if(image->dynamic_ptr) {
 		image->dynamic_ptr+= image->regions[0].delta;
 	}
@@ -454,7 +454,7 @@ error:
 	return false;
 }
 
-static 
+static
 bool
 parse_dynamic_segment(image_t *image)
 {
@@ -517,8 +517,8 @@ parse_dynamic_segment(image_t *image)
 	return true;
 }
 
-static 
-struct 
+static
+struct
 Elf32_Sym *find_symbol(image_t **shimg, const char *name)
 {
 	image_t *iter;
@@ -547,8 +547,8 @@ Elf32_Sym *find_symbol(image_t **shimg, const char *name)
 	return NULL;
 }
 
-static 
-int  
+static
+int
 resolve_symbol(image_t *image, struct Elf32_Sym *sym, addr *sym_addr)
 {
 	struct Elf32_Sym *sym2;
@@ -609,7 +609,7 @@ relocate_rel(image_t *image, struct Elf32_Rel *rel, int rel_len )
 	addr final_val;
 
 	S = A = P = 0;
-	
+
 	for(i = 0; i * (int)sizeof(struct Elf32_Rel) < rel_len; i++) {
 
 		// calc S
@@ -671,12 +671,12 @@ relocate_rel(image_t *image, struct Elf32_Rel *rel, int rel_len )
 		}
 		*(addr *)(image->regions[0].delta + rel[i].r_offset) = final_val;
 	}
-	
+
 	return NO_ERROR;
 }
 
-static 
-bool 
+static
+bool
 relocate_image(image_t *image)
 {
 	int res = NO_ERROR;
@@ -685,12 +685,12 @@ relocate_image(image_t *image)
 	// deal with the rels first
 	if(image->rel) {
 		res= relocate_rel( image, image->rel, image->rel_len );
-		
+
 		if(res) {
 			return false;
 		}
 	}
-	
+
 	if(image->pltrel) {
 		res= relocate_rel(image, image->pltrel, image->pltrel_len);
 
@@ -732,7 +732,7 @@ load_container(char const *path)
 
 	len= sys_read(fd, &eheader, 0, sizeof(eheader));
 	FATAL((len!= sizeof(eheader)), "troubles reading ELF header\n");
-	
+
 	ph_len= parse_eheader(&eheader);
 	FATAL((ph_len<= 0), "incorrect ELF header\n");
 	FATAL((ph_len> (int)sizeof(ph_buff)), "cannot handle Program headers bigger than %d\n", sizeof(ph_buff));
