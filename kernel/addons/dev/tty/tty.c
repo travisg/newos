@@ -374,7 +374,7 @@ err:
 	return bytes_written;
 }
 
-int dev_boostrap(void);
+int dev_bootstrap(void);
 
 int dev_bootstrap(void)
 {
