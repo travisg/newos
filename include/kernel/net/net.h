@@ -19,7 +19,9 @@ enum {
 typedef struct netaddr {
 	uint8 len;
 	uint8 type;
-	uint8 addr[14];
+	uint8 pad0;
+	uint8 pad1;
+	uint8 addr[12];
 } netaddr;
 
 #define NET_CHATTY 0
