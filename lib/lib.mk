@@ -9,10 +9,11 @@ KLIBS =
 LINK_KLIBS = 
 LIBS_CLEAN =
 
+include $(LIB_DIR)/glue/glue.mk
+include $(LIB_DIR)/glue/libglue.mk
 include $(LIB_DIR)/libsys/libsys.mk
 #include $(LIB_DIR)/libc/libc.mk
 include $(LIB_DIR)/nulibc/nulibc.mk
-include $(LIB_DIR)/glue/glue.mk
 
 libs: $(LIBS)
 

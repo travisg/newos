@@ -5,7 +5,7 @@ LIBSYS_OBJS = \
 
 DEPS += $(LIBSYS_OBJS:.o=.d)
 
-include $(LIBSYS_DIR)/hoard/hoard.mk
+#include $(LIBSYS_DIR)/hoard/hoard.mk
 
 LIBSYS = $(LIBSYS_OBJ_DIR)/libsys.o
 
@@ -16,7 +16,7 @@ $(LIBSYS): $(LIBSYS_OBJS) $(LIBHOARD)
 LIBS += $(LIBSYS) 
 LINK_LIBS += $(LIBSYS) 
 
-libsysclean: libhoardclean
+libsysclean:
 	rm -f $(LIBSYS_OBJS) $(LIBSYS)
 
 LIBS_CLEAN += libsysclean 

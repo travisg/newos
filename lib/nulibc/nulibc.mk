@@ -2,7 +2,7 @@ NULIBC_DIR = $(LIB_DIR)/nulibc
 NULIBC_OBJ_DIR = $(NULIBC_DIR)/$(OBJ_DIR)
 
 
-#include $(NULIBC_DIR)/hoard/nulibc_hoard.mk
+include $(NULIBC_DIR)/hoard/nulibc_hoard.mk
 include $(NULIBC_DIR)/locale/nulibc_locale.mk
 include $(NULIBC_DIR)/stdio/nulibc_stdio.mk
 include $(NULIBC_DIR)/stdlib/nulibc_stdlib.mk
@@ -29,7 +29,7 @@ $(NULIBC_STATIC): $(NULIBC_OBJS)
 	@mkdir -p $(NULIBC_OBJ_DIR)
 	$(AR) r $@ $^
 
-$(NULIBC_DYNAMIC): $(NULIBC_OBJS)
+$(NULIBC_DYNAMIC): $(LIBGLUE) $(NULIBC_OBJS)
 	@mkdir -p $(NULIBC_OBJ_DIR)
 	$(LD) -shared -soname libc.so --script=$(NULIBC_DIR)/library.ld -o$@ $^
 

@@ -10,6 +10,8 @@
 #include <types.h>
 
 
+#define NEWOS_MAGIC_APPNAME	"__NEWOS_APP__"
+
 int rldmain(void *arg);
 
 int load_program(char const *path, void **entry);

@@ -24,11 +24,13 @@
 
 
 enum {
-	RFLAG_RW  = 0x0001,
-	RFLAG_ANON= 0x0002,
-	RFLAG_SYMBOLIC= 0x1000,
-	RFLAG_PROTECTED= 0x2000,
-	RFLAG_INITIALIZED= 0x4000,
+	RFLAG_RW             = 0x0001,
+	RFLAG_ANON           = 0x0002,
+
+	RFLAG_SORTED         = 0x0800,
+	RFLAG_SYMBOLIC       = 0x1000,
+	RFLAG_PROTECTED      = 0x2000,
+	RFLAG_INITIALIZED    = 0x4000,
 	RFLAG_NEEDAGIRLFRIEND= 0x8000
 };
 
@@ -49,9 +51,15 @@ struct elf_region_t {
 
 typedef
 struct image_t {
+	/*
+	 * image identification
+	 */
+	char     name[SYS_MAX_OS_NAME_LEN];
+
 	struct   image_t *next;
 	struct   image_t **prev;
 	int      ref_count;
+	unsigned flags;
 
 	addr entry_point;
 	addr dynamic_ptr; // pointer to the dynamic section
@@ -85,6 +93,7 @@ struct image_queue_t {
 
 
 static image_queue_t loaded_images= { 0, 0 };
+static unsigned      loaded_image_count= 0;
 
 
 
@@ -137,6 +146,23 @@ elf_hash(const unsigned char *name)
 		hash &= ~temp;
 	}
 	return hash;
+}
+
+static
+image_t *
+find_image(char const *name)
+{
+	image_t *iter;
+
+	iter= loaded_images.head;
+	while(iter) {
+		if(strncmp(iter->name, name, sizeof(iter->name)) == 0) {
+			return iter;
+		}
+		iter= iter->next;
+	}
+
+	return 0;
 }
 
 static
@@ -214,7 +240,7 @@ count_regions(char const *buff, int phnum, int phentsize)
 
 static
 image_t *
-create_image(int num_regions)
+create_image(char const *name, int num_regions)
 {
 	image_t *retval;
 	int      alloc_size;
@@ -225,6 +251,7 @@ create_image(int num_regions)
 
 	memset(retval, 0, alloc_size);
 
+	strlcpy(retval->name, name, sizeof(retval->name));
 	retval->num_regions= num_regions;
 
 	return retval;
@@ -352,7 +379,7 @@ assert_dynamic_loadable(image_t *image)
 
 static
 bool
-load_image(int fd, char const *path, image_t *image, bool fixed)
+map_image(int fd, char const *path, image_t *image, bool fixed)
 {
 	unsigned i;
 
@@ -719,19 +746,25 @@ relocate_image(image_t *image)
 
 static
 image_t *
-load_container(char const *path, bool fixed)
+load_container(char const *path, char const *name, bool fixed)
 {
 	int      fd;
 	int      len;
 	int      ph_len;
 	char     ph_buff[4096];
 	int      num_regions;
-	bool     load_success;
+	bool     map_success;
 	bool     dynamic_success;
 //	bool     relocate_success;
+	image_t *found;
 	image_t *image;
 
 	struct Elf32_Ehdr eheader;
+
+	found= find_image(name);
+	if(found) {
+		return found;
+	}
 
 	fd= sys_open(path, STREAM_TYPE_FILE, 0);
 	FATAL((fd< 0), "cannot open file %s\n", path);
@@ -749,14 +782,14 @@ load_container(char const *path, bool fixed)
 	num_regions= count_regions(ph_buff, eheader.e_phnum, eheader.e_phentsize);
 	FATAL((num_regions<= 0), "troubles parsing Program headers, num_regions= %d\n", num_regions);
 
-	image= create_image(num_regions);
+	image= create_image(name, num_regions);
 	FATAL((!image), "failed to allocate image_t control block\n");
 
 	parse_program_headers(image, ph_buff, eheader.e_phnum, eheader.e_phentsize);
 	FATAL(!assert_dynamic_loadable(image), "dynamic segment must be loadable (implementation restriction)\n");
 
-	load_success= load_image(fd, path, image, fixed);
-	FATAL(!load_success, "troubles reading image\n");
+	map_success= map_image(fd, path, image, fixed);
+	FATAL(!map_success, "troubles reading image\n");
 
 	dynamic_success= parse_dynamic_segment(image);
 	FATAL(!dynamic_success, "troubles handling dynamic section\n");
@@ -779,6 +812,7 @@ void
 load_dependencies(image_t *img)
 {
 	unsigned i;
+	unsigned j;
 
 	struct Elf32_Dyn *d;
 	addr   needed_offset;
@@ -789,12 +823,17 @@ load_dependencies(image_t *img)
 		return;
 	}
 
-	for(i=0; d[i].d_tag != DT_NULL; i++) {
+	img->needed= rldalloc(img->num_needed*sizeof(image_t*));
+	FATAL((!img->needed), "failed to allocate needed struct\n");
+	memset(img->needed, 0, img->num_needed*sizeof(image_t*));
+
+	for(i=0, j= 0; d[i].d_tag != DT_NULL; i++) {
 		switch(d[i].d_tag) {
 			case DT_NEEDED:
 				needed_offset = d[i].d_un.d_ptr;
 				sprintf(path, "/boot/lib/%s", STRING(img, needed_offset));
-				load_container(path, false);
+				img->needed[j]= load_container(path, STRING(img, needed_offset), false);
+				j+= 1;
 
 				break;
 			default:
@@ -805,7 +844,59 @@ load_dependencies(image_t *img)
 		}
 	}
 
+	FATAL((j!= img->num_needed), "Internal error at " __FUNCTION__);
+
 	return;
+}
+
+static
+unsigned
+topological_sort(image_t *img, unsigned slot, image_t **init_list)
+{
+	unsigned i;
+
+	img->flags|= RFLAG_SORTED; /* make sure we don't visit this one */
+	slot= 0;
+	for(i= 0; i< img->num_needed; i++) {
+		if(!(img->needed[i]->flags & RFLAG_SORTED)) {
+			slot= topological_sort(img->needed[i], slot, init_list);
+		}
+	}
+
+	init_list[slot]= img;
+	return slot+1;
+}
+
+static
+void
+init_dependencies(image_t *img)
+{
+	unsigned i;
+	unsigned slot;
+	image_t **init_list;
+
+	init_list= rldalloc(loaded_image_count*sizeof(image_t*));
+	FATAL((!init_list), "memory shortage in " __FUNCTION__ "\n");
+	memset(init_list, 0, loaded_image_count*sizeof(image_t*));
+
+	img->flags|= RFLAG_SORTED; /* make sure we don't visit this one */
+	slot= 0;
+	for(i= 0; i< img->num_needed; i++) {
+		if(!(img->needed[i]->flags & RFLAG_SORTED)) {
+			slot= topological_sort(img->needed[i], slot, init_list);
+		}
+	}
+
+	for(i= 0; i< slot; i++) {
+		addr _initf= init_list[i]->entry_point;
+		void (*initf)(void)= (void(*)(void))(_initf);
+
+		if(initf) {
+			initf();
+		}
+	}
+
+	rldfree(init_list);
 }
 
 int
@@ -815,7 +906,7 @@ load_program(char const *path, void **entry)
 	image_t *iter;
 
 
-	image = load_container(path, true);
+	image = load_container(path, NEWOS_MAGIC_APPNAME, true);
 
 	iter= loaded_images.head;
 	while(iter) {
@@ -833,6 +924,8 @@ load_program(char const *path, void **entry)
 
 		iter= iter->next;
 	};
+
+	init_dependencies(loaded_images.head);
 
 	*entry= (void*)(image->entry_point);
 	return 0;

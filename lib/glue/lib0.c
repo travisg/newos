@@ -6,37 +6,28 @@
 #include <kernel/user_runtime.h>
 #include <sys/syscalls.h>
 
-extern int __stdio_init(void);
-extern int __stdio_deinit(void);
-
 extern void sys_exit(int retcode);
 
 extern void (*__ctor_list)(void);
 extern void (*__ctor_end)(void);
 
-extern int main(int argc,char **argv);
+int _start(unsigned image_id, struct uspace_prog_args_t *);
+static void _call_ctors(void);
 
-int _start(struct uspace_prog_args_t *);
-void _call_ctors(void);
-
-int _start(struct uspace_prog_args_t *uspa)
+int
+_start(unsigned image_id, struct uspace_prog_args_t *uspa)
 {
 	int i;
 	int retcode;
+
 	_call_ctors();
 
-	__stdio_init();
-
-
-	retcode = main(uspa->argc, uspa->argv);
-
-	__stdio_deinit();
-	sys_exit(retcode);
 	return 0;
 }
 
+static
 void _call_ctors(void)
-{ 
+{
 	void (**f)(void);
 
 	for(f = &__ctor_list; f < &__ctor_end; f++) {
