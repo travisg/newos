@@ -283,7 +283,7 @@ static	int	init(int channel)
 					init_ide_struct(channel,current_drive,-1);
       					TRACE(("done discovering device\n"));
     					TRACE(("Cookie for interrupt is %p\n",current_cookie));
-					int_set_io_interrupt_handler(0x20 + 14,&ide_interrupt_handler, current_cookie);
+					int_set_io_interrupt_handler(14,&ide_interrupt_handler, current_cookie);
 					break;
 				}
 				i++;

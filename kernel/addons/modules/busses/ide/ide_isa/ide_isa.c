@@ -228,7 +228,7 @@ static int probe_channel( uint16 command_block_base, uint16 control_block_base,
 		goto err4;
 		
 	new_channel->interrupt_gate = 1;
-	res = int_set_io_interrupt_handler( new_channel->intnum + 0x20, 
+	res = int_set_io_interrupt_handler( new_channel->intnum, 
 		(int (*)(void *))inthand, new_channel, "isa ide" );
 	
 	if( res ) {

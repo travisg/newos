@@ -33,9 +33,9 @@ static desc_table *idt = NULL;
 
 static void interrupt_ack(int n)
 {
-	if(n >= 0x20 && n < 0x30) {
+	if(n < 16) {
 		// 8239 controlled interrupt
-		if(n > 0x27)
+		if(n > 7)
 			out8(0x20, 0xa0);	// EOI to pic 2
 		out8(0x20, 0x20);	// EOI to pic 1
 	}
@@ -55,13 +55,13 @@ static void _set_gate(desc_table *gate_addr, unsigned int addr_t, int type, int 
 
 void arch_int_enable_io_interrupt(int irq)
 {
-	if(irq < 0x20 || irq >= 0x30) return;
+	if(irq > 15)
+		return;
 
-	// if this interrupt is >= 0x28, then enable the cascade interrupt
-	if(irq >= 0x28)
-		arch_int_enable_io_interrupt(0x22);
+	// if this interrupt is >= 8, then enable the cascade interrupt
+	if(irq >= 8)
+		arch_int_enable_io_interrupt(2);
 
-	irq -= 0x20;
 	// if this is a external interrupt via 8239, enable it here
 	if (irq < 8)
 		out8(in8(0x21) & ~(1 << irq), 0x21);
@@ -71,8 +71,9 @@ void arch_int_enable_io_interrupt(int irq)
 
 void arch_int_disable_io_interrupt(int irq)
 {
-	if(irq < 0x20 || irq >= 0x30) return;
-	irq -= 0x20;
+	if (irq > 15)
+		return;
+
 	// if this is a external interrupt via 8239, disable it here
 	if (irq < 8)
 		out8(in8(0x21) | (1 << irq), 0x21);
@@ -222,8 +223,8 @@ void i386_handle_trap(struct iframe frame)
 		}
 		default:
 			if(frame.vector >= 0x20) {
-				interrupt_ack(frame.vector); // ack the 8239 (if applicable)
-				ret = int_io_interrupt_handler(frame.vector);
+				interrupt_ack(frame.vector - 0x20); // ack the 8239 (if applicable)
+				ret = int_io_interrupt_handler(frame.vector - 0x20);
 			} else {
 				panic("i386_handle_trap: unhandled cpu trap 0x%x at ip 0x%x!\n", frame.vector, frame.eip);
 				ret = INT_NO_RESCHEDULE;

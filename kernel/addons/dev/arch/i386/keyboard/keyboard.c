@@ -307,7 +307,7 @@ int	dev_bootstrap(void)
 	}
 
 	setup_keyboard();
-	int_set_io_interrupt_handler(0x21,&handle_keyboard_interrupt, NULL, "keyb");
+	int_set_io_interrupt_handler(1,&handle_keyboard_interrupt, NULL, "keyb");
 
 	devfs_publish_device("keyboard", NULL, &keyboard_hooks);
 

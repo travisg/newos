@@ -77,7 +77,6 @@
 #define PS2_RES_RESEND           0xFE
 
 // interrupts
-#define INT_BASE                 0x20
 #define INT_PS2_MOUSE            0x0C
 #define INT_CASCADE              0x02
 
@@ -375,7 +374,7 @@ int dev_bootstrap(void)
 	   panic("failed to create PS/2 mouse semaphore!\n");
 
 	// register interrupt handler
-	int_set_io_interrupt_handler(INT_BASE + INT_PS2_MOUSE,
+	int_set_io_interrupt_handler(INT_PS2_MOUSE,
 	   &handle_mouse_interrupt, NULL, "ps2mouse");
 
 	// register device file-system like operations

@@ -157,7 +157,7 @@ int rtl8139_init(rtl8139 *rtl)
 	rtl->reg_spinlock = 0;
 
 	// set up the interrupt handler
-	int_set_io_interrupt_handler(rtl->irq + 0x20, &rtl8139_int, rtl, "rtl8139");
+	int_set_io_interrupt_handler(rtl->irq, &rtl8139_int, rtl, "rtl8139");
 
 	// read the mac address
 	rtl->mac_addr[0] = RTL_READ_8(rtl, RT_IDR0);

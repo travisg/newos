@@ -363,7 +363,7 @@ int ide_bus_init(kernel_args *ka)
 		return ide_sem;
 
 	// attach ide bus #1
-	int_set_io_interrupt_handler(0x20 + IDE_0_INTERRUPT, &ide_interrupt_handler, NULL);
+	int_set_io_interrupt_handler(IDE_0_INTERRUPT, &ide_interrupt_handler, NULL);
 	ide_raw_init(0x1f0, 0x3f0);
 	ide_attach_bus(0);
 
@@ -372,7 +372,7 @@ int ide_bus_init(kernel_args *ka)
 		return ide_sem;
 
 	// attach ide bus #2
-	int_set_io_interrupt_handler(0x20 + IDE_1_INTERRUPT, &ide_interrupt_handler, NULL);
+	int_set_io_interrupt_handler(IDE_1_INTERRUPT, &ide_interrupt_handler, NULL);
 	ide_raw_init(0x170, 0x370);
 	ide_attach_bus(1);
 

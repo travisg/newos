@@ -1,5 +1,5 @@
 /*
-** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2004, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #include <kernel/kernel.h>
@@ -14,8 +14,6 @@
 #include <string.h>
 #include <stdio.h>
 
-#define NUM_IO_VECTORS 256
-
 struct io_handler {
 	struct io_handler *next;
 	int (*func)(void*);
@@ -26,9 +24,12 @@ struct io_handler {
 struct io_vector {
 	struct io_handler *handler_list;
 	spinlock_t         vector_lock;
+
+	// statistics
+	int call_count;
 };
 
-static struct io_vector *io_vectors = NULL;
+static struct io_vector io_vectors[ARCH_NUM_INT_VECTORS];
 
 int int_init(kernel_args *ka)
 {
@@ -39,11 +40,8 @@ int int_init(kernel_args *ka)
 
 int int_init2(kernel_args *ka)
 {
-	io_vectors = (struct io_vector *)kmalloc(sizeof(struct io_vector) * NUM_IO_VECTORS);
-	if(io_vectors == NULL)
-		panic("int_init2: could not create io vector table!\n");
-
-	memset(io_vectors, 0, sizeof(struct io_vector) * NUM_IO_VECTORS);
+	// clear out all of the vectors
+	memset(io_vectors, 0, sizeof(struct io_vector) * ARCH_NUM_INT_VECTORS);
 
 	return arch_int_init2(ka);
 }
@@ -52,7 +50,7 @@ int int_set_io_interrupt_handler(int vector, int (*func)(void*), void* data, con
 {
 	struct io_handler *io;
 
-	if(vector < 0 || vector >= NUM_IO_VECTORS)
+	if(vector < 0 || vector >= ARCH_NUM_INT_VECTORS)
 		return ERR_INVALID_ARGS;
 
 	// insert this io handler in the chain of interrupt
@@ -86,7 +84,7 @@ int int_remove_io_interrupt_handler(int vector, int (*func)(void*), void* data)
 {
 	struct io_handler *io, *prev = NULL;
 
-	if(vector < 0 || vector >= NUM_IO_VECTORS)
+	if(vector < 0 || vector >= ARCH_NUM_INT_VECTORS)
 		return ERR_INVALID_ARGS;
 
 	// lock the structures down so it is not modified while we search
@@ -137,6 +135,8 @@ int int_io_interrupt_handler(int vector)
 	int ret = INT_NO_RESCHEDULE;
 
 	acquire_spinlock(&io_vectors[vector].vector_lock);
+
+	io_vectors[vector].call_count++;
 
 	if(io_vectors[vector].handler_list == NULL) {
 		dprintf("unhandled io interrupt 0x%x\n", vector);
