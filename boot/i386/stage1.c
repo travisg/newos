@@ -122,6 +122,7 @@ int panic(const char *fmt, ...)
 
 	puts("STAGE1 PANIC: ");
 	puts(temp);
+	puts("\n");
 
 	puts("spinning forever...");
 	for(;;);
