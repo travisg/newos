@@ -18,10 +18,10 @@ APPS += $(INITAPP)
 APPS_CLEAN += initappclean
 
 $(INITAPP_OBJ_DIR)/%.o: $(INITAPP_DIR)/%.c
-	@mkdir -p $(INITAPP_OBJ_DIR)
+	@if [ ! -d $(INITAPP_OBJ_DIR) ]; then mkdir -p $(INITAPP_OBJ_DIR); fi
 	$(CC) -c $< $(GLOBAL_CFLAGS) -O0 $(APPS_INCLUDES) -o $@
 
 $(INITAPP_OBJ_DIR)/%.d: $(INITAPP_DIR)/%.c
-	@mkdir -p $(INITAPP_OBJ_DIR)
+	@if [ ! -d $(INITAPP_OBJ_DIR) ]; then mkdir -p $(INITAPP_OBJ_DIR); fi
 	@echo "making deps for $<..."
 	@($(ECHO) -n $(dir $@); $(CC) $(GLOBAL_CFLAGS) $(APPS_INCLUDES) -M -MG $<) > $@

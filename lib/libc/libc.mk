@@ -45,20 +45,20 @@ LIBS_CLEAN += libcclean
 
 # build prototypes
 $(LIBC_OBJ_DIR)/%.o: $(LIBC_DIR)/%.c 
-	@mkdir -p $(LIBC_OBJ_DIR)
+	@if [ ! -d $(LIBC_OBJ_DIR) ]; then mkdir -p $(LIBC_OBJ_DIR); fi
 	$(CC) -c $< $(GLOBAL_CFLAGS) -Iinclude -o $@
 
 $(LIBC_OBJ_DIR)/%.d: $(LIBC_DIR)/%.c
-	@mkdir -p $(LIBC_OBJ_DIR)
+	@if [ ! -d $(LIBC_OBJ_DIR) ]; then mkdir -p $(LIBC_OBJ_DIR); fi
 	@echo "making deps for $<..."
 	@($(ECHO) -n $(dir $@); $(CC) $(GLOBAL_CFLAGS) -Iinclude -M -MG $<) > $@
 
 $(LIBC_OBJ_DIR)/%.d: $(LIBC_DIR)/%.S
-	@mkdir -p $(LIBC_OBJ_DIR)
+	@if [ ! -d $(LIBC_OBJ_DIR) ]; then mkdir -p $(LIBC_OBJ_DIR); fi
 	@echo "making deps for $<..."
 	@($(ECHO) -n $(dir $@);$(CC) $(GLOBAL_CFLAGS) -Iinclude -M -MG $<) > $@
 
 $(LIBC_OBJ_DIR)/%.o: $(LIBC_DIR)/%.S
-	@mkdir -p $(LIBC_OBJ_DIR)
+	@if [ ! -d $(LIBC_OBJ_DIR) ]; then mkdir -p $(LIBC_OBJ_DIR); fi
 	$(CC) -c $< $(GLOBAL_CFLAGS) -Iinclude -o $@
 

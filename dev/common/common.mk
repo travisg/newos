@@ -8,19 +8,19 @@ DEV_SUB_INCLUDES += \
 	-I$(COMMON_DEV_DIR)
 
 $(COMMON_DEV_OBJ_DIR)/%.o: $(COMMON_DEV_DIR)/%.c
-	@mkdir -p $(COMMON_DEV_OBJ_DIR)
+	@if [ ! -d $(COMMON_DEV_OBJ_DIR) ]; then mkdir -p $(COMMON_DEV_OBJ_DIR); fi
 	$(CC) -c $< $(GLOBAL_CFLAGS) $(DEV_INCLUDES) -o $@
 
 $(COMMON_DEV_OBJ_DIR)/%.d: $(COMMON_DEV_DIR)/%.c
-	@mkdir -p $(COMMON_DEV_OBJ_DIR)
+	@if [ ! -d $(COMMON_DEV_OBJ_DIR) ]; then mkdir -p $(COMMON_DEV_OBJ_DIR); fi
 	@echo "making deps for $<..."
 	@($(ECHO) -n $(dir $@); $(CC) $(GLOBAL_CFLAGS) $(DEV_INCLUDES) -M -MG $<) > $@
 
 $(COMMON_DEV_OBJ_DIR)/%.d: $(COMMON_DEV_DIR)/%.S
-	@mkdir -p $(COMMON_DEV_OBJ_DIR)
+	@if [ ! -d $(COMMON_DEV_OBJ_DIR) ]; then mkdir -p $(COMMON_DEV_OBJ_DIR); fi
 	@echo "making deps for $<..."
 	@($(ECHO) -n $(dir $@);$(CC) $(GLOBAL_CFLAGS) $(DEV_INCLUDES) -M -MG $<) > $@
 
 $(COMMON_DEV_OBJ_DIR)/%.o: $(COMMON_DEV_DIR)/%.S
-	@mkdir -p $(COMMON_DEV_OBJ_DIR)
+	@if [ ! -d $(COMMON_DEV_OBJ_DIR) ]; then mkdir -p $(COMMON_DEV_OBJ_DIR); fi
 	$(CC) -c $< $(GLOBAL_CFLAGS) $(DEV_INCLUDES) -o $@

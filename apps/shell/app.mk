@@ -19,10 +19,11 @@ APPS += $(SHELLAPP)
 APPS_CLEAN += shellappclean
 
 $(SHELLAPP_OBJ_DIR)/%.o: $(SHELLAPP_DIR)/%.c
+	@if [ ! -d $(SHELLAPP_OBJ_DIR) ]; then mkdir -p $(SHELLAPP_OBJ_DIR); fi
 	@mkdir -p $(SHELLAPP_OBJ_DIR)
 	$(CC) -c $< $(GLOBAL_CFLAGS) -O0 $(APPS_INCLUDES) -o $@
 
 $(SHELLAPP_OBJ_DIR)/%.d: $(SHELLAPP_DIR)/%.c
-	@mkdir -p $(SHELLAPP_OBJ_DIR)
+	@if [ ! -d $(SHELLAPP_OBJ_DIR) ]; then mkdir -p $(SHELLAPP_OBJ_DIR); fi
 	@echo "making deps for $<..."
 	@($(ECHO) -n $(dir $@); $(CC) $(GLOBAL_CFLAGS) $(APPS_INCLUDES) -M -MG $<) > $@

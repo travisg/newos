@@ -45,7 +45,7 @@ $(FINAL): $(STAGE1_OBJS)
 FINAL_ASMINCLUDE = $(BOOT_DIR)/final.asminclude
 
 $(BOOT_OBJ_DIR)/stage1.o: $(BOOT_DIR)/stage1.S
-	@mkdir -p $(BOOT_OBJ_DIR)
+	@if [ ! -d $(BOOT_OBJ_DIR) ]; then mkdir -p $(BOOT_OBJ_DIR); fi
 	$(CC) -c $< $(GLOBAL_CFLAGS) -I. -Iinclude -o $@
 
 $(FINAL_ASMINCLUDE): $(SEMIFINAL) tools
@@ -58,21 +58,21 @@ CLEAN += finalclean
 
 # 
 $(BOOT_OBJ_DIR)/%.o: $(BOOT_DIR)/%.c 
-	@mkdir -p $(BOOT_OBJ_DIR)
+	@if [ ! -d $(BOOT_OBJ_DIR) ]; then mkdir -p $(BOOT_OBJ_DIR); fi
 	$(CC) -c $< $(GLOBAL_CFLAGS) -Iinclude -o $@
 
 $(BOOT_OBJ_DIR)/%.d: $(BOOT_DIR)/%.c
-	@mkdir -p $(BOOT_OBJ_DIR)
+	@if [ ! -d $(BOOT_OBJ_DIR) ]; then mkdir -p $(BOOT_OBJ_DIR); fi
 	@echo "making deps for $<..."
 	@($(ECHO) -n $(dir $@);$(CC) $(GLOBAL_CFLAGS) -Iinclude -M -MG $<) > $@
 
 $(BOOT_OBJ_DIR)/%.d: $(BOOT_DIR)/%.S
-	@mkdir -p $(BOOT_OBJ_DIR)
+	@if [ ! -d $(BOOT_OBJ_DIR) ]; then mkdir -p $(BOOT_OBJ_DIR); fi
 	@echo "making deps for $<..."
 	@($(ECHO) -n $(dir $@);$(CC) $(GLOBAL_CFLAGS) -Iinclude -M -MG $<) > $@
 
 $(BOOT_OBJ_DIR)/%.o: $(BOOT_DIR)/%.S
-	@mkdir -p $(BOOT_OBJ_DIR)
+	@if [ ! -d $(BOOT_OBJ_DIR) ]; then mkdir -p $(BOOT_OBJ_DIR); fi
 	$(CC) -c $< $(GLOBAL_CFLAGS) -Iinclude -o $@
 
 endif

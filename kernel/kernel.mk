@@ -51,11 +51,11 @@ CLEAN += kernelclean
 # build prototypes - this covers architecture dependant subdirs
 
 $(KERNEL_OBJ_DIR)/%.o: $(KERNEL_DIR)/%.c
-	@mkdir -p $(KERNEL_OBJ_DIR)
+	@if [ ! -d $(KERNEL_OBJ_DIR) ]; then mkdir -p $(KERNEL_OBJ_DIR); fi
 	$(CC) -c $< $(GLOBAL_CFLAGS) $(KERNEL_INCLUDES) -o $@
 
 $(KERNEL_OBJ_DIR)/%.d: $(KERNEL_DIR)/%.c
-	@mkdir -p $(KERNEL_OBJ_DIR)
+	@if [ ! -d $(KERNEL_OBJ_DIR) ]; then mkdir -p $(KERNEL_OBJ_DIR); fi
 	@echo "making deps for $<..."
 	@($(ECHO) -n $(dir $@); $(CC) $(GLOBAL_CFLAGS) $(KERNEL_INCLUDES) -M -MG $<) > $@
 

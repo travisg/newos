@@ -17,19 +17,19 @@ KERNEL_OBJS += \
 KERNEL_ARCH_INCLUDES = $(KERNEL_INCLUDES)
 
 $(KERNEL_ARCH_OBJ_DIR)/%.o: $(KERNEL_ARCH_DIR)/%.c
-	@mkdir -p $(KERNEL_ARCH_OBJ_DIR)
+	@if [ ! -d $(KERNEL_ARCH_OBJ_DIR) ]; then mkdir -p $(KERNEL_ARCH_OBJ_DIR); fi
 	$(CC) -c $< $(GLOBAL_CFLAGS) $(KERNEL_ARCH_INCLUDES) -o $@
 
 $(KERNEL_ARCH_OBJ_DIR)/%.d: $(KERNEL_ARCH_DIR)/%.c
-	@mkdir -p $(KERNEL_ARCH_OBJ_DIR)
+	@if [ ! -d $(KERNEL_ARCH_OBJ_DIR) ]; then mkdir -p $(KERNEL_ARCH_OBJ_DIR); fi
 	@echo "making deps for $<..."
 	@($(ECHO) -n $(dir $@); $(CC) $(GLOBAL_CFLAGS) $(KERNEL_ARCH_INCLUDES) -M -MG $<) > $@
 
 $(KERNEL_ARCH_OBJ_DIR)/%.d: $(KERNEL_ARCH_DIR)/%.S
-	@mkdir -p $(KERNEL_ARCH_OBJ_DIR)
+	@if [ ! -d $(KERNEL_ARCH_OBJ_DIR) ]; then mkdir -p $(KERNEL_ARCH_OBJ_DIR); fi
 	@echo "making deps for $<..."
 	@($(ECHO) -n $(dir $@);$(CC) $(GLOBAL_CFLAGS) $(KERNEL_ARCH_INCLUDES) -M -MG $<) > $@
 
 $(KERNEL_ARCH_OBJ_DIR)/%.o: $(KERNEL_ARCH_DIR)/%.S
-	@mkdir -p $(KERNEL_ARCH_OBJ_DIR)
+	@if [ ! -d $(KERNEL_ARCH_OBJ_DIR) ]; then mkdir -p $(KERNEL_ARCH_OBJ_DIR); fi
 	$(CC) -c $< $(GLOBAL_CFLAGS) $(KERNEL_ARCH_INCLUDES) -o $@
