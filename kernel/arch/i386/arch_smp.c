@@ -85,8 +85,8 @@ int arch_smp_init(kernel_args *ka)
 		apic_timer_tics_per_sec = ka->arch_args.apic_time_cv_factor;
 	
 		// setup areas that represent the apic & ioapic
-		vm_create_area(vm_get_kernel_aspace(), "local_apic", (void *)&apic, AREA_ALREADY_MAPPED, PAGE_SIZE, LOCK_RW|LOCK_KERNEL);
-		vm_create_area(vm_get_kernel_aspace(), "ioapic", (void *)&ioapic, AREA_ALREADY_MAPPED, PAGE_SIZE, LOCK_RW|LOCK_KERNEL);
+		vm_create_area(vm_get_kernel_aspace(), "local_apic", (void *)&apic, AREA_ALREADY_MAPPED, PAGE_SIZE, LOCK_RW|LOCK_KERNEL, AREA_NO_FLAGS);
+		vm_create_area(vm_get_kernel_aspace(), "ioapic", (void *)&ioapic, AREA_ALREADY_MAPPED, PAGE_SIZE, LOCK_RW|LOCK_KERNEL, AREA_NO_FLAGS);
 
 		int_set_io_interrupt_handler(0xfb, &i386_timer_interrupt);
 		int_set_io_interrupt_handler(0xfd, &i386_ici_interrupt);

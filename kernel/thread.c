@@ -773,7 +773,7 @@ int thread_test()
 	int i;
 	char temp[64];
 	
-#if 0
+#if 1
 	for(i=0; i<NUM_TEST_THREADS; i++) {
 		sprintf(temp, "test_thread%d", i);
 //		t = create_kernel_thread(NULL, temp, &test_thread, i % THREAD_NUM_PRIORITY_LEVELS);
@@ -804,7 +804,7 @@ int thread_test()
 	t = create_kernel_thread(NULL, "test thread 5", &test_thread5, 5);
 	thread_enqueue_run_q(t);
 #endif
-#if 1
+#if 0
 	t = create_kernel_thread(NULL, "panic thread", &panic_thread, THREAD_MAX_PRIORITY);
 	thread_enqueue_run_q(t);
 #endif

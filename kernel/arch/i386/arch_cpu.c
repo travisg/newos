@@ -30,7 +30,7 @@ int arch_cpu_init2(kernel_args *ka)
 	
 	// account for the segment descriptors
 	gdt = (unsigned int *)ka->arch_args.vir_gdt;	
-	vm_create_area(vm_get_kernel_aspace(), "gdt", (void **)&gdt, AREA_ALREADY_MAPPED, PAGE_SIZE, LOCK_RW|LOCK_KERNEL);	
+	vm_create_area(vm_get_kernel_aspace(), "gdt", (void **)&gdt, AREA_ALREADY_MAPPED, PAGE_SIZE, LOCK_RW|LOCK_KERNEL, AREA_NO_FLAGS);	
 	
 	tss = kmalloc(sizeof(struct tss *) * ka->num_cpus);
 	if(tss == NULL) {
@@ -50,7 +50,7 @@ int arch_cpu_init2(kernel_args *ka)
 		
 		sprintf(tss_name, "tss%d", i);
 		a = vm_create_area(vm_get_kernel_aspace(), tss_name, (void **)&tss[i],
-			AREA_ANY_ADDRESS, PAGE_SIZE, LOCK_RW | LOCK_KERNEL);
+			AREA_ANY_ADDRESS, PAGE_SIZE, LOCK_RW | LOCK_KERNEL, AREA_NO_FLAGS);
 		if(a < 0) {
 			panic("arch_cpu_init2: unable to create area for tss\n");
 			return -1;

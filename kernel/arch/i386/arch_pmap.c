@@ -94,9 +94,9 @@ int arch_pmap_init2(kernel_args *ka)
 	dprintf("arch_pmap_init2: entry\n");
 
 	temp = (void *)page_hole;
-	vm_create_area(vm_get_kernel_aspace(), "page_hole", &temp, AREA_ALREADY_MAPPED, PAGE_SIZE * 1024, LOCK_RW|LOCK_KERNEL);
+	vm_create_area(vm_get_kernel_aspace(), "page_hole", &temp, AREA_ALREADY_MAPPED, PAGE_SIZE * 1024, LOCK_RW|LOCK_KERNEL, AREA_NO_FLAGS);
 	temp = (void *)ka->arch_args.vir_pgdir;
-	vm_create_area(vm_get_kernel_aspace(), "kernel_pgdir", &temp, AREA_ALREADY_MAPPED, PAGE_SIZE, LOCK_RW|LOCK_KERNEL);
+	vm_create_area(vm_get_kernel_aspace(), "kernel_pgdir", &temp, AREA_ALREADY_MAPPED, PAGE_SIZE, LOCK_RW|LOCK_KERNEL, AREA_NO_FLAGS);
 
 	return 0;
 }
