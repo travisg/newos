@@ -38,14 +38,14 @@ ifeq ($(ARCH),sh4)
 endif
 	
 ifeq ($(ARCH),sparc)
-	CC =
-	LD =
-	AS =
-	AR =
+	CC = sparc-elf-gcc
+	LD = sparc-elf-ld
+	AS = sparc-elf-as
+	AR = sparc-elf-ar
 	GLOBAL_CFLAGS =
 	GLOBAL_LDFLAGS =
-	LIBGCC =
-	LIBGCC_PATH =
+	LIBGCC = -lgcc
+	LIBGCC_PATH = lib/libgcc/$(ARCH)
 endif
 	
 ifeq ($(ARCH),alpha)

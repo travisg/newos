@@ -16,6 +16,7 @@
 
 static unsigned int first_free_page_index = 0;
 static unsigned int *free_page_table = NULL;
+static unsigned int free_page_table_base = 0;
 static unsigned int free_page_table_size = 0;
 
 #define END_OF_LIST 0xffffffff
@@ -35,8 +36,14 @@ struct heap_page {
 	unsigned short in_use : 1;
 } PACKED;
 
+#if 0
 static struct heap_page *heap_alloc_table = (struct heap_page *)HEAP_BASE;
 static int heap_base = PAGE_ALIGN(HEAP_BASE + (HEAP_SIZE / PAGE_SIZE) * sizeof(struct heap_page));
+#else
+static struct heap_page *heap_alloc_table; 
+static int heap_base;
+#endif
+
 struct heap_bin {
 	unsigned int element_size;
 	unsigned int grow_size;
@@ -411,28 +418,138 @@ struct aspace *vm_create_aspace(const char *name, unsigned int base, unsigned in
 	return aspace;	
 }
 
-int vm_init(kernel_args *ka)
+static addr _alloc_vspace_from_ka_struct(kernel_args *ka, unsigned int size)
 {
-	int err;
+	addr spot = 0;
+	unsigned int i;
+	int last_valloc_entry = 0;
+
+	size = PAGE_ALIGN(size);
+	// find a slot in the virtual allocation addr range
+	for(i=1; i<ka->num_virt_alloc_ranges; i++) {
+		last_valloc_entry = i;
+		// check to see if the space between this one and the last is big enough
+		if(ka->virt_alloc_range[i].start - 
+			(ka->virt_alloc_range[i-1].start + ka->virt_alloc_range[i-1].size) >= size) {
+
+			spot = ka->virt_alloc_range[i-1].start + ka->virt_alloc_range[i-1].size;
+			ka->virt_alloc_range[i-1].size += size;
+			goto out;
+		}
+	}
+	if(spot == 0) {
+		// we hadn't found one between allocation ranges. this is ok.
+		// see if there's a gap after the last one
+		if(ka->virt_alloc_range[last_valloc_entry].start + ka->virt_alloc_range[last_valloc_entry].size + size <=
+			KERNEL_BASE + (KERNEL_SIZE - 1)) {
+			spot = ka->virt_alloc_range[last_valloc_entry].start + ka->virt_alloc_range[last_valloc_entry].size;
+			ka->virt_alloc_range[last_valloc_entry].size += size;
+			goto out;
+		}
+		// see if there's a gap before the first one
+		if(ka->virt_alloc_range[0].start > KERNEL_BASE) {
+			if(ka->virt_alloc_range[0].start - KERNEL_BASE >= size) {
+				ka->virt_alloc_range[0].start -= size;
+				spot = ka->virt_alloc_range[0].start;
+				goto out;
+			}
+		}
+	}
+
+out:
+	return spot;
+}
+
+// XXX horrible brute-force method of determining if the page can be allocated
+static bool is_page_in_phys_range(kernel_args *ka, addr paddr)
+{
 	unsigned int i;
 
-	dprintf("vm_init: entry\n");
+	for(i=0; i<ka->num_phys_mem_ranges; i++) {
+		if(paddr >= ka->phys_mem_range[i].start &&
+			paddr < ka->phys_mem_range[i].start + ka->phys_mem_range[i].size) {
+			return true;
+		}	
+	}
+	return false;
+}
 
+static addr _alloc_ppage_from_kernel_struct(kernel_args *ka)
+{
+	unsigned int i;
+
+	for(i=0; i<ka->num_phys_alloc_ranges; i++) {
+		addr next_page;
+
+		next_page = ka->phys_alloc_range[i].start + ka->phys_alloc_range[i].size;
+		// see if the page after the next allocated paddr run can be allocated
+		if(i + 1 < ka->num_phys_alloc_ranges && ka->phys_alloc_range[i+1].size != 0) {
+			// see if the next page will collide with the next allocated range
+			if(next_page >= ka->phys_alloc_range[i+1].start)
+				continue;
+		}
+		// see if the next physical page fits in the memory block
+		if(is_page_in_phys_range(ka, next_page)) {
+			// we got one!
+			ka->phys_alloc_range[i].size += PAGE_SIZE;
+			return (ka->phys_alloc_range[i].start + ka->phys_alloc_range[i].size - PAGE_SIZE);
+		}
+	}
+
+	return 0;	// could not allocate a block
+}
+
+static addr alloc_from_ka_struct(kernel_args *ka, unsigned int size, int lock)
+{
+	addr vspot;
+	addr pspot;
+	unsigned int i;
+	int curr_phys_alloc_range = 0;
+
+	// find the vaddr to allocate at
+	vspot = _alloc_vspace_from_ka_struct(ka, size);
+//	dprintf("alloc_from_ka_struct: vaddr 0x%x\n", vspot);
+
+	// map the pages
+	for(i=0; i<PAGE_ALIGN(size)/PAGE_SIZE; i++) {
+		pspot = _alloc_ppage_from_kernel_struct(ka);
+//		dprintf("alloc_from_ka_struct: paddr 0x%x\n", pspot);
+		if(pspot == 0)
+			panic("error allocating page from ka_struct!\n");
+		pmap_map_page(pspot, vspot + i*PAGE_SIZE, lock);
+	}
+	
+	return vspot;
+}
+
+int vm_init(kernel_args *ka)
+{
+	int err = 0;
+	unsigned int i;
+	int last_used_virt_range = -1;
+	int last_used_phys_range = -1;
+
+	dprintf("vm_init: entry\n");
 	err = arch_pmap_init(ka);
 	err = arch_vm_init(ka);
 	
-	// set up the free page table immediately past what has been allocated
-	free_page_table = (unsigned int *)ka->virt_alloc_range_high;
-	free_page_table_size = ka->mem_size/PAGE_SIZE;
-	// map in this new table
-	ka->phys_alloc_range_high = PAGE_ALIGN(ka->phys_alloc_range_high);
-	for(i = 0; i < free_page_table_size/(PAGE_SIZE/sizeof(unsigned int)); i++) {
-		map_page_into_kspace(ka->phys_alloc_range_high, ka->virt_alloc_range_high, LOCK_RW|LOCK_KERNEL);
-		ka->phys_alloc_range_high += PAGE_SIZE;
-		ka->virt_alloc_range_high += PAGE_SIZE;
+	// calculate the size of memory by looking at the phys_mem_range array
+	{
+		unsigned int last_phys_page = 0;
+
+		free_page_table_base = ka->phys_mem_range[0].start / PAGE_SIZE;
+		for(i=0; i<ka->num_phys_mem_ranges; i++) {
+			last_phys_page = (ka->phys_mem_range[i].start + ka->phys_mem_range[i].size) / PAGE_SIZE - 1;
+		}
+		dprintf("first phys page = 0x%x, last 0x%x\n", free_page_table_base, last_phys_page);
+		free_page_table_size = last_phys_page - free_page_table_base;
 	}
-//	dprintf("vm_init: putting free_page_table @ %p, # ents %d\n",
-//		free_page_table, free_page_table_size);
+	
+	// map in this new table
+	free_page_table = (unsigned int *)alloc_from_ka_struct(ka, free_page_table_size*sizeof(unsigned int),LOCK_KERNEL|LOCK_RW);
+
+	dprintf("vm_init: putting free_page_table @ %p, # ents %d\n",
+		free_page_table, free_page_table_size);
 	
 	// initialize the free page table
 	for(i=0; i<free_page_table_size-1; i++) {
@@ -441,19 +558,36 @@ int vm_init(kernel_args *ka)
 	free_page_table[i] = END_OF_LIST;
 	first_free_page_index = 0;
 
+	// mark some of the page ranges inuse
+	for(i = 0; i < ka->num_phys_alloc_ranges; i++) {
+		vm_mark_page_range_inuse(ka->phys_alloc_range[i].start / PAGE_SIZE,
+			ka->phys_alloc_range[i].size / PAGE_SIZE);
+	}
+
 	// map in the new heap
+	heap_alloc_table = (struct heap_page *)_alloc_vspace_from_ka_struct(ka, HEAP_SIZE);
+	if(heap_alloc_table == 0)
+		panic("could not allocate heap!\n");
+	for(i = 0; i < HEAP_SIZE / PAGE_SIZE; i++) {
+		addr ppage;
+		if(vm_get_free_page((unsigned int *)&ppage) < 0)
+			panic("error getting page for kernel heap!\n");
+		pmap_map_page(ppage * PAGE_SIZE, (addr)heap_alloc_table + i * PAGE_SIZE, LOCK_KERNEL|LOCK_RW);
+	}
+
+	heap_base = PAGE_ALIGN((unsigned int)heap_alloc_table + (HEAP_SIZE / PAGE_SIZE) * sizeof(struct heap_page));
+	dprintf("heap_alloc_table = 0x%x, heap_base = 0x%x\n", heap_alloc_table, heap_base);
+	
+#if 0
 	for(i = HEAP_BASE; i < HEAP_BASE + HEAP_SIZE; i += PAGE_SIZE) {
 		map_page_into_kspace(ka->phys_alloc_range_high, i, LOCK_RW | LOCK_KERNEL);
 		ka->phys_alloc_range_high += PAGE_SIZE;
 	}
+#endif
 
-	// mark some of the page ranges inuse
-	vm_mark_page_range_inuse(ka->phys_alloc_range_low/PAGE_SIZE,
-		ka->phys_alloc_range_high/PAGE_SIZE - ka->phys_alloc_range_low/PAGE_SIZE);
-	
 	// zero out the heap alloc table at the base of the heap
 	memset((void *)heap_alloc_table, 0, (HEAP_SIZE / PAGE_SIZE) * sizeof(struct heap_page));
-
+	
 	// create the initial kernel address space
 	kernel_aspace = vm_create_aspace("kernel_land", KERNEL_BASE, KERNEL_SIZE);
 
@@ -462,22 +596,22 @@ int vm_init(kernel_args *ka)
 	arch_vm_init2(ka);
 
 	// allocate areas to represent stuff that already exists
-	_vm_create_area_struct(kernel_aspace, "kernel_heap", (unsigned int)HEAP_BASE, HEAP_SIZE, LOCK_RW|LOCK_KERNEL);
-	_vm_create_area_struct(kernel_aspace, "free_page_table", (unsigned int)free_page_table, free_page_table_size * sizeof(unsigned int), LOCK_RW|LOCK_KERNEL);
-	_vm_create_area_struct(kernel_aspace, "kernel_seg0", (unsigned int)ka->kernel_seg0_base, ka->kernel_seg0_size, LOCK_RW|LOCK_KERNEL);
-	_vm_create_area_struct(kernel_aspace, "kernel_seg1", (unsigned int)ka->kernel_seg1_base, ka->kernel_seg1_size, LOCK_RW|LOCK_KERNEL);
+	_vm_create_area_struct(kernel_aspace, "kernel_heap", ROUNDOWN((unsigned int)heap_alloc_table, PAGE_SIZE), HEAP_SIZE, LOCK_RW|LOCK_KERNEL);
+	_vm_create_area_struct(kernel_aspace, "free_page_table", (unsigned int)free_page_table, PAGE_ALIGN(free_page_table_size * sizeof(unsigned int)), LOCK_RW|LOCK_KERNEL);
+	_vm_create_area_struct(kernel_aspace, "kernel_seg0", ROUNDOWN((unsigned int)ka->kernel_seg0_addr.start, PAGE_SIZE), PAGE_ALIGN(ka->kernel_seg0_addr.size), LOCK_RW|LOCK_KERNEL);
+	_vm_create_area_struct(kernel_aspace, "kernel_seg1", ROUNDOWN((unsigned int)ka->kernel_seg1_addr.start, PAGE_SIZE), PAGE_ALIGN(ka->kernel_seg1_addr.size), LOCK_RW|LOCK_KERNEL);
 	for(i=0; i < ka->num_cpus; i++) {
 		char temp[64];
 		
 		sprintf(temp, "idle_thread%d_kstack", i);
-		_vm_create_area_struct(kernel_aspace, temp, (unsigned int)ka->cpu_kstack[i], ka->cpu_kstack_len[i], LOCK_RW|LOCK_KERNEL);
+		_vm_create_area_struct(kernel_aspace, temp, (unsigned int)ka->cpu_kstack[i].start, ka->cpu_kstack[i].size, LOCK_RW|LOCK_KERNEL);
 	}
 	{
 		void *null;
 		vm_map_physical_memory(kernel_aspace, "bootdir", &null, AREA_ANY_ADDRESS,
-			ka->bootdir_size, LOCK_RO|LOCK_KERNEL, (unsigned int)ka->bootdir);
+			ka->bootdir_addr.size, LOCK_RO|LOCK_KERNEL, ka->bootdir_addr.start);
 	}
-//	vm_dump_areas(kernel_aspace);
+	vm_dump_areas(kernel_aspace);
 
 	// add some debugger commands
 	dbg_add_command(&vm_dump_kspace_areas, "area_dump_kspace", "Dump kernel space areas");
@@ -616,14 +750,16 @@ int vm_mark_page_range_inuse(unsigned int start_page, unsigned int len)
 	unsigned int last_i;
 	unsigned int j;
 	
-#if 0
+#if 1
 	dprintf("vm_mark_page_range_inuse: entry. start_page %d len %d, first_free %d\n",
 		start_page, len, first_free_page_index);
 #endif
-	if(start_page + len >= free_page_table_size) {
+	dprintf("first_free 0x%x\n", first_free_page_index);
+	if(start_page - free_page_table_base || start_page - free_page_table_base + len >= free_page_table_size) {
 		dprintf("vm_mark_page_range_inuse: range would extend past free list\n");
 		return -1;
 	}
+	start_page -= free_page_table_base;
 
 	// walk thru the free page list to find the spot
 	last_i = END_OF_LIST;
@@ -632,13 +768,13 @@ int vm_mark_page_range_inuse(unsigned int start_page, unsigned int len)
 		last_i = i;
 		i = free_page_table[i];
 	}
-	
+
 	if(i == END_OF_LIST || i > start_page) {
 		dprintf("vm_mark_page_range_inuse: could not find start_page (%d) in free_page_list\n", start_page);
 		dump_free_page_table(0, NULL);
 		return -1;
 	}
-				
+
 	for(j=i; j<(len + i); j++) {
 		if(free_page_table[j] == PAGE_INUSE) {
 			dprintf("vm_mark_page_range_inuse: found page inuse already\n");	
@@ -670,7 +806,7 @@ int vm_get_free_page(unsigned int *page)
 	if(index == END_OF_LIST)
 		return -1;
 
-	*page = index;
+	*page = index + free_page_table_base;
 	first_free_page_index = free_page_table[index];
 	free_page_table[index] = PAGE_INUSE;
 //	dprintf("vm_get_free_page exit, returning page 0x%x\n", *page);
@@ -693,7 +829,7 @@ static void dump_free_page_table(int argc, char **argv)
 				continue;
 			}
 			if(free_start != END_OF_LIST) {
-				dprintf("free from %d -> %d\n", free_start, i-1);
+				dprintf("free from %d -> %d\n", free_start + free_page_table_base, i-1 + free_page_table_base);
 				free_start = END_OF_LIST;
 			}
 			inuse_start = i;
@@ -703,7 +839,7 @@ static void dump_free_page_table(int argc, char **argv)
 				continue;
 			}
 			if(inuse_start != PAGE_INUSE) {
-				dprintf("inuse from %d -> %d\n", inuse_start, i-1);
+				dprintf("inuse from %d -> %d\n", inuse_start + free_page_table_base, i-1 + free_page_table_base);
 				inuse_start = PAGE_INUSE;
 			}
 			free_start = i;
@@ -711,10 +847,10 @@ static void dump_free_page_table(int argc, char **argv)
 		i++;
 	}
 	if(inuse_start != PAGE_INUSE) {
-		dprintf("inuse from %d -> %d\n", inuse_start, i-1);
+		dprintf("inuse from %d -> %d\n", inuse_start + free_page_table_base, i-1 + free_page_table_base);
 	}
 	if(free_start != END_OF_LIST) {
-		dprintf("free from %d -> %d\n", free_start, i-1);
+		dprintf("free from %d -> %d\n", free_start + free_page_table_base, i-1 + free_page_table_base);
 	}
 /*			
 	for(i=0; i<free_page_table_size; i++) {
