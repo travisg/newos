@@ -30,6 +30,9 @@ int cmd_exec(int argc, char *argv[])
 		int retcode;
 		sys_proc_wait_on_proc(pid, &retcode);
 		printf("spawned process was pid 0x%x, retcode 0x%x\n", pid, retcode);
+	} else {
+		printf("Error: cannot execute '%s'\n", argv[1]);
+		return 0; // should be -1, but the shell would exit
 	}
 
 	return 0;

@@ -28,6 +28,7 @@ struct command cmds[] = {
 	{"cd", &cmd_cd},
 	{"pwd", &cmd_pwd},
 	{"help", &cmd_help},
+	{NULL, &cmd_exec},
 	{NULL, NULL}
 };
 
@@ -152,23 +153,36 @@ static int shell_parse(char *buf, int len)
 		return 0;
 
 	// search for the command
-	for(i=0; cmds[i].cmd_text != NULL; i++) {
-		if(strncmp(cmds[i].cmd_text, buf, strlen(cmds[i].cmd_text)) == 0) {
-			if(buf[strlen(cmds[i].cmd_text)] != 0 && !isspace(buf[strlen(cmds[i].cmd_text)])) {
-				// we're actually looking at the leading edge of a larger word, skip it
-				continue;
-			}
-			{
-				// we need to parse the command
-				int argc;
-				char *argv[64];
+	for(i=0; cmds[i].cmd_handler != NULL; i++) {
+		if(cmds[i].cmd_text != NULL) {
+			if(strncmp(cmds[i].cmd_text, buf, strlen(cmds[i].cmd_text)) == 0) {
+				if(buf[strlen(cmds[i].cmd_text)] != 0 && !isspace(buf[strlen(cmds[i].cmd_text)])) {
+					// we're actually looking at the leading edge of a larger word, skip it
+					continue;
+				}
+				{
+					// we need to parse the command
+					int argc;
+					char *argv[64];
 
-				argc = parse_line(buf, argv, 64);
-				if(cmds[i].cmd_handler(argc, argv) != 0)
-					return -1;
+					argc = parse_line(buf, argv, 64);
+					if(cmds[i].cmd_handler(argc, argv) != 0)
+						return -1;
+				}
+				found_command = true;
+				break;
 			}
+		} else {
+			// we need to parse the command
+			int argc;
+			char *argv[64];
+
+			argv[0]= "exec";
+			argc = 1+parse_line(buf, argv+1, 63);
+			cmds[i].cmd_handler(argc, argv);
 			found_command = true;
 			break;
+			
 		}
 	}
 	if(found_command == false) {
