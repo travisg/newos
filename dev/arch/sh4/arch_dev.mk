@@ -1,3 +1,1 @@
-DEV_OBJS += \
-
-DEV_ARCH_INCLUDES += \
+include $(DEV_ARCH_DIR)/console/console.mk

@@ -9,6 +9,9 @@
 #include <pci_bus.h>
 #include <console_dev.h>
 #endif
+#ifdef ARCH_sh4
+#include <console_dev.h>
+#endif
 #include <null.h>
 #include <zero.h>
 
@@ -19,6 +22,9 @@ int devs_init(kernel_args *ka)
 
 	console_dev_init(ka);
 #endif	
+#ifdef ARCH_sh4
+	console_dev_init(ka);
+#endif
 	null_dev_init(ka);
 	zero_dev_init(ka);
 

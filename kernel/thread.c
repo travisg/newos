@@ -700,7 +700,7 @@ int test_thread()
 	while(1) {
 //		a += tid;
 		a++;
-#if 0
+#if 1
 		kprintf_xy(0, tid-1, "thread%d - %d    - %d %d - cpu %d", tid, a, system_time(), smp_get_current_cpu());
 #endif
 #if 0
@@ -793,8 +793,8 @@ int thread_test()
 //	t = create_kernel_thread("test thread 5", &test_thread5, 5);
 //	thread_enqueue_run_q(t);
 
-	t = create_kernel_thread("panic thread", &panic_thread, THREAD_MAX_PRIORITY);
-	thread_enqueue_run_q(t);
+//	t = create_kernel_thread("panic thread", &panic_thread, THREAD_MAX_PRIORITY);
+//	thread_enqueue_run_q(t);
 
 	dprintf("thread_test: done creating test threads\n");
 	
