@@ -25,6 +25,21 @@ int main()
 
 	printf("init: Welcome to NewOS!\r\n");
 
+	{
+		proc_id pid;
+		char *args[2];
+
+		args[0] = "/boot/bin/shell";
+		args[1] = "/boot/bootscript";
+
+		pid = sys_proc_create_proc(args[0], "startup shell", args, 2, 5);
+		if(pid < 0) {
+			printf("init: error %d creating shell!\n", pid);
+			return -1;
+		}
+	}
+
+#if 0
 	if(1) {
 		proc_id pid;
 
@@ -35,7 +50,6 @@ int main()
 		}
 	}
 
-		
 	while(1) {
 		proc_id pid;
 
@@ -46,7 +60,7 @@ int main()
 			sys_proc_wait_on_proc(pid, &retcode);
 		}
 	}
-
+#endif
 	printf("init exiting\r\n");
 
 	return 0;

@@ -1,0 +1,7 @@
+# login script
+
+$path=".:/:/boot:/boot/bin"
+
+exec /boot/bin/fortune
+echo "Welcome to the NewOS shell"
+echo "The path is $path"

@@ -187,7 +187,7 @@ err:
 
 	shell_value_free(*out);
 	*out = NULL;
-	
+
 	return err;
 }
 
@@ -703,7 +703,7 @@ int parse_info(scan_info *info)
 				err =  shell_parse(info->input_line,strlen(info->input_line));
 			}
          break;
-         
+
 		case SVO_ECHO :
 			if(scan(info)){
 
@@ -724,7 +724,7 @@ int parse_info(scan_info *info)
 				err = handle_if(info);
 
 			}
-         
+
 			break;
 
 		case SVO_EXIT :
@@ -737,7 +737,10 @@ int parse_info(scan_info *info)
 				err = handle_exit(info);
 
 			}
-         
+
+			break;
+
+		case SVO_END:
 			break;
 
 		default:

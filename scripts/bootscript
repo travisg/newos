@@ -1,0 +1,9 @@
+# main newos boot script
+
+# start the network
+exec /boot/bin/nettest > /dev/null &
+
+# start the console daemon
+console:
+exec /boot/bin/consoled > /dev/null
+goto console

@@ -1,4 +1,4 @@
-/* 
+/*
 ** Some Portions Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -144,6 +144,39 @@ void die(char *s, char *a)
     exit(1);
 }
 
+void *loadtextfile(char *file, int *size)
+{
+    int fd;
+    char *data;
+    char c;
+    struct stat info;
+	int ret;
+	int i;
+
+	*size = 0;
+
+    if((fd = open(file,O_BINARY|O_RDONLY)) != -1){
+        if(fstat(fd,&info)){
+            close(fd);
+            return NULL;
+        }
+
+        data = (char *) malloc(info.st_size);
+
+		i = 0;
+		while((ret = read(fd, &c, 1)) > 0) {
+			if(c != '\r') {
+				data[i++] = c;
+				(*size)++;
+			}
+		}
+
+        close(fd);
+        return data;
+    }
+    return NULL;
+}
+
 void *loadfile(char *file, int *size)
 {
     int fd;
@@ -206,7 +239,7 @@ int writesparcbootblock(int fd, unsigned int blocks)
 	return write(fd, bb, sizeof(bb));
  }
 
-typedef struct _nvpair 
+typedef struct _nvpair
 {
     struct _nvpair *next;
     char *name;
@@ -224,7 +257,7 @@ typedef struct _section
 void print_sections(section *first)
 {
     nvpair *p;
-    
+
     while(first){
         printf("\n[%s]\n",first->name);
         for(p = first->firstnv; p; p = p->next){
@@ -249,14 +282,14 @@ section *load_ini(char *file)
     int size;
     int state = stNEWLINE;
 	section *cur;
-	
+
     char *lhs,*rhs;
-    
+
     if(!(data = loadfile(file,&size))){
         return NULL;
     }
     end = data+size;
-    
+
     while(data < end){
         switch(state){
         case stSKIPLINE:
@@ -265,7 +298,7 @@ section *load_ini(char *file)
             }
             data++;
             break;
-            
+
         case stNEWLINE:
             if(*data == '\n' || *data == '\r'){
                 data++;
@@ -286,8 +319,8 @@ section *load_ini(char *file)
             data++;
             state = stLHS;
             break;
-        case stHEADER:        
-            if(*data == ']'){                
+        case stHEADER:
+            if(*data == ']'){
                 cur = (section *) malloc(sizeof(section));
                 cur->name = lhs;
                 cur->firstnv = NULL;
@@ -329,7 +362,7 @@ section *load_ini(char *file)
         }
     }
     return first;
-    
+
 }
 
 
@@ -368,7 +401,7 @@ Elf32_Addr elf_find_entry(void *buf, int size)
 		return 0;
 
 	byte_swap = 0;
-#if xBIG_ENDIAN		
+#if xBIG_ENDIAN
 	if(cbuf[EI_DATA] == ELFDATA2LSB) {
 		byte_swap = 1;
 	}
@@ -377,7 +410,7 @@ Elf32_Addr elf_find_entry(void *buf, int size)
 		byte_swap = 1;
 	}
 #endif
-	
+
 	header = (struct Elf32_Ehdr *)cbuf;
 	pheader = (struct Elf32_Phdr *)&cbuf[SWAPIT(header->e_phoff)];
 
@@ -398,7 +431,7 @@ void makeboot(section *s, char *outfile)
     int nextpage = 1; /* page rel offset of next loaded object */
 
     memset(fill,0,4096);
-    
+
     memset(&bdir, 0, 4096);
     for(i=0;i<64;i++){
         rawdata[i] = NULL;
@@ -412,7 +445,7 @@ void makeboot(section *s, char *outfile)
     bdir.bd_entry[0].be_vsize = fix(1);
     rawdata[0] = (void *) &bdir;
     rawsize[0] = 4096;
-    
+
     strcpy(bdir.bd_entry[0].be_name,"SBBB/Directory");
 
     while(s){
@@ -421,23 +454,30 @@ void makeboot(section *s, char *outfile)
         int vsize;
         int size;
         struct stat statbuf;
-        
+
         if(!type) die("section %s has no type",s->name);
 
         strncpy(centry.be_name,s->name,32);
         centry.be_name[31] = 0;
 
         if(!file) die("section %s has no file",s->name);
-        rawdata[c]= ((strcmp(type, "elf32")==0)?loadstripfile:loadfile)(file,&rawsize[c]);
+
+        if(!strcmp(type, "elf32"))
+        	rawdata[c] = loadstripfile(file,&rawsize[c]);
+        else if(!strcmp(type, "text"))
+        	rawdata[c] = loadtextfile(file,&rawsize[c]);
+        else
+        	rawdata[c] = loadfile(file,&rawsize[c]);
+
         if(!rawdata[c])
            die("cannot load \"%s\"",file);
 
         if(stat(file,&statbuf))
             die("cannot stat \"%s\"",file);
         vsize = statbuf.st_size;
-        
+
         centry.be_size = rawsize[c] / 4096 + (rawsize[c] % 4096 ? 1 : 0);
-        centry.be_vsize = 
+        centry.be_vsize =
             (vsize < centry.be_size) ? centry.be_size : vsize;
 
         centry.be_offset = nextpage;
@@ -446,18 +486,18 @@ void makeboot(section *s, char *outfile)
         centry.be_size = fix(centry.be_size);
         centry.be_vsize = fix(centry.be_vsize);
         centry.be_offset = fix(centry.be_offset);
-        
+
         if(!strcmp(type,"boot")){
             centry.be_type = fix(BE_TYPE_BOOTSTRAP);
             centry.be_code_vaddr = fix(atoi(getvaldef(s,"vaddr","0")));
-            centry.be_code_ventr = fix(atoi(getvaldef(s,"ventry","0")));            
+            centry.be_code_ventr = fix(atoi(getvaldef(s,"ventry","0")));
         }
         if(!strcmp(type,"code")){
             centry.be_type = fix(BE_TYPE_CODE);
             centry.be_code_vaddr = fix(atoi(getvaldef(s,"vaddr","0")));
-            centry.be_code_ventr = fix(atoi(getvaldef(s,"ventry","0"))); 
+            centry.be_code_ventr = fix(atoi(getvaldef(s,"ventry","0")));
         }
-        if(!strcmp(type,"data")){
+        if(!strcmp(type,"data") || !strcmp(type,"text")){
             centry.be_type = fix(BE_TYPE_DATA);
         }
         if(!strcmp(type,"elf32")){
@@ -472,7 +512,7 @@ void makeboot(section *s, char *outfile)
 
         c++;
         s = s->next;
-        
+
         if(c==64) die("too many sections (>63)",NULL);
     }
 
@@ -483,10 +523,10 @@ void makeboot(section *s, char *outfile)
     if(make_sparcboot) {
         writesparcbootblock(fd, nextpage+1);
     }
-    
+
     for(i=0;i<c;i++){
         write(fd, rawdata[i], rawsize[i]);
-        if(rawsize[i]%4096) 
+        if(rawsize[i]%4096)
             write(fd, fill, 4096 - (rawsize[i]%4096));
     }
     close(fd);
@@ -496,7 +536,7 @@ int main(int argc, char **argv)
 {
 	char *file = NULL;
     section *s;
-    
+
     if(argc < 2){
 usage:
         fprintf(stderr,"usage: %s [--littleendian (default)] [--bigendian ] [ --strip-binary <binary ] [ --strip-debug] [ --sparc | -s ] [ <inifile> ... ] -o <bootfile>\n",argv[0]);
@@ -505,7 +545,7 @@ usage:
 
 	argc--;
 	argv++;
-	
+
 	while(argc){
 		if(!strcmp(*argv,"--sparc")) {
 			make_sparcboot = 1;
@@ -537,8 +577,8 @@ usage:
 		argc--;
 		argv++;
 	}
-	
-	
+
+
     if((argc > 3) && !strcmp(argv[3],"-sparc")){
         make_sparcboot = 1;
     }
@@ -547,14 +587,14 @@ usage:
 		fprintf(stderr,"error: no output specified\n");
 		goto usage;
 	}
-	
+
 	if(!first){
 		fprintf(stderr,"error: no data to write?!\n");
 		goto usage;
 	}
-	
+
 	makeboot(first,file);
-    
-    return 0;    
+
+    return 0;
 }
 

@@ -19,9 +19,10 @@ static void handle_option(char *option){
 			if(option[2] == 0){
 				af_exit_after_script = false;
 			}
+			return;
 	}
 
-	printf("wrong option : %s \n",option);
+	printf("unknown option : %s\n",option);
 }
 
 void init_arguments(int argc,char **argv){

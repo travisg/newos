@@ -62,7 +62,7 @@ static int console_writer(void *arg)
 		if(len < 0)
 			break;
 
-		write_len = write(con->console_fd, buf, len);		
+		write_len = write(con->console_fd, buf, len);
 	}
 
 	sys_sem_release(con->wait_sem, 1);
@@ -87,7 +87,7 @@ static int start_console(struct console *con)
 	con->keyboard_fd = open("/dev/keyboard", 0);
 	if(con->keyboard_fd < 0)
 		return -3;
-	
+
 	con->tty_master_fd = open("/dev/tty/master", 0);
 	if(con->tty_master_fd < 0)
 		return -4;
@@ -99,7 +99,7 @@ static int start_console(struct console *con)
 	{
 		char temp[128];
 		sprintf(temp, "/dev/tty/slave/%d", con->tty_num);
-		
+
 		con->tty_slave_fd = open(temp, 0);
 		if(con->tty_slave_fd < 0)
 			return -6;
@@ -117,12 +117,11 @@ static int start_console(struct console *con)
 	sys_thread_resume_thread(con->console_writer);
 
 	return 0;
-}	
+}
 
-static proc_id start_process(const char *path, const char *name, struct console *con)
+static proc_id start_process(const char *path, const char *name, char **argv, int argc, struct console *con)
 {
 	int saved_stdin, saved_stdout, saved_stderr;
-	char *argv;
 	proc_id pid;
 
 	saved_stdin = sys_dup(0);
@@ -134,8 +133,7 @@ static proc_id start_process(const char *path, const char *name, struct console 
 	sys_dup2(con->tty_slave_fd, 2);
 
 	// XXX launch
-	argv = (char *)path;
-	pid = sys_proc_create_proc(path, name, &argv, 1, 5);
+	pid = sys_proc_create_proc(path, name, argv, argc, 5);
 
 	sys_dup2(saved_stdin, 0);
 	sys_dup2(saved_stdout, 1);
@@ -143,7 +141,6 @@ static proc_id start_process(const char *path, const char *name, struct console 
 	sys_close(saved_stdin);
 	sys_close(saved_stdout);
 	sys_close(saved_stderr);
-	printf("sys_proc_create_proc returns %d\n", pid);
 
 	return pid;
 }
@@ -154,7 +151,7 @@ int main(void)
 
 	err = start_console(&theconsole);
 	if(err < 0) {
-		printf("error %d starting console\n", err);
+		printf("consoled: error %d starting console\n", err);
 		return err;
 	}
 
@@ -166,8 +163,12 @@ int main(void)
 	for(;;) {
 		proc_id shell_process;
 		int retcode;
-		
-		shell_process = start_process("/boot/bin/shell", "shell", &theconsole);
+		char *argv[3];
+
+		argv[0] = "/boot/bin/shell";
+		argv[1] = "-s";
+		argv[2] = "/boot/loginscript";
+		shell_process = start_process("/boot/bin/shell", "console shell", argv, 3, &theconsole);
 		sys_proc_wait_on_proc(shell_process, &retcode);
 	}
 
