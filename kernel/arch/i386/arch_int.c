@@ -173,6 +173,15 @@ void i386_handle_trap(struct int_frame frame)
 //				dprintf("page_fault: enabling interrupts\n");
 				int_enable_interrupts();
 			}
+#if 0
+			if((frame.flags & 0x200) == 0) {
+				// ints are were disabled, that is very bad
+				panic("i386_handle_trap: page fault at 0x%x, ip 0x%x, write %d with ints disabled\n",
+					cr2, frame.eip, (frame.error_code & 0x2) != 0);
+			}
+
+			int_enable_interrupts();
+#endif
 			ret = vm_page_fault(cr2, frame.eip,
 				(frame.error_code & 0x2) != 0,
 				(frame.error_code & 0x4) != 0,
