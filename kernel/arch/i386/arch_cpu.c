@@ -189,3 +189,14 @@ error:
 	return ERR_VM_BAD_USER_MEMORY;
 }
 
+void arch_cpu_idle(void)
+{
+	switch(smp_get_num_cpus()) {
+		case 0:
+			panic("You need at least 1 CPU to run NewOS\n");
+		case 1:
+			asm("hlt");
+		default:
+			break;
+	}
+}

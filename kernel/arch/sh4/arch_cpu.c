@@ -171,3 +171,6 @@ error:
 	return ERR_VM_BAD_USER_MEMORY;
 }
 
+void arch_cpu_idle(void)
+{
+}

@@ -100,7 +100,8 @@ int _start(kernel_args *oldka, int cpu_num)
 	int_enable_interrupts();
 
 	dprintf("main: done... begin idle loop on cpu %d\n", cpu_num);
-	for(;;);
+	for(;;)
+		arch_cpu_idle();
 
 	return 0;
 }

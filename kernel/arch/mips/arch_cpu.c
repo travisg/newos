@@ -16,3 +16,6 @@ int arch_cpu_init2(kernel_args *ka)
 	return 0;
 }
 
+void arch_cpu_idle(void)
+{
+}

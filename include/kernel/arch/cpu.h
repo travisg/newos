@@ -32,6 +32,8 @@ int arch_cpu_user_strcpy(char *to, const char *from, addr *fault_handler);
 int arch_cpu_user_strncpy(char *to, const char *from, size_t size, addr *fault_handler);
 int arch_cpu_user_memset(void *s, char c, size_t count, addr *fault_handler);
 
+void arch_cpu_idle(void);
+
 #ifdef ARCH_i386
 #include <kernel/arch/i386/cpu.h>
 #endif
