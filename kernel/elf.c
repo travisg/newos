@@ -176,7 +176,8 @@ int elf_reverse_lookup_symbol(addr address, addr *base_address, char *text, int 
 	struct elf_image_info *found_image;
 	struct Elf32_Sym *found_sym;
 	long found_delta;
-	int i,j,rv;
+	unsigned int i,j;
+	int rv;
 
 	PRINT(("looking up %p\n",(void *)address));
 

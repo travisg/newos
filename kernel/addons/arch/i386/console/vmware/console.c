@@ -306,7 +306,7 @@ static int log2(uint32 v)
 		3, 3, 3, 3, 3, 3, 3, 3 
 	};
 	int result = 0;
-	dprintf("log2(%8lx)", v);
+	dprintf("log2(%8x)", v);
 	if ((v & 0xffff) == 0) { result += 16; v >>= 16; }
 	if ((v & 0xff) == 0) { result += 8; v >>= 8; }
 	if ((v & 0xf) == 0) { result += 4; v >>= 4; }

@@ -251,7 +251,7 @@ int sem_delete_etc(sem_id id, int return_code)
 	}
 
 	sems[slot].id = -1;
-	old_name = sems[slot].name;
+	old_name = (char *)sems[slot].name;
 	sems[slot].name = NULL;
 
 	RELEASE_SEM_LOCK(sems[slot]);

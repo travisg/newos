@@ -250,7 +250,7 @@ void WindowManager::DispatchThread()
 
 				buf[index] = 0;
 
-				printf("WindowManager::DispatchThread: OP_DRAW_STRING, x %d, y %d, '%s'\n", x, y, buf);
+				printf("WindowManager::DispatchThread: OP_DRAW_STRING, x %ld, y %ld, '%s'\n", x, y, buf);
 
 				Window *targetWindow = LookupWindow(windowID);
 				LockCursor();
@@ -332,7 +332,7 @@ void WindowManager::DispatchThread()
 				rect.bottom = ReadInt32();
 				long eventPort = ReadInt32();
 				window_flags flags = (window_flags)ReadInt32();
-				printf("WindowManager::DispatchThread: OP_CREATE_WINDOW, eventPort %d, responsePort %d, parentWindow %d\n", eventPort, responsePort, parentWindow);
+				printf("WindowManager::DispatchThread: OP_CREATE_WINDOW, eventPort %ld, responsePort %d, parentWindow %ld\n", eventPort, responsePort, parentWindow);
 
 				Window *parent = LookupWindow(parentWindow);
 				int id = -1;

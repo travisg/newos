@@ -55,12 +55,15 @@ int __gxx_personality_v0(void)
 	return 0;
 }
 
+int __gxx_personality_sj0(void);
+
 int __gxx_personality_sj0(void)
 {
 	return 0;
 }
 
-void
-__cxa_pure_virtual (void)
+void __cxa_pure_virtual (void);
+
+void __cxa_pure_virtual (void)
 {
 }

@@ -43,7 +43,7 @@ static int write_thread(void *args)
 		c = getchar();
 		len = socket_write(fd, &c, sizeof(c));
 		if(len < 0) {
-			printf("\nsocket_write returns %d\n", len);
+			printf("\nsocket_write returns %ld\n", len);
 			break;
 		}
 	}
@@ -143,7 +143,7 @@ static int nettest3(void)
 		ssize_t len;
 
 		len = socket_read(fd, buf, sizeof(buf));
-		printf("socket_read returns %d\n", len);
+		printf("socket_read returns %ld\n", len);
 		if(len <= 0)
 			break;
 	}

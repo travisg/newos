@@ -2,6 +2,8 @@
 ** Copyright 2002, Trey Boudreau. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
+#include <stdio.h>
+
 int main(void)
 {
 	int fg, bg;

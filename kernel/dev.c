@@ -34,6 +34,7 @@ int dev_scan_drivers(kernel_args *ka)
 		}
 		sys_close(fd);
 	}
+	return NO_ERROR;
 }
 
 

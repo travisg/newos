@@ -26,6 +26,7 @@
 #include <kernel/module.h>
 
 #include <string.h>
+#include <stdlib.h>
 
 #include <kernel/arch/cpu.h>
 

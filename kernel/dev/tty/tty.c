@@ -344,7 +344,6 @@ tty_write_special_state:
 						goto tty_write_special_state;
 					}
 					break;
-				default:
 			}
 			tty_insert_char(lbuf, c, true);
 			wrote_char = true;

@@ -48,7 +48,7 @@ static ssize_t dprint_write(dev_cookie cookie, const void *inbuf, off_t pos, ssi
 	int err;
 
 	while(len > 0) {
-		int towrite = min(sizeof(buf), len);
+		int towrite = min((int)sizeof(buf), len);
 
 		err = user_memcpy(buf, inbuf, towrite);
 		if(err < 0)

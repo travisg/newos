@@ -115,7 +115,7 @@ int IRCEngine::SignOn()
 //	NETADDR_TO_IPV4(saddr.addr) = IPV4_DOTADDR_TO_ADDR(63,203,215,73); // newos.org
 
 	err = socket_connect(mSocket, &saddr);
-	printf("socket_connect returns %d\n", err);
+	printf("socket_connect returns %ld\n", err);
 	if(err < 0)
 		return err;
 

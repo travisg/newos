@@ -64,7 +64,8 @@ static void dbg_stack_trace(int argc, char **argv)
 				break;
 
 			if(elf_reverse_lookup_symbol(eip, &base_address, symname, sizeof(symname)) >= 0) {
-				dprintf("0x%x\t0x%x:<0x%x+0x%x>\t'%s'\n", ebp, eip, base_address, eip - base_address, symname);
+				dprintf("0x%x\t0x%x:<0x%x+0x%x>\t'%s'\n", ebp, eip, (unsigned int)base_address, 
+					(unsigned int)(eip - base_address), symname);
 			} else {
 				dprintf("0x%x\t0x%x\n", ebp, eip);
 			}

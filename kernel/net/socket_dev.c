@@ -10,6 +10,7 @@
 #include <kernel/fs/devfs.h>
 #include <kernel/net/socket.h>
 #include <newos/socket_api.h>
+#include <string.h>
 
 typedef struct socket_dev {
 	sock_id id;
