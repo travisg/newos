@@ -1,12 +1,13 @@
 ifneq ($(_KERNEL_MAKE),1)
 _KERNEL_MAKE = 1
 
+KERNEL_DIR = kernel
+
 # include targets we depend on
 include lib/lib.mk
-include bus/bus.mk
-include dev/dev.mk
+include $(KERNEL_DIR)/bus/bus.mk
+include $(KERNEL_DIR)/dev/dev.mk
 
-KERNEL_DIR = kernel
 KERNEL_OBJ_DIR = kernel/$(OBJ_DIR)
 KERNEL_OBJS = \
         $(KERNEL_OBJ_DIR)/main.o \

@@ -1,3 +1,0 @@
-DEV_OBJS += \
-
-DEV_ARCH_INCLUDES += \

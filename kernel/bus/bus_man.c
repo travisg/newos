@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -7,11 +7,11 @@
 #include <kernel/debug.h>
 #include <kernel/heap.h>
 #include <kernel/vfs.h>
-#include <bus/bus.h>
+#include <kernel/bus/bus.h>
 #include <libc/string.h>
 #include <sys/errors.h>
 
-#include <bus/pci/pci_bus.h>
+#include <kernel/bus/pci/pci_bus.h>
 
 typedef struct bus {
 	struct bus *next;
@@ -22,7 +22,7 @@ static bus *bus_list;
 static mutex bus_lock;
 
 int bus_man_init(kernel_args *ka)
-{	
+{
 	mutex_init(&bus_lock, "bus_lock");
 
 	bus_list = NULL;
@@ -47,11 +47,11 @@ int bus_register_bus(const char *path)
 	int err = 0;
 
 	dprintf("bus_register_bus: path '%s'\n", path);
-	
+
 	mutex_lock(&bus_lock);
 
 	if(!find_bus(path)) {
-		b = (bus *)kmalloc(sizeof(bus));	
+		b = (bus *)kmalloc(sizeof(bus));
 		if(b == NULL) {
 			err = ERR_NO_MEMORY;
 			goto err;
@@ -85,7 +85,7 @@ static int bus_find_device_recurse(int *n, char *base_path, int base_fd, id_list
 	int fd;
 	int err;
 	struct file_stat stat;
-	
+
 	while((len = sys_read(base_fd, &leaf, -1, sizeof(leaf))) > 0) {
 		// reset the base_path to the original string passed in
 		base_path[base_path_len] = 0;
@@ -111,7 +111,7 @@ static int bus_find_device_recurse(int *n, char *base_path, int base_fd, id_list
 			// XXX assumes PCI
 			struct pci_cfg cfg;
 			uint32 i, j;
-			
+
 			err = sys_ioctl(fd, PCI_GET_CFG, &cfg, sizeof(struct pci_cfg));
 			if(err >= 0) {
 				// see if the vendor & device id matches
@@ -142,7 +142,7 @@ int bus_find_device(int n, id_list *vendor_ids, id_list *device_ids, device *dev
 	bus *b;
 	int err = -1;
 
-	for(b = bus_list; b != NULL && err < 0; b = b->next) {	
+	for(b = bus_list; b != NULL && err < 0; b = b->next) {
 		base_fd = sys_open(b->path, STREAM_TYPE_DIR, 0);
 		if(base_fd < 0)
 			continue;

@@ -5,10 +5,10 @@
 #include <kernel/kernel.h>
 #include <kernel/heap.h>
 #include <kernel/debug.h>
-#include <bus/bus.h>
+#include <kernel/bus/bus.h>
 
 #ifdef ARCH_i386
-#include <bus/pci/pci_bus.h>
+#include <kernel/bus/pci/pci_bus.h>
 #endif
 #ifdef ARCH_sh4
 #endif

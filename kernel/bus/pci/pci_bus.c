@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -8,7 +8,7 @@
 
 #include <libc/string.h>
 
-#include <bus/pci/pci_bus.h>
+#include <kernel/bus/pci/pci_bus.h>
 
 #include "pci_p.h" // private includes
 
@@ -75,14 +75,14 @@ static int pci_read_config(uint8 bus, uint8 unit, uint8 func, struct pci_cfg *cf
 		struct pci_cfg cfg;
 		uint32 word[4];
 	} u;
-	int i;	
+	int i;
 
 	for(i=0; i<4; i++) {
 		u.word[i] = pci_read_data(bus, unit, func, 4*i, 4);
 	}
 	if(u.cfg.vendor_id == 0xffff)
 		return -1;
-	
+
 	// move over to the passed in config structure
 	memcpy(cfg, &u.cfg, sizeof(struct pci_cfg));
 	cfg->bus = bus;
@@ -191,9 +191,9 @@ void dump_pci_config(struct pci_cfg *cfg)
 	int i;
 
 	dprintf("dump_pci_config: dumping cfg structure at 0x%x\n", cfg);
-	
+
 	dprintf("\tbus: %d, unit: %d, function: %d\n", cfg->bus, cfg->unit, cfg->func);
-	
+
 	dprintf("\tvendor id: %d\n", cfg->vendor_id);
 	dprintf("\tdevice id: %d\n", cfg->device_id);
 	dprintf("\tcommand: %d\n", cfg->command);
@@ -210,11 +210,11 @@ void dump_pci_config(struct pci_cfg *cfg)
 	dprintf("\tbist: %d\n", cfg->bist);
 
 	dprintf("\tirq: %d\n", cfg->irq);
-	
+
 	for(i=0; i<6; i++) {
 		dprintf("\tbase[%d] = 0x%x\n", i, cfg->base[i]);
 		dprintf("\tsize[%d] = 0x%x\n", i, cfg->size[i]);
-	}		
+	}
 }
 
 int pci_probe(uint8 bus, uint8 unit, uint8 function, struct pci_cfg *cfg)
@@ -225,7 +225,7 @@ int pci_probe(uint8 bus, uint8 unit, uint8 function, struct pci_cfg *cfg)
 		// read info about the first unit
 		if(pci_probe(bus, unit, 0, &cfg1) < 0)
 			return -1;
-		
+
 		if(!(cfg1.header_type & 0x80)) {
 			// no multiple functions for this dev
 			return -1;
@@ -241,7 +241,7 @@ int pci_probe(uint8 bus, uint8 unit, uint8 function, struct pci_cfg *cfg)
 //	dump_pci_config(&cfg);
 
 	return 0;
-}	
+}
 
 #if 0
 int pci_scan_all()
@@ -249,15 +249,15 @@ int pci_scan_all()
 	int bus;
 	int unit;
 	int function;
-	
+
 	dprintf("pci_scan_all: entry\n");
-	
+
 	for(bus = 0; bus < 255; bus++) {
 		for(unit = 0; unit < 32; unit++) {
 			for(function = 0; function < 8; function++) {
 				unsigned int dev_class;
 				struct pci_cfg cfg;
-						
+
 				if(pci_read_data(bus, unit, function, 0, 2) == 0xffff)
 					break;
 

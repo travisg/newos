@@ -18,7 +18,7 @@
 #include <libc/string.h>
 #include <libc/printf.h>
 
-#include <dev/arch/i386/console/console_dev.h>
+#include <kernel/dev/arch/i386/console/console_dev.h>
 
 unsigned int origin = 0;
 

@@ -1,7 +1,7 @@
 ifneq ($(_BUS_MAKE),1)
 _BUS_MAKE = 1
 
-BUS_DIR = bus
+BUS_DIR = $(KERNEL_DIR)/bus
 BUS_OBJ_DIR = $(BUS_DIR)/$(OBJ_DIR)
 BUS_OBJS = \
 	$(BUS_OBJ_DIR)/bus_init.o \

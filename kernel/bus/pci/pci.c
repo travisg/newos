@@ -19,8 +19,8 @@
 #include <libc/string.h>
 #include <libc/printf.h>
 
-#include <bus/bus.h>
-#include <bus/pci/pci_bus.h>
+#include <kernel/bus/bus.h>
+#include <kernel/bus/pci/pci_bus.h>
 
 #include "pci_p.h" // private includes
 

@@ -1,7 +1,7 @@
 ifneq ($(_DEV_MAKE),1)
 _DEV_MAKE = 1
 
-DEV_DIR = dev
+DEV_DIR = $(KERNEL_DIR)/dev
 DEV_OBJ_DIR = $(DEV_DIR)/$(OBJ_DIR)
 DEV_OBJS = \
 	$(DEV_OBJ_DIR)/devs.o

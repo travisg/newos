@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -12,7 +12,7 @@
 #include <kernel/arch/cpu.h>
 #include <kernel/arch/i386/cpu.h>
 
-#include <bus/bus.h>
+#include <kernel/bus/bus.h>
 #include <libc/string.h>
 
 #include "rtl8139_dev.h"
@@ -54,7 +54,7 @@ static rtl8139 *grtl;
 
 static int rtl8139_int();
 
-int rtl8139_detect(rtl8139 **rtl) 
+int rtl8139_detect(rtl8139 **rtl)
 {
 	id_list *vendor_ids;
 	id_list *device_ids;
@@ -74,7 +74,7 @@ int rtl8139_detect(rtl8139 **rtl)
 		err = -1;
 		goto err;
 	}
-	
+
 	// we found one
 	dprintf("rtl8139_detect: found device at '%s'\n", dev.dev_path);
 
@@ -111,12 +111,12 @@ err:
 	return err;
 }
 
-int rtl8139_init(rtl8139 *rtl) 
+int rtl8139_init(rtl8139 *rtl)
 {
 	time_t time;
 	int err = -1;
 	addr temp;
-	
+
 	rtl->region = vm_map_physical_memory(vm_get_kernel_aspace_id(), "rtl8139_region", (void **)&rtl->virt_base,
 		REGION_ADDR_ANY_ADDRESS, rtl->phys_size, LOCK_KERNEL|LOCK_RW, rtl->phys_base);
 	if(rtl->region < 0) {
@@ -141,7 +141,7 @@ int rtl8139_init(rtl8139 *rtl)
 		REGION_ADDR_ANY_ADDRESS, 64*1024 + 16, REGION_WIRING_WIRED_CONTIG, LOCK_KERNEL|LOCK_RW);
 	rtl->txbuf_region = vm_create_anonymous_region(vm_get_kernel_aspace_id(), "rtl8139_txbuf", (void **)&rtl->txbuf,
 		REGION_ADDR_ANY_ADDRESS, 8*1024, REGION_WIRING_WIRED, LOCK_KERNEL|LOCK_RW);
-	
+
 	// set up the transmission buf and sem
 	rtl->tx_sem = sem_create(4, "rtl8139_txsem");
 	mutex_init(&rtl->lock, "rtl8139");
@@ -161,7 +161,7 @@ int rtl8139_init(rtl8139 *rtl)
   	rtl->mac_addr[4] = RTL_READ_8(rtl, RT_IDR0 + 4);
   	rtl->mac_addr[5] = RTL_READ_8(rtl, RT_IDR0 + 5);
 
-  	dprintf("rtl8139: mac addr %x:%x:%x:%x:%x:%x\n", 
+  	dprintf("rtl8139: mac addr %x:%x:%x:%x:%x:%x\n",
   		rtl->mac_addr[0], rtl->mac_addr[1], rtl->mac_addr[2],
   		rtl->mac_addr[3], rtl->mac_addr[4], rtl->mac_addr[5]);
 
@@ -176,13 +176,13 @@ int rtl8139_init(rtl8139 *rtl)
 
 	// Set Rx FIFO threashold to 1K, Rx size to 64k+16, 1024 byte DMA burst
 	RTL_WRITE_32(rtl, RT_RXCONFIG, 0x0000de00);
-	
+
 	// Set Tx 1024 byte DMA burst
 	RTL_WRITE_32(rtl, RT_TXCONFIG, 0x03000600);
 
 	// Turn off lan-wake and set the driver-loaded bit
 	RTL_WRITE_8(rtl, RT_CONFIG1, (RTL_READ_8(rtl, RT_CONFIG1) & ~0x30) | 0x20);
-	
+
 	// Enable FIFO auto-clear
 	RTL_WRITE_8(rtl, RT_CONFIG4, RTL_READ_8(rtl, RT_CONFIG4) | 0x80);
 
@@ -200,10 +200,10 @@ int rtl8139_init(rtl8139 *rtl)
 	vm_get_page_mapping(vm_get_kernel_aspace(), rtl->txbuf + 4*1024, &temp);
 	RTL_WRITE_32(rtl, RT_TXADDR2, temp);
 	RTL_WRITE_32(rtl, RT_TXADDR3, temp + 2*1024);
-	
+
 	// Reset RXMISSED counter
 	RTL_WRITE_32(rtl, RT_RXMISSED, 0);
-	
+
 	// Enable receiving broadcast and physical match packets
 //	RTL_WRITE_32(rtl, RT_RXCONFIG, RTL_READ_32(rtl, RT_RXCONFIG) | 0x0000000a);
 	RTL_WRITE_32(rtl, RT_RXCONFIG, RTL_READ_32(rtl, RT_RXCONFIG) | 0x0000000f);
@@ -217,7 +217,7 @@ int rtl8139_init(rtl8139 *rtl)
 
 	RTL_WRITE_16(rtl, RT_INTRMASK, MYRT_INTS);
 //	RTL_WRITE_16(rtl, RT_INTRMASK, 0x807f);
-	
+
 	// Enable RX/TX once more
 	RTL_WRITE_8(rtl, RT_CHIPCMD, RT_CMD_RX_ENABLE | RT_CMD_TX_ENABLE);
 
@@ -249,14 +249,14 @@ restart:
 		mutex_unlock(&rtl->lock);
 		sem_release(rtl->tx_sem, 1);
 		goto restart;
-	}	
+	}
 
 	memcpy((void*)(rtl->txbuf + rtl->txbn * 0x800), ptr, len);
-	if(len < 64) 
+	if(len < 64)
 		len = 64;
 
 	state = int_disable_interrupts();
-	
+
 	RTL_WRITE_32(rtl, RT_TXSTATUS0 + (rtl->txbn)*4, len | 0x80000);
 	if(++rtl->txbn >= 4)
 		rtl->txbn = 0;
@@ -295,7 +295,7 @@ restart:
 	tail = TAILREG_TO_TAIL(RTL_READ_16(rtl, RT_RXBUFTAIL));
 //	dprintf("tailreg = 0x%x, actual tail 0x%x\n", RTL_READ_16(rtl, RT_RXBUFTAIL), tail);
 	if(tail == RTL_READ_16(rtl, RT_RXBUFHEAD)) {
-		mutex_unlock(&rtl->lock);	
+		mutex_unlock(&rtl->lock);
 		goto restart;
 	}
 
@@ -314,14 +314,14 @@ restart:
 	}
 	if(tail + entry->len > 0xffff) {
 		int pos = 0;
-		
+
 		dprintf("packet wraps around\n");
 		memcpy(buf, (const void *)&entry->data[0], 0x10000 - tail);
 		memcpy((uint8 *)buf + 0x10000 - tail, (const void *)rtl->rxbuf, entry->len - (0x10000 - tail));
 	} else {
 		memcpy(buf, (const void *)&entry->data[0], entry->len);
 	}
-	rc = entry->len;	
+	rc = entry->len;
 
 	// calculate the new tail
 	tail = (tail + entry->len + 4 + 3) & ~3;
@@ -342,10 +342,10 @@ restart:
 static int rtl8139_rxint(rtl8139 *rtl, uint16 int_status)
 {
 	int rc = INT_NO_RESCHEDULE;
-	
+
 //	dprintf("rx\n");
 
-//	dprintf("buf 0x%x, head 0x%x, tail 0x%x\n", 
+//	dprintf("buf 0x%x, head 0x%x, tail 0x%x\n",
 //		RTL_READ_32(rtl, RT_RXBUF), RTL_READ_16(rtl, RT_RXBUFHEAD), RTL_READ_16(rtl, RT_RXBUFTAIL));
 //	dprintf("BUF_EMPTY = %d\n", RTL_READ_8(rtl, RT_CHIPCMD) & RT_CMD_RX_BUF_EMPTY);
 
@@ -386,7 +386,7 @@ static int rtl8139_txint(rtl8139 *rtl, uint16 int_status)
 static int rtl8139_int()
 {
 	int rc = INT_NO_RESCHEDULE;
-	
+
 	// Disable interrupts
 	RTL_WRITE_16(grtl, RT_INTRMASK, 0);
 
@@ -407,7 +407,7 @@ static int rtl8139_int()
 		}
 		if(status & RT_INT_RXBUF_OVERFLOW) {
 			dprintf("RX buffer overflow!\n");
-			dprintf("buf 0x%x, head 0x%x, tail 0x%x\n", 
+			dprintf("buf 0x%x, head 0x%x, tail 0x%x\n",
 				RTL_READ_32(grtl, RT_RXBUF), RTL_READ_16(grtl, RT_RXBUFHEAD), RTL_READ_16(grtl, RT_RXBUFTAIL));
 			RTL_WRITE_32(grtl, RT_RXMISSED, 0);
 			RTL_WRITE_16(grtl, RT_RXBUFTAIL, TAILREG_TO_TAIL(RTL_READ_16(grtl, RT_RXBUFHEAD)));

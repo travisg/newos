@@ -21,8 +21,8 @@
 #include <kernel/net/net.h>
 #include <kernel/cbuf.h>
 #include <kernel/elf.h>
-#include <dev/devs.h>
-#include <bus/bus.h>
+#include <kernel/dev/devs.h>
+#include <kernel/bus/bus.h>
 
 #include <libc/string.h>
 
