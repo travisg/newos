@@ -30,7 +30,7 @@ dlclose(void *img)
 
 
 void
-__init__dlfcn(struct uspace_prog_args_t const *uspa)
+_init__dlfcn(struct uspace_prog_args_t const *uspa)
 {
 	rld= uspa->rld_export;
 }

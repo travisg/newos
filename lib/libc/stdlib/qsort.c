@@ -45,6 +45,9 @@ typedef int		 cmp_t(void const *, void const *);
 static inline char	*med3(char *, char *, char *, cmp_t *);
 static inline void	 swapfunc(char *, char *, int, int);
 
+#ifdef min
+# undef min
+#endif
 #define min(a, b)	(a) < (b) ? a : b
 
 /*

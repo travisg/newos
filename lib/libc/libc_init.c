@@ -6,12 +6,9 @@
 #include <sys/user_runtime.h>
 
 
-extern void __init__dlfcn(struct uspace_prog_args_t const *uspa);
-
-
 void
 INIT_BEFORE_CTORS(unsigned imid, struct uspace_prog_args_t const *uspa)
 {
-	__init__dlfcn(uspa);
+	_init__dlfcn(uspa);
 }
 

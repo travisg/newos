@@ -2,6 +2,7 @@
 ** Copyright 2001, Dan Sinclair. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
+#include <string.h>
 #include <sys/types.h>
 #include <newos/errors.h>
 
@@ -35,7 +36,7 @@ strerror(int errnum)
 		;
 
 		case ERR_NOT_ALLOWED:
-			return "Not Allowd";
+			return "Not Allowed";
 		;
 
 		case ERR_PERMISSION_DENIED:
