@@ -22,7 +22,7 @@
 
 #include <kernel/debug_ext.h>
 
-int pcnet32_dev_init(kernel_args *ka);
+int dev_bootstrap(void);
 
 static int pcnet32_open(dev_ident ident, dev_cookie *cookie)
 {
@@ -70,7 +70,7 @@ static ssize_t pcnet32_write(dev_cookie cookie, const void *buf, off_t pos, ssiz
 static int pcnet32_ioctl(dev_cookie cookie, int op, void *buf, size_t len)
 {
 	pcnet32 *nic = (pcnet32 *)cookie;
-	int err;
+	int err = NO_ERROR;
 
 	SHOW_FLOW(3, "op %d, buf %p, len %Ld\n", op, buf, (long long)len);
 
@@ -78,10 +78,16 @@ static int pcnet32_ioctl(dev_cookie cookie, int op, void *buf, size_t len)
 		return ERR_IO_ERROR;
 
 	switch(op) {
-		case 10000: // get the ethernet MAC address
+		case IOCTL_NET_IF_GET_ADDR: // get the ethernet MAC address
 			if(len >= sizeof(nic->mac_addr)) {
 				memcpy(buf, nic->mac_addr, sizeof(nic->mac_addr));
-				err = 0;
+			} else {
+				err = ERR_VFS_INSUFFICIENT_BUF;
+			}
+			break;
+	        case IOCTL_NET_IF_GET_TYPE:
+			if (len >= sizeof(int)) {
+				*(int *)buf = IF_TYPE_ETHERNET;
 			} else {
 				err = ERR_VFS_INSUFFICIENT_BUF;
 			}
@@ -107,9 +113,9 @@ static struct dev_calls pcnet32_hooks = {
 	NULL
 };
 
-int pcnet32_dev_init(kernel_args *ka)
+int dev_bootstrap(void)
 {
-	pcnet32 *nic;
+	pcnet32 *nic = NULL;
 
 	SHOW_FLOW0(3, "entry");
 
@@ -120,7 +126,7 @@ int pcnet32_dev_init(kernel_args *ka)
 	if (nic == NULL)
 	{
 		SHOW_FLOW0(3, "pcnet_new returned 0.");
-		return 0;
+		return ERR_GENERAL;
 	}
 
 	if (pcnet32_detect(nic) > -1)
@@ -130,7 +136,7 @@ int pcnet32_dev_init(kernel_args *ka)
 			SHOW_FLOW0(3, "pcnet_init failed.");
 			
 			pcnet32_delete(nic);
-			return 0;
+			return ERR_GENERAL;
 		}
 
 		pcnet32_start(nic);
@@ -138,7 +144,7 @@ int pcnet32_dev_init(kernel_args *ka)
 		if (devfs_publish_device("net/pcnet32/0", nic, &pcnet32_hooks) < 0)
 		{
 			SHOW_FLOW0(3, "failed to register device /dev/net/pcnet32/0");
-			return 0;
+			return ERR_GENERAL;
 		}
 	}
 
