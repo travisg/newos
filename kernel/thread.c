@@ -1122,6 +1122,7 @@ int thread_wait_on_thread(thread_id id, int *retcode)
 	sem_id sem;
 	int state;
 	struct thread *t;
+	int rc;
 
 	state = int_disable_interrupts();
 	GRAB_THREAD_LOCK();
@@ -1136,7 +1137,13 @@ int thread_wait_on_thread(thread_id id, int *retcode)
 	RELEASE_THREAD_LOCK();
 	int_restore_interrupts(state);
 
-	return sem_acquire_etc(sem, 1, 0, 0, retcode);
+	rc = sem_acquire_etc(sem, 1, 0, 0, retcode);
+
+	/* This thread died the way it should, dont ripple a non-error up */
+	if (rc == ERR_SEM_DELETED)
+		rc = NO_ERROR;
+
+	return rc;
 }
 
 int user_proc_wait_on_proc(proc_id id, int *uretcode)

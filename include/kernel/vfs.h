@@ -99,6 +99,7 @@ struct fs_calls {
 };
 
 int vfs_init(kernel_args *ka);
+int vfs_bootstrap_all_filesystems();
 int vfs_register_filesystem(const char *name, struct fs_calls *calls);
 void *vfs_new_ioctx();
 int vfs_free_ioctx(void *ioctx);
@@ -112,6 +113,7 @@ int vfs_put_vnode(fs_id fsid, vnode_id vnid);
 int vfs_remove_vnode(fs_id fsid, vnode_id vnid);
 
 /* calls needed by the VM for paging */
+int vfs_get_vnode_from_fd(int fd, bool kernel, void **vnode);
 int vfs_get_vnode_from_path(const char *path, bool kernel, void **vnode);
 int vfs_put_vnode_ptr(void *vnode);
 void vfs_vnode_acquire_ref(void *vnode);

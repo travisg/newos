@@ -235,17 +235,95 @@ static int bootfs_is_dir_empty(struct bootfs_vnode *dir)
 	return !dir->stream.u.dir.dir_head;
 }
 
-int bootfs_create_vnode_tree(struct bootfs *fs, struct bootfs_vnode *v)
+// creates a path of vnodes up to the last part of the passed in path.
+// returns the vnode the last segment should be a part of and
+// a pointer to the leaf of the path.
+// clobbers the path string passed in
+static struct bootfs_vnode *bootfs_create_path(struct bootfs *fs, char *path, struct bootfs_vnode *base, char **path_leaf)
+{
+	struct bootfs_vnode *v;
+	char *temp;
+	bool done;
+
+	// strip off any leading '/' or spaces
+	for(; *path == '/' || *path == ' '; path++)
+		;
+
+	// first, find the leaf
+	*path_leaf = strrchr(path, '/');
+	if(*path_leaf == NULL) {
+		// didn't find it, so this path only is a leaf
+		*path_leaf = path;
+		return base;
+	}
+
+	// this is a multipart path, seperate the leaf off
+	**path_leaf = '\0';
+	(*path_leaf)++;
+	if(**path_leaf == '\0') {
+		// the path ended with '/'. That's invalid
+		return NULL;
+	}
+
+	// now, lets walk down the path, building vnodes as we need em
+	done = false;
+	for(; !done; path = temp+1) {
+		// find the next seperator and knock it out
+		temp = strchr(path, '/');
+		if(temp) {
+			*temp = '\0';
+		} else {
+			done = true;
+		}
+
+		if(*path == '\0') {
+			// zero length path segment, continue
+			continue;
+		}
+
+		v = bootfs_find_in_dir(base, path);
+		if(!v) {
+			v = bootfs_create_vnode(fs, path);
+			if(!v)
+				return NULL;
+
+			v->stream.type = STREAM_TYPE_DIR;
+			v->stream.u.dir.dir_head = NULL;
+			v->stream.u.dir.jar_head = NULL;
+
+			bootfs_insert_in_dir(base, v);
+			hash_insert(fs->vnode_list_hash, v);
+		} else {
+			// we found one
+			if(v->stream.type != STREAM_TYPE_DIR)
+				return NULL;
+		}
+		base = v;
+	}
+	return base;
+}
+
+static int bootfs_create_vnode_tree(struct bootfs *fs, struct bootfs_vnode *root)
 {
 	int i;
 	boot_entry *entry;
 	int err;
 	struct bootfs_vnode *new_vnode;
+	struct bootfs_vnode *dir;
+	char path[SYS_MAX_PATH_LEN];
+	char *leaf;
 
 	entry = (boot_entry *)bootdir;
 	for(i=0; i<BOOTDIR_MAX_ENTRIES; i++) {
 		if(entry[i].be_type != BE_TYPE_NONE && entry[i].be_type != BE_TYPE_DIRECTORY) {
-			new_vnode = bootfs_create_vnode(fs, entry[i].be_name);
+			strncpy(path, entry[i].be_name, SYS_MAX_PATH_LEN-1);
+			path[SYS_MAX_PATH_LEN-1] = '\0';
+
+			dir = bootfs_create_path(fs, path, root, &leaf);
+			if(!dir)
+				continue;
+
+			new_vnode = bootfs_create_vnode(fs, leaf);
 			if(new_vnode == NULL)
 				return ERR_NO_MEMORY;
 
@@ -258,7 +336,7 @@ int bootfs_create_vnode_tree(struct bootfs *fs, struct bootfs_vnode *v)
 				new_vnode->stream.u.file.start, new_vnode->stream.u.file.len);
 
 			// insert it into the parent dir
-			bootfs_insert_in_dir(v, new_vnode);
+			bootfs_insert_in_dir(dir, new_vnode);
 
 			hash_insert(fs->vnode_list_hash, new_vnode);
 		}

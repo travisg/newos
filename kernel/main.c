@@ -14,9 +14,6 @@
 #include <kernel/smp.h>
 #include <kernel/sem.h>
 #include <kernel/vfs.h>
-#include <kernel/fs/rootfs.h>
-#include <kernel/fs/bootfs.h>
-#include <kernel/fs/devfs.h>
 #include <kernel/dev.h>
 #include <kernel/net/net.h>
 #include <kernel/cbuf.h>
@@ -100,30 +97,8 @@ static int main2()
 
 	dprintf("start of main2: initializing devices\n");
 
-	// bootstrap the root filesystem
-	bootstrap_rootfs();
-
-	err = sys_mount("/", "rootfs");
-	if(err < 0)
-		panic("error mounting rootfs!\n");
-
-	sys_setcwd("/");
-
-	// bootstrap the bootfs
-	bootstrap_bootfs();
-
-	sys_create("/boot", STREAM_TYPE_DIR);
-	err = sys_mount("/boot", "bootfs");
-	if(err < 0)
-		panic("error mounting bootfs\n");
-
-	// bootstrap the devfs
-	bootstrap_devfs();
-
-	sys_create("/dev", STREAM_TYPE_DIR);
-	err = sys_mount("/dev", "devfs");
-	if(err < 0)
-		panic("error mounting devfs\n");
+	// bootstrap all the filesystems
+	vfs_bootstrap_all_filesystems();
 
 	dev_init(&ka);
 	bus_init(&ka);
@@ -146,12 +121,10 @@ static int main2()
 	panic("debugger_test\n");
 #endif
 
-	vfs_load_fs_module("/boot/iso9660fs");
-
 	// start the init process
 	{
 		proc_id pid;
-		pid = proc_create_proc("/boot/init", "init", 5);
+		pid = proc_create_proc("/boot/bin/init", "init", 5);
 		if(pid < 0)
 			kprintf("error starting 'init'\n");
 	}

@@ -14,11 +14,15 @@
 #include <kernel/heap.h>
 #include <kernel/arch/cpu.h>
 #include <kernel/elf.h>
+#include <kernel/fs/rootfs.h>
+#include <kernel/fs/bootfs.h>
+#include <kernel/fs/devfs.h>
 #include <sys/errors.h>
 
 #include <kernel/fs/rootfs.h>
 
 #include <libc/string.h>
+#include <libc/printf.h>
 #include <libc/ctype.h>
 
 #define MAKE_NOIZE 0
@@ -1460,6 +1464,20 @@ err:
 	return err;
 }
 
+int vfs_get_vnode_from_fd(int fd, bool kernel, void **vnode)
+{
+	struct ioctx *ioctx;
+	int err;
+
+	ioctx = get_current_ioctx(kernel);
+	*vnode = get_vnode_from_fd(ioctx, fd);
+
+	if(*vnode == NULL)
+		return ERR_INVALID_HANDLE;
+
+	return NO_ERROR;
+}
+
 int vfs_get_vnode_from_path(const char *path, bool kernel, void **vnode)
 {
 	struct vnode *v;
@@ -2010,21 +2028,70 @@ int user_setcwd(const char* upath)
 	return vfs_set_cwd(path,false);
 }
 
-image_id vfs_load_fs_module(const char *path)
+image_id vfs_load_fs_module(const char *name)
 {
 	image_id id;
 	void (*bootstrap)();
+	char path[SYS_MAX_PATH_LEN];
+
+	sprintf(path, "/boot/addons/fs/%s", name);
 
 	id = elf_load_kspace(path);
 	if(id < 0)
 		return id;
 
-	bootstrap = elf_lookup_symbol(id, "fs_bootstrap");
+	bootstrap = (void *)elf_lookup_symbol(id, "fs_bootstrap");
 	if(!bootstrap)
 		return ERR_VFS_INVALID_FS;
 
 	bootstrap();
 
 	return id;
+}
+
+int vfs_bootstrap_all_filesystems()
+{
+	int err;
+	int fd;
+
+	// bootstrap the root filesystem
+	bootstrap_rootfs();
+
+	err = sys_mount("/", "rootfs");
+	if(err < 0)
+		panic("error mounting rootfs!\n");
+
+	sys_setcwd("/");
+
+	// bootstrap the bootfs
+	bootstrap_bootfs();
+
+	sys_create("/boot", STREAM_TYPE_DIR);
+	err = sys_mount("/boot", "bootfs");
+	if(err < 0)
+		panic("error mounting bootfs\n");
+
+	// bootstrap the devfs
+	bootstrap_devfs();
+
+	sys_create("/dev", STREAM_TYPE_DIR);
+	err = sys_mount("/dev", "devfs");
+	if(err < 0)
+		panic("error mounting devfs\n");
+
+
+	fd = sys_open("/boot/addons/fs", STREAM_TYPE_DIR, 0);
+	if(fd >= 0) {
+		ssize_t len;
+		char buf[SYS_MAX_NAME_LEN];
+
+		while((len = sys_read(fd, buf, 0, sizeof(buf))) > 0) {
+			dprintf("loading '%s' fs module\n", buf);
+			vfs_load_fs_module(buf);
+		}
+		sys_close(fd);
+	}
+
+	return NO_ERROR;
 }
 

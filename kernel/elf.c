@@ -27,6 +27,7 @@ struct elf_region {
 struct elf_image_info {
 	struct elf_image_info *next;
 	image_id id;
+	void *vnode;
 	struct elf_region regions[2]; // describes the text and data regions
 	addr dynamic_ptr; // pointer to the dynamic section
 
@@ -44,6 +45,7 @@ struct elf_image_info {
 static struct elf_image_info *kernel_images = NULL;
 static struct elf_image_info *kernel_image = NULL;
 static mutex image_lock;
+static mutex image_load_lock;
 static image_id next_image_id = 0;
 
 #define STRING(image, offset) ((char *)(&(image)->strtab[(offset)]))
@@ -71,6 +73,21 @@ static struct elf_image_info *find_image(image_id id)
 
 	for(image = kernel_images; image; image = image->next) {
 		if(image->id == id)
+			break;
+	}
+	mutex_unlock(&image_lock);
+
+	return image;
+}
+
+static struct elf_image_info *find_image_by_vnode(void *vnode)
+{
+	struct elf_image_info *image;
+
+	mutex_lock(&image_lock);
+
+	for(image = kernel_images; image; image = image->next) {
+		if(image->vnode == vnode)
 			break;
 	}
 	mutex_unlock(&image_lock);
@@ -472,6 +489,7 @@ image_id elf_load_kspace(const char *path)
 	struct Elf32_Ehdr eheader;
 	struct Elf32_Phdr *pheaders;
 	struct elf_image_info *image;
+	void *vnode = NULL;
 	int fd;
 	int err;
 	int i;
@@ -482,6 +500,20 @@ image_id elf_load_kspace(const char *path)
 	fd = sys_open(path, STREAM_TYPE_FILE, 0);
 	if(fd < 0)
 		return fd;
+
+	err = vfs_get_vnode_from_fd(fd, true, &vnode);
+	if(err < 0)
+		goto error0;
+
+	// XXX awful hack to keep someone else from trying to load this image
+	// probably not a bad thing, shouldn't be too many races
+	mutex_lock(&image_load_lock);
+
+	// make sure it's not loaded already. Search by vnode
+	if(find_image_by_vnode(vnode)) {
+		err = ERR_NOT_ALLOWED;
+		goto error;
+	}
 
 	len = sys_read(fd, &eheader, 0, sizeof(eheader));
 	if(len < 0) {
@@ -497,14 +529,12 @@ image_id elf_load_kspace(const char *path)
 	if(err < 0)
 		goto error;
 
-	/* we can only deal with relocatable binaries here */
-//	if(eheader.e_type & ET_REL)
-
 	image = create_image_struct();
 	if(!image) {
 		err = ERR_NO_MEMORY;
 		goto error;
 	}
+	image->vnode = vnode;
 
 	pheaders = kmalloc(eheader.e_phnum * eheader.e_phentsize);
 	if(pheaders == NULL) {
@@ -622,6 +652,8 @@ image_id elf_load_kspace(const char *path)
 
 	insert_image_in_list(image);
 
+	mutex_unlock(&image_load_lock);
+
 	return image->id;
 
 error3:
@@ -634,6 +666,10 @@ error2:
 error1:
 	kfree(pheaders);
 error:
+	mutex_unlock(&image_load_lock);
+error0:
+	if(vnode)
+		vfs_put_vnode_ptr(vnode);
 	sys_close(fd);
 
 	return err;
@@ -675,6 +711,7 @@ int elf_init(kernel_args *ka)
 	insert_image_in_list(kernel_image);
 
 	mutex_init(&image_lock, "kimages_lock");
+	mutex_init(&image_load_lock, "kimages_load_lock");
 
 	return 0;
 }
