@@ -14,25 +14,23 @@
 
 // one per cpu. put per cpu stuff here, to keep the data local and reduce
 // the amount of cache thrashing that goes on otherwise.
-typedef union cpu_ent {
-	struct {
-		int cpu_num;
+typedef struct cpu_ent {
+	int cpu_num;
 
-		// thread.c: used to force a reschedule at quantum expiration time
-		int preempted;
-		struct timer_event quantum_timer;
+	// thread.c: used to force a reschedule at quantum expiration time
+	int preempted;
+	struct timer_event quantum_timer;
 
-		// remember which thread's fpu state we hold
-		// NULL means we dont hold any state
-		struct thread *fpu_state_thread;
+	// remember which thread's fpu state we hold
+	// NULL means we dont hold any state
+	struct thread *fpu_state_thread;
 
-		// timer.c: per-cpu timer queues
-		struct timer_event * volatile timer_events;
-		spinlock_t timer_spinlock;
+	// timer.c: per-cpu timer queues
+	struct timer_event * volatile timer_events;
+	spinlock_t timer_spinlock;
 
-		// arch-specific stuff
-		struct arch_cpu_info arch;
-	} info;
+	// arch-specific stuff
+	struct arch_cpu_info arch;
 } cpu_ent _ALIGNED(64);
 
 extern cpu_ent cpu[_MAX_CPUS];

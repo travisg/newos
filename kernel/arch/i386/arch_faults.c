@@ -47,37 +47,37 @@ int i386_device_not_available(void)
 	struct thread *t = thread_get_current_thread();
 
 //	dprintf("***device_not_available: cpu %d holds fpu context for thread %d. current thread %d, state on cpu %d\n", 
-//		cpu->info.cpu_num, 
-//		cpu->info.fpu_state_thread ? cpu->info.fpu_state_thread->id : -1, 
+//		cpu->cpu_num, 
+//		cpu->fpu_state_thread ? cpu->fpu_state_thread->id : -1, 
 //		t->id, 
-//		t->fpu_cpu ? t->fpu_cpu->info.cpu_num : -1);
+//		t->fpu_cpu ? t->fpu_cpu->cpu_num : -1);
 
 	// unset the task switched bit
 	i386_clear_task_switched();
 
 	// if our cpu owns the fpu context of the current thread, then we're done
-	if(cpu->info.fpu_state_thread 
-	   && cpu->info.fpu_state_thread == t 
+	if(cpu->fpu_state_thread 
+	   && cpu->fpu_state_thread == t 
 	   && t->fpu_state_saved == false)
 		return 0;
 
 	// save the current fpu context
-	if(cpu->info.fpu_state_thread) {
-		ASSERT(cpu->info.fpu_state_thread->fpu_cpu == cpu);
-		ASSERT(cpu->info.fpu_state_thread->fpu_state_saved == false);
-		i386_save_fpu_context(&cpu->info.fpu_state_thread->arch_info.fpu_state);
-		cpu->info.fpu_state_thread->fpu_state_saved = true;
-		cpu->info.fpu_state_thread->fpu_cpu = NULL;
-		cpu->info.fpu_state_thread = NULL;
+	if(cpu->fpu_state_thread) {
+		ASSERT(cpu->fpu_state_thread->fpu_cpu == cpu);
+		ASSERT(cpu->fpu_state_thread->fpu_state_saved == false);
+		i386_save_fpu_context(&cpu->fpu_state_thread->arch_info.fpu_state);
+		cpu->fpu_state_thread->fpu_state_saved = true;
+		cpu->fpu_state_thread->fpu_cpu = NULL;
+		cpu->fpu_state_thread = NULL;
 	}
 
 	// load the new context
-	ASSERT(cpu->info.fpu_state_thread == NULL);
+	ASSERT(cpu->fpu_state_thread == NULL);
 	ASSERT(t->fpu_cpu == NULL);
 	i386_load_fpu_context(t->arch_info.fpu_state);
 	t->fpu_state_saved = false;
 	t->fpu_cpu = cpu;
-	t->fpu_cpu->info.fpu_state_thread = t;
+	t->fpu_cpu->fpu_state_thread = t;
 
 //	panic("device not available\n");
 

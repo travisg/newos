@@ -98,10 +98,10 @@ struct thread {
 	int priority;
 	int state;
 	int next_state;
-	union cpu_ent *cpu;
+	struct cpu_ent *cpu;
 	bool in_kernel;
 
-	union cpu_ent *fpu_cpu; // this cpu holds our fpu state
+	struct cpu_ent *fpu_cpu; // this cpu holds our fpu state
 	bool fpu_state_saved; // does the thread structure hold our fpu state
 
 	int int_disable_level;

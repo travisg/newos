@@ -74,23 +74,23 @@ int timer_interrupt(void)
 	int rc = INT_NO_RESCHEDULE;
 
 	// cpu 0 gets to increment the system timer
-	if(cpu->info.cpu_num == 0)
+	if(cpu->cpu_num == 0)
 		time_tick(TICK_RATE);
 
 	curr_time = system_time_lores();
 
-	spinlock = &cpu->info.timer_spinlock;
+	spinlock = &cpu->timer_spinlock;
 
 	acquire_spinlock(spinlock);
 
 restart_scan:
-	event = cpu->info.timer_events;
+	event = cpu->timer_events;
 	if(event != NULL && event->sched_time <= curr_time) {
 		// this event needs to happen
 		int mode = event->mode;
 		bigtime_t old_sched_time = event->sched_time;
 
-		cpu->info.timer_events = event->next;
+		cpu->timer_events = event->next;
 		event->sched_time = 0;
 
 		release_spinlock(spinlock);
@@ -112,7 +112,7 @@ restart_scan:
 				event->sched_time = 1; // if we wrapped around and happen
 				                       // to hit zero, set it to one, since
 				                       // zero represents not scheduled
-			add_event_to_list(event, &cpu->info.timer_events);
+			add_event_to_list(event, &cpu->timer_events);
 		}
 
 		goto restart_scan; // the list may have changed
@@ -120,8 +120,8 @@ restart_scan:
 
 #if DYNAMIC_TIMER
 	// setup the next hardware timer
-	if(cpu->info.timer_events != NULL)
-		arch_timer_set_hardware_timer(cpu->info.timer_events->sched_time - system_time());
+	if(cpu->timer_events != NULL)
+		arch_timer_set_hardware_timer(cpu->timer_events->sched_time - system_time());
 #endif
 
 	release_spinlock(spinlock);
@@ -162,19 +162,19 @@ int timer_set_event(bigtime_t relative_time, timer_mode mode, struct timer_event
 
 	cpu = get_curr_cpu_struct();
 
-	acquire_spinlock(&cpu->info.timer_spinlock);
+	acquire_spinlock(&cpu->timer_spinlock);
 
-	event->scheduled_cpu = cpu->info.cpu_num;
-	add_event_to_list(event, &cpu->info.timer_events);
+	event->scheduled_cpu = cpu->cpu_num;
+	add_event_to_list(event, &cpu->timer_events);
 
 #if DYNAMIC_TIMER
 	// if we were stuck at the headof the list, set the hardware timer
-	if(event == cpu->info.timer_events) {
+	if(event == cpu->timer_events) {
 		arch_timer_set_hardware_timer(relative_time);
 	}
 #endif
 
-	release_spinlock(&cpu->info.timer_spinlock);
+	release_spinlock(&cpu->timer_spinlock);
 	int_restore_interrupts();
 
 	return 0;
@@ -189,14 +189,14 @@ int _local_timer_cancel_event(int curr_cpu, struct timer_event *event)
 	bool foundit = false;
 	cpu_ent *cpu = get_cpu_struct(curr_cpu);
 
-	acquire_spinlock(&cpu->info.timer_spinlock);
-	e = cpu->info.timer_events;
+	acquire_spinlock(&cpu->timer_spinlock);
+	e = cpu->timer_events;
 	while(e != NULL) {
 		if(e == event) {
 			// we found it
 			foundit = true;
-			if(e == cpu->info.timer_events) {
-				cpu->info.timer_events = e->next;
+			if(e == cpu->timer_events) {
+				cpu->timer_events = e->next;
 			} else {
 				last->next = e->next;
 			}
@@ -207,19 +207,19 @@ int _local_timer_cancel_event(int curr_cpu, struct timer_event *event)
 		last = e;
 		e = e->next;
 	}
-	release_spinlock(&cpu->info.timer_spinlock);
+	release_spinlock(&cpu->timer_spinlock);
 done:
 
 #if DYNAMIC_TIMER
-	if(cpu->info.timer_events == NULL) {
+	if(cpu->timer_events == NULL) {
 		arch_timer_clear_hardware_timer();
 	} else {
-		arch_timer_set_hardware_timer(cpu->info.timer_events->sched_time - system_time());
+		arch_timer_set_hardware_timer(cpu->timer_events->sched_time - system_time());
 	}
 #endif
 
 	if(foundit) {
-		release_spinlock(&cpu->info.timer_spinlock);
+		release_spinlock(&cpu->timer_spinlock);
 		event->sched_time = 0;
 	}
 
@@ -258,15 +258,15 @@ int timer_cancel_event(struct timer_event *event)
 	} else {
 		// it should be in another cpu's queue
 		cpu = get_cpu_struct(event->scheduled_cpu);
-		acquire_spinlock(&cpu->info.timer_spinlock);
+		acquire_spinlock(&cpu->timer_spinlock);
 		last = NULL;
-		e = cpu->info.timer_events;
+		e = cpu->timer_events;
 		while(e != NULL) {
 			if(e == event) {
 				// we found it
 				foundit = true;
-				if(e == cpu->info.timer_events) {
-					cpu->info.timer_events = e->next;
+				if(e == cpu->timer_events) {
+					cpu->timer_events = e->next;
 				} else {
 					last->next = e->next;
 				}
@@ -278,7 +278,7 @@ int timer_cancel_event(struct timer_event *event)
 			last = e;
 			e = e->next;
 		}
-		release_spinlock(&cpu->info.timer_spinlock);
+		release_spinlock(&cpu->timer_spinlock);
 	}
 
 done:

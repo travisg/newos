@@ -19,7 +19,7 @@ int cpu_init(kernel_args *ka)
 
 	memset(cpu, 0, sizeof(cpu));
 	for(i = 0; i < _MAX_CPUS; i++) {
-		cpu[i].info.cpu_num = i;
+		cpu[i].cpu_num = i;
 	}
 
 	return arch_cpu_init(ka);

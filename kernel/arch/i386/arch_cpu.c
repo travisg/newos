@@ -69,89 +69,89 @@ static void make_feature_string(cpu_ent *cpu, char *str)
 
 	str[0] = 0;
 
-	if(cpu->info.arch.feature[FEATURE_COMMON] & X86_FPU)
+	if(cpu->arch.feature[FEATURE_COMMON] & X86_FPU)
 		strcat(str, "fpu ");
-	if(cpu->info.arch.feature[FEATURE_COMMON] & X86_VME)
+	if(cpu->arch.feature[FEATURE_COMMON] & X86_VME)
 		strcat(str, "vme ");
-	if(cpu->info.arch.feature[FEATURE_COMMON] & X86_DE)
+	if(cpu->arch.feature[FEATURE_COMMON] & X86_DE)
 		strcat(str, "de ");
-	if(cpu->info.arch.feature[FEATURE_COMMON] & X86_PSE)
+	if(cpu->arch.feature[FEATURE_COMMON] & X86_PSE)
 		strcat(str, "pse ");
-	if(cpu->info.arch.feature[FEATURE_COMMON] & X86_TSC)
+	if(cpu->arch.feature[FEATURE_COMMON] & X86_TSC)
 		strcat(str, "tsc ");
-	if(cpu->info.arch.feature[FEATURE_COMMON] & X86_MSR)
+	if(cpu->arch.feature[FEATURE_COMMON] & X86_MSR)
 		strcat(str, "msr ");
-	if(cpu->info.arch.feature[FEATURE_COMMON] & X86_PAE)
+	if(cpu->arch.feature[FEATURE_COMMON] & X86_PAE)
 		strcat(str, "pae ");
-	if(cpu->info.arch.feature[FEATURE_COMMON] & X86_MCE)
+	if(cpu->arch.feature[FEATURE_COMMON] & X86_MCE)
 		strcat(str, "mce ");
-	if(cpu->info.arch.feature[FEATURE_COMMON] & X86_CX8)
+	if(cpu->arch.feature[FEATURE_COMMON] & X86_CX8)
 		strcat(str, "cx8 ");
-	if(cpu->info.arch.feature[FEATURE_COMMON] & X86_APIC)
+	if(cpu->arch.feature[FEATURE_COMMON] & X86_APIC)
 		strcat(str, "apic ");
-	if(cpu->info.arch.feature[FEATURE_COMMON] & X86_SEP)
+	if(cpu->arch.feature[FEATURE_COMMON] & X86_SEP)
 		strcat(str, "sep ");
-	if(cpu->info.arch.feature[FEATURE_COMMON] & X86_MTRR)
+	if(cpu->arch.feature[FEATURE_COMMON] & X86_MTRR)
 		strcat(str, "mtrr ");
-	if(cpu->info.arch.feature[FEATURE_COMMON] & X86_PGE)
+	if(cpu->arch.feature[FEATURE_COMMON] & X86_PGE)
 		strcat(str, "pge ");
-	if(cpu->info.arch.feature[FEATURE_COMMON] & X86_MCA)
+	if(cpu->arch.feature[FEATURE_COMMON] & X86_MCA)
 		strcat(str, "mca ");
-	if(cpu->info.arch.feature[FEATURE_COMMON] & X86_CMOV)
+	if(cpu->arch.feature[FEATURE_COMMON] & X86_CMOV)
 		strcat(str, "cmov ");
-	if(cpu->info.arch.feature[FEATURE_COMMON] & X86_PAT)
+	if(cpu->arch.feature[FEATURE_COMMON] & X86_PAT)
 		strcat(str, "pat ");
-	if(cpu->info.arch.feature[FEATURE_COMMON] & X86_PSE36)
+	if(cpu->arch.feature[FEATURE_COMMON] & X86_PSE36)
 		strcat(str, "pse36 ");
-	if(cpu->info.arch.feature[FEATURE_COMMON] & X86_PSN)
+	if(cpu->arch.feature[FEATURE_COMMON] & X86_PSN)
 		strcat(str, "psn ");
-	if(cpu->info.arch.feature[FEATURE_COMMON] & X86_CLFSH)
+	if(cpu->arch.feature[FEATURE_COMMON] & X86_CLFSH)
 		strcat(str, "clfsh ");
-	if(cpu->info.arch.feature[FEATURE_COMMON] & X86_DS)
+	if(cpu->arch.feature[FEATURE_COMMON] & X86_DS)
 		strcat(str, "ds ");
-	if(cpu->info.arch.feature[FEATURE_COMMON] & X86_ACPI)
+	if(cpu->arch.feature[FEATURE_COMMON] & X86_ACPI)
 		strcat(str, "acpi ");
-	if(cpu->info.arch.feature[FEATURE_COMMON] & X86_MMX)
+	if(cpu->arch.feature[FEATURE_COMMON] & X86_MMX)
 		strcat(str, "mmx ");
-	if(cpu->info.arch.feature[FEATURE_COMMON] & X86_FXSR)
+	if(cpu->arch.feature[FEATURE_COMMON] & X86_FXSR)
 		strcat(str, "fxsr ");
-	if(cpu->info.arch.feature[FEATURE_COMMON] & X86_SSE)
+	if(cpu->arch.feature[FEATURE_COMMON] & X86_SSE)
 		strcat(str, "sse ");
-	if(cpu->info.arch.feature[FEATURE_COMMON] & X86_SSE2)
+	if(cpu->arch.feature[FEATURE_COMMON] & X86_SSE2)
 		strcat(str, "sse2 ");
-	if(cpu->info.arch.feature[FEATURE_COMMON] & X86_SS)
+	if(cpu->arch.feature[FEATURE_COMMON] & X86_SS)
 		strcat(str, "ss ");
-	if(cpu->info.arch.feature[FEATURE_COMMON] & X86_HTT)
+	if(cpu->arch.feature[FEATURE_COMMON] & X86_HTT)
 		strcat(str, "htt ");
-	if(cpu->info.arch.feature[FEATURE_COMMON] & X86_TM)
+	if(cpu->arch.feature[FEATURE_COMMON] & X86_TM)
 		strcat(str, "tm ");
-	if(cpu->info.arch.feature[FEATURE_COMMON] & X86_PBE)
+	if(cpu->arch.feature[FEATURE_COMMON] & X86_PBE)
 		strcat(str, "pbe ");
-	if(cpu->info.arch.feature[FEATURE_EXT] & X86_EXT_SSE3)
+	if(cpu->arch.feature[FEATURE_EXT] & X86_EXT_SSE3)
 		strcat(str, "sse3 ");
-	if(cpu->info.arch.feature[FEATURE_EXT] & X86_EXT_MONITOR)
+	if(cpu->arch.feature[FEATURE_EXT] & X86_EXT_MONITOR)
 		strcat(str, "monitor ");
-	if(cpu->info.arch.feature[FEATURE_EXT] & X86_EXT_DSCPL)
+	if(cpu->arch.feature[FEATURE_EXT] & X86_EXT_DSCPL)
 		strcat(str, "dscpl ");
-	if(cpu->info.arch.feature[FEATURE_EXT] & X86_EXT_EST)
+	if(cpu->arch.feature[FEATURE_EXT] & X86_EXT_EST)
 		strcat(str, "est ");
-	if(cpu->info.arch.feature[FEATURE_EXT] & X86_EXT_TM2)
+	if(cpu->arch.feature[FEATURE_EXT] & X86_EXT_TM2)
 		strcat(str, "tm2 ");
-	if(cpu->info.arch.feature[FEATURE_EXT] & X86_EXT_CNXTID)
+	if(cpu->arch.feature[FEATURE_EXT] & X86_EXT_CNXTID)
 		strcat(str, "cnxtid ");
-	if(cpu->info.arch.feature[FEATURE_EXT_AMD] & X86_AMD_EXT_SYSCALL)
+	if(cpu->arch.feature[FEATURE_EXT_AMD] & X86_AMD_EXT_SYSCALL)
 		strcat(str, "syscall ");
-	if(cpu->info.arch.feature[FEATURE_EXT_AMD] & X86_AMD_EXT_NX)
+	if(cpu->arch.feature[FEATURE_EXT_AMD] & X86_AMD_EXT_NX)
 		strcat(str, "nx ");
-	if(cpu->info.arch.feature[FEATURE_EXT_AMD] & X86_AMD_EXT_MMXEXT)
+	if(cpu->arch.feature[FEATURE_EXT_AMD] & X86_AMD_EXT_MMXEXT)
 		strcat(str, "mmxext ");
-	if(cpu->info.arch.feature[FEATURE_EXT_AMD] & X86_AMD_EXT_FFXSR)
+	if(cpu->arch.feature[FEATURE_EXT_AMD] & X86_AMD_EXT_FFXSR)
 		strcat(str, "ffxsr ");
-	if(cpu->info.arch.feature[FEATURE_EXT_AMD] & X86_AMD_EXT_LONG)
+	if(cpu->arch.feature[FEATURE_EXT_AMD] & X86_AMD_EXT_LONG)
 		strcat(str, "long ");
-	if(cpu->info.arch.feature[FEATURE_EXT_AMD] & X86_AMD_EXT_3DNOWEXT)
+	if(cpu->arch.feature[FEATURE_EXT_AMD] & X86_AMD_EXT_3DNOWEXT)
 		strcat(str, "3dnowext ");
-	if(cpu->info.arch.feature[FEATURE_EXT_AMD] & X86_AMD_EXT_3DNOW)
+	if(cpu->arch.feature[FEATURE_EXT_AMD] & X86_AMD_EXT_3DNOW)
 		strcat(str, "3dnow ");
 }
 
@@ -163,12 +163,12 @@ static int detect_cpu(kernel_args *ka, int curr_cpu)
 	cpu_ent *cpu = get_cpu_struct(curr_cpu);
 
 	// clear out the cpu info data
-	cpu->info.arch.vendor = VENDOR_UNKNOWN;
-	cpu->info.arch.vendor_name = "UNKNOWN VENDOR";
-	cpu->info.arch.feature[FEATURE_COMMON] = 0;
-	cpu->info.arch.feature[FEATURE_EXT] = 0;
-	cpu->info.arch.feature[FEATURE_EXT_AMD] = 0;
-	cpu->info.arch.model_name[0] = 0;
+	cpu->arch.vendor = VENDOR_UNKNOWN;
+	cpu->arch.vendor_name = "UNKNOWN VENDOR";
+	cpu->arch.feature[FEATURE_COMMON] = 0;
+	cpu->arch.feature[FEATURE_EXT] = 0;
+	cpu->arch.feature[FEATURE_EXT_AMD] = 0;
+	cpu->arch.model_name[0] = 0;
 
 	// print some fun data
 	i386_cpuid(0, data);
@@ -181,25 +181,25 @@ static int detect_cpu(kernel_args *ka, int curr_cpu)
 
 	// get the family, model, stepping
 	i386_cpuid(1, data);
-	cpu->info.arch.family = (data[0] >> 8) & 0xf;
-	cpu->info.arch.model = (data[0] >> 4) & 0xf;
-	cpu->info.arch.stepping = data[0] & 0xf;
+	cpu->arch.family = (data[0] >> 8) & 0xf;
+	cpu->arch.model = (data[0] >> 4) & 0xf;
+	cpu->arch.stepping = data[0] & 0xf;
 	dprintf("CPU %d: family %d model %d stepping %d, string '%s'\n",
-		curr_cpu, cpu->info.arch.family, cpu->info.arch.model, cpu->info.arch.stepping, vendor_str);
+		curr_cpu, cpu->arch.family, cpu->arch.model, cpu->arch.stepping, vendor_str);
 	kprintf("CPU %d: family %d model %d stepping %d, string '%s'\n",
-		curr_cpu, cpu->info.arch.family, cpu->info.arch.model, cpu->info.arch.stepping, vendor_str);
+		curr_cpu, cpu->arch.family, cpu->arch.model, cpu->arch.stepping, vendor_str);
 
 	// figure out what vendor we have here
 
 	for(i=0; i<VENDOR_NUM; i++) {
 		if(!strcmp(vendor_str, vendor_info[i].ident_string[0])) {
-			cpu->info.arch.vendor = i;
-			cpu->info.arch.vendor_name = vendor_info[i].vendor;
+			cpu->arch.vendor = i;
+			cpu->arch.vendor_name = vendor_info[i].vendor;
 			break;
 		}
 		if(!strcmp(vendor_str, vendor_info[i].ident_string[1])) {
-			cpu->info.arch.vendor = i;
-			cpu->info.arch.vendor_name = vendor_info[i].vendor;
+			cpu->arch.vendor = i;
+			cpu->arch.vendor_name = vendor_info[i].vendor;
 			break;
 		}
 	}
@@ -208,43 +208,43 @@ static int detect_cpu(kernel_args *ka, int curr_cpu)
 	i386_cpuid(0x80000000, data);
 	if(data[0] >= 0x80000004) {
 		// build the model string
-		memset(cpu->info.arch.model_name, 0, sizeof(cpu->info.arch.model_name));
+		memset(cpu->arch.model_name, 0, sizeof(cpu->arch.model_name));
 		i386_cpuid(0x80000002, data);
-		memcpy(cpu->info.arch.model_name, data, sizeof(data));
+		memcpy(cpu->arch.model_name, data, sizeof(data));
 		i386_cpuid(0x80000003, data);
-		memcpy(cpu->info.arch.model_name+16, data, sizeof(data));
+		memcpy(cpu->arch.model_name+16, data, sizeof(data));
 		i386_cpuid(0x80000004, data);
-		memcpy(cpu->info.arch.model_name+32, data, sizeof(data));
+		memcpy(cpu->arch.model_name+32, data, sizeof(data));
 
 		// some cpus return a right-justified string
-		for(i = 0; cpu->info.arch.model_name[i] == ' '; i++)
+		for(i = 0; cpu->arch.model_name[i] == ' '; i++)
 			;
 		if(i > 0) {
-			memmove(cpu->info.arch.model_name, 
-				&cpu->info.arch.model_name[i], 
-				strlen(&cpu->info.arch.model_name[i]) + 1);
+			memmove(cpu->arch.model_name, 
+				&cpu->arch.model_name[i], 
+				strlen(&cpu->arch.model_name[i]) + 1);
 		}
 
 		dprintf("CPU %d: vendor '%s' model name '%s'\n", 
-			curr_cpu, cpu->info.arch.vendor_name, cpu->info.arch.model_name);
+			curr_cpu, cpu->arch.vendor_name, cpu->arch.model_name);
 		kprintf("CPU %d: vendor '%s' model name '%s'\n",
-			curr_cpu, cpu->info.arch.vendor_name, cpu->info.arch.model_name);
+			curr_cpu, cpu->arch.vendor_name, cpu->arch.model_name);
 	} else {
-		strcpy(cpu->info.arch.model_name, "unknown");
+		strcpy(cpu->arch.model_name, "unknown");
 	}
 
 	// load feature bits
 	i386_cpuid(1, data);
-	cpu->info.arch.feature[FEATURE_COMMON] = data[3]; // edx
-	cpu->info.arch.feature[FEATURE_EXT] = data[2]; // ecx
-	if(cpu->info.arch.vendor == VENDOR_AMD) {
+	cpu->arch.feature[FEATURE_COMMON] = data[3]; // edx
+	cpu->arch.feature[FEATURE_EXT] = data[2]; // ecx
+	if(cpu->arch.vendor == VENDOR_AMD) {
 		i386_cpuid(0x80000001, data);
-		cpu->info.arch.feature[FEATURE_EXT_AMD] = data[3]; // edx
+		cpu->arch.feature[FEATURE_EXT_AMD] = data[3]; // edx
 	}
 
-	make_feature_string(cpu, cpu->info.arch.feature_string);
-	dprintf("CPU %d: features: %s\n", curr_cpu, cpu->info.arch.feature_string);
-	kprintf("CPU %d: features: %s\n", curr_cpu, cpu->info.arch.feature_string);
+	make_feature_string(cpu, cpu->arch.feature_string);
+	dprintf("CPU %d: features: %s\n", curr_cpu, cpu->arch.feature_string);
+	kprintf("CPU %d: features: %s\n", curr_cpu, cpu->arch.feature_string);
 
 	return 0;
 }
@@ -379,7 +379,7 @@ int arch_cpu_init2(kernel_args *ka)
 bool i386_check_feature(uint32 feature, enum i386_feature_type type) 
 {
 	cpu_ent *cpu = get_curr_cpu_struct();
-	return cpu->info.arch.feature[type] & feature;
+	return cpu->arch.feature[type] & feature;
 }
 
 desc_table *i386_get_gdt(void)
