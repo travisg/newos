@@ -192,6 +192,7 @@ done:
 
 	if(foundit) {
 		release_spinlock(&timer_spinlock[curr_cpu]);
+		event->sched_time = 0;
 	}
 
 	return (foundit ? 0 : ERR_GENERAL);
@@ -224,7 +225,9 @@ int timer_cancel_event(struct timer_event *event)
 	// a cheap match. If this fails, we start harassing
 	// other cpus.
 	//
-	if(_local_timer_cancel_event(curr_cpu, event) < 0) {
+	if(_local_timer_cancel_event(curr_cpu, event) == 0) 
+		foundit = true;
+	else {
 		for(cpu = 0; cpu < num_cpus; cpu++) {
 			if(cpu== curr_cpu) continue;
 			acquire_spinlock(&timer_spinlock[cpu]);
@@ -247,12 +250,14 @@ int timer_cancel_event(struct timer_event *event)
 			}
 			release_spinlock(&timer_spinlock[cpu]);
 		}
-	}
 done:
 
-	if(foundit) {
-		release_spinlock(&timer_spinlock[cpu]);
+		if(foundit) {
+			release_spinlock(&timer_spinlock[cpu]);
+			event->sched_time = 0;
+		}
 	}
+	
 	int_restore_interrupts(state);
 
 	return (foundit ? 0 : ERR_GENERAL);

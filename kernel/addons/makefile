@@ -5,4 +5,7 @@ KERNEL_ADDONS_CFLAGS := $(KERNEL_CFLAGS)
 include $(addsuffix /makefile, $(addprefix $(KERNEL_ADDONS_DIR)/, \
 	fs \
 	bus_managers \
+	busses \
+	generic \
+	dev \
 ))
