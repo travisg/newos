@@ -7,7 +7,7 @@
 #define __newos__run_time_linker__hh__
 
 
-#include <types.h>
+#include <sys/types.h>
 #include <kernel/user_runtime.h>
 
 

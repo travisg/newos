@@ -2,11 +2,11 @@
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
-#include <types.h>
 #include <stdarg.h>
 #include <string.h>
 #include <ctype.h>
 #include <stdio.h>
+#include <sys/types.h>
 
 #if 0
 static unsigned long simple_strtoul(const char *cp,char **endp,unsigned int base)

@@ -52,8 +52,7 @@ static char sccsid[] = "@(#)merge.c	8.2 (Berkeley) 2/14/94";
  * (The default is pairwise merging.)
  */
 
-//#include <sys/types.h>
-#include <types.h>
+#include <sys/types.h>
 
 #include <errno.h>
 #include <stdlib.h>

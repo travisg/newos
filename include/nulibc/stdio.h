@@ -8,7 +8,7 @@
 #define __newos__nulibc_stdio__hh__
 
 
-#include <types.h>
+#include <newos/types.h>
 #include <nulibc/sys/cdefs.h>
 #include <nulibc/stdarg.h>
 

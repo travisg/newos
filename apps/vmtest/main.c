@@ -2,11 +2,11 @@
 ** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
-#include <types.h>
 #include <string.h>
 #include <stdio.h>
-#include <newos/errors.h>
+#include <sys/types.h>
 #include <sys/syscalls.h>
+#include <newos/errors.h>
 
 int main(void)
 {

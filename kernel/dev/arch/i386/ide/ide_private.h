@@ -7,7 +7,7 @@
 #ifndef __IDE_PRIVATE_H__
 #define	__IDE_PRIVATE_H__
 
-#include <types.h>
+#include <newos/types.h>
 #include "partition.h"
 
 typedef struct

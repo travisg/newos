@@ -3,6 +3,7 @@
 ** Distributed under the terms of the NewOS License.
 */
 #include <string.h>
+#include <sys/types.h>
 
 size_t
 strspn(char const *s, char const *accept)

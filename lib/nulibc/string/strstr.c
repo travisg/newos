@@ -3,6 +3,7 @@
 ** Distributed under the terms of the NewOS License.
 */
 #include <string.h>
+#include <sys/types.h>
 
 char *
 strstr(char const *s1, char const *s2)

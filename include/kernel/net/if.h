@@ -5,7 +5,7 @@
 #ifndef _NEWOS_KERNEL_NET_IF_H
 #define _NEWOS_KERNEL_NET_IF_H
 
-#include <types.h>
+#include <newos/types.h>
 #include <kernel/cbuf.h>
 #include <kernel/queue.h>
 #include <kernel/lock.h>

@@ -51,8 +51,7 @@ static char sccsid[] = "@(#)radixsort.c	8.2 (Berkeley) 4/28/95";
  * "Engineering Radix Sort".
  */
 
-//#include <sys/types.h>
-#include <types.h>
+#include <sys/types.h>
 #include <stdlib.h>
 #include <errno.h>
 

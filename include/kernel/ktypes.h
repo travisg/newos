@@ -5,7 +5,7 @@
 #ifndef _KERNEL_KTYPES_H
 #define _KERNEL_KTYPES_H
 
-#include <types.h>
+#include <newos/types.h>
 #include <kernel/arch/ktypes.h>
 
 typedef int thread_id;

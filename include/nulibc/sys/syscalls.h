@@ -5,8 +5,8 @@
 #ifndef _LIBSYS_SYSCALLS_H
 #define _LIBSYS_SYSCALLS_H
 
-#include <types.h>
 #include <kernel/ktypes.h>
+#include <newos/types.h>
 #include <newos/defines.h>
 #include <nulibc/sys/resource.h>
 

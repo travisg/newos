@@ -2,8 +2,8 @@
 ** Copyright 2001, Manuel J. Petit. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
-#include <types.h>
 #include <string.h>
+#include <sys/types.h>
 
 void *
 memchr(void const *buf, int c, size_t len)

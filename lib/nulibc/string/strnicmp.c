@@ -4,6 +4,7 @@
 */
 #include <string.h>
 #include <ctype.h>
+#include <sys/types.h>
 
 int
 strnicmp(char const *s1, char const *s2, size_t len)

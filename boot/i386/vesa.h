@@ -5,7 +5,7 @@
 #ifndef _STAGE2_VESA_H
 #define _STAGE2_VESA_H
 
-#include <types.h>
+#include <newos/types.h>
 
 struct VBEInfoBlock {
 	char   signature[4]; // should be 'VESA'

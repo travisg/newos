@@ -8,7 +8,7 @@
 #define __newos__nulibc_unistd__hh__
 
 
-#include <types.h>
+#include <newos/types.h>
 
 
 #ifdef __cplusplus

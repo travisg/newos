@@ -2,7 +2,7 @@
 ** Copyright 2001, Dan Sinclair. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
-#include <string.h>
+#include <sys/types.h>
 #include <newos/errors.h>
 
 char const *
