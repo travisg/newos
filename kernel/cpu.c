@@ -4,6 +4,7 @@
 */
 #include <kernel/kernel.h>
 #include <kernel/cpu.h>
+#include <kernel/vm.h>
 #include <kernel/arch/cpu.h>
 #include <boot/stage2.h>
 
@@ -27,5 +28,131 @@ int cpu_init(kernel_args *ka)
 int cpu_preboot_init(kernel_args *ka)
 {
 	return arch_cpu_preboot_init(ka);
+}
+
+int user_atomic_add(int *uval, int incr)
+{
+	int val;
+	int rc;
+	int ret;
+
+	if((addr)uval >= KERNEL_BASE && (addr)uval <= KERNEL_TOP)
+		goto error;
+
+	if(user_memcpy(&val, uval, sizeof(val)) < 0) 
+		goto error;
+
+	ret = val;
+	val += incr;
+
+	if(user_memcpy(uval, &val, sizeof(val)) < 0)
+		goto error;
+
+	return ret;
+
+error:
+	// XXX kill the app
+	return -1;
+}
+
+int user_atomic_and(int *uval, int incr)
+{
+	int val;
+	int rc;
+	int ret;
+
+	if((addr)uval >= KERNEL_BASE && (addr)uval <= KERNEL_TOP)
+		goto error;
+
+	if(user_memcpy(&val, uval, sizeof(val)) < 0) 
+		goto error;
+
+	ret = val;
+	val &= incr;
+
+	if(user_memcpy(uval, &val, sizeof(val)) < 0)
+		goto error;
+
+	return ret;
+
+error:
+	// XXX kill the app
+	return -1;
+}
+
+int user_atomic_or(int *uval, int incr)
+{
+	int val;
+	int rc;
+	int ret;
+
+	if((addr)uval >= KERNEL_BASE && (addr)uval <= KERNEL_TOP)
+		goto error;
+
+	if(user_memcpy(&val, uval, sizeof(val)) < 0) 
+		goto error;
+
+	ret = val;
+	val |= incr;
+
+	if(user_memcpy(uval, &val, sizeof(val)) < 0)
+		goto error;
+
+	return ret;
+
+error:
+	// XXX kill the app
+	return -1;
+}
+
+int user_atomic_set(int *uval, int set_to)
+{
+	int val;
+	int rc;
+	int ret;
+
+	if((addr)uval >= KERNEL_BASE && (addr)uval <= KERNEL_TOP)
+		goto error;
+
+	if(user_memcpy(&val, uval, sizeof(val)) < 0) 
+		goto error;
+
+	ret = val;
+	val = set_to;
+
+	if(user_memcpy(uval, &val, sizeof(val)) < 0)
+		goto error;
+
+	return ret;
+
+error:
+	// XXX kill the app
+	return -1;
+}
+
+int user_test_and_set(int *uval, int set_to, int test_val)
+{
+	int val;
+	int rc;
+	int ret;
+
+	if((addr)uval >= KERNEL_BASE && (addr)uval <= KERNEL_TOP)
+		goto error;
+
+	if(user_memcpy(&val, uval, sizeof(val)) < 0) 
+		goto error;
+
+	ret = val;
+	if(val == test_val) {
+		val = set_to;
+		if(user_memcpy(uval, &val, sizeof(val)) < 0)
+			goto error;
+	}
+
+	return ret;
+
+error:
+	// XXX kill the app
+	return -1;
 }
 

@@ -115,7 +115,7 @@ static int main2(void *unused)
 	// bootstrap all the filesystems
 	vfs_bootstrap_all_filesystems();
 
-	net_init(&ka);
+//	net_init(&ka);
 	dev_init(&ka);
 	bus_init(&ka);
 	devs_init(&ka);

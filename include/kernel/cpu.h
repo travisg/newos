@@ -31,5 +31,12 @@ int cpu_init(kernel_args *ka);
 cpu_ent *get_cpu_struct(void);
 extern inline cpu_ent *get_cpu_struct(void) { return &cpu[smp_get_current_cpu()]; }
 
+/* manual implementations of the atomic_* ops */
+int user_atomic_add(int *val, int incr);
+int user_atomic_and(int *val, int incr);
+int user_atomic_or(int *val, int incr);
+int user_atomic_set(int *val, int set_to);
+int user_test_and_set(int *val, int set_to, int test_val);
+
 #endif
 

@@ -43,13 +43,12 @@ $(STAGE1).bin: $(STAGE1)
 
 BOOTBLOCK := $(BOOT_SRCDIR)/bootblock.bin
 CONFIG_FILE := $(BOOT_SRCDIR)/config.ini
+SEMIFINAL := $(BOOT_TARGETDIR)/final.bootdir
 
 $(FINAL): $(SEMIFINAL) $(STAGE1).bin
 	cat $(STAGE1).bin $(SEMIFINAL) > $(FINAL)
 
-$(FINAL): $(STAGE2) $(ALL) $(TOOLS) $(CONFIG_FILE) $(BOOTBLOCK)
-	#$(BOOTMAKER) --strip-debug --strip-binary $(STRIP) $(CONFIG_FILE) -o $(FINAL).pre
-	#$(MAKEFLOP) $(BOOTBLOCK) $(FINAL).pre $(FINAL)
-	@rm -f $(FINAL).pre
+$(SEMIFINAL): $(STAGE2) $(ALL) $(TOOLS) $(CONFIG_FILE)
+	$(BOOTMAKER) --strip-debug --strip-binary $(STRIP) $(CONFIG_FILE) -o $@
 
 

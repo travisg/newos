@@ -10,6 +10,7 @@
 #include <kernel/thread.h>
 #include <kernel/sem.h>
 #include <kernel/port.h>
+#include <kernel/cpu.h>
 #include <kernel/arch/cpu.h>
 #include <nulibc/sys/resource.h>
 
@@ -241,6 +242,21 @@ int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_re
 			break;
 		case SYSCALL_SETRLIMIT:
 			*call_ret = user_setrlimit((int)arg0, (const struct rlimit *)arg1);
+			break;
+		case SYSCALL_ATOMIC_ADD:
+			*call_ret = user_atomic_add((int *)arg0, (int)arg1);
+			break;
+		case SYSCALL_ATOMIC_AND:
+			*call_ret = user_atomic_and((int *)arg0, (int)arg1);
+			break;
+		case SYSCALL_ATOMIC_OR:
+			*call_ret = user_atomic_or((int *)arg0, (int)arg1);
+			break;
+		case SYSCALL_ATOMIC_SET:
+			*call_ret = user_atomic_set((int *)arg0, (int)arg1);
+			break;
+		case SYSCALL_TEST_AND_SET:
+			*call_ret = user_test_and_set((int *)arg0, (int)arg1, (int)arg2);
 			break;
 		default:
 			*call_ret = -1;

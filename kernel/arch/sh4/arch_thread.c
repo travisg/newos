@@ -10,6 +10,8 @@
 #include <kernel/arch/cpu.h>
 #include <nulibc/string.h>
 
+static struct thread *curr_thread = NULL;
+
 int arch_proc_init_proc_struct(struct proc *p, bool kernel)
 {
 #if 0
@@ -102,7 +104,7 @@ void arch_thread_dump_info(void *info)
 	dprintf("\tsp: 0x%x\n", at->sp);
 }
 
-void arch_thread_enter_uspace(addr entry, addr ustack_top)
+void arch_thread_enter_uspace(addr entry, void *args, addr ustack_top)
 {
     dprintf("arch_thread_entry_uspace: entry 0x%x, ustack_top 0x%x\n",
 	        entry, ustack_top);
@@ -111,12 +113,22 @@ void arch_thread_enter_uspace(addr entry, addr ustack_top)
 
     sh4_set_kstack(thread_get_current_thread()->kernel_stack_base + KSTACK_SIZE);
 
-    sh4_enter_uspace(entry, ustack_top - 4);
+    sh4_enter_uspace(entry, args, ustack_top - 4);
 	// never get to here
 }
 
 void arch_thread_switch_kstack_and_call(struct thread *t, addr new_kstack, void (*func)(void *), void *arg)
 {
 	sh4_switch_stack_and_call(new_kstack, func, arg);
+}
+
+struct thread *arch_thread_get_current_thread(void)
+{
+	return curr_thread;
+}
+
+void arch_thread_set_current_thread(struct thread *t)
+{
+	curr_thread = t;
 }
 

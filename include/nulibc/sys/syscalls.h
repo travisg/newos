@@ -173,6 +173,13 @@ int			sys_port_set_owner(port_id port, proc_id proc);
 int			sys_port_write(port_id port, int32 msg_code, void *msg_buffer, size_t buffer_size);
 int			sys_port_write_etc(port_id port, int32 msg_code, void *msg_buffer, size_t buffer_size, uint32 flags, bigtime_t timeout);
 
+/* atomic_* ops (needed for cpus that dont support them directly) */
+int sys_atomic_add(int *val, int incr);
+int sys_atomic_and(int *val, int incr);
+int sys_atomic_or(int *val, int incr);
+int sys_atomic_set(int *val, int set_to);
+int sys_test_and_set(int *val, int set_to, int test_val);
+
 #ifdef __cplusplus
 }
 #endif

@@ -1,5 +1,5 @@
 # arch SH4 makefile
-KERNEL_ARCH_SH4_DIR := arch/SH4
+KERNEL_ARCH_SH4_DIR := arch/sh4
 
 MY_OBJS += \
 	$(KERNEL_ARCH_SH4_DIR)/arch_asm.o \

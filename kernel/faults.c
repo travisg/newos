@@ -52,9 +52,9 @@ int fpu_fault(int fpu_fault)
 	return INT_NO_RESCHEDULE;
 }
 
-int fpu_disable_fault(int errorcode)
+int fpu_disable_fault(void)
 {
-	panic("FPU DISABLE FAULT: errcode 0x%x, Killing system.\n", errorcode);
+	panic("FPU DISABLE FAULT: Killing system.\n");
 
 	return INT_NO_RESCHEDULE;
 }

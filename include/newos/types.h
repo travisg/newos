@@ -26,6 +26,9 @@
 #ifdef ARCH_ppc
 #include <arch/ppc/types.h>
 #endif
+#ifdef ARCH_m68k
+#include <arch/m68k/types.h>
+#endif
 
 #ifndef NULL
 #define NULL 0

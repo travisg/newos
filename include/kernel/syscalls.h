@@ -70,7 +70,13 @@ enum {
 	SYSCALL_FDDUP2,
 	SYSCALL_GET_PROC_TABLE,
 	SYSCALL_GETRLIMIT,
-	SYSCALL_SETRLIMIT
+	SYSCALL_SETRLIMIT,
+	SYSCALL_ATOMIC_ADD,
+	SYSCALL_ATOMIC_AND,
+	SYSCALL_ATOMIC_OR,
+	SYSCALL_ATOMIC_SET,
+	SYSCALL_TEST_AND_SET
+	/* 70 */
 };
 
 int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_ret);

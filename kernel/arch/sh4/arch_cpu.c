@@ -9,6 +9,11 @@
 
 static vcpu_struct *vcpu;
 
+int arch_cpu_preboot_init(kernel_args *ka)
+{
+	return 0;
+}
+
 int arch_cpu_init(kernel_args *ka)
 {
 	vcpu = ka->arch_args.vcpu;

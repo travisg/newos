@@ -399,6 +399,7 @@ int main(int argc, char **argv)
 		sys_thread_resume_thread(id);
 
 		getchar();
+		printf("passed the test\n");
 	}
 #endif
 

@@ -1,11 +1,11 @@
 OUTPUT_FORMAT("elf32-shl", "elf32-shl", "elf32-shl")
 OUTPUT_ARCH(sh)
 
-ENTRY(_RLD_STARTUP)
+ENTRY(__start)
 SEARCH_DIR("libgcc");
 SECTIONS
 {
-	. = 0x00100000 + SIZEOF_HEADERS;
+	. = 0xc0000000 + SIZEOF_HEADERS;
 
 	.interp : { *(.interp) }
 	.hash : { *(.hash) }
@@ -35,29 +35,35 @@ SECTIONS
 	.plt : { *(.plt) }
 
 	/* text/read-only data */
-	.text :	{ *(.text .gnu.linkonce.t.*) }
+	.text :	{ *(.text .gnu.linkonce.t.*) } =0x9090
 
-	.rodata : { *(.rodata) }
+  	.rodata :
+	{ 
+ 		*(.rodata)
+ 		. = ALIGN(0x1000);
+ 	} =0x9000
 
 	/* writable data  */
   	. = ALIGN(0x1000) + (. & (0x1000 - 1));
-	__data_start = .;
-	PROVIDE(_data_start = .);
+	___data_start = .;
 	.data : { *(.data .gnu.linkonce.d.*) }
 
-	__ctor_list = .;
-	PROVIDE (___ctor_list = .);
+	___ctor_list = .;
 	.ctors : { *(.ctors) }
-	PROVIDE (___ctor_end = .);
-
-
+	___ctor_end = .;
+	___dtor_list = .;
+	.dtors : { *(.dtors) }
+	___dtor_end = .;
+	.got : { *(.got.plt) *(.got) }
+	.dynamic : { *(.dynamic) }
+	
 	/* unintialized data (in same segment as writable data) */
-	PROVIDE (__bss_start = .);
+	___bss_start = .;
 	.bss : { *(.bss) }
 
 	. = ALIGN(0x1000);
-	PROVIDE (_end = .);
+	_end = . ;
 
 	/* Strip unnecessary stuff */
-	/DISCARD/ : { *(.comment .note .eh_frame .dtors) }
+	/DISCARD/ : { *(.comment .note .eh_frame) }
 }

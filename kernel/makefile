@@ -55,7 +55,7 @@ $(LINKHACK).o: $(KERNEL_DIR)/linkhack.c
 	$(CC) $(GLOBAL_CFLAGS) -c $< -o $@
 
 $(LINKHACK).so: $(LINKHACK).o
-	$(LD) --shared -Bdynamic $< -o $@
+	$(LD) $(GLOBAL_LDFLAGS) --shared -Bdynamic $< -o $@
 
 endif
 

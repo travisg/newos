@@ -14,6 +14,10 @@ FUNCTION(reboot):
 	jmp		@r0
 	nop
 
+FUNCTION(dbg_save_registers):
+	rts
+	nop
+
 .align 2
 reboot_vector: .long 0xa0000000
 disable_exceptions_addr:	.long	_disable_exceptions
@@ -294,10 +298,11 @@ FUNCTION(sh4_switch_stack_and_call):
 	jsr		@r5
 	mov		r6,r4
 
-// void sh4_enter_uspace(addr entry, addr ustack_top);
+// void sh4_enter_uspace(addr entry, void *args, addr ustack_top);
 FUNCTION(sh4_enter_uspace):
 	ldc		r4,spc		// load the program counter it will switch to
-	mov		r5,r15		// restore the user stack
+	mov		r5,r4		// load the args
+	mov		r6,r15		// restore the user stack
 	mov.l	uspace_sr,r0
 	ldc		r0,ssr
 	rte
