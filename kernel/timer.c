@@ -171,10 +171,15 @@ int timer_cancel_event(struct timer_event *event)
 
 	state = int_disable_interrupts();
 	curr_cpu = smp_get_current_cpu();
-	acquire_spinlock(&timer_spinlock[curr_cpu]);
 
 	// walk through all of the cpu's timer queues
+	//
+	// XXXfreston, probably we should start by peeking our
+	//             own queue, aiming for a cheap match,
+	//             rather than start harassing other cpus.
+	//
 	for(cpu = 0; cpu < num_cpus; cpu++) {
+		acquire_spinlock(&timer_spinlock[cpu]);
 		e = events[cpu];
 		while(e != NULL) {
 			if(e == event) {
@@ -196,18 +201,21 @@ int timer_cancel_event(struct timer_event *event)
 			last = e;
 			e = e->next;
 		}
+		release_spinlock(&timer_spinlock[cpu]);
 	}
 done:
 
 	if(reset_timer == true) {
-		if(events[cpu] == NULL) {
+		if(events[curr_cpu] == NULL) {
 			arch_timer_clear_hardware_timer();
 		} else {
-			arch_timer_set_hardware_timer(events[cpu]->sched_time - system_time());
+			arch_timer_set_hardware_timer(events[curr_cpu]->sched_time - system_time());
 		}
 	}
 
-	release_spinlock(&timer_spinlock[curr_cpu]);
+	if(foundit) {
+		release_spinlock(&timer_spinlock[cpu]);
+	}
 	int_restore_interrupts(state);
 
 	return (foundit ? 0 : ERR_GENERAL);
