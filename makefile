@@ -124,6 +124,7 @@ CLEAN += toolsclean bootclean
 
 clean: $(CLEAN)
 	rm -f $(KERNEL) $(FINAL)
+	rm -f final.$(ARCH) system.$(ARCH)
 
 depsclean:
 	rm -f $(DEPS)
