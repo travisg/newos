@@ -89,12 +89,15 @@ void arch_cpu_global_TLB_invalidate(void)
 	asm volatile("sync");
 }
 
+#if 0
+// now implemented in kernel/time.c
 long long system_time(void)
 {
 	bigtime_t time_base = get_time_base();
 
 	return (time_base * 1000000) / ((66*1000*1000) / 4); // XXX remove hard coded
 }
+#endif
 
 int arch_cpu_user_memcpy(void *to, const void *from, size_t size, addr_t *fault_handler)
 {

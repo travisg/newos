@@ -10,8 +10,9 @@
 #include <kernel/arch/timer.h>
 
 static bigtime_t tick_rate;
+static uint32 periodic_tick_val;
 
-void arch_timer_set_hardware_timer(bigtime_t timeout)
+void arch_timer_set_hardware_timer(bigtime_t timeout, int type)
 {
 	bigtime_t new_val_64;
 
@@ -21,6 +22,13 @@ void arch_timer_set_hardware_timer(bigtime_t timeout)
 	new_val_64 = (timeout * tick_rate) / 1000000;
 
 	asm("mtdec	%0" :: "r"((uint32)new_val_64));
+	
+	periodic_tick_val = new_val_64;
+}
+
+void ppc_timer_reset(void)
+{
+	asm("mtdec	%0" :: "r"((uint32)periodic_tick_val));
 }
 
 void arch_timer_clear_hardware_timer()

@@ -5,6 +5,8 @@
 #include <kernel/kernel.h>
 #include <kernel/debug.h>
 #include <kernel/thread.h>
+#include <kernel/vm.h>
+#include <kernel/arch/vm_translation_map.h>
 #include <boot/stage2.h>
 #include <string.h>
 
