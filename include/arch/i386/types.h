@@ -1,10 +1,10 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #ifndef _I386_TYPES_H
 #define _I386_TYPES_H
- 
+
 #ifndef WIN32
 typedef unsigned long long uint64;
 typedef long long           int64;
@@ -12,11 +12,7 @@ typedef long long           int64;
 typedef unsigned __int64   uint64;
 typedef __int64             int64;
 #endif
-#ifdef __BEOS__ //XXX this fixes the size_t definition problem, as gcc on BeOS
-typedef unsigned long      uint32; // wants size_t to be unsigned long iso int
-#else
 typedef unsigned int       uint32;
-#endif
 typedef int                 int32;
 typedef unsigned short     uint16;
 typedef short               int16;
