@@ -27,6 +27,7 @@ struct command cmds[] = {
 	{"cat", &cmd_cat},
 	{"cd", &cmd_cd},
 	{"pwd", &cmd_pwd},
+	{"ps", &cmd_ps},
 	{"help", &cmd_help},
 	{NULL, &cmd_exec},
 	{NULL, NULL}
@@ -269,7 +270,7 @@ static int shell_parse(char *buf, int len)
 			launch(cmds[i].cmd_handler, argc, argv, redirect_in, redirect_out);
 			found_command = true;
 			break;
-			
+
 		}
 	}
 	if(found_command == false) {

@@ -98,6 +98,13 @@ struct thread_queue {
 	struct thread *tail;
 };
 
+struct proc_info {
+	proc_id id;
+	char name[SYS_MAX_OS_NAME_LEN];
+	int state;
+	int num_threads;
+};
+
 void thread_enqueue(struct thread *t, struct thread_queue *q);
 struct thread *thread_lookat_queue(struct thread_queue *q);
 struct thread *thread_dequeue(struct thread_queue *q);
@@ -141,6 +148,7 @@ proc_id user_proc_create_proc(const char *path, const char *name, char **args, i
 int user_proc_wait_on_proc(proc_id id, int *uretcode);
 thread_id user_thread_create_user_thread(char *uname, proc_id pid, addr entry, void *args);
 int user_thread_snooze(time_t time);
+int user_proc_get_table(struct proc_info *pi, size_t len);
 
 #if 1
 // XXX remove later

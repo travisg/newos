@@ -61,6 +61,13 @@ typedef struct port_info {
 	int32 total_count;
 } port_info;
 
+struct proc_info {
+	proc_id id;
+	char name[SYS_MAX_OS_NAME_LEN];
+	int state;
+	int num_threads;
+};
+
 // args for the create_area funcs
 enum {
 	REGION_ADDR_ANY_ADDRESS = 0,
@@ -126,6 +133,7 @@ int sys_sem_get_sem_info(sem_id id, struct sem_info *info);
 int sys_sem_get_next_sem_info(proc_id proc, uint32 *cookie, struct sem_info *info);
 int sys_set_sem_owner(sem_id id, proc_id proc);
 
+int sys_proc_get_table(struct proc_info *pi, size_t len);
 thread_id sys_get_current_thread_id();
 void sys_exit(int retcode);
 proc_id sys_proc_create_proc(const char *path, const char *name, char **args, int argc, int priority);

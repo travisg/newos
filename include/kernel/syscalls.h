@@ -70,6 +70,7 @@ enum {
 	SYSCALL_FDDUP2,
 	SYSCALL_PROC_GET_ARGUMENT,
 	SYSCALL_PROC_GET_ARG_COUNT,
+	SYSCALL_GET_PROC_TABLE
 };
 
 int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_ret);

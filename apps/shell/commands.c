@@ -4,6 +4,7 @@
 */
 #include <libsys/syscalls.h>
 #include <libsys/stdio.h>
+#include <libsys/malloc.h>
 #include <libc/string.h>
 #include <libc/ctype.h>
 
@@ -262,6 +263,28 @@ err_ls:
 	return 0;
 }
 
+int cmd_ps(int argc, char *argv[])
+{
+	char *proc_state[3] = { "normal","birth","death" };
+	const int maxprocess = 1024;
+	struct proc_info *pi = (struct proc_info *) malloc(sizeof(struct proc_info) * maxprocess);
+
+	int pidx;
+	int procs=sys_proc_get_table(pi, sizeof(struct proc_info) * maxprocess);
+	if (procs > 0) {
+		printf("process list\n\n");
+		printf("id\tstate\tthreads\tname\n");
+		for (pidx=0; pidx<procs; pidx++) {
+			printf("%d\t%s\t%d\t%s\n",pi->id,proc_state[pi->state],pi->num_threads,pi->name);
+			pi=pi+sizeof(struct proc_info);
+		}
+		printf("\n%d processes listed\n", procs);
+	} else {
+		printf("ps: sys_get_proc_table() returned error %s!\n",strerror(procs));
+	}
+	return 0;
+}
+
 int cmd_help(int argc, char *argv[])
 {
 	printf("command list:\n\n");
@@ -275,6 +298,7 @@ int cmd_help(int argc, char *argv[])
 	printf("cat <file> : dumps the file to stdout\n");
 	printf("mount <path> <device> <fsname> : tries to mount <device> at <path>\n");
 	printf("unmount <path> : tries to unmount at <path>\n");
+	printf("ps : process list\n");
 
 	return 0;
 }

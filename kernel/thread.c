@@ -1826,6 +1826,43 @@ char **user_proc_get_arguments(void)
 	return args;
 }
 
+// used by PS command any anthing else interested in a process list
+int user_proc_get_table(struct proc_info *pbuf, size_t len)
+{
+	struct proc *p;
+	struct hash_iterator i;
+	struct proc_info pi;
+	int state;
+	int count=0;
+	int max = (len / sizeof(struct proc_info));
+
+	if((addr)pbuf >= KERNEL_BASE && (addr)pbuf <= KERNEL_TOP)
+		return ERR_VM_BAD_USER_MEMORY;
+
+	state = int_disable_interrupts();
+	GRAB_PROC_LOCK();
+
+	hash_open(proc_hash, &i);
+	while(((p = hash_next(proc_hash, &i)) != NULL) && (count < max)) {
+		pi.id = p->id;
+		strcpy(pi.name, p->name);
+		pi.state = p->state;
+		pi.num_threads = p->num_threads;
+		count++;
+		user_memcpy(pbuf, &pi, sizeof(struct proc_info));
+		pbuf=pbuf + sizeof(struct proc_info);
+	}
+	hash_close(proc_hash, &i, false);
+
+	RELEASE_PROC_LOCK();
+	int_restore_interrupts(state);
+
+	if (count < max)
+		return count;
+	else
+		return ERR_NO_MEMORY;
+}
+
 
 int proc_kill_proc(proc_id id)
 {
