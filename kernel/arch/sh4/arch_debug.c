@@ -6,3 +6,7 @@
 #include <kernel/debug.h>
 #include <kernel/arch/debug.h>
 
+void dbg_make_register_file(unsigned int *file, const struct iframe *frame)
+{
+	// XXX gdb stub for SH4 obviously not implemented.
+}

@@ -5,6 +5,7 @@
 #include <string.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <kernel/vm.h>
 #include <kernel/smp.h>
 #include <kernel/debug.h>
@@ -192,7 +193,7 @@ gdb_verify_checksum(void)
  */
 static
 int
-gdb_parse_command(void)
+gdb_parse_command(unsigned int *regfile)
 {
 	int retval;
 
@@ -284,8 +285,7 @@ gdb_parse_command(void)
 				 * reason (unknown to me) gdb wants the register
 				 * dump in *big endian* format.
 				 */
-				cpu= smp_get_current_cpu();
-				gdb_regreply(dbg_register_file[cpu], 14);
+				gdb_regreply(regfile, GDB_REGISTER_FILE_COUNT);
 			} break;
 
 		case 'm':
@@ -363,8 +363,10 @@ gdb_parse_command(void)
  */
 static
 int
-gdb_init_handler(int input)
+gdb_init_handler(int input, unsigned int *regfile)
 {
+	(void)(regfile);
+
 	switch(input) {
 		case '$':
 			memset(cmd, 0, sizeof(cmd));
@@ -387,8 +389,10 @@ gdb_init_handler(int input)
 
 static
 int
-gdb_cmdread_handler(int input)
+gdb_cmdread_handler(int input, unsigned int *regfile)
 {
+	(void)(regfile);
+
 	switch(input) {
 		case '#':
 			return CKSUM1;
@@ -401,8 +405,10 @@ gdb_cmdread_handler(int input)
 
 static
 int
-gdb_cksum1_handler(int input)
+gdb_cksum1_handler(int input, unsigned int *regfile)
 {
+	(void)(regfile);
+
 	int nibble= parse_nibble(input);
 
 	if(nibble== 0xff) {
@@ -426,8 +432,8 @@ gdb_cksum1_handler(int input)
 
 static
 int
-gdb_cksum2_handler(int input)
-{
+gdb_cksum2_handler(int input, unsigned int *regfile)
+{      
 	int nibble= parse_nibble(input);
 
 	if(nibble== 0xff) {
@@ -446,13 +452,15 @@ gdb_cksum2_handler(int input)
 
 	checksum+= nibble;
 
-	return gdb_parse_command();
+	return gdb_parse_command(regfile);
 }
 
 static
 int
-gdb_waitack_handler(int input)
+gdb_waitack_handler(int input, unsigned int *regfile)
 {
+       	(void)(regfile);
+
 	switch(input) {
 		case '+':
 			return INIT;
@@ -471,9 +479,10 @@ gdb_waitack_handler(int input)
 
 static
 int
-gdb_quit_handler(int input)
+gdb_quit_handler(int input, unsigned int *regfile)
 {
 	(void)(input);
+	(void)(regfile);
 
 	/*
 	 * actually we should never be here
@@ -481,7 +490,7 @@ gdb_quit_handler(int input)
 	return QUIT;
 }
 
-static int (*dispatch_table[GDBSTATES])(int)=
+static int (*dispatch_table[GDBSTATES])(int, unsigned int*)=
 {
 	&gdb_init_handler,
 	&gdb_cmdread_handler,
@@ -493,7 +502,7 @@ static int (*dispatch_table[GDBSTATES])(int)=
 
 static
 int
-gdb_state_dispatch(int curr, int input)
+gdb_state_dispatch(int curr, int input, unsigned int *regfile)
 {
 	if(curr< INIT) {
 		return QUIT;
@@ -502,19 +511,19 @@ gdb_state_dispatch(int curr, int input)
 		return QUIT;
 	}
 
-	return dispatch_table[curr](input);
+	return dispatch_table[curr](input, regfile);
 }
 
 static
 int
-gdb_state_machine(void)
+gdb_state_machine(unsigned int *regfile)
 {
 	int state= INIT;
 	int c;
 
 	while(state!= QUIT) {
 		c= arch_dbg_con_read();
-		state= gdb_state_dispatch(state, c);
+		state= gdb_state_dispatch(state, c, regfile);
 	}
 
 	return 0;
@@ -523,8 +532,22 @@ gdb_state_machine(void)
 void
 cmd_gdb(int argc, char **argv)
 {
-	(void)(argc);
-	(void)(argv);
+	struct iframe *interrupt_frame = NULL;
+	unsigned int local_regfile[GDB_REGISTER_FILE_COUNT];
+	if (argc > 1)
+	{
+		// we want to work under a particular iframe.
+		if(strlen(argv[1]) > 2 && argv[1][0] == '0' && argv[1][1] == 'x') 
+			interrupt_frame = (struct iframe*)atoul(argv[1]);
+		else
+			dprintf("warning: iframe used is not valid, using local stack.\n");
+	}
+	if (interrupt_frame)
+	{
+		dbg_make_register_file(local_regfile, interrupt_frame);
+	} else {
+		memcpy(local_regfile, interrupt_frame, sizeof(unsigned int) * GDB_REGISTER_FILE_COUNT);
+	}
 
-	gdb_state_machine();
+	gdb_state_machine(local_regfile);
 }

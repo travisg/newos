@@ -21,7 +21,7 @@
 #include <ctype.h>
 
 
-int dbg_register_file[2][14]; /* XXXmpetit -- must be made generic */
+int dbg_register_file[GDB_REGISTER_FILE_COUNT]; /* XXXmpetit -- must be made generic */
 
 
 static bool serial_debug_on = false;
@@ -224,7 +224,7 @@ static void kernel_debugger_loop()
 
 void kernel_debugger()
 {
-	dbg_save_registers(&(dbg_register_file[smp_get_current_cpu()][0]));
+	dbg_save_registers(dbg_register_file);
 
 	kernel_debugger_loop();
 }
@@ -358,7 +358,7 @@ int dbg_init2(kernel_args *ka)
 {
 	dbg_add_command(&cmd_help, "help", "List all debugger commands");
 	dbg_add_command(&cmd_reboot, "reboot", "Reboot");
-	dbg_add_command(&cmd_gdb, "gdb", "Connect to remote gdb");
+	dbg_add_command(&cmd_gdb, "gdb", "Connect to remote gdb. May supply an optional iframe.");
 
 	arch_dbg_init(ka);
 

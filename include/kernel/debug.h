@@ -9,8 +9,7 @@
 #include <boot/stage2.h>
 #include <sys/cdefs.h>
 
-extern int dbg_register_file[2][14]; /* XXXmpetit -- must be made generic */
-
+extern int dbg_register_file[GDB_REGISTER_FILE_COUNT];
 
 int dbg_init(kernel_args *ka);
 int dbg_init2(kernel_args *ka);
@@ -23,7 +22,9 @@ int panic(const char *fmt, ...) __PRINTFLIKE(1,2);
 void kernel_debugger(void);
 int dbg_add_command(void (*func)(int, char **), const char *cmd, const char *desc);
 
-extern void dbg_save_registers(int *);	/* arch provided */
+/* arch provided */
+extern void dbg_save_registers(int *);	
+extern void dbg_make_register_file(unsigned int *file, const struct iframe *frame);
 
 #if DEBUG
 #define ASSERT(x) \

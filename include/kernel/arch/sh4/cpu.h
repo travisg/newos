@@ -18,5 +18,7 @@ void sh4_set_user_pgdir(addr pgdir);
 void sh4_invl_page(addr va);
 void sh4_switch_stack_and_call(addr stack, void (*func)(void *), void *arg);
 
+#define GDB_REGISTER_FILE_COUNT 1 // placeholder.
+
 #endif
 

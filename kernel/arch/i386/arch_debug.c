@@ -82,3 +82,20 @@ int arch_dbg_init(kernel_args *ka)
 	return NO_ERROR;
 }
 
+void dbg_make_register_file(unsigned int *file, const struct iframe * frame)
+{
+	file[0] = frame->eax;
+	file[1] = frame->ebx;
+	file[2] = frame->ecx;
+	file[3] = frame->edx;
+	file[4] = frame->esp;
+	file[5] = frame->ebp;
+	file[6] = frame->esi;
+	file[7] = frame->edi;
+	file[8] = frame->eip;
+	file[9] = frame->flags;
+	file[10] = frame->cs;
+	file[11] = frame->user_ss;
+	file[12] = frame->ds;
+	file[13] = frame->es;
+}
