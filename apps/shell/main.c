@@ -28,6 +28,7 @@ struct command cmds[] = {
 	{"cd", &cmd_cd},
 	{"pwd", &cmd_pwd},
 	{"ps", &cmd_ps},
+	{"echo", &cmd_echo},
 	{"help", &cmd_help},
 	{NULL, &cmd_exec},
 	{NULL, NULL}

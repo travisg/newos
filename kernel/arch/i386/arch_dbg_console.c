@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -31,7 +31,7 @@ char arch_dbg_con_read(void)
 {
 	while ((in8(0x3fd) & 1) == 0)
 		;
-		
+
 	return in8(0x3f8);
 }
 
@@ -40,9 +40,9 @@ static void _arch_dbg_con_putch(const char c)
 #if BOCHS_E9_HACK
 	out8(c, 0xe9);
 #else
-	while ((in8(0x3fd) & 0x64) == 0)
+	while ((in8(0x3fd) & 0x20) == 0)
 		;
-		
+
 	out8(c, 0x3f8);
 #endif
 }

@@ -285,6 +285,15 @@ int cmd_ps(int argc, char *argv[])
 	return 0;
 }
 
+int cmd_echo(int argc, char *argv[])
+{
+	int idx;
+	for (idx=1;idx<argc;idx++)
+		printf("%s ",argv[idx]);
+	printf("\n");
+	return 0;
+}
+
 int cmd_help(int argc, char *argv[])
 {
 	printf("command list:\n\n");
@@ -299,6 +308,7 @@ int cmd_help(int argc, char *argv[])
 	printf("mount <path> <device> <fsname> : tries to mount <device> at <path>\n");
 	printf("unmount <path> : tries to unmount at <path>\n");
 	printf("ps : process list\n");
+	printf("echo : echo text to stdio\n");
 
 	return 0;
 }
