@@ -856,7 +856,6 @@ topological_sort(image_t *img, unsigned slot, image_t **init_list)
 	unsigned i;
 
 	img->flags|= RFLAG_SORTED; /* make sure we don't visit this one */
-	slot= 0;
 	for(i= 0; i< img->num_needed; i++) {
 		if(!(img->needed[i]->flags & RFLAG_SORTED)) {
 			slot= topological_sort(img->needed[i], slot, init_list);
