@@ -44,7 +44,7 @@ SECTIONS
  	} =0x9000
 
 	/* writable data  */
-	. = ALIGN(0x1000);
+  	. = ALIGN(0x1000) + (. & (0x1000 - 1));
 	___data_start = .;
 	.data : { *(.data .gnu.linkonce.d.*) }
 
