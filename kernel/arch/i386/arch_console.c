@@ -386,7 +386,7 @@ int arch_con_init(struct kernel_args *ka)
 	gotoxy(0, ka->cons_line);
 
 	// Setup keyboard interrupt
-	set_intr_gate(0x21,&_keyboard_interrupt);
+	int_set_io_interrupt_handler(1,&_keyboard_interrupt);
 /*
 	outb_p(inb_p(0x21)&0xfd,0x21);
 	a=inb_p(0x61);

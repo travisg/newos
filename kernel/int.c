@@ -4,7 +4,17 @@
 #include "int.h"
 #include "debug.h"
 #include "stage2.h"
+#include "vm.h"
 #include "arch_int.h"
+
+#define NUM_IO_HANDLERS 256
+
+struct io_handler {
+	struct io_handler *next;
+	int (*func)(void);
+};
+
+static struct io_handler **io_handlers = NULL;
 
 int int_init(struct kernel_args *ka)
 {
@@ -14,7 +24,54 @@ int int_init(struct kernel_args *ka)
 
 int int_init2(struct kernel_args *ka)
 {
+	io_handlers = (struct io_handler **)kmalloc(sizeof(struct io_handler *) * NUM_IO_HANDLERS);
+	if(io_handlers == NULL)
+		return -1;
+	
+	memset(io_handlers, 0, sizeof(struct io_handler *) * NUM_IO_HANDLERS);
+
 	return arch_int_init2(ka);
+}
+
+int int_set_io_interrupt_handler(int vector, int (*func)(void))
+{
+	struct io_handler *io;
+	
+	// insert this io handler in the chain of interrupt
+	// handlers registered for this io interrupt
+
+	io = (struct io_handler *)kmalloc(sizeof(struct io_handler));
+	if(io == NULL)
+		return -1;
+	io->func = func;
+	io->next = io_handlers[vector];
+	io_handlers[vector] = io;
+
+	arch_int_enable_io_interrupt(vector);
+
+	return 0;
+}
+
+int int_io_interrupt_handler(int vector)
+{
+	int ret = INT_NO_RESCHEDULE;
+
+	if(io_handlers[vector] == NULL) {
+		dprintf("unhandled io interrupt %d\n", vector);
+	} else {
+		struct io_handler *io;
+		int temp_ret;
+		
+		io = io_handlers[vector];
+		while(io != NULL) {
+			temp_ret = io->func();
+			if(temp_ret == INT_RESCHEDULE)
+				ret = INT_RESCHEDULE;
+			io = io->next;
+		}
+	}
+
+	return ret;
 }
 
 #if !_INT_ARCH_INLINE_CODE

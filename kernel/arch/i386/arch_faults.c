@@ -3,6 +3,7 @@
 #include "vm.h"
 #include "debug.h"
 #include "console.h"
+#include "int.h"
 
 #include "arch_cpu.h"
 #include "arch_interrupts.h"
@@ -19,15 +20,16 @@ int arch_faults_init(struct kernel_args *ka)
 	return 0;
 }
 
-void i386_general_protection_fault(int errorcode)
+int i386_general_protection_fault(int errorcode)
 {
-	general_protection_fault(errorcode);
+	return general_protection_fault(errorcode);
 }
 
-void i386_double_fault(int errorcode)
+int i386_double_fault(int errorcode)
 {
 	kprintf("double fault! errorcode = 0x%x\n", errorcode);
 	dprintf("double fault! errorcode = 0x%x\n", errorcode);
 	for(;;);
+	return INT_NO_RESCHEDULE;
 }
 

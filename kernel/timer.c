@@ -1,6 +1,7 @@
 #include "console.h"
 #include "debug.h"
 #include "thread.h"
+#include "int.h"
 
 #include "arch_timer.h"
 
@@ -10,8 +11,8 @@ int timer_init(struct kernel_args *ka)
 	return arch_init_timer(ka);
 }
 
-void timer_interrupt()
+int timer_interrupt()
 {
-	thread_timer_interrupt();	
+	return INT_RESCHEDULE;
 }
 

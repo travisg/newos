@@ -73,6 +73,7 @@ int_bottom:
 .globl _double_fault_int
 .globl _timer_int
 
+#if 0
 _page_fault_int:
 	pusha
 	cld
@@ -119,7 +120,6 @@ _timer_int:
 	popa
 	iret
 
-#if 0
 /* This is the default interrupt "handler" :-) */
 int_msg:
 	.asciz "Unknown extern interrupt 0x%x\n"

@@ -20,8 +20,6 @@ int arch_vm_init2(struct kernel_args *ka)
 {
 	dprintf("arch_vm_init2: entry\n");
 	
-	set_intr_gate(14, &_page_fault_int);
-	
 	// account for BIOS area and mark the pages unusable
 	vm_mark_page_range_inuse(0xa0000 / PAGE_SIZE, (0x100000 - 0xa0000) / PAGE_SIZE);
 
@@ -37,8 +35,8 @@ int map_page_into_kspace(unsigned int paddr, unsigned int kaddr)
 	return pmap_map_page(paddr, kaddr);
 }
 
-void i386_page_fault(int cr2reg, int errorcode)
+int i386_page_fault(int cr2reg, int errorcode)
 {
-	vm_page_fault(cr2reg, errorcode);
+	return vm_page_fault(cr2reg, errorcode);
 }
 

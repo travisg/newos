@@ -4,6 +4,7 @@
 #include "faults.h"
 #include "debug.h"
 #include "stage2.h"
+#include "int.h"
 #include "arch_faults.h"
 
 int faults_init(struct kernel_args *ka)
@@ -13,11 +14,12 @@ int faults_init(struct kernel_args *ka)
 }
 
 
-void general_protection_fault(int errorcode)
+int general_protection_fault(int errorcode)
 {
 	dprintf("GENERAL PROTECTION FAULT: errcode 0x%x. Killing system.\n", errorcode);
 	
 //	cli();
 	for(;;);
+	return INT_NO_RESCHEDULE;
 }
 

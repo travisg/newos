@@ -1,29 +1,12 @@
 #ifndef _INTERRUPTS_H
 #define _INTERRUPTS_H
 
-void _page_fault_int();
-void _general_protection_fault_int();
-void _double_fault_int();
-void _timer_int();
-
-#if 0
-void _default_int0();
-void _default_int1();
-void _default_int2();
-void _default_int3();
-void _default_int4();
-void _default_int5();
-void _default_int6();
-void _default_int7();
-void _default_int8();
-void _default_int9();
-void _default_int10();
-void _default_int11();
-void _default_int12();
-void _default_int13();
-void _default_int14();
-void _default_int15();
-#endif
+void trap0();void trap1();void trap2();void trap3();void trap4();void trap5();
+void trap6();void trap7();void trap8();void trap9();void trap10();void trap11();
+void trap12();void trap13();void trap14();void trap16();void trap17();void trap18();
+void trap32();void trap33();void trap34();void trap35();void trap36();void trap37();
+void trap38();void trap39();void trap40();void trap41();void trap42();void trap43();
+void trap44();void trap45();void trap46();void trap47();
 
 #endif
 

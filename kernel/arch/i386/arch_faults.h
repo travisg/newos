@@ -3,8 +3,8 @@
 
 int arch_faults_init(struct kernel_args *ka);
 
-void i386_general_protection_fault(int errorcode);
-void i386_double_fault(int errorcode);
+int i386_general_protection_fault(int errorcode);
+int i386_double_fault(int errorcode);
 
 #endif
 

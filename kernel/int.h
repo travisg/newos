@@ -5,6 +5,8 @@
 
 int int_init(struct kernel_args *ka);
 int int_init2(struct kernel_args *ka);
+int int_io_interrupt_handler(int vector);
+int int_set_io_interrupt_handler(int vector, int (*func)(void));
 
 #define _INT_ARCH_INLINE_CODE 1
 #if _INT_ARCH_INLINE_CODE
@@ -16,7 +18,13 @@ int int_init2(struct kernel_args *ka);
 void int_enable_interrupts();
 int int_disable_interrupts();
 void int_restore_interrupts(int oldstate);
+int int_set_io_interrupt_handler(int vector);
 #endif
+
+enum {
+	INT_NO_RESCHEDULE,
+	INT_RESCHEDULE
+};
 
 #endif
 

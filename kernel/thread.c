@@ -9,12 +9,13 @@
 #include "arch_thread.h"
 #include "khash.h"
 #include "int.h"
+#include "smp.h"
 #include "arch_cpu.h"
 #include "arch_int.h"
 
 static int next_thread_id = 0;
 
-#define CUR_THREAD cur_thread[arch_get_current_cpu()]
+#define CUR_THREAD cur_thread[smp_get_current_cpu()]
 static struct thread *cur_thread[MAX_CPUS] = { NULL, };
 
 static struct thread *thread_list = NULL;
@@ -153,26 +154,21 @@ int thread_test()
 	return 0;
 }
 
-int thread_timer_interrupt()
+int thread_resched()
 {
-	dprintf("thread_timer_interrupt: entry\n");
-
 	// XXX thread test
 	{
 		struct thread *switch_to;
-		
-		dprintf("CUR_THREAD = 0x%p\n", CUR_THREAD);
 		
 		if(CUR_THREAD == t1) {
 			switch_to = t2;
 		} else {
 			switch_to = t1;
 		}
-		dprintf("switching from thread %d to %d\n",
-			CUR_THREAD->id, switch_to->id);
+//		dprintf("thread_resched: switching from thread %d to %d\n",
+//			CUR_THREAD->id, switch_to->id);
 		CUR_THREAD = switch_to;
 		thread_context_switch(CUR_THREAD, switch_to);
 	}
 	return 0;
 }
-

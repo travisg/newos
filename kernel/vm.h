@@ -31,7 +31,7 @@ enum {
 };
 
 int vm_init(struct kernel_args *ka);
-void vm_page_fault(int address, int errorcode);
+int vm_page_fault(int address, int errorcode);
 int vm_get_free_page(unsigned int *page);
 struct aspace *vm_create_aspace(const char *name, unsigned int base, unsigned int size);
 struct aspace *vm_get_kernel_aspace();

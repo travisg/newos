@@ -17,9 +17,10 @@ struct thread {
 	void *arch_info;
 };
 
-int thread_timer_interrupt();
+int thread_resched();
 int thread_init(struct kernel_args *ka);
 int thread_kthread_exit();
+
 #if 1
 // XXX remove later
 int thread_test();

@@ -4,6 +4,7 @@
 #include "kernel.h"
 #include "debug.h"
 #include "stage2.h"
+#include "int.h"
 
 #include "arch_cpu.h"
 #include "arch_pmap.h"
@@ -575,11 +576,12 @@ static void dump_free_page_table()
 }
 #endif
 
-void vm_page_fault(int address, int errorcode)
+int vm_page_fault(int address, int errorcode)
 {
 	dprintf("PAGE FAULT: address 0x%x. Killing system.\n", address);
 
 //	cli();
 	for(;;);
+	return INT_NO_RESCHEDULE;
 }
 
