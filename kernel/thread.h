@@ -72,8 +72,6 @@ thread_id thread_get_current_thread_id();
 struct thread *thread_get_thread_struct(thread_id id);
 struct thread *thread_get_thread_struct_locked(thread_id id);
 
-struct thread *thread_create_user_thread(char *name, struct proc *p, int priority);
-
 struct proc *proc_get_kernel_proc();
 struct proc *proc_create_user_proc(const char *path, const char *name, int priority);
 

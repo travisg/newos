@@ -208,7 +208,7 @@ struct thread *thread_create_user_thread(char *name, struct proc *p, int priorit
 	vm_create_area(t->proc->kaspace, stack_name, (void **)&stack_addr,
 		AREA_ANY_ADDRESS, KSTACK_SIZE, LOCK_RW|LOCK_KERNEL);
 	t->kernel_stack_area = vm_find_area_by_name(t->proc->kaspace, stack_name);
-	arch_thread_initialize_kthread_stack(t, func, &thread_entry);
+	//arch_thread_initialize_kthread_stack(t, func, &thread_entry);
 
 	sprintf(stack_name, "%s_stack", name);
 	vm_create_area(t->proc->aspace, stack_name, (void **)&stack_addr,
@@ -921,7 +921,7 @@ struct proc *proc_create_user_proc(const char *path, const char *name, int prior
 		return NULL;
 	}	
 	
-	t = create
+//	t = create
 	 
 	dprintf("proc_create_user_proc: loaded elf. entry = 0x%x\n", entry);
 	
