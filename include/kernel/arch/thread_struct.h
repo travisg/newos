@@ -5,7 +5,7 @@
 #ifndef _NEWOS_KERNEL_ARCH_THREAD_STRUCT_H
 #define _NEWOS_KERNEL_ARCH_THREAD_STRUCT_H
 
-#include INC_ARCH(kernel/arch, thread_struct.h)
+#include INC_ARCH(kernel/arch,thread_struct.h)
 
 #endif
 

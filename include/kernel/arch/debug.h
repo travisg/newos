@@ -7,7 +7,7 @@
 
 int arch_dbg_init(kernel_args *ka);
 
-#include INC_ARCH(kernel/arch, debug.h)
+#include INC_ARCH(kernel/arch,debug.h)
 
 #endif
 

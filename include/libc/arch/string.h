@@ -5,7 +5,7 @@
 #ifndef _LIBC_ARCH_STRING_H_
 #define _LIBC_ARCH_STRING_H_
 
-#include INC_ARCH(libc/arch, string.h)
+#include INC_ARCH(libc/arch,string.h)
 
 #endif
 

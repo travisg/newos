@@ -34,7 +34,7 @@ int arch_cpu_user_memset(void *s, char c, size_t count, addr *fault_handler);
 
 void arch_cpu_idle(void);
 
-#include INC_ARCH(kernel/arch, cpu.h)
+#include INC_ARCH(kernel/arch,cpu.h)
 
 #endif
 

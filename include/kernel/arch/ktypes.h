@@ -5,7 +5,7 @@
 #ifndef _NEWOS_KERNEL_ARCH_KTYPES_H
 #define _NEWOS_KERNEL_ARCH_KTYPES_H
 
-#include INC_ARCH(kernel/arch, ktypes.h)
+#include INC_ARCH(kernel/arch,ktypes.h)
 
 #endif
 

@@ -28,6 +28,6 @@
 #define UINT64_MAX  0xffffffffffffffffULL
 #define UINT64_MIN  0
 
-#include INC_ARCH(libc/arch, limits.h)
+#include INC_ARCH(libc/arch,limits.h)
 
 #endif

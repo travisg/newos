@@ -7,7 +7,7 @@
 
 #define INC_ARCH(path, x) <path/__ARCH__/x>
 
-#include INC_ARCH(arch, types.h)
+#include INC_ARCH(arch,types.h)
 
 #ifndef NULL
 #define NULL 0
