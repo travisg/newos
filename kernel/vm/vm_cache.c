@@ -9,6 +9,7 @@
 #include <kernel/heap.h>
 #include <kernel/lock.h>
 #include <kernel/debug.h>
+#include <kernel/lock.h>
 #include <kernel/arch/cpu.h>
 
 vm_cache *vm_cache_create(vm_store *store)
@@ -40,6 +41,7 @@ vm_cache_ref *vm_cache_ref_create(vm_cache *cache)
 	mutex_init(&ref->lock, "cache_ref_mutex");
 	ref->region_list = NULL;
 	ref->ref_count = 0;
+	cache->ref = ref;
 
 	return ref;
 }
@@ -118,4 +120,31 @@ void vm_cache_remove_page(vm_cache_ref *cache_ref, vm_page *page)
 			page->cache_next->cache_prev = page->cache_next;		
 	}
 	page->cache_ref = NULL;
+}
+
+int vm_cache_insert_region(vm_cache_ref *cache_ref, vm_region *region)
+{
+	mutex_lock(&cache_ref->lock);
+
+	region->cache_next = cache_ref->region_list;
+	if(region->cache_next)
+		region->cache_next->cache_prev = region;
+	region->cache_prev = NULL;
+	cache_ref->region_list = region;
+
+	mutex_unlock(&cache_ref->lock);
+}
+
+int vm_cache_remove_region(vm_cache_ref *cache_ref, vm_region *region)
+{
+	mutex_lock(&cache_ref->lock);
+
+	if(region->cache_prev)
+		region->cache_prev->cache_next = region->cache_next;
+	if(region->cache_next)
+		region->cache_next->cache_prev = region->cache_prev;
+	if(cache_ref->region_list == region)
+		cache_ref->region_list = region->cache_next;
+
+	mutex_unlock(&cache_ref->lock);
 }

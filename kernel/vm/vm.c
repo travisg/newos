@@ -8,6 +8,7 @@
 #include <kernel/vm_page.h>
 #include <kernel/vm_cache.h>
 #include <kernel/vm_store_anonymous_noswap.h>
+#include <kernel/vm_store_device.h>
 #include <kernel/heap.h>
 #include <kernel/debug.h>
 #include <kernel/console.h>
@@ -297,21 +298,26 @@ vm_region *_vm_create_region(vm_address_space *aspace, char *name, void **addres
 	return region;
 }
 
-static region_id _vm_create_anonymous_region(vm_address_space *aspace, char *name, void **address, int addr_type,
-	addr size, int wiring, int lock, addr phys_addr)
+region_id vm_create_anonymous_region(aspace_id aid, char *name, void **address, int addr_type,
+	addr size, int wiring, int lock)
 {
 	vm_region *region;
 	vm_cache *cache;
 	vm_cache_ref *cache_ref;
 	vm_store *store;
+	vm_address_space *aspace;
+
+	aspace = vm_get_aspace_from_id(aid);
+	if(aspace == NULL)
+		return -1;
 	
 	region = _vm_create_region(aspace, name, address, addr_type, size, wiring, lock);
 	if(region == NULL)
-		return NULL;
+		return -1;
 
 	// create a new cache
 
-	// null vm_store for this one
+	// anonymous store for this one
 	store = vm_store_create_anonymous_noswap();
 	if(store == NULL)
 		panic("vm_create_anonymous_region: vm_create_store_anonymous_noswap returned NULL");
@@ -324,6 +330,7 @@ static region_id _vm_create_anonymous_region(vm_address_space *aspace, char *nam
 
 	vm_cache_acquire_ref(cache_ref);
 	
+	vm_cache_insert_region(cache_ref, region);
 	region->cache_ref = cache_ref;
 	region->cache_offset = 0;
 
@@ -364,36 +371,6 @@ static region_id _vm_create_anonymous_region(vm_address_space *aspace, char *nam
 				page = vm_lookup_page(pa / PAGE_SIZE);
 				if(page == NULL) {
 //					dprintf("vm_create_anonymous_region: error looking up vm_page structure for pa 0x%x\n", pa);
-					continue;
-				}
-				vm_page_set_state(page, PAGE_STATE_WIRED);
-				vm_cache_insert_page(cache_ref, page, offset);
-			}
-			(*aspace->translation_map.ops->unlock)(&aspace->translation_map);
-			mutex_unlock(&cache_ref->lock);
-			break;
-		}
-		case REGION_WIRING_WIRED_PHYSICAL: {
-			addr va;
-			unsigned int flags;
-			int err;
-			vm_page *page;
-			off_t offset = 0;
-
-			mutex_lock(&cache_ref->lock);
-			(*aspace->translation_map.ops->lock)(&aspace->translation_map);
-			for(va = region->base; va < region->base + region->size; va += PAGE_SIZE, offset += PAGE_SIZE, phys_addr += PAGE_SIZE) {
-				err = (*aspace->translation_map.ops->map)(&aspace->translation_map,
-					va, phys_addr, lock);
-				if(err < 0) {
-					dprintf("vm_create_anonymous_region: error mapping va 0x%x to pa 0x%x\n",
-						va, phys_addr);
-				}
-				page = vm_page_allocate_specific_page(phys_addr / PAGE_SIZE, PAGE_STATE_FREE);
-				if(page == NULL) {
-					// not finding a page structure is not the end of the world
-					// this may be covering a range of the physical address space
-					// that is not covered by RAM, such as a device.
 					continue;
 				}
 				vm_page_set_state(page, PAGE_STATE_WIRED);
@@ -445,31 +422,43 @@ static region_id _vm_create_anonymous_region(vm_address_space *aspace, char *nam
 		return -1;
 }
 
-region_id vm_create_anonymous_region(aspace_id aid, char *name, void **address, int addr_type,
-	addr size, int wiring, int lock)
-{
-	vm_address_space *aspace;
-	if(wiring == REGION_WIRING_WIRED_PHYSICAL) {
-		// invalid here
-		return -1;
-	}
-	
-	aspace = vm_get_aspace_from_id(aid);
-	if(aspace == NULL)
-		return -1;
-	
-	return _vm_create_anonymous_region(aspace, name, address, addr_type, size, wiring, lock, 0);
-}
-
 region_id vm_map_physical_memory(aspace_id aid, char *name, void **address, int addr_type,
 	addr size, int lock, addr phys_addr)
 {
+	vm_region *region;
+	vm_cache *cache;
+	vm_cache_ref *cache_ref;
+	vm_store *store;
+	
 	vm_address_space *aspace = vm_get_aspace_from_id(aid);
 	if(aspace == NULL)
 		return -1;
 
-	return _vm_create_anonymous_region(aspace, name, address, addr_type, size,
-		REGION_WIRING_WIRED_PHYSICAL, lock, phys_addr);
+	region = _vm_create_region(aspace, name, address, addr_type, size, REGION_WIRING_WIRED_SPECIAL, lock);
+	if(region == NULL)
+		return -1;
+
+	// create a new cache
+	store = vm_store_create_device(phys_addr);
+	if(store == NULL)
+		panic("vm_map_physical_memory: vm_store_create_device returned NULL");
+	cache = vm_cache_create(store);
+	if(cache == NULL)
+		panic("vm_map_physical_memory: vm_cache_create returned NULL");
+	cache_ref = vm_cache_ref_create(cache);
+	if(cache_ref == NULL)
+		panic("vm_map_physical_memory: vm_cache_ref_create returned NULL");
+
+	vm_cache_acquire_ref(cache_ref);
+	
+	vm_cache_insert_region(cache_ref, region);
+	region->cache_ref = cache_ref;
+	region->cache_offset = 0;
+
+	if(region)
+		return region->id;
+	else
+		return -1;
 }
 
 int vm_delete_region(aspace_id aid, region_id rid)
@@ -480,7 +469,7 @@ int vm_delete_region(aspace_id aid, region_id rid)
 	if(aspace == NULL)
 		return -1;
 
-	dprintf("vm_delete_region: aspace 0x%x, region %d\n", aspace, rid);
+	dprintf("vm_delete_region: aspace 0x%x, region 0x%x\n", aspace, rid);
 
 	// remove the region from the global hash table
 	sem_acquire(region_hash_sem, READ_COUNT);
@@ -490,6 +479,7 @@ int vm_delete_region(aspace_id aid, region_id rid)
 	if(region == NULL)
 		return -1;
 
+	// remove the region from the aspace's virtual map
 	sem_acquire(aspace->virtual_map.sem, WRITE_COUNT);
 	temp = aspace->virtual_map.region_list;
 	while(temp != NULL) {
@@ -516,6 +506,7 @@ int vm_delete_region(aspace_id aid, region_id rid)
 	hash_remove(region_table, region);
 	sem_release(region_hash_sem, WRITE_COUNT);
 	
+	vm_cache_remove_region(region->cache_ref, region);
 	vm_cache_release_ref(region->cache_ref);
 
 	(*aspace->translation_map.ops->lock)(&aspace->translation_map);

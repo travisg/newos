@@ -6,6 +6,7 @@
 #include <kernel/vm.h>
 #include <kernel/heap.h>
 #include <kernel/debug.h>
+#include <kernel/lock.h>
 #include <kernel/vm_store_device.h>
 
 struct device_store_data {
@@ -47,23 +48,33 @@ static int device_write(struct vm_store *store, off_t offset, const void *buf, s
 static int device_fault(struct vm_store *store, struct vm_address_space *aspace, off_t offset)
 {
 	struct device_store_data *d = (struct device_store_data *)store->data;
-	addr vaddr, paddr;
+	vm_cache_ref *cache_ref = store->cache->ref;
+	vm_region *region;
 	
 	dprintf("device_fault: offset 0x%d + base_addr 0x%x\n", offset, d->base_addr);
 	
 	// figure out which page needs to be mapped where
-	
-// XXX finish
-
-#if 0	
-	// simply map in the appropriate page, regardless of vm_page coverage
 	(*aspace->translation_map.ops->lock)(&aspace->translation_map);
-	(*aspace->translation_map.ops->map)(&aspace->translation_map, address,
-		page->ppn * PAGE_SIZE, region->lock);
-	(*aspace->translation_map.ops->unlock)(&aspace->translation_map);
-#endif
+	mutex_lock(&cache_ref->lock);
+
+	// cycle through all of the regions that map this cache and map the page in
+	for(region = cache_ref->region_list; region != NULL; region = region->cache_next) {
+		// make sure this page in the cache that was faulted on is covered in this region
+		if(offset >= region->cache_offset && (offset - region->cache_offset) < region->size) {
+			dprintf("device_fault: mapping paddr 0x%x to vaddr 0x%x\n",
+				(addr)(d->base_addr + offset),
+				(addr)(region->base + (offset - region->cache_offset)));
+			(*aspace->translation_map.ops->map)(&aspace->translation_map,
+				region->base + (offset - region->cache_offset),
+				d->base_addr + offset, region->lock);
+		}
+	}
 	
-	panic("here\n");
+	mutex_unlock(&cache_ref->lock);	
+	(*aspace->translation_map.ops->unlock)(&aspace->translation_map);
+
+	dprintf("device_fault: done\n");
+
 	return 0;
 }
 
