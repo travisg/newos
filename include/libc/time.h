@@ -4,10 +4,10 @@
 ** Distributed under the terms of the NewOS License.
 */
 
-#ifndef __newos__libc_stdio__hh__
-#define __newos__libc_stdio__hh__
+#ifndef __newos__libc_time__hh__
+#define __newos__libc_time__hh__
 
-struct __tm
+struct tm
 {
 	int tm_sec;    /* seconds*/
 	int tm_min;    /* minutes*/
@@ -20,11 +20,9 @@ struct __tm
 	int tm_isdst;  /* Daylight Savings Time */
 };
 
-typedef unsigned long size_t;
 typedef unsigned long clock_t;
-typedef unsigned long time_t;
-
-typedef struct __tm tm;
+typedef unsigned long long time_t;
+typedef unsigned long long museconds_t;
 
 char *asctime(const struct tm *timeptr);
 clock_t clock(void);

@@ -21,6 +21,7 @@ include $(addsuffix /makefile, $(addprefix $(MY_SRCDIR)/, \
 	stdlib \
 	string \
 	unistd \
+	time \
 ))
 
 include templates/lib.mk
