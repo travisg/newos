@@ -151,7 +151,7 @@ int vm_page_init2(kernel_args *ka)
 	void *null;
 
 	null = all_pages;	
-	vm_create_anonymous_region(vm_get_kernel_aspace(), "page_structures", &null, REGION_ADDR_EXACT_ADDRESS,
+	vm_create_anonymous_region(vm_get_kernel_aspace_id(), "page_structures", &null, REGION_ADDR_EXACT_ADDRESS,
 		PAGE_ALIGN(num_pages * sizeof(vm_page)), REGION_WIRING_WIRED_ALREADY, LOCK_RW|LOCK_KERNEL);
 
 	dbg_add_command(&dump_page_stats, "page_stats", "Dump statistics about page usage");

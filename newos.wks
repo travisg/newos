@@ -48,6 +48,8 @@ AddFileGroup "vm" "/build/ossrc/newos/kernel/vm" -nomake
 AddFile "vm.c" "/build/ossrc/newos/kernel/vm/vm.c"
 AddFile "vm_cache.c" "/build/ossrc/newos/kernel/vm/vm_cache.c"
 AddFile "vm_page.c" "/build/ossrc/newos/kernel/vm/vm_page.c"
+AddFile "vm_store_anonymous_noswap.c" "/build/ossrc/newos/kernel/vm/vm_store_anonymous_noswap.c"
+AddFile "vm_store_device.c" "/build/ossrc/newos/kernel/vm/vm_store_device.c"
 AddFile "vm_kernel.mk" "/build/ossrc/newos/kernel/vm/vm_kernel.mk"
 EndFileGroup "vm"
 AddFileGroup "kernel" "/build/ossrc/newos/kernel" -nomake
@@ -95,6 +97,8 @@ AddFile "vm.h" "/build/ossrc/newos/include/kernel/vm.h"
 AddFile "vm_cache.h" "/build/ossrc/newos/include/kernel/vm_cache.h"
 AddFile "vm_page.h" "/build/ossrc/newos/include/kernel/vm_page.h"
 AddFile "vm_priv.h" "/build/ossrc/newos/include/kernel/vm_priv.h"
+AddFile "vm_store_anonymous_noswap.h" "/build/ossrc/newos/include/kernel/vm_store_anonymous_noswap.h"
+AddFile "vm_store_device.h" "/build/ossrc/newos/include/kernel/vm_store_device.h"
 EndFileGroup "kernel-headers"
 AddFileGroup "x86-kernel-headers" "/build/ossrc/newos/include/kernel/arch/i386" -nomake
 AddFile "cpu.h" "/build/ossrc/newos/include/kernel/arch/i386/cpu.h"

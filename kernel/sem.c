@@ -95,17 +95,15 @@ static void dump_sem_info(int argc, char **argv)
 int sem_init(kernel_args *ka)
 {
 	int i;
-	vm_region *region;
 	
 	dprintf("sem_init: entry\n");
 	
 	// create and initialize semaphore table
-	region = vm_create_anonymous_region(vm_get_kernel_aspace(), "sem_table", (void **)&sems,
+	sem_region = vm_create_anonymous_region(vm_get_kernel_aspace_id(), "sem_table", (void **)&sems,
 		REGION_ADDR_ANY_ADDRESS, sizeof(struct sem_entry) * MAX_SEMS, REGION_WIRING_WIRED, LOCK_RW|LOCK_KERNEL);
-	if(region == NULL) {
+	if(sem_region < 0) {
 		panic("unable to allocate semaphore table!\n");
 	}
-	sem_region = region->id;
 
 	dprintf("memsetting len %d @ 0x%x\n", sizeof(struct sem_entry) * MAX_SEMS, sems);
 	memset(sems, 0, sizeof(struct sem_entry) * MAX_SEMS);

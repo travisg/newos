@@ -28,14 +28,14 @@ int arch_cpu_init(kernel_args *ka)
 
 int arch_cpu_init2(kernel_args *ka)
 {
-	vm_region *r;
+	region_id rid;
 	struct tss_descriptor *tss_d;
 	unsigned int i;
 	
 	// account for the segment descriptors
 	gdt = (unsigned int *)ka->arch_args.vir_gdt;	
-	vm_create_anonymous_region(vm_get_kernel_aspace(), "gdt", (void **)&gdt,
-		REGION_ADDR_EXACT_ADDRESS, PAGE_SIZE, REGION_WIRING_WIRED_ALREADY, LOCK_RW|LOCK_KERNEL);	
+	vm_create_anonymous_region(vm_get_kernel_aspace_id(), "gdt", (void **)&gdt,
+		REGION_ADDR_EXACT_ADDRESS, PAGE_SIZE, REGION_WIRING_WIRED_ALREADY, LOCK_RW|LOCK_KERNEL);
 	
 	tss = kmalloc(sizeof(struct tss *) * ka->num_cpus);
 	if(tss == NULL) {
@@ -54,9 +54,9 @@ int arch_cpu_init2(kernel_args *ka)
 		char tss_name[16];
 		
 		sprintf(tss_name, "tss%d", i);
-		r = vm_create_anonymous_region(vm_get_kernel_aspace(), tss_name, (void **)&tss[i],
+		rid = vm_create_anonymous_region(vm_get_kernel_aspace_id(), tss_name, (void **)&tss[i],
 			REGION_ADDR_ANY_ADDRESS, PAGE_SIZE, REGION_WIRING_WIRED, LOCK_RW|LOCK_KERNEL);
-		if(r == NULL) {
+		if(rid < 0) {
 			panic("arch_cpu_init2: unable to create region for tss\n");
 			return -1;
 		}

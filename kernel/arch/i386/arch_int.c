@@ -264,7 +264,7 @@ int arch_int_init(kernel_args *ka)
 int arch_int_init2(kernel_args *ka)
 {
 	idt = (desc_table *)ka->arch_args.vir_idt;
-	vm_create_anonymous_region(vm_get_kernel_aspace(), "idt", (void *)&idt,
+	vm_create_anonymous_region(vm_get_kernel_aspace_id(), "idt", (void *)&idt,
 		REGION_ADDR_EXACT_ADDRESS, PAGE_SIZE, REGION_WIRING_WIRED_ALREADY, LOCK_RW|LOCK_KERNEL);
 	return 0;
 }

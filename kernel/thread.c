@@ -59,7 +59,8 @@ static sem_id snooze_sem = -1;
 // death stacks
 // used temporarily as a thread cleans itself up
 struct death_stack {
-	vm_region *region;
+	region_id rid;
+	addr address;
 	bool in_use;
 };
 static struct death_stack *death_stacks;
@@ -226,8 +227,10 @@ static struct thread *create_thread_struct(const char *name)
 	strcpy(t->name, name);
 	t->id = atomic_add(&next_thread_id, 1);
 	t->proc = NULL;
-	t->kernel_stack_region = NULL;
-	t->user_stack_region = NULL;
+	t->kernel_stack_region_id = -1;
+	t->kernel_stack_base = 0;
+	t->user_stack_region_id = -1;
+	t->user_stack_base = 0;
 	t->proc_next = NULL;
 	t->q_next = NULL;
 	t->priority = -1;
@@ -265,7 +268,7 @@ static int _create_user_thread_kentry(void)
 	t = thread_get_current_thread();
 
 	// jump to the entry point in user space
-	arch_thread_enter_uspace((addr)t->args, (addr)t->user_stack_region->base + STACK_SIZE);
+	arch_thread_enter_uspace((addr)t->args, t->user_stack_base + STACK_SIZE);
 
 	// never get here
 	return 0;
@@ -275,7 +278,6 @@ static thread_id _create_thread(const char *name, proc_id pid, int priority, add
 {
 	struct thread *t;
 	struct proc *p;
-	unsigned int *kstack_addr;
 	int state;
 	char stack_name[64];
 	bool abort = false;
@@ -317,9 +319,11 @@ static thread_id _create_thread(const char *name, proc_id pid, int priority, add
 	}
 	
 	sprintf(stack_name, "%s_kstack", name);
-	vm_create_anonymous_region(t->proc->kaspace, stack_name, (void **)&kstack_addr,
-		REGION_ADDR_ANY_ADDRESS, KSTACK_SIZE, REGION_WIRING_WIRED, LOCK_RW|LOCK_KERNEL);
-	t->kernel_stack_region = vm_find_region_by_name(t->proc->kaspace, stack_name);
+	t->kernel_stack_region_id = vm_create_anonymous_region(vm_get_kernel_aspace_id(), stack_name,
+		(void **)&t->kernel_stack_base, REGION_ADDR_ANY_ADDRESS, KSTACK_SIZE,
+		REGION_WIRING_WIRED, LOCK_RW|LOCK_KERNEL);
+	if(t->kernel_stack_region_id < 0)
+		panic("_create_thread: error creating kernel stack!\n");
 
 	if(kernel) {
 		// this sets up an initial kthread stack that runs the entry
@@ -328,23 +332,22 @@ static thread_id _create_thread(const char *name, proc_id pid, int priority, add
 		// create user stack
 		// XXX make this better. For now just keep trying to create a stack
 		// until we find a spot.
-		
-		addr ustack_addr;
-		
-		ustack_addr = (USER_STACK_REGION  - STACK_SIZE) + USER_STACK_REGION_SIZE;
-		while(ustack_addr > USER_STACK_REGION) {
+		t->user_stack_base = (USER_STACK_REGION  - STACK_SIZE) + USER_STACK_REGION_SIZE;
+		while(t->user_stack_base > USER_STACK_REGION) {
 			sprintf(stack_name, "%s_stack%d", p->name, t->id);
-			vm_create_anonymous_region(p->aspace, stack_name, (void **)&ustack_addr,
+			t->user_stack_region_id = vm_create_anonymous_region(p->aspace_id, stack_name,
+				(void **)&t->user_stack_base,
 				REGION_ADDR_ANY_ADDRESS, STACK_SIZE, REGION_WIRING_WIRED, LOCK_RW);
-			t->user_stack_region = vm_find_region_by_name(p->aspace, stack_name);
-			if(t->user_stack_region == NULL) {
-				ustack_addr -= STACK_SIZE;
+			if(t->user_stack_region_id < 0) {
+				t->user_stack_base -= STACK_SIZE;
 			} else {
-				// we created an region
+				// we created a region
 				break;
 			}
 		}
-		
+		if(t->user_stack_region_id < 0)
+			panic("_create_thread: unable to create user stack!\n");
+
 		// copy the user entry over to the args field in the thread struct
 		// the function this will call will immediately switch the thread into
 		// user space.
@@ -353,7 +356,7 @@ static thread_id _create_thread(const char *name, proc_id pid, int priority, add
 	}
 	
 	t->state = THREAD_STATE_SUSPENDED;
-		
+
 	return t->id;
 }
 
@@ -471,8 +474,10 @@ static void _dump_thread_info(struct thread *t)
 	dprintf("sem_count:   0x%x\n", t->sem_count);
 	dprintf("blocked_sem: 0x%x\n", t->blocked_sem_id);
 	dprintf("proc:        0x%x\n", t->proc);
-	dprintf("kernel_stack_region: 0x%x\n", t->kernel_stack_region);
-	dprintf("user_stack_region:   0x%x\n", t->user_stack_region);
+	dprintf("kernel_stack_region_id: 0x%x\n", t->kernel_stack_region_id);
+	dprintf("kernel_stack_base: 0x%x\n", t->kernel_stack_base);
+	dprintf("user_stack_region_id:   0x%x\n", t->user_stack_region_id);
+	dprintf("user_stack_base:   0x%x\n", t->user_stack_base);
 	dprintf("architecture dependant section:\n");
 	arch_thread_dump_info(&t->arch_info);
 
@@ -528,10 +533,7 @@ static void dump_thread_list(int argc, char **argv)
 			dprintf("\t%32s", "<NULL>");
 		dprintf("\t0x%x", t->id);
 		dprintf("\t%16s", state_to_text(t->state));
-		if(t->kernel_stack_region != NULL)
-			dprintf("\t0x%x\n", t->kernel_stack_region->base);
-		else
-			dprintf("\t0x%x\n", 0);
+		dprintf("\t0x%x\n", t->kernel_stack_base);
 	}
 	hash_close(thread_hash, &i, false);
 }
@@ -587,9 +589,8 @@ static void dump_next_thread_in_proc(int argc, char **argv)
 	}
 }
 
-static vm_region *get_death_stack(void)
+int get_death_stack(void)
 {
-	vm_region *region = NULL;
 	unsigned int i;
 	int state;
 
@@ -606,7 +607,6 @@ static vm_region *get_death_stack(void)
 	for(i=0; i<num_death_stacks; i++) {
 		if(death_stacks[i].in_use == false) {
 			death_stacks[i].in_use = true;
-			region = death_stacks[i].region;
 			break;
 		}
 	}
@@ -614,31 +614,21 @@ static vm_region *get_death_stack(void)
 	RELEASE_THREAD_LOCK();
 	int_restore_interrupts(state);
 
-	if(region == NULL) {
+	if(i >= num_death_stacks) {
 		panic("get_death_stack: couldn't find free stack!\n");
 	}
+
+	dprintf("get_death_stack: returning 0x%x\n", death_stacks[i].address);
 	
-	dprintf("get_death_stack: returning 0x%x\n", region->base);
-	
-	return region;
+	return i;
 }
 
-static void put_death_stack_and_reschedule(vm_region *region)
+static void put_death_stack_and_reschedule(unsigned int index)
 {
-	unsigned int index;
+	dprintf("put_death_stack...: passed %d\n", index);
 	
-	dprintf("put_death_stack...: passed 0x%x\n", region->base);
-	
-	for(index = 0; index < num_death_stacks; index++) {
-		if(death_stacks[index].region == region)
-			break;
-	}
-	if(index >= num_death_stacks)
-		panic("put_death_stack...: passed invalid death stack\n");
-	
-	if(death_stacks[index].in_use == false) {
-		panic("put_death_stacks passed stack 0x%x that wasn't in use!\n", region->base);
-	}
+	if(index >= num_death_stacks || death_stacks[index].in_use == false)
+		panic("put_death_stack_and_reschedule: passed invalid stack index %d\n", index);
 	death_stacks[index].in_use = false;
 
 	// disable the interrupts around the semaphore release to prevent the get_death_stack
@@ -727,7 +717,7 @@ int thread_init(kernel_args *ka)
 		t->state = THREAD_STATE_RUNNING;
 		t->next_state = THREAD_STATE_READY;
 		sprintf(temp, "idle_thread%d_kstack", i);
-		t->kernel_stack_region = vm_find_region_by_name(t->proc->kaspace, temp);		
+		t->kernel_stack_region_id = vm_find_region_by_name(vm_get_kernel_aspace_id(), temp);		
 		hash_insert(thread_hash, t);
 		insert_thread_into_proc(t->proc, t);
 		cur_thread[i] = t;
@@ -745,12 +735,11 @@ int thread_init(kernel_args *ka)
 		char temp[64];
 		
 		for(i=0; i<num_death_stacks; i++) {
-			void *address;
-
 			sprintf(temp, "death_stack%d", i);
-			death_stacks[i].region = vm_create_anonymous_region(vm_get_kernel_aspace(), temp, &address,
+			death_stacks[i].rid = vm_create_anonymous_region(vm_get_kernel_aspace_id(), temp,
+				(void **)&death_stacks[i].address,
 				REGION_ADDR_ANY_ADDRESS, KSTACK_SIZE, REGION_WIRING_WIRED, LOCK_RW|LOCK_KERNEL);
-			if(death_stacks[i].region == NULL) {
+			if(death_stacks[i].rid < 0) {
 				panic("error creating death stacks\n");
 				return -1;
 			}
@@ -810,8 +799,9 @@ static void thread_entry(void)
 // used to pass messages between thread_exit and thread_exit2
 struct thread_exit_args {
 	struct thread *t;
-	vm_region *old_kernel_stack;
+	region_id old_kernel_stack;
 	int int_state;
+	unsigned int death_stack;
 };
 
 static void thread_exit2(void *_args)
@@ -825,11 +815,11 @@ static void thread_exit2(void *_args)
 	// restore the interrupts
 	int_restore_interrupts(args.int_state);
 	
-	dprintf("thread_exit2, running on death stack 0x%x\n", args.t->kernel_stack_region->base);
+	dprintf("thread_exit2, running on death stack 0x%x\n", args.t->kernel_stack_base);
 	
 	// delete the old kernel stack region
-	dprintf("thread_exit2: deleting old kernel stack at 0x%x for thread 0x%x\n", args.old_kernel_stack->base, args.t->id);
-	vm_delete_region(vm_get_kernel_aspace(), args.old_kernel_stack);
+	dprintf("thread_exit2: deleting old kernel stack id 0x%x for thread 0x%x\n", args.old_kernel_stack, args.t->id);
+	vm_delete_region(vm_get_kernel_aspace_id(), args.old_kernel_stack);
 	
 	dprintf("thread_exit2: freeing name for thid 0x%x\n", args.t->id);
 
@@ -856,7 +846,7 @@ static void thread_exit2(void *_args)
 	args.t->next_state = THREAD_STATE_FREE_ON_RESCHED;
 
 	// return the death stack and reschedule one last time
-	put_death_stack_and_reschedule(args.t->kernel_stack_region);
+	put_death_stack_and_reschedule(args.death_stack);
 	// never get to here
 	panic("thread_exit2: made it where it shouldn't have!\n");
 }
@@ -867,7 +857,7 @@ void thread_exit(int retcode)
 	struct thread *t = CURR_THREAD;
 	struct proc *p = t->proc;
 	bool delete_proc = false;
-	vm_region *death_stack;
+	unsigned int death_stack;
 	
 	dprintf("thread 0x%x exiting w/return code 0x%x\n", t->id, retcode);
 
@@ -877,10 +867,10 @@ void thread_exit(int retcode)
 	}
 
 	// delete the user stack region first
-	if(p->aspace && t->user_stack_region) {
-		vm_region *region = t->user_stack_region;
-		region = NULL;
-		vm_delete_region(p->aspace, region);
+	if(p->aspace_id >= 0 && t->user_stack_region_id >= 0) {
+		region_id rid = t->user_stack_region_id;
+		t->user_stack_region_id = -1;
+		vm_delete_region(p->aspace_id, rid);
 	}
 
 	if(p != kernel_proc) {
@@ -913,7 +903,7 @@ void thread_exit(int retcode)
 			// there are other threads still in this process,
 			// XXX kill the process
 		}
-		vm_delete_aspace(p->aspace);
+		vm_delete_aspace(p->aspace_id);
 		vfs_free_ioctx(p->ioctx);
 		kfree(p);
 	}
@@ -931,18 +921,20 @@ void thread_exit(int retcode)
 		struct thread_exit_args args;
 
 		args.t = t;
-		args.old_kernel_stack = t->kernel_stack_region;
-		
+		args.old_kernel_stack = t->kernel_stack_region_id;
+		args.death_stack = death_stack;
+
 		// disable the interrupts. Must remain disabled until the kernel stack pointer can be officially switched
 		args.int_state = int_disable_interrupts();
 
 		// set the new kernel stack officially to the death stack, wont be really switched until
 		// the next function is called. This bookkeeping must be done now before a context switch
 		// happens, or the processor will interrupt to the old stack
-		t->kernel_stack_region = death_stack;
+		t->kernel_stack_region_id = death_stacks[death_stack].rid;
+		t->kernel_stack_base = death_stacks[death_stack].address;
 
 		// we will continue in thread_exit2(), on the new stack
-		arch_thread_switch_kstack_and_call(t, death_stack->base + KSTACK_SIZE, thread_exit2, &args);
+		arch_thread_switch_kstack_and_call(t, t->kernel_stack_base + KSTACK_SIZE, thread_exit2, &args);
 	}
 
 	panic("never can get here\n");
@@ -1386,8 +1378,9 @@ static struct proc *create_proc_struct(const char *name, bool kernel)
 	strcpy(p->name, name);
 	p->num_threads = 0;
 	p->ioctx = NULL;
-	p->kaspace = vm_get_kernel_aspace();
+	p->aspace_id = -1;
 	p->aspace = NULL;
+	p->kaspace = vm_get_kernel_aspace();
 	p->thread_list = NULL;
 	p->main_thread = NULL;
 	p->state = PROC_STATE_BIRTH;
@@ -1418,7 +1411,6 @@ static int proc_create_proc2(void)
 	char *path;
 	addr entry;
 	char ustack_name[128];
-	void *ustack_addr;
 
 	t = thread_get_current_thread();
 	p = t->proc;
@@ -1426,11 +1418,11 @@ static int proc_create_proc2(void)
 	dprintf("proc_create_proc2: entry thread %d\n", t->id);
 
 	// create an initial primary stack region
-	ustack_addr = (void *)((USER_STACK_REGION  - STACK_SIZE) + USER_STACK_REGION_SIZE);
+	t->user_stack_base = ((USER_STACK_REGION  - STACK_SIZE) + USER_STACK_REGION_SIZE);
 	sprintf(ustack_name, "%s_primary_stack", p->name);
-	t->user_stack_region = vm_create_anonymous_region(p->aspace, ustack_name, (void **)&ustack_addr,
+	t->user_stack_region_id = vm_create_anonymous_region(p->aspace_id, ustack_name, (void **)&t->user_stack_base,
 		REGION_ADDR_EXACT_ADDRESS, STACK_SIZE, REGION_WIRING_LAZY, LOCK_RW);
-	if(t->user_stack_region == NULL) {
+	if(t->user_stack_region_id < 0) {
 		panic("proc_create_proc2: could not create default user stack region\n");
 		sem_delete_etc(p->proc_creation_sem, -1);
 		return -1;
@@ -1456,7 +1448,7 @@ static int proc_create_proc2(void)
 	p->proc_creation_sem = 0;
 
 	// jump to the entry point in user space
-	arch_thread_enter_uspace(entry, (addr)ustack_addr + STACK_SIZE);
+	arch_thread_enter_uspace(entry, t->user_stack_base + STACK_SIZE);
 
 	// never gets here
 	return 0;
@@ -1506,12 +1498,13 @@ proc_id proc_create_proc(const char *path, const char *name, int priority)
 	}
 
 	// create an address space for this process
-	p->aspace = vm_create_aspace(p->name, USER_BASE, USER_SIZE, false);
-	if(p->aspace == NULL) {
+	p->aspace_id = vm_create_aspace(p->name, USER_BASE, USER_SIZE, false);
+	if(p->aspace_id < 0) {
 		// XXX clean up proc
 		panic("proc_create_proc: could not create user address space\n");
 		return -1;
 	}
+	p->aspace = vm_get_aspace_from_id(p->aspace_id);
 
 	thread_resume_thread(tid);
 	

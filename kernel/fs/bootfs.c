@@ -649,17 +649,19 @@ struct fs_calls bootfs_calls = {
 
 int bootstrap_bootfs()
 {
-	vm_region *region;
+	region_id rid;
+	vm_region_info rinfo;
 	
 	dprintf("bootstrap_bootfs: entry\n");
 	
 	// find the bootdir and set it up
-	region = vm_find_region_by_name(vm_get_kernel_aspace(), "bootdir");
-	if(region == NULL)
+	rid = vm_find_region_by_name(vm_get_kernel_aspace_id(), "bootdir");
+	if(rid < 0)
 		panic("bootstrap_bootfs: no bootdir area found!\n");
-	bootdir = (char *)region->base;
-	bootdir_len = region->size;
-	bootdir_region = region->id;
+	vm_get_region_info(rid, &rinfo);
+	bootdir = (char *)rinfo.base;
+	bootdir_len = rinfo.size;
+	bootdir_region = rinfo.id;
 	
 	dprintf("bootstrap_bootfs: found bootdir at 0x%x\n", bootdir);
 	

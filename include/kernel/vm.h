@@ -61,6 +61,16 @@ typedef struct vm_cache {
 	struct vm_store *store;
 } vm_cache;
 
+// info about a region that external entities may want to know
+// used in vm_get_region_info()
+typedef struct vm_region_info {
+	region_id id;
+	addr base;
+	addr size;
+	int lock;
+	int wiring;
+} vm_region_info;	
+
 // vm region
 typedef struct vm_region {
 	char *name;
@@ -73,10 +83,11 @@ typedef struct vm_region {
 	struct vm_cache_ref *cache_ref;
 	off_t cache_offset;	
 	
-	struct vm_region *next;
+	struct vm_region *aspace_next;
 	struct vm_virtual_map *map;
 	struct vm_region *cache_next;
 	struct vm_region *cache_prev;
+	struct vm_region *hash_next;
 } vm_region;
 
 // virtual map (1 per address space)
@@ -95,6 +106,8 @@ typedef struct vm_address_space {
 	vm_virtual_map virtual_map;
 	vm_translation_map translation_map;
 	char *name;
+	aspace_id id;
+	struct vm_address_space *hash_next;
 } vm_address_space;	
 
 // vm_store
@@ -113,18 +126,6 @@ typedef struct vm_store_ops {
 	int (*write)(struct vm_store *backing_store, off_t offset, const void *buf, size_t *len);
 	int (*fault)(struct vm_store *backing_store, struct vm_address_space *aspace, off_t offset);
 } vm_store_ops;
-
-#if 0
-// area
-struct area {
-	struct area *next;
-	area_id id;
-	char *name;
-	addr base;
-	addr size;
-	int lock;
-};
-#endif
 
 // args for the create_area funcs
 enum {
@@ -154,16 +155,23 @@ enum {
 int vm_init(kernel_args *ka);
 int vm_init_postsem(kernel_args *ka);
 int vm_init_postthread(kernel_args *ka);
-vm_address_space *vm_create_aspace(const char *name, unsigned int base, unsigned int size, bool kernel);
-int vm_delete_aspace(vm_address_space *aspace);
+
+aspace_id vm_create_aspace(const char *name, addr base, addr size, bool kernel);
+int vm_delete_aspace(aspace_id);
 vm_address_space *vm_get_kernel_aspace();
+aspace_id vm_get_kernel_aspace_id();
 vm_address_space *vm_get_current_user_aspace();
-vm_region *vm_create_anonymous_region(vm_address_space *aspace, char *name, void **address, int addr_type,
+aspace_id vm_get_current_user_aspace_id();
+vm_address_space *vm_get_aspace_from_id(aspace_id aid);
+
+region_id vm_create_anonymous_region(aspace_id aid, char *name, void **address, int addr_type,
 	addr size, int wiring, int lock);
-vm_region *vm_map_physical_memory(vm_address_space *aspace, char *name, void **address, int addr_type,
+region_id vm_map_physical_memory(aspace_id aid, char *name, void **address, int addr_type,
 	addr size, int lock, addr phys_addr);
-int vm_delete_region(vm_address_space *aspace, vm_region *region);
-vm_region *vm_find_region_by_name(vm_address_space *aspace, const char *name);
+int vm_delete_region(aspace_id aid, region_id id);
+region_id vm_find_region_by_name(aspace_id aid, const char *name);
+int vm_get_region_info(region_id id, vm_region_info *info);
+
 int vm_get_page_mapping(vm_address_space *aspace, addr vaddr, addr *paddr);
 int vm_get_physical_page(addr paddr, addr *vaddr, int flags);
 int vm_put_physical_page(addr vaddr);

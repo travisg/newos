@@ -47,8 +47,9 @@ struct proc {
 	void *ioctx;
 	void *args;
 	sem_id proc_creation_sem;
-	vm_address_space *kaspace;
+	aspace_id aspace_id;
 	vm_address_space *aspace;
+	vm_address_space *kaspace;
 	struct thread *main_thread;
 	struct thread *thread_list;
 	struct arch_proc arch_info;
@@ -71,8 +72,10 @@ struct thread {
 	void *args;
 	struct proc *proc;
 	sem_id return_code_sem;
-	vm_region *kernel_stack_region;
-	vm_region *user_stack_region;
+	region_id kernel_stack_region_id;
+	addr kernel_stack_base;
+	region_id user_stack_region_id;
+	addr user_stack_base;
 	// architecture dependant section
 	struct arch_thread arch_info;
 };

@@ -27,8 +27,8 @@ int arch_thread_init_thread_struct(struct thread *t)
 
 int arch_thread_initialize_kthread_stack(struct thread *t, int (*start_func)(void), void (*entry_func)(void), void (*exit_func)(void))
 {
-	unsigned int *kstack = (unsigned int *)t->kernel_stack_region->base;
-	unsigned int kstack_size = t->kernel_stack_region->size;
+	unsigned int *kstack = (unsigned int *)t->kernel_stack_base;
+	unsigned int kstack_size = KSTACK_SIZE;
 	unsigned int *kstack_top = kstack + kstack_size / sizeof(unsigned int);
 	int i;
 
@@ -73,7 +73,7 @@ void arch_thread_switch_kstack_and_call(struct thread *t, addr new_kstack, void 
 
 void arch_thread_context_switch(struct thread *t_from, struct thread *t_to)
 {
-	unsigned int *new_pgdir;
+	addr new_pgdir;
 #if 0
 	int i;
 
@@ -86,26 +86,25 @@ void arch_thread_context_switch(struct thread *t_from, struct thread *t_to)
 	for(i=0; i<11; i++)
 		dprintf("*esp[%d] (0x%x) = 0x%x\n", i, ((unsigned int *)new_at->esp + i), *((unsigned int *)new_at->esp + i));
 #endif
-	i386_set_kstack(t_to->kernel_stack_region->base + KSTACK_SIZE);
+	i386_set_kstack(t_to->kernel_stack_base + KSTACK_SIZE);
 
-	if(t_from->proc->aspace != NULL && t_to->proc->aspace != NULL) {
+	if(t_from->proc->aspace_id >= 0 && t_to->proc->aspace_id >= 0) {
 		// they are both uspace threads
-		addr pgdir_from = vm_translation_map_get_pgdir(&t_from->proc->aspace->translation_map);
-		addr pgdir_to = vm_translation_map_get_pgdir(&t_to->proc->aspace->translation_map);
-
-		if(pgdir_from != pgdir_to) {
-			new_pgdir = (unsigned int *)pgdir_to;
-		} else {
+		if(t_from->proc->aspace_id == t_to->proc->aspace_id) {
+			// dont change the pgdir, same address space
 			new_pgdir = NULL;
+		} else {
+			// switching to a new address space
+			new_pgdir = vm_translation_map_get_pgdir(&t_to->proc->aspace->translation_map);
 		}
-	} else if(t_from->proc->aspace == t_to->proc->aspace) {
-		// they must both be kspace threads	
+	} else if(t_from->proc->aspace_id < 0 && t_to->proc->aspace_id < 0) {
+		// they must both be kspace threads
 		new_pgdir = NULL;
-	} else if(t_to->proc->aspace == NULL) {
+	} else if(t_to->proc->aspace_id < 0) {
 		// the one we're switching to is kspace
-		new_pgdir = (unsigned int *)vm_translation_map_get_pgdir(&t_to->proc->kaspace->translation_map);
+		new_pgdir = vm_translation_map_get_pgdir(&t_to->proc->kaspace->translation_map);
 	} else {
-		new_pgdir = (unsigned int *)vm_translation_map_get_pgdir(&t_to->proc->aspace->translation_map);
+		new_pgdir = vm_translation_map_get_pgdir(&t_to->proc->aspace->translation_map);
 	}
 #if 0
 	dprintf("new_pgdir is 0x%x\n", new_pgdir);
@@ -128,7 +127,7 @@ void arch_thread_enter_uspace(addr entry, addr ustack_top)
 
 	int_disable_interrupts();
 
-	i386_set_kstack(thread_get_current_thread()->kernel_stack_region->base + KSTACK_SIZE);
+	i386_set_kstack(thread_get_current_thread()->kernel_stack_base + KSTACK_SIZE);
 
 	i386_enter_uspace(entry, ustack_top - 4);
 }

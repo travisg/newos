@@ -116,7 +116,7 @@ arch_cpu_global_TLB_invalidate:
 	movl	%eax,%cr3
 	ret
 
-// void i386_context_switch(unsigned int **old_esp, unsigned int *new_esp, unsigned int *new_pgdir);
+// void i386_context_switch(unsigned int **old_esp, unsigned int *new_esp, addr new_pgdir);
 .global i386_context_switch
 i386_context_switch:
 //	pushfl

@@ -83,16 +83,16 @@ int elf_load(const char *path, struct proc *p, int flags, addr *entry)
 
 	for(i=0; i < eheader.e_phnum; i++) {
 		char region_name[64];
-		vm_region *region;
+		region_id id;
 		char *region_addr;
 		
 		sprintf(region_name, "%s_seg%d", path, i);
 		
 		region_addr = (char *)ROUNDOWN(pheaders[i].p_vaddr, PAGE_SIZE);
-		region = vm_create_anonymous_region(p->aspace, region_name, (void **)&region_addr, REGION_ADDR_EXACT_ADDRESS,
+		id = vm_create_anonymous_region(p->aspace_id, region_name, (void **)&region_addr, REGION_ADDR_EXACT_ADDRESS,
 			ROUNDUP(pheaders[i].p_memsz + (pheaders[i].p_vaddr % PAGE_SIZE), PAGE_SIZE), REGION_WIRING_LAZY, LOCK_RW);
-		if(region == NULL) {
-			dprintf("error allocating area!\n");
+		if(id < 0) {
+			dprintf("error allocating region!\n");
 			err = -1;
 			goto error;
 		}

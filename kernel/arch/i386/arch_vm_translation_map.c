@@ -618,27 +618,27 @@ int vm_translation_map_module_init2(kernel_args *ka)
 	page_hole = NULL;
 
 	temp = (void *)kernel_pgdir_virt;
-	vm_create_anonymous_region(vm_get_kernel_aspace(), "kernel_pgdir", &temp,
+	vm_create_anonymous_region(vm_get_kernel_aspace_id(), "kernel_pgdir", &temp,
 		REGION_ADDR_EXACT_ADDRESS, PAGE_SIZE, REGION_WIRING_WIRED_ALREADY, LOCK_RW|LOCK_KERNEL);
 
 	temp = (void *)paddr_desc;
-	vm_create_anonymous_region(vm_get_kernel_aspace(), "physical_page_mapping_descriptors", &temp,
+	vm_create_anonymous_region(vm_get_kernel_aspace_id(), "physical_page_mapping_descriptors", &temp,
 		REGION_ADDR_EXACT_ADDRESS, ROUNDUP(sizeof(paddr_chunk_desc) * 1024, PAGE_SIZE),
 		REGION_WIRING_WIRED_ALREADY, LOCK_RW|LOCK_KERNEL);
 
 	temp = (void *)virtual_pmappings;
-	vm_create_anonymous_region(vm_get_kernel_aspace(), "iospace_virtual_chunk_descriptors", &temp,
+	vm_create_anonymous_region(vm_get_kernel_aspace_id(), "iospace_virtual_chunk_descriptors", &temp,
 		REGION_ADDR_EXACT_ADDRESS, ROUNDUP(sizeof(paddr_chunk_desc *) * num_virtual_chunks, PAGE_SIZE),
 		REGION_WIRING_WIRED_ALREADY, LOCK_RW|LOCK_KERNEL);	
 
 	temp = (void *)iospace_pgtables;
-	vm_create_anonymous_region(vm_get_kernel_aspace(), "iospace_pgtables", &temp,
+	vm_create_anonymous_region(vm_get_kernel_aspace_id(), "iospace_pgtables", &temp,
 		REGION_ADDR_EXACT_ADDRESS, PAGE_SIZE * (IOSPACE_SIZE / (PAGE_SIZE * 1024)),
 		REGION_WIRING_WIRED_ALREADY, LOCK_RW|LOCK_KERNEL);	
 
 	dprintf("vm_translation_map_module_init2: creating iospace\n");
 	temp = (void *)IOSPACE_BASE;
-	vm_create_anonymous_region(vm_get_kernel_aspace(), "iospace", &temp,
+	vm_create_anonymous_region(vm_get_kernel_aspace_id(), "iospace", &temp,
 		REGION_ADDR_EXACT_ADDRESS, IOSPACE_SIZE, REGION_WIRING_WIRED_ALREADY, LOCK_RW|LOCK_KERNEL);
 
 	dprintf("vm_translation_map_module_init2: done\n");
