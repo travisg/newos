@@ -232,7 +232,7 @@ static int devfs_is_dir_empty(struct devfs_vnode *dir)
 	return !dir->stream.u.dir.dir_head;
 }
 
-static int devfs_mount(fs_cookie *_fs, fs_id id, void *flags, vnode_id *root_vnid)
+static int devfs_mount(fs_cookie *_fs, fs_id id, const char *devfs, void *args, vnode_id *root_vnid)
 {
 	struct devfs *fs;
 	struct devfs_vnode *v;

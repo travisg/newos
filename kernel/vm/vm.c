@@ -1692,6 +1692,8 @@ int vm_page_fault(addr address, addr fault_address, bool is_write, bool is_user,
 
 	err = vm_soft_fault(address, is_write, is_user);
 	if(err < 0) {
+		dprintf("vm_page_fault: vm_soft_fault returned error %d on fault at 0x%x, ip 0x%x, write %d, user %d\n",
+			err, address, fault_address, is_write, is_user);
 		if(!is_user) {
 			struct thread *t = thread_get_current_thread();
 			if(t && t->fault_handler != 0) {

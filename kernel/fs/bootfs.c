@@ -345,7 +345,7 @@ static int bootfs_create_vnode_tree(struct bootfs *fs, struct bootfs_vnode *root
 	return 0;
 }
 
-static int bootfs_mount(fs_cookie *_fs, fs_id id, void *flags, vnode_id *root_vnid)
+static int bootfs_mount(fs_cookie *_fs, fs_id id, const char *device, void *args, vnode_id *root_vnid)
 {
 	struct bootfs *fs;
 	struct bootfs_vnode *v;

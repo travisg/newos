@@ -66,7 +66,7 @@ struct fs_calls {
 #endif
 
 struct fs_calls {
-	int (*fs_mount)(fs_cookie *fs, fs_id id, void *flags, vnode_id *root_vnid);
+	int (*fs_mount)(fs_cookie *fs, fs_id id, const char *device, void *args, vnode_id *root_vnid);
 	int (*fs_unmount)(fs_cookie fs);
 	int (*fs_sync)(fs_cookie fs);
 
@@ -125,7 +125,7 @@ void *vfs_get_cache_ptr(void *vnode);
 int vfs_set_cache_ptr(void *vnode, void *cache);
 
 /* calls kernel code should make for file I/O */
-int sys_mount(const char *path, const char *fs_name);
+int sys_mount(const char *path, const char *device, const char *fs_name, void *args);
 int sys_unmount(const char *path);
 int sys_sync();
 int sys_open(const char *path, stream_type st, int omode);
@@ -143,7 +143,7 @@ int sys_wstat(const char *path, struct file_stat *stat, int stat_mask);
 int sys_setcwd(const char* path);
 
 /* calls the syscall dispatcher should use for user file I/O */
-int user_mount(const char *path, const char *fs_name);
+int user_mount(const char *path, const char *device, const char *fs_name, void *args);
 int user_unmount(const char *path);
 int user_sync();
 int user_open(const char *path, stream_type st, int omode);

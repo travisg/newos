@@ -40,7 +40,7 @@ int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_re
 			*call_ret = 0;
 			break;
 		case SYSCALL_MOUNT:
-			*call_ret = user_mount((const char *)arg0, (const char *)arg1);
+			*call_ret = user_mount((const char *)arg0, (const char *)arg1, (const char *)arg2, (void *)arg3);
 			break;
 		case SYSCALL_UNMOUNT:
 			*call_ret = user_unmount((const char *)arg0);

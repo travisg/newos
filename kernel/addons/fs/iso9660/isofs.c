@@ -304,7 +304,7 @@ void iso_init_volume(struct isofs* fs)
 // VFS DRIVER API IMPLEMENTATION
 //================================================================================
 
-static int isofs_mount(fs_cookie *_fs, fs_id id, void *flags, vnode_id *root_vnid)
+static int isofs_mount(fs_cookie *_fs, fs_id id, const char *device, void *args, vnode_id *root_vnid)
 {
 	struct isofs *fs;
 	struct isofs_vnode *v;
@@ -322,7 +322,7 @@ static int isofs_mount(fs_cookie *_fs, fs_id id, void *flags, vnode_id *root_vni
 	fs->next_vnode_id = 0;
 
 	// Try to open the ISO file to read
-	fs->fd = sys_open("/boot/test.iso", STREAM_TYPE_FILE, 0);
+	fs->fd = sys_open(device, STREAM_TYPE_FILE, 0);
 	if (fs->fd < 0) {
 		err = fs->fd;
 		goto err1;

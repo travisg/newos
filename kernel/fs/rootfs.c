@@ -194,7 +194,7 @@ static int rootfs_is_dir_empty(struct rootfs_vnode *dir)
 	return !dir->stream.dir.dir_head;
 }
 
-static int rootfs_mount(fs_cookie *_fs, fs_id id, void *flags, vnode_id *root_vnid)
+static int rootfs_mount(fs_cookie *_fs, fs_id id, const char *device, void *args, vnode_id *root_vnid)
 {
 	struct rootfs *fs;
 	struct rootfs_vnode *v, *v1;

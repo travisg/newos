@@ -72,7 +72,7 @@ extern "C" {
 int sys_null();
 
 /* fs api */
-int sys_mount(const char *path, const char *fs_name);
+int sys_mount(const char *path, const char *device, const char *fs_name, void *args);
 int sys_unmount(const char *path);
 int sys_sync();
 int sys_open(const char *path, stream_type st, int omode);

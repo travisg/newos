@@ -87,7 +87,7 @@ static mutex vfs_mount_op_mutex;
 static mutex vfs_vnode_mutex;
 
 /* function declarations */
-static int vfs_mount(char *path, const char *fs_name, bool kernel);
+static int vfs_mount(char *path, const char *device, const char *fs_name, void *args, bool kernel);
 static int vfs_unmount(char *path, bool kernel);
 static int vfs_open(char *path, stream_type st, int omode, bool kernel);
 static int vfs_seek(int fd, off_t pos, seek_type seek_type, bool kernel);
@@ -848,7 +848,7 @@ int vfs_test()
 
 	sys_create("/test", STREAM_TYPE_DIR);
 	sys_create("/test", STREAM_TYPE_DIR);
-	err = sys_mount("/test", "rootfs");
+	err = sys_mount("/test", NULL, "rootfs", NULL);
 	if(err < 0)
 		panic("failed mount test\n");
 
@@ -929,7 +929,7 @@ int vfs_register_filesystem(const char *name, struct fs_calls *calls)
 	return 0;
 }
 
-static int vfs_mount(char *path, const char *fs_name, bool kernel)
+static int vfs_mount(char *path, const char *device, const char *fs_name, void *args, bool kernel)
 {
 	struct fs_mount *mount;
 	int err = 0;
@@ -972,7 +972,7 @@ static int vfs_mount(char *path, const char *fs_name, bool kernel)
 			goto err3;
 		}
 
-		err = mount->fs->calls->fs_mount(&mount->fscookie, mount->id, NULL, &root_id);
+		err = mount->fs->calls->fs_mount(&mount->fscookie, mount->id, device, NULL, &root_id);
 		if(err < 0) {
 			err = ERR_VFS_GENERAL;
 			goto err3;
@@ -1004,7 +1004,7 @@ static int vfs_mount(char *path, const char *fs_name, bool kernel)
 		mount->covers_vnode = covered_vnode;
 
 		// mount it
-		err = mount->fs->calls->fs_mount(&mount->fscookie, mount->id, NULL, &root_id);
+		err = mount->fs->calls->fs_mount(&mount->fscookie, mount->id, device, NULL, &root_id);
 		if(err < 0)
 			goto err4;
 	}
@@ -1625,14 +1625,14 @@ err:
 	return rc;
 }
 
-int sys_mount(const char *path, const char *fs_name)
+int sys_mount(const char *path, const char *device, const char *fs_name, void *args)
 {
 	char buf[SYS_MAX_PATH_LEN+1];
 
 	strncpy(buf, path, SYS_MAX_PATH_LEN);
 	buf[SYS_MAX_PATH_LEN] = 0;
 
-	return vfs_mount(buf, fs_name, true);
+	return vfs_mount(buf, device, fs_name, args, true);
 }
 
 int sys_unmount(const char *path)
@@ -1780,10 +1780,11 @@ int sys_setcwd(const char* _path)
 	return vfs_set_cwd(path,true);
 }
 
-int user_mount(const char *upath, const char *ufs_name)
+int user_mount(const char *upath, const char *udevice, const char *ufs_name, void *args)
 {
 	char path[SYS_MAX_PATH_LEN+1];
 	char fs_name[SYS_MAX_OS_NAME_LEN+1];
+	char device[SYS_MAX_PATH_LEN+1];
 	int rc;
 
 	if((addr)upath >= KERNEL_BASE && (addr)upath <= KERNEL_TOP)
@@ -1792,17 +1793,31 @@ int user_mount(const char *upath, const char *ufs_name)
 	if((addr)ufs_name >= KERNEL_BASE && (addr)ufs_name <= KERNEL_TOP)
 		return ERR_VM_BAD_USER_MEMORY;
 
+	if(udevice) {
+		if((addr)udevice >= KERNEL_BASE && (addr)udevice <= KERNEL_TOP)
+			return ERR_VM_BAD_USER_MEMORY;
+	}
+	
 	rc = user_strncpy(path, upath, SYS_MAX_PATH_LEN);
 	if(rc < 0)
 		return rc;
 	path[SYS_MAX_PATH_LEN] = 0;
 
-	rc = user_strncpy(fs_name, ufs_name, SYS_MAX_PATH_LEN);
+	rc = user_strncpy(fs_name, ufs_name, SYS_MAX_OS_NAME_LEN);
 	if(rc < 0)
 		return rc;
-	fs_name[SYS_MAX_PATH_LEN] = 0;
+	fs_name[SYS_MAX_OS_NAME_LEN] = 0;
 
-	return vfs_mount(path, fs_name, false);
+	if(udevice) {
+		rc = user_strncpy(device, udevice, SYS_MAX_PATH_LEN);
+		if(rc < 0)
+			return rc;
+		device[SYS_MAX_PATH_LEN] = 0;
+	} else {
+		device[0] = 0;
+	}
+
+	return vfs_mount(path, device, fs_name, args, false);
 }
 
 int user_unmount(const char *upath)
@@ -2065,7 +2080,7 @@ int vfs_bootstrap_all_filesystems()
 	// bootstrap the root filesystem
 	bootstrap_rootfs();
 
-	err = sys_mount("/", "rootfs");
+	err = sys_mount("/", NULL, "rootfs", NULL);
 	if(err < 0)
 		panic("error mounting rootfs!\n");
 
@@ -2075,7 +2090,7 @@ int vfs_bootstrap_all_filesystems()
 	bootstrap_bootfs();
 
 	sys_create("/boot", STREAM_TYPE_DIR);
-	err = sys_mount("/boot", "bootfs");
+	err = sys_mount("/boot", NULL, "bootfs", NULL);
 	if(err < 0)
 		panic("error mounting bootfs\n");
 
@@ -2083,7 +2098,7 @@ int vfs_bootstrap_all_filesystems()
 	bootstrap_devfs();
 
 	sys_create("/dev", STREAM_TYPE_DIR);
-	err = sys_mount("/dev", "devfs");
+	err = sys_mount("/dev", NULL, "devfs", NULL);
 	if(err < 0)
 		panic("error mounting devfs\n");
 

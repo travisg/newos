@@ -124,7 +124,7 @@ name: \
 	jmp		syscall16
 
 SYSCALL0(sys_null, 0)
-SYSCALL2(sys_mount, 1)
+SYSCALL4(sys_mount, 1)
 SYSCALL1(sys_unmount, 2)
 SYSCALL0(sys_sync, 3)
 SYSCALL3(sys_open, 4)

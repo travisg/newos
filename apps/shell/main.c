@@ -13,23 +13,22 @@
 
 struct command {
 	char *cmd_text;
-	int (*cmd_handler)(char *);
-	int needs_args;
+	int (*cmd_handler)(int argc, char *argv[]);
 };
 
 struct command cmds[] = {
-	{"exit", &cmd_exit, 0},
-	{"exec", &cmd_exec, 1},
-	{"ls", &cmd_ls, 0},
-	{"stat", &cmd_stat, 1},
-	{"mount", &cmd_mount, 1},
-	{"unmount", &cmd_unmount, 1},
-	{"mkdir", &cmd_mkdir, 1},
-	{"cat", &cmd_cat, 1},
-	{"cd", &cmd_cd, 1},
-	{"pwd", &cmd_pwd, 0},
-	{"help", &cmd_help, 0},
-	{NULL, NULL, 0}
+	{"exit", &cmd_exit},
+	{"exec", &cmd_exec},
+	{"ls", &cmd_ls},
+	{"stat", &cmd_stat},
+	{"mount", &cmd_mount},
+	{"unmount", &cmd_unmount},
+	{"mkdir", &cmd_mkdir},
+	{"cat", &cmd_cat},
+	{"cd", &cmd_cd},
+	{"pwd", &cmd_pwd},
+	{"help", &cmd_help},
+	{NULL, NULL}
 };
 
 struct path {
@@ -39,7 +38,93 @@ struct path {
 	{NULL}
 };
 
-int shell_parse(char *buf, int len)
+enum {
+	PARSE_STATE_INITIAL = 0,
+	PARSE_STATE_SCANNING_SPACE,
+	PARSE_STATE_NEW_FIELD,
+	PARSE_STATE_SCANNING_FIELD,
+	PARSE_STATE_FIELD_DONE,
+	PARSE_STATE_SCANNING_STRING,
+	PARSE_STATE_DONE
+};
+
+static int parse_line(char *buf, char *argv[], int max_args)
+{
+	int state = PARSE_STATE_INITIAL;
+	int curr_char = 0;
+	int curr_field = 0;
+	int field_start = 0;
+	int field_end = 0;
+	int c = 0;
+
+	for(;;) {
+		// read in the next char if we're in the proper state
+		switch(state) {
+			case PARSE_STATE_SCANNING_SPACE:
+			case PARSE_STATE_SCANNING_FIELD:
+			case PARSE_STATE_SCANNING_STRING:
+				c = buf[curr_char++];
+				break;
+		}
+
+//		printf("state %d\n", state);
+
+		switch(state) {
+			case PARSE_STATE_INITIAL:
+				curr_char = 0;
+				curr_field = 0;
+				state = PARSE_STATE_SCANNING_SPACE;
+				break;
+			case PARSE_STATE_SCANNING_SPACE:
+				if(!isspace(c)) {
+					// we see a non-space char, we gots to transition
+					state = PARSE_STATE_NEW_FIELD;
+				} else if(c == '\0')
+					state = PARSE_STATE_DONE;
+				break;
+			case PARSE_STATE_NEW_FIELD:
+				if(c == '"') {
+					// start of a string
+					state = PARSE_STATE_SCANNING_STRING;
+					field_start = curr_char;
+				} else {
+					state = PARSE_STATE_SCANNING_FIELD;
+					field_start = curr_char-1;
+				}
+				break;
+			case PARSE_STATE_SCANNING_FIELD:
+				if(isspace(c) || c == '\0') {
+					// time to break outta here
+					field_end = curr_char-1;
+					state = PARSE_STATE_FIELD_DONE;
+				}
+				break;
+			case PARSE_STATE_FIELD_DONE:
+				// point the args at the spot in the buffer
+				argv[curr_field++] = &buf[field_start];
+				buf[field_end] = 0;
+				if(curr_field == max_args)
+					return curr_field;
+				if(c != '\0')
+					state = PARSE_STATE_SCANNING_SPACE;
+				else
+					state = PARSE_STATE_DONE;
+				break;
+			case PARSE_STATE_SCANNING_STRING:
+				if(c == '"' || c == '\0') {
+					field_end = curr_char-1;
+					state = PARSE_STATE_FIELD_DONE;
+				}
+				break;
+			case PARSE_STATE_DONE:
+				return curr_field;
+				break;
+		}
+	}
+	return -1;
+}
+
+static int shell_parse(char *buf, int len)
 {
 	int i;
 	bool found_command = false;
@@ -50,7 +135,7 @@ int shell_parse(char *buf, int len)
 			buf[i] = 0;
 	}
 
-	// trim off the trailing spaces
+	// trim off any trailing spaces
 	for(i=strlen(buf)-1; i>=0; i--) {
 		if(isspace(buf[i]))
 			buf[i] = 0;
@@ -58,52 +143,41 @@ int shell_parse(char *buf, int len)
 			break;
 	}
 
+	// trim off any leading spaces
+	while(isspace(*buf))
+		buf++;
+
 	// if the command is now zero length, quit
 	if(strlen(buf) == 0)
 		return 0;
 
 	// search for the command
-	i=0;
-	while(cmds[i].cmd_text != NULL) {
+	for(i=0; cmds[i].cmd_text != NULL; i++) {
 		if(strncmp(cmds[i].cmd_text, buf, strlen(cmds[i].cmd_text)) == 0) {
-			// see if it has an argument, if it needs it
-			if(cmds[i].needs_args && !isspace(buf[strlen(cmds[i].cmd_text)])) {
-				printf("command requires arguments\n");
-			} else {
-				// call the command handler function
-				int j, k;
-				for(j = strlen(cmds[i].cmd_text); isspace(buf[j]); j++);
-				for(k = strlen(&buf[j]); isspace(buf[j+k]); k--);
+			if(buf[strlen(cmds[i].cmd_text)] != 0 && !isspace(buf[strlen(cmds[i].cmd_text)])) {
+				// we're actually looking at the leading edge of a larger word, skip it
+				continue;
+			}
+			{
+				// we need to parse the command
+				int argc;
+				char *argv[64];
 
-				if(cmds[i].cmd_handler(&buf[j]) != 0)
+				argc = parse_line(buf, argv, 64);
+				if(cmds[i].cmd_handler(argc, argv) != 0)
 					return -1;
 			}
 			found_command = true;
 			break;
 		}
-		i++;
 	}
 	if(found_command == false) {
-/*
-		// search for the command in the /boot directory
-		struct vnode_stat *stat;
-		int rc;
-
-		for(i=0; paths[i].path != NULL; i++) {
-
-			strcpy(buf, paths[i].path);
-			strcpy(
-
-		rc = sys_stat(
-
-
-*/
 		printf("Invalid command, please try again.\n");
 	}
 	return 0;
 }
 
-int readline(char *buf, int len)
+static int readline(char *buf, int len)
 {
 	int i;
 
@@ -142,13 +216,13 @@ int main()
 
 	printf("Welcome to the NewOS shell\n");
 
-	while(1) {
+	for(;;) {
 		int chars_read;
 
 		printf("> ");
 
 		chars_read = readline(buf, sizeof(buf));
-		if(chars_read > 0) {
+ 		if(chars_read > 0) {
 			if(shell_parse(buf, chars_read) < 0)
 				break;
 		}

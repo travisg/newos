@@ -17,6 +17,7 @@ int main()
 			int retcode;
 			printf("init: spawned shell, pid 0x%x\n", pid);
 			sys_proc_wait_on_proc(pid, &retcode);
+			printf("init: shell exited with return code %d\n", retcode);
 		}
 	}
 

@@ -35,7 +35,8 @@ void _call_ctors()
 	void (*f)();
 
 	for((unsigned long)f = __ctor_list; (unsigned long)f <= __ctor_end; f++) {
-		f();
+		if(f)
+			f();
 	}
 }
 

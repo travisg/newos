@@ -9,18 +9,23 @@
 
 #include "commands.h"
 
-int cmd_exit(char *args)
+int cmd_exit(int argc, char *argv[])
 {
 	return -1;
 }
 
-int cmd_exec(char *args)
+int cmd_exec(int argc, char *argv[])
 {
 	proc_id pid;
 
-	printf("executing binary '%s'\n", args);
+	if(argc <= 1) {
+		printf("not enough args to exec\n");
+		return 0;
+	}
 
-	pid = sys_proc_create_proc(args, args, 5);
+	printf("executing binary '%s'\n", argv[1]);
+
+	pid = sys_proc_create_proc(argv[1], argv[1], 5);
 	if(pid >= 0) {
 		int retcode;
 		sys_proc_wait_on_proc(pid, &retcode);
@@ -30,68 +35,77 @@ int cmd_exec(char *args)
 	return 0;
 }
 
-int cmd_mount(char* args)
+int cmd_mount(int argc, char *argv[])
 {
-	char devicepath[256];
 	int i, rc;
 
-	// Copy our first argument to 'devicepath'
-	for (i=0; i < 255 && *args && !isspace(*args); i++, args++) {
-		devicepath[i] = *args;
-	}
-	devicepath[i] = '\0';
-
-		// Skip spaces between arguments
-	while(*args && isspace(*args)) {
-		args++;
+	if(argc < 4) {
+		printf("not enough arguments to mount:\n");
+		printf("usage: mount <path> <device> <fsname>\n");
+		return 0;
 	}
 
-	rc = sys_mount(devicepath, args);
+	rc = sys_mount(argv[1], argv[2], argv[3], NULL);
 	if (rc < 0) {
 		printf("sys_mount() returned error %d\n", rc);
 	} else {
-		printf("%s successfully mounted on %s.\n", args, devicepath);
+		printf("%s successfully mounted on %s.\n", argv[2], argv[1]);
 	}
 
 	return 0;
 }
 
-int cmd_unmount(char* args)
+int cmd_unmount(int argc, char *argv[])
 {
 	int rc;
 
-	rc = sys_unmount(args);
+	if(argc < 2) {
+		printf("not enough arguments to unmount\n");
+		return 0;
+	}
+
+	rc = sys_unmount(argv[1]);
 	if (rc < 0) {
 		printf("sys_unmount() returned error %d\n", rc);
 	} else {
-		printf("%s successfully unmounted.\n", args);
+		printf("%s successfully unmounted.\n", argv[1]);
 	}
 
 	return 0;
 }
 
-int cmd_mkdir(char* args)
+int cmd_mkdir(int argc, char *argv[])
 {
 	int rc;
 
-	rc = sys_create(args, STREAM_TYPE_DIR);
+	if(argc < 2) {
+		printf("not enough arguments to mkdir\n");
+		return 0;
+	}
+
+	rc = sys_create(argv[1], STREAM_TYPE_DIR);
 	if (rc < 0) {
 		printf("sys_mkdir() returned error %d\n", rc);
 	} else {
-		printf("%s successfully created.\n", args);
+		printf("%s successfully created.\n", argv[1]);
 	}
 
 	return 0;
 }
 
-int cmd_cat(char* args)
+int cmd_cat(int argc, char *argv[])
 {
 	int rc;
 	int fd;
 	char buf[257];
 	int len;
 
-	fd = sys_open(args, STREAM_TYPE_FILE, 0);
+	if(argc < 2) {
+		printf("not enough arguments to cat\n");
+		return 0;
+	}
+
+	fd = sys_open(argv[1], STREAM_TYPE_FILE, 0);
 	if(fd < 0) {
 		printf("cat: sys_open() returned %d!\n", fd);
 		goto done_cat;
@@ -111,11 +125,16 @@ done_cat:
 	return 0;
 }
 
-int cmd_cd(char *args)
+int cmd_cd(int argc, char *argv[])
 {
 	int rc;
 
-	rc = sys_setcwd(args);
+	if(argc < 2) {
+		printf("not enough arguments to cat\n");
+		return 0;
+	}
+
+	rc = sys_setcwd(argv[1]);
 	if (rc < 0) {
 		printf("cd: sys_setcwd() returned error %d!\n", rc);
 	}
@@ -123,7 +142,7 @@ int cmd_cd(char *args)
 	return 0;
 }
 
-int cmd_pwd(char *args)
+int cmd_pwd(int argc, char *argv[])
 {
 	char buf[257];
 	int rc;
@@ -139,43 +158,49 @@ int cmd_pwd(char *args)
 	return 0;
 }
 
-int cmd_stat(char *args)
+int cmd_stat(int argc, char *argv[])
 {
 	int rc;
 	struct file_stat stat;
 
-	rc = sys_rstat(args, &stat);
+	if(argc < 2) {
+		printf("not enough arguments to stat\n");
+		return 0;
+	}
+
+	rc = sys_rstat(argv[1], &stat);
 	if(rc >= 0) {
-		printf("stat of file '%s': \n", args);
+		printf("stat of file '%s': \n", argv[1]);
 		printf("vnid 0x%x\n", (unsigned int)stat.vnid);
 		printf("type %d\n", stat.type);
 		printf("size %d\n", (int)stat.size);
 	} else {
-		printf("stat failed for file '%s'\n", args);
+		printf("stat failed for file '%s'\n", argv[1]);
 	}
 	return 0;
 }
 
-int cmd_ls(char *args)
+int cmd_ls(int argc, char *argv[])
 {
 	int rc;
 	int count = 0;
 	struct file_stat stat;
+	char *arg = argv[1];
 
-	rc = sys_rstat(args, &stat);
+	if(!arg || !strcmp(argv[1], "")) {
+		arg = ".";
+	}
+
+	rc = sys_rstat(argv[1], &stat);
 	if(rc < 0) {
 		printf("sys_rstat() returned error %d!\n", rc);
 		goto done_ls;
 	}
 
-	if(!strcmp(args, "")) {
-		args = ".";
-	}
-
 	switch(stat.type) {
 		case STREAM_TYPE_FILE:
 		case STREAM_TYPE_DEVICE:
-			printf("%s    %d bytes\n", args, (int)stat.size);
+			printf("%s    %d bytes\n", arg, (int)stat.size);
 			count++;
 			break;
 		case STREAM_TYPE_DIR: {
@@ -183,7 +208,7 @@ int cmd_ls(char *args)
 			char buf[1024];
 			int len;
 
-			fd = sys_open(args, STREAM_TYPE_DIR, 0);
+			fd = sys_open(arg, STREAM_TYPE_DIR, 0);
 			if(fd < 0) {
 				printf("ls: sys_open() returned %d!\n", fd);
 				goto done_ls;
@@ -200,7 +225,7 @@ int cmd_ls(char *args)
 			break;
 		}
 		default:
-			printf("%s    unknown file type\n", args);
+			printf("%s    unknown file type\n", arg);
 			break;
 	}
 
@@ -209,7 +234,7 @@ done_ls:
 	return 0;
 }
 
-int cmd_help(char *args)
+int cmd_help(int argc, char *argv[])
 {
 	printf("command list:\n\n");
 	printf("exit : quits this copy of the shell\n");
