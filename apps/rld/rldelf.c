@@ -661,6 +661,7 @@ relocate_rel(image_t *image, struct Elf32_Rel *rel, int rel_len )
 				// B + A;
 				final_val = image->regions[0].delta + A;
 				break;
+			case R_386_GLOB_DAT:
 			case R_386_JMP_SLOT:
 				final_val = S;
 				break;
