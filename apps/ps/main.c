@@ -13,46 +13,69 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define DISPLAY_THREADS 0
+/* global configuration */
+bool display_threads = false;
 
-int main(int argc, char ** argv)
+static void do_ps(void)
 {
 	uint32 cookie = 0;
 	struct proc_info pi;
 	int err;
 	int count = 0;
-#if DISPLAY_THREADS
 	struct thread_info ti;
 	uint32 cookie2;
-#endif
 
 	printf("process list:\n");
 	printf("id\tthreads\tname\n");
-#if DISPLAY_THREADS
-	printf(" id\t name\t user\t kernel\n");
-#endif
+	if(display_threads)
+		printf("\tid\t name\t user\t kernel\n");
 	for(;;) {
 		err = sys_proc_get_next_proc_info(&cookie, &pi);
 		if(err < 0)
 			break;
 
-		printf("%d\t%d\t%s\n", pi.id,
+		printf("%d\t%d\t%32s\n", pi.id,
 				pi.num_threads, pi.name);
 		count++;
-#if DISPLAY_THREADS
-		// display the threads this proc holds
-		cookie2 = 0;
-		for(;;) {
-			err = sys_thread_get_next_thread_info(&cookie2, pi.id, &ti);
-			if(err < 0)
-				break;
+		if(display_threads) {
+			// display the threads this proc holds
+			cookie2 = 0;
+			for(;;) {
+				err = sys_thread_get_next_thread_info(&cookie2, pi.id, &ti);
+				if(err < 0)
+					break;
 
-			printf(" %d\t %s\t %Ld\t %Ld\n", ti.id, ti.name, ti.user_time, ti.kernel_time);
+				printf("\t%d\t %32s\t %Ld\t %Ld\n", ti.id, ti.name, ti.user_time, ti.kernel_time);
+			}
 		}
-#endif
 	}
 
 	printf("\n%d processes listed\n", count);
+}
+
+static void usage(const char *progname)
+{
+	printf("usage:\n");
+	printf("%s [-t]\n", progname);
+
+	exit(1);
+}
+
+int main(int argc, char ** argv)
+{
+	char c;
+
+	while((c = getopt(argc, argv, "t")) >= 0) {
+		switch(c) {
+			case 't':
+				display_threads = true;
+				break;
+			default:
+				usage(argv[0]);
+		}
+	}
+
+	do_ps();
 
 	return 0;
 }
