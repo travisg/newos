@@ -5,7 +5,7 @@
 
 #include <string.h>
 
-#include <con.h>
+#include <console_dev.h>
 #include <null.h>
 #include <zero.h>
 
