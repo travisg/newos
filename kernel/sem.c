@@ -157,9 +157,9 @@ static sem_id sem_create_etc(int count, const char *name, proc_id owner)
 		temp_name = (char *)kmalloc(sizeof("default_sem_name")+1);
 		if(temp_name == NULL)
 			return ERR_NO_MEMORY;
-		strcpy(temp_name, "default_sem_name");		
+		strcpy(temp_name, "default_sem_name");
 	}
-	
+
 	state = int_disable_interrupts();
 	GRAB_SEM_LIST_LOCK();
 
@@ -202,7 +202,7 @@ out:
 
 sem_id sem_create(int count, const char *name)
 {
-	return sem_create_etc(count, name, proc_get_kernel_proc_id());	
+	return sem_create_etc(count, name, proc_get_kernel_proc_id());
 }
 
 int sem_delete(sem_id id)
@@ -328,8 +328,10 @@ int sem_acquire_etc(sem_id id, int count, int flags, time_t timeout, int *delete
 	if(sems_active == false)
 		return ERR_SEM_NOT_ACTIVE;
 
-	if(id < 0)
+	if(id < 0) {
+		dprintf("sem_acquire_etc: invalid sem handle %d\n", id);
 		return ERR_INVALID_HANDLE;
+	}
 
 	if(count <= 0)
 		return ERR_INVALID_ARGS;
@@ -338,7 +340,7 @@ int sem_acquire_etc(sem_id id, int count, int flags, time_t timeout, int *delete
 	GRAB_SEM_LOCK(sems[slot]);
 
 	if(sems[slot].id != id) {
-		dprintf("sem_acquire_etc: invalid sem_id %d\n", id);
+		dprintf("sem_acquire_etc: bad sem_id %d\n", id);
 		err = ERR_INVALID_HANDLE;
 		goto err;
 	}
@@ -409,7 +411,7 @@ int sem_acquire_etc(sem_id id, int count, int flags, time_t timeout, int *delete
 
 		if((flags & SEM_FLAG_TIMEOUT) != 0) {
 			if(t->sem_errcode < 0 && t->sem_errcode != ERR_SEM_TIMED_OUT) {
-				// cancel the timer event, the sem may have been deleted or interrupted 
+				// cancel the timer event, the sem may have been deleted or interrupted
 				// with the timer still active
 				timer_cancel_event(&timer);
 			}
@@ -463,7 +465,7 @@ int sem_release_etc(sem_id id, int count, int flags)
 	// put back into the run list. This is done so the thread lock wont be held
 	// while this sems lock is held since the two locks are grabbed in the other
 	// order in sem_interrupt_thread.
-	release_queue.head = release_queue.tail = NULL; 
+	release_queue.head = release_queue.tail = NULL;
 
 	while(count > 0) {
 		int delta = count;
@@ -595,7 +597,7 @@ int sem_delete_owned_sems(proc_id owner)
 		if(sems[i].id != -1 && sems[i].owner == owner) {
 			sem_id id = sems[i].id;
 
-			RELEASE_SEM_LIST_LOCK();			
+			RELEASE_SEM_LIST_LOCK();
 			int_restore_interrupts(state);
 
 			sem_delete_etc(id, 0);
@@ -606,9 +608,9 @@ int sem_delete_owned_sems(proc_id owner)
 		}
 	}
 
-	RELEASE_SEM_LIST_LOCK();			
+	RELEASE_SEM_LIST_LOCK();
 	int_restore_interrupts(state);
-	
+
 	return count;
 }
 

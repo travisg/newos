@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -19,7 +19,7 @@ struct hash_table {
 	int flags;
 	int (*compare_func)(void *e, void *key);
 	unsigned int (*hash_func)(void *e, void *key, int range);
-};	
+};
 
 // XXX gross hack
 #define NEXT_ADDR(t, e) ((void *)(((unsigned long)(e)) + (t)->next_ptr_offset))
@@ -32,7 +32,7 @@ void *hash_init(int table_size, int next_ptr_offset,
 {
 	struct hash_table *t;
 	int i;
-	
+
 	t = (struct hash_table *)malloc(sizeof(struct hash_table));
 	if(t == NULL) {
 		return NULL;
@@ -57,17 +57,17 @@ void *hash_init(int table_size, int next_ptr_offset,
 int hash_uninit(void *_hash_table)
 {
 	struct hash_table *t = _hash_table;
-	
+
 #if 0
 	if(t->num_elems > 0) {
 		return -1;
 	}
-#endif	
-	
+#endif
+
 	free(t->table);
 	free(t);
-	
-	return 0;	
+
+	return 0;
 }
 
 int hash_insert(void *_hash_table, void *e)
@@ -165,48 +165,30 @@ void hash_close(void *_hash_table, struct hash_iterator *i, bool free_iterator)
 
 void hash_rewind(void *_hash_table, struct hash_iterator *i)
 {
-	struct hash_table *t = _hash_table;
-	int index;
-
-	for(index = 0; index < t->table_size; index++) {
-		if(t->table[index] != NULL) {
-			i->bucket = index;
-			i->ptr = t->table[index];
-			return;
-		}
-	}
-
-	i->bucket = t->table_size;
 	i->ptr = NULL;
+	i->bucket = -1;
 }
 
 void *hash_next(void *_hash_table, struct hash_iterator *i)
 {
 	struct hash_table *t = _hash_table;
-	void *e;
+	int index;
 
-	e = NULL;
-findnext:
-	if(i->ptr != NULL) {
-		e = i->ptr;
-		if(NEXT(t, i->ptr) != NULL) {
-			i->ptr = NEXT(t, i->ptr);
-			return e;
+restart:
+	if(!i->ptr) {
+		for(index = i->bucket + 1; index < t->table_size; index++) {
+			if(t->table[index]) {
+				i->bucket = index;
+				i->ptr = t->table[index];
+				break;
+			}
 		}
+	} else {
+		i->ptr = NEXT(t, i->ptr);
+		if(!i->ptr)
+			goto restart;
 	}
 
-	if(i->bucket >= t->table_size)
-		return NULL;
-	for(i->bucket++; i->bucket < t->table_size; i->bucket++) {
-		if(t->table[i->bucket] != NULL) {
-			i->ptr = t->table[i->bucket];
-			if(e != NULL) 
-				return e;
-			goto findnext;
-		}
-	}
-	i->ptr = NULL;
-
-	return e;
+	return i->ptr;
 }
 

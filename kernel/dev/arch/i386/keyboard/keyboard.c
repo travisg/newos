@@ -182,7 +182,7 @@ int handle_keyboard_interrupt(void* data)
 				set_leds();
 				break;
 			case SYSREQ:
-				kernel_debugger();
+				panic("Keyboard Requested Halt\n");
 				break;
 			case F12:
 				reboot();

@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -13,6 +13,7 @@ int arch_int_disable_interrupts();
 void arch_int_restore_interrupts(int oldstate);
 void arch_int_enable_io_interrupt(int irq);
 void arch_int_disable_io_interrupt(int irq);
+bool arch_int_is_interrupts_enabled();
 
 #endif
 

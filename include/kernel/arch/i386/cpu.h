@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -55,7 +55,7 @@ struct tss_descriptor {
 typedef struct ptentry {
 	unsigned int present:1;
 	unsigned int rw:1;
-	unsigned int supervisor:1;
+	unsigned int user:1;
 	unsigned int write_through:1;
 	unsigned int cache_disabled:1;
 	unsigned int accessed:1;
@@ -69,7 +69,7 @@ typedef struct ptentry {
 typedef struct pdentry {
 	unsigned int present:1;
 	unsigned int rw:1;
-	unsigned int supervisor:1;
+	unsigned int user:1;
 	unsigned int write_through:1;
 	unsigned int cache_disabled:1;
 	unsigned int accessed:1;

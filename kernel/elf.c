@@ -165,6 +165,9 @@ static struct Elf32_Sym *elf_find_symbol(struct elf_image_info *image, const cha
 	unsigned int hash;
 	unsigned int i;
 
+	if(!image->dynamic_ptr)
+		return NULL;
+
 	hash = elf_hash(name) % HASHTABSIZE(image);
 	for(i = HASHBUCKETS(image)[hash]; i != STN_UNDEF; i = HASHCHAINS(image)[i]) {
 		if(!strcmp(SYMNAME(image, &image->syms[i]), name)) {
@@ -715,7 +718,7 @@ int elf_init(kernel_args *ka)
 
 	// parse the dynamic section
 	if(elf_parse_dynamic_section(kernel_image) < 0)
-		panic("elf_init: elf_parse_dynamic_section doesn't like the kernel image\n");
+		dprintf("elf_init: WARNING elf_parse_dynamic_section couldn't find dynamic section.\n");
 
 	// insert it first in the list of kernel images loaded
 	kernel_images = NULL;

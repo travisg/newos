@@ -139,6 +139,15 @@ void arch_int_restore_interrupts(int oldstate)
 		: "=g" (flags) : "r" (state), "0" (flags));
 }
 
+bool arch_int_is_interrupts_enabled()
+{
+	int flags;
+
+	asm("pushfl;\n"
+		"popl %0;\n" : "=g" (flags));
+	return flags & 0x200 ? 1 : 0;
+}
+
 void i386_handle_trap(struct int_frame frame)
 {
 	int ret = INT_NO_RESCHEDULE;

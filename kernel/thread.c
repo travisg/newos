@@ -859,8 +859,10 @@ void thread_start_threading()
 
 	// XXX may not be the best place for this
 	// invalidate all of the other processors' TLB caches
-	smp_send_broadcast_ici(SMP_MSG_GLOBAL_INVL_PAGE, 0, 0, 0, NULL, SMP_MSG_FLAG_SYNC);
+	state = int_disable_interrupts();
 	arch_cpu_global_TLB_invalidate();
+	smp_send_broadcast_ici(SMP_MSG_GLOBAL_INVL_PAGE, 0, 0, 0, NULL, SMP_MSG_FLAG_SYNC);
+	int_restore_interrupts(state);
 
 	// start the other processors
 	smp_send_broadcast_ici(SMP_MSG_RESCHEDULE, 0, 0, 0, NULL, SMP_MSG_FLAG_ASYNC);
@@ -1008,6 +1010,7 @@ void thread_exit(int retcode)
 				thread_snooze(10000); // 10 ms
 			}
 		}
+		vm_put_aspace(p->aspace);
 		vm_delete_aspace(p->aspace_id);
 		sem_delete_owned_sems(p->id);
 		vfs_free_ioctx(p->ioctx);
@@ -1600,6 +1603,7 @@ static struct proc *create_proc_struct(const char *name, bool kernel)
 	p->aspace_id = -1;
 	p->aspace = NULL;
 	p->kaspace = vm_get_kernel_aspace();
+	vm_put_aspace(p->kaspace);
 	p->thread_list = NULL;
 	p->main_thread = NULL;
 	p->state = PROC_STATE_BIRTH;

@@ -89,6 +89,7 @@ vm_cache *vm_cache_create(vm_store *store)
 		store->cache = cache;
 	cache->virtual_size = 0;
 	cache->temporary = 0;
+	cache->scan_skip = 0;
 
 	return cache;
 }

@@ -190,14 +190,14 @@ int rtl8139_init(rtl8139 *rtl)
 	RTL_WRITE_8(rtl, RT_CFG9346, 0);
 
 	// Setup RX buffers
-	vm_get_page_mapping(vm_get_kernel_aspace(), rtl->rxbuf, &temp);
+	vm_get_page_mapping(vm_get_kernel_aspace_id(), rtl->rxbuf, &temp);
 	RTL_WRITE_32(rtl, RT_RXBUF, temp);
 
 	// Setup TX buffers
-	vm_get_page_mapping(vm_get_kernel_aspace(), rtl->txbuf, &temp);
+	vm_get_page_mapping(vm_get_kernel_aspace_id(), rtl->txbuf, &temp);
 	RTL_WRITE_32(rtl, RT_TXADDR0, temp);
 	RTL_WRITE_32(rtl, RT_TXADDR1, temp + 2*1024);
-	vm_get_page_mapping(vm_get_kernel_aspace(), rtl->txbuf + 4*1024, &temp);
+	vm_get_page_mapping(vm_get_kernel_aspace_id(), rtl->txbuf + 4*1024, &temp);
 	RTL_WRITE_32(rtl, RT_TXADDR2, temp);
 	RTL_WRITE_32(rtl, RT_TXADDR3, temp + 2*1024);
 

@@ -70,12 +70,12 @@ void vm_test()
 		addr va, pa;
 		addr va2;
 
-		vm_get_page_mapping(vm_get_kernel_aspace(), 0x80000000, &pa);
+		vm_get_page_mapping(vm_get_kernel_aspace_id(), 0x80000000, &pa);
 		vm_get_physical_page(pa, &va, PHYSICAL_PAGE_CAN_WAIT);
 		dprintf("pa 0x%x va 0x%x\n", pa, va);
 		dprintf("%d\n", memcmp((void *)0x80000000, (void *)va, PAGE_SIZE));
 
-		vm_get_page_mapping(vm_get_kernel_aspace(), 0x80001000, &pa);
+		vm_get_page_mapping(vm_get_kernel_aspace_id(), 0x80001000, &pa);
 		vm_get_physical_page(pa, &va2, PHYSICAL_PAGE_CAN_WAIT);
 		dprintf("pa 0x%x va 0x%x\n", pa, va2);
 		dprintf("%d\n", memcmp((void *)0x80001000, (void *)va2, PAGE_SIZE));
@@ -83,7 +83,7 @@ void vm_test()
 		vm_put_physical_page(va);
 		vm_put_physical_page(va2);
 
-		vm_get_page_mapping(vm_get_kernel_aspace(), 0x80000000, &pa);
+		vm_get_page_mapping(vm_get_kernel_aspace_id(), 0x80000000, &pa);
 		vm_get_physical_page(pa, &va, PHYSICAL_PAGE_CAN_WAIT);
 		dprintf("pa 0x%x va 0x%x\n", pa, va);
 		dprintf("%d\n", memcmp((void *)0x80000000, (void *)va, PAGE_SIZE));

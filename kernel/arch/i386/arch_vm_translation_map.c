@@ -75,6 +75,8 @@ static spinlock_t tmap_list_lock;
 
 static int vm_translation_map_quick_query(addr va, addr *out_physical);
 
+static void flush_tmap(vm_translation_map *map);
+
 static void init_pdentry(pdentry *e)
 {
 	*(int *)e = 0;
@@ -87,7 +89,6 @@ static void init_ptentry(ptentry *e)
 
 static void _update_all_pgdirs(int index, pdentry e)
 {
-	// XXX disable interrupts here?
 	unsigned int state;
 	vm_translation_map *entry;
 
@@ -119,18 +120,7 @@ static int unlock_tmap(vm_translation_map *map)
 
 	if(recursive_lock_get_recursion(&map->lock) == 1) {
 		// we're about to release it for the last time
-		if(map->arch_data->num_invalidate_pages > PAGE_INVALIDATE_CACHE_SIZE) {
-			// invalidate all pages
-//			dprintf("unlock_tmap: %d pages to invalidate, doing global invalidation\n", map->arch_data->num_invalidate_pages);
-			arch_cpu_global_TLB_invalidate();
-			smp_send_broadcast_ici(SMP_MSG_GLOBAL_INVL_PAGE, 0, 0, 0, NULL, SMP_MSG_FLAG_SYNC);
-		} else {
-//			dprintf("unlock_tmap: %d pages to invalidate, doing local invalidation\n", map->arch_data->num_invalidate_pages);
-			arch_cpu_invalidate_TLB_list(map->arch_data->pages_to_invalidate, map->arch_data->num_invalidate_pages);
-			smp_send_broadcast_ici(SMP_MSG_INVL_PAGE_LIST, (unsigned long)map->arch_data->pages_to_invalidate,
-				map->arch_data->num_invalidate_pages, 0, NULL, SMP_MSG_FLAG_SYNC);
-		}
-		map->arch_data->num_invalidate_pages = 0;
+		flush_tmap(map);
 	}
 	recursive_lock_unlock(&map->lock);
 	return 0;
@@ -193,7 +183,7 @@ static void put_pgtable_in_pgdir(pdentry *e, addr pgtable_phys, int attributes)
 	// put it in the pgdir
 	init_pdentry(e);
 	e->addr = ADDR_SHIFT(pgtable_phys);
-	e->supervisor = !(attributes & LOCK_KERNEL);
+	e->user = !(attributes & LOCK_KERNEL);
 	e->rw = attributes & LOCK_RW;
 	e->present = 1;
 }
@@ -248,7 +238,7 @@ static int map_tmap(vm_translation_map *map, addr va, addr pa, unsigned int attr
 
 	init_ptentry(&pt[index]);
 	pt[index].addr = ADDR_SHIFT(pa);
-	pt[index].supervisor = !(attributes & LOCK_KERNEL);
+	pt[index].user = !(attributes & LOCK_KERNEL);
 	pt[index].rw = attributes & LOCK_RW;
 	pt[index].present = 1;
 
@@ -322,26 +312,30 @@ static int query_tmap(vm_translation_map *map, addr va, addr *out_physical, unsi
 	int index;
 	int err;
 
+	// default the flags to not present
+	*out_flags = 0;
+	*out_physical = 0;
+
 	index = VADDR_TO_PDENT(va);
 	if(pd[index].present == 0) {
 		// no pagetable here
-		return ERR_VM_PAGE_NOT_PRESENT;
+		return NO_ERROR;
 	}
 
 	do {
 		err = vm_get_physical_page(ADDR_REVERSE_SHIFT(pd[index].addr), (addr *)&pt, PHYSICAL_PAGE_NO_WAIT);
 	} while(err < 0);
 	index = VADDR_TO_PTENT(va);
-	if(pt[index].present == 0) {
-		// page mapping not valid
-		vm_put_physical_page((addr)pt);
-		return ERR_VM_PAGE_NOT_PRESENT;
-	}
 
 	*out_physical = ADDR_REVERSE_SHIFT(pt[index].addr);
 
-	// XXX fill this
+	// read in the page state flags, clearing the modified and accessed flags in the process
 	*out_flags = 0;
+	*out_flags |= pt[index].rw ? LOCK_RW : LOCK_RO;
+	*out_flags |= pt[index].user ? 0 : LOCK_KERNEL;
+	*out_flags |= pt[index].dirty ? PAGE_MODIFIED : 0;
+	*out_flags |= pt[index].accessed ? PAGE_ACCESSED : 0;
+	*out_flags |= pt[index].present ? PAGE_PRESENT : 0;
 
 	vm_put_physical_page((addr)pt);
 
@@ -362,11 +356,79 @@ static int protect_tmap(vm_translation_map *map, addr base, addr top, unsigned i
 	return ERR_UNIMPLEMENTED;
 }
 
+static int clear_flags_tmap(vm_translation_map *map, addr va, unsigned int flags)
+{
+	ptentry *pt;
+	pdentry *pd = map->arch_data->pgdir_virt;
+	int index;
+	int err;
+	int tlb_flush = false;
+
+	index = VADDR_TO_PDENT(va);
+	if(pd[index].present == 0) {
+		// no pagetable here
+		return NO_ERROR;
+	}
+
+	do {
+		err = vm_get_physical_page(ADDR_REVERSE_SHIFT(pd[index].addr), (addr *)&pt, PHYSICAL_PAGE_NO_WAIT);
+	} while(err < 0);
+	index = VADDR_TO_PTENT(va);
+
+	// clear out the flags we've been requested to clear
+	if(flags & PAGE_MODIFIED) {
+		pt[index].dirty = 0;
+		tlb_flush = true;
+	}
+	if(flags & PAGE_ACCESSED) {
+		pt[index].accessed = 0;
+		tlb_flush = true;
+	}
+
+	vm_put_physical_page((addr)pt);
+
+	if(tlb_flush) {
+		if(map->arch_data->num_invalidate_pages < PAGE_INVALIDATE_CACHE_SIZE) {
+			map->arch_data->pages_to_invalidate[map->arch_data->num_invalidate_pages] = va;
+		}
+		map->arch_data->num_invalidate_pages++;
+	}
+
+//	dprintf("query_tmap: returning pa 0x%x for va 0x%x\n", *out_physical, va);
+
+	return 0;
+}
+
+
+static void flush_tmap(vm_translation_map *map)
+{
+	int state;
+
+	if(map->arch_data->num_invalidate_pages <= 0)
+		return;
+
+	state = int_disable_interrupts();
+	if(map->arch_data->num_invalidate_pages > PAGE_INVALIDATE_CACHE_SIZE) {
+		// invalidate all pages
+//		dprintf("flush_tmap: %d pages to invalidate, doing global invalidation\n", map->arch_data->num_invalidate_pages);
+		arch_cpu_global_TLB_invalidate();
+		smp_send_broadcast_ici(SMP_MSG_GLOBAL_INVL_PAGE, 0, 0, 0, NULL, SMP_MSG_FLAG_SYNC);
+	} else {
+//		dprintf("flush_tmap: %d pages to invalidate, doing local invalidation\n", map->arch_data->num_invalidate_pages);
+		arch_cpu_invalidate_TLB_list(map->arch_data->pages_to_invalidate, map->arch_data->num_invalidate_pages);
+		smp_send_broadcast_ici(SMP_MSG_INVL_PAGE_LIST, (unsigned long)map->arch_data->pages_to_invalidate,
+			map->arch_data->num_invalidate_pages, 0, NULL, SMP_MSG_FLAG_SYNC);
+	}
+	map->arch_data->num_invalidate_pages = 0;
+	int_restore_interrupts(state);
+}
+
 static int map_iospace_chunk(addr va, addr pa)
 {
 	int i;
 	ptentry *pt;
 	addr ppn;
+	int state;
 
 	pa &= ~(PAGE_SIZE - 1); // make sure it's page aligned
 	va &= ~(PAGE_SIZE - 1); // make sure it's page aligned
@@ -378,14 +440,16 @@ static int map_iospace_chunk(addr va, addr pa)
 	for(i=0; i<1024; i++) {
 		init_ptentry(&pt[i]);
 		pt[i].addr = ppn + i;
-		pt[i].supervisor = 0;
+		pt[i].user = 0;
 		pt[i].rw = 1;
 		pt[i].present = 1;
 	}
 
+	state = int_disable_interrupts();
 	arch_cpu_invalidate_TLB_range(va, va + (IOSPACE_CHUNK_SIZE - PAGE_SIZE));
 	smp_send_broadcast_ici(SMP_MSG_INVL_PAGE_RANGE, va, va + (IOSPACE_CHUNK_SIZE - PAGE_SIZE), 0,
 		NULL, SMP_MSG_FLAG_SYNC);
+	int_restore_interrupts(state);
 
 	return 0;
 }
@@ -497,6 +561,8 @@ static vm_translation_map_ops tmap_ops = {
 	query_tmap,
 	get_mapped_size_tmap,
 	protect_tmap,
+	clear_flags_tmap,
+	flush_tmap,
 	get_physical_page_tmap,
 	put_physical_page_tmap
 };
@@ -528,7 +594,7 @@ int vm_translation_map_create(vm_translation_map *new_map, bool kernel)
 		}
 		if(((addr)new_map->arch_data->pgdir_virt % PAGE_SIZE) != 0)
 			panic("vm_translation_map_create: malloced pgdir and found it wasn't aligned!\n");
-		vm_get_page_mapping(vm_get_kernel_aspace(), (addr)new_map->arch_data->pgdir_virt, (addr *)&new_map->arch_data->pgdir_phys);
+		vm_get_page_mapping(vm_get_kernel_aspace_id(), (addr)new_map->arch_data->pgdir_virt, (addr *)&new_map->arch_data->pgdir_phys);
 	} else {
 		// kernel
 		// we already know the kernel pgdir mapping
@@ -709,7 +775,7 @@ int vm_translation_map_quick_map(kernel_args *ka, addr va, addr pa, unsigned int
 
 	init_ptentry(pentry);
 	pentry->addr = ADDR_SHIFT(pa);
-	pentry->supervisor = !(attributes & LOCK_KERNEL);
+	pentry->user = !(attributes & LOCK_KERNEL);
 	pentry->rw = attributes & LOCK_RW;
 	pentry->present = 1;
 

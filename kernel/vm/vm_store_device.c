@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -41,7 +41,7 @@ static ssize_t device_read(struct vm_store *store, off_t offset, iovecs *vecs)
 
 static ssize_t device_write(struct vm_store *store, off_t offset, iovecs *vecs)
 {
-	// no place to write, this will cause the page daemon to skip this store	
+	// no place to write, this will cause the page daemon to skip this store
 	return 0;
 }
 
@@ -54,12 +54,12 @@ static int device_fault(struct vm_store *store, struct vm_address_space *aspace,
 	struct device_store_data *d = (struct device_store_data *)store->data;
 	vm_cache_ref *cache_ref = store->cache->ref;
 	vm_region *region;
-	
+
 	dprintf("device_fault: offset 0x%x 0x%x + base_addr 0x%x\n", offset, d->base_addr);
-	
+
 	// figure out which page needs to be mapped where
-	(*aspace->translation_map.ops->lock)(&aspace->translation_map);
 	mutex_lock(&cache_ref->lock);
+	(*aspace->translation_map.ops->lock)(&aspace->translation_map);
 
 	// cycle through all of the regions that map this cache and map the page in
 	for(region = cache_ref->region_list; region != NULL; region = region->cache_next) {
@@ -73,9 +73,9 @@ static int device_fault(struct vm_store *store, struct vm_address_space *aspace,
 				d->base_addr + offset, region->lock);
 		}
 	}
-	
-	mutex_unlock(&cache_ref->lock);	
+
 	(*aspace->translation_map.ops->unlock)(&aspace->translation_map);
+	mutex_unlock(&cache_ref->lock);
 
 	dprintf("device_fault: done\n");
 
@@ -97,7 +97,7 @@ vm_store *vm_store_create_device(addr base_addr)
 {
 	vm_store *store;
 	struct device_store_data *d;
-	
+
 	store = kmalloc(sizeof(vm_store) + sizeof(struct device_store_data));
 	if(store == NULL)
 		return NULL;

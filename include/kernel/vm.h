@@ -25,9 +25,10 @@ typedef struct vm_page {
 	struct vm_page *cache_prev;
 	struct vm_page *cache_next;
 
+	unsigned int ref_count;
+
 	unsigned int type : 2;
 	unsigned int state : 3;
-	unsigned int ref_count : 27;
 } vm_page;
 
 enum {
@@ -65,6 +66,7 @@ typedef struct vm_cache {
 	struct vm_store *store;
 	off_t virtual_size;
 	unsigned int temporary : 1;
+	unsigned int scan_skip : 1;
 } vm_cache;
 
 // info about a region that external entities may want to know
@@ -116,8 +118,13 @@ typedef struct vm_address_space {
 	vm_translation_map translation_map;
 	char *name;
 	aspace_id id;
+	int ref_count;
 	int fault_count;
-	int working_set_size;
+	addr scan_va;
+	addr working_set_size;
+	addr max_working_set;
+	addr min_working_set;
+	time_t last_working_set_adjust;
 	struct vm_address_space *hash_next;
 } vm_address_space;
 
@@ -181,6 +188,7 @@ aspace_id vm_get_kernel_aspace_id();
 vm_address_space *vm_get_current_user_aspace();
 aspace_id vm_get_current_user_aspace_id();
 vm_address_space *vm_get_aspace_from_id(aspace_id aid);
+void vm_put_aspace(vm_address_space *aspace);
 
 region_id vm_create_anonymous_region(aspace_id aid, char *name, void **address, int addr_type,
 	addr size, int wiring, int lock);
@@ -195,7 +203,7 @@ int vm_delete_region(aspace_id aid, region_id id);
 region_id vm_find_region_by_name(aspace_id aid, const char *name);
 int vm_get_region_info(region_id id, vm_region_info *info);
 
-int vm_get_page_mapping(vm_address_space *aspace, addr vaddr, addr *paddr);
+int vm_get_page_mapping(aspace_id aid, addr vaddr, addr *paddr);
 int vm_get_physical_page(addr paddr, addr *vaddr, int flags);
 int vm_put_physical_page(addr vaddr);
 

@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -27,6 +27,8 @@ typedef struct vm_translation_map_ops_struct {
 	int (*query)(vm_translation_map *map, addr va, addr *out_physical, unsigned int *out_flags);
 	addr (*get_mapped_size)(vm_translation_map*);
 	int (*protect)(vm_translation_map *map, addr base, addr top, unsigned int attributes);
+	int (*clear_flags)(vm_translation_map *map, addr va, unsigned int flags);
+	void (*flush)(vm_translation_map *map);
 	int (*get_physical_page)(addr physical_address, addr *out_virtual_address, int flags);
 	int (*put_physical_page)(addr virtual_address);
 } vm_translation_map_ops;

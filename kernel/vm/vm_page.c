@@ -507,6 +507,16 @@ int vm_page_set_state(vm_page *page, int page_state)
 	return err;
 }
 
+addr vm_page_num_pages()
+{
+	return num_pages;
+}
+
+addr vm_page_num_free_pages()
+{
+	return page_free_queue.count + page_clear_queue.count;
+}
+
 void dump_free_page_table(int argc, char **argv)
 {
 	dprintf("not finished\n");
