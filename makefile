@@ -33,6 +33,9 @@ clean: $(CLEAN)
 depsclean:
 	rm -f $(ALL_DEPS)
 
+appsclean:
+	rm -rf $(APPS_BUILD_DIR)
+
 allclean: depsclean clean
 	rm -f $(TOOLS)
 
