@@ -222,8 +222,8 @@ static int find_and_insert_region_slot(vm_virtual_map *map, addr_t start, addr_t
 	vm_region *next_r;
 	bool foundspot = false;
 
-	dprintf("find_and_insert_region_slot: map %p, start 0x%lx, size %ld, end 0x%lx, addr_type %d, region %p\n",
-		map, start, size, end, addr_type, region);
+//	dprintf("find_and_insert_region_slot: map %p, start 0x%lx, size %ld, end 0x%lx, addr_type %d, region %p\n",
+//		map, start, size, end, addr_type, region);
 //	dprintf("map->base 0x%x, map->size 0x%x\n", map->base, map->size);
 
 	// do some sanity checking
@@ -519,8 +519,8 @@ region_id vm_create_anonymous_region(aspace_id aid, char *name, void **address, 
 	vm_address_space *aspace;
 	vm_cache_ref *cache_ref;
 
-	dprintf("create_anonymous_region: name '%s', type %d, size 0x%lx, wiring %d, lock %d\n",
-		name, addr_type, size, wiring, lock);
+//	dprintf("create_anonymous_region: name '%s', type %d, size 0x%lx, wiring %d, lock %d\n",
+//		name, addr_type, size, wiring, lock);
 
 	if(addr_type != REGION_ADDR_ANY_ADDRESS && addr_type != REGION_ADDR_EXACT_ADDRESS)
 		return ERR_INVALID_ARGS;
@@ -661,7 +661,7 @@ region_id vm_create_anonymous_region(aspace_id aid, char *name, void **address, 
 			;
 	}
 	vm_put_aspace(aspace);
-	dprintf("create_anonymous_region: done\n");
+//	dprintf("create_anonymous_region: done\n");
 	if(region)
 		return region->id;
 	else
@@ -959,7 +959,7 @@ static int _vm_delete_region(vm_address_space *aspace, region_id rid)
 {
 	vm_region *region;
 
-	dprintf("vm_delete_region: aspace id 0x%x, region id 0x%x\n", aspace->id, rid);
+//	dprintf("vm_delete_region: aspace id 0x%x, region id 0x%x\n", aspace->id, rid);
 
 	VERIFY_VM_ASPACE(aspace);
 
@@ -1508,7 +1508,7 @@ void vm_put_aspace(vm_address_space *aspace)
 	if(!removeit)
 		return;
 
-	dprintf("vm_put_aspace: reached zero ref, deleting aspace\n");
+//	dprintf("vm_put_aspace: reached zero ref, deleting aspace\n");
 
 	if(aspace == kernel_aspace)
 		panic("vm_put_aspace: tried to delete the kernel aspace!\n");
@@ -1596,7 +1596,7 @@ int vm_delete_aspace(aspace_id aid)
 	if(aspace == NULL)
 		return ERR_VM_INVALID_ASPACE;
 
-	dprintf("vm_delete_aspace: called on aspace 0x%x\n", aid);
+//	dprintf("vm_delete_aspace: called on aspace 0x%x\n", aid);
 
 	// put this aspace in the deletion state
 	// this guarantees that no one else will add regions to the list

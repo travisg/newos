@@ -189,7 +189,8 @@ void i386_handle_trap(struct iframe frame)
 
 	// try to deliver signals to the interrupted thread
 	// XXX should we only do it for timer interrupts?
-	ret |= thread_atinterrupt_exit();
+	if(frame.cs == USER_CODE_SEG)
+		ret |= thread_atinterrupt_exit();
 	if(ret == INT_RESCHEDULE) {
 		GRAB_THREAD_LOCK();
 		thread_resched();
