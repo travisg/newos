@@ -387,7 +387,7 @@ restart:
 
 	// copy the buffer
 	if(len > buf_len) {
-		dprintf("rtl8139_rx: packet too large for buffer (len %d, buf_len %d)\n", len, buf_len);
+		dprintf("rtl8139_rx: packet too large for buffer (len %d, buf_len %ld)\n", len, (long)buf_len);
 		RTL_WRITE_16(rtl, RT_RXBUFTAIL, TAILREG_TO_TAIL(RTL_READ_16(rtl, RT_RXBUFHEAD)));
 		rc = ERR_TOO_BIG;
 		release_sem = true;

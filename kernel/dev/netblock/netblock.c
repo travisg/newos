@@ -349,7 +349,7 @@ static ssize_t netblock_read(dev_cookie _cookie, void *_buf, off_t pos, ssize_t 
 	ssize_t bytes_read = 0;
 	bool update_pos = false;
 
-	TRACE(("netblock_read: cookie %p, buf %p, pos 0x%Ld, len %ud\n", cookie, _buf, pos, len));
+	TRACE(("netblock_read: cookie %p, buf %p, pos 0x%Ld, len %lu\n", cookie, _buf, pos, (long)len));
 
 	mutex_lock(&cookie->dev->lock);
 
@@ -387,7 +387,7 @@ static ssize_t netblock_write(dev_cookie _cookie, const void *_buf, off_t pos, s
 	ssize_t bytes_written = 0;
 	bool update_pos = false;
 
-	TRACE(("netblock_write: cookie %p, buf %p, pos 0x%Ld, len %ud\n", cookie, _buf, pos, len));
+	TRACE(("netblock_write: cookie %p, buf %p, pos 0x%Ld, len %lu\n", cookie, _buf, pos, (long)len));
 
 	mutex_lock(&cookie->dev->lock);
 
@@ -430,7 +430,7 @@ static ssize_t netblock_readpage(dev_ident ident, iovecs *vecs, off_t pos)
 	ssize_t bytes_read = 0;
 	unsigned int curr_vec;
 
-	TRACE(("netblock_readpage: dev %p, vecs %p, num %d, total_len %u, pos 0x%Ld\n", dev, vecs, vecs->num, vecs->total_len, pos));
+	TRACE(("netblock_readpage: dev %p, vecs %p, num %lu, total_len %lu, pos 0x%Ld\n", dev, vecs, (unsigned long)vecs->num, (unsigned long)vecs->total_len, pos));
 
 	if(pos % BLOCKSIZE != 0)
 		return ERR_INVALID_ARGS;
@@ -468,7 +468,7 @@ static ssize_t netblock_writepage(dev_ident ident, iovecs *vecs, off_t pos)
 	ssize_t bytes_written = 0;
 	unsigned int curr_vec;
 
-	TRACE(("netblock_writepage: dev %p, vecs %p, num %d, total_len %u, pos 0x%Ld\n", dev, vecs, vecs->num, vecs->total_len, pos));
+	TRACE(("netblock_writepage: dev %p, vecs %p, num %lu, total_len %lu, pos 0x%Ld\n", dev, vecs, (unsigned long)vecs->num, (unsigned long)vecs->total_len, pos));
 
 	if(pos % BLOCKSIZE != 0)
 		return ERR_INVALID_ARGS;

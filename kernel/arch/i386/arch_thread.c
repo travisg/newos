@@ -132,7 +132,7 @@ void arch_thread_context_switch(struct thread *t_from, struct thread *t_to)
 #endif
 
 	if((new_pgdir % PAGE_SIZE) != 0)
-		panic("arch_thread_context_switch: bad pgdir 0x%x\n", new_pgdir);
+		panic("arch_thread_context_switch: bad pgdir %p\n", (void*)new_pgdir);
 
 	i386_fsave_swap(t_from->arch_info.fpu_state, t_to->arch_info.fpu_state);
 	i386_context_switch(&t_from->arch_info, &t_to->arch_info, new_pgdir);
