@@ -107,8 +107,8 @@ void *loadfile(char *file, int *size)
     int fd;
     char *data;
     struct stat info;
-    
-    if((fd = open(file,O_RDONLY)) != -1){
+
+    if((fd = open(file,O_BINARY|O_RDONLY)) != -1){
         if(fstat(fd,&info)){
             close(fd);
             *size = 0;
@@ -131,15 +131,15 @@ void *loadfile(char *file, int *size)
 // write a boot block to the head of the dir.
 // note: the first 0x20 bytes are removed by the sparc prom
 // which makes the whole file off by 0x20 bytes
-int writesparcbootblock(FILE *fp, unsigned int blocks)
+int writesparcbootblock(int fd, unsigned int blocks)
 {
 	unsigned char bb[0x200+0x20];
 
 	memset(bb, 0, sizeof(bb));
 	memcpy(bb, sparcbootblock, sizeof(sparcbootblock));
 
-	return fwrite(bb,sizeof(bb),1,fp);
-}
+	return write(fd, bb, sizeof(bb));
+ }
 
 typedef struct _nvpair 
 {
@@ -219,14 +219,14 @@ section *load_ini(char *file)
     while(data < end){
         switch(state){
         case stSKIPLINE:
-            if(*data == '\n'){
+            if(*data == '\n' || *data == '\r'){
                 state = stNEWLINE;
             }
             data++;
             break;
             
         case stNEWLINE:
-            if(*data == '\n'){
+            if(*data == '\n' || *data == '\r'){
                 data++;
                 break;
             }
@@ -263,7 +263,7 @@ section *load_ini(char *file)
             data++;
             break;
         case stLHS:
-            if(*data == '\n'){
+            if(*data == '\n' || *data == '\r'){
                 state = stNEWLINE;
             }
             if(*data == '='){
@@ -274,7 +274,7 @@ section *load_ini(char *file)
             data++;
             continue;
         case stRHS:
-            if(*data == '\n'){
+            if(*data == '\n' || *data == '\r'){
                 nvpair *p = (nvpair *) malloc(sizeof(nvpair));
                 p->name = lhs;
                 p->value = rhs;
@@ -338,7 +338,7 @@ Elf32_Addr elf_find_entry(void *buf, int size)
 #endif
 	header = (struct Elf32_Ehdr *)cbuf;
 	pheader = (struct Elf32_Phdr *)&cbuf[SWAPIT(header->e_phoff)];
-	
+
 	// XXX only looking at the first program header. Should be ok
 	return SWAPIT(pheader->p_offset);
 }
@@ -346,7 +346,7 @@ Elf32_Addr elf_find_entry(void *buf, int size)
 #define centry bdir.bd_entry[c]
 void makeboot(section *s, char *outfile)
 {
-    FILE *fp;
+    int fd;
     void *rawdata[64];
     int rawsize[64];
     char fill[4096];
@@ -432,19 +432,20 @@ void makeboot(section *s, char *outfile)
         if(c==64) die("too many sections (>63)",NULL);
     }
 
-    if(!(fp = fopen(outfile,"w"))){
+	if((fd = open(outfile, O_BINARY|O_WRONLY|O_CREAT)) < 0) {
         die("cannot write to \"%s\"",outfile);
     }
 
     if(make_sparcboot) {
-        writesparcbootblock(fp, nextpage+1);
+        writesparcbootblock(fd, nextpage+1);
     }
     
     for(i=0;i<c;i++){
-        fwrite(rawdata[i],rawsize[i],1,fp);
-        if(rawsize[i]%4096) fwrite(fill,4096 - (rawsize[i]%4096),1,fp);
+		write(fd, rawdata[i], rawsize[i]);
+        if(rawsize[i]%4096) 
+			write(fd, fill, 4096 - (rawsize[i]%4096));
     }
-    fclose(fp);
+   	close(fd);
     
     
 }

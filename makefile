@@ -1,6 +1,9 @@
 ifeq ($(HOSTTYPE),i586)
 	HOSTTYPE = i386
 endif
+ifeq ($(HOSTTYPE),i686)
+	HOSTTYPE = i386
+endif
 ifeq ($(ARCH), )
 ARCH = $(HOSTTYPE)
 #ARCH = i386
@@ -38,6 +41,12 @@ ifeq ($(ARCH),i386)
 		LD = i386-elf-ld
 		AS = i386-elf-as
 		AR = i386-elf-ar
+	endif
+	ifeq ($(OSTYPE),cygwin)
+		CC = i386-linux-gcc
+		LD = i386-linux-ld
+		AS = i386-linux-as
+		AR = i386-linux-ar
 	endif
 	GLOBAL_CFLAGS = -fno-pic -O
 	GLOBAL_LDFLAGS = 

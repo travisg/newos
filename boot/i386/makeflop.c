@@ -13,16 +13,21 @@ int main(int argc, char *argv[])
 	char buf[512];
 	size_t read_size;
 	int filefd;
+	int outfd;
 	
-	if(argc < 2)
+	if(argc < 3)
 		return -1;
 
 	err = stat(argv[1], &st);
 	if(err < 0)
 		return -1;
 
-	filefd = open(argv[1], O_RDONLY);
+	filefd = open(argv[1], O_BINARY|O_RDONLY);
 	if(filefd < 0)
+		return -1;
+
+	outfd = open(argv[2], O_BINARY|O_WRONLY|O_CREAT);
+	if(outfd < 0)
 		return -1;
 
 	// patch the size of the output into bytes 3 & 4 of the bootblock
@@ -31,12 +36,13 @@ int main(int argc, char *argv[])
 	bootblock[2] = (blocks & 0x00ff);
 	bootblock[3] = (blocks & 0xff00) >> 8;
 	
-	write(1, bootblock, sizeof(bootblock));
+	write(outfd, bootblock, sizeof(bootblock));
 	
 	while((read_size = read(filefd, buf, sizeof(buf))) > 0) {
-		write(1, buf, read_size);
+		write(outfd, buf, read_size);
 	}
 
+	close(outfd);
 	close(filefd);
 
 	return 0;
