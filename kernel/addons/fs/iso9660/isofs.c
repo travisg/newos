@@ -582,6 +582,7 @@ static int isofs_freecookie(fs_cookie _fs, fs_vnode _v, file_cookie _cookie)
 }
 
 //--------------------------------------------------------------------------------
+#define READ_CHUNK 16384
 static ssize_t isofs_read(fs_cookie _fs, fs_vnode _v, file_cookie _cookie,
 							void *buf, off_t pos, ssize_t len)
 {
@@ -589,7 +590,8 @@ static ssize_t isofs_read(fs_cookie _fs, fs_vnode _v, file_cookie _cookie,
 	struct isofs_vnode *v = _v;
 	struct isofs_cookie *cookie = _cookie;
 	ssize_t err = 0;
-	char tempbuf[len];
+	ssize_t totread = 0;
+	char   *tempbuf = 0;
 
 	TRACE(("isofs_read: vnode 0x%x, cookie 0x%x, pos 0x%x 0x%x, len 0x%x\n", v, cookie, pos, len));
 
@@ -648,14 +650,29 @@ static ssize_t isofs_read(fs_cookie _fs, fs_vnode _v, file_cookie _cookie,
 				len = cookie->s->data_len - pos;
 			}
 
-			err = sys_read(fs->fd, tempbuf, cookie->s->data_pos + pos, len);
-			if(err < 0) {
+			tempbuf= kmalloc(READ_CHUNK);
+			if(!tempbuf) {
 				goto error;
 			}
-			user_memcpy(buf, tempbuf, err);
 
-			// Move to next bit of the file
-			cookie->u.file.pos = pos + err;
+			while (len) {
+				ssize_t to_read= (READ_CHUNK< len) ? READ_CHUNK : len;
+				err = sys_read(fs->fd, tempbuf, cookie->s->data_pos + pos, to_read);
+				if(err <= 0) {
+					goto error;
+				}
+				user_memcpy(buf, tempbuf, err);
+				pos += err;
+				len -= err;
+				buf = ((char*)buf)+err;
+				totread += err;
+
+				// Move to next bit of the file
+			}
+			kfree(tempbuf);
+			tempbuf = 0;
+			err = totread;
+			cookie->u.file.pos = pos;
 			break;
 
 		default:
@@ -663,6 +680,8 @@ static ssize_t isofs_read(fs_cookie _fs, fs_vnode _v, file_cookie _cookie,
 	}
 error:
 	mutex_unlock(&fs->lock);
+	if(tempbuf)
+		kfree(tempbuf);
 
 	return err;
 }
