@@ -178,7 +178,12 @@ ifeq ($(ARCH),ppc)
 endif
 
 # try to detect if the user has ARCH-newos-gcc installed
-FOO := $(shell [ -x $(TOOLCHAIN_ARCH)-newos-gcc ] && $(TOOLCHAIN_ARCH)-newos-gcc --version)
+#
+#  NOTE:
+#	the "| cat" below looks unnecesary, this is
+#	to avoid a bug in liberty in certain versions
+#	of gmake for BeOS
+FOO := $(shell $(TOOLCHAIN_ARCH)-newos-gcc --version | cat)
 ifneq ($(FOO),)
 $(warning found newos toolchain!)
 	CC = $(TOOLCHAIN_ARCH)-newos-gcc
