@@ -25,13 +25,13 @@ void *memcpy(void *dest, const void *src, size_t count)
 
 	if(((long)d | (long)s) & lmask) {
 		// src and/or dest do not align on word boundary
-		if(((long)d ^ (long)s) & lmask || count < lsize)
+		if((((long)d ^ (long)s) & lmask) || (count < lsize))
 			len = count; // copy the rest of the buffer with the byte mover
 		else
 			len = lsize - ((long)d & lmask); // move the ptrs up to a word boundary
 
 		count -= len;
-		for(; len >= 0; len--)
+		for(; len > 0; len--)
 			*d++ = *s++;
 	}
 	for(len = count / lsize; len > 0; len--) {
