@@ -768,13 +768,24 @@ image_id elf_load_kspace(const char *path, const char *sym_prepend)
 			continue;
 		}
 		image->regions[image_region].size = ROUNDUP(pheaders[i].p_memsz + (pheaders[i].p_vaddr % PAGE_SIZE), PAGE_SIZE);
-		image->regions[image_region].id = vm_create_anonymous_region(vm_get_kernel_aspace_id(), region_name,
-			(void **)&image->regions[image_region].start, REGION_ADDR_ANY_ADDRESS,
-			image->regions[image_region].size, REGION_WIRING_WIRED, lock);
+		if(i == 0) {
+			// put region zero anywhere
+			image->regions[image_region].id = vm_create_anonymous_region(vm_get_kernel_aspace_id(), region_name,
+				(void **)&image->regions[image_region].start, REGION_ADDR_ANY_ADDRESS,
+				image->regions[image_region].size, REGION_WIRING_WIRED, lock);
+		} else {
+			// try to line the other regions up so that their relative distances are according to the ELF header
+			image->regions[image_region].start = ROUNDOWN(pheaders[i].p_vaddr + image->regions[0].delta, PAGE_SIZE);
+//			dprintf("elf: region 0.delta 0x%x region %d.pvaddr 0x%x region %d.start 0x%x\n", 
+//				image->regions[0].delta, i, pheaders[i].p_vaddr, i, image->regions[image_region].start);
+			image->regions[image_region].id = vm_create_anonymous_region(vm_get_kernel_aspace_id(), region_name,
+				(void **)&image->regions[image_region].start, REGION_ADDR_EXACT_ADDRESS,
+				image->regions[image_region].size, REGION_WIRING_WIRED, lock);			
+		}
 		if(image->regions[image_region].id < 0) {
 			dprintf("error allocating region!\n");
 			err = ERR_INVALID_BINARY;
-			goto error3;
+			goto error4;
 		}
 		image->regions[image_region].delta = image->regions[image_region].start - ROUNDOWN(pheaders[i].p_vaddr, PAGE_SIZE);
 
