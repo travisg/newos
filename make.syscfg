@@ -222,7 +222,7 @@ endif
 GLOBAL_CFLAGS += -finline -nostdinc -fno-builtin
 GLOBAL_CFLAGS += -Wall -W -Wno-multichar -Wno-unused-parameter -Wmissing-prototypes
 GLOBAL_CFLAGS += -DARCH_$(ARCH) -DNEWOS=1 -D__ARCH__=$(ARCH) -U$(ARCH)
-GLOBAL_CPPFLAGS = $(GLOBAL_CFLAGS) -fno-rtti
+GLOBAL_CPPFLAGS = $(GLOBAL_CFLAGS)
 
 # find libgcc
 LIBGCC := -lgcc

@@ -7,6 +7,7 @@ include $(addsuffix /makefile, $(addprefix $(LIBS_DIR)/, \
 	libm \
 	libnewos \
 	libsocket \
+	libsupc++ \
 	libwin \
 ))
 

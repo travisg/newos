@@ -11,9 +11,9 @@ namespace std
 	class exception
 	{
 	public:
-		exception() throw();
-		exception(const exception &other) throw();
-		exception &operator=(const exception &other) throw();
+		exception() throw() {}
+		exception(const exception &other) throw() {}
+		exception &operator=(const exception &other) throw() {}
 
 		virtual ~exception() throw();
 		virtual const char *what() const throw();
@@ -22,9 +22,9 @@ namespace std
 	class bad_exception : public exception
 	{
 	public:
-		bad_exception() throw();
-		bad_exception(const bad_exception &other) throw();
-		bad_exception &operator=(const bad_exception &other) throw();
+		bad_exception() throw() {}
+		bad_exception(const bad_exception &other) throw() : exception(other) {}
+		bad_exception &operator=(const bad_exception &other) throw() {}
 
 		virtual ~bad_exception() throw();
 		virtual const char *what() const throw();
@@ -38,7 +38,7 @@ namespace std
 	terminate_handler set_terminate(terminate_handler func) throw();
 	void terminate();
 
-	bool uncaught_exception();
+	bool uncaught_exception() throw();
 }
 
 #endif
