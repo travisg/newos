@@ -182,9 +182,19 @@ static void add_vnode_to_mount_list(struct vnode *v, struct fs_mount *mount)
 
 	v->mount_next = mount->vnodes_head;
 	v->mount_prev = NULL;
+	if(v->mount_next)
+		v->mount_next->mount_prev = v;
+
 	mount->vnodes_head = v;
+
 	if(!mount->vnodes_tail)
 		mount->vnodes_tail = v;
+
+	// do a little bit of error checking
+	if(v->mount_prev == NULL)
+		ASSERT(mount->vnodes_head == v);
+	if(v->mount_next == NULL)
+		ASSERT(mount->vnodes_tail == v);
 
 	recursive_lock_unlock(&mount->rlock);
 }
@@ -192,6 +202,12 @@ static void add_vnode_to_mount_list(struct vnode *v, struct fs_mount *mount)
 static void remove_vnode_from_mount_list(struct vnode *v, struct fs_mount *mount)
 {
 	recursive_lock_lock(&mount->rlock);
+
+	// do a little bit of error checking
+	if(v->mount_prev == NULL)
+		ASSERT(mount->vnodes_head == v);
+	if(v->mount_next == NULL)
+		ASSERT(mount->vnodes_tail == v);
 
 	if(v->mount_next)
 		v->mount_next->mount_prev = v->mount_prev;
@@ -255,8 +271,12 @@ static int dec_vnode_ref_count(struct vnode *v, bool free_mem, bool r)
 		hash_remove(vnode_table, v);
 		mutex_unlock(&vfs_vnode_mutex);
 
-		if(free_mem)
+		if(free_mem) {
+#if MAKE_NOIZE
+		dprintf("dec_vnode_ref_count: freeing vnode 0x%x\n", v);
+#endif
 			kfree(v);
+		}
 		err = 1;
 	} else {
 		mutex_unlock(&vfs_vnode_mutex);
