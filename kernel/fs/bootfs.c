@@ -775,7 +775,6 @@ static int bootfs_seek(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, off_t po
 	struct bootfs *fs = _fs;
 	struct bootfs_vnode *v = _v;
 	struct bootfs_cookie *cookie = _cookie;
-	int err = 0;
 
 	TOUCH(v);
 
@@ -787,34 +786,36 @@ static int bootfs_seek(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, off_t po
 		case _SEEK_SET:
 			if(pos < 0)
 				pos = 0;
-			if(pos > cookie->s->u.file.len)
+			else if(pos > cookie->s->u.file.len)
 				pos = cookie->s->u.file.len;
 			cookie->u.file.pos = pos;
 			break;
 		case _SEEK_CUR:
-			if(pos + cookie->u.file.pos > cookie->s->u.file.len)
-				cookie->u.file.pos = cookie->s->u.file.len;
-			else if(pos + cookie->u.file.pos < 0)
-				cookie->u.file.pos = 0;
-			else
-				cookie->u.file.pos += pos;
+			pos += cookie->u.file.pos;
+			if(pos < 0)
+				pos = 0;
+			else if(pos > cookie->s->u.file.len)
+				pos = cookie->s->u.file.len;
+			cookie->u.file.pos = pos;
 			break;
 		case _SEEK_END:
-			if(pos > 0)
-				cookie->u.file.pos = cookie->s->u.file.len;
-			else if(pos + cookie->s->u.file.len < 0)
-				cookie->u.file.pos = 0;
-			else
-				cookie->u.file.pos = pos + cookie->s->u.file.len;
+			if(pos >= 0)
+				pos = cookie->s->u.file.len;
+			else {
+				pos += cookie->s->u.file.len;
+				if(pos < 0)
+					pos = 0;
+			}
+			cookie->u.file.pos = pos;
 			break;
 		default:
-			err = ERR_INVALID_ARGS;
+			pos = (off_t)ERR_INVALID_ARGS;
 
 	}
 
 	mutex_unlock(&fs->lock);
 
-	return err;
+	return (int)pos;
 }
 
 static int bootfs_ioctl(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, int op, void *buf, size_t len)

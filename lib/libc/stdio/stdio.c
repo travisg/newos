@@ -305,7 +305,7 @@ int fseek(FILE *stream, long int offset, int whence)
 
 	_flush(stream);
 
-	p = _kern_seek(stream->fd, 0, _SEEK_CUR);
+	p = _kern_seek(stream->fd, offset, whence);
 
 	if(p < 0)
 	{
