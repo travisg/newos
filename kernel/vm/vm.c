@@ -1338,7 +1338,12 @@ vm_address_space *vm_get_current_user_aspace()
 
 aspace_id vm_get_current_user_aspace_id()
 {
-	return thread_get_current_thread()->proc->aspace_id;
+	struct thread *t = thread_get_current_thread();
+
+	if(t)
+		return t->proc->aspace_id;
+	else
+		return -1;
 }
 
 aspace_id vm_create_aspace(const char *name, addr base, addr size, bool kernel)
@@ -1582,7 +1587,7 @@ int vm_page_fault(addr address, addr fault_address, bool is_write, bool is_user,
 	if(err < 0) {
 		if(!is_user) {
 			struct thread *t = thread_get_current_thread();
-			if(t->fault_handler != 0) {
+			if(t && t->fault_handler != 0) {
 				// this will cause the arch dependant page fault handler to
 				// modify the IP on the interrupt frame or whatever to return
 				// to this address

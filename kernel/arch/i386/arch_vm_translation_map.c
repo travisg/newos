@@ -461,11 +461,16 @@ static int put_physical_page_tmap(addr va)
 {
 	paddr_chunk_desc *desc;
 
+	if(va < IOSPACE_BASE || va >= IOSPACE_BASE + IOSPACE_SIZE)
+		panic("someone called put_physical_page on an invalid va 0x%x\n", va);
+	va -= IOSPACE_BASE;
+	
 	mutex_lock(&iospace_mutex);
 
 	desc = virtual_pmappings[va / IOSPACE_CHUNK_SIZE];
 	if(desc == NULL) {
 		mutex_unlock(&iospace_mutex);
+		panic("put_physical_page called on page at va 0x%x which is not checked out\n", va);
 		return ERR_VM_GENERAL;
 	}
 
