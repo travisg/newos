@@ -48,7 +48,7 @@ WindowManager::WindowManager(Renderer *screenRenderer)
 
 	sys_thread_resume_thread(tid);
 
-	tid = sys_thread_create_thread("mouse_thread", StartMouseThread, this);
+	tid = sys_thread_create_thread("mouse_thread", StartInputThread, this);
 	sys_thread_resume_thread(tid);
 }
 
@@ -417,116 +417,152 @@ void WindowManager::SetCursorPos(int x, int y)
 	UnlockCursor();
 }
 
-int WindowManager::StartMouseThread(void *_wm)
+int WindowManager::StartInputThread(void *_wm)
 {
-	((WindowManager*) _wm)->MouseThread();
+	((WindowManager*) _wm)->InputThread();
 	return 0;
 }
 
-void WindowManager::MouseThread()
+void WindowManager::InputThread()
 {
-	PS2Mouse *mouse = new PS2Mouse(fScreenRenderer->BufferWidth() - 1, fScreenRenderer->BufferHeight() - 1);
-	int cx = 160, cy = 100, buttons = 0;
-	int last_cx = cx;
-	int last_cy = cy;
-	int last_buttons = buttons;
+	port_id event_port;
+
+	// find the input server
+retry:
+	event_port = sys_port_find("input_event_port");
+	if(event_port < 0) {
+		sys_snooze(1000000);
+		goto retry;
+	}
+
 	while (true) {
-		mouse->GetPos(&cx, &cy, &buttons);
+		Event event;
+		int32 msg;
+		sys_port_read(event_port, &msg, &event, sizeof(event));
 
-		if (last_cx != cx || last_cy != cy) {
-			int delta_cx = cx - last_cx;
-			int delta_cy = cy - last_cy;
-			SetCursorPos(cx, cy);
-			last_cx = cx;
-			last_cy = cy;
+		switch(event.what) {
+			case EVT_MOUSE_MOVED:
+				ProcessMouseEvent(event);
+				break;
+			case EVT_KEY_UP:
+			case EVT_KEY_DOWN:
+				ProcessKeyboardEvent(event);
+				break;
+		}
+	}
+}
 
-			Window *oldMouseFocus = fCurrentMouseFocus;
-			if (fCurrentMouseFocus == 0 || !fMouseBoundries.Contains(cx, cy)) {
-				// Either there is no focus window, or we have moved out
-				// of the current rectangle that is known to be in this window.
-				// Check to see what window we are over.
-				Window *focusWindow = WindowAtPoint(cx, cy);
-				if (fMouseFocusLocked) {
-					// Mouse focus is locked, don't actually switch focus windows
-					if (focusWindow == fCurrentMouseFocus && !fInFocusLockedWindow) {
-						// Inform the window with locked focus that the mouse has entered
-						Rect screenFrame = fCurrentMouseFocus->LocalToScreen(
-							fCurrentMouseFocus->Bounds());
-						Event evt;
-						evt.what = EVT_MOUSE_ENTER;
-						evt.target = fCurrentMouseFocus->ID();
-						evt.x = cx - screenFrame.left;
-						evt.y = cy - screenFrame.top;
-						fCurrentMouseFocus->PostEvent(&evt);
-						fInFocusLockedWindow = true;
-					} else if (focusWindow != fCurrentMouseFocus && fInFocusLockedWindow) {
-						// Inform the window with the locked focus that the mouse has left.
-						Event evt;
-						evt.what = EVT_MOUSE_LEAVE;
-						evt.target = oldMouseFocus->ID();
-						fCurrentMouseFocus->PostEvent(&evt);
-						fInFocusLockedWindow = false;
-					}
+void WindowManager::ProcessMouseEvent(const Event &event)
+{
+	static int cx = 160;
+	static int cy = 100;
+	static int buttons = 0;
+	static int last_cx = cx;
+	static int last_cy = cy;
+	static int last_buttons = buttons;
 
-					focusWindow->ClipRegion().FindRect(cx, cy, fMouseBoundries);
-				} else {
-					fCurrentMouseFocus = focusWindow;
-					fCurrentMouseFocus->ClipRegion().FindRect(cx, cy, fMouseBoundries);
-				}
-			}
+	cx += event.x;
+	cy += event.y;
+	buttons = event.modifiers;
+	if (last_cx != cx || last_cy != cy) {
+		int delta_cx = cx - last_cx;
+		int delta_cy = cy - last_cy;
+		SetCursorPos(cx, cy);
+		last_cx = cx;
+		last_cy = cy;
 
-			if (oldMouseFocus == fCurrentMouseFocus) {
-				// Post a mouse moved message to the current focus window
-				Rect screenFrame = fCurrentMouseFocus->LocalToScreen(
-					fCurrentMouseFocus->Bounds());
-
-				Event evt;
-				evt.what = EVT_MOUSE_MOVED;
-				evt.target = fCurrentMouseFocus->ID();
-				evt.x = cx - screenFrame.left;
-				evt.y = cy - screenFrame.top;
-				fCurrentMouseFocus->PostEvent(&evt);
-			} else {
-				// Inform the old window (if there is one), that the mouse is leaving
-				if (oldMouseFocus) {
+		Window *oldMouseFocus = fCurrentMouseFocus;
+		if (fCurrentMouseFocus == 0 || !fMouseBoundries.Contains(cx, cy)) {
+			// Either there is no focus window, or we have moved out
+			// of the current rectangle that is known to be in this window.
+			// Check to see what window we are over.
+			Window *focusWindow = WindowAtPoint(cx, cy);
+			if (fMouseFocusLocked) {
+				// Mouse focus is locked, don't actually switch focus windows
+				if (focusWindow == fCurrentMouseFocus && !fInFocusLockedWindow) {
+					// Inform the window with locked focus that the mouse has entered
+					Rect screenFrame = fCurrentMouseFocus->LocalToScreen(
+						fCurrentMouseFocus->Bounds());
+					Event evt;
+					evt.what = EVT_MOUSE_ENTER;
+					evt.target = fCurrentMouseFocus->ID();
+					evt.x = cx - screenFrame.left;
+					evt.y = cy - screenFrame.top;
+					fCurrentMouseFocus->PostEvent(&evt);
+					fInFocusLockedWindow = true;
+				} else if (focusWindow != fCurrentMouseFocus && fInFocusLockedWindow) {
+					// Inform the window with the locked focus that the mouse has left.
 					Event evt;
 					evt.what = EVT_MOUSE_LEAVE;
 					evt.target = oldMouseFocus->ID();
-					oldMouseFocus->PostEvent(&evt);
+					fCurrentMouseFocus->PostEvent(&evt);
+					fInFocusLockedWindow = false;
 				}
 
-				// Inform the new window that the mouse has entered
-				Rect screenFrame = fCurrentMouseFocus->LocalToScreen(
-					fCurrentMouseFocus->Bounds());
-
-				Event evt;
-				evt.what = EVT_MOUSE_ENTER;
-				evt.target = fCurrentMouseFocus->ID();
-				evt.x = cx - screenFrame.left;
-				evt.y = cy - screenFrame.top;
-				fCurrentMouseFocus->PostEvent(&evt);
+				focusWindow->ClipRegion().FindRect(cx, cy, fMouseBoundries);
+			} else {
+				fCurrentMouseFocus = focusWindow;
+				fCurrentMouseFocus->ClipRegion().FindRect(cx, cy, fMouseBoundries);
 			}
 		}
 
-		if (buttons != last_buttons && fCurrentMouseFocus) {
-			// If the user has released the buttons, unlock the mouse focus
-			if (buttons == 0 && fMouseFocusLocked) {
-				InvalidateMouseBoundries();
-				fMouseFocusLocked = false;
-			}
-
-			// Send a button message to the window
+		if (oldMouseFocus == fCurrentMouseFocus) {
+			// Post a mouse moved message to the current focus window
 			Rect screenFrame = fCurrentMouseFocus->LocalToScreen(
 				fCurrentMouseFocus->Bounds());
 
 			Event evt;
-			evt.what = buttons != 0 ? EVT_MOUSE_DOWN : EVT_MOUSE_UP;
+			evt.what = EVT_MOUSE_MOVED;
 			evt.target = fCurrentMouseFocus->ID();
 			evt.x = cx - screenFrame.left;
 			evt.y = cy - screenFrame.top;
 			fCurrentMouseFocus->PostEvent(&evt);
-			last_buttons = buttons;
+		} else {
+			// Inform the old window (if there is one), that the mouse is leaving
+			if (oldMouseFocus) {
+				Event evt;
+				evt.what = EVT_MOUSE_LEAVE;
+				evt.target = oldMouseFocus->ID();
+				oldMouseFocus->PostEvent(&evt);
+			}
+
+			// Inform the new window that the mouse has entered
+			Rect screenFrame = fCurrentMouseFocus->LocalToScreen(
+				fCurrentMouseFocus->Bounds());
+
+			Event evt;
+			evt.what = EVT_MOUSE_ENTER;
+			evt.target = fCurrentMouseFocus->ID();
+			evt.x = cx - screenFrame.left;
+			evt.y = cy - screenFrame.top;
+			fCurrentMouseFocus->PostEvent(&evt);
 		}
 	}
+
+	if (buttons != last_buttons && fCurrentMouseFocus) {
+		// If the user has released the buttons, unlock the mouse focus
+		if (buttons == 0 && fMouseFocusLocked) {
+			InvalidateMouseBoundries();
+			fMouseFocusLocked = false;
+		}
+
+		// Send a button message to the window
+		Rect screenFrame = fCurrentMouseFocus->LocalToScreen(
+			fCurrentMouseFocus->Bounds());
+
+		Event evt;
+		evt.what = buttons != 0 ? EVT_MOUSE_DOWN : EVT_MOUSE_UP;
+		evt.target = fCurrentMouseFocus->ID();
+		evt.x = cx - screenFrame.left;
+		evt.y = cy - screenFrame.top;
+		fCurrentMouseFocus->PostEvent(&evt);
+		last_buttons = buttons;
+	}
+}
+
+void WindowManager::ProcessKeyboardEvent(const Event &Event)
+{
+
+
 }
 

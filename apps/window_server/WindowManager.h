@@ -31,14 +31,17 @@ private:
 	char ReadInt8();
 	void Respond(port_id, void *, int);
 
+	static int StartInputThread(void *_wm);
+	void InputThread();
+
+	void ProcessMouseEvent(const Event &event);
 	void SetCursorPos(int x, int y);
-	static int StartMouseThread(void *_wm);
-	void MouseThread();
 	void LockCursor();
 	void UnlockCursor();
 
 	void InvalidateMouseBoundries();
 
+	void ProcessKeyboardEvent(const Event &event);
 
 	Window *fWindowArray[kMaxWindows];
 	int fNextWindowID;

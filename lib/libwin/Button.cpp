@@ -36,13 +36,13 @@ void Button::Repaint(const Rect &dirtyRect)
 		bounds.bottom--;
 	}
 
-	SetPenColor(5);
+	SetPenColor(0x00c4c0b8); // grey
+	FillRect(Rect(bounds.left + 1, bounds.top + 1, bounds.right - 1, bounds.bottom - 1));
+	SetPenColor(0); // black
 	DrawLine(bounds.left, bounds.top, bounds.right, bounds.top);
 	DrawLine(bounds.left, bounds.bottom, bounds.right, bounds.bottom);
 	DrawLine(bounds.left, bounds.top, bounds.left, bounds.bottom);
 	DrawLine(bounds.right, bounds.top, bounds.right, bounds.bottom);
-	SetPenColor(10);
-	FillRect(Rect(bounds.left + 1, bounds.top + 1, bounds.right - 1, bounds.bottom - 1));
 	DrawString(bounds.left + 1, bounds.top + 1, fText);
 }
 

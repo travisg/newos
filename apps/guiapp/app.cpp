@@ -25,15 +25,14 @@ public:
 	virtual void EventReceived(const Event*);
 
 private:
-	Button *fButton;
+	int fMouseX;
+	int fMouseY;
 };
 
 mycanvas::mycanvas()
-	:	fButton(0)
+	:	fMouseX(0),
+		fMouseY(0)
 {
-	fButton = new Button("button");
-	AddChild(fButton, Rect(5, 5, 50, 20));
-	fButton->Show();
 }
 
 void mycanvas::Repaint(const Rect &dirtyRect)
@@ -50,13 +49,25 @@ void mycanvas::Repaint(const Rect &dirtyRect)
 	DrawLine(bounds.left, bounds.top, bounds.left, bounds.bottom);
 
 	SetPenColor(0); // black
-	DrawString(10, 10, "this is a test");
-	DrawString(20, 50, "this is another test");
+	char temp[128];
+	sprintf(temp, "%d, %d", fMouseX, fMouseY);
+	DrawString(20, 30, temp);
+	DrawString(20, 50, "this is a test");
 }
 
 void mycanvas::EventReceived(const Event *event)
 {
-	printf("mycanvas::EventReceived: Event %p, what %d\n", event, event->what);
+//	printf("mycanvas::EventReceived: Event %p, what %d\n", event, event->what);
+
+	switch(event->what) {
+		case EVT_MOUSE_MOVED:
+			fMouseX = event->x;
+			fMouseY = event->y;
+			Invalidate(); // invalidate enough to cover the coordinate text
+			break;
+		default:
+			Canvas::EventReceived(event);
+	}
 }
 
 const int kNumWindows = 16;
@@ -79,12 +90,15 @@ int main(int argc, char **argv)
 
 		Window *win = new Window(r);
 		Canvas *canvas = new mycanvas();
+		Button *button = new Button("testbutton");
 
 		win->AddChild(canvas, win->GetCanvas()->GetBounds());
+		canvas->SetBackgroundColor(0x00c4c0b8); // windows grey
+		canvas->AddChild(button, Rect(10, 10, 80, 20));
+		button->SetBackgroundColor(0x00c4c0b8); // windows grey
+
 		win->Show();
 		win->MakeFocus();
-		canvas->SetBackgroundColor(0x00c4c0b8); // windows grey
-		canvas->Invalidate();
 
 		wins[i] = win;
 	}

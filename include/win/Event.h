@@ -4,18 +4,24 @@
 namespace os {
 namespace gui {
 
-const int EVT_PAINT = 1;
-const int EVT_QUIT = 2;
-const int EVT_MOUSE_DOWN = 3;
-const int EVT_MOUSE_UP = 4;
-const int EVT_MOUSE_MOVED = 5;
-const int EVT_MOUSE_ENTER = 6;
-const int EVT_MOUSE_LEAVE = 7;
+enum {
+	EVT_PAINT = 0,
+	EVT_QUIT,
+	EVT_MOUSE_DOWN,
+	EVT_MOUSE_UP,
+	EVT_MOUSE_MOVED,
+	EVT_MOUSE_ENTER,
+	EVT_MOUSE_LEAVE,
+	EVT_KEY_DOWN,
+	EVT_KEY_UP
+};
 
 struct Event {
 	int what;
 	int target;
 
+	int key;
+	int modifiers;
 	int x, y;
 };
 

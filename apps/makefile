@@ -24,6 +24,7 @@ include $(addsuffix /makefile, $(addprefix $(APPS_DIR)/, \
 	consoled \
 	socketd \
 	telnetd \
+	inputd \
 	window_server \
 	guiapp \
 ))
