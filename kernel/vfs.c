@@ -217,7 +217,7 @@ static void remove_vnode_from_mount_list(struct vnode *v, struct fs_mount *mount
 	recursive_lock_unlock(&mount->rlock);
 }
 
-static struct vnode *create_new_vnode()
+static struct vnode *create_new_vnode(void)
 {
 	struct vnode *v;
 
@@ -448,7 +448,7 @@ int vfs_set_cache_ptr(void *vnode, void *cache)
 		return 0;
 }
 
-static struct file_descriptor *alloc_fd()
+static struct file_descriptor *alloc_fd(void)
 {
 	struct file_descriptor *f;
 
@@ -831,7 +831,7 @@ int vfs_init(kernel_args *ka)
 	return 0;
 }
 
-int vfs_test()
+int vfs_test(void)
 {
 	int fd;
 	int err;
@@ -1171,7 +1171,7 @@ err:
 	return err;
 }
 
-static int vfs_sync()
+static int vfs_sync(void)
 {
 	struct hash_iterator iter;
 	struct fs_mount *mount;
@@ -1679,7 +1679,7 @@ int sys_unmount(const char *path)
 	return vfs_unmount(buf, true);
 }
 
-int sys_sync()
+int sys_sync(void)
 {
 	return vfs_sync();
 }
@@ -1867,7 +1867,7 @@ int user_unmount(const char *upath)
 	return vfs_unmount(path, false);
 }
 
-int user_sync()
+int user_sync(void)
 {
 	return vfs_sync();
 }
@@ -2106,7 +2106,7 @@ image_id vfs_load_fs_module(const char *name)
 	return id;
 }
 
-int vfs_bootstrap_all_filesystems()
+int vfs_bootstrap_all_filesystems(void)
 {
 	int err;
 	int fd;

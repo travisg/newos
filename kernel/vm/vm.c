@@ -2059,7 +2059,7 @@ void vm_increase_max_commit(addr delta)
 	int_restore_interrupts(state);
 }
 
-int user_memcpy(void *to, void *from, size_t size)
+int user_memcpy(void *to, const void *from, size_t size)
 {
 	return arch_cpu_user_memcpy(to, from, size, &thread_get_current_thread()->fault_handler);
 }
