@@ -46,7 +46,10 @@ struct pci_cfg {
 	uint8 cache_line_size;
 	uint8 latency_timer;
 	uint8 header_type;
-	uint8 bist;	
+	uint8 bist;
+	
+	uint32 bus;
+	uint32 unit;
 };
 
 struct pci_fs {
@@ -181,12 +184,78 @@ static int pci_read_config(int bus, int unit, int func, struct pci_cfg *cfg)
 	if(u.cfg.vendor_id == 0xffff)
 		return -1;
 	memcpy(cfg, &u.cfg, sizeof(struct pci_cfg));
+	cfg->bus = bus;
+	cfg->unit = unit;
 	return 0;
+}
+
+static const char *pci_class_to_string(uint8 base_class)
+{
+	switch(base_class) {
+		case 0: return "legacy";
+		case 1: return "mass storage";
+		case 2: return "network";
+		case 3: return "video";
+		case 4: return "multimedia";
+		case 5: return "memory";
+		case 6: return "bridge";
+		default: return "unknown";
+	}
+}
+
+static const char *pci_subclass_to_string(uint8 base_class, uint8 sub_class)
+{
+	switch(base_class) {
+		case 0: // legacy
+			return "unknown";
+		case 1: // mass storage
+			switch(sub_class) {
+				case 0: return "scsi";
+				case 1: return "ide";
+				case 2: return "floppy";
+				case 3: return "ipi";
+				default: return "unknown";
+			}
+		case 2: // network
+			switch(sub_class) {
+				case 0: return "ethernet";
+				case 1: return "token_ring";
+				case 2: return "fddi";
+				default: return "unknown";
+			}
+		case 3: // video
+			switch(sub_class) {
+				case 0: return "vga";
+				case 1: return "xga";
+				default: return "unknown";
+			}
+		case 4: // multimedia
+			return "unknown";
+		case 5: // memory
+			switch(sub_class) {
+				case 1: return "ram";
+				default: return "unknown";
+			}
+		case 6: // bridge
+			switch(sub_class) {
+				case 0: return "host";
+				case 1: return "isa";
+				case 2: return "eisa";
+				case 3: return "mca";
+				case 4: return "pcipci";
+				case 5: return "pcmcia";
+				case 0x80: return "other";
+				default: return "unknown";
+			}
+		default: return "unknown";
+	}
 }
 
 static void dump_pci_config(struct pci_cfg *cfg)
 {
 	dprintf("dump_pci_config: dumping cfg structure at 0x%x\n", cfg);
+	
+	dprintf("\tbus: %d, unit: %d\n", cfg->bus, cfg->unit);
 	
 	dprintf("\tvendor id: %d\n", cfg->vendor_id);
 	dprintf("\tdevice id: %d\n", cfg->device_id);
@@ -195,8 +264,8 @@ static void dump_pci_config(struct pci_cfg *cfg)
 
 	dprintf("\trevision id: %d\n", cfg->revision_id);
 	dprintf("\tinterface: %d\n", cfg->interface);
-	dprintf("\tsub class: %d\n", cfg->sub_class);
-	dprintf("\tbase class: %d\n", cfg->base_class);
+	dprintf("\tsub class: %d '%s'\n", cfg->sub_class, pci_subclass_to_string(cfg->base_class, cfg->sub_class));
+	dprintf("\tbase class: %d '%s'\n", cfg->base_class, pci_class_to_string(cfg->base_class));
 
 	dprintf("\tcache line size: %d\n", cfg->cache_line_size);
 	dprintf("\tlatency timer: %d\n", cfg->latency_timer);
@@ -329,9 +398,10 @@ int pci_bus_init(kernel_args *ka)
 {
 	// create device node
 	vfs_register_filesystem("pci_bus_fs", &pci_hooks);
-	sys_create("/bus", "", STREAM_TYPE_DIR);
-	sys_create("/bus/pci", "", STREAM_TYPE_DIR);
-	sys_mount("/bus/pci", "pci_bus_fs");
+	sys_create("/dev", "", STREAM_TYPE_DIR);
+	sys_create("/dev/bus", "", STREAM_TYPE_DIR);
+	sys_create("/dev/bus/pci", "", STREAM_TYPE_DIR);
+	sys_mount("/dev/bus/pci", "pci_bus_fs");
 
 	return 0;
 }
