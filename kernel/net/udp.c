@@ -408,11 +408,10 @@ ssize_t udp_sendto(void *prot_data, const void *inbuf, ssize_t len, sockaddr *to
 
 int udp_init(void)
 {
-	udp_endpoint e;
-
 	mutex_init(&endpoints_lock, "udp_endpoints lock");
 
-	endpoints = hash_init(256, (addr_t)&e.next - (addr_t)&e, &udp_endpoint_compare_func, &udp_endpoint_hash_func);
+	endpoints = hash_init(256, offsetof(udp_endpoint, next), 
+		&udp_endpoint_compare_func, &udp_endpoint_hash_func);
 	if(!endpoints)
 		return ERR_NO_MEMORY;
 

@@ -333,7 +333,7 @@ static int isofs_mount(fs_cookie *_fs, fs_id id, const char *device, void *args,
 	}
 
 	// Create and setup hash table
-	fs->vnode_list_hash = hash_init(ISOFS_HASH_SIZE, (addr_t)&v->all_next - (addr_t)v,
+	fs->vnode_list_hash = hash_init(ISOFS_HASH_SIZE, offsetof(struct isofs_vnode, all_next),
 		&isofs_vnode_compare_func, &isofs_vnode_hash_func);
 	if(fs->vnode_list_hash == NULL) {
 		err = ERR_NO_MEMORY;

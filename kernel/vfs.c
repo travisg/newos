@@ -842,20 +842,16 @@ int vfs_init(kernel_args *ka)
 	dprintf("vfs_init: entry\n");
 	kprintf("initializing fs layer...\n");
 
-	{
-		struct vnode *v;
-		vnode_table = hash_init(VNODE_HASH_TABLE_SIZE, (addr_t)&v->next - (addr_t)v,
-			&vnode_compare, &vnode_hash);
-		if(vnode_table == NULL)
-			panic("vfs_init: error creating vnode hash table\n");
-	}
-	{
-		struct fs_mount *mount;
-		mounts_table = hash_init(MOUNTS_HASH_TABLE_SIZE, (addr_t)&mount->next - (addr_t)mount,
-			&mount_compare, &mount_hash);
-		if(mounts_table == NULL)
-			panic("vfs_init: error creating mounts hash table\n");
-	}
+	vnode_table = hash_init(VNODE_HASH_TABLE_SIZE, offsetof(struct vnode, next),
+		&vnode_compare, &vnode_hash);
+	if(vnode_table == NULL)
+		panic("vfs_init: error creating vnode hash table\n");
+
+	mounts_table = hash_init(MOUNTS_HASH_TABLE_SIZE, offsetof(struct fs_mount, next),
+		&mount_compare, &mount_hash);
+	if(mounts_table == NULL)
+		panic("vfs_init: error creating mounts hash table\n");
+
 	fs_list = NULL;
 	root_vnode = NULL;
 

@@ -336,7 +336,7 @@ static int pipefs_mount(fs_cookie *_fs, fs_id id, const char *pipefs, void *args
 		goto err1;
 	}
 
-	fs->vnode_list_hash = hash_init(PIPEFS_HASH_SIZE, (addr_t)&v->all_next - (addr_t)v,
+	fs->vnode_list_hash = hash_init(PIPEFS_HASH_SIZE, offsetof(struct pipefs_vnode, all_next),
 		&pipefs_vnode_compare_func, &pipefs_vnode_hash_func);
 	if(fs->vnode_list_hash == NULL) {
 		err = ERR_NO_MEMORY;

@@ -70,10 +70,8 @@ static unsigned int page_hash_func(void *_p, const void *_key, unsigned int rang
 
 int vm_cache_init(kernel_args *ka)
 {
-	vm_page p;
-
 	page_cache_table = hash_init(PAGE_TABLE_SIZE,
-		(int)&p.hash_next - (int)&p,
+		offsetof(vm_page, hash_next),
 		&page_compare_func,
 		&page_hash_func);
 	if(!page_cache_table)

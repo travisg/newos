@@ -488,8 +488,6 @@ static int arp_cleanup_thread(void *unused)
 
 int arp_init(void)
 {
-	arp_cache_entry *e;
-
 	mutex_init(&arp_table_mutex, "arp_table_mutex");
 	mutex_init(&arp_wait_mutex, "arp_wait_mutex");
 	arp_wait_sem = sem_create(0, "arp_wait_sem");
@@ -497,7 +495,7 @@ int arp_init(void)
 	arp_waiters = NULL;
 	arp_cache_entries = NULL;
 
-	arp_table = hash_init(256, (addr_t)&e->next - (addr_t)e, &arp_cache_compare, &arp_cache_hash);
+	arp_table = hash_init(256, offsetof(arp_cache_entry, next), &arp_cache_compare, &arp_cache_hash);
 	if(!arp_table)
 		return -1;
 

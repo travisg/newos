@@ -336,12 +336,11 @@ err1:
 int if_init(void)
 {
 	int err;
-	ifnet *i;
 
 	next_id = 0;
 
 	// create a hash table to store the interface list
-	ifhash = hash_init(16, (addr_t)&i->next - (addr_t)i,
+	ifhash = hash_init(16, offsetof(ifnet, next),
 		&if_compare_func, &if_hash_func);
 	err = mutex_init(&ifhash_lock, "if list lock");
 	if(err < 0)

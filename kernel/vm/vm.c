@@ -1692,21 +1692,15 @@ int vm_init(kernel_args *ka)
 	vm_cache_init(ka);
 
 	// create the region and address space hash tables
-	{
-		vm_address_space *aspace;
-		aspace_table = hash_init(ASPACE_HASH_TABLE_SIZE, (addr_t)&aspace->hash_next - (addr_t)aspace,
-			&aspace_compare, &aspace_hash);
-		if(aspace_table == NULL)
-			panic("vm_init: error creating aspace hash table\n");
-	}
-	{
-		vm_region *region;
-		region_table = hash_init(REGION_HASH_TABLE_SIZE, (addr_t)&region->hash_next - (addr_t)region,
-			&region_compare, &region_hash);
-		if(region_table == NULL)
-			panic("vm_init: error creating aspace hash table\n");
-	}
+	aspace_table = hash_init(ASPACE_HASH_TABLE_SIZE, offsetof(vm_address_space, hash_next),
+		&aspace_compare, &aspace_hash);
+	if(aspace_table == NULL)
+		panic("vm_init: error creating aspace hash table\n");
 
+	region_table = hash_init(REGION_HASH_TABLE_SIZE, offsetof(vm_region, hash_next),
+		&region_compare, &region_hash);
+	if(region_table == NULL)
+		panic("vm_init: error creating aspace hash table\n");
 
 	// create the initial kernel address space
 	{

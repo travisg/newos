@@ -1658,11 +1658,9 @@ static void tcp_remote_close(tcp_socket *s)
 
 int tcp_init(void)
 {
-	tcp_socket s;
-
 	mutex_init(&socket_table_lock, "tcp socket table lock");
 
-	socket_table = hash_init(256, (addr_t)&s.next - (addr_t)&s, &tcp_socket_compare_func, &tcp_socket_hash_func);
+	socket_table = hash_init(256, offsetof(tcp_socket, next), &tcp_socket_compare_func, &tcp_socket_hash_func);
 	if(!socket_table)
 		return ERR_NO_MEMORY;
 

@@ -1022,7 +1022,7 @@ int thread_init(kernel_args *ka)
 	kprintf("initializing threading system...\n");
 
 	// create the process hash table
-	proc_hash = hash_init(15, (addr_t)&kernel_proc->next - (addr_t)kernel_proc,
+	proc_hash = hash_init(15, offsetof(struct proc, next),
 		&proc_struct_compare, &proc_struct_hash);
 
 	// create the kernel process
@@ -1046,7 +1046,7 @@ int thread_init(kernel_args *ka)
 	hash_insert(proc_hash, kernel_proc);
 
 	// create the thread hash table
-	thread_hash = hash_init(15, (addr_t)&t->next - (addr_t)t,
+	thread_hash = hash_init(15, offsetof(struct thread, next),
 		&thread_struct_compare, &thread_struct_hash);
 
 	// zero out the run queues

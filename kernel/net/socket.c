@@ -319,13 +319,11 @@ int socket_close(sock_id id)
 
 int socket_init(void)
 {
-	netsocket s;
-
 	next_sock_id = 0;
 
 	mutex_init(&sock_mutex, "socket list mutex");
 
-	sock_table = hash_init(256, (addr_t)&s.next - (addr_t)&s, &sock_compare_func, &sock_hash_func);
+	sock_table = hash_init(256, offsetof(netsocket, next), &sock_compare_func, &sock_hash_func);
 	if(!sock_table)
 		return ERR_NO_MEMORY;
 

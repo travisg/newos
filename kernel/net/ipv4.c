@@ -794,15 +794,13 @@ out:
 
 int ipv4_init(void)
 {
-	ipv4_fragment frag;
-
 	mutex_init(&route_table_mutex, "ipv4 routing table mutex");
 	mutex_init(&frag_table_mutex, "ipv4 fragment table mutex");
 
 	route_table = NULL;
 	curr_identification = system_time();
 
-	frag_table = hash_init(256, (addr_t)&frag.hash_next - (addr_t)&frag,
+	frag_table = hash_init(256, offsetof(ipv4_fragment, hash_next),
 		&frag_compare_func, &frag_hash_func);
 
 	set_net_timer(&frag_killer_event, FRAG_KILLER_QUANTUM, &ipv4_frag_killer, NULL, 0);
