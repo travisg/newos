@@ -2,7 +2,7 @@
 #define _INT_H
 
 #include <stage2.h>
-#include <arch_int.h>
+#include <kernel/arch/int.h>
 
 int int_init(kernel_args *ka);
 int int_init2(kernel_args *ka);

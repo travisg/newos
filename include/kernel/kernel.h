@@ -2,7 +2,7 @@
 #define _KERNEL_H
 
 #include <kernel/ktypes.h>
-#include <arch_kernel.h>
+#include <kernel/arch/kernel.h>
 
 #define ROUNDUP(a, b) (((a) + ((b)-1)) & ~((b)-1))
 #define ROUNDOWN(a, b) (((a) / (b)) * (b))

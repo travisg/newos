@@ -2,7 +2,7 @@
 #define _KTYPES_H
 
 #include <types.h>
-#include <arch_ktypes.h>
+#include <kernel/arch/ktypes.h>
 
 typedef int thread_id;
 typedef int area_id;

@@ -4,7 +4,7 @@
 #include <stage2.h>
 #include <kernel/vm.h>
 #include <kernel/smp.h>
-#include <arch_thread_struct.h>
+#include <kernel/arch/thread_struct.h>
 
 #define THREAD_IDLE_PRIORITY 0
 #define THREAD_NUM_PRIORITY_LEVELS 64

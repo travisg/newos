@@ -27,7 +27,7 @@ int smp_disable_ici();
 
 int smp_get_num_cpus();
 
-#include <arch_smp.h>
+#include <kernel/arch/smp.h>
 #define smp_get_current_cpu() arch_smp_get_current_cpu()
 
 // spinlock functions
