@@ -10,7 +10,7 @@
 
 vm_cache *vm_cache_create(vm_store *store);
 vm_cache_ref *vm_cache_ref_create(vm_cache *cache);
-void vm_cache_acquire_ref(vm_cache_ref *cache_ref);
+int vm_cache_acquire_ref(vm_cache_ref *cache_ref);
 void vm_cache_release_ref(vm_cache_ref *cache_ref);
 vm_page *vm_cache_lookup_page(vm_cache_ref *cache_ref, off_t page);
 void vm_cache_insert_page(vm_cache_ref *cache_ref, vm_page *page, off_t offset);

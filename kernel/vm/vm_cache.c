@@ -27,7 +27,7 @@ vm_cache *vm_cache_create(vm_store *store)
 	cache->store = store;
 	if(store != NULL)
 		store->cache = cache;
-	cache->committed_size = 0;
+	cache->virtual_size = 0;
 	cache->temporary = 0;
 
 	return cache;
@@ -50,11 +50,11 @@ vm_cache_ref *vm_cache_ref_create(vm_cache *cache)
 	return ref;
 }
 
-void vm_cache_acquire_ref(vm_cache_ref *cache_ref)
+int vm_cache_acquire_ref(vm_cache_ref *cache_ref)
 {
 	if(cache_ref == NULL)
 		panic("vm_cache_acquire_ref: passed NULL\n");
-	atomic_add(&cache_ref->ref_count, 1);
+	return atomic_add(&cache_ref->ref_count, 1);
 }
 
 void vm_cache_release_ref(vm_cache_ref *cache_ref)
@@ -66,8 +66,11 @@ void vm_cache_release_ref(vm_cache_ref *cache_ref)
 	if(atomic_add(&cache_ref->ref_count, -1) == 1) {
 		// delete this cache
 		// delete the cache's backing store, if it has one
-		if(cache_ref->cache->store)
+		off_t store_committed_size = 0;
+		if(cache_ref->cache->store) {
+			store_committed_size = cache_ref->cache->store->committed_size;
 			(*cache_ref->cache->store->ops->destroy)(cache_ref->cache->store);
+		}
 
 		// free all of the pages in the cache
 		page = cache_ref->cache->page_list;
@@ -77,7 +80,7 @@ void vm_cache_release_ref(vm_cache_ref *cache_ref)
 			dprintf("vm_cache_release_ref: freeing page 0x%x\n", old_page->ppn);
 			vm_page_set_state(old_page, PAGE_STATE_FREE);
 		}
-		vm_increase_max_commit(cache_ref->cache->committed_size);
+		vm_increase_max_commit(cache_ref->cache->virtual_size - store_committed_size);
 
 		mutex_destroy(&cache_ref->lock);
 		kfree(cache_ref->cache);

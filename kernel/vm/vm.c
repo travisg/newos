@@ -313,8 +313,8 @@ static int map_backing_store(vm_address_space *aspace, vm_store *store, void **v
 //				dprintf("map_backing_store: adding %d to max_commit\n", 
 //					(commitment - old_store_commitment) - (offset + size - cache->committed_size));
 
-				max_commit += (commitment - old_store_commitment) - (offset + size - cache->committed_size);
-				cache->committed_size = offset + size;
+				max_commit += (commitment - old_store_commitment) - (offset + size - cache->virtual_size);
+				cache->virtual_size = offset + size;
 				release_spinlock(&max_commit_lock);
 				int_restore_interrupts(state);
 			} else {
@@ -572,7 +572,8 @@ region_id vm_clone_region(aspace_id aid, char *name, void **address, int addr_ty
 	if(src_region == NULL)
 		return ERR_VM_INVALID_REGION;	
 
-	vm_cache_acquire_ref(src_region->cache_ref);
+	if(vm_cache_acquire_ref(src_region->cache_ref) <= 0)
+		return ERR_VM_GENERAL;
 	err = map_backing_store(aspace, src_region->cache_ref->cache->store, address, src_region->cache_offset, src_region->size, 
 		addr_type, src_region->wiring, lock, &new_region, name);
 	vm_cache_release_ref(src_region->cache_ref);
@@ -835,6 +836,30 @@ static void dump_cache_ref(int argc, char **argv)
 	dprintf("ref_count: %d\n", cache_ref->ref_count);
 }
 
+static const char *page_state_to_text(int state)
+{
+	switch(state) {
+		case PAGE_STATE_ACTIVE:
+			return "active";
+		case PAGE_STATE_INACTIVE:
+			return "inactive";
+		case PAGE_STATE_BUSY:
+			return "busy";
+		case PAGE_STATE_MODIFIED:
+			return "modified";
+		case PAGE_STATE_FREE:
+			return "free";
+		case PAGE_STATE_CLEAR:
+			return "clear";
+		case PAGE_STATE_WIRED:
+			return "wired";
+		case PAGE_STATE_UNUSED:
+			return "unused";
+		default:
+			return "unknown";
+	}
+}
+
 static void dump_cache(int argc, char **argv)
 {
 	addr address;
@@ -856,11 +881,14 @@ static void dump_cache(int argc, char **argv)
 	dprintf("cache at 0x%x:\n", cache);
 	dprintf("cache_ref: 0x%x\n", cache->ref);
 	dprintf("store: 0x%x\n", cache->store);
+	// XXX 64-bit
+	dprintf("virtual_size: 0x%x 0x%x\n", cache->virtual_size);
+	dprintf("temporary: %d\n", cache->temporary);
 	dprintf("page_list:\n");
 	for(page = cache->page_list; page != NULL; page = page->cache_next) {
 		// XXX offset is 64-bit
-		dprintf(" 0x%x ppn 0x%x offset 0x%x 0x%x type %d state %d ref_count %d\n",
-			page, page->ppn, page->offset, page->type, page->state, page->ref_count);
+		dprintf(" 0x%x ppn 0x%x offset 0x%x 0x%x type %d state %d (%s) ref_count %d\n",
+			page, page->ppn, page->offset, page->type, page->state, page_state_to_text(page->state), page->ref_count);
 	}
 }
 

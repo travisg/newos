@@ -59,7 +59,7 @@ typedef struct vm_cache {
 	vm_page *page_list;
 	vm_cache_ref *ref;
 	struct vm_store *store;
-	off_t committed_size;
+	off_t virtual_size;
 	unsigned int temporary : 1;
 } vm_cache;
 
