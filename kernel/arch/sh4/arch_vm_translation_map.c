@@ -54,7 +54,8 @@ static int lock_tmap(vm_translation_map *map)
 //		map->arch_data->num_invalidate_pages = 0;
 	}
 
-	return 0;}
+	return 0;
+}
 
 static int unlock_tmap(vm_translation_map *map)
 {
@@ -107,9 +108,6 @@ static int map_tmap(vm_translation_map *map, addr va, addr pa, unsigned int lock
 	// get the pagetable
 	pt = (struct ptent *)PHYS_TO_P1(pd[index].ppn << 12);
 	index = (va >> 12) & 0x000003ff;
-
-	if(pt[index].v)
-		panic("map_tmap: va 0x%x already mapped to pa 0x%x\n", va, pt[index].ppn << 12);
 
 	// insert the mapping
 	pt[index].wt = 0;

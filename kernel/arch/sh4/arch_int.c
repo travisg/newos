@@ -47,14 +47,12 @@ static int sh4_handle_exception(void *_frame)
 	switch(frame->excode) {
 		case 0:  // reset
 		case 1:  // manual reset
-		case 5:  // TLB protection violation (read)
-		case 6:  // TLB protection violation (write)
 		case 7:  // data address error (read)
 		case 8:  // data address error (write)
 		case 10: // TLB multi hit
 		case 12: // illegal instruction
 		case 13: // slot illegal instruction
-			dprintf("about to gpf at pc 0x%x, excode %d\n", frame->spc, frame->excode);
+			dprintf("about to gpf at pc 0x%x, excode %d, TEA 0x%x\n", frame->spc, frame->excode, *(addr *)TEA);
 			ret = general_protection_fault(frame->excode);
 			break;
 		case 11:  { // TRAPA
@@ -120,6 +118,11 @@ static int sh4_handle_exception(void *_frame)
 		case 65: // Slot FPU disable exception
 			ret = fpu_disable_fault();
 			break;
+		case 5:  // TLB protection violation (read)
+		case 6:  // TLB protection violation (write)
+			// make these faults act like a page fault
+			frame->page_fault_addr = *(addr *)TEA;
+			frame->excode = (frame->excode == 5) ? EXCEPTION_PAGE_FAULT_READ : EXCEPTION_PAGE_FAULT_WRITE;
 		case EXCEPTION_PAGE_FAULT_READ:
 		case EXCEPTION_PAGE_FAULT_WRITE: {
 			addr newip;
