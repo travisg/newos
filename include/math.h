@@ -20,8 +20,9 @@
 /*
  * ANSI/POSIX
  */
-extern char __infinity[];
-#define HUGE_VAL	(*(double *) __infinity)
+	/* note: __builtin_inff() requires gcc 3.3 */
+#define INFINITY	(__builtin_inff())
+#define HUGE_VAL	(__builtin_inff())
 
 /*
  * XOPEN/SVID

@@ -12,7 +12,9 @@ MY_OBJS += \
 	$(LIBC_STRING_DIR)/strcat.o \
 	$(LIBC_STRING_DIR)/strchr.o \
 	$(LIBC_STRING_DIR)/strcmp.o \
+	$(LIBC_STRING_DIR)/strcoll.o \
 	$(LIBC_STRING_DIR)/strcpy.o \
+	$(LIBC_STRING_DIR)/strdup.o \
 	$(LIBC_STRING_DIR)/strerror.o \
 	$(LIBC_STRING_DIR)/strlcat.o \
 	$(LIBC_STRING_DIR)/strlcpy.o \
@@ -26,7 +28,8 @@ MY_OBJS += \
 	$(LIBC_STRING_DIR)/strrchr.o \
 	$(LIBC_STRING_DIR)/strspn.o \
 	$(LIBC_STRING_DIR)/strstr.o \
-	$(LIBC_STRING_DIR)/strtok.o
+	$(LIBC_STRING_DIR)/strtok.o \
+	$(LIBC_STRING_DIR)/strxfrm.o
 
 include $(addsuffix /makefile, $(addprefix $(MY_SRCDIR)/string/, \
 	arch/$(ARCH) \

@@ -190,6 +190,26 @@ FILE *fopen(const char *filename, const char *mode)
     return f;
 }
 
+FILE *fdopen(int fd, const char *mode)
+{
+    FILE* f;
+    int sys_flags;
+    int flags;
+
+	if(_set_open_flags(mode, &sys_flags, &flags))
+	{
+		return (FILE*)0;
+	}
+
+    f = __create_FILE_struct(fd, flags);
+    if(f == (FILE*)0)
+    {
+        close(fd);
+    }
+
+    return f;
+}
+
 FILE *freopen(const char *filename, const char *mode, FILE *stream)
 {
     int sys_flags;
@@ -426,6 +446,11 @@ void clearerr(FILE *stream)
 	_kern_sem_acquire(stream->sid, 1);
     stream->flags &= ~_STDIO_ERROR;
     _kern_sem_release(stream->sid, 1);
+}
+
+int fileno(FILE *stream)
+{
+	return stream->fd;
 }
 
 int ungetc(int c, FILE *stream)
@@ -680,5 +705,34 @@ int fscanf(FILE *stream, char const *fmt, ...)
 	return i;
 }
 
+int setvbuf(FILE *stream, char *buf, int mode, size_t size)
+{
+	_kern_sem_acquire(stream->sid, 1);
+
+	_flush(stream);
+	if(stream->buf)
+		free(stream->buf);
+	stream->buf = buf;
+	stream->buf_size = size;
+
+	_kern_sem_release(stream->sid, 1);
+
+	return 0;
+}
+
+void setbuf(FILE *stream, char *buf)
+{
+	setvbuf(stream, buf, buf ? _IOFBF : _IONBF, BUFSIZ);
+}
+
+void setbuffer(FILE *stream, char *buf, int size)
+{
+	setvbuf(stream, buf, buf ? _IOFBF : _IONBF, (size_t)size);
+}
+
+int setlinebuf(FILE *stream)
+{
+	return setvbuf(stream, NULL, _IOLBF, (size_t)0);
+}
 
 #endif
