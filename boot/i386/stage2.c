@@ -410,7 +410,7 @@ static void mmu_map_page(unsigned int vaddr, unsigned int paddr)
 static int check_cpu(void)
 {
 	unsigned int i;
-	uint32 data[4];
+	unsigned int data[4];
 	char str[17];
 
 	// check the eflags register to see if the cpuid instruction exists
