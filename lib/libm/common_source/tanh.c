@@ -71,13 +71,18 @@ static char sccsid[] = "@(#)tanh.c	8.1 (Berkeley) 6/4/93";
  *	In a test run with 1,024,000 random arguments on a VAX, the maximum
  *	observed error was 2.22 ulps (units in the last place).
  */
+#include <math.h>
+#include <float.h>
 
-double tanh(x)
-double x;
+double
+tanh(double x)
 {
-	static double one=1.0, two=2.0, small = 1.0e-10, big = 1.0e10;
-	double expm1(), t, copysign(), sign;
-	int finite();
+	static double const one=1.0;
+	static double const two=2.0;
+	static double const small = 1.0e-10;
+	static double const big = 1.0e10;
+	double t;
+	double sign;
 
 #if !defined(vax)&&!defined(tahoe)
 	if(x!=x) return(x);	/* x is NaN */
@@ -91,7 +96,7 @@ double x;
 	    else if ( x > small )
 		{t= -expm1(-(x+x)); return(copysign(t/(two-t),sign));}
 	    else		/* raise the INEXACT flag for non-zero x */
-		{big+x; return(copysign(x,sign));}
+		{(void volatile)(big+x); return(copysign(x,sign));}
 	else if(finite(x))
 	    return (sign+1.0E-37); /* raise the INEXACT flag */
 	else

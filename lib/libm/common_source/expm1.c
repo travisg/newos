@@ -105,16 +105,20 @@ ic(invln2, 1.4426950408889633870E0,     0, 1.71547652B82FE)
 #define	invln2	vccast(invln2)
 #endif
 
-double expm1(x)
-double x;
+double
+expm1(double x)
 {
-	const static double one=1.0, half=1.0/2.0;
-	double  z,hi,lo,c;
+	static double const one=1.0;
+	static double const half=1.0/2.0;
+	double z;
+	double hi;
+	double lo;
+	double c;
 	int k;
 #if defined(vax)||defined(tahoe)
-	static prec=56;
+	static int prec=56;
 #else	/* defined(vax)||defined(tahoe) */
-	static prec=53;
+	static int prec=53;
 #endif	/* defined(vax)||defined(tahoe) */
 
 #if !defined(vax)&&!defined(tahoe)
@@ -154,7 +158,7 @@ double x;
 		else
 		     /* expm1(-big#) rounded to -1 (inexact) */
 		     if(finite(x))
-			 { ln2hi+ln2lo; return(-one);}
+			 { (void volatile)(ln2hi+ln2lo); return(-one);}
 
 		     /* expm1(-INF) is -1 */
 		     else return(-one);

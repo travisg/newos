@@ -90,8 +90,8 @@
 /*
  * Functions internal to the math package, yet not static.
  */
-extern double	__exp__E();
-extern double	__log__L();
+extern double	__exp__E(double, double);
+extern double	__log__L(double);
 
 struct Double {double a, b;};
 double __exp__D(double, double);

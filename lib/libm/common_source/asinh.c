@@ -80,22 +80,24 @@ ic(ln2lo, 1.9082149292705877000E-10, -33, 1.A39EF35793C76)
 #define    ln2lo    vccast(ln2lo)
 #endif
 
-double asinh(x)
-double x;
+double
+asinh(double x)
 {
-	double t,s;
-	const static double	small=1.0E-10,	/* fl(1+small*small) == 1 */
-				big  =1.0E20,	/* fl(1+big) == big */
-				one  =1.0   ;
+	double t;
+	double s;
+	static double const small = 1.0E-10;	/* fl(1+small*small) == 1 */
+	static double const big   =1.0E20;	/* fl(1+big) == big */
+	static double const one   =1.0;
 
 #if !defined(vax)&&!defined(tahoe)
 	if(x!=x) return(x);	/* x is NaN */
 #endif	/* !defined(vax)&&!defined(tahoe) */
-	if((t=copysign(x,one))>small)
+	if((t=copysign(x,one))>small) {
 	    if(t<big) {
 	     	s=one/t; return(copysign(log1p(t+t/(s+sqrt(one+s*s))),x)); }
 	    else	/* if |x| > big */
 		{s=log1p(t)+ln2lo; return(copysign(s+ln2hi,x));}
-	else	/* if |x| < small */
+	} else {	/* if |x| < small */
 	    return(x);
+	}
 }

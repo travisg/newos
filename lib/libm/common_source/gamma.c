@@ -147,34 +147,39 @@ gamma(x)
 			return(one/zero);
 		u = large_gam(x);
 		return(__exp__D(u.a, u.b));
-	} else if (x >= 1.0 + LEFT + x0)
+	} else if (x >= 1.0 + LEFT + x0) {
 		return (small_gam(x));
-	else if (x > 1.e-17)
+	} else if (x > 1.e-17) {
 		return (smaller_gam(x));
-	else if (x > -1.e-17) {
-		if (x == 0.0)
+	} else if (x > -1.e-17) {
+		if (x == 0.0) {
 			if (!_IEEE) return (infnan(ERANGE));
 			else return (one/x);
-		one+1e-20;		/* Raise inexact flag. */
+		}
+		(void volatile)(one+1e-20);	/* Raise inexact flag. */
 		return (one/x);
 	} else if (!finite(x)) {
 		if (_IEEE)		/* x = NaN, -Inf */
 			return (x*x);
 		else
 			return (infnan(EDOM));
-	 } else
+	} else {
 		return (neg_gam(x));
+	}
 }
 /*
  * Accurate to max(ulp(1/128) absolute, 2^-66 relative) error.
  */
-static struct Double
-large_gam(x)
-	double x;
+static
+struct Double
+large_gam(double x)
 {
-	double z, p;
+	double z;
+	double p;
 	int i;
-	struct Double t, u, v;
+	struct Double t;
+	struct Double u;
+	struct Double v;
 
 	z = one/(x*x);
 	p = Pa0+z*(Pa1+z*(Pa2+z*(Pa3+z*(Pa4+z*(Pa5+z*(Pa6+z*Pa7))))));
@@ -198,12 +203,17 @@ large_gam(x)
  * Good to < 1 ulp.  (provably .90 ulp; .87 ulp on 1,000,000 runs.)
  * It also has correct monotonicity.
  */
-static double
-small_gam(x)
-	double x;
+static
+double
+small_gam(double x)
 {
-	double y, ym1, t, x1;
-	struct Double yy, r;
+	double y;
+	double ym1;
+	double t;
+	double x1;
+	struct Double yy;
+	struct Double r;
+
 	y = x - one;
 	ym1 = y - one;
 	if (y <= 1.0 + (LEFT + x0)) {
@@ -232,12 +242,15 @@ small_gam(x)
 /*
  * Good on (0, 1+x0+LEFT].  Accurate to 1ulp.
  */
-static double
-smaller_gam(x)
-	double x;
+static
+double
+smaller_gam(double x)
 {
-	double t, d;
-	struct Double r, xx;
+	double t;
+	double d;
+	struct Double r;
+	struct Double xx;
+
 	if (x < x0 + LEFT) {
 		t = x, TRUNC(t);
 		d = (t+x)*(x-t);
@@ -261,13 +274,15 @@ smaller_gam(x)
 /*
  * returns (z+c)^2 * P(z)/Q(z) + a0
  */
-static struct Double
-ratfun_gam(z, c)
-	double z, c;
+static
+struct Double
+ratfun_gam(double z, double c)
 {
 	int i;
-	double p, q;
-	struct Double r, t;
+	double p;
+	double q;
+	struct Double r;
+	struct Double t;
 
 	q = Q0 +z*(Q1+z*(Q2+z*(Q3+z*(Q4+z*(Q5+z*(Q6+z*(Q7+z*Q8)))))));
 	p = P0 + z*(P1 + z*(P2 + z*(P3 + z*P4)));
@@ -289,20 +304,23 @@ ratfun_gam(z, c)
 	return (r);			/* r = a0 + t */
 }
 
-static double
-neg_gam(x)
-	double x;
+static
+double
+neg_gam(double x)
 {
 	int sgn = 1;
-	struct Double lg, lsine;
-	double y, z;
+	struct Double lg;
+	struct Double lsine;
+	double y;
+	double z;
 
 	y = floor(x + .5);
-	if (y == x)		/* Negative integer. */
+	if (y == x) {		/* Negative integer. */
 		if(!_IEEE)
 			return (infnan(ERANGE));
 		else
 			return (one/zero);
+	}
 	z = fabs(x - y);
 	y = .5*ceil(x);
 	if (y == ceil(y))

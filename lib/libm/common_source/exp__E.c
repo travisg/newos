@@ -107,11 +107,20 @@ ic(q2, 9.9176615021572857300E-4, -10, 1.03FC4CB8C98E8)
 #define       q3    vccast(q3)
 #endif
 
-double __exp__E(x,c)
-double x,c;
+double
+__exp__E(double x, double c)
 {
-	const static double zero=0.0, one=1.0, half=1.0/2.0, small=1.0E-19;
-	double z,p,q,xp,xh,w;
+	static double const zero=0.0;
+	static double const one=1.0;
+	static double const half=1.0/2.0;
+	static double const small=1.0E-19;
+	double z;
+	double p;
+	double q;
+	double xp;
+	double xh;
+	double w;
+
 	if(copysign(x,one)>small) {
            z = x*x  ;
 	   p = z*( p1 +z* p2 );
@@ -130,7 +139,7 @@ double x,c;
 	/* end of |x| > small */
 
 	else {
-	    if(x!=zero) one+small;	/* raise the inexact flag */
+	    if(x!=zero) (void volatile)(one+small);	/* raise the inexact flag */
 	    return(copysign(zero,x));
 	}
 }

@@ -99,28 +99,30 @@ ic(lnovfl, 7.0978271289338397310E2,     9, 1.62E42FEFA39EF)
 #endif
 
 #if defined(vax)||defined(tahoe)
-static max = 126                      ;
+static int const max = 126                      ;
 #else	/* defined(vax)||defined(tahoe) */
-static max = 1023                     ;
+static int const max = 1023                     ;
 #endif	/* defined(vax)||defined(tahoe) */
 
-double cosh(x)
-double x;
+double
+cosh(double x)
 {
-	static const double half=1.0/2.0,
-		one=1.0, small=1.0E-18; /* fl(1+small)==1 */
+	static double const half=1.0/2.0;
+	static double const one=1.0;
+	static double const small=1.0E-18; /* fl(1+small)==1 */
 	double t;
 
 #if !defined(vax)&&!defined(tahoe)
 	if(x!=x) return(x);	/* x is NaN */
 #endif	/* !defined(vax)&&!defined(tahoe) */
-	if((x=copysign(x,one)) <= 22)
+	if((x=copysign(x,one)) <= 22) {
 	    if(x<0.3465)
 		if(x<small) return(one+x);
 		else {t=x+__exp__E(x,0.0);x=t+t; return(one+t*t/(2.0+x)); }
 
 	    else /* for x lies in [0.3465,22] */
 	        { t=exp(x); return((t+one/t)*half); }
+	}
 
 	if( lnovfl <= x && x <= (lnovfl+0.7))
         /* for x lies in [lnovfl, lnovfl+ln2], decrease x by ln(2^(max+1))

@@ -102,18 +102,21 @@ static char sccsid[] = "@(#)jn.c	8.2 (Berkeley) 11/30/93";
 #define infnan(x) (0.0)
 #endif
 
-static double
-invsqrtpi= 5.641895835477562869480794515607725858441e-0001,
-two  = 2.0,
-zero = 0.0,
-one  = 1.0;
+static double const invsqrtpi= 5.641895835477562869480794515607725858441e-0001;
+static double const two  = 2.0;
+static double const zero = 0.0;
+static double const one  = 1.0;
 
-double jn(n,x)
-	int n; double x;
+double
+jn(int n, double x)
 {
-	int i, sgn;
-	double a, b, temp;
-	double z, w;
+	int i;
+	int sgn;
+	double a;
+	double b;
+	double temp;
+	double z;
+	double w;
 
     /* J(-n,x) = (-1)^n * J(n, x), J(n, -x) = (-1)^n * J(n, x)
      * Thus, J(-n,x) = J(n,-x)
@@ -128,9 +131,9 @@ double jn(n,x)
 	if (n==1) return(j1(x));
 	sgn = (n&1)&(x < zero);		/* even n -- 0, odd n -- sign(x) */
 	x = fabs(x);
-	if (x == 0 || !finite (x)) 	/* if x is 0 or inf */
+	if (x == 0 || !finite (x)) { 	/* if x is 0 or inf */
 	    b = zero;
-	else if ((double) n <= x) {
+	} else if ((double) n <= x) {
 			/* Safe to use J(n+1,x)=2n/x *J(n,x)-J(n-1,x) */
 	    if (_IEEE && x >= 8.148143905337944345e+090) {
 					/* x >= 2**302 */
@@ -152,6 +155,7 @@ double jn(n,x)
 		    case 1: temp = -cos(x)+sin(x); break;
 		    case 2: temp = -cos(x)-sin(x); break;
 		    case 3: temp =  cos(x)-sin(x); break;
+		    default: temp = 0;	/* keep the stupid compiler silent */
 		}
 		b = invsqrtpi*temp/sqrt(x);
 	    } else {
@@ -254,19 +258,25 @@ double jn(n,x)
 	}
 	return ((sgn == 1) ? -b : b);
 }
-double yn(n,x)
-	int n; double x;
+
+double
+yn(int n, double x)
 {
-	int i, sign;
-	double a, b, temp;
+	int i;
+	int sign;
+	double a;
+	double b;
+	double temp;
 
     /* Y(n,NaN), Y(n, x < 0) is NaN */
-	if (x <= 0 || (_IEEE && x != x))
+	if (x <= 0 || (_IEEE && x != x)) {
 		if (_IEEE && x < 0) return zero/zero;
 		else if (x < 0)     return (infnan(EDOM));
 		else if (_IEEE)     return -one/zero;
 		else		    return(infnan(-ERANGE));
-	else if (!finite(x)) return(0);
+	} else if (!finite(x)) {
+		return(0);
+	}
 	sign = 1;
 	if (n<0){
 		n = -n;
@@ -293,6 +303,7 @@ double yn(n,x)
 		    case 1: temp = -sin(x)-cos(x); break;
 		    case 2: temp = -sin(x)+cos(x); break;
 		    case 3: temp =  sin(x)+cos(x); break;
+		    default: temp = 0;	/* keep the stupid compiler silent */
 		}
 		b = invsqrtpi*temp/sqrt(x);
 	} else {

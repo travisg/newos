@@ -96,12 +96,12 @@ static char sccsid[] = "@(#)log.c	8.2 (Berkeley) 11/30/93";
  * Values for log(F) were generated using error < 10^-57 absolute
  * with the bc -l package.
 */
-static double	A1 = 	  .08333333333333178827;
-static double	A2 = 	  .01250000000377174923;
-static double	A3 =	 .002232139987919447809;
-static double	A4 =	.0004348877777076145742;
+static double const A1 = 	  .08333333333333178827;
+static double const A2 = 	  .01250000000377174923;
+static double const A3 =	 .002232139987919447809;
+static double const A4 =	.0004348877777076145742;
 
-static double logF_head[N+1] = {
+static double const logF_head[N+1] = {
 	0.,
 	.007782140442060381246,
 	.015504186535963526694,
@@ -233,7 +233,7 @@ static double logF_head[N+1] = {
 	.693147180560117703862
 };
 
-static double logF_tail[N+1] = {
+static double const logF_tail[N+1] = {
 	0.,
 	-.00000000000000543229938420049,
 	 .00000000000000172745674997061,
@@ -366,18 +366,22 @@ static double logF_tail[N+1] = {
 };
 
 double
-#ifdef _ANSI_SOURCE
 log(double x)
-#else
-log(x) double x;
-#endif
 {
 	int m, j;
-	double F, f, g, q, u, u2, v, zero = 0.0, one = 1.0;
+	double F;
+	double f;
+	double g;
+	double q;
+	double u;
+	double u2;
+	double v;
+	static double const zero = 0.0;
+	static double const one = 1.0;
 	volatile double u1;
 
 	/* Catch special cases */
-	if (x <= 0)
+	if (x <= 0) {
 		if (_IEEE && x == zero)	/* log(0) = -Inf */
 			return (-one/zero);
 		else if (_IEEE)		/* log(neg) = NaN */
@@ -386,11 +390,12 @@ log(x) double x;
 			return (infnan(-ERANGE));
 		else
 			return (infnan(EDOM));
-	else if (!finite(x))
+	} else if (!finite(x)) {
 		if (_IEEE)		/* x = NaN, Inf */
 			return (x+x);
 		else
 			return (infnan(ERANGE));
+	}
 
 	/* Argument reduction: 1 <= g < 2; x/2^m = g;	*/
 	/* y = F*(1 + f/F) for |f| <= 2^-8		*/
@@ -441,14 +446,18 @@ log(x) double x;
  * log(x) = a+b to 63 bits, with a is rounded to 26 bits.
  */
 struct Double
-#ifdef _ANSI_SOURCE
 __log__D(double x)
-#else
-__log__D(x) double x;
-#endif
 {
-	int m, j;
-	double F, f, g, q, u, v, u2, one = 1.0;
+	int m;
+	int j;
+	double F;
+	double f;
+	double g;
+	double q;
+	double u;
+	double v;
+	double u2;
+	static double const one = 1.0;
 	volatile double u1;
 	struct Double r;
 

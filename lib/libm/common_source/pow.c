@@ -119,12 +119,15 @@ static char sccsid[] = "@(#)pow.c	8.1 (Berkeley) 6/4/93";
 #define infnan(x)	0.0
 #endif		/* vax or tahoe */
 
-const static double zero=0.0, one=1.0, two=2.0, negone= -1.0;
+static double const zero=0.0;
+static double const one=1.0;
+static double const two=2.0;
+static double const negone= -1.0;
 
 static double pow_P(double, double);
 
-double pow(x,y)
-double x,y;
+double
+pow(double x, double y)
 {
 	double t;
 	if (y==zero)
@@ -166,40 +169,40 @@ double x,y;
 		return (infnan(EDOM));
 }
 /* kernel function for x >= 0 */
-static double
-#ifdef _ANSI_SOURCE
+static
+double
 pow_P(double x, double y)
-#else
-pow_P(x, y) double x, y;
-#endif
 {
 	struct Double s, t, __log__D();
 	double  __exp__D();
 	volatile double huge = 1e300, tiny = 1e-300;
 
-	if (x == zero)
+	if (x == zero) {
 		if (y > zero)
 			return (zero);
 		else if (_IEEE)
 			return (huge*huge);
 		else
 			return (infnan(ERANGE));
+	}
 	if (x == one)
 		return (one);
-	if (!finite(x))
+	if (!finite(x)) {
 		if (y < zero)
 			return (zero);
 		else if (_IEEE)
 			return (huge*huge);
 		else
 			return (infnan(ERANGE));
-	if (y >= 7e18)		/* infinity */
+	}
+	if (y >= 7e18) {	/* infinity */
 		if (x < 1)
 			return(tiny*tiny);
 		else if (_IEEE)
 			return (huge*huge);
 		else
 			return (infnan(ERANGE));
+	}
 
 	/* Return exp(y*log(x)), using simulated extended */
 	/* precision for the log and the multiply.	  */

@@ -147,22 +147,24 @@ lgamma(double x)
 	signgam = 1;
 	endian = ((*(int *) &one)) ? 1 : 0;
 
-	if (!finite(x))
+	if (!finite(x)) {
 		if (_IEEE)
 			return (x+x);
 		else return (infnan(EDOM));
+	}
 
 	if (x > 6 + RIGHT) {
 		r = large_lgam(x);
 		return (r);
-	} else if (x > 1e-16)
+	} else if (x > 1e-16) {
 		return (small_lgam(x));
-	else if (x > -1e-16) {
+	} else if (x > -1e-16) {
 		if (x < 0)
 			signgam = -1, x = -x;
 		return (-log(x));
-	} else
+	} else {
 		return (neg_lgam(x));
+	}
 }
 
 static double
@@ -276,11 +278,12 @@ neg_lgam(double x)
 	/* avoid destructive cancellation as much as possible */
 	if (x > -170) {
 		xi = x;
-		if (xi == x)
+		if (xi == x) {
 			if (_IEEE)
 				return(one/zero);
 			else
 				return(infnan(ERANGE));
+		}
 		y = gamma(x);
 		if (y < 0)
 			y = -y, signgam = -1;
