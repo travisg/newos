@@ -220,6 +220,7 @@ static int pci_scan_all()
 			dump_pci_config(&cfg);
 		}
 	}
+	return 0;
 }
 
 static int pci_ioctl(void *_fs, void *_vnode, void *_cookie, int op, void *buf, size_t len)
