@@ -11,8 +11,8 @@
 #define THREAD_MAX_PRIORITY (THREAD_NUM_PRIORITY_LEVELS - 1)
 
 extern int thread_spinlock;
-#define GRAB_THREAD_LOCK acquire_spinlock(&thread_spinlock)
-#define RELEASE_THREAD_LOCK release_spinlock(&thread_spinlock)
+#define GRAB_THREAD_LOCK() acquire_spinlock(&thread_spinlock)
+#define RELEASE_THREAD_LOCK() release_spinlock(&thread_spinlock)
 
 enum {
 	THREAD_STATE_NEW = 0, // thread was just created, hasn't been previously rescheded from
@@ -32,6 +32,7 @@ struct thread {
 	int state;
 	int next_state;
 	int sem_count;
+	int snooze_sem_id;
 	struct proc *proc;
 	struct area *kernel_stack_area;
 	struct area *user_stack_area;
@@ -47,14 +48,17 @@ struct thread_queue {
 void thread_enqueue(struct thread *t, struct thread_queue *q);
 struct thread *thread_lookat_queue(struct thread_queue *q);
 struct thread *thread_dequeue(struct thread_queue *q);
+struct thread *thread_dequeue_id(struct thread_queue *q, int thread_id);
 struct thread *thread_lookat_run_q(int priority);
 void thread_enqueue_run_q(struct thread *t);
 struct thread *thread_dequeue_run_q(int priority);
 
-int thread_resched();
+void thread_resched();
+void thread_snooze(long long time);
 int thread_init(struct kernel_args *ka);
 int thread_kthread_exit();
 struct thread *thread_get_current_thread();
+int thread_get_current_thread_id();
 
 #if 1
 // XXX remove later

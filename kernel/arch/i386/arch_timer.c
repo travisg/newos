@@ -12,8 +12,6 @@
 #define pit_clock_rate 1193180
 #define pit_max_timer_interval ((long long)0xffff * 1000000 / pit_clock_rate)
 
-static long long periodic_timer_rate = 10000; // us
-
 static void set_isa_hardware_timer(long long relative_timeout)
 {
 	unsigned short next_event_clocks;
@@ -32,18 +30,17 @@ static void set_isa_hardware_timer(long long relative_timeout)
 
 static int isa_timer_interrupt()
 {
-	// handle setting it up for the next shot
-	set_isa_hardware_timer(periodic_timer_rate);		
-
 	return timer_interrupt();
 }
 
 static int apic_timer_interrupt()
 {
-	// XXX reset timer
-	
-	
 	return timer_interrupt();
+}
+
+int arch_timer_set_hardware_timer(long long timeout)
+{
+	set_isa_hardware_timer(timeout);
 }
 
 int arch_init_timer(struct kernel_args *ka)

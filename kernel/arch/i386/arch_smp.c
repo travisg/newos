@@ -17,7 +17,7 @@
 #include "arch_smp.h"
 #include "arch_smp_priv.h"
 
-static int num_cpus = 0;
+static int num_cpus = 1;
 static unsigned int *apic = NULL;
 static unsigned int cpu_apic_id[SMP_MAX_CPUS] = { 0, 0};
 static unsigned int cpu_os_id[SMP_MAX_CPUS] = { 0, 0};

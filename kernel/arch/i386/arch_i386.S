@@ -71,3 +71,36 @@ _test_and_set1:
 
 _test_and_set2:
     ret
+
+// saves the conversion factor needed for system_time
+.global cv_factor
+cv_factor:
+	.word 0
+			
+.global setup_system_time
+setup_system_time:
+	movl	4(%esp),%eax
+	movl	%eax,cv_factor
+	ret
+	
+// long long system_time();
+.global system_time
+system_time:
+	/* load 64-bit factor into %eax (low), %edx (high) */
+	rdtsc		/* time in %edx,%eax */
+
+	pushl	%ebx
+	pushl	%ecx
+	movl	cv_factor, %ebx
+	movl	%edx, %ecx	/* save high half */
+	mull	%ebx 		/* truncate %eax, but keep %edx */
+	movl	%ecx, %eax
+	movl	%edx, %ecx	/* save high half of low */
+	mull	%ebx /*, %eax*/
+	/* now compute  [%edx, %eax] + [%ecx], propagating carry */
+	subl	%ebx, %ebx	/* need zero to propagate carry */
+	addl	%ecx, %eax
+	adc		%ebx, %edx
+	popl	%ecx
+	popl	%ebx
+	ret

@@ -3,8 +3,10 @@
 #include "vm.h"
 #include "kernel.h"
 #include "debug.h"
+#include "console.h"
 #include "stage2.h"
 #include "int.h"
+#include "spinlock.h"
 
 #include "arch_cpu.h"
 #include "arch_pmap.h"
@@ -76,6 +78,7 @@ static struct heap_bin bins[] = {
 };
 
 static const int bin_count = sizeof(bins) / sizeof(struct heap_bin);
+static int heap_spinlock = 0;
 
 static struct aspace *aspace_list = NULL;
 static struct aspace *kernel_aspace = NULL;
@@ -199,6 +202,12 @@ static int _vm_create_area(struct aspace *aspace, char *name, void **addr, int a
 		}
 		case AREA_EXACT_ADDRESS:
 			base = (unsigned int)*addr;
+			
+			if(base < aspace->base || (base - aspace->base) + size > (base - aspace->base) + aspace->size) {
+				dprintf("_vm_create_area: area asked to be created outside of aspace\n");
+				return -1;
+			}
+			
 			area = _vm_create_area_struct(aspace, name, base, size, lock);
 			break;
 		default:
@@ -258,7 +267,7 @@ void vm_dump_areas(struct aspace *aspace)
 {
 	struct area *area;
 
-	dprintf("area dump of address space '%s':\n", aspace->name);
+	dprintf("area dump of address space '%s', base 0x%x, size 0x%x:\n", aspace->name, aspace->base, aspace->size);
 	
 	area = aspace->area_list;
 	while(area != NULL) {
@@ -400,10 +409,14 @@ static char *raw_alloc(int size, int bin_index)
 
 void *kmalloc(int size)
 {
-	void *address = 0;
+	void *address = NULL;
 	int bin_index;
 	unsigned int i;
 	struct heap_page *page;
+	int state;
+
+	state = int_disable_interrupts();
+	acquire_spinlock(&heap_spinlock);
 	
 	for (bin_index = 0; bin_index < bin_count; bin_index++)
 		if (size <= bins[bin_index].element_size)
@@ -412,7 +425,7 @@ void *kmalloc(int size)
 	if (bin_index == bin_count) {
 		// XXX fix the raw alloc later.
 		//address = raw_alloc(size, bin_index);
-		return NULL;
+		goto out;
 	} else {
 		if (bins[bin_index].free_list != NULL) {
 			address = bins[bin_index].free_list;
@@ -435,6 +448,10 @@ void *kmalloc(int size)
 			page[i].free_count--;
 	}
 
+out:
+	release_spinlock(&heap_spinlock);
+	int_restore_interrupts(state);
+
 //	dprintf("kmalloc: asked to allocate size %d, returning ptr = %p\n", size, address);
 
 	return address;
@@ -445,9 +462,13 @@ void kfree(void *address)
 	struct heap_page *page;
 	struct heap_bin *bin;
 	unsigned int i;
+	int state;
 
 	if (address == 0)
 		return;
+
+	state = int_disable_interrupts();
+	acquire_spinlock(&heap_spinlock);
 
 //	dprintf("kfree: asked to free at ptr = %p\n", address);
 
@@ -466,6 +487,9 @@ void kfree(void *address)
 	bin->free_list = address;
 	bin->alloc_count--;
 	bin->free_count++;
+
+	release_spinlock(&heap_spinlock);
+	int_restore_interrupts(state);
 }
 
 int vm_mark_page_range_inuse(unsigned int start_page, unsigned int len)

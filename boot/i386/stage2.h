@@ -26,6 +26,7 @@ struct kernel_args {
 	unsigned int cpu_kstack[MAX_BOOT_CPUS];
 	unsigned int cpu_kstack_len[MAX_BOOT_CPUS];
 	// architecture specific
+	unsigned int system_time_cv_factor;
 	unsigned int pgdir;
 	unsigned int num_pgtables;
 	unsigned int pgtables[MAX_BOOT_PTABLES];

@@ -259,7 +259,7 @@ static int smp_cpu_ready()
 	struct gdt_idt_descr idt_descr;	
 	struct gdt_idt_descr gdt_descr;	
 	
-	dprintf("smp_cpu_ready: entry cpu %d\n", curr_cpu);
+//	dprintf("smp_cpu_ready: entry cpu %d\n", curr_cpu);
 
 	// Important.  Make sure supervisor threads can fault on read only pages...
 	asm("movl %%eax, %%cr0" : : "a" ((1 << 31) | (1 << 16) | (1 << 5) | 1));
@@ -379,15 +379,11 @@ static int smp_boot_all_cpus(struct kernel_args *ka)
 //			dprintf("0x%x\n", apic_read(APIC_ICR1));
 		
 		/* wait 10ms */
-//		u_sleep (10000);
-		for(j=0; j<100000000; j++)
-			j=j;
+		sleep(10000);
 
 		/* is this a local apic or an 82489dx ? */
 		num_startups = (ka->cpu_apic_version[i] & 0xf0) ? 2 : 0;
 		for (j = 0; j < num_startups; j++) {
-			int j1;
-			
 			/* it's a local apic, so send STARTUP IPIs */
 			apic_write(APIC_ESR, 0);
 
@@ -401,9 +397,8 @@ static int smp_boot_all_cpus(struct kernel_args *ka)
 			apic_write(APIC_ICR1, config);
 
 			/* wait */
-			for(j1=0; j1<100000000; j1++)
-				j1=j1;
-//			u_sleep (200);
+			sleep(200);
+
 			while((apic_read(APIC_ICR1)& 0x00001000) == 0x00001000);
 		}
 	} 

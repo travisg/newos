@@ -9,6 +9,7 @@
 #include "proc.h"
 #include "smp.h"
 #include "sem.h"
+#include "arch_cpu.h"
 
 #include "stage2.h"
 
@@ -28,7 +29,8 @@ int _start(struct kernel_args *oldka, int cpu)
 		dbg_set_serial_debug(true);
 		dprintf("Welcome to kernel debugger output!\n");
 	
-		// init modules	
+		// init modules
+		arch_cpu_init(&ka);
 		int_init(&ka);
 		vm_init(&ka);
 		int_init2(&ka);
@@ -36,11 +38,11 @@ int _start(struct kernel_args *oldka, int cpu)
 		con_init(&ka);
 		smp_init(&ka);
 		timer_init(&ka);
-		proc_init(&ka);
 		sem_init(&ka);
+		proc_init(&ka);
 		thread_init(&ka);
 	
-	#if 1
+	#if 0
 		// XXX remove
 		thread_test();
 	#endif
@@ -109,7 +111,7 @@ int _start(struct kernel_args *oldka, int cpu)
 			c[0]++;
 			if(c[0] > 'z')
 				c[0] = 'a';
-			con_puts_xy(c, 79-cpu, 0);
+			con_puts_xy(c, 79-cpu, 23);
 		}
 	}
 	

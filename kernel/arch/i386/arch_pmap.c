@@ -2,6 +2,7 @@
 
 #include "vm.h"
 #include "debug.h"
+#include "smp.h"
 
 #include "arch_cpu.h"
 #include "arch_pmap.h"
@@ -72,7 +73,8 @@ int pmap_map_page(unsigned int paddr, unsigned int vaddr)
 
 	*pentry = (paddr & ADDR_MASK) | DEFAULT_PAGE_FLAGS;
 
-	invalidate_TLB(vaddr);
+	arch_pmap_invl_page(vaddr);
+	smp_send_broadcast_ici(SMP_MSG_INVL_PAGE, vaddr, NULL);
 	
 	return 0;
 }

@@ -85,6 +85,7 @@ static void set_intr_gate(int n, void *addr)
 	_set_gate(&idt[n], (unsigned int)addr, 14, 0);
 }
 
+/*
 static void set_trap_gate(int n, void *addr)
 {
 	_set_gate(&idt[n], (unsigned int)addr, 15, 0);
@@ -94,7 +95,7 @@ static void set_system_gate(int n, void *addr)
 {
 	_set_gate(&idt[n], (unsigned int)addr, 15, 3);
 }
-
+*/
 void arch_int_enable_interrupts()
 {
 	asm("sti");
@@ -151,9 +152,12 @@ void i386_handle_trap(struct int_frame frame)
 	}
 	
 	if(ret == INT_RESCHEDULE) {
-		GRAB_THREAD_LOCK;
+		// XXX remove -- tell the other processor to reschedule too
+		if(smp_get_num_cpus() > 1)
+			smp_send_ici(smp_get_current_cpu() == 0 ? 1 : 0, SMP_MSG_RESCHEDULE, 0, NULL);
+		GRAB_THREAD_LOCK();
 		thread_resched();
-		RELEASE_THREAD_LOCK;
+		RELEASE_THREAD_LOCK();
 	}	
 }
 

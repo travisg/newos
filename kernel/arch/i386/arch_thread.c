@@ -16,7 +16,7 @@ struct arch_thread *arch_thread_create_thread_struct()
 	return at;
 }
 
-int arch_thread_initialize_kthread_stack(struct thread *t, int (*start_func)(void *param))
+int arch_thread_initialize_kthread_stack(struct thread *t, int (*start_func)(void), void (*entry_func)(void))
 {
 	unsigned int *kstack = (unsigned int *)t->kernel_stack_area->base;
 	unsigned int kstack_size = t->kernel_stack_area->size;
@@ -24,8 +24,8 @@ int arch_thread_initialize_kthread_stack(struct thread *t, int (*start_func)(voi
 	struct arch_thread *at;
 	int i;
 
-//	dprintf("arch_thread_initialize_stack: kstack 0x%p, kstack_size %d, kstack_top 0x%p\n",
-//		kstack, kstack_size, kstack_top);
+	dprintf("arch_thread_initialize_kthread_stack: kstack 0x%p, kstack_size %d, kstack_top 0x%p, start_func 0x%p, entry_func 0x%p\n",
+		kstack, kstack_size, kstack_top, start_func, entry_func);
 
 	// clear the kernel stack
 	memset(kstack, 0, kstack_size);
@@ -37,7 +37,11 @@ int arch_thread_initialize_kthread_stack(struct thread *t, int (*start_func)(voi
 	// set the return address to be the start of the first function
 	*kstack_top = (unsigned int)start_func;
 	kstack_top--;
-	
+
+	// set the return address to be the start of the entry (thread setup) function
+	*kstack_top = (unsigned int)entry_func;
+	kstack_top--;
+
 	// simulate pushfl
 	*kstack_top = 0x200;
 	kstack_top--;
@@ -75,8 +79,8 @@ void arch_thread_context_switch(struct thread *t_from, struct thread *t_to)
 	struct arch_thread *old_at = (struct arch_thread *)t_from->arch_info;
 	struct arch_thread *new_at = (struct arch_thread *)t_to->arch_info;
 
-//	dprintf("arch_thread_context_switch: &old_esp = 0x%p, esp = 0x%p\n",
-//		&old_at->esp, new_at->esp);
+	dprintf("arch_thread_context_switch: &old_esp = 0x%p, esp = 0x%p\n",
+		&old_at->esp, new_at->esp);
 
 	context_switch(&old_at->esp, new_at->esp);
 }

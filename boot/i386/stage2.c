@@ -19,7 +19,11 @@ unsigned short *kScreenBase = (unsigned short*) 0xb8000;
 unsigned screenOffset = 0;
 unsigned int line = 0;
 
-double calculate_cpu_clock();
+unsigned int cv_factor = 0;
+
+void calculate_cpu_conversion_factor();
+long long system_time();
+void execute_n_instructions(int count);
 
 void _start(unsigned int mem, char *str)
 {
@@ -43,7 +47,8 @@ void _start(unsigned int mem, char *str)
 	clearscreen();
 	dprintf("stage2 bootloader entry.\n");
 
-	calculate_cpu_clock();
+	calculate_cpu_conversion_factor();
+	dprintf("system_time = %d %d\n", system_time());
 
 	// calculate how big the bootdir is
 	{
@@ -183,6 +188,7 @@ void _start(unsigned int mem, char *str)
 	pgdir[KERNEL_BASE/(4*1024*1024)] = (unsigned int)new_pgtable | DEFAULT_PAGE_FLAGS;
 
 	// save the kernel args
+	ka->system_time_cv_factor = cv_factor;
 	ka->pgdir = (unsigned int)pgdir;
 	ka->pgtables[0] = (unsigned int)new_pgtable;
 	ka->num_pgtables = 1;
@@ -223,7 +229,7 @@ void _start(unsigned int mem, char *str)
 	dprintf("virt_alloc_range_high = 0x%x\n", ka->virt_alloc_range_high);
 #endif
 	dprintf("page_hole = 0x%x\n", ka->page_hole);
-	dprintf("\nfinding and booting other cpus...\n");
+	dprintf("finding and booting other cpus...\n");
 	smp_boot(ka);
 
 	dprintf("jumping into kernel at 0x80000080\n");
@@ -248,7 +254,7 @@ get_time_base:
 	ret
 ");
 
-void execute_n_instructions(int count);
+//void execute_n_instructions(int count);
 asm("
 execute_n_instructions:
 	movl	4(%esp), %ecx
@@ -273,6 +279,51 @@ execute_n_instructions:
 	ret
 ");
 
+void system_time_setup(long a);
+asm("
+system_time_setup:
+	/* First divide 1M * 2^32 by proc_clock */
+	movl	$0x0F4240, %ecx
+	movl	%ecx, %edx
+	subl	%eax, %eax
+	movl	4(%esp), %ebx
+	divl	%ebx, %eax		/* should be 64 / 32 */
+	movl	%eax, cv_factor
+	ret
+");
+
+// long long system_time();
+asm("
+system_time:
+	/* load 64-bit factor into %eax (low), %edx (high) */
+	/* hand-assemble rdtsc -- read time stamp counter */
+	rdtsc		/* time in %edx,%eax */
+
+	pushl	%ebx
+	pushl	%ecx
+	movl	cv_factor, %ebx
+	movl	%edx, %ecx	/* save high half */
+	mull	%ebx 		/* truncate %eax, but keep %edx */
+	movl	%ecx, %eax
+	movl	%edx, %ecx	/* save high half of low */
+	mull	%ebx /*, %eax*/
+	/* now compute  [%edx, %eax] + [%ecx], propagating carry */
+	subl	%ebx, %ebx	/* need zero to propagate carry */
+	addl	%ecx, %eax
+	adc		%ebx, %edx
+	popl	%ecx
+	popl	%ebx
+	ret
+");
+
+void sleep(long long time)
+{
+	long long start = system_time();
+	
+	while(system_time() - start <= time)
+		;
+}
+
 #define outb(value,port) \
 	asm("outb %%al,%%dx"::"a" (value),"d" (port))
 
@@ -285,32 +336,36 @@ execute_n_instructions:
 
 #define TIMER_CLKNUM_HZ 1193167
 
-double calculate_cpu_clock() 
+void calculate_cpu_conversion_factor() 
 {
 	unsigned char	low, high;
 	unsigned long	expired;
 	long long		t1, t2;
-	double			timer_usecs, time_base_ticks;
+	long long       time_base_ticks;
+	double			timer_usecs;
 
 	/* program the timer to count down mode */
-    outb(0x43, 0x34);              
+    outb(0x34, 0x43);              
 
-	outb(0x40, 0xff);		/* low and then high */
-	outb(0x40, 0xff);
+	outb(0xff, 0x40);		/* low and then high */
+	outb(0xff, 0x40);
+
 	t1 = get_time_base();
-
-	execute_n_instructions(16*20000);
+	
+	execute_n_instructions(64*20000);
 
 	t2 = get_time_base();
-	outb(0x43, 0x00); /* latch counter value */
+
+	outb(0x00, 0x43); /* latch counter value */
 	low = inb(0x40);
 	high = inb(0x40);
 
 	expired = (ulong)0xffff - ((((ulong)high) << 8) + low);
-	
+
 	timer_usecs = (expired * 1.0) / (TIMER_CLKNUM_HZ/1000000.0);
 	time_base_ticks = t2 -t1;
-	return (timer_usecs /(t2-t1)); 
+
+	system_time_setup((int)(1000000.0/(timer_usecs / time_base_ticks)));
 }
 
 /*

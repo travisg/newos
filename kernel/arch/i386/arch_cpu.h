@@ -1,6 +1,8 @@
 #ifndef _I386_H
 #define _I386_H
 
+#include "stage2.h"
+
 #define PAGE_SIZE 4096
 #define PAGE_ALIGN(x) (((x) + (PAGE_SIZE-1)) & ~(PAGE_SIZE-1))
 
@@ -10,14 +12,16 @@ typedef struct desc_struct {
 	unsigned int a,b;
 } desc_table;
 
-
-
 #define nop() __asm__ ("nop"::)
 
 int atomic_add(int *val, int incr);
 int atomic_and(int *val, int incr);
 int atomic_or(int *val, int incr);
 int test_and_set(int *val, int set_to);
+
+long long system_time();
+void setup_system_time(unsigned int cv_factor);
+int arch_cpu_init(struct kernel_args *ka);
 
 #define iret() __asm__ ("iret"::)
 

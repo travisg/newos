@@ -5,6 +5,8 @@
 
 void clearscreen();
 int dprintf(const char *fmt, ...);
+void sleep(long long time);
+long long system_time();
 
 //void put_uint_dec(unsigned int a);
 //void put_uint_hex(unsigned int a);

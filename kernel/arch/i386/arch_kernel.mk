@@ -1,6 +1,7 @@
 # i386 kernel makefile
 # included from kernel.mk
 KERNEL_OBJS += \
+	$(KERNEL_ARCH_DIR)/arch_cpu.o \
 	$(KERNEL_ARCH_DIR)/arch_i386.o \
 	$(KERNEL_ARCH_DIR)/arch_interrupts.o \
 	$(KERNEL_ARCH_DIR)/arch_faults.o \
