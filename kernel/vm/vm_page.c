@@ -45,10 +45,13 @@ static vm_page *dequeue_page(page_queue *q)
 
 	page = q->tail;
 	if(page != NULL) {
+		if(q->head == page)
+			q->head = NULL;
 		if(page->queue_prev != NULL) {
 			page->queue_prev->queue_next = NULL;
 		}
 		q->tail = page->queue_prev;
+		q->count--;
 	}
 	return page;
 }
