@@ -28,6 +28,7 @@ IRCEngine::IRCEngine()
 	mUser[sizeof(mNick) - 2] = 0;
 
 	mCurrentChannel[0] = 0;
+	memset(&mServerSockaddr, 0, sizeof(mServerSockaddr));
 
 	mSem = _kern_sem_create(1, "irc engine lock");
 }
@@ -106,15 +107,7 @@ int IRCEngine::SignOn()
 	if(mSocket < 0)
 		return mSocket;
 
-	sockaddr saddr;
-	memset(&saddr, 0, sizeof(saddr));
-	saddr.addr.len = 4;
-	saddr.addr.type = ADDR_TYPE_IP;
-	saddr.port = 6667;
-	NETADDR_TO_IPV4(saddr.addr) = IPV4_DOTADDR_TO_ADDR(82,96,64,2); // irc.freenode.net
-//	NETADDR_TO_IPV4(saddr.addr) = IPV4_DOTADDR_TO_ADDR(63,203,215,73); // newos.org
-
-	err = socket_connect(mSocket, &saddr);
+	err = socket_connect(mSocket, &mServerSockaddr);
 	printf("socket_connect returns %ld\n", err);
 	if(err < 0)
 		return err;
@@ -140,8 +133,13 @@ int IRCEngine::Disconnect()
 	return 0;
 }
 
-int IRCEngine::SetServer(ipv4_addr serverAddress)
+int IRCEngine::SetServer(ipv4_addr serverAddress, int port)
 {
+	mServerSockaddr.addr.len = 4;
+	mServerSockaddr.addr.type = ADDR_TYPE_IP;
+	mServerSockaddr.port = port;
+	NETADDR_TO_IPV4(mServerSockaddr.addr) = serverAddress;
+
 	return 0;
 }
 
@@ -243,11 +241,17 @@ int IRCEngine::ReceivedSocketData(char *line, int len)
 		}
 
 		// rest of the line is the string
-		char outbuf[4096];
+		// see if it's CTCP quoted
+		if(line[pos] == 0x1) {
+			processCTCP(target, address, &line[pos]);
+		} else {
+			char outbuf[4096];
 
-		sprintf(outbuf, "%s (%s): %s", target, address, &line[pos]);
-		mTextWindow->ScrollUp();
-		mTextWindow->Write(outbuf, true);
+			// XXX use snprintf
+			sprintf(outbuf, "%s (%s): %s", target, address, &line[pos]);
+			mTextWindow->ScrollUp();
+			mTextWindow->Write(outbuf, true);
+		}
 	} else {
 		// Display the raw line
 		mTextWindow->ScrollUp();
@@ -256,6 +260,58 @@ int IRCEngine::ReceivedSocketData(char *line, int len)
 
 	Unlock();
 	return 0;
+}
+
+void IRCEngine::processCTCP(const char *target, const char *address, char *data)
+{
+	int i;
+	char outbuf[4096];
+	bool echo_outbuf = false;
+
+	// push the pointer up past the first occurrence of the CTCP escape char
+	data = strchr(data, 0x1);
+	if(data == NULL)
+		return;
+	if(*data == 0x1)
+		data++;
+	
+	// find the last occurrence of the CTCP escape char and null it out
+	char *temp = strchr(data, 0x1);
+	if(temp && *temp == 0x1)
+		*temp = 0;
+
+	if(!strncasecmp("version", data, strlen("version "))) {	
+		sprintf(outbuf, "PRIVMSG %s :%cVERSION IRC v1 running on NewOS (http://newos.sf.net/)%c\n", address, 0x01, 0x01);
+		WriteData(outbuf);
+		sprintf(outbuf, "CTCP VERSION request from %s", address);
+		echo_outbuf = true;
+	} else if(!strncasecmp("ping", data, strlen("ping "))) {
+		sprintf(outbuf, "PRIVMSG %s :%c%s%c\n", address, 0x01, data, 0x01);
+		WriteData(outbuf);
+		sprintf(outbuf, "CTCP PING request from %s", address);
+		echo_outbuf = true;
+	} else if(!strncasecmp("action", data, strlen("action "))) {
+		data += strlen("action ");
+		sprintf(outbuf, "%s %s %s", target, address, data);
+		echo_outbuf = true;
+	} else {
+		sprintf(outbuf, "CTCP message from %s: %s", address, data);
+		echo_outbuf = true;
+	}
+
+	// echo the command to the main window
+	if(echo_outbuf) {
+		// trim any trailing CRLFs
+		for(int i = 0; outbuf[i] != 0; i++) {
+			if(outbuf[i] == '\r' || outbuf[i] == '\n') {
+				outbuf[i] = 0;
+				break;
+			}
+		}
+
+		mTextWindow->ScrollUp();
+		mTextWindow->Write(outbuf, true);
+	}
 }
 
 int IRCEngine::ReceivedKeyboardData(const char *data, int len)
@@ -352,6 +408,7 @@ int IRCEngine::ProcessKeyboardInput(char *line)
 				sprintf(outbuf, "NICK %s\n", &line[pos]);
 				WriteData(outbuf);
 				echo_outbuf = true;
+				strlcpy(mNick, &line[pos], sizeof(mNick));
 			}
 		} else if(strncasecmp(&line[pos], "ME ", strlen("ME ")) == 0) {
 			pos += strlen("ME ");

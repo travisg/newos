@@ -3,6 +3,7 @@
 
 #include "ircreader.h"
 #include "term.h"
+#include <socket/socket.h>
 
 class IRCEngine {
 public:
@@ -11,7 +12,7 @@ public:
 	int Run();
 	int SignOn();
 	int Disconnect();
-	int SetServer(ipv4_addr serverAddress);
+	int SetServer(ipv4_addr serverAddress, int port);
 
 	int SocketError(int error);
 	ssize_t WriteData(const char *data);
@@ -22,6 +23,7 @@ public:
 private:
 	void Lock();
 	void Unlock();
+	void processCTCP(const char *target, const char *address, char *data);	
 
 	IRCReader *mReader;
 	Term *mTerm;
@@ -32,6 +34,7 @@ private:
 	char mIRCName[256];
 	char mNick[256];
 	char mCurrentChannel[256];
+	sockaddr mServerSockaddr;
 	sem_id mSem;
 
 	char mInputLine[1024];

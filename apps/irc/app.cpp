@@ -41,7 +41,9 @@ int IRCApp::Run(int argc, char **argv)
 
 	int err;
 
-	mEngine->SetServer(IPV4_DOTADDR_TO_ADDR(196,40,71,132));
+	mEngine->SetServer(IPV4_DOTADDR_TO_ADDR(64,191,197,245), 6667); // irc.idlenet.net
+//	mEngine->SetServer(IPV4_DOTADDR_TO_ADDR(82,96,64,2), 6667); // irc.freenode.net
+//	mEngine->SetServer(IPV4_DOTADDR_TO_ADDR(63,203,215,73), 6667); // newos.org
 
 	err = mEngine->Run();
 
