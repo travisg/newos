@@ -125,9 +125,6 @@ BOOTMAKER_ARGS =
 ifeq ($(ARCH),sparc)
 BOOTMAKER_ARGS += --sparc
 endif
-ifeq ($(ARCH),sh4)
-BOOTMAKER_ARGS += --sh4
-endif
 
 final1: $(FINAL)
 	rm -f final.$(ARCH);ln -sf $(FINAL) final.$(ARCH)

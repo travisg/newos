@@ -1,15 +1,24 @@
 
+static int stack[1024];
+
 asm("
+.text
 .globl _start
 _start:
-	j	_start
+	lw	$sp,_stack_end_addr
+	j	start
 	nop
+_stack_end_addr:
+	.word	stack+(1024*4)
 
 ");
-/*
-void _start()
+
+void start()
 {
+	int *a = stack;
+	int *b = 0;
+	*b = 4;
 	for(;;);
 }
-*/
+
 
