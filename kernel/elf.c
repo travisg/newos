@@ -541,13 +541,24 @@ int elf_load_uspace(const char *path, struct proc *p, int flags, addr *entry)
 			/*
 			 * rw segment
 			 */
-			id = vm_create_anonymous_region(
+			unsigned start_clearing;
+			unsigned to_clear;
+			unsigned A= pheaders[i].p_vaddr+pheaders[i].p_memsz;
+			unsigned B= pheaders[i].p_vaddr+pheaders[i].p_filesz;
+
+			A= ROUNDOWN(A, PAGE_SIZE);
+			B= ROUNDOWN(B, PAGE_SIZE);
+
+			id= vm_map_file(
 				p->aspace_id,
 				region_name,
 				(void **)&region_addr,
 				REGION_ADDR_EXACT_ADDRESS,
-				ROUNDUP(pheaders[i].p_memsz + (pheaders[i].p_vaddr % PAGE_SIZE), PAGE_SIZE),
-				REGION_WIRING_LAZY, LOCK_RW
+				ROUNDUP(pheaders[i].p_filesz+ (pheaders[i].p_vaddr % PAGE_SIZE), PAGE_SIZE),
+				LOCK_RW,
+				REGION_PRIVATE_MAP,
+				path,
+				ROUNDOWN(pheaders[i].p_offset, PAGE_SIZE)
 			);
 			if(id < 0) {
 				dprintf("error allocating region!\n");
@@ -555,16 +566,47 @@ int elf_load_uspace(const char *path, struct proc *p, int flags, addr *entry)
 				goto error;
 			}
 
-			len = sys_read(
-				fd,
-				region_addr + (pheaders[i].p_vaddr % PAGE_SIZE),
-				pheaders[i].p_offset,
-				pheaders[i].p_filesz
-			);
-			if(len < 0) {
-				err = len;
-				dprintf("error reading in seg %d\n", i);
-				goto error;
+
+			/*
+			 * clean garbage brought by mmap
+			 */
+			start_clearing=
+				(unsigned)region_addr
+				+ (pheaders[i].p_vaddr % PAGE_SIZE)
+				+ pheaders[i].p_filesz;
+			to_clear=
+				ROUNDUP(pheaders[i].p_filesz+ (pheaders[i].p_vaddr % PAGE_SIZE), PAGE_SIZE)
+				- (pheaders[i].p_vaddr % PAGE_SIZE)
+				- (pheaders[i].p_filesz);
+			memset((void*)start_clearing, 0, to_clear);
+
+			/*
+			 * check if we need extra storage for the bss
+			 */
+			if(A != B) {
+				size_t bss_size;
+
+				bss_size=
+					ROUNDUP(pheaders[i].p_memsz+ (pheaders[i].p_vaddr % PAGE_SIZE), PAGE_SIZE),
+					- ROUNDUP(pheaders[i].p_filesz+ (pheaders[i].p_vaddr % PAGE_SIZE), PAGE_SIZE);
+
+				sprintf(region_name, "%s_bss%d", path, 'X');
+
+				region_addr+= ROUNDUP(pheaders[i].p_filesz+ (pheaders[i].p_vaddr % PAGE_SIZE), PAGE_SIZE),
+				id= vm_create_anonymous_region(
+					p->aspace_id,
+					region_name,
+					(void **)&region_addr,
+					REGION_ADDR_EXACT_ADDRESS,
+					bss_size,
+					REGION_WIRING_LAZY,
+					LOCK_RW
+				);
+				if(id < 0) {
+					dprintf("error allocating region!\n");
+					err = ERR_INVALID_BINARY;
+					goto error;
+				}
 			}
 		} else {
 			/*
