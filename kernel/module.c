@@ -3,9 +3,7 @@
 ** Distributed under the terms of the NewOS License.
 */
 
-//
 // TODO:
-// - move string hash function to <kernel/khash.h>
 // - "offsetof" macro is missing
 //   -> move it to a public place
 
@@ -380,7 +378,7 @@ static module_image *get_module_image( const char *name, size_t name_len, int ba
 	
 	SHOW_FLOW( 3, "%s\n", path );
 	
-	image = hash_lookup( modules_images[base_path_id], (void *)path );
+	image = hash_lookup( modules_images[base_path_id], path );
 	
 	if( image ) {
 		SHOW_FLOW0( 3, "image already loaded\n" );
@@ -415,7 +413,7 @@ static module_info *search_module( const char *name )
 	
 	SHOW_FLOW( 3, "name: %s\n", name );
 	
-	module = hash_lookup( modules_list, (void *)name );
+	module = hash_lookup( modules_list, name );
 		
 	if( module != NULL ) {
 		SHOW_FLOW0( 3, "already loaded\n" );
@@ -621,7 +619,7 @@ int module_put( const char *name )
 
 	recursive_lock_lock( &modules_lock );
 
-	module = hash_lookup( modules_list, (void *)name );
+	module = hash_lookup( modules_list, name );
 	if( module == NULL ) {
 		res = ERR_NOT_FOUND;
 		goto err;
