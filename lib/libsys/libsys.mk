@@ -1,6 +1,7 @@
 LIBSYS_DIR = $(LIB_DIR)/libsys
 LIBSYS_OBJ_DIR = $(LIBSYS_DIR)/$(OBJ_DIR)
 LIBSYS_OBJS = \
+	$(LIBSYS_OBJ_DIR)/syscalls.o	\
 	$(LIBSYS_OBJ_DIR)/stdio.o
 
 DEPS += $(LIBSYS_OBJS:.o=.d)
