@@ -9,6 +9,7 @@
 #include "printf.h"
 #include "string.h"
 #include "int.h"
+#include "spinlock.h"
 
 #include "arch_cpu.h"
 #include "arch_vm.h"
@@ -26,17 +27,16 @@ int boot_cpu_spin[SMP_MAX_CPUS] = { 0, };
 
 int arch_smp_trap_non_boot_cpus(struct kernel_args *ka, int cpu)
 {
-	if(cpu > 0)
+	if(cpu > 0) {
 		boot_cpu_spin[cpu] = 1;
-
-	while(boot_cpu_spin[cpu] == 1);
-
+		acquire_spinlock(&boot_cpu_spin[cpu]);
+	}
 	return cpu;
 }
 
 void arch_smp_wake_up_cpu(int cpu)
 {
-	boot_cpu_spin[cpu] = 0;
+	release_spinlock(&boot_cpu_spin[cpu]);
 }
 
 static unsigned int apic_read(unsigned int *addr)

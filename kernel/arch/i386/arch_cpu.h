@@ -10,9 +10,14 @@ typedef struct desc_struct {
 	unsigned int a,b;
 } desc_table;
 
+
+
 #define nop() __asm__ ("nop"::)
 
-
+int atomic_add(int *val, int incr);
+int atomic_and(int *val, int incr);
+int atomic_or(int *val, int incr);
+int test_and_set(int *val, int set_to);
 
 #define iret() __asm__ ("iret"::)
 
