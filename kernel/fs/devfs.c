@@ -1072,6 +1072,11 @@ int devfs_publish_device(const char *path, dev_ident ident, struct dev_calls *ca
 		}
 	}
 
+	if (devfs_find_in_dir(parent, name) != NULL) {
+		errval = ERR_VFS_ALREADY_EXISTS;
+		goto err1;
+	}
+
 	child = devfs_create_vnode(thedevfs, name);
 	if (child == NULL) {
 		errval = ERR_NO_MEMORY;
@@ -1116,6 +1121,11 @@ int devfs_publish_indexed_device(const char *dir, dev_ident ident, struct dev_ca
 	// now stringize the index of the next child node.
 	sprintf(number, "%u", parent->stream.u.dir.next_index);
 	number[SYS_MAX_PATH_LEN] = '\0';
+
+	if (devfs_find_in_dir(parent, number) != NULL) {
+		errval = ERR_VFS_ALREADY_EXISTS;
+		goto err1;
+	}
 
 	child = devfs_create_vnode(thedevfs, number);
 	if (child == NULL) {
@@ -1165,6 +1175,11 @@ int devfs_publish_indexed_directory(const char *dir)
 	// now stringize the index of the next child node.
 	sprintf(number, "%u", parent->stream.u.dir.next_index);
 	number[SYS_MAX_PATH_LEN] = '\0';
+
+	if (devfs_find_in_dir(parent, number) != NULL) {
+		errval = ERR_VFS_ALREADY_EXISTS;
+		goto err1;
+	}
 
 	child = devfs_create_vnode(thedevfs, number);
 	if (child == NULL) {
