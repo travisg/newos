@@ -53,7 +53,7 @@ int ethernet_input(cbuf *buf, ifnet *i)
 	dump_ethernet_header(e2_head);
 
 	// strip out the ethernet header
-	buf = cbuf_truncate_head(buf, sizeof(ethernet2_header));
+	buf = cbuf_truncate_head(buf, sizeof(ethernet2_header), true);
 
 	switch(type) {
 		case PROT_TYPE_IPV4:

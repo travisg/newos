@@ -200,7 +200,7 @@ int udp_input(cbuf *buf, ifnet *i, ipv4_addr source_address, ipv4_addr target_ad
 	qe->len = ntohs(header->length) - sizeof(udp_header);
 
 	// trim off the udp header
-	buf = cbuf_truncate_head(buf, sizeof(udp_header));
+	buf = cbuf_truncate_head(buf, sizeof(udp_header), true);
 	qe->buf = buf;
 
 	mutex_lock(&e->lock);

@@ -1064,7 +1064,7 @@ ssize_t tcp_recvfrom(void *prot_data, void *buf, ssize_t len, sockaddr *saddr, i
 	}
 
 	/* truncate the read buffer */
-	s->read_buffer = cbuf_truncate_head(s->read_buffer, to_copy);
+	s->read_buffer = cbuf_truncate_head(s->read_buffer, to_copy, true);
 	if(cbuf_get_len(s->read_buffer) == 0) {
 		cbuf_free_chain(s->read_buffer);
 		s->read_buffer = NULL;
@@ -1130,6 +1130,7 @@ ssize_t tcp_sendto(void *prot_data, const void *inbuf, ssize_t len, sockaddr *to
 
 		err = cbuf_user_memcpy_to_chain(chunk, 0, inbuf, chunk_size);
 		if(err < 0) {
+			cbuf_free_chain(chunk);
 			sent = err;
 			goto out;
 		}
@@ -1220,7 +1221,7 @@ static void handle_ack(tcp_socket *s, uint32 sequence, uint32 window_size, bool 
 				goto out;
 			if(ack_len > s->unacked_data_len)
 				ack_len = s->unacked_data_len;
-			s->write_buffer = cbuf_truncate_head(s->write_buffer, ack_len);
+			s->write_buffer = cbuf_truncate_head(s->write_buffer, ack_len, true);
 			s->unacked_data_len -= ack_len;
 
 			s->retransmit_tx_seq = sequence;
@@ -1291,7 +1292,7 @@ static void handle_persist_timeout(void *_socket)
 
 		if(tcp_flush_pending_data(s) == 0) {
 			// we've flushed everything, send one byte past the end of the window
-			cbuf *data = cbuf_duplicate_chain(s->write_buffer, s->unacked_data_len, 1);
+			cbuf *data = cbuf_duplicate_chain(s->write_buffer, s->unacked_data_len, 1, 0);
 			if(data == NULL)
 				goto out;
 			tcp_socket_send(s, data, PKT_PSH | PKT_ACK, NULL, 0, s->tx_win_low);
@@ -1379,7 +1380,7 @@ static void handle_data(tcp_socket *s, cbuf *buf)
 
 	if(SEQUENCE_LTE(seq_low, s->rx_win_low) && SEQUENCE_GTE(seq_high, s->rx_win_low)) {
 		// it's in order, so truncate from the head and add to the receive buffer
-		buf = cbuf_truncate_head(buf, header_length + (s->rx_win_low - seq_low));
+		buf = cbuf_truncate_head(buf, header_length + (s->rx_win_low - seq_low), true);
 		s->rx_win_low += cbuf_get_len(buf);
 		s->read_buffer = cbuf_merge_chains(s->read_buffer, buf);
 
@@ -1402,7 +1403,7 @@ static void handle_data(tcp_socket *s, cbuf *buf)
 				cbuf *tmp = s->reassembly_q;
 				s->reassembly_q = tmp->packet_next;
 
-				tmp = cbuf_truncate_head(tmp, packet_header_len + (s->rx_win_low - packet_low));
+				tmp = cbuf_truncate_head(tmp, packet_header_len + (s->rx_win_low - packet_low), true);
 				s->rx_win_low += cbuf_get_len(tmp);
 
 				/* merge it with the read data */
@@ -1462,7 +1463,7 @@ static void tcp_retransmit(tcp_socket *s)
 
 	// slice off some data to retransmit
 	retransmit_len = min(s->unacked_data_len, s->mss);
-	retransmit_data = cbuf_duplicate_chain(s->write_buffer, 0, retransmit_len);
+	retransmit_data = cbuf_duplicate_chain(s->write_buffer, 0, retransmit_len, 0);
 	tcp_socket_send(s, retransmit_data, flags, NULL, 0, s->retransmit_tx_seq);
 
 	if(s->tracking_rtt) {
@@ -1512,7 +1513,7 @@ static int tcp_flush_pending_data(tcp_socket *s)
 
 		send_len = min(send_len, cbuf_get_len(s->write_buffer) - s->unacked_data_len);
 
-		packet = cbuf_duplicate_chain(s->write_buffer, s->unacked_data_len, send_len);
+		packet = cbuf_duplicate_chain(s->write_buffer, s->unacked_data_len, send_len, 0);
 		if(!packet)
 			return data_flushed;
 

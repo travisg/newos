@@ -1,6 +1,7 @@
 #include <kernel/kernel.h>
 #include <kernel/heap.h>
 #include <kernel/sem.h>
+#include <kernel/lock.h>
 #include <kernel/smp.h>
 #include <kernel/int.h>
 #include <kernel/debug.h>
@@ -11,12 +12,18 @@
 
 #include <string.h>
 
+#if DEBUG > 1
+#define VALIDATE_CBUFS 1
+#else
+#define VALIDATE_CBUFS 0
+#endif
+
 #define ALLOCATE_CHUNK (PAGE_SIZE * 16)
 #define CBUF_REGION_SIZE (4*1024*1024)
 #define CBUF_BITMAP_SIZE (CBUF_REGION_SIZE / CBUF_LEN)
 
 static cbuf *cbuf_free_list;
-static sem_id free_list_sem;
+static mutex cbuf_free_list_lock;
 static cbuf *cbuf_free_noblock_list;
 static spinlock_t noblock_spin;
 
@@ -37,6 +44,61 @@ static void initialize_cbuf(cbuf *buf)
 	buf->packet_next = 0;
 }
 
+#if VALIDATE_CBUFS
+static int validate_cbuf(cbuf *head)
+{
+	size_t counted_size;
+	cbuf *tail;
+	cbuf *buf;
+
+	if(head == NULL)
+		return ERR_GENERAL;
+
+	/* make sure the first cbuf is the head */
+	if((head->flags & CBUF_FLAG_CHAIN_HEAD) == 0)
+		panic("validate_cbuf: cbuf %p is not head\n", head);
+
+	/* walk through the chain and verify a few things */
+	buf = head;
+	counted_size = 0;
+	while(buf) {
+		if(buf != head && (buf->flags & CBUF_FLAG_CHAIN_HEAD))
+			panic("validate_cbuf: cbuf %p has buffer %p with HEAD flag set\n", head, buf);
+
+		if(buf->next != NULL && (buf->flags & CBUF_FLAG_CHAIN_TAIL))
+			panic("validate_cbuf: cbuf %p has buffer %p with TAIL flag set\n", head, buf);
+
+		/* make sure len makes sense */
+		if(buf->len > sizeof(buf->dat))
+			panic("validate_cbuf: cbuf %p has buffer %p with bad length\n", head, buf);
+
+		/* add up the size of this part of the chain */
+		counted_size += buf->len;
+
+		/* make sure the data pointer is inside the buffer */
+		if(((addr)buf->data < (addr)buf->dat)
+		  || ((addr)buf->data - (addr)buf->dat > sizeof(buf->dat))
+		  || ((addr)buf->data + buf->len > (addr)buf->data + sizeof(buf->dat)))
+			panic("validate_cbuf: cbuf %p has buffer %p with bad pointer\n", head, buf);
+
+		tail = buf;
+		buf = buf->next;
+	}
+
+	/* look at the tail */
+	if((tail->flags & CBUF_FLAG_CHAIN_TAIL) == 0)
+		panic("validate_cbuf: cbuf %p 's tail at %p does not have TAIL flag set\n", head, tail);
+
+	/* make sure the added up size == the total size */
+	if(counted_size != head->total_len)
+		panic("validate_cbuf: cbuf %p has bad total_len %ld, counted %ld\n", head, head->total_len, counted_size);
+
+	return 0;
+}
+#else
+#define validate_cbuf(x) ((int)0)
+#endif
+
 static void *_cbuf_alloc(size_t *size)
 {
 	int state;
@@ -53,7 +115,13 @@ static void *_cbuf_alloc(size_t *size)
 	// scan through the allocation bitmap, looking for the first free block
 	// XXX not optimal
 	start = -1;
-	for(i=0; i<CBUF_BITMAP_SIZE; i++) {
+	for(i = 0; i < CBUF_BITMAP_SIZE; i++) {
+		// skip bytes of the bitmap at a time
+		if((i % 8) == 0 && cbuf_bitmap[i/8] == 0xff) {
+			i += 8;
+			continue;
+		}
+
 		if(!CHECK_BIT(cbuf_bitmap[i/8], i%8)) {
 			cbuf_bitmap[i/8] = SET_BIT(cbuf_bitmap[i/8], i%8);
 			if(start < 0)
@@ -122,9 +190,9 @@ static cbuf *allocate_cbuf_mem(size_t size)
 			buf++;
 		}
 	}
-	if(buf) {
-		buf->next = NULL;
-		buf->flags |= CBUF_FLAG_CHAIN_TAIL;
+	if(last_buf) {
+		last_buf->next = NULL;
+		last_buf->flags |= CBUF_FLAG_CHAIN_TAIL;
 	}
 
 	return head_buf;
@@ -176,12 +244,12 @@ void cbuf_free_chain(cbuf *buf)
 	head = buf;
 	_clear_chain(head, &last);
 
-	sem_acquire(free_list_sem, 1);
+	mutex_lock(&cbuf_free_list_lock);
 
 	last->next = cbuf_free_list;
 	cbuf_free_list = head;
 
-	sem_release(free_list_sem, 1);
+	mutex_unlock(&cbuf_free_list_lock);
 }
 
 cbuf *cbuf_get_chain(size_t len)
@@ -194,26 +262,28 @@ cbuf *cbuf_get_chain(size_t len)
 	if(len == 0)
 		panic("cbuf_get_chain: passed size 0\n");
 
-	sem_acquire(free_list_sem, 1);
+	mutex_lock(&cbuf_free_list_lock);
 
 	while(chain_len < len) {
 		if(cbuf_free_list == NULL) {
 			// we need to allocate some more cbufs
-			sem_release(free_list_sem, 1);
+			mutex_unlock(&cbuf_free_list_lock);
 			temp = allocate_cbuf_mem(ALLOCATE_CHUNK);
 			if(!temp) {
 				// no more ram
 				if(chain)
 					cbuf_free_chain(chain);
+				dprintf("cbuf_get_chain: asked to allocate %ld bytes but out of memory\n", len);
 				return NULL;
 			}
 			cbuf_free_chain(temp);
-			sem_acquire(free_list_sem, 1);
+			mutex_lock(&cbuf_free_list_lock);
 			continue;
 		}
 
 		temp = cbuf_free_list;
 		cbuf_free_list = cbuf_free_list->next;
+		temp->flags = 0;
 		temp->next = chain;
 		if(chain == NULL)
 			tail = temp;
@@ -221,13 +291,15 @@ cbuf *cbuf_get_chain(size_t len)
 
 		chain_len += chain->len;
 	}
-	sem_release(free_list_sem, 1);
+	mutex_unlock(&cbuf_free_list_lock);
 
 	// now we have a chain, fixup the first and last entry
 	chain->total_len = len;
 	chain->flags |= CBUF_FLAG_CHAIN_HEAD;
 	tail->len -= chain_len - len;
 	tail->flags |= CBUF_FLAG_CHAIN_TAIL;
+
+	validate_cbuf(chain);
 
 	return chain;
 }
@@ -282,13 +354,10 @@ int cbuf_memcpy_to_chain(cbuf *chain, size_t offset, const void *_src, size_t le
 	char *src = (char *)_src;
 	int buf_offset;
 
-	if((chain->flags & CBUF_FLAG_CHAIN_HEAD) == 0) {
-		dprintf("cbuf_memcpy_to_chain: chain at %p not head\n", chain);
-		return ERR_INVALID_ARGS;
-	}
+	validate_cbuf(chain);
 
-	if(len + offset > chain->total_len) {
-		dprintf("cbuf_memcpy_to_chain: len + offset > size of cbuf chain\n");
+	if(offset + len > chain->total_len) {
+		panic("cbuf_memcpy_to_chain: offset + len > size of cbuf chain\n");
 		return ERR_INVALID_ARGS;
 	}
 
@@ -297,7 +366,7 @@ int cbuf_memcpy_to_chain(cbuf *chain, size_t offset, const void *_src, size_t le
 	buf_offset = 0;
 	while(offset > 0) {
 		if(buf == NULL) {
-			dprintf("cbuf_memcpy_to_chain: end of chain reached too early!\n");
+			panic("cbuf_memcpy_to_chain: end of chain reached too early!\n");
 			return ERR_GENERAL;
 		}
 		if(offset < buf->len) {
@@ -313,7 +382,7 @@ int cbuf_memcpy_to_chain(cbuf *chain, size_t offset, const void *_src, size_t le
 		int to_copy;
 
 		if(buf == NULL) {
-			dprintf("cbuf_memcpy_to_chain: end of chain reached too early!\n");
+			panic("cbuf_memcpy_to_chain: end of chain reached too early!\n");
 			return ERR_GENERAL;
 		}
 		to_copy = min(len, buf->len - buf_offset);
@@ -335,10 +404,7 @@ int cbuf_user_memcpy_to_chain(cbuf *chain, size_t offset, const void *_src, size
 	int buf_offset;
 	int err;
 
-	if((chain->flags & CBUF_FLAG_CHAIN_HEAD) == 0) {
-		dprintf("cbuf_memcpy_to_chain: chain at %p not head\n", chain);
-		return ERR_INVALID_ARGS;
-	}
+	validate_cbuf(chain);
 
 	if(len + offset > chain->total_len) {
 		dprintf("cbuf_memcpy_to_chain: len + offset > size of cbuf chain\n");
@@ -390,10 +456,7 @@ int cbuf_memcpy_from_chain(void *_dest, cbuf *chain, size_t offset, size_t len)
 	char *dest = (char *)_dest;
 	int buf_offset;
 
-	if((chain->flags & CBUF_FLAG_CHAIN_HEAD) == 0) {
-		dprintf("cbuf_memcpy_from_chain: chain at %p not head\n", chain);
-		return ERR_INVALID_ARGS;
-	}
+	validate_cbuf(chain);
 
 	if(len + offset > chain->total_len) {
 		dprintf("cbuf_memcpy_from_chain: len + offset > size of cbuf chain\n");
@@ -444,10 +507,7 @@ int cbuf_user_memcpy_from_chain(void *_dest, cbuf *chain, size_t offset, size_t 
 	int buf_offset;
 	int err;
 
-	if((chain->flags & CBUF_FLAG_CHAIN_HEAD) == 0) {
-		dprintf("cbuf_memcpy_from_chain: chain at %p not head\n", chain);
-		return ERR_INVALID_ARGS;
-	}
+	validate_cbuf(chain);
 
 	if(len + offset > chain->total_len) {
 		dprintf("cbuf_memcpy_from_chain: len + offset > size of cbuf chain\n");
@@ -493,7 +553,7 @@ int cbuf_user_memcpy_from_chain(void *_dest, cbuf *chain, size_t offset, size_t 
 	return err;
 }
 
-cbuf *cbuf_duplicate_chain(cbuf *chain, size_t offset, size_t len)
+cbuf *cbuf_duplicate_chain(cbuf *chain, size_t offset, size_t len, size_t leading_space)
 {
 	cbuf *buf;
 	cbuf *newbuf;
@@ -503,15 +563,20 @@ cbuf *cbuf_duplicate_chain(cbuf *chain, size_t offset, size_t len)
 
 	if(!chain)
 		return NULL;
-	if((chain->flags & CBUF_FLAG_CHAIN_HEAD) == 0)
-		return NULL;
+
+	validate_cbuf(chain);
+
 	if(offset >= chain->total_len)
 		return NULL;
 	len = min(len, chain->total_len - offset);
 
-	newbuf = cbuf_get_chain(len);
+	newbuf = cbuf_get_chain(len + leading_space);
 	if(!newbuf)
 		return NULL;
+
+	if(leading_space > 0) {
+		cbuf_truncate_head(newbuf, leading_space, false);
+	}
 
 	// find the starting cbuf in the chain to copy from
 	buf = chain;
@@ -566,6 +631,8 @@ cbuf *cbuf_duplicate_chain(cbuf *chain, size_t offset, size_t len)
 		}
 	}
 
+	validate_cbuf(newbuf);
+
 	return newbuf;
 }
 
@@ -580,16 +647,11 @@ cbuf *cbuf_merge_chains(cbuf *chain1, cbuf *chain2)
 		return chain2;
 	if(!chain2)
 		return chain1;
+	if(chain1 == chain2)
+		return chain1;
 
-	if((chain1->flags & CBUF_FLAG_CHAIN_HEAD) == 0) {
-		dprintf("cbuf_merge_chain: chain at %p not head\n", chain1);
-		return NULL;
-	}
-
-	if((chain2->flags & CBUF_FLAG_CHAIN_HEAD) == 0) {
-		dprintf("cbuf_merge_chain: chain at %p not head\n", chain2);
-		return NULL;
-	}
+	validate_cbuf(chain1);
+	validate_cbuf(chain2);
 
 	// walk to the end of the first chain and tag the second one on
 	buf = chain1;
@@ -611,6 +673,8 @@ size_t cbuf_get_len(cbuf *buf)
 	if(!buf)
 		return 0;
 
+	validate_cbuf(buf);
+
 	if(buf->flags & CBUF_FLAG_CHAIN_HEAD) {
 		return buf->total_len;
 	} else {
@@ -625,6 +689,8 @@ size_t cbuf_get_len(cbuf *buf)
 
 void *cbuf_get_ptr(cbuf *buf, size_t offset)
 {
+	validate_cbuf(buf);
+
 	while(buf) {
 		if(buf->len > offset)
 			return (void *)((int)buf->data + offset);
@@ -638,6 +704,8 @@ void *cbuf_get_ptr(cbuf *buf, size_t offset)
 
 int cbuf_is_contig_region(cbuf *buf, size_t start, size_t end)
 {
+	validate_cbuf(buf);
+
 	while(buf) {
 		if(buf->len > start) {
 			if(buf->len - start >= end)
@@ -658,8 +726,8 @@ static uint16 _cbuf_ones_cksum16(cbuf *buf, size_t offset, size_t len, uint16 su
 
 	if(!buf)
 		return sum;
-	if((buf->flags & CBUF_FLAG_CHAIN_HEAD) == 0)
-		return sum;
+
+	validate_cbuf(buf);
 
 	// find the start ptr
 	while(buf) {
@@ -707,15 +775,15 @@ uint16 cbuf_ones_cksum16_2(cbuf *chain, size_t offset, size_t len, void *buf, si
 	return ~_cbuf_ones_cksum16(chain, offset, len, sum);
 }
 
-cbuf *cbuf_truncate_head(cbuf *buf, size_t trunc_bytes)
+cbuf *cbuf_truncate_head(cbuf *buf, size_t trunc_bytes, bool free_unused)
 {
 	cbuf *head = buf;
 	cbuf *free_chain = NULL;
 
 	if(!buf)
 		return head;
-	if((buf->flags & CBUF_FLAG_CHAIN_HEAD) == 0)
-		return head;
+
+	validate_cbuf(buf);
 
 	while(buf && trunc_bytes > 0) {
 		int to_trunc;
@@ -729,7 +797,7 @@ cbuf *cbuf_truncate_head(cbuf *buf, size_t trunc_bytes)
 		head->total_len -= to_trunc;
 
 		buf = buf->next;
-		if(buf && head->len == 0) {
+		if(free_unused && buf && head->len == 0) {
 			// the head cbuf is now zero length
 			buf->total_len = head->total_len;
 			buf->flags |= CBUF_FLAG_CHAIN_HEAD;
@@ -745,19 +813,22 @@ cbuf *cbuf_truncate_head(cbuf *buf, size_t trunc_bytes)
 	if(free_chain)
 		cbuf_free_chain(free_chain);
 
+	validate_cbuf(head);
+
 	return head;
 }
 
-int cbuf_truncate_tail(cbuf *buf, size_t trunc_bytes)
+int cbuf_truncate_tail(cbuf *buf, size_t trunc_bytes, bool free_unused)
 {
 	size_t offset;
 	size_t buf_offset;
 	cbuf *head = buf;
+	cbuf *free_chain = NULL;
 
-	if(!buf)
-		return ERR_INVALID_ARGS;
-	if((buf->flags & CBUF_FLAG_CHAIN_HEAD) == 0)
-		return ERR_INVALID_ARGS;
+	validate_cbuf(buf);
+
+	if(trunc_bytes > buf->total_len)
+		trunc_bytes = buf->total_len;
 
 	offset = buf->total_len - trunc_bytes;
 	buf_offset = 0;
@@ -779,12 +850,78 @@ int cbuf_truncate_tail(cbuf *buf, size_t trunc_bytes)
 	// clear out the rest of the buffers in this chain
 	buf = buf->next;
 	while(buf) {
+		cbuf *temp = buf;
+
+		// account for the loss of this buffer
 		head->total_len -= buf->len;
-		buf->len = 0;
 		buf = buf->next;
+
+		if(free_unused) {
+			// stick it on the free list that we'll dispose of in a bit
+			temp->next = free_chain;
+			free_chain = temp;
+		}
 	}
 
+	if(free_chain)
+		cbuf_free_chain(free_chain);
+
+	validate_cbuf(head);
+
 	return NO_ERROR;
+}
+
+cbuf *cbuf_extend_head(cbuf *buf, size_t extend_bytes)
+{
+	if(!buf)
+		return NULL;
+
+	validate_cbuf(buf);
+
+	// first, see how much space we can allocate off the front of the chain
+	if(buf->len < sizeof(buf->dat) && (addr)buf->data != (addr)buf->dat) {
+		// there is some space at the front of this buffer, lets see how much
+		size_t available;
+		size_t to_extend;
+
+		// check to make sure the data pointer is inside the dat buffer in this cbuf
+		ASSERT((addr)buf->data > (addr)buf->dat);
+		ASSERT((addr)buf->data - (addr)buf->dat < sizeof(buf->dat));
+
+		available = (addr)buf->data - (addr)buf->dat;
+		to_extend = min(available, extend_bytes);
+
+		buf->len += to_extend;
+		buf->data = (void *)((addr)buf->data - to_extend);
+		extend_bytes -= to_extend;
+	}
+
+	if(extend_bytes > 0) {
+		cbuf *new_buf;
+
+		new_buf = cbuf_get_chain(extend_bytes);
+		if(!new_buf)
+			return NULL;
+
+		if(new_buf->next == NULL) {
+			// simple case, the head extension is a single buffer.
+			// move the data in the head to the end of the cbuf (so subsequent extends)
+			// have a better shot at being able to reuse the cbuf.
+			size_t move_size;
+
+			ASSERT(new_buf->len <= sizeof(new_buf->dat));
+
+			move_size = sizeof(new_buf->dat) - new_buf->len;
+
+			buf->data = (void *)((addr)buf->data + move_size);
+		}
+
+		buf = cbuf_merge_chains(new_buf, buf);
+	}
+
+	validate_cbuf(buf);
+
+	return buf;
 }
 
 static void dbg_dump_cbuf_freelists(int argc, char **argv)
@@ -849,6 +986,7 @@ int cbuf_init()
 {
 	cbuf *buf;
 	int i;
+	int err;
 
 	cbuf_free_list = NULL;
 	cbuf_free_noblock_list = NULL;
@@ -858,9 +996,9 @@ int cbuf_init()
 	// add the debug command
 	dbg_add_command(&dbg_dump_cbuf_freelists, "cbuf_freelist", "Dumps the cbuf free lists");
 
-	free_list_sem = sem_create(1, "cbuf_free_list_sem");
-	if(free_list_sem < 0) {
-		panic("cbuf_init: error creating cbuf_free_list_sem\n");
+	err = mutex_init(&cbuf_free_list_lock, "cbuf_free_list_lock");
+	if(err < 0) {
+		panic("cbuf_init: error creating cbuf_free_list_lock\n");
 		return ERR_NO_MEMORY;
 	}
 
@@ -882,12 +1020,12 @@ int cbuf_init()
 	// initialize the bitmap
 	for(i=0; i<CBUF_BITMAP_SIZE/8; i++)
 		cbuf_bitmap[i] = 0;
-
+#if 0
 	buf = allocate_cbuf_mem(ALLOCATE_CHUNK);
 	if(buf == NULL)
 		return ERR_NO_MEMORY;
 	cbuf_free_chain_noblock(buf);
-
+#endif
 	buf = allocate_cbuf_mem(ALLOCATE_CHUNK);
 	if(buf == NULL)
 		return ERR_NO_MEMORY;

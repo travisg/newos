@@ -385,7 +385,7 @@ int ipv4_output(cbuf *buf, ipv4_addr target_addr, int protocol)
 		header->header_checksum = cksum16(header, (header->version_length & 0xf) * 4);
 
 		if(must_frag) {
-			send_buf = cbuf_duplicate_chain(buf, curr_offset, packet_len - header_len);
+			send_buf = cbuf_duplicate_chain(buf, curr_offset, packet_len - header_len, 0);
 			if(!send_buf) {
 				cbuf_free_chain(header_buf);
 				cbuf_free_chain(buf);
@@ -567,7 +567,7 @@ done_frag_spot_search:
 		if(last) {
 			if(last->offset + last->len == offset) {
 				// merge it
-				inbuf = cbuf_truncate_head(inbuf, ((header->version_length & 0xf) * 4));
+				inbuf = cbuf_truncate_head(inbuf, ((header->version_length & 0xf) * 4), 0);
 				last->buf = cbuf_merge_chains(last->buf, inbuf);
 				inbuf = last->buf;
 				last->len += len;
@@ -583,7 +583,7 @@ done_frag_spot_search:
 			if(offset + len == temp->offset) {
 				// merge it
 				ipv4_header *next_header = cbuf_get_ptr(temp->buf, 0);
-				temp->buf = cbuf_truncate_head(temp->buf, ((next_header->version_length & 0xf) * 4));
+				temp->buf = cbuf_truncate_head(temp->buf, ((next_header->version_length & 0xf) * 4), 0);
 				temp->buf = cbuf_merge_chains(inbuf, temp->buf);
 				inbuf = temp->buf;
 				header = (ipv4_header *)cbuf_get_ptr(inbuf, 0);
@@ -601,7 +601,7 @@ done_frag_spot_search:
 			if(last->offset + len == temp->offset) {
 				// merge them
 				ipv4_header *next_header = cbuf_get_ptr(temp->buf, 0);
-				temp->buf = cbuf_truncate_head(temp->buf, ((next_header->version_length & 0xf) * 4));
+				temp->buf = cbuf_truncate_head(temp->buf, ((next_header->version_length & 0xf) * 4), true);
 				last->buf = cbuf_merge_chains(last->buf, temp->buf);
 				inbuf = last->buf;
 				header = (ipv4_header *)cbuf_get_ptr(inbuf, 0);
@@ -740,7 +740,7 @@ int ipv4_input(cbuf *buf, ifnet *i)
 
 		// see if we need to trim off any padding
 		if(buf_len > packet_len) {
-			cbuf_truncate_tail(buf, buf_len - packet_len);
+			cbuf_truncate_tail(buf, buf_len - packet_len, true);
 		}
 	}
 
@@ -769,7 +769,7 @@ int ipv4_input(cbuf *buf, ifnet *i)
 	dest = ntohl(header->dest);
 
 	// strip off the ip header
-	cbuf_truncate_head(buf, (header->version_length & 0xf) * 4);
+	cbuf_truncate_head(buf, (header->version_length & 0xf) * 4, true);
 
 	// demultiplex and hand to the proper module
 	switch(protocol) {
