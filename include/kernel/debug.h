@@ -5,6 +5,7 @@
 #ifndef _DEBUG_H
 #define _DEBUG_H
 
+#include <sys/cdefs.h>
 #include <kernel/kernel.h>
 #include <boot/stage2.h>
 
@@ -17,8 +18,8 @@ char dbg_putch(char c);
 void dbg_puts(const char *s);
 bool dbg_set_serial_debug(bool new_val);
 bool dbg_get_serial_debug(void);
-int dprintf(const char *fmt, ...);
-int panic(const char *fmt, ...);
+int dprintf(const char *fmt, ...) __PRINTFLIKE(1,2);
+int panic(const char *fmt, ...) __PRINTFLIKE(1,2);
 void kernel_debugger(void);
 int dbg_add_command(void (*func)(int, char **), const char *cmd, const char *desc);
 

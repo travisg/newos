@@ -5,9 +5,10 @@
 #ifndef _STDIO_H
 #define _STDIO_H
 
+#include <sys/cdefs.h>
 #include <libc/stdarg.h>
 
-int printf(const char *fmt, ...);
+int printf(const char *fmt, ...) __PRINTFLIKE(1,2);
 char getc(void);
 
 #endif

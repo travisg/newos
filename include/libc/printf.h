@@ -5,13 +5,14 @@
 #ifndef _PRINTF_H_
 #define _PRINTF_H_
 
+#include <sys/cdefs.h>
 #include <libc/stdarg.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-int sprintf(char * buf, const char *fmt, ...);
+int sprintf(char * buf, const char *fmt, ...) __PRINTFLIKE(2,3);
 int vsprintf(char *buf, const char *fmt, va_list args);
 
 #ifdef __cplusplus
