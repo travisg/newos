@@ -13,8 +13,11 @@
 #include <kernel/timer.h>
 #include <kernel/int.h>
 
+#include <kernel/arch/timer.h>
+
 #include <kernel/arch/i386/interrupts.h>
 #include <kernel/arch/i386/smp_priv.h>
+#include <kernel/arch/i386/timer.h>
 
 #define pit_clock_rate 1193180
 #define pit_max_timer_interval ((long long)0xffff * 1000000 / pit_clock_rate)
