@@ -47,10 +47,10 @@ enum {
 struct proc {
 	struct proc *next;
 	proc_id id;
+	char name[SYS_MAX_OS_NAME_LEN];
 	int num_threads;
 	int state;
 	int pending_signals;
-	char *name;
 	void *ioctx;
 	sem_id proc_creation_sem;
 	aspace_id aspace_id;
@@ -65,8 +65,8 @@ struct thread {
 	struct thread *all_next;
 	struct thread *proc_next;
 	struct thread *q_next;
-	char *name;
 	thread_id id;
+	char name[SYS_MAX_OS_NAME_LEN];
 	int priority;
 	int state;
 	int next_state;

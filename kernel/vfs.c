@@ -640,7 +640,7 @@ static int path_to_vnode(char *path, struct vnode **v, bool kernel)
 			if(curr_v->mount->covers_vnode) {
 				next_v = curr_v->mount->covers_vnode;
 				inc_vnode_ref_count(next_v);
-				dec_vnode_ref_count(curr_v, false, false);
+				dec_vnode_ref_count(curr_v, true, false);
 				curr_v = next_v;
 			}
 		}
@@ -648,7 +648,7 @@ static int path_to_vnode(char *path, struct vnode **v, bool kernel)
 		// tell the filesystem to parse this path
 		err = curr_v->mount->fs->calls->fs_lookup(curr_v->mount->fscookie, curr_v->priv_vnode, p, &vnid);
 		if(err < 0) {
-			dec_vnode_ref_count(curr_v, false, false);
+			dec_vnode_ref_count(curr_v, true, false);
 			goto out;
 		}
 
@@ -663,12 +663,12 @@ static int path_to_vnode(char *path, struct vnode **v, bool kernel)
 			// pretty screwed up here
 			panic("path_to_vnode: could not lookup vnode (fsid 0x%x vnid 0x%Lx)\n", curr_v->fsid, vnid);
 			err = ERR_VFS_PATH_NOT_FOUND;
-			dec_vnode_ref_count(curr_v, false, false);
+			dec_vnode_ref_count(curr_v, true, false);
 			goto out;
 		}
 
 		// decrease the ref count on the old dir we just looked up into
-		dec_vnode_ref_count(curr_v, false, false);
+		dec_vnode_ref_count(curr_v, true, false);
 
 		p = next_p;
 		curr_v = next_v;
@@ -677,7 +677,7 @@ static int path_to_vnode(char *path, struct vnode **v, bool kernel)
 		if(curr_v->covered_by) {
 			next_v = curr_v->covered_by;
 			inc_vnode_ref_count(next_v);
-			dec_vnode_ref_count(curr_v, false, false);
+			dec_vnode_ref_count(curr_v, true, false);
 			curr_v = next_v;
 		}
 	}

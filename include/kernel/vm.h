@@ -112,6 +112,11 @@ typedef struct vm_virtual_map {
 	addr size;
 } vm_virtual_map;
 
+enum {
+	VM_ASPACE_STATE_NORMAL = 0,
+	VM_ASPACE_STATE_DELETION
+};
+
 // address space
 typedef struct vm_address_space {
 	vm_virtual_map virtual_map;
@@ -120,6 +125,7 @@ typedef struct vm_address_space {
 	aspace_id id;
 	int ref_count;
 	int fault_count;
+	int state;
 	addr scan_va;
 	addr working_set_size;
 	addr max_working_set;
@@ -187,8 +193,10 @@ vm_address_space *vm_get_kernel_aspace(void);
 aspace_id vm_get_kernel_aspace_id(void);
 vm_address_space *vm_get_current_user_aspace(void);
 aspace_id vm_get_current_user_aspace_id(void);
-vm_address_space *vm_get_aspace_from_id(aspace_id aid);
+vm_address_space *vm_get_aspace_by_id(aspace_id aid);
 void vm_put_aspace(vm_address_space *aspace);
+vm_region *vm_get_region_by_id(region_id rid);
+void vm_put_region(vm_region *region);
 
 region_id vm_create_anonymous_region(aspace_id aid, char *name, void **address, int addr_type,
 	addr size, int wiring, int lock);

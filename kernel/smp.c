@@ -302,13 +302,17 @@ void smp_send_ici(int target_cpu, int message, unsigned long data, unsigned long
 
 	if(ici_enabled) {
 		int state;
-		int curr_cpu = smp_get_current_cpu();
-
-		if(target_cpu == curr_cpu)
-			return; // nope, cant do that
+		int curr_cpu;
 
 		// find_free_message leaves interrupts disabled
 		state = find_free_message(&msg);
+
+		curr_cpu = smp_get_current_cpu();
+		if(target_cpu == curr_cpu) {
+			return_free_message(msg);
+			int_restore_interrupts(state);
+			return; // nope, cant do that
+		}
 
 		// set up the message
 		msg->message = message;
@@ -352,10 +356,12 @@ void smp_send_broadcast_ici(int message, unsigned long data, unsigned long data2
 
 	if(ici_enabled) {
 		int state;
-		int curr_cpu = smp_get_current_cpu();
+		int curr_cpu;
 
 		// find_free_message leaves interrupts disabled
 		state = find_free_message(&msg);
+
+		curr_cpu = smp_get_current_cpu();
 
 		msg->message = message;
 		msg->data = data;

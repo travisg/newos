@@ -313,9 +313,8 @@ static struct thread *create_thread_struct(const char *name)
 			goto err;
 	}
 
-	t->name = kstrdup(name);
-	if(t->name == NULL)
-		goto err1;
+	strncpy(&t->name[0], name, SYS_MAX_OS_NAME_LEN-1);
+	t->name[SYS_MAX_OS_NAME_LEN-1] = 0;
 
 	t->id = atomic_add(&next_thread_id, 1);
 	t->proc = NULL;
@@ -337,18 +336,16 @@ static struct thread *create_thread_struct(const char *name)
 		sprintf(temp, "thread_0x%x_retcode_sem", t->id);
 		t->return_code_sem = sem_create(0, temp);
 		if(t->return_code_sem < 0)
-			goto err2;
+			goto err1;
 	}
 
 	if(arch_thread_init_thread_struct(t) < 0)
-		goto err3;
+		goto err2;
 
 	return t;
 
-err3:
-	sem_delete_etc(t->return_code_sem, -1);
 err2:
-	kfree(t->name);
+	sem_delete_etc(t->return_code_sem, -1);
 err1:
 	kfree(t);
 err:
@@ -359,7 +356,6 @@ static void delete_thread_struct(struct thread *t)
 {
 	if(t->return_code_sem >= 0)
 		sem_delete_etc(t->return_code_sem, -1);
-	kfree(t->name);
 	kfree(t);
 }
 
@@ -1078,13 +1074,6 @@ static void thread_exit2(void *_args)
 	dprintf("thread_exit2: deleting old kernel stack id 0x%x for thread 0x%x\n", args.old_kernel_stack, args.t->id);
 	vm_delete_region(vm_get_kernel_aspace_id(), args.old_kernel_stack);
 
-	dprintf("thread_exit2: freeing name for thid 0x%x\n", args.t->id);
-
-	// delete the name
-	temp = args.t->name;
-	args.t->name = NULL;
-	kfree(temp);
-
 	dprintf("thread_exit2: removing thread 0x%x from global lists\n", args.t->id);
 
 	// remove this thread from all of the global lists
@@ -1570,10 +1559,8 @@ static struct proc *create_proc_struct(const char *name, bool kernel)
 	if(p == NULL)
 		goto error;
 	p->id = atomic_add(&next_proc_id, 1);
-	p->name = kstrdup(name);
-	if(p->name == NULL)
-		goto error1;
-
+	strncpy(&p->name[0], name, SYS_MAX_OS_NAME_LEN-1);
+	p->name[SYS_MAX_OS_NAME_LEN-1] = 0;
 	p->num_threads = 0;
 	p->ioctx = NULL;
 	p->aspace_id = -1;
@@ -1586,17 +1573,15 @@ static struct proc *create_proc_struct(const char *name, bool kernel)
 	p->pending_signals = SIG_NONE;
 	p->proc_creation_sem = sem_create(0, "proc_creation_sem");
 	if(p->proc_creation_sem < 0)
-		goto error2;
+		goto error1;
 
 	if(arch_proc_init_proc_struct(p, kernel) < 0)
-		goto error3;
+		goto error2;
 
 	return p;
 
-error3:
-	sem_delete(p->proc_creation_sem);
 error2:
-	kfree(p->name);
+	sem_delete(p->proc_creation_sem);
 error1:
 	kfree(p);
 error:
@@ -1607,7 +1592,6 @@ static void delete_proc_struct(struct proc *p)
 {
 	if(p->proc_creation_sem >= 0)
 		sem_delete(p->proc_creation_sem);
-	kfree(p->name);
 	kfree(p);
 }
 
@@ -1756,7 +1740,7 @@ proc_id proc_create_proc(const char *path, const char *name, char **args, int ar
 		err = p->aspace_id;
 		goto err4;
 	}
-	p->aspace = vm_get_aspace_from_id(p->aspace_id);
+	p->aspace = vm_get_aspace_by_id(p->aspace_id);
 
 	// create a kernel thread, but under the context of the new process
 	tid = thread_create_kernel_thread_etc(name, proc_create_proc2, pargs, p);

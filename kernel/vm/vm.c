@@ -101,17 +101,30 @@ static unsigned int aspace_hash(void *_a, void *key, int range)
 		return (*id % range);
 }
 
-vm_address_space *vm_get_aspace_from_id(aspace_id aid)
+vm_address_space *vm_get_aspace_by_id(aspace_id aid)
 {
 	vm_address_space *aspace;
 
 	sem_acquire(aspace_hash_sem, READ_COUNT);
 	aspace = hash_lookup(aspace_table, &aid);
 	if(aspace)
-		aspace->ref_count++;
+		atomic_add(&aspace->ref_count, 1);
 	sem_release(aspace_hash_sem, READ_COUNT);
 
 	return aspace;
+}
+
+vm_region *vm_get_region_by_id(region_id rid)
+{
+	vm_region *region;
+
+	sem_acquire(region_hash_sem, READ_COUNT);
+	region = hash_lookup(region_table, &rid);
+	if(region)
+		atomic_add(&region->ref_count, 1);
+	sem_release(region_hash_sem, READ_COUNT);
+
+	return region;
 }
 
 region_id vm_find_region_by_name(aspace_id aid, const char *name)
@@ -120,7 +133,7 @@ region_id vm_find_region_by_name(aspace_id aid, const char *name)
 	vm_address_space *aspace;
 	region_id id = ERR_NOT_FOUND;
 
-	aspace = vm_get_aspace_from_id(aid);
+	aspace = vm_get_aspace_by_id(aid);
 	if(aspace == NULL)
 		return ERR_VM_INVALID_ASPACE;
 
@@ -366,6 +379,14 @@ static int map_backing_store(vm_address_space *aspace, vm_store *store, void **v
 
 	sem_acquire(aspace->virtual_map.sem, WRITE_COUNT);
 
+	// check to see if this aspace has entered DELETE state
+	if(aspace->state == VM_ASPACE_STATE_DELETION) {
+		// okay, someone is trying to delete this aspace now, so we can't
+		// insert the region, so back out
+		err = ERR_VM_INVALID_ASPACE;
+		goto err1b;
+	}
+
 	{
 		addr search_addr, search_end;
 
@@ -396,6 +417,9 @@ static int map_backing_store(vm_address_space *aspace, vm_store *store, void **v
 	sem_acquire(region_hash_sem, WRITE_COUNT);
 	hash_insert(region_table, region);
 	sem_release(region_hash_sem, WRITE_COUNT);
+
+	// grab a ref to the aspace (the region holds this)
+	atomic_add(&aspace->ref_count, 1);
 
 	sem_release(aspace->virtual_map.sem, WRITE_COUNT);
 
@@ -462,7 +486,7 @@ region_id vm_create_anonymous_region(aspace_id aid, char *name, void **address, 
 
 	dprintf("create_anonymous_region: size 0x%lx\n", size);
 
-	aspace = vm_get_aspace_from_id(aid);
+	aspace = vm_get_aspace_by_id(aid);
 	if(aspace == NULL)
 		return ERR_VM_INVALID_ASPACE;
 
@@ -596,7 +620,7 @@ region_id vm_map_physical_memory(aspace_id aid, char *name, void **address, int 
 	addr map_offset;
 	int err;
 
-	vm_address_space *aspace = vm_get_aspace_from_id(aid);
+	vm_address_space *aspace = vm_get_aspace_by_id(aid);
 	if(aspace == NULL)
 		return ERR_VM_INVALID_ASPACE;
 
@@ -644,7 +668,7 @@ region_id vm_create_null_region(aspace_id aid, char *name, void **address, int a
 	addr map_offset;
 	int err;
 
-	vm_address_space *aspace = vm_get_aspace_from_id(aid);
+	vm_address_space *aspace = vm_get_aspace_by_id(aid);
 	if(aspace == NULL)
 		return ERR_VM_INVALID_ASPACE;
 
@@ -684,7 +708,7 @@ static region_id _vm_map_file(aspace_id aid, char *name, void **address, int add
 	addr map_offset;
 	int err;
 
-	vm_address_space *aspace = vm_get_aspace_from_id(aid);
+	vm_address_space *aspace = vm_get_aspace_by_id(aid);
 	if(aspace == NULL)
 		return ERR_VM_INVALID_ASPACE;
 
@@ -835,35 +859,23 @@ region_id vm_clone_region(aspace_id aid, char *name, void **address, int addr_ty
 	vm_region *src_region;
 	int err;
 
-	vm_address_space *aspace = vm_get_aspace_from_id(aid);
+	vm_address_space *aspace = vm_get_aspace_by_id(aid);
 	if(aspace == NULL)
 		return ERR_VM_INVALID_ASPACE;
 
-	// look up the source region
-	sem_acquire(region_hash_sem, READ_COUNT);
-	src_region = hash_lookup(region_table, &source_region);
-	if(src_region != NULL) {
-		if(vm_region_acquire_ref(src_region) < 0) {
-			// it's ref has already been decremented, so it's not reliable
-			src_region = NULL;
-		}
-	}
-	if(src_region) {
-		vm_cache_acquire_ref(src_region->cache_ref, true);
-	}
-	sem_release(region_hash_sem, READ_COUNT);
-
+	src_region = vm_get_region_by_id(source_region);
 	if(src_region == NULL) {
 		vm_put_aspace(aspace);
 		return ERR_VM_INVALID_REGION;
 	}
 
+	vm_cache_acquire_ref(src_region->cache_ref, true);
 	err = map_backing_store(aspace, src_region->cache_ref->cache->store, address, src_region->cache_offset, src_region->size,
 		addr_type, src_region->wiring, lock, mapping, &new_region, name);
 	vm_cache_release_ref(src_region->cache_ref);
 
 	// release the ref on the old region
-	vm_region_release_ref(src_region);
+	vm_put_region(src_region);
 
 	vm_put_aspace(aspace);
 
@@ -873,6 +885,13 @@ region_id vm_clone_region(aspace_id aid, char *name, void **address, int addr_ty
 		return new_region->id;
 }
 
+static int __vm_delete_region(vm_address_space *aspace, vm_region *region)
+{
+	if(region->aspace == aspace)
+		vm_put_region(region);
+	return NO_ERROR;
+}
+
 static int _vm_delete_region(vm_address_space *aspace, region_id rid)
 {
 	vm_region *temp, *last = NULL;
@@ -880,22 +899,12 @@ static int _vm_delete_region(vm_address_space *aspace, region_id rid)
 
 	dprintf("vm_delete_region: aspace id 0x%x, region id 0x%x\n", aspace->id, rid);
 
-	// find the region structure
-	sem_acquire(region_hash_sem, READ_COUNT);
-	region = hash_lookup(region_table, &rid);
-	if(region != NULL) {
-		// acquire the ref once, to make sure no old else deletes this
-		// region before we can do it
-		if(vm_region_acquire_ref(region) < 0) {
-			region = NULL;
-		}
-	}
-	sem_release(region_hash_sem, READ_COUNT);
+	region = vm_get_region_by_id(rid);
 	if(region == NULL)
 		return ERR_VM_INVALID_REGION;
 
-	// release the ref twice, insuring no one else got this far
-	vm_region_release_ref2(region);
+	__vm_delete_region(aspace, region);
+	vm_put_region(region);
 
 	return 0;
 }
@@ -905,7 +914,7 @@ int vm_delete_region(aspace_id aid, region_id rid)
 	vm_address_space *aspace;
 	int err;
 
-	aspace = vm_get_aspace_from_id(aid);
+	aspace = vm_get_aspace_by_id(aid);
 	if(aspace == NULL)
 		return ERR_VM_INVALID_ASPACE;
 
@@ -914,23 +923,27 @@ int vm_delete_region(aspace_id aid, region_id rid)
 	return err;
 }
 
-static int vm_region_acquire_ref(vm_region *region)
+static void _vm_put_region(vm_region *region, bool aspace_locked)
 {
-	if(region == NULL)
-		panic("vm_region_acquire_ref: passed NULL\n");
-	if(atomic_add(&region->ref_count, 1) == 0)
-		return -1;
-	return 0;
-}
-
-static void vm_remove_region_struct(vm_region *region)
-{
-	// time to die
 	vm_region *temp, *last = NULL;
-	vm_address_space *aspace = region->aspace;
+	vm_address_space *aspace;
+	bool removeit = false;
+
+	sem_acquire(region_hash_sem, WRITE_COUNT);
+	if(atomic_add(&region->ref_count, -1) == 1) {
+		hash_remove(region_table, region);
+		removeit = true;
+	}
+	sem_release(region_hash_sem, WRITE_COUNT);
+
+	if(!removeit)
+		return;
+
+	aspace = region->aspace;
 
 	// remove the region from the aspace's virtual map
-	sem_acquire(aspace->virtual_map.sem, WRITE_COUNT);
+	if(!aspace_locked)
+		sem_acquire(aspace->virtual_map.sem, WRITE_COUNT);
 	temp = aspace->virtual_map.region_list;
 	while(temp != NULL) {
 		if(region == temp) {
@@ -947,15 +960,11 @@ static void vm_remove_region_struct(vm_region *region)
 	}
 	if(region == aspace->virtual_map.region_hint)
 		aspace->virtual_map.region_hint = NULL;
-	sem_release(aspace->virtual_map.sem, WRITE_COUNT);
+	if(!aspace_locked)
+		sem_release(aspace->virtual_map.sem, WRITE_COUNT);
 
 	if(temp == NULL)
 		panic("vm_region_release_ref: region not found in aspace's region_list\n");
-
-	// remove the region from the global hash table
-	sem_acquire(region_hash_sem, WRITE_COUNT);
-	hash_remove(region_table, region);
-	sem_release(region_hash_sem, WRITE_COUNT);
 
 	vm_cache_remove_region(region->cache_ref, region);
 	vm_cache_release_ref(region->cache_ref);
@@ -965,27 +974,19 @@ static void vm_remove_region_struct(vm_region *region)
 		region->base + (region->size - 1));
 	(*aspace->translation_map.ops->unlock)(&aspace->translation_map);
 
+	// now we can give up the last ref to the aspace
+	vm_put_aspace(aspace);
+
 	if(region->name)
 		kfree(region->name);
 	kfree(region);
+
+	return;
 }
 
-static void vm_region_release_ref(vm_region *region)
+void vm_put_region(vm_region *region)
 {
-	if(region == NULL)
-		panic("vm_region_release_ref: passed NULL\n");
-	if(atomic_add(&region->ref_count, -1) == 1) {
-		vm_remove_region_struct(region);
-	}
-}
-
-static void vm_region_release_ref2(vm_region *region)
-{
-	if(region == NULL)
-		panic("vm_region_release_ref2: passed NULL\n");
-	if(atomic_add(&region->ref_count, -2) <= 2) {
-		vm_remove_region_struct(region);
-	}
+	return _vm_put_region(region, false);
 }
 
 int user_vm_get_region_info(region_id id, vm_region_info *uinfo)
@@ -1014,14 +1015,7 @@ int vm_get_region_info(region_id id, vm_region_info *info)
 	if(info == NULL)
 		return ERR_INVALID_ARGS;
 
-	// remove the region from the global hash table
-	sem_acquire(region_hash_sem, READ_COUNT);
-	region = hash_lookup(region_table, &id);
-	if(region != NULL) {
-		if(vm_region_acquire_ref(region) < 0)
-			region = NULL;
-	}
-	sem_release(region_hash_sem, READ_COUNT);
+	region = vm_get_region_by_id(id);
 	if(region == NULL)
 		return ERR_VM_INVALID_REGION;
 
@@ -1033,7 +1027,7 @@ int vm_get_region_info(region_id id, vm_region_info *info)
 	strncpy(info->name, region->name, SYS_MAX_OS_NAME_LEN-1);
 	info->name[SYS_MAX_OS_NAME_LEN-1] = 0;
 
-	vm_region_release_ref(region);
+	vm_put_region(region);
 
 	return 0;
 }
@@ -1044,7 +1038,7 @@ int vm_get_page_mapping(aspace_id aid, addr vaddr, addr *paddr)
 	unsigned int null_flags;
 	int err;
 
-	aspace = vm_get_aspace_from_id(aid);
+	aspace = vm_get_aspace_by_id(aid);
 	if(aspace == NULL)
 		return ERR_VM_INVALID_ASPACE;
 
@@ -1372,7 +1366,7 @@ vm_address_space *vm_get_kernel_aspace(void)
 {
 	/* we can treat this one a little differently since it can't be deleted */
 	sem_acquire(aspace_hash_sem, READ_COUNT);
-	kernel_aspace->ref_count++;
+	atomic_add(&kernel_aspace->ref_count, 1);
 	sem_release(aspace_hash_sem, READ_COUNT);
 	return kernel_aspace;
 }
@@ -1384,7 +1378,7 @@ aspace_id vm_get_kernel_aspace_id(void)
 
 vm_address_space *vm_get_current_user_aspace(void)
 {
-	return vm_get_aspace_from_id(vm_get_current_user_aspace_id());
+	return vm_get_aspace_by_id(vm_get_current_user_aspace_id());
 }
 
 aspace_id vm_get_current_user_aspace_id(void)
@@ -1402,13 +1396,12 @@ void vm_put_aspace(vm_address_space *aspace)
 	vm_region *region;
 	bool removeit = false;
 
-	sem_acquire(aspace_hash_sem, READ_COUNT);
-	aspace->ref_count--;
-	if(aspace->ref_count == 0) {
+	sem_acquire(aspace_hash_sem, WRITE_COUNT);
+	if(atomic_add(&aspace->ref_count, -1) == 1) {
 		hash_remove(aspace_table, aspace);
 		removeit = true;
 	}
-	sem_release(aspace_hash_sem, READ_COUNT);
+	sem_release(aspace_hash_sem, WRITE_COUNT);
 
 	if(!removeit)
 		return;
@@ -1418,17 +1411,10 @@ void vm_put_aspace(vm_address_space *aspace)
 	if(aspace == kernel_aspace)
 		panic("vm_put_aspace: tried to delete the kernel aspace!\n");
 
-	// delete all of the regions
-	while(aspace->virtual_map.region_list) {
-		_vm_delete_region(aspace, aspace->virtual_map.region_list->id);
-	}
+	if(aspace->virtual_map.region_list)
+		panic("vm_put_aspace: aspace at %p has zero ref count, but region list isn't empty!\n", aspace);
 
 	(*aspace->translation_map.ops->destroy)(&aspace->translation_map);
-
-	// remove the aspace from the global hash table
-	sem_acquire(aspace_hash_sem, WRITE_COUNT);
-	hash_remove(aspace_table, aspace);
-	sem_release(aspace_hash_sem, WRITE_COUNT);
 
 	kfree(aspace->name);
 	sem_delete(aspace->virtual_map.sem);
@@ -1455,6 +1441,7 @@ aspace_id vm_create_aspace(const char *name, addr base, addr size, bool kernel)
 
 	aspace->id = next_aspace_id++;
 	aspace->ref_count = 1;
+	aspace->state = VM_ASPACE_STATE_NORMAL;
 	aspace->fault_count = 0;
 	aspace->scan_va = base;
 	aspace->working_set_size = kernel ? DEFAULT_KERNEL_WORKING_SET : DEFAULT_WORKING_SET;
@@ -1490,13 +1477,37 @@ aspace_id vm_create_aspace(const char *name, addr base, addr size, bool kernel)
 int vm_delete_aspace(aspace_id aid)
 {
 	vm_region *region;
+	vm_region *next;
 	vm_address_space *aspace;
 
-	aspace = vm_get_aspace_from_id(aid);
+	aspace = vm_get_aspace_by_id(aid);
 	if(aspace == NULL)
 		return ERR_VM_INVALID_ASPACE;
 
 	dprintf("vm_delete_aspace: called on aspace 0x%x\n", aid);
+
+	// put this aspace in the deletion state
+	// this guarantees that no one else will add regions to the list
+	sem_acquire(aspace->virtual_map.sem, WRITE_COUNT);
+	if(aspace->state == VM_ASPACE_STATE_DELETION) {
+		// abort, someone else is already deleting this aspace
+		sem_release(aspace->virtual_map.sem, WRITE_COUNT);
+		vm_put_aspace(aspace);
+		return NO_ERROR;
+	}
+	aspace->state = VM_ASPACE_STATE_DELETION;
+
+	// delete all the regions in this aspace
+	region = aspace->virtual_map.region_list;
+	while(region) {
+		next = region->aspace_next;
+		// decrement the ref on this region, may actually push the ref < 0, but that's okay
+		_vm_put_region(region, true);
+		region = next;
+	}
+
+	// unlock
+	sem_release(aspace->virtual_map.sem, WRITE_COUNT);
 
 	// release two refs on the address space
 	vm_put_aspace(aspace);
@@ -1518,7 +1529,7 @@ vm_address_space *vm_aspace_walk_next(struct hash_iterator *i)
 	sem_acquire(aspace_hash_sem, READ_COUNT);
 	aspace = hash_next(aspace_table, i);
 	if(aspace)
-		aspace->ref_count++;
+		atomic_add(&aspace->ref_count, 1);
 	sem_release(aspace_hash_sem, READ_COUNT);
 	return aspace;
 }
@@ -1593,7 +1604,7 @@ int vm_init(kernel_args *ka)
 		aid = vm_create_aspace("kernel_land", KERNEL_BASE, KERNEL_SIZE, true);
 		if(aid < 0)
 			panic("vm_init: error creating kernel address space!\n");
-		kernel_aspace = vm_get_aspace_from_id(aid);
+		kernel_aspace = vm_get_aspace_by_id(aid);
 		vm_put_aspace(kernel_aspace);
 	}
 

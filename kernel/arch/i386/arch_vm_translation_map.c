@@ -165,10 +165,11 @@ static void destroy_tmap(vm_translation_map *map)
 			vm_page *page;
 
 			if(map->arch_data->pgdir_virt[i].present == 1) {
-				pgtable_addr = ADDR_REVERSE_SHIFT(map->arch_data->pgdir_virt[i].addr);
+				pgtable_addr = map->arch_data->pgdir_virt[i].addr;
 				page = vm_lookup_page(pgtable_addr);
-				if(page)
-					vm_page_set_state(page, PAGE_STATE_FREE);
+				if(!page)
+					panic("destroy_tmap: didn't find pgtable page\n");
+				vm_page_set_state(page, PAGE_STATE_FREE);
 			}
 		}
 		kfree(map->arch_data->pgdir_virt);
@@ -580,7 +581,7 @@ int vm_translation_map_create(vm_translation_map *new_map, bool kernel)
 
 	new_map->arch_data = kmalloc(sizeof(vm_translation_map_arch_info));
 	if(new_map == NULL)
-		panic("vm_translation_map_create: error allocating translation map object!\n");
+		return ERR_NO_MEMORY;
 
 	new_map->arch_data->num_invalidate_pages = 0;
 
