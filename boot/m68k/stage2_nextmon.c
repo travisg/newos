@@ -1,3 +1,7 @@
+/*
+** Copyright 2002, Travis Geiselbrecht. All rights reserved.
+** Distributed under the terms of the NewOS License.
+*/
 #include "stage2_priv.h"
 
 #define MG_simm 0
@@ -157,10 +161,14 @@ int probe_memory(kernel_args *ka)
 				ka->phys_mem_range[ka->num_phys_mem_ranges].size = msize1;
 				break;
 		}
-		dprintf("bank %i: start 0x%x, size 0x%x\n", i, 
+		dprintf("bank %i: start 0x%x, size 0x%x\n", i,
 			ka->phys_mem_range[ka->num_phys_mem_ranges].start, ka->phys_mem_range[ka->num_phys_mem_ranges].size);
 		ka->num_phys_mem_ranges++;
 	}
+
+	dprintf("alloc_base: 0x%x\n", MON(int, MG_alloc_base));
+	dprintf("alloc_brk: 0x%x\n", MON(int, MG_alloc_brk));
+	dprintf("mon_stack: 0x%x\n", MON(int, MG_mon_stack));
 
 	return 0;
 }

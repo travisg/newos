@@ -1,3 +1,7 @@
+/*
+** Copyright 2002, Travis Geiselbrecht. All rights reserved.
+** Distributed under the terms of the NewOS License.
+*/
 #ifndef _NEWOS_M68K_STAGE2_PRIV_H
 #define _NEWOS_M68K_STAGE2_PRIV_H
 
@@ -19,5 +23,7 @@ void set_urp(unsigned int tc);
 unsigned int get_urp(void);
 void set_srp(unsigned int tc);
 unsigned int get_srp(void);
+
+unsigned long allocate_page(kernel_args *ka);
 
 #endif

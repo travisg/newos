@@ -1,3 +1,7 @@
+/*
+** Copyright 2002, Travis Geiselbrecht. All rights reserved.
+** Distributed under the terms of the NewOS License.
+*/
 #include "stage2_priv.h"
 
 #include <string.h>
