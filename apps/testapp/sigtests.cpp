@@ -22,6 +22,11 @@ static void chld_handler(int sig, void *arg)
 	printf("SIGCHLD %d\n", sig);
 }
 
+static void winch_handler(int sig, void *arg)
+{
+	printf("SIGWINCH %d\n", sig);
+}
+
 int sig_test(int arg)
 {
 	struct sigaction sig;
@@ -49,6 +54,14 @@ int sig_test(int arg)
 	sig.sa_userdata = (void *)1170;
 
 	err = _kern_sigaction(SIGCHLD, &sig, NULL);
+	printf("sigaction returns %d\n", err);
+
+	sig.sa_handler = (sig_func_t)&winch_handler;
+	sig.sa_mask = 0;
+	sig.sa_flags = 0;
+	sig.sa_userdata = (void *)1170;
+
+	err = _kern_sigaction(SIGWINCH, &sig, NULL);
 	printf("sigaction returns %d\n", err);
 
 	_kern_set_alarm(1000000, TIMER_MODE_PERIODIC);

@@ -47,6 +47,8 @@ tty_desc *allocate_new_tty(void)
 			thetty.ttys[i].inuse = true;
 			thetty.ttys[i].ref_count = 1;
 			thetty.ttys[i].pgid = -1;
+			thetty.ttys[i].wsize.cols = 80;
+			thetty.ttys[i].wsize.rows = 25;
 			tty = &thetty.ttys[i];
 			break;
 		}
@@ -127,12 +129,11 @@ int tty_ioctl(tty_desc *tty, int op, void *buf, size_t len)
 			err = 0;
 			break;
 		}
-		case _TTY_IOCTL_IS_A_TTY: {
+		case _TTY_IOCTL_IS_A_TTY:
 			TRACE(("TTY tty_ioctl isatty"));
 			err = 0;
 			break;
-		}
-		case _TTY_IOCTL_SET_PGRP: {
+		case _TTY_IOCTL_SET_PGRP:
 			TRACE(("TTY tty_ioctl set pgrp"));
 			if(len < sizeof(pgrp_id)) {
 				err = ERR_INVALID_ARGS;
@@ -141,7 +142,30 @@ int tty_ioctl(tty_desc *tty, int op, void *buf, size_t len)
 
 			err = user_memcpy(&tty->pgid, buf, sizeof(pgrp_id));
 			break;
-		}
+		case _TTY_IOCTL_SET_WINSIZE:
+			TRACE(("TTY tty_ioctl set winsize"));
+			if(len < sizeof(struct tty_winsize)) {
+				err = ERR_INVALID_ARGS;
+				break;
+			}
+
+			err = user_memcpy(&tty->wsize, buf, sizeof(struct tty_winsize));
+			if(err < 0)
+				break;
+
+			send_pgrp_signal_etc(tty->pgid, SIGWINCH, 0);
+
+			break;
+		case _TTY_IOCTL_GET_WINSIZE:
+			TRACE(("TTY tty_ioctl get winsize"));
+			if(len < sizeof(struct tty_winsize)) {
+				err = ERR_INVALID_ARGS;
+				break;
+			}
+
+			err = user_memcpy(buf, &tty->wsize, sizeof(struct tty_winsize));
+			if(err < 0)
+				break;
 		default:
 			TRACE(("TTY tty_ioctl default"));
 			err = ERR_INVALID_ARGS;

@@ -2,6 +2,7 @@
 #define _NEWOS_KERNEL_DEV_TTY_TTY_PRIV_H
 
 #include <kernel/lock.h>
+#include <newos/tty_priv.h>
 
 #define TTY_TRACE 0
 
@@ -44,6 +45,7 @@ typedef struct tty_desc {
 	int index;
 	mutex lock;
 	pgrp_id pgid;
+	struct tty_winsize wsize;
 	struct line_buffer buf[2]; /* one buffer in either direction */
 } tty_desc;
 

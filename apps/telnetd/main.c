@@ -10,11 +10,18 @@
 #include <unistd.h>
 #include <newos/tty_priv.h>
 
+static int debug_fd; // debug spew to the console
 static int tty_master_fd;
 static int tty_slave_fd;
 static int tty_num;
 static int socket_fd;
 static sem_id wait_sem;
+
+// XXX fix for big endian (move to libnet or whatever it's gonna be called)
+static short ntohs(short value)
+{
+	return ((value>>8)&0xff) | ((value&0xff)<<8);
+}
 
 enum {
 	SE = 240,
@@ -29,11 +36,32 @@ enum {
 enum {
 	OPT_ECHO = 1,
 	OPT_SUPPRESS_GO_AHEAD = 3,
+	OPT_NAWS = 31,
 };
+
+static void process_subblock(int sb_type, unsigned char *buf, int len)
+{
+	char temp[128];
+
+	sprintf(temp, "process_subblock: type %d, len %d\r\n", sb_type, len);
+	write(debug_fd, temp, strlen(temp));
+
+	if(sb_type == OPT_NAWS) {
+		struct tty_winsize ws;
+
+		ws.cols = ntohs(*(unsigned short *)&buf[0]);
+		ws.rows = ntohs(*(unsigned short *)&buf[2]);
+		sprintf(temp, "NAWS %d %d\r\n", ws.cols, ws.rows);
+		write(debug_fd, temp, strlen(temp));
+
+		ioctl(tty_master_fd, _TTY_IOCTL_SET_WINSIZE, &ws, sizeof(ws)); 
+	}
+}
 
 static int telnet_reader(void *arg)
 {
 	unsigned char buf[4096];
+	unsigned char sb[4096];
 	ssize_t len;
 	int i;
 	enum {
@@ -41,8 +69,12 @@ static int telnet_reader(void *arg)
 		SEEN_IAC,
 		SEEN_OPT_NEGOTIATION,
 		SEEN_SB,
+		IN_SB,
 	} state = NORMAL;
 	int output_start, output_len;
+	int curr_sb_type = 0;
+	int sb_len = 0;
+	char temp[128];
 
 	for(;;) {
 		/* read from the socket */
@@ -54,13 +86,6 @@ static int telnet_reader(void *arg)
 		output_len = 0;
 		for(i = 0; i < len; i++) {
 			// try to remove commands
-#if 0
-			{
-				char temp[128];
-				sprintf(temp, "s %d, c %d\r\n", state, buf[i]);
-				write(socket_fd, temp, strlen(temp));
-			}
-#endif
 			switch(state) {
 				case NORMAL:
 					if(buf[i] == IAC) {
@@ -68,28 +93,56 @@ static int telnet_reader(void *arg)
 						if(output_len > 0)
 							write(tty_master_fd, &buf[output_start], output_len);
 						output_len = 0;
+						write(debug_fd, "NORMAL: IAC\r\n", strlen("NORMAL: IAC\r\n"));
 					} else {
 						output_len++;
 					}
 					break;
 				case SEEN_IAC:
+					sprintf(temp, "SEEN_IAC: 0x%x\r\n", buf[i]);
+					write(debug_fd, temp, strlen(temp));
 					if(buf[i] == SB) {
 						state = SEEN_SB;
+					} else if(buf[i] == IAC) {
+						output_start = i;
+						output_len = 1;
+						state = NORMAL;
 					} else {
 						state = SEEN_OPT_NEGOTIATION;
 					}
 					break;
 				case SEEN_OPT_NEGOTIATION:
+					sprintf(temp, "SEEN_OPT_NEGOTIATION: 0x%x\r\n", buf[i]);
+					write(debug_fd, temp, strlen(temp));
 					// we can transition back to normal now, we've eaten this option
 					state = NORMAL;
 					output_len = 0;
 					output_start = i+1;
 					break;
 				case SEEN_SB:
+					sprintf(temp, "SEEN_SB: 0x%x\r\n", buf[i]);
+					write(debug_fd, temp, strlen(temp));
 					if(buf[i] == SE) {
 						state = NORMAL;
 						output_len = 0;
 						output_start = i+1;
+					} else {
+						curr_sb_type = buf[i];
+						state = IN_SB;
+						sb_len = 0;
+					}
+					break;
+				case IN_SB:
+					sprintf(temp, "IN_SB: 0x%x\r\n", buf[i]);
+					write(debug_fd, temp, strlen(temp));
+					if(buf[i] == SE) {
+						state = NORMAL;
+						output_len = 0;
+						output_start = i+1;
+					} else if(buf[i] == IAC) {
+						process_subblock(curr_sb_type, sb, sb_len);
+					} else {
+						sb[sb_len++] = buf[i];
 					}
 					break;
 			}
@@ -138,8 +191,11 @@ static int send_opts()
 	buf[3] = IAC;
 	buf[4] = WILL;
 	buf[5] = OPT_SUPPRESS_GO_AHEAD;
+	buf[6] = IAC;
+	buf[7] = DO;
+	buf[8] = OPT_NAWS;
 
-	return write(socket_fd, buf, 6);
+	return write(socket_fd, buf, 9);
 }
 
 static void sigchld_handler(int signal)
@@ -174,6 +230,9 @@ int main(int argc, char **argv)
 
 	// register for SIGCHLD signals
 	signal(SIGCHLD, &sigchld_handler);
+
+//	debug_fd = open("/dev/console", 0);
+	debug_fd = -1;
 
 	wait_sem = _kern_sem_create(0, "telnetd wait sem");
 	if(wait_sem < 0)
