@@ -11,6 +11,7 @@ include $(APPS_DIR)/shell/app.mk
 include $(APPS_DIR)/testapp/app.mk
 include $(APPS_DIR)/vmtest/app.mk
 include $(APPS_DIR)/true/app.mk
+include $(APPS_DIR)/false/app.mk
 include $(APPS_DIR)/fibo/app.mk
 include $(APPS_DIR)/rld/app.mk
 include $(APPS_DIR)/rldtest/app.mk
