@@ -229,9 +229,9 @@ int panic(const char *fmt, ...)
 
 int dprintf(const char *fmt, ...)
 {
-	int ret = 0; 
 	va_list args;
 	char temp[128];
+	int ret = 0; 
 
 	if(serial_debug_on) {
 		va_start(args, fmt);

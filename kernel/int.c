@@ -31,7 +31,7 @@ int int_init2(kernel_args *ka)
 {
 	io_handlers = (struct io_handler **)kmalloc(sizeof(struct io_handler *) * NUM_IO_HANDLERS);
 	if(io_handlers == NULL)
-		return -1;
+		panic("int_init2: could not create io handler table!\n");
 	
 	memset(io_handlers, 0, sizeof(struct io_handler *) * NUM_IO_HANDLERS);
 

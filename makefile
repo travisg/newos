@@ -31,7 +31,7 @@ ifeq ($(ARCH),sh4)
 	AS = sh-elf-as
 	AR = sh-elf-ar
 	OBJCOPY = sh-elf-objcopy
-	GLOBAL_CFLAGS = -ml -m4 -mhitachi
+	GLOBAL_CFLAGS = -ml -m4 -mhitachi -O
 	GLOBAL_LDFLAGS = -EL
 	LIBGCC = -lgcc
 	LIBGCC_PATH = lib/libgcc/$(ARCH)/ml/m4-single-only

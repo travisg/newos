@@ -4,7 +4,6 @@
 #include <kernel.h>
 #include <stage2.h>
 
-#define PAGE_SIZE 4096
 #define PAGE_ALIGN(x) (((x) + (PAGE_SIZE-1)) & ~(PAGE_SIZE-1))
 
 #define KERNEL_CODE_SEG 0x8
