@@ -18,6 +18,7 @@ enum {
 	THREAD_STATE_READY = 0,   // ready to run
 	THREAD_STATE_RUNNING, // running right now somewhere
 	THREAD_STATE_WAITING, // blocked on something
+	THREAD_STATE_SUSPENDED, // suspended, not in queue
 	THREAD_STATE_MARKED_FOR_DEATH, // ready for manny to kill it
 };
 
@@ -45,17 +46,16 @@ struct thread {
 	int next_state;
 	int sem_count;
 	sem_id blocked_sem_id;
+	void *args;
 	struct proc *proc;
 	struct area *kernel_stack_area;
 	struct area *user_stack_area;
 	// architecture dependant section
-//	void *arch_info;
 	struct arch_thread arch_info;
 };
 
 struct thread_queue {
 	struct thread *head;
-	
 	struct thread *tail;
 };
 
@@ -66,6 +66,7 @@ struct thread *thread_dequeue_id(struct thread_queue *q, thread_id thr_id);
 struct thread *thread_lookat_run_q(int priority);
 void thread_enqueue_run_q(struct thread *t);
 struct thread *thread_dequeue_run_q(int priority);
+void thread_resume_thread(struct thread *t);
 
 void thread_resched();
 void thread_start_threading();
@@ -76,6 +77,9 @@ struct thread *thread_get_current_thread();
 thread_id thread_get_current_thread_id();
 struct thread *thread_get_thread_struct(thread_id id);
 struct thread *thread_get_thread_struct_locked(thread_id id);
+
+struct thread *thread_create_user_thread(char *name, struct proc *p, int priority, addr entry);
+struct thread *thread_create_kernel_thread(const char *name, int (*func)(void), int priority);
 
 struct proc *proc_get_kernel_proc();
 struct proc *proc_create_proc(const char *path, const char *name, int priority);

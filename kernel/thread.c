@@ -178,6 +178,7 @@ static struct thread *create_thread_struct(const char *name)
 	t->proc_next = NULL;
 	t->q_next = NULL;
 	t->priority = -1;
+	t->args = NULL;
 
 	if(arch_thread_init_thread_struct(t) < 0)
 		goto err2;
@@ -192,47 +193,20 @@ err:
 	return NULL;
 }
 
-struct thread *thread_create_user_thread(char *name, struct proc *p, int priority, addr entry)
+static int _create_user_thread_kentry(void)
 {
 	struct thread *t;
-	unsigned int *stack_addr;
-	int state;
-	char stack_name[64];
 
-	t = create_thread_struct(name);
-	if(t == NULL)
-		return NULL;
-	t->proc = p;
-	t->priority = priority;
-	t->state = THREAD_STATE_READY;
-	t->next_state = THREAD_STATE_READY;
+	t = thread_get_current_thread();
 
-	sprintf(stack_name, "%s_kstack", name);
-	vm_create_area(t->proc->kaspace, stack_name, (void **)&stack_addr,
-		AREA_ANY_ADDRESS, KSTACK_SIZE, LOCK_RW|LOCK_KERNEL, AREA_NO_FLAGS);
-	t->kernel_stack_area = vm_find_area_by_name(t->proc->kaspace, stack_name);
-	//arch_thread_initialize_kthread_stack(t, func, &thread_entry);
+	// jump to the entry point in user space
+	arch_thread_enter_uspace((addr)t->args, (addr)t->user_stack_area->base + STACK_SIZE);
 
-	sprintf(stack_name, "%s_stack", name);
-	vm_create_area(t->proc->aspace, stack_name, (void **)&stack_addr,
-		AREA_ANY_ADDRESS, STACK_SIZE, LOCK_RW, AREA_NO_FLAGS);
-	t->kernel_stack_area = vm_find_area_by_name(t->proc->aspace, stack_name);
-
-	state = int_disable_interrupts();
-	GRAB_THREAD_LOCK();
-
-	// insert into global list
-	hash_insert(thread_hash, t);
-
-	insert_thread_into_proc(t->proc, t);
-
-	RELEASE_THREAD_LOCK();
-	int_restore_interrupts(state);
-	
-	return t;
+	// never get here
+	return 0;
 }
 
-static struct thread *create_kernel_thread(struct proc *p, const char *name, int (*func)(void), int priority)
+static struct thread *_create_thread(const char *name, struct proc *p, int priority, addr entry, bool kernel)
 {
 	struct thread *t;
 	unsigned int *kstack_addr;
@@ -242,31 +216,83 @@ static struct thread *create_kernel_thread(struct proc *p, const char *name, int
 	t = create_thread_struct(name);
 	if(t == NULL)
 		return NULL;
-	if(p == NULL)
-		p = proc_get_kernel_proc();
 	t->proc = p;
 	t->priority = priority;
-	t->state = THREAD_STATE_READY;
-	t->next_state = THREAD_STATE_READY;
+	t->state = THREAD_STATE_SUSPENDED;
+	t->next_state = THREAD_STATE_SUSPENDED;
 
 	sprintf(stack_name, "%s_kstack", name);
 	vm_create_area(t->proc->kaspace, stack_name, (void **)&kstack_addr,
 		AREA_ANY_ADDRESS, KSTACK_SIZE, LOCK_RW|LOCK_KERNEL, AREA_NO_FLAGS);
 	t->kernel_stack_area = vm_find_area_by_name(t->proc->kaspace, stack_name);
-	arch_thread_initialize_kthread_stack(t, func, &thread_entry);
+
+	if(kernel) {
+		// this sets up an initial kthread stack that runs the entry
+		arch_thread_initialize_kthread_stack(t, (void *)entry, &thread_entry);
+	} else {
+		// create user stack
+		// XXX make this better. For now just keep trying to create a stack
+		// until we find a spot.
+		
+		addr ustack_addr;
+		
+		ustack_addr = (USER_STACK_REGION  - STACK_SIZE) + USER_STACK_REGION_SIZE;
+		while(ustack_addr > USER_STACK_REGION) {
+			sprintf(stack_name, "%s_stack%d", p->name, t->id);
+			vm_create_area(p->aspace, stack_name, (void **)&ustack_addr,
+				AREA_EXACT_ADDRESS, STACK_SIZE, LOCK_RW, AREA_NO_FLAGS);
+			t->user_stack_area = vm_find_area_by_name(p->aspace, stack_name);
+			if(t->user_stack_area == NULL) {
+				ustack_addr -= STACK_SIZE;
+			} else {
+				// we created an area
+				break;
+			}
+		}
+		
+		// copy the user entry over to the args field in the thread struct
+		// the function this will call will immediately switch the thread into
+		// user space.
+		t->args = (void *)entry;
+		arch_thread_initialize_kthread_stack(t, &_create_user_thread_kentry, &thread_entry);
+	}
 	
 	state = int_disable_interrupts();
 	GRAB_THREAD_LOCK();
 
 	// insert into global list
 	hash_insert(thread_hash, t);
-
-	insert_thread_into_proc(t->proc, t);
-
 	RELEASE_THREAD_LOCK();
+
+	GRAB_PROC_LOCK();
+	insert_thread_into_proc(t->proc, t);
+	RELEASE_PROC_LOCK();
 	int_restore_interrupts(state);
 	
 	return t;
+}
+
+struct thread *thread_create_user_thread(char *name, struct proc *p, int priority, addr entry)
+{
+	return _create_thread(name, p, priority, entry, false);
+}
+
+struct thread *thread_create_kernel_thread(const char *name, int (*func)(void), int priority)
+{
+	return _create_thread(name, proc_get_kernel_proc(), priority, (addr)func, true);
+}
+
+static struct thread *thread_create_kernel_thread_etc(const char *name, int (*func)(void), int priority, struct proc *p)
+{
+	return _create_thread(name, p, priority, (addr)func, true);
+}
+
+void thread_resume_thread(struct thread *t)
+{
+	t->state = THREAD_STATE_READY;
+	t->next_state = THREAD_STATE_READY;
+	
+	thread_enqueue_run_q(t);
 }
 
 int thread_killer()
@@ -513,12 +539,12 @@ int thread_init(kernel_args *ka)
 	}
 
 	// create a worker thread to kill other ones
-	t = create_kernel_thread(NULL, "manny", &thread_killer, THREAD_MAX_PRIORITY);
+	t = thread_create_kernel_thread("manny", &thread_killer, THREAD_MAX_PRIORITY);
 	if(t == NULL) {
 		panic("error creating Manny the thread killer\n");
 		return -1;
 	}
-	thread_enqueue_run_q(t);
+	thread_resume_thread(t);
 
 	// set up some debugger commands
 	dbg_add_command(dump_thread_list, "threads", "list all threads");
@@ -776,37 +802,37 @@ int thread_test()
 #if 1
 	for(i=0; i<NUM_TEST_THREADS; i++) {
 		sprintf(temp, "test_thread%d", i);
-//		t = create_kernel_thread(NULL, temp, &test_thread, i % THREAD_NUM_PRIORITY_LEVELS);
-		t = create_kernel_thread(NULL, temp, &test_thread, 5);
-		thread_enqueue_run_q(t);
+//		t = thread_create_kernel_thread(temp, &test_thread, i % THREAD_NUM_PRIORITY_LEVELS);
+		t = thread_create_kernel_thread(temp, &test_thread, 5);
+		thread_resume_thread(t);
 		if(i == 0) {
 			thread_test_first_thid = t->id;
 		}
 		sprintf(temp, "test sem %d", i);
 		thread_test_sems[i] = sem_create(0, temp);
 	}	
-	t = create_kernel_thread(NULL, "test starter thread", &test_thread_starter_thread, THREAD_MAX_PRIORITY);
-	thread_enqueue_run_q(t);
+	t = thread_create_kernel_thread("test starter thread", &test_thread_starter_thread, THREAD_MAX_PRIORITY);
+	thread_resume_thread(t);
 #endif
 #if 0
-	t = create_kernel_thread(NULL, "test thread 2", &test_thread2, 5);
-	thread_enqueue_run_q(t);
+	t = thread_create_kernel_thread("test thread 2", &test_thread2, 5);
+	thread_resume_thread(t);
 #endif
 #if 0
-	t = create_kernel_thread(NULL, "test thread 3", &test_thread3, 5);
-	thread_enqueue_run_q(t);
+	t = thread_create_kernel_thread("test thread 3", &test_thread3, 5);
+	thread_resume_thread(t);
 #endif
 #if 1
-	t = create_kernel_thread(NULL, "test thread 4", &test_thread4, 5);
-	thread_enqueue_run_q(t);
+	t = thread_create_kernel_thread("test thread 4", &test_thread4, 5);
+	thread_resume_thread(t);
 #endif
 #if 0
-	t = create_kernel_thread(NULL, "test thread 5", &test_thread5, 5);
-	thread_enqueue_run_q(t);
+	t = thread_create_kernel_thread("test thread 5", &test_thread5, 5);
+	thread_resume_thread(t);
 #endif
 #if 0
-	t = create_kernel_thread(NULL, "panic thread", &panic_thread, THREAD_MAX_PRIORITY);
-	thread_enqueue_run_q(t);
+	t = thread_create_kernel_thread("panic thread", &panic_thread, THREAD_MAX_PRIORITY);
+	thread_resume_thread(t);
 #endif
 	dprintf("thread_test: done creating test threads\n");
 	
@@ -1012,7 +1038,8 @@ struct proc *proc_create_proc(const char *path, const char *name, int priority)
 	if(p == NULL)
 		return NULL;
 
-	t = create_kernel_thread(p, name, proc_create_proc2, priority);
+	// create a kernel thread, but under the context of the new process
+	t = thread_create_kernel_thread_etc(name, proc_create_proc2, priority, p);
 	if(t == NULL) {
 		// XXX clean up proc
 		return NULL;
@@ -1032,7 +1059,7 @@ struct proc *proc_create_proc(const char *path, const char *name, int priority)
 	RELEASE_PROC_LOCK();
 
 	GRAB_THREAD_LOCK();
-	thread_enqueue_run_q(t);
+	thread_resume_thread(t);
 	RELEASE_THREAD_LOCK();
 	int_restore_interrupts(state);
 
