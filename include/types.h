@@ -2,16 +2,16 @@
 #define _TYPES_H
 
 #ifdef ARCH_i386
-#include <i386/types.h>
+#include <arch/i386/types.h>
 #endif
 #ifdef ARCH_alpha
-#include <alpha/types.h>
+#include <arch/alpha/types.h>
 #endif
 #ifdef ARCH_sh4
-#include <sh4/types.h>
+#include <arch/sh4/types.h>
 #endif
 #ifdef ARCH_sparc
-#include <sparc/types.h>
+#include <arch/sparc/types.h>
 #endif
 
 #ifndef NULL
