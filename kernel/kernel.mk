@@ -40,12 +40,16 @@ include $(KERNEL_ARCH_DIR)/arch_kernel.mk
 DEPS += $(KERNEL_OBJS:.o=.d)
 
 KERNEL = $(KERNEL_OBJ_DIR)/system
+LIBKERNEL = $(KERNEL_OBJ_DIR)/libsystem.so
 LINKHACK = $(KERNEL_OBJ_DIR)/linkhack.so
 
-kernel:	$(KERNEL)
+kernel:	$(KERNEL) $(LIBKERNEL)
 
 $(KERNEL): $(KERNEL_OBJS) $(KLIBS) $(DEV) $(BUS) $(LINKHACK)
 	$(LD) -Bdynamic -export-dynamic -dynamic-linker /foo/bar -T $(KERNEL_ARCH_DIR)/kernel.ld -L $(LIBGCC_PATH) -o $@ $(KERNEL_OBJS) $(DEV) $(BUS) $(LINKHACK) $(LINK_KLIBS) $(LIBGCC)
+
+$(LIBKERNEL): $(KERNEL_OBJS) $(KLIBS) $(DEV) $(BUS) $(LINKHACK)
+	$(LD) -Bdynamic -shared -export-dynamic -dynamic-linker /foo/bar -T $(KERNEL_ARCH_DIR)/kernel.ld -L $(LIBGCC_PATH) -o $@ $(KERNEL_OBJS) $(DEV) $(BUS) $(LINKHACK) $(LINK_KLIBS) $(LIBGCC)
 
 # Build a shared object with nothing in it to link against the kernel.
 # Otherwise the linker optimizes and removes the dynamic section.

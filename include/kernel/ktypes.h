@@ -13,6 +13,7 @@ typedef int region_id;
 typedef int aspace_id;
 typedef int proc_id;
 typedef int sem_id;
+typedef int image_id;
 
 typedef uint64 vnode_id;
 typedef uint32 fs_id;

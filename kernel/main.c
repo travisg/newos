@@ -21,6 +21,7 @@
 #include <kernel/dev.h>
 #include <kernel/net/net.h>
 #include <kernel/cbuf.h>
+#include <kernel/elf.h>
 #include <dev/devs.h>
 #include <bus/bus.h>
 

@@ -105,6 +105,14 @@ struct Elf32_Phdr {
 #define PT_LOPROC 0x70000000
 #define PT_HIPROC 0x7fffffff
 
+#define SHN_UNDEF 0
+#define SHN_LORESERVE 0xff00
+#define SHN_LOPROC 0xff00
+#define SHN_HIPROC 0xff1f
+#define SHN_ABS 0xfff1
+#define SHN_COMMON 0xfff2
+#define SHN_HIRESERVE 0xffff
+
 struct Elf32_Sym {
 	Elf32_Word		st_name;
 	Elf32_Addr		st_value;
@@ -126,6 +134,12 @@ struct Elf32_Sym {
 #define STT_LOPROC 13
 #define STT_HIPROC 15
 
+#define STB_LOCAL 0
+#define STB_GLOBAL 1
+#define STB_WEAK 2
+#define STB_LOPROC 13
+#define STB_HIPROC 15
+
 #define STN_UNDEF 0
 
 struct Elf32_Rel {
@@ -142,6 +156,18 @@ struct Elf32_Rela {
 #define ELF32_R_SYM(i) ((i) >> 8)
 #define ELF32_R_TYPE(i) ((unsigned char)(i))
 #define ELF32_R_INFO(s, t) (((s) << 8) + (unsigned char)(t))
+
+#define R_386_NONE 0
+#define R_386_32 1
+#define R_386_PC32 2
+#define R_386_GOT32 3
+#define R_386_PLT32 4
+#define R_386_COPY 5
+#define R_386_GLOB_DAT 6
+#define R_386_JMP_SLOT 7
+#define R_386_RELATIVE 8
+#define R_386_GOTOFF 9
+#define R_386_GOTPC 10
 
 struct Elf32_Dyn {
 	Elf32_Sword d_tag;
