@@ -6,5 +6,5 @@ _start:
 
 .data
 foo:
-#include "final.asminclude"
+#include "boot/mips/final.asminclude"
 

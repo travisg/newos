@@ -42,14 +42,14 @@ FINAL = $(BOOT_DIR)/final
 $(FINAL): $(STAGE1_OBJS)
 	$(LD) -dN --script=$(BOOT_DIR)/stage1.ld $(STAGE1_OBJS) -o $@
 	
-FINAL_ASMINCLUDE = $(FINAL).asminclude
+FINAL_ASMINCLUDE = $(BOOT_DIR)/final.asminclude
+
+$(BOOT_OBJ_DIR)/stage1.o: $(BOOT_DIR)/stage1.S
+	@mkdir -p $(BOOT_OBJ_DIR)
+	$(CC) -c $< $(GLOBAL_CFLAGS) -I. -Iinclude -o $@
 
 $(FINAL_ASMINCLUDE): $(SEMIFINAL) tools
 	$(BIN2ASM) < $(SEMIFINAL) > $(FINAL_ASMINCLUDE)
-
-$(BOOT_OBJ_DIR)/stage1.o: $(BOOT_DIR)/stage1.S $(FINAL_ASMINCLUDE)
-	@mkdir -p $(BOOT_OBJ_DIR)
-	$(CC) -c $< $(GLOBAL_CFLAGS) -Iinclude -I$(BOOT_DIR) -o $@
 
 finalclean:
 	rm -f $(STAGE1_OBJS) $(FINAL) $(SEMIFINAL) $(FINAL_ASMINCLUDE)
@@ -59,20 +59,20 @@ CLEAN += finalclean
 # 
 $(BOOT_OBJ_DIR)/%.o: $(BOOT_DIR)/%.c 
 	@mkdir -p $(BOOT_OBJ_DIR)
-	$(CC) -c $< $(GLOBAL_CFLAGS) -Iinclude -I$(BOOT_DIR) -o $@
+	$(CC) -c $< $(GLOBAL_CFLAGS) -Iinclude -o $@
 
 $(BOOT_OBJ_DIR)/%.d: $(BOOT_DIR)/%.c
 	@mkdir -p $(BOOT_OBJ_DIR)
 	@echo "making deps for $<..."
-	@($(ECHO) -n $(dir $@);$(CC) $(GLOBAL_CFLAGS) -Iinclude -I$(BOOT_DIR) -M -MG $<) > $@
+	@($(ECHO) -n $(dir $@);$(CC) $(GLOBAL_CFLAGS) -Iinclude -M -MG $<) > $@
 
 $(BOOT_OBJ_DIR)/%.d: $(BOOT_DIR)/%.S
 	@mkdir -p $(BOOT_OBJ_DIR)
 	@echo "making deps for $<..."
-	@($(ECHO) -n $(dir $@);$(CC) $(GLOBAL_CFLAGS) -Iinclude -I$(BOOT_DIR) -M -MG $<) > $@
+	@($(ECHO) -n $(dir $@);$(CC) $(GLOBAL_CFLAGS) -Iinclude -M -MG $<) > $@
 
 $(BOOT_OBJ_DIR)/%.o: $(BOOT_DIR)/%.S
 	@mkdir -p $(BOOT_OBJ_DIR)
-	$(CC) -c $< $(GLOBAL_CFLAGS) -Iinclude -I$(BOOT_DIR) -o $@
+	$(CC) -c $< $(GLOBAL_CFLAGS) -Iinclude -o $@
 
 endif
