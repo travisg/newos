@@ -270,8 +270,8 @@ static int handle_set1_keycode(unsigned char key)
 		if(menu)
 			event.modifiers |= KEY_MODIFIER_MENU;
 
-
 		insert_in_buf(&event);
+		retval = INT_RESCHEDULE;
 	}
 
 	return retval;
