@@ -34,7 +34,7 @@ typedef struct vm_translation_map_ops_struct {
 int vm_translation_map_create(vm_translation_map *new_map, bool kernel);
 int vm_translation_map_module_init(kernel_args *ka);
 int vm_translation_map_module_init2(kernel_args *ka);
-
+void vm_translation_map_module_init_post_sem(kernel_args *ka);
 // quick function to map a page in regardless of map context. Used in VM initialization,
 // before most vm data structures exist
 int vm_translation_map_quick_map(kernel_args *ka, addr va, addr pa, unsigned int attributes, addr (*get_free_page)(kernel_args *));

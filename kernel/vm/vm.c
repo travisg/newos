@@ -1548,6 +1548,7 @@ int vm_init_postsem(kernel_args *ka)
 	// fill in all of the semaphores that were not allocated before
 	// since we're still single threaded and only the kernel address space exists,
 	// it isn't that hard to find all of the ones we need to create
+	vm_translation_map_module_init_post_sem(ka);
 	kernel_aspace->virtual_map.sem = sem_create(WRITE_COUNT, "kernel_aspacelock");
 	kernel_aspace->translation_map.lock.sem = sem_create(1, "recursive_lock");
 
@@ -1850,7 +1851,9 @@ static int vm_soft_fault(addr address, bool is_write, bool is_user)
 	if(change_count != map->change_count) {
 		// something may have changed, see if the address is still valid
 		region = vm_virtual_map_lookup(map, address);
-		if(region == NULL || region->cache_ref != top_cache_ref || region->cache_offset != cache_offset) {
+		if(region == NULL 
+		  || region->cache_ref != top_cache_ref 
+		  || (address - region->base + region->cache_offset) != cache_offset) {
 			dprintf("vm_soft_fault: address space layout changed effecting ongoing soft fault\n");
 			err = ERR_VM_PF_BAD_ADDRESS; // BAD_ADDRESS
 		}

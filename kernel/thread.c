@@ -1664,7 +1664,7 @@ static int proc_create_proc2(void)
 	// this will wake up the thread that initially created us, with the process id
 	// as the return code
 	sem_delete_etc(p->proc_creation_sem, p->id);
-	p->proc_creation_sem = 0;
+	p->proc_creation_sem = -1;
 
 	// jump to the entry point in user space
 	arch_thread_enter_uspace(entry, t->user_stack_base + STACK_SIZE);

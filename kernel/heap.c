@@ -246,8 +246,8 @@ void kfree(void *address)
 
 	bin = &bins[page[0].bin_index];
 
-	if((addr)address % bin->element_size != 0)
-		panic("kfree: passed invalid pointer 0x%x! Supposed to be in bin for esize 0x%x\n", address, bin->element_size);
+//	if((addr)address % bin->element_size != 0)
+//		panic("kfree: passed invalid pointer 0x%x! Supposed to be in bin for esize 0x%x\n", address, bin->element_size);
 
 	for(i = 0; i < bin->element_size / PAGE_SIZE; i++) {
 		if(page[i].bin_index != page[0].bin_index)

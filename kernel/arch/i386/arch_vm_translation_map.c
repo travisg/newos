@@ -464,7 +464,7 @@ static int put_physical_page_tmap(addr va)
 	if(va < IOSPACE_BASE || va >= IOSPACE_BASE + IOSPACE_SIZE)
 		panic("someone called put_physical_page on an invalid va 0x%x\n", va);
 	va -= IOSPACE_BASE;
-	
+
 	mutex_lock(&iospace_mutex);
 
 	desc = virtual_pmappings[va / IOSPACE_CHUNK_SIZE];
@@ -621,6 +621,13 @@ int vm_translation_map_module_init(kernel_args *ka)
 	return 0;
 }
 
+
+void vm_translation_map_module_init_post_sem(kernel_args *ka)
+{
+	mutex_init(&iospace_mutex, "iospace_mutex");
+	iospace_full_sem = sem_create(1, "iospace_full_sem");
+}
+
 int vm_translation_map_module_init2(kernel_args *ka)
 {
 	// now that the vm is initialized, create an region that represents
@@ -628,9 +635,6 @@ int vm_translation_map_module_init2(kernel_args *ka)
 	void *temp;
 
 	dprintf("vm_translation_map_module_init2: entry\n");
-
-	mutex_init(&iospace_mutex, "iospace_mutex");
-	iospace_full_sem = sem_create(1, "iospace_full_sem");
 
 	// unmap the page hole hack we were using before
 	kernel_pgdir_virt[1023].present = 0;

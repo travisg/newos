@@ -991,28 +991,29 @@ static int vfs_mount(char *path, const char *fs_name, bool kernel)
 		struct ioctx *ioctx;
 		void *null_cookie;
 
-		fd = sys_open(path, STREAM_TYPE_DIR, 0);
-		if(fd < 0) {
-			err = fd;
-			goto err3;
+		err = path_to_vnode(path,&covered_vnode,kernel);
+		if(err < 0) {
+			goto err2;
 		}
-
-		// get the vnode this mount will cover
-		ioctx = get_current_ioctx(true);
-		covered_vnode = get_vnode_from_fd(ioctx, fd);
-		sys_close(fd);
 
 		if(!covered_vnode) {
 			err = ERR_VFS_GENERAL;
 			goto err2;
 		}
+
+		// XXX insert check to make sure covered_vnode is a DIR, or maybe it's okay for it not to be
+
+		if((covered_vnode != root_vnode) && (covered_vnode->mount->root_vnode == covered_vnode)){
+			err = ERR_VFS_ALREADY_MOUNTPOINT;
+			goto err2;
+		}
+
 		mount->covers_vnode = covered_vnode;
 
 		// mount it
 		err = mount->fs->calls->fs_mount(&mount->fscookie, mount->id, NULL, &root_id);
 		if(err < 0)
 			goto err4;
-
 	}
 
 	mutex_lock(&vfs_mount_mutex);
@@ -1115,6 +1116,7 @@ static int vfs_unmount(char *path, bool kernel)
 
 	mount->covers_vnode->covered_by = NULL;
 	dec_vnode_ref_count(mount->covers_vnode, true, false);
+
 	/* release the ref on the root vnode twice */
 	dec_vnode_ref_count(mount->root_vnode, true, false);
 	dec_vnode_ref_count(mount->root_vnode, true, false);

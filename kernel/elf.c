@@ -256,11 +256,12 @@ static int elf_parse_dynamic_section(struct elf_image_info *image)
 // this function first tries to see if the first image and it's already resolved symbol is okay, otherwise
 // it tries to link against the shared_image
 // XXX gross hack and needs to be done better
-static addr elf_resolve_symbol(struct elf_image_info *image, struct Elf32_Sym *sym, struct elf_image_info *shared_image, const char *sym_prepend)
+static int  elf_resolve_symbol(struct elf_image_info *image, struct Elf32_Sym *sym, struct elf_image_info *shared_image, const char *sym_prepend,addr *sym_addr)
 {
 	struct Elf32_Sym *sym2;
 	char new_symname[512];
 
+        *sym_addr = NULL;
 	switch(sym->st_shndx) {
 		case SHN_UNDEF:
 			// patch the symbol name
@@ -271,30 +272,33 @@ static addr elf_resolve_symbol(struct elf_image_info *image, struct Elf32_Sym *s
 			sym2 = elf_find_symbol(shared_image, new_symname);
 			if(!sym2) {
 				dprintf("elf_resolve_symbol: could not resolve symbol '%s'\n", new_symname);
-				return 0;
+				return ERR_ELF_RESOLVING_SYMBOL;
 			}
 
 			// make sure they're the same type
 			if(ELF32_ST_TYPE(sym->st_info) != ELF32_ST_TYPE(sym2->st_info)) {
 				dprintf("elf_resolve_symbol: found symbol '%s' in shared image but wrong type\n", new_symname);
-				return 0;
+				return ERR_ELF_RESOLVING_SYMBOL;
 			}
 
 			if(ELF32_ST_BIND(sym2->st_info) != STB_GLOBAL && ELF32_ST_BIND(sym2->st_info) != STB_WEAK) {
 				dprintf("elf_resolve_symbol: found symbol '%s' but not exported\n", new_symname);
-				return 0;
+				return ERR_ELF_RESOLVING_SYMBOL;
 			}
 
-			return sym2->st_value + shared_image->regions[0].delta;
+			*sym_addr = sym2->st_value + shared_image->regions[0].delta;
+                        return NO_ERROR;
 		case SHN_ABS:
-			return sym->st_value;
+			*sym_addr = sym->st_value;
+                        return NO_ERROR;
 		case SHN_COMMON:
 			// XXX finish this
 			dprintf("elf_resolve_symbol: COMMON symbol, finish me!\n");
-			return 0;
+			return ERR_NOT_IMPLEMENTED_YET;
 		default:
 			// standard symbol
-			return sym->st_value + image->regions[0].delta;
+			*sym_addr = sym->st_value + image->regions[0].delta;
+                        return NO_ERROR;
 	}
 }
 
@@ -303,6 +307,7 @@ static int elf_relocate(struct elf_image_info *image, const char *sym_prepend)
 {
 	int i;
 	struct Elf32_Sym *sym;
+        int vlErr;
 	addr S;
 	addr A;
 	addr P;
@@ -326,7 +331,8 @@ static int elf_relocate(struct elf_image_info *image, const char *sym_prepend)
 				case R_386_GOTOFF:
 					sym = SYMBOL(image, ELF32_R_SYM(image->rel[i].r_info));
 
-					S = elf_resolve_symbol(image, sym, kernel_image, sym_prepend);
+					vlErr = elf_resolve_symbol(image, sym, kernel_image, sym_prepend,&S);
+					if(vlErr<0) return vlErr;
 //					dprintf("S 0x%x\n", S);
 			}
 			// calc A
@@ -472,12 +478,11 @@ int elf_load_uspace(const char *path, struct proc *p, int flags, addr *entry)
 			dprintf("error reading in seg %d\n", i);
 			goto error;
 		}
-
-		if(i == 0)
-			*entry = pheaders[i].p_vaddr;
 	}
 
 	dprintf("elf_load: done!\n");
+
+	*entry = eheader.e_entry;
 
 	err = 0;
 
