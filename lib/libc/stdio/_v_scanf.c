@@ -112,7 +112,7 @@ static int _fscanf_read(void *p)
 
     if(stream->flags & _STDIO_UNGET)
 	{
-		stream->flags &= !_STDIO_UNGET;
+		stream->flags &= stream->flags ^ _STDIO_UNGET;
 		return stream->unget;
 	}
 

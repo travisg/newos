@@ -347,7 +347,7 @@ restart_loop:
 				if(bw == 0)
 				{
 					buf_pos--;
-					echo = false;
+					goto exit_loop;
 				}
 				else
 				{
