@@ -20,6 +20,11 @@ bool Rect::Contains(int x, int y) const
 	return (x >= left && x <= right && y >= top && y <= bottom);
 }
 
+bool Rect::Contains(const Point &p) const
+{
+	return (p.x >= left && p.x <= right && p.y >= top && p.y <= bottom);
+}
+
 bool Rect::Contains(const Rect &rect) const
 {
 	return rect.left >= left && rect.right <= right
