@@ -96,12 +96,7 @@ int main(int argc, char **argv)
 		dup2(new_fd, 2);
 		close(new_fd);
 
-		pid = _kern_proc_create_proc(spawn_argv[0], spawn_argv[0], spawn_argv, spawn_argc, 5);
-
-		if(pid > 0) {
-			// give the spawned process a new process group
-			setpgid(pid, 0);
-		}
+		pid = _kern_proc_create_proc(spawn_argv[0], spawn_argv[0], spawn_argv, spawn_argc, 5, PROC_FLAG_NEW_PGROUP);
 
 		dup2(saved_stdin, 0);
 		dup2(saved_stdout, 1);

@@ -54,6 +54,13 @@ enum {
 	USER_TIME
 };
 
+// args to proc_create_proc()
+enum {
+	PROC_FLAG_SUSPENDED = 1,
+	PROC_FLAG_NEW_PGROUP = 2,
+	PROC_FLAG_NEW_SESSION = 4
+};
+
 struct proc {
 	struct proc *next;
 	struct proc *parent;
@@ -192,7 +199,7 @@ int thread_get_next_thread_info(uint32 *cookie, proc_id pid, struct thread_info 
 int user_thread_get_next_thread_info(uint32 *cookie, proc_id pid, struct thread_info *info);
 
 struct proc *proc_get_kernel_proc(void);
-proc_id proc_create_proc(const char *path, const char *name, char **args, int argc, int priority);
+proc_id proc_create_proc(const char *path, const char *name, char **args, int argc, int priority, int flags);
 int proc_kill_proc(proc_id);
 int proc_wait_on_proc(proc_id id, int *retcode);
 thread_id proc_get_main_thread(proc_id id);
@@ -209,7 +216,7 @@ int user_proc_get_next_proc_info(uint32 *cookie, struct proc_info *info);
 
 // used in syscalls.c
 int user_thread_wait_on_thread(thread_id id, int *uretcode);
-proc_id user_proc_create_proc(const char *path, const char *name, char **args, int argc, int priority);
+proc_id user_proc_create_proc(const char *path, const char *name, char **args, int argc, int priority, int flags);
 int user_proc_wait_on_proc(proc_id id, int *uretcode);
 thread_id user_thread_create_user_thread(char *uname, addr_t entry, void *args);
 int user_thread_set_priority(thread_id id, int priority);

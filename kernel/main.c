@@ -1,5 +1,5 @@
 /*
-** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2004, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #include <boot/stage2.h>
@@ -188,8 +188,7 @@ static int main2(void *unused)
 
 		kprintf("main2: starting init process...\n");
 
-		pid = proc_create_proc("/boot/bin/init", "init", NULL, 0, 5);
-//		pid = proc_create_proc("/boot/bin/static", "static", NULL, 0, 5);
+		pid = proc_create_proc("/boot/bin/init", "init", NULL, 0, 5, 0);
 		if(pid < 0)
 			kprintf("error starting 'init' error = %d \n",pid);
 	}

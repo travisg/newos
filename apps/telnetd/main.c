@@ -220,14 +220,9 @@ int main(int argc, char **argv)
 	send_opts();
 
 	// now start the app
-	pid = _kern_proc_create_proc(spawn_argv[0], spawn_argv[0], spawn_argv, spawn_argc, 5);
+	pid = _kern_proc_create_proc(spawn_argv[0], spawn_argv[0], spawn_argv, spawn_argc, 5, PROC_FLAG_NEW_PGROUP);
 	if(pid < 0)
 		return -1;
-
-	// create a new process group for the command
-	// XXX big race here. we need to be able to start the process in a halted state, set
-	// the process group, then let it start, or use fork/exec.
-	setpgid(pid, 0);	
 
 	tid = _kern_thread_create_thread("telnet reader", &telnet_reader, NULL);
 	_kern_thread_set_priority(tid, 30);

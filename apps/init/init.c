@@ -32,7 +32,7 @@ int main()
 		args[0] = "/boot/bin/shell";
 		args[1] = "/boot/bootscript";
 
-		pid = _kern_proc_create_proc(args[0], "startup shell", args, 2, 5);
+		pid = _kern_proc_create_proc(args[0], "startup shell", args, 2, 5, 0);
 		if(pid < 0) {
 			printf("init: error %d creating shell!\n", pid);
 			return -1;

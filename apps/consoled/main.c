@@ -133,7 +133,7 @@ static proc_id start_process(const char *path, const char *name, char **argv, in
 	dup2(con->tty_slave_fd, 2);
 
 	// XXX launch
-	pid = _kern_proc_create_proc(path, name, argv, argc, 5);
+	pid = _kern_proc_create_proc(path, name, argv, argc, 5, PROC_FLAG_NEW_PGROUP);
 
 	dup2(saved_stdin, 0);
 	dup2(saved_stdout, 1);

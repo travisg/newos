@@ -2058,7 +2058,7 @@ static int proc_create_proc2(void *args)
 	return 0;
 }
 
-proc_id proc_create_proc(const char *path, const char *name, char **args, int argc, int priority)
+proc_id proc_create_proc(const char *path, const char *name, char **args, int argc, int priority, int flags)
 {
 	struct proc *p;
 	struct proc *curr_proc;
@@ -2067,8 +2067,10 @@ proc_id proc_create_proc(const char *path, const char *name, char **args, int ar
 	proc_id curr_proc_id;
 	int err;
 	struct proc_arg *pargs;
+	struct sid_node *snode = NULL;
+	struct pgid_node *pgnode = NULL;
 
-	dprintf("proc_create_proc: entry '%s', name '%s' args = %p argc = %d\n", path, name, args, argc);
+	dprintf("proc_create_proc: entry '%s', name '%s' args = %p argc = %d, flags = 0x%x\n", path, name, args, argc, flags);
 
 	p = create_proc_struct(name, false);
 	if(p == NULL)
@@ -2076,6 +2078,14 @@ proc_id proc_create_proc(const char *path, const char *name, char **args, int ar
 
 	pid = p->id;
 	curr_proc_id = proc_get_current_proc_id();
+
+	// preallocate a process group and session node if we need it
+	if(flags & PROC_FLAG_NEW_SESSION) {
+		snode = create_session_struct(p->id);
+		flags |= PROC_FLAG_NEW_PGROUP; // creating your own session implies your own pgroup
+	}	
+	if(flags & PROC_FLAG_NEW_PGROUP)
+		pgnode = create_pgroup_struct(p->id);
 
 	int_disable_interrupts();
 	GRAB_PROC_LOCK();
@@ -2087,11 +2097,23 @@ proc_id proc_create_proc(const char *path, const char *name, char **args, int ar
 	curr_proc = proc_get_proc_struct_locked(curr_proc_id);
 	insert_proc_into_parent(curr_proc, p);
 
-	// inheirit the creating processes's process group, session
-	p->pgid = curr_proc->pgid;
-	add_proc_to_pgroup(p, curr_proc->pgid);
-	p->sid = curr_proc->sid;
-	add_proc_to_session(p, curr_proc->sid);
+	if(flags & PROC_FLAG_NEW_SESSION) {
+		hash_insert(sid_hash, snode);
+		add_proc_to_session(p, p->id);
+	} else {
+		// inheirit the parent's session
+		p->sid = curr_proc->sid;
+		add_proc_to_session(p, curr_proc->sid);
+	}
+
+	if(flags & PROC_FLAG_NEW_PGROUP) {
+		hash_insert(pgid_hash, pgnode);
+		add_proc_to_pgroup(p, p->id); 
+	} else {
+		// inheirit the creating processes's process group
+		p->pgid = curr_proc->pgid;
+		add_proc_to_pgroup(p, curr_proc->pgid);
+	}
 
 	RELEASE_PROC_LOCK();
 	int_restore_interrupts();
@@ -2132,7 +2154,8 @@ proc_id proc_create_proc(const char *path, const char *name, char **args, int ar
 		goto err5;
 	}
 
-	thread_resume_thread(tid);
+	if((flags & PROC_FLAG_SUSPENDED) == 0)
+		thread_resume_thread(tid);
 
 	return pid;
 
@@ -2157,7 +2180,7 @@ err1:
 	return err;
 }
 
-proc_id user_proc_create_proc(const char *upath, const char *uname, char **args, int argc, int priority)
+proc_id user_proc_create_proc(const char *upath, const char *uname, char **args, int argc, int priority, int flags)
 {
 	char path[SYS_MAX_PATH_LEN];
 	char name[SYS_MAX_OS_NAME_LEN];
@@ -2187,7 +2210,7 @@ proc_id user_proc_create_proc(const char *upath, const char *uname, char **args,
 
 	name[SYS_MAX_OS_NAME_LEN-1] = 0;
 
-	return proc_create_proc(path, name, kargs, argc, priority);
+	return proc_create_proc(path, name, kargs, argc, priority, flags);
 error:
 	free_arg_list(kargs,argc);
 	return rc;

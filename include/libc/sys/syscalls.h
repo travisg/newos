@@ -88,6 +88,13 @@ struct thread_info {
 	bigtime_t kernel_time;
 };
 
+// args to proc_create_proc()
+enum {
+	PROC_FLAG_SUSPENDED = 1,
+	PROC_FLAG_NEW_PGROUP = 2,
+	PROC_FLAG_NEW_SESSION = 4
+};
+
 // args for the create_area funcs
 enum {
 	REGION_ADDR_ANY_ADDRESS = 0,
@@ -192,7 +199,7 @@ int _kern_set_sem_owner(sem_id id, proc_id proc);
 
 thread_id _kern_get_current_thread_id(void);
 void _kern_exit(int retcode);
-proc_id _kern_proc_create_proc(const char *path, const char *name, char **args, int argc, int priority);
+proc_id _kern_proc_create_proc(const char *path, const char *name, char **args, int argc, int priority, int flags);
 thread_id _kern_thread_create_thread(const char *name, int (*func)(void *args), void *args);
 int _kern_thread_set_priority(thread_id tid, int priority);
 int _kern_thread_wait_on_thread(thread_id tid, int *retcode);

@@ -50,12 +50,12 @@ main(int argc, char *argv[])
 		int  aaargc= 3;
 
 		sprintf(buffer, "%d", num-1);
-		pid= _kern_proc_create_proc(aaargv[0], aaargv[0], aaargv, aaargc, 5);
+		pid= _kern_proc_create_proc(aaargv[0], aaargv[0], aaargv, aaargc, 5, 0);
 		_kern_proc_wait_on_proc(pid, &retcode);
 		result= retcode;
 
 		sprintf(buffer, "%d", num-2);
-		pid= _kern_proc_create_proc(aaargv[0], aaargv[0], aaargv, aaargc, 5);
+		pid= _kern_proc_create_proc(aaargv[0], aaargv[0], aaargv, aaargc, 5, 0);
 		_kern_proc_wait_on_proc(pid, &retcode);
 		result+= retcode;
 	}

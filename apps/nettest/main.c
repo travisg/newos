@@ -284,7 +284,7 @@ int nettest6(void)
 
 		// XXX launch
 		argv = "/boot/bin/shell";
-		err = _kern_proc_create_proc("/boot/bin/shell", "shell", &argv, 1, 5);
+		err = _kern_proc_create_proc("/boot/bin/shell", "shell", &argv, 1, 5, 0);
 
 		dup2(saved_stdin, 0);
 		dup2(saved_stdout, 1);

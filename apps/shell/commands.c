@@ -68,20 +68,18 @@ int cmd_create_proc(int argc,char *argv[])
 		}
 	}
 
-	pid = _kern_proc_create_proc(filename,filename, argv, argc, 5);
+	pid = _kern_proc_create_proc(filename,filename, argv, argc, 5, PROC_FLAG_SUSPENDED|PROC_FLAG_NEW_PGROUP);
 	if(pid >= 0) {
 		int retcode;
 
-		// create a new process group for the command
-		// XXX big race here. we need to be able to start the process in a halted state, set
-		// the process group, then let it start, or use fork/exec.
-		setpgid(pid, 0);
-
 		if(must_wait) {
 			ioctl(0, _TTY_IOCTL_SET_PGRP, &pid, sizeof(pgrp_id));
+			_kern_send_proc_signal(pid, SIGCONT);
 			_kern_proc_wait_on_proc(pid, &retcode);
 			pid = -1;
 			ioctl(0, _TTY_IOCTL_SET_PGRP, &pid, sizeof(pgrp_id));
+		} else {
+			_kern_send_proc_signal(pid, SIGCONT);
 		}
 	} else {
 		printf("Error: cannot execute '%s'\n", filename);
