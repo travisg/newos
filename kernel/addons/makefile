@@ -8,4 +8,5 @@ include $(addsuffix /makefile, $(addprefix $(KERNEL_ADDONS_DIR)/, \
 	busses \
 	generic \
 	dev \
+	arch/$(ARCH) \
 ))

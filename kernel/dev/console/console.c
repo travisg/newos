@@ -2,6 +2,7 @@
 ** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
+#include <kernel/mod_console.h>
 #include <kernel/kernel.h>
 #include <kernel/console.h>
 #include <kernel/debug.h>
@@ -20,11 +21,6 @@
 
 #include <kernel/dev/arch/i386/console/console_dev.h>
 
-#define SCREEN_START 0xb8000
-#define SCREEN_END   0xc0000
-#define LINES 25
-#define COLUMNS 80
-#define NPAR 16
 #define TAB_SIZE 8
 #define TAB_MASK 7
 
@@ -47,8 +43,10 @@ typedef enum {
 static struct console_desc {
 	mutex lock;
 
+#if 0
 	unsigned int origin;
 	unsigned int end;
+#endif
 	int lines;
 	int columns;
 
@@ -57,7 +55,9 @@ static struct console_desc {
 	bool          bright_attr;
 	bool          reverse_attr;
 
+#if 0
 	unsigned int pos;			/* current position within the buffer */
+#endif
 	int x;						/* current x coordinate */
 	int y;						/* current y coordinate */
 	int saved_x;				/* used to save x and y */
@@ -70,19 +70,12 @@ static struct console_desc {
 	console_state state;
 	int arg_ptr;
 	int args[MAX_ARGS];
+	mod_console *funcs;
 } gconsole;
 
 #define LINE_OFFSET(con, line) ((con)->columns * (line) * 2)
 
-static void update_cursor(struct console_desc *con, int x, int y)
-{
-	short int pos = y * con->columns + x;
-
-	out8(TEXT_CURSOR_LO, TEXT_INDEX);
-	out8((char)pos, TEXT_DATA);
-	out8(TEXT_CURSOR_HI, TEXT_INDEX);
-	out8((char)(pos >> 8), TEXT_DATA);
-}
+#define update_cursor(con, x, y) (con->funcs->move_cursor)(x, y)
 
 static void gotoxy(struct console_desc *con, int new_x, int new_y)
 {
@@ -97,27 +90,19 @@ static void gotoxy(struct console_desc *con, int new_x, int new_y)
 
 	con->x = new_x;
 	con->y = new_y;
-	con->pos = con->origin + (con->y * con->columns + con->x) * 2;
 }
 
 static void scrup(struct console_desc *con)
 {
-	unsigned long i;
-
 	ASSERT(con->scroll_top <= con->scroll_bottom);
 
 	if(con->scroll_bottom - con->scroll_top > 1) {
 		// move the screen up one
-		memmove((void *)(con->origin + LINE_OFFSET(con, con->scroll_top)),
-			(void *)(con->origin + LINE_OFFSET(con, con->scroll_top + 1)),
-			LINE_OFFSET(con, con->scroll_bottom) - LINE_OFFSET(con, con->scroll_top));
+		con->funcs->blt(0, con->scroll_top + 1, con->columns, con->scroll_bottom - con->scroll_top, 0, con->scroll_top);
 	}
 
 	// clear the bottom line
-	for(i = con->origin + LINE_OFFSET(con, con->scroll_bottom); i < con->origin + LINE_OFFSET(con, con->scroll_bottom + 1); i += 2) {
-		*(unsigned char *)i = ' ';
-		*(unsigned char *)(i+1) = con->attr;
-	}
+	con->funcs->fill_glyph(0, con->scroll_bottom, con->columns, 1, ' ', con->attr);
 }
 
 static void scrdown(struct console_desc *con)
@@ -128,16 +113,11 @@ static void scrdown(struct console_desc *con)
 
 	if(con->scroll_bottom - con->scroll_top > 1) {
 		// move the screen down one
-		memmove((void *)(con->origin + LINE_OFFSET(con, con->scroll_top + 1)),
-			(void *)(con->origin + LINE_OFFSET(con, con->scroll_top)),
-			LINE_OFFSET(con, con->scroll_bottom) - LINE_OFFSET(con, con->scroll_top));
+		con->funcs->blt(0, con->scroll_top, con->columns, con->scroll_bottom - con->scroll_top, 0, con->scroll_top+1);
 	}
 
 	// clear the top line
-	for(i = con->origin + LINE_OFFSET(con, con->scroll_top); i < con->origin + LINE_OFFSET(con, con->scroll_top + 1); i += 2) {
-		*(unsigned char *)i = ' ';
-		*(unsigned char *)(i+1) = con->attr;
-	}
+	con->funcs->fill_glyph(0, con->scroll_top, con->columns, 1, ' ', con->attr);
 }
 
 static void lf(struct console_desc *con)
@@ -147,7 +127,6 @@ static void lf(struct console_desc *con)
  		scrup(con);
 	} else if(con->y < con->scroll_bottom) {
 		con->y++;
-		con->pos += con->columns * 2;
 	}
 }
 
@@ -158,23 +137,19 @@ static void rlf(struct console_desc *con)
  		scrdown(con);
 	} else if(con->y > con->scroll_top) {
 		con->y--;
-		con->pos -= con->columns * 2;
 	}
 }
 
 static void cr(struct console_desc *con)
 {
-	con->pos -= con->x * 2;
 	con->x = 0;
 }
 
 static void del(struct console_desc *con)
 {
 	if (con->x > 0) {
-		con->pos -= 2;
 		con->x--;
-		*(unsigned char *)con->pos = ' ';
-		*(unsigned char *)(con->pos + 1) = con->attr;
+		con->funcs->put_glyph(con->x, con->y, ' ', con->attr);
 	}
 }
 
@@ -186,30 +161,18 @@ typedef enum {
 
 static void erase_line(struct console_desc *con, erase_line_mode mode)
 {
-	unsigned char *ptr;
-	int len;
-	int i;
-
 	switch(mode) {
 		case LINE_ERASE_WHOLE:
-			ptr = (unsigned char *)(con->origin + LINE_OFFSET(con, con->y));
-			len = con->columns * 2;
+			con->funcs->fill_glyph(0, con->y, con->columns, 1, ' ', con->attr);
 			break;
 		case LINE_ERASE_LEFT:
-			ptr = (unsigned char *)(con->origin + LINE_OFFSET(con, con->y));
-			len = con->x * 2;
+			con->funcs->fill_glyph(0, con->y, con->x+1, 1, ' ', con->attr);
 			break;
 		case LINE_ERASE_RIGHT:
-			ptr = (unsigned char *)con->pos;
-			len = (con->columns - con->x) * 2;
+			con->funcs->fill_glyph(con->x, con->y, con->columns - con->x, 1, ' ', con->attr);
 			break;
 		default:
 			return;
-	}
-
-	for(i = 0; i < len; i += 2) {
-		ptr[i] = ' ';
-		ptr[i+1] = con->attr;
 	}
 }
 
@@ -221,30 +184,18 @@ typedef enum {
 
 static void erase_screen(struct console_desc *con, erase_screen_mode mode)
 {
-	unsigned char *ptr;
-	int len;
-	int i;
-
 	switch(mode) {
 		case SCREEN_ERASE_WHOLE:
-			ptr = (unsigned char *)con->origin;
-			len = con->end - con->origin;
+			con->funcs->fill_glyph(0, 0, con->columns, con->lines, ' ', con->attr);
 			break;
 		case SCREEN_ERASE_UP:
-			ptr = (unsigned char *)con->origin;
-			len = LINE_OFFSET(con, con->y + 1);
+			con->funcs->fill_glyph(0, 0, con->columns, con->y + 1, ' ', con->attr);
 			break;
 		case SCREEN_ERASE_DOWN:
-			ptr = (unsigned char *)(con->origin + LINE_OFFSET(con, con->y));
-			len = (con->lines - con->y) * con->columns * 2;
+			con->funcs->fill_glyph(con->y, 0, con->columns, con->lines - con->y, ' ', con->attr);
 			break;
 		default:
 			return;
-	}
-
-	for(i = 0; i < len; i += 2) {
-		ptr[i] = ' ';
-		ptr[i+1] = con->attr;
 	}
 }
 
@@ -260,7 +211,6 @@ static void restore_cur(struct console_desc *con, bool restore_attrs)
 {
 	con->x = con->saved_x;
 	con->y = con->saved_y;
-	con->pos = con->origin +((con->y * con->columns + con->x)<<1);
 	if(restore_attrs)
 		con->attr = con->saved_attr;
 }
@@ -271,12 +221,7 @@ static char console_putch(struct console_desc *con, const char c)
 		cr(con);
 		lf(con);
 	}
-
-	*(char *)con->pos = c;
-	*(char *)(con->pos + 1) = con->attr;
-
-	con->pos += 2;
-
+	con->funcs->put_glyph(con->x-1, con->y, c, con->attr);
 	return c;
 }
 
@@ -287,7 +232,6 @@ static void tab(struct console_desc *con)
 		con->x -= con->columns;
 		lf(con);
 	}
-	con->pos = con->origin + ((con->y * con->columns + con->x)<<1);
 }
 
 static void set_scroll_region(struct console_desc *con, int top, int bottom)
@@ -592,6 +536,7 @@ static ssize_t console_write(dev_cookie cookie, const void *buf, off_t pos, ssiz
 
 	mutex_lock(&con->lock);
 
+	update_cursor(con, -1, -1); // hide it
 	err = _console_write(con, buf, len);
 	update_cursor(con, con->x, con->y);
 
@@ -646,6 +591,7 @@ static struct dev_calls console_hooks = {
 
 int console_dev_init(kernel_args *ka)
 {
+#if 0
 	if(!ka->fb.enabled) {
 		dprintf("con_init: mapping vid mem\n");
 		vm_map_physical_memory(vm_get_kernel_aspace_id(), "vid_mem", (void *)&gconsole.origin, REGION_ADDR_ANY_ADDRESS,
@@ -670,7 +616,57 @@ int console_dev_init(kernel_args *ka)
 		// create device node
 		devfs_publish_device("console", (dev_ident)&gconsole, &console_hooks);
 	}
+#endif
+	// iterate through the list of console modules until we find one that accepts the job
+	modules_cookie mc = module_open_list("console");
+	char buffer[SYS_MAX_PATH_LEN];
+	char saved[SYS_MAX_PATH_LEN];
+	size_t bufsize = sizeof(buffer);
+	int found = 0;
+	*saved = '\0';
+	while (!found && (read_next_module_name(mc, buffer, &bufsize) == 0))
+	{
+		char *special = buffer;
+#if ARCH == ARCH_I386
+		dprintf("ARCH_I386: using \"/text\" as the fallback driver\n");
+		special = strstr(buffer, "/text");
+#else
+#endif
+		if (special && (special != buffer))
+		{
+			strlcpy(saved, buffer, sizeof(saved));
+			dprintf("con_init: skipping %s as the fallback module\n", saved);
+		}
+		else
+		{
+			dprintf("con_init: trying module %s\n", buffer);
+			found = (module_get(buffer, 0, (void **)&(gconsole.funcs)) == 0);
+		}
+		bufsize = sizeof(buffer);
+	}
+	close_module_list(mc);
+	// try the fallback module, if required.
+	if (!found && strlen(saved))
+		found = (module_get(saved, 0, (void **)&(gconsole.funcs)) == 0);
+	if (found)
+	{
+		// set up the console structure
+		mutex_init(&gconsole.lock, "console_lock");
+		gconsole.attr = 0x0f;
+		gconsole.funcs->get_size(&gconsole.columns, &gconsole.lines);
+		gconsole.scroll_top = 0;
+		gconsole.scroll_bottom = gconsole.lines - 1;
+		gconsole.bright_attr = true;
+		gconsole.reverse_attr = false;
 
-	return 0;
+		gotoxy(&gconsole, 0, ka->cons_line);
+		update_cursor((&gconsole), gconsole.x, gconsole.y);
+		save_cur(&gconsole, true);
+
+		// create device node
+		devfs_publish_device("console", (dev_ident)&gconsole, &console_hooks);
+	}
+	else dprintf("con_init: failed to find a suitable module :-(\n");
+	return found ? 0 : found;
 }
 

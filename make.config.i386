@@ -1,0 +1,4 @@
+KERNEL_ADDONS += $(addprefix $(KERNEL_ADDONS_BUILD_DIR)/, \
+	console/text/text \
+	console/vmware/vmware \
+)

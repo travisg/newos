@@ -32,17 +32,15 @@ int fixed_devs_init(kernel_args *ka)
 //	ide_bus_init(ka);
 	keyboard_dev_init(ka);
 //	mouse_dev_init(ka);
-	console_dev_init(ka);
 	rtl8139_dev_init(ka);
 #endif
 
 #ifdef ARCH_sh4
 	maple_bus_init(ka);
 	keyboard_dev_init(ka);
-//	console_dev_init(ka);
 	rtl8139_dev_init(ka);
 #endif
-	fb_console_dev_init(ka);
+	console_dev_init(ka);
 	tty_dev_init(ka);
 
 	return 0;
