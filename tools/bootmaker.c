@@ -247,15 +247,17 @@ void *loadfile(char *file, int *size)
 
 void *loadstripfile(char *file, int *size)
 {
-    char temp[256];
+    char temp[L_tmpnam];
     char cmd[4096];
     void *retval;
 
 
     if(strip_debug) {
-        strcpy(temp, "/tmp/mkboot.XXXXXXXX");
-        mkstemp(temp);
-
+        /*  This is broken for cygwin
+		strcpy(temp, "/tmp/mkboot.XXXXXXXX");
+        mkstemp(temp); */
+		tmpnam(temp);
+		
         sprintf(cmd, "cp %s %s; %s %s", file, temp, strip_binary, temp);
         system(cmd);
 
