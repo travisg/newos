@@ -11,7 +11,6 @@
 #include <fcntl.h>
 #include <newos/types.h>
 #include <errno.h>
-#include <unistd.h>
 
 #define BUFFER_SIZE 1024
 
@@ -107,7 +106,7 @@ static int __delete_FILE_struct(int fd)
 	_kern_sem_acquire(sid, 1);
 
 	/* free the FILE space/semaphore*/
-    close(fNode->fd);
+    _kern_close(fNode->fd);
     free(fNode->buf);
     free(fNode);
 
@@ -272,7 +271,22 @@ static long _ftell(FILE* stream)
 
 	_flush(stream);
 
-	p = lseek(stream->fd, 0, _SEEK_CUR) - ((stream->flags & _STDIO_UNGET) ? 1 : 0);
+	p = _kern_seek(stream->fd, 0, _SEEK_CUR) - ((stream->flags & _STDIO_UNGET) ? 1 : 0);
+
+	if(p < 0)
+	{
+		errno = EIO;
+	}
+	return p;
+}
+
+int fseek(FILE *stream, long int offset, int whence)
+{
+	fpos_t p;
+
+	_flush(stream);
+
+	p = _kern_seek(stream->fd, 0, _SEEK_CUR);
 
 	if(p < 0)
 	{
@@ -331,7 +345,7 @@ static int _flush(FILE* stream)
 	{
 		if(stream->flags & _STDIO_WRITE)
 		{
-			int err = write(stream->fd, stream->buf, stream->buf_pos);
+			int err = _kern_write(stream->fd, stream->buf, -1, stream->buf_pos);
 			stream->buf_pos = 0;
 			if(err < 0)
 			{
@@ -346,7 +360,7 @@ static int _flush(FILE* stream)
 			off_t dif = stream->rpos - stream->buf_pos;
 			if(dif < 0)
 			{
-				dif = lseek(stream->fd, dif, SEEK_CUR);
+				dif = _kern_seek(stream->fd, dif, SEEK_CUR);
 				stream->rpos = stream->buf_pos = 0;
 				if(dif < 0)
 				{
@@ -464,7 +478,7 @@ static int _fputc(int ch, FILE *stream)
 {
     if(stream->buf_pos >= stream->buf_size)
     {
-        int err = write(stream->fd, stream->buf, stream->buf_pos);
+        int err = _kern_write(stream->fd, stream->buf, -1, stream->buf_pos);
         if(err < 0)
         {
             errno = EIO;
@@ -605,7 +619,7 @@ static int _fgetc(FILE* stream)
 	{
 		if (stream->rpos >= stream->buf_pos)
 		{
-			int len = read(stream->fd, stream->buf, stream->buf_size);
+			int len = _kern_read(stream->fd, stream->buf, -1, stream->buf_size);
 
 			if (len==0)
 			{

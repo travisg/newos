@@ -8,7 +8,6 @@
 #ifndef __newos__libc_stdio__hh__
 #define __newos__libc_stdio__hh__
 
-
 #include <stddef.h>
 #include <sys/types.h>
 #include <sys/cdefs.h>
@@ -25,6 +24,12 @@ namespace std
 #define _STDIO_EOF 0x0004
 #define _STDIO_ERROR 0x0008
 #define _STDIO_UNGET 0x0010
+
+//#ifndef __newos__libc_unistd__hh__
+#define SEEK_SET 0
+#define SEEK_CUR 1
+#define SEEK_END 2
+//#endif
 
 typedef off_t fpos_t;
 
@@ -68,8 +73,10 @@ int   fflush(FILE *);
 int   fclose(FILE *);
 
 long int ftell(FILE *stream);
-int   fgetpos(FILE *stream, fpos_t *pos);
-int   feof(FILE *);
+int fgetpos(FILE *stream, fpos_t *pos);
+int feof(FILE *);
+int fseek(FILE *stream, long int offset, int whence);
+
 int   ferror(FILE *);
 void  clearerr(FILE *);
 
