@@ -5,27 +5,9 @@
 #ifndef _NEWOS_ARCH_CPU_H
 #define _NEWOS_ARCH_CPU_H
 
-#ifdef ARCH_i386
-#include <arch/i386/cpu.h>
-#endif
-#ifdef ARCH_sh4
-#include <arch/sh4/cpu.h>
-#endif
-#ifdef ARCH_alpha
-#include <arch/alpha/cpu.h>
-#endif
-#ifdef ARCH_sparc64
-#include <arch/sparc64/cpu.h>
-#endif
-#ifdef ARCH_mips
-#include <arch/mips/cpu.h>
-#endif
-#ifdef ARCH_ppc
-#include <arch/ppc/cpu.h>
-#endif
-#ifdef ARCH_m68k
-#include <arch/m68k/cpu.h>
-#endif
+#include <newos/types.h>
+
+#include INC_ARCH(arch, cpu.h)
 
 #endif
 

@@ -198,7 +198,7 @@ $(warning found newos toolchain!)
 	SIZE = $(TOOLCHAIN_ARCH)-newos-size
 endif
 
-GLOBAL_CFLAGS += -Wall -W -Wno-multichar -Wno-unused-parameter -Wmissing-prototypes -finline -nostdinc -fno-builtin -DARCH_$(ARCH) -DNEWOS=1
+GLOBAL_CFLAGS += -Wall -W -Wno-multichar -Wno-unused-parameter -Wmissing-prototypes -finline -nostdinc -fno-builtin -DARCH_$(ARCH) -DNEWOS=1 -D__ARCH__=$(ARCH) -U$(ARCH)
 GLOBAL_CPPFLAGS = $(GLOBAL_CFLAGS) -fno-rtti
 
 # find libgcc

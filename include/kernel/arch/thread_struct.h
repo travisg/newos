@@ -5,27 +5,7 @@
 #ifndef _NEWOS_KERNEL_ARCH_THREAD_STRUCT_H
 #define _NEWOS_KERNEL_ARCH_THREAD_STRUCT_H
 
-#ifdef ARCH_i386
-#include <kernel/arch/i386/thread_struct.h>
-#endif
-#ifdef ARCH_sh4
-#include <kernel/arch/sh4/thread_struct.h>
-#endif
-#ifdef ARCH_alpha
-#include <kernel/arch/alpha/thread_struct.h>
-#endif
-#ifdef ARCH_sparc64
-#include <kernel/arch/sparc64/thread_struct.h>
-#endif
-#ifdef ARCH_mips
-#include <kernel/arch/mips/thread_struct.h>
-#endif
-#ifdef ARCH_ppc
-#include <kernel/arch/ppc/thread_struct.h>
-#endif
-#ifdef ARCH_m68k
-#include <kernel/arch/m68k/thread_struct.h>
-#endif
+#include INC_ARCH(kernel/arch, thread_struct.h)
 
 #endif
 

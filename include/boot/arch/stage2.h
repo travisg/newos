@@ -5,23 +5,8 @@
 #ifndef _NEWOS_KERNEL_BOOT_ARCH_STAGE2_H
 #define _NEWOS_KERNEL_BOOT_ARCH_STAGE2_H
 
-#ifdef ARCH_i386
-#include <boot/arch/i386/stage2.h>
-#endif
-#ifdef ARCH_sh4
-#include <boot/arch/sh4/stage2.h>
-#endif
-#ifdef ARCH_sparc64
-#include <boot/arch/sparc64/stage2.h>
-#endif
-#ifdef ARCH_mips
-#include <boot/arch/mips/stage2.h>
-#endif
-#ifdef ARCH_ppc
-#include <boot/arch/ppc/stage2.h>
-#endif
-#ifdef ARCH_m68k
-#include <boot/arch/m68k/stage2.h>
-#endif
+#define INC_BOOT_ARCH(x) <boot/arch/__ARCH__/x>
+
+#include INC_BOOT_ARCH(stage2.h)
 
 #endif

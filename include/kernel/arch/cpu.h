@@ -34,27 +34,7 @@ int arch_cpu_user_memset(void *s, char c, size_t count, addr *fault_handler);
 
 void arch_cpu_idle(void);
 
-#ifdef ARCH_i386
-#include <kernel/arch/i386/cpu.h>
-#endif
-#ifdef ARCH_sh4
-#include <kernel/arch/sh4/cpu.h>
-#endif
-#ifdef ARCH_alpha
-#include <kernel/arch/alpha/cpu.h>
-#endif
-#ifdef ARCH_sparc64
-#include <kernel/arch/sparc64/cpu.h>
-#endif
-#ifdef ARCH_mips
-#include <kernel/arch/mips/cpu.h>
-#endif
-#ifdef ARCH_ppc
-#include <kernel/arch/ppc/cpu.h>
-#endif
-#ifdef ARCH_m68k
-#include <kernel/arch/m68k/cpu.h>
-#endif
+#include INC_ARCH(kernel/arch, cpu.h)
 
 #endif
 
