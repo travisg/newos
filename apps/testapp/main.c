@@ -8,10 +8,10 @@
 #include <libsys/syscalls.h>
 #include <libsys/stdio.h>
 
-void port_test();
-int port_test_thread_func(void* arg);
+static void port_test(void);
+static int port_test_thread_func(void* arg);
 
-int test_thread(void *args)
+static int test_thread(void *args)
 {
 	int i = (int)args;
 
@@ -188,7 +188,7 @@ int main()
 
 port_id test_p1, test_p2, test_p3;
 
-void port_test()
+static void port_test(void)
 {
 	char testdata[5];
 	char testdata2[5];
@@ -250,7 +250,7 @@ void port_test()
 	printf("porttest: end test main thread - will exit proc\n");
 }
 
-int port_test_thread_func(void* arg)
+static int port_test_thread_func(void* arg)
 {
 	int msg_code;
 	int n;
