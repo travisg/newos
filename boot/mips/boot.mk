@@ -1,34 +1,56 @@
-# i386 stage2 makefile
-STAGE2_DIR = boot/$(ARCH)
-STAGE2_OBJ_DIR = $(STAGE2_DIR)/$(OBJ_DIR)
+ifneq ($(_BOOT_MAKE),1)
+_BOOT_MAKE = 1
+
+# include targets we depend on
+include lib/lib.mk
+include kernel/kernel.mk
+include apps/apps.mk
+
+# mips stage2 makefile
+BOOT_DIR = boot/$(ARCH)
+BOOT_OBJ_DIR = $(BOOT_DIR)/$(OBJ_DIR)
+
 STAGE2_OBJS = \
-	$(STAGE2_OBJ_DIR)/stage2.o
+	$(BOOT_OBJ_DIR)/stage2.o
 
 DEPS += $(STAGE2_OBJS:.o=.d)
 
-STAGE2 = $(STAGE2_OBJ_DIR)/stage2
+STAGE2 = $(BOOT_OBJ_DIR)/stage2
 
 $(STAGE2): $(STAGE2_OBJS) $(KLIBS)
-	$(LD) -dN --script=$(STAGE2_DIR)/stage2.ld -L $(LIBGCC_PATH) $(STAGE2_OBJS) $(KLIBS) $(LIBGCC) -o $@
+	$(LD) -dN --script=$(BOOT_DIR)/stage2.ld -L $(LIBGCC_PATH) $(STAGE2_OBJS) $(KLIBS) $(LIBGCC) -o $@
+
+stage2: $(STAGE2)
 
 stage2clean:
 	rm -f $(STAGE2_OBJS) $(STAGE2) 
 
+CLEAN += stage2clean
+
+stage1:
+
+FINAL = $(BOOT_DIR)/final
+
+$(FINAL): $(STAGE2) $(KERNEL) $(APPS) tools 
+	$(BOOTMAKER) $(BOOT_DIR)/config.ini -o $(FINAL)
+
 # 
-$(STAGE2_OBJ_DIR)/%.o: $(STAGE2_DIR)/%.c 
-	@mkdir -p $(STAGE2_OBJ_DIR)
-	$(CC) -c $< $(GLOBAL_CFLAGS) -Iinclude -I$(STAGE2_DIR) -o $@
+$(BOOT_OBJ_DIR)/%.o: $(BOOT_DIR)/%.c 
+	@mkdir -p $(BOOT_OBJ_DIR)
+	$(CC) -c $< $(GLOBAL_CFLAGS) -Iinclude -I$(BOOT_DIR) -o $@
 
-$(STAGE2_OBJ_DIR)/%.d: $(STAGE2_DIR)/%.c
-	@mkdir -p $(STAGE2_OBJ_DIR)
+$(BOOT_OBJ_DIR)/%.d: $(BOOT_DIR)/%.c
+	@mkdir -p $(BOOT_OBJ_DIR)
 	@echo "making deps for $<..."
-	@($(ECHO) -n $(dir $@);$(CC) $(GLOBAL_CFLAGS) -Iinclude -I$(STAGE2_DIR) -M -MG $<) > $@
+	@($(ECHO) -n $(dir $@);$(CC) $(GLOBAL_CFLAGS) -Iinclude -I$(BOOT_DIR) -M -MG $<) > $@
 
-$(STAGE2_OBJ_DIR)/%.d: $(STAGE2_DIR)/%.S
-	@mkdir -p $(STAGE2_OBJ_DIR)
+$(BOOT_OBJ_DIR)/%.d: $(BOOT_DIR)/%.S
+	@mkdir -p $(BOOT_OBJ_DIR)
 	@echo "making deps for $<..."
-	@($(ECHO) -n $(dir $@);$(CC) $(GLOBAL_CFLAGS) -Iinclude -I$(STAGE2_DIR) -M -MG $<) > $@
+	@($(ECHO) -n $(dir $@);$(CC) $(GLOBAL_CFLAGS) -Iinclude -I$(BOOT_DIR) -M -MG $<) > $@
 
-$(STAGE2_OBJ_DIR)/%.o: $(STAGE2_DIR)/%.S
-	@mkdir -p $(STAGE2_OBJ_DIR)
-	$(CC) -c $< $(GLOBAL_CFLAGS) -Iinclude -I$(STAGE2_DIR) -o $@
+$(BOOT_OBJ_DIR)/%.o: $(BOOT_DIR)/%.S
+	@mkdir -p $(BOOT_OBJ_DIR)
+	$(CC) -c $< $(GLOBAL_CFLAGS) -Iinclude -I$(BOOT_DIR) -o $@
+
+endif

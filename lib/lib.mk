@@ -1,3 +1,6 @@
+ifneq ($(_LIB_MAKE),1)
+_LIB_MAKE = 1
+
 LIB_DIR = lib
 
 LIBS = 
@@ -17,3 +20,5 @@ klibs: $(KLIBS)
 libclean: $(LIBS_CLEAN)
 
 CLEAN += libclean
+
+endif

@@ -24,6 +24,7 @@ endif
 
 BOOTMAKER = tools/bootmaker
 NETBOOT = tools/netboot
+BIN2H = tools/bin2h
 
 CC = $(HOST_CC)
 LD = $(HOST_LD)
@@ -109,19 +110,15 @@ OBJ_DIR = obj.$(ARCH)
 
 GLOBAL_CFLAGS += -pipe -Werror -Wall -W -Wno-multichar -Wno-unused -nostdinc -fno-builtin -DARCH_$(ARCH)
 
-FINAL = boot/$(ARCH)/final
-
-final: $(FINAL)
-
 # sub makefiles are responsible for adding to these
 DEPS =
 CLEAN =
+FINAL = 
 
-include lib/lib.mk
-include boot/$(ARCH)/stage2.mk
-include dev/dev.mk
-include kernel/kernel.mk
-include apps/apps.mk
+final: final1
+
+# include the top level makefile
+include boot/$(ARCH)/boot.mk
 
 BOOTMAKER_ARGS =
 ifeq ($(ARCH),sparc)
@@ -131,24 +128,11 @@ ifeq ($(ARCH),sh4)
 BOOTMAKER_ARGS += --sh4
 endif
 
-$(FINAL): $(KERNEL) $(STAGE2) $(APPS) tools
-	$(BOOTMAKER) boot/$(ARCH)/config.ini -o $(FINAL) $(BOOTMAKER_ARGS)
+final1: $(FINAL)
 	rm -f final.$(ARCH);ln -sf $(FINAL) final.$(ARCH)
 	rm -f system.$(ARCH);ln -sf $(KERNEL) system.$(ARCH)
 
-ifeq ($(ARCH),i386)
-floppy: floppy1
-
-floppy1: $(KERNEL) $(STAGE2) $(APPS) tools
-	$(BOOTMAKER) boot/$(ARCH)/config.ini --floppy -o $(FINAL)
-	rm -f final.$(ARCH);ln -sf $(FINAL) final.$(ARCH)
-	rm -f system.$(ARCH);ln -sf $(KERNEL) system.$(ARCH)
-
-disk: floppy
-	dd if=$(FINAL) of=/dev/disk/floppy/raw bs=18k
-endif
-
-tools: $(NETBOOT) $(BOOTMAKER)
+tools: $(NETBOOT) $(BOOTMAKER) $(BIN2H)
 
 $(BOOTMAKER): $(BOOTMAKER).c tools/sh4bootblock.h tools/sparcbootblock.h
 	$(HOST_CC) -O3 -o $@ $(BOOTMAKER).c
@@ -164,13 +148,13 @@ endif
 $(NETBOOT): $(NETBOOT).c
 	$(HOST_CC) -O3 -o $@ $(NETBOOT).c $(NETBOOT_LINK_ARGS)
 
+$(BIN2H): $(BIN2H).c
+	$(HOST_CC) -O3 -o $@ $(BIN2H).c
+
 toolsclean:
-	rm -f $(BOOTMAKER) $(NETBOOT) $(NETBOOT_DC)
+	rm -f $(BOOTMAKER) $(NETBOOT) $(NETBOOT_DC) $(BIN2H)
 
-bootclean: stage2clean
-	rm -f $(STAGE2)
-
-CLEAN += toolsclean bootclean
+CLEAN += toolsclean
 
 clean: $(CLEAN)
 	rm -f $(KERNEL) $(FINAL)

@@ -1,6 +1,12 @@
+ifneq ($(_KERNEL_MAKE),1)
+_KERNEL_MAKE = 1
+
+# include targets we depend on
+include lib/lib.mk
+include dev/dev.mk
+
 KERNEL_DIR = kernel
 KERNEL_OBJ_DIR = kernel/$(OBJ_DIR)
-KERNEL_LIB = $(KERNEL_OBJ_DIR)/kernel.o
 KERNEL_OBJS = \
         $(KERNEL_OBJ_DIR)/main.o \
         $(KERNEL_OBJ_DIR)/elf.o \
@@ -18,7 +24,7 @@ KERNEL_OBJS = \
         $(KERNEL_OBJ_DIR)/thread.o \
         $(KERNEL_OBJ_DIR)/vfs.o
 
-KERNEL_INCLUDES = -Iinclude -Idev -Iboot/$(ARCH)
+KERNEL_INCLUDES = -Iinclude
 
 include $(KERNEL_DIR)/fs/fs_kernel.mk
 include $(KERNEL_DIR)/vm/vm_kernel.mk
@@ -32,14 +38,11 @@ KERNEL = $(KERNEL_OBJ_DIR)/system
 
 kernel:	$(KERNEL)
 
-$(KERNEL): $(KERNEL_LIB) $(KLIBS) $(DEV)
-	$(LD) -dN --script=$(KERNEL_ARCH_DIR)/kernel.ld -L $(LIBGCC_PATH) -o $@ $(KERNEL_LIB) $(LINK_KLIBS) $(DEV) $(LIBGCC)
-
-$(KERNEL_LIB): $(KERNEL_OBJS)
-	$(LD) $(GLOBAL_LDFLAGS) -r -o $@ $(KERNEL_OBJS)
+$(KERNEL): $(KERNEL_OBJS) $(KLIBS) $(DEV)
+	$(LD) -dN --script=$(KERNEL_ARCH_DIR)/kernel.ld -L $(LIBGCC_PATH) -o $@ $(KERNEL_OBJS) $(LINK_KLIBS) $(DEV) $(LIBGCC)
 
 kernelclean:
-	rm -f $(KERNEL_OBJS) $(KERNEL_LIB)
+	rm -f $(KERNEL_OBJS)
 
 CLEAN += kernelclean
 
@@ -53,3 +56,5 @@ $(KERNEL_OBJ_DIR)/%.d: $(KERNEL_DIR)/%.c
 	@mkdir -p $(KERNEL_OBJ_DIR)
 	@echo "making deps for $<..."
 	@($(ECHO) -n $(dir $@); $(CC) $(GLOBAL_CFLAGS) $(KERNEL_INCLUDES) -M -MG $<) > $@
+
+endif

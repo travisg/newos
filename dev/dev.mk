@@ -1,3 +1,6 @@
+ifneq ($(_DEV_MAKE),1)
+_DEV_MAKE = 1
+
 DEV_DIR = dev
 DEV_OBJ_DIR = $(DEV_DIR)/$(OBJ_DIR)
 DEV_OBJS = \
@@ -17,6 +20,8 @@ DEV = $(DEV_OBJ_DIR)/dev.a
 
 $(DEV): $(DEV_OBJS)
 	$(AR) r $@ $(DEV_OBJS)
+
+devs: $(DEV)
 
 devclean:
 	rm -f $(DEV_OBJS) $(DEV)
@@ -41,3 +46,4 @@ $(DEV_OBJ_DIR)/%.d: $(DEV_DIR)/%.S
 $(DEV_OBJ_DIR)/%.o: $(DEV_DIR)/%.S
 	@mkdir -p $(DEV_OBJ_DIR)
 	$(CC) -c $< $(GLOBAL_CFLAGS) $(DEV_INCLUDES) $(DEV_SUB_INCLUDES) -o $@
+endif
