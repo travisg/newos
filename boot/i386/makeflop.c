@@ -1,9 +1,15 @@
+/* 
+** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Distributed under the terms of the NewOS License.
+*/
 #include <stdio.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <fcntl.h>
 
+static unsigned char bootblock[] = {
 #include "bootblock.h"
+};
 
 #ifndef O_BINARY
 #define O_BINARY 0

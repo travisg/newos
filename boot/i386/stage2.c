@@ -70,6 +70,7 @@ void _start(unsigned int mem, char *str)
 
 	clearscreen();
 	dprintf("stage2 bootloader entry.\n");
+	dprintf("memsize = 0x%x\n", mem);
 
 	// calculate the conversion factor that translates rdtsc time to real microseconds
 	calculate_cpu_conversion_factor();

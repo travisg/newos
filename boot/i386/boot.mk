@@ -36,7 +36,7 @@ bootclean:
 
 CLEAN += bootclean
 
-$(MAKEFLOP): $(MAKEFLOP).c
+$(MAKEFLOP): $(MAKEFLOP).c $(BOOT_DIR)/bootblock.h
 	$(HOST_CC) -O3 $(MAKEFLOP).c -o $@
 
 $(FINAL): $(STAGE2) $(KERNEL) $(APPS) tools
