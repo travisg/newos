@@ -390,6 +390,8 @@ int console_open(const char *name, int flags, void **cookie)
 {
 	TOUCH(name);TOUCH(flags);TOUCH(cookie);
 
+	dprintf("console_open: entry\n");
+
 	*cookie = NULL;
 
 	return 0;
@@ -399,27 +401,42 @@ int console_close(void *cookie)
 {
 	TOUCH(cookie);
 
+	dprintf("console_close: entry\n");
+
 	return 0;
 }
 
-int console_read(void *cookie, off_t pos, void *data, size_t *num_bytes)
+int console_freecookie(void *cookie)
+{
+	TOUCH(cookie);
+	
+	dprintf("console_freecookie: entry\n");
+
+	return 0;
+}
+
+int console_read(void *cookie, void *data, off_t pos, size_t *num_bytes)
 {
 	TOUCH(cookie);TOUCH(pos);TOUCH(data);TOUCH(num_bytes);
 
 //	sem_acquire(console_sem, 1);
 //	sem_release(console_sem, 1);
+
+	dprintf("console_read: entry\n");
 	
 	*num_bytes = 0;
 	
 	return 0;
 }
 
-int console_write(void *cookie, off_t pos, const void *data, size_t *num_bytes)
+int console_write(void *cookie, const void *data, off_t pos, size_t *num_bytes)
 {
 	size_t i;
 	const char *c;
 
 	TOUCH(cookie);TOUCH(pos);TOUCH(data);TOUCH(num_bytes);
+
+	dprintf("console_write: entry\n");
 
 	sem_acquire(console_sem, 1);
 
@@ -441,6 +458,7 @@ int console_write(void *cookie, off_t pos, const void *data, size_t *num_bytes)
 struct device_hooks console_hooks = {
 	&console_open,
 	&console_close,
+	&console_freecookie,
 	&console_read,
 	&console_write
 };
@@ -472,7 +490,7 @@ int console_dev_init(kernel_args *ka)
 */
 
 	// create device node
-	devfs_create_device_node("console", &console_hooks);
+	devfs_create_device_node("/console", &console_hooks);
 
 	return 0;
 }

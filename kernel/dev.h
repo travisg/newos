@@ -9,8 +9,9 @@ int dev_init(kernel_args *ka);
 struct device_hooks {
 	int (*driver_open)(const char *name, int flags, void **cookie);
 	int (*driver_close)(void *cookie);
-	int (*driver_read)(void *cookie, off_t pos, void *data, size_t *num_bytes);
-	int (*driver_write)(void *cookie, off_t pos, const void *data, size_t *num_bytes);
+	int (*driver_freecookie)(void *cookie);
+	int (*driver_read)(void *cookie, void *data, off_t pos, size_t *num_bytes);
+	int (*driver_write)(void *cookie, const void *data, off_t pos, size_t *num_bytes);
 };
 
 #endif

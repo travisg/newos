@@ -56,6 +56,8 @@ static struct devfs_vnode *devfs_create_vnode(struct devfs *fs)
 {
 	struct devfs_vnode *v;
 	
+	dprintf("devfs_create_vnode: entry\n");
+	
 	v = kmalloc(sizeof(struct devfs_vnode));
 	if(v == NULL)
 		return NULL;
@@ -201,6 +203,11 @@ int devfs_mount(void **fs_cookie, void *flags, void *covered_vnode, fs_id id, vo
 
 	dprintf("devfs_mount: entry\n");
 
+	if(system_devfs != NULL) {
+		dprintf("devfs_mount: already have a devfs mounted somewhere!\n");
+		return -1;
+	}
+
 	fs = kmalloc(sizeof(struct devfs));
 	if(fs == NULL) {
 		err = -1;
@@ -243,6 +250,9 @@ int devfs_mount(void **fs_cookie, void *flags, void *covered_vnode, fs_id id, vo
 	}
 	strcpy(v->name, "");
 	
+	
+	system_devfs = fs;
+	fs->root_vnode = v;
 	*root_vnode = v;
 	*fs_cookie = fs;
 	
@@ -316,7 +326,7 @@ int devfs_dispose_vnode(void *_fs, void *_v)
 	return 0;
 }
 
-int devfs_opendir(void *_fs, void *_base_vnode, const char *path, void **_vnode, void **_dircookie)
+int devfs_opendir(void *_fs, void *_base_vnode, const char *path, void **passthru, void **_vnode, void **_dircookie)
 {
 	struct devfs *fs = _fs;
 	struct devfs_vnode *base = _base_vnode;
@@ -338,7 +348,7 @@ int devfs_opendir(void *_fs, void *_base_vnode, const char *path, void **_vnode,
 	if(redir == true) {
 		// loop back into the vfs because the parse hit a mount point
 		sem_release(fs->sem, 1);
-		return vfs_opendir_loopback(v->redir_vnode, &path[start], _vnode, _dircookie);
+		return vfs_opendir_loopback(v->redir_vnode, &path[start], passthru, _vnode, _dircookie);
 	}
 	
 	cookie = kmalloc(sizeof(struct devfs_dircookie));
@@ -411,19 +421,20 @@ int devfs_rewinddir(void *_fs, void *_dir_vnode, void *_dircookie)
 	return 0;
 }
 
-int devfs_closedir(void *_fs, void *_dir_vnode)
+int devfs_closedir(void *_fs, void *_dir_vnode, void *_cookie)
 {
-	TOUCH(_fs);
+	TOUCH(_fs);TOUCH(_cookie);
 
 	dprintf("devfs_closedir: entry vnode 0x%x\n", _dir_vnode);
 
 	return 0;
 }
 
-int devfs_freedircookie(void *_fs, void *_dircookie)
+int devfs_freedircookie(void *_fs, void *_vnode, void *_dircookie)
 {
 	struct devfs_dircookie *cookie = _dircookie;
-	TOUCH(_fs);
+
+	TOUCH(_fs);TOUCH(_vnode);
 	
 	dprintf("devfs_freedircookie: entry dircookie 0x%x\n", cookie);
 
@@ -484,6 +495,85 @@ err:
 	return err;
 }
 
+
+int devfs_open(void *_fs, void *_base_vnode, const char *path, void **passthru, void **_vnode, void **_cookie)
+{
+	struct devfs *fs = _fs;
+	struct devfs_vnode *base = _base_vnode;
+	struct devfs_vnode *v;
+	void *cookie;
+	int err = 0;
+	bool redir;
+	int start = 0;
+
+	dprintf("devfs_open: path '%s', base_vnode 0x%x\n", path, base);
+
+	sem_acquire(fs->sem, 1);
+
+	v = devfs_get_vnode_from_path(fs, base, path, &start, &redir);
+	if(v == NULL) {
+		err = -1;
+		goto err;
+	}
+	if(redir == true) {
+		// loop back into the vfs because the parse hit a mount point
+		sem_release(fs->sem, 1);
+		return vfs_open_loopback(v->redir_vnode, &path[start], passthru, _vnode, _cookie);
+	}
+	
+	err = v->hooks->driver_open(v->name, 0, &cookie);
+	if(err < 0)
+		goto err;
+	
+	dprintf("devfs_open: returning new vnode 0x%x, cookie 0x%x\n", v, cookie);
+	
+	*_cookie = cookie;
+	*_vnode = v;	
+
+err:
+	sem_release(fs->sem, 1);
+
+	return err;
+}
+
+int devfs_read(void *_fs, void *_vnode, void *_cookie, void *buf, off_t pos, size_t *len)
+{
+	struct devfs_vnode *v = _vnode;
+	
+	TOUCH(_fs);
+
+	return v->hooks->driver_read(_cookie, buf, pos, len);
+}
+
+int devfs_write(void *_fs, void *_vnode, void *_cookie, const void *buf, off_t pos, size_t *len)
+{
+	struct devfs_vnode *v = _vnode;
+	
+	TOUCH(_fs);
+
+	dprintf("devfs_write: vnode 0x%x\n", v);
+
+	return v->hooks->driver_write(_cookie, buf, pos, len);
+}
+
+int devfs_close(void *_fs, void *_vnode, void *_cookie)
+{
+	struct devfs_vnode *v = _vnode;
+	
+	TOUCH(_fs);
+
+	return v->hooks->driver_close(_cookie);
+}
+
+int devfs_freecookie(void *_fs, void *_vnode, void *_cookie)
+{
+	struct devfs_vnode *v = _vnode;
+	
+	TOUCH(_fs);
+
+	return v->hooks->driver_freecookie(_cookie);
+}
+
 int devfs_create_device_node(const char *path, struct device_hooks *hooks)
 {
 	struct devfs *fs;
@@ -531,7 +621,7 @@ int devfs_create_device_node(const char *path, struct device_hooks *hooks)
 	}
 	sem_release(fs->sem, 1);
 
-	err = 0;
+	return 0;
 
 err1:
 	devfs_delete_vnode(fs, new_vnode, false);
@@ -553,6 +643,11 @@ struct fs_calls devfs_calls = {
 	&devfs_closedir,
 	&devfs_freedircookie,
 	&devfs_mkdir,
+	&devfs_open,
+	&devfs_read,
+	&devfs_write,
+	&devfs_close,
+	&devfs_freecookie
 };
 
 int bootstrap_devfs()

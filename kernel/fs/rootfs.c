@@ -239,6 +239,7 @@ int rootfs_mount(void **fs_cookie, void *flags, void *covered_vnode, fs_id id, v
 	strcpy(v->name, "");
 	v->vfs_has = true;
 	
+	fs->root_vnode = v;
 	*root_vnode = v;
 	*fs_cookie = fs;
 	
@@ -319,7 +320,7 @@ int rootfs_dispose_vnode(void *_fs, void *_v)
 	return 0;
 }
 
-int rootfs_opendir(void *_fs, void *_base_vnode, const char *path, void **_vnode, void **_dircookie)
+int rootfs_opendir(void *_fs, void *_base_vnode, const char *path, void **passthru, void **_vnode, void **_dircookie)
 {
 	struct rootfs *fs = _fs;
 	struct rootfs_vnode *base = _base_vnode;
@@ -341,7 +342,7 @@ int rootfs_opendir(void *_fs, void *_base_vnode, const char *path, void **_vnode
 	if(redir == true) {
 		// loop back into the vfs because the parse hit a mount point
 		sem_release(fs->sem, 1);
-		return vfs_opendir_loopback(v->redir_vnode, &path[start], _vnode, _dircookie);
+		return vfs_opendir_loopback(v->redir_vnode, &path[start], passthru, _vnode, _dircookie);
 	}
 	
 	cookie = kmalloc(sizeof(struct rootfs_dircookie));
@@ -414,19 +415,19 @@ int rootfs_rewinddir(void *_fs, void *_dir_vnode, void *_dircookie)
 	return 0;
 }
 
-int rootfs_closedir(void *_fs, void *_dir_vnode)
+int rootfs_closedir(void *_fs, void *_dir_vnode, void *_closedir)
 {
-	TOUCH(_fs);
+	TOUCH(_fs);TOUCH(_closedir);
 
 	dprintf("rootfs_closedir: entry vnode 0x%x\n", _dir_vnode);
 
 	return 0;
 }
 
-int rootfs_freedircookie(void *_fs, void *_dircookie)
+int rootfs_freedircookie(void *_fs, void *_vnode, void *_dircookie)
 {
 	struct rootfs_dircookie *cookie = _dircookie;
-	TOUCH(_fs);
+	TOUCH(_fs);TOUCH(_vnode);
 	
 	dprintf("rootfs_freedircookie: entry dircookie 0x%x\n", cookie);
 
@@ -487,6 +488,70 @@ err:
 	return err;
 }
 
+int rootfs_open(void *_fs, void *_base_vnode, const char *path, void **passthru, void **_vnode, void **_cookie)
+{
+	struct rootfs *fs = _fs;
+	struct rootfs_vnode *base = _base_vnode;
+	struct rootfs_vnode *v;
+	int start = 0;
+	bool redir;
+	int err;
+	
+	TOUCH(_fs);TOUCH(_base_vnode);TOUCH(path);TOUCH(_vnode);TOUCH(_cookie);
+
+	sem_acquire(fs->sem, 1);
+
+	v = rootfs_get_vnode_from_path(fs, base, path, &start, &redir);
+	if(v == NULL) {
+		err = -1;
+		goto err;
+	}
+	if(redir == true) {
+		// loop back into the vfs because the parse hit a mount point
+		sem_release(fs->sem, 1);
+		return vfs_open_loopback(v->redir_vnode, &path[start], passthru, _vnode, _cookie);
+	}
+	// we can't open here
+	err = -1;
+
+err:
+	sem_release(fs->sem, 1);
+
+	return err;
+}
+
+int rootfs_read(void *_fs, void *_vnode, void *_cookie, void *buf, off_t pos, size_t *len)
+{
+	TOUCH(_fs);TOUCH(_vnode);TOUCH(_cookie);TOUCH(buf);TOUCH(pos);TOUCH(len);
+
+	dprintf("rootfs_read called\n");
+
+	return -1;
+}
+
+int rootfs_write(void *_fs, void *_vnode, void *_cookie, const void *buf, off_t pos, size_t *len)
+{
+	TOUCH(_fs);TOUCH(_vnode);TOUCH(_cookie);TOUCH(buf);TOUCH(pos);TOUCH(len);
+
+	dprintf("rootfs_write called\n");
+
+	return -1;
+}
+
+int rootfs_close(void *_fs, void *_vnode, void *_cookie)
+{
+	TOUCH(_fs);TOUCH(_vnode);TOUCH(_cookie);
+
+	return -1;
+}
+
+int rootfs_freecookie(void *_fs, void *_vnode, void *_cookie)
+{
+	TOUCH(_fs);TOUCH(_vnode);TOUCH(_cookie);
+
+	return -1;
+}
+
 struct fs_calls rootfs_calls = {
 	&rootfs_mount,
 	&rootfs_unmount,
@@ -499,6 +564,11 @@ struct fs_calls rootfs_calls = {
 	&rootfs_closedir,
 	&rootfs_freedircookie,
 	&rootfs_mkdir,
+	&rootfs_open,
+	&rootfs_read,
+	&rootfs_write,
+	&rootfs_close,
+	&rootfs_freecookie,
 };
 
 // XXX
