@@ -23,6 +23,7 @@
 #include <kernel/dev/beos.h>
 #include <kernel/dev/devs.h>
 #include <kernel/bus/bus.h>
+#include <kernel/module.h>
 
 #include <nulibc/string.h>
 
@@ -117,6 +118,7 @@ static int main2(void *unused)
 
 	net_init(&ka);
 	dev_init(&ka);
+	module_init( &ka, NULL );
 	bus_init(&ka);
 	devs_init(&ka);
 	con_init(&ka);

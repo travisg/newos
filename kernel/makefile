@@ -28,7 +28,8 @@ MY_OBJS := \
 	thread.o \
 	cbuf.o \
 	cpu.o \
-	vfs.o
+	vfs.o \
+	module.o
 
 MY_INCLUDES := -Iinclude
 MY_CFLAGS := $(KERNEL_CFLAGS)
