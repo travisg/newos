@@ -1,34 +1,40 @@
 Implement:
 
-rtl8139 driver - i386
-TCP/IP stack
-sparc v8 port
-sparc v9 port
-alpha port
+PORTS:
+ sparc v8 port
+ sparc v9 port
+ alpha port
+ mips port (SGI Indy)	
 user-space loader
-kernel ELF loader
-improved kernel ELF loader - i386
+kernel module loader
 disk based filesystem
-tty layer?
+tty layer
+process environment variables
 maple bus layer - dreamcast
-default vfs handlers
+vfs redo:
+ remove multiple streams
+ move path parsing back into vfs?
+ default vfs handlers
 sh4 cache enable - dreamcast
-performance counters
+statistic gathering
 
 In Progress:
-disk driver
-improved VM
-mips port (SGI Indy)
+VM:
+ memmap
+ swap
+ page out
+ppc port (iMac)
 rtl8139 driver - dreamcast
+TCP/IP stack
 
 Finish:
 
 sh4 console - dreamcast
-SMP mailbox check during spin
 sh4 test_and_set - dreamcast
-improved schedule quantum handling
 sh4 invalidate_TLB - dreamcast
-PCI bus - i386
+SMP mailbox check during spin
+improved schedule quantum handling
+ide driver cleanup
 
 Fix:
-
+crash in stage2 on some systems
