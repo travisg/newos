@@ -8,6 +8,7 @@
 #include <kernel/smp.h>
 #include <kernel/console.h>
 #include <kernel/heap.h>
+#include <kernel/gdb.h>
 #include <sys/errors.h>
 
 #include <kernel/arch/dbg_console.h>
@@ -18,6 +19,9 @@
 #include <libc/printf.h>
 #include <libc/string.h>
 #include <libc/ctype.h>
+
+
+int dbg_register_file[2][14]; /* XXXmpetit -- must be made generic */
 
 
 static bool serial_debug_on = false;
@@ -124,6 +128,21 @@ static int debug_read_line(char *buf, int max_len)
 						break;
 				}
 				break;
+			case '$':
+			case '+':
+				/* HACK ALERT!!!
+				 *
+				 * If we get a $ at the beginning of the line
+				 * we assume we are talking with GDB
+				 */
+				if(ptr == 0) {
+					strcpy(buf, "gdb");
+					ptr= 4;
+					done= true;
+					break;
+				} else {
+					/* fall thru */
+				}
 			default:
 				buf[ptr++] = c;
 				dbg_putch(c);
@@ -171,7 +190,7 @@ static int debug_parse_line(char *buf, char **argv, int *argc, int max_args)
 	return *argc;
 }
 
-void kernel_debugger()
+static void kernel_debugger_loop()
 {
 	int argc;
 	struct debugger_command *cmd;
@@ -201,6 +220,13 @@ void kernel_debugger()
 		if(cur_line >= HISTORY_SIZE)
 			cur_line = 0;
 	}
+}
+
+void kernel_debugger()
+{
+	dbg_save_registers(&(dbg_register_file[smp_get_current_cpu()][0]));
+
+	kernel_debugger_loop();
 }
 
 int panic(const char *fmt, ...)
@@ -332,6 +358,7 @@ int dbg_init2(kernel_args *ka)
 {
 	dbg_add_command(&cmd_help, "help", "List all debugger commands");
 	dbg_add_command(&cmd_reboot, "reboot", "Reboot");
+	dbg_add_command(&cmd_gdb, "gdb", "Connect to remote gdb");
 
 	return NO_ERROR;
 }

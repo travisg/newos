@@ -196,3 +196,40 @@ reboot:
 	int		$0
 done:
 	jmp		done
+
+
+.global dbg_save_registers
+dbg_save_registers:
+	pushl	%esi
+	pushl	%eax
+	movl	12(%esp), %esi
+
+	movl	%eax, 0(%esi)
+	movl	%ebx, 4(%esi)
+	movl	%ecx, 8(%esi)
+	movl	%edx, 12(%esi)
+
+	lea	16(%esp), %eax
+	movl	%eax, 16(%esi)	// caller's %esp
+	movl	%ebp, 20(%esi)
+
+	movl	4(%esp), %eax
+	movl	%eax, 24(%esi)	// caller's %esi
+	movl	%edi, 28(%esi)
+
+	movl	8(%esp), %eax
+	movl	%eax, 32(%esi)	// caller's %ebp
+
+
+	pushfl
+	popl	%eax
+	mov	%eax, 36(%esi)
+
+	movl	%cs, 40(%esi)
+	movl	%ss, 44(%esi)
+	movl	%ds, 48(%esi)
+	movl	%es, 52(%esi)
+
+	popl	%eax
+	popl	%esi
+	ret

@@ -1,0 +1,217 @@
+
+HOW TO DEBUG KERNEL CRASHES WITH GDB
+====================================
+
+/*
+** Copyright 2002, Manuel J. Petit. All rights reserved.
+** Distributed under the terms of the NewOS License.
+*/
+
+
+If you are hacking the Kernel and experiencing Kernel Crashes,
+the kernel now supports some minimal remote debugging capabilities
+to hook into GDB. Here are some simple indications.
+
+
+1. What you need
+----------------
+
+	a) A GDB enabled machine and OS (I use FreeBSD
+	myself, but any Linux or even Windows+CygWin
+	will do.)
+
+	b) A null modem cable. If you are hacking the
+	kernel you probably already have one for the
+	serial debug output.
+
+	c) A kernel file with symbols. In the root makefile
+	edit the lines for GLOBAL_CFLAGS and GLOBAL_LDFLAGS
+	and add -g to them. Rebuild the kernel.
+
+	*You dont need to boot off a kernel with symbols*
+	The kernel with symbols is only required in the
+	host running GDB. However, it is important that
+	both kernels (the running one and the one in the
+	GDB host) perfectly match each other: this means
+	they must be compiled from the same source tree
+	with the same compile options (except for the -g).
+
+	d) A kernel crash to analyze.
+
+
+2. How to debug
+---------------
+
+	i) once the kernel has crashed, close the terminal
+	emulator (if you are using one) used for serial
+	debug output.
+
+	ii) launch GDB specifying the path to kernel file
+	as argument.
+
+	iii) in GDB type the following commands:
+
+		set remotebaud XXXX
+		target remote YYYY
+
+	XXXX is the baud rate your kernel is using for
+	serial debug output (115200 by default, unless
+	you changed it). YYYY is the device path to
+	the serial port used for debug output.
+
+	Once you type the "target remote YYYY" command
+	you will be debugging your kernel. The kernel
+	debugger will remain in GDB mode until you quit
+	from GDB, at that point it will return to the
+	normal crash prompt.
+
+
+3. Notes
+--------
+
+	Personally I have obtained better results by using
+	57600 as serial port speed. Your mileage may vary
+	depending on your serial ports, the length of your
+	serial cable and the phase of the moon. If you feel
+	that it is sluggish try reducing the serial port
+	speed in your kernel (kernel/arch/i386/ arch_dbg_console.c)
+
+	Currently only inspecting the crash is supported,
+	you cannot single step, set breakpoints etc.
+
+	For better debugging you may want to have your
+	kernel debugged without optimizations. In the
+	GLOBAL_CFLAGS change the -O to -O0. When compiling
+	with optimizations the compiler may assign some
+	of your local variables to registers, and you
+	will not be able to inspect some values for
+	functions other than the call stack tip.
+
+	After the "target remote" command you may get
+	an eror message similar to:
+
+		ptrace(PT_GETDBREGS) failed: No such process
+
+	you can safely ignore it. It's just GDB being silly.
+
+
+4. I have troubles
+------------------
+
+	If you have troubles, before typing the "target remote"
+	command. Type the following command:
+
+		set remotedebug 1
+
+	This will enable tracing all (actually most) of the
+	data packets exchanged between GDB and the kernel.
+	Now try to reproduce your troubles and send the
+	traces to the NewOS developer list.
+
+
+5. Have Fun
+-----------
+
+	Yeah! Have fun!
+
+
+	manuel,
+
+
+
+A. Sample debug session
+-----------------------
+
+	The following is a capture of a debug session done
+	with GDB, after hitting the SysReq key.
+
+
+[freston@cairo ~/NewOS/newos]
+[freston@cairo ~/NewOS/newos] gdb kernel/obj.i386/system
+GNU gdb 4.18
+Copyright 1998 Free Software Foundation, Inc.
+GDB is free software, covered by the GNU General Public License, and you are
+welcome to change it and/or distribute copies of it under certain conditions.
+Type "show copying" to see the conditions.
+There is absolutely no warranty for GDB.  Type "show warranty" for details.
+This GDB was configured as "i386-unknown-freebsd"...
+(gdb) set remotebaud 57600
+(gdb) target remote /dev/cuaa0
+Remote debugging using /dev/cuaa0
+ptrace(PT_GETDBREGS) failed: No such process
+0x80009132 in kernel_debugger () at kernel/debug.c:227
+227             dbg_save_registers(&(dbg_register_file[smp_get_current_cpu()][0]));
+(gdb) where
+#0  0x80009132 in kernel_debugger () at kernel/debug.c:227
+#1  0x800091d5 in panic (fmt=0x80036de0 "Keyboard Requested Halt\n")
+    at kernel/debug.c:257
+#2  0x8002bf85 in handle_keyboard_interrupt (data=0x0)
+    at kernel/dev/arch/i386/keyboard/keyboard.c:185
+#3  0x80008aca in int_io_interrupt_handler (vector=33) at kernel/int.c:135
+#4  0x80025981 in i386_handle_trap (frame={gs = 16, fs = 16, es = 16,
+      ds = 2147745808, edi = 0, esi = 0, ebp = 2147786692, esp = 2147786648,
+      ebx = 0, edx = 39, ecx = 1, eax = 39, vector = 33, error_code = 0,
+      eip = 2147506764, cs = 8, flags = 646, user_esp = 0, user_ss = 0})
+    at kernel/arch/i386/arch_int.c:232
+#5  0x8002555c in int_bottom ()
+#6  0x0 in ?? ()
+(gdb) list
+222             }
+223     }
+224
+225     void kernel_debugger()
+226     {
+227             dbg_save_registers(&(dbg_register_file[smp_get_current_cpu()][0]));
+228
+229             kernel_debugger_loop();
+230     }
+231
+(gdb) up
+#1  0x800091d5 in panic (fmt=0x80036de0 "Keyboard Requested Halt\n")
+    at kernel/debug.c:257
+257             kernel_debugger();
+(gdb) up
+#2  0x8002bf85 in handle_keyboard_interrupt (data=0x0)
+    at kernel/dev/arch/i386/keyboard/keyboard.c:185
+185                                     panic("Keyboard Requested Halt\n");
+(gdb) list
+180                                     else
+181                                             leds |= LED_NUM;
+182                                     set_leds();
+183                                     break;
+184                             case SYSREQ:
+185                                     panic("Keyboard Requested Halt\n");
+186                                     break;
+187                             case F12:
+188                                     reboot();
+189                                     break;
+(gdb) print leds
+$1 = 1
+(gdb) up
+#3  0x80008aca in int_io_interrupt_handler (vector=33) at kernel/int.c:135
+135                             temp_ret = io->func(io->data);
+(gdb) list
+130                     struct io_handler *io;
+131                     int temp_ret;
+132
+133                     io = io_handlers[vector];
+134                     while(io != NULL) {
+135                             temp_ret = io->func(io->data);
+136                             if(temp_ret == INT_RESCHEDULE)
+137                                     ret = INT_RESCHEDULE;
+138                             io = io->next;
+139                     }
+(gdb) print vector
+$2 = 33
+(gdb) print io_handlers[vector]
+$3 = (struct io_handler *) 0x8008fb20
+(gdb) print io
+$4 = (struct io_handler *) 0x8008fb20
+(gdb) print *io
+$5 = {next = 0x0, func = 0x8002be6c <handle_keyboard_interrupt>, data = 0x0}
+(gdb) print *io->next
+Cannot access memory at address 0x0.
+(gdb) quit
+The program is running.  Exit anyway? (y or n) y
+[freston@cairo ~/NewOS/newos]
+

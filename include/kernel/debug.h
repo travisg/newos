@@ -8,6 +8,9 @@
 #include <kernel/kernel.h>
 #include <boot/stage2.h>
 
+extern int dbg_register_file[2][14]; /* XXXmpetit -- must be made generic */
+
+
 int dbg_init(kernel_args *ka);
 int dbg_init2(kernel_args *ka);
 char dbg_putch(char c);
@@ -18,5 +21,7 @@ int dprintf(const char *fmt, ...);
 int panic(const char *fmt, ...);
 void kernel_debugger();
 int dbg_add_command(void (*func)(int, char **), const char *cmd, const char *desc);
+
+extern void dbg_save_registers(int *);	/* arch provided */
 
 #endif

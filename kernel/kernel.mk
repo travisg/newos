@@ -19,6 +19,7 @@ KERNEL_OBJS = \
         $(KERNEL_OBJ_DIR)/int.o \
         $(KERNEL_OBJ_DIR)/console.o \
         $(KERNEL_OBJ_DIR)/debug.o \
+        $(KERNEL_OBJ_DIR)/gdb.o \
         $(KERNEL_OBJ_DIR)/dev.o \
         $(KERNEL_OBJ_DIR)/queue.o \
         $(KERNEL_OBJ_DIR)/timer.o \
