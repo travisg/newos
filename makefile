@@ -63,7 +63,7 @@ OBJ_DIR = obj.$(ARCH)
 
 GLOBAL_CFLAGS += -Wall -W -Werror -Wno-multichar -Wno-unused -nostdinc -fno-builtin -DARCH_$(ARCH)
 
-FINAL = boot/final
+FINAL = boot/$(ARCH)/final
 
 final: $(FINAL)
 
