@@ -52,8 +52,6 @@ int ethernet_input(cbuf *buf, ifnet *i)
 
 	// strip out the ethernet header
 	cbuf_truncate_head(buf, sizeof(ethernet2_header));
-	// strip off the crc
-	cbuf_truncate_tail(buf, 4);
 
 	switch(ntohs(e2_head->type)) {
 		case PROT_TYPE_IPV4:

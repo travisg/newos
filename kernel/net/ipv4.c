@@ -272,7 +272,7 @@ int ipv4_output(cbuf *buf, ipv4_addr target_addr, int protocol)
 
 	// figure out the total len
 	len = cbuf_get_len(buf);
-	if(len > i->mtu)
+	if(len + sizeof(ipv4_header) > i->mtu)
 		must_frag = true;
 
 //	dprintf("did route match, result iid %d, i 0x%x, transmit_addr 0x%x, if_addr 0x%x\n", iid, i, transmit_addr, if_addr);
@@ -294,7 +294,8 @@ int ipv4_output(cbuf *buf, ipv4_addr target_addr, int protocol)
 		header = cbuf_get_ptr(header_buf, 0);
 
 		packet_len = min(i->mtu, (unsigned)(len + header_len));
-		packet_len = ROUNDOWN(packet_len - header_len, 8) + header_len;
+		if(packet_len == i->mtu)
+			packet_len = ROUNDOWN(packet_len - header_len, 8) + header_len;
 
 		header->version_length = 0x4 << 4 | 5;
 		header->tos = 0;
@@ -339,12 +340,13 @@ int ipv4_output(cbuf *buf, ipv4_addr target_addr, int protocol)
 			i->link_output(send_buf, i, &link_addr, PROT_TYPE_IPV4);
 		}
 
-		dprintf("curr_offset %d, len %d\n", curr_offset, len);
-
 		// update the offset
 		curr_offset += packet_len - header_len;
 		len -= packet_len - header_len;
 	}
+
+	if(must_frag)
+		cbuf_free_chain(buf);
 
 out:
 
@@ -394,8 +396,9 @@ static int ipv4_process_frag(cbuf *inbuf, ifnet *i, cbuf **outbuf)
 
 	*outbuf = NULL;
 
+#if NET_CHATTY
 	dprintf("ipv4_process_frag: inbuf %p, i %p, outbuf %p\n", inbuf, i, outbuf);
-
+#endif
 	header = (ipv4_header *)cbuf_get_ptr(inbuf, 0);
 	offset = (ntohs(header->flags_frag_offset) & IPV4_FRAG_OFFSET_MASK) * 8;
 	len = ntohs(header->total_length) - ((header->version_length & 0xf) * 4);
@@ -407,8 +410,10 @@ static int ipv4_process_frag(cbuf *inbuf, ifnet *i, cbuf **outbuf)
 	key.identification = ntohs(header->identification);
 	key.protocol = header->protocol;
 
+#if NET_CHATTY
 	dprintf("ipv4_process_frag frag: src 0x%x dest 0x%x ident %d prot %d offset %d len %d last_frag %d\n",
 		key.src, key.dest, key.identification, key.protocol, offset, len, last_frag);
+#endif
 
 	mutex_lock(&frag_table_mutex);
 
@@ -421,8 +426,10 @@ static int ipv4_process_frag(cbuf *inbuf, ifnet *i, cbuf **outbuf)
 		// find the spot where this frag would be in the frag list
 		for(last = NULL, temp = frag; temp; last = temp, temp = temp->frag_next) {
 
+#if NET_CHATTY
 			dprintf("last %p, temp %p\n", last, temp);
 			dprintf("bad_frag %d, found_spot %d\n", bad_frag, found_spot);
+#endif
 
 			// if we haven't already found a spot, look for it, and make sure
 			// the new frag would insert properly (no cross-overs, etc)
@@ -450,7 +457,9 @@ static int ipv4_process_frag(cbuf *inbuf, ifnet *i, cbuf **outbuf)
 		}
 		// if we still hadn't found a spot, do a last check to see if it'll tack on
 		// to the end of the frag list properly
+#if NET_CHATTY
 		dprintf("out of loop: last %p, temp %p, found_spot %d, bad_frag %d\n", last, temp, found_spot, bad_frag);
+#endif
 		if(!found_spot) {
 			if(offset < last->offset + last->len) {
 				// crosses last in list
@@ -598,10 +607,20 @@ int ipv4_input(cbuf *buf, ifnet *i)
 
 	header = (ipv4_header *)cbuf_get_ptr(buf, 0);
 
+	if(cbuf_get_len(buf) < 4) {
+		err = ERR_NET_BAD_PACKET;
+		goto ditch_packet;
+	}
+
 	dump_ipv4_header(header);
 
 	if(((header->version_length >> 4) & 0xf) != 4) {
 		dprintf("ipv4 packet has bad version\n");
+		err = ERR_NET_BAD_PACKET;
+		goto ditch_packet;
+	}
+
+	if(cbuf_get_len(buf) < sizeof(ipv4_header)) {
 		err = ERR_NET_BAD_PACKET;
 		goto ditch_packet;
 	}
@@ -631,6 +650,24 @@ int ipv4_input(cbuf *buf, ifnet *i)
 			dprintf("ipv4 packet for someone else\n");
 			err = NO_ERROR;
 			goto ditch_packet;
+		}
+	}
+
+	// do some sanity checks and buffer trimming
+	{
+		size_t buf_len = cbuf_get_len(buf);
+		uint16 packet_len = ntohs(header->total_length);
+
+		// see if the packet is too short
+		if(buf_len < packet_len) {
+			dprintf("ipv4 packet too short (buf_len %d, packet len %d)\n", buf_len, packet_len);
+			err = ERR_NET_BAD_PACKET;
+			goto ditch_packet;
+		}
+
+		// see if we need to trim off any padding
+		if(buf_len > packet_len) {
+			cbuf_truncate_tail(buf, buf_len - packet_len);
 		}
 	}
 

@@ -188,6 +188,9 @@ cbuf *cbuf_get_chain(size_t len)
 	cbuf *temp;
 	size_t chain_len = 0;
 
+	if(len == 0)
+		panic("cbuf_get_chain: passed size 0\n");
+
 	sem_acquire(free_list_sem, 1);
 
 	while(chain_len < len) {
@@ -648,7 +651,8 @@ int cbuf_is_contig_region(cbuf *buf, size_t start, size_t end)
 
 uint16 cbuf_ones_cksum16(cbuf *buf, size_t offset, size_t len)
 {
-	uint32 sum = 0;
+	uint16 sum = 0;
+	int swapped = 0;
 
 	if(!buf)
 		return 0;
@@ -673,11 +677,21 @@ uint16 cbuf_ones_cksum16(cbuf *buf, size_t offset, size_t len)
 		sum = ones_sum16(sum, ptr, plen);
 
 		len -= plen;
-		offset = 0;
 		buf = buf->next;
+
+		// if the pointer was odd, or the length was odd, but not both,
+		// the checksum was swapped
+		if((buf && len > 0) && (((offset % 2) && ((plen % 2) == 0)) || (((offset % 2) == 0) && (plen % 2)))) {
+			swapped ^= 1;
+			sum = ((sum & 0xff) << 8) | ((sum >> 8) & 0xff);
+		}
+		offset = 0;
 	}
 
-	return ~((uint16)sum);
+	if (swapped)
+		sum = ((sum & 0xff) << 8) | ((sum >> 8) & 0xff);
+
+	return ~sum;
 }
 
 int cbuf_truncate_head(cbuf *buf, size_t trunc_bytes)

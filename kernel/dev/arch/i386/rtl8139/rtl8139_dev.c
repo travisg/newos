@@ -48,6 +48,11 @@
 	in32((rtl)->io_port + (reg))
 #endif
 
+#define TAILREG_TO_TAIL(in) \
+	(uint16)(((uint32)(in) + 16) % 0x10000)
+#define TAIL_TO_TAILREG(in) \
+	(uint16)((uint16)(in) - 16)
+
 #define MYRT_INTS (RT_INT_PCIERR | RT_INT_RX_ERR | RT_INT_RX_OK | RT_INT_TX_ERR | RT_INT_TX_OK | RT_INT_RXBUF_OVERFLOW)
 
 static int rtl8139_int(void*);
@@ -236,6 +241,28 @@ err:
 	return err;
 }
 
+static void rtl8139_stop(rtl8139 *rtl)
+{
+	// stop the rx and tx and mask all interrupts
+	RTL_WRITE_8(rtl, RT_CHIPCMD, RT_CMD_RESET);
+	RTL_WRITE_16(rtl, RT_INTRMASK, 0);
+}
+
+static void rtl8139_resetrx(rtl8139 *rtl)
+{
+	rtl8139_stop(rtl);
+
+	// reset the rx pointers
+	RTL_WRITE_16(rtl, RT_RXBUFTAIL, 0);
+	RTL_WRITE_16(rtl, RT_RXBUFHEAD, TAIL_TO_TAILREG(0));
+
+	// start it back up
+	RTL_WRITE_16(rtl, RT_INTRMASK, MYRT_INTS);
+
+	// Enable RX/TX once more
+	RTL_WRITE_8(rtl, RT_CHIPCMD, RT_CMD_RX_ENABLE | RT_CMD_TX_ENABLE);
+}
+
 void rtl8139_xmit(rtl8139 *rtl, const char *ptr, ssize_t len)
 {
 	int i;
@@ -291,15 +318,11 @@ typedef struct rx_entry {
 	volatile uint8 data[1];
 } rx_entry;
 
-#define TAILREG_TO_TAIL(in) \
-	(uint16)((uint16)(in) + (uint16)16)
-#define TAIL_TO_TAILREG(in) \
-	(uint16)((uint16)(in) - (uint16)16)
-
 ssize_t rtl8139_rx(rtl8139 *rtl, char *buf, ssize_t buf_len)
 {
 	rx_entry *entry;
 	uint32 tail;
+	uint16 len;
 	int rc;
 	int state;
 	bool release_sem = false;
@@ -325,34 +348,60 @@ restart:
 		goto restart;
 	}
 
+	if(RTL_READ_8(rtl, RT_CHIPCMD) & RT_CMD_RX_BUF_EMPTY) {
+		release_spinlock(&rtl->reg_spinlock);
+		int_restore_interrupts(state);
+		mutex_unlock(&rtl->lock);
+		goto restart;
+	}
+
 	// grab another buffer
 	entry = (rx_entry *)((uint8 *)rtl->rxbuf + tail);
 //	dprintf("entry->status = 0x%x\n", entry->status);
 //	dprintf("entry->len = 0x%x\n", entry->len);
 
+	// see if it's an unfinished buffer
+	if(entry->len == 0xfff0) {
+		release_spinlock(&rtl->reg_spinlock);
+		int_restore_interrupts(state);
+		mutex_unlock(&rtl->lock);
+		goto restart;
+	}
+
+	// figure the len that we need to copy
+	len = entry->len - 4; // minus the crc
+
+	// see if we got an error
+	if((entry->status & RT_RX_STATUS_OK) == 0 || len > 1500) {
+		// error, lets reset the card
+		rtl8139_resetrx(rtl);
+		release_spinlock(&rtl->reg_spinlock);
+		int_restore_interrupts(state);
+		mutex_unlock(&rtl->lock);
+		goto restart;
+	}
+
 	// copy the buffer
-	if(entry->len > buf_len) {
-		dprintf("rtl8139_rx: packet too large for buffer\n");
+	if(len > buf_len) {
+		dprintf("rtl8139_rx: packet too large for buffer (len %d, buf_len %d)\n", len, buf_len);
 		RTL_WRITE_16(rtl, RT_RXBUFTAIL, TAILREG_TO_TAIL(RTL_READ_16(rtl, RT_RXBUFHEAD)));
 		rc = ERR_TOO_BIG;
 		release_sem = true;
 		goto out;
 	}
-	if(tail + entry->len > 0xffff) {
+	if(tail + len > 0xffff) {
 		int pos = 0;
 
 //		dprintf("packet wraps around\n");
-		memcpy(buf, (const void *)&entry->data[0], 0x10000 - tail);
-		memcpy((uint8 *)buf + 0x10000 - tail, (const void *)rtl->rxbuf, entry->len - (0x10000 - tail));
+		memcpy(buf, (const void *)&entry->data[0], 0x10000 - (tail + 4));
+		memcpy((uint8 *)buf + 0x10000 - (tail + 4), (const void *)rtl->rxbuf, len - (0x10000 - (tail + 4)));
 	} else {
-		memcpy(buf, (const void *)&entry->data[0], entry->len);
+		memcpy(buf, (const void *)&entry->data[0], len);
 	}
-	rc = entry->len;
+	rc = len;
 
 	// calculate the new tail
-	tail = (tail + entry->len + 4 + 3) & ~3;
-	if(tail > 0xffff)
-		tail = tail % 0x10000;
+	tail = ((tail + entry->len + 4 + 3) & ~3) % 0x10000;
 //	dprintf("new tail at 0x%x, tailreg will say 0x%x\n", tail, TAIL_TO_TAILREG(tail));
 	RTL_WRITE_16(rtl, RT_RXBUFTAIL, TAIL_TO_TAILREG(tail));
 
