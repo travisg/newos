@@ -1,10 +1,17 @@
+ifeq ($(HOSTTYPE),)
+	HOSTTYPE := $(shell uname -m)
+endif
+ifeq ($(OSTYPE),)
+	OSTYPE := $(shell uname -s | awk -F_ '{print $$1}' | tr A-Z a-z)
+endif
+
 ifeq ($(HOSTTYPE),i586)
 	HOSTTYPE := i386
 endif
 ifeq ($(HOSTTYPE),i686)
 	HOSTTYPE := i386
 endif
-ifeq ($(HOSTTYPE), )
+ifeq ($(HOSTTYPE),)
 	HOSTTYPE := i386
 endif
 ifeq ($(HOSTTYPE),macintosh)
@@ -12,7 +19,7 @@ ifeq ($(HOSTTYPE),macintosh)
 		HOSTTYPE := ppc
 	endif
 endif
-ifeq ($(ARCH), )
+ifeq ($(ARCH),)
 ARCH := $(HOSTTYPE)
 #ARCH := i386
 #ARCH := sparc
@@ -168,7 +175,7 @@ DEPS =
 CLEAN =
 FINAL =
 
-final: final1
+final:: final1
 
 # include the top level makefile
 include boot/$(ARCH)/boot.mk
