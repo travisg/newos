@@ -6,10 +6,12 @@
 
 #ifdef ARCH_i386
 #include <kernel/arch/i386/cpu.h>
-#else
+#endif
 #ifdef ARCH_sh4
 #include <kernel/arch/sh4/cpu.h>
 #endif
+#ifdef ARCH_alpha
+#include <kernel/arch/alpha/cpu.h>
 #endif
 
 #define PAGE_ALIGN(x) (((x) + (PAGE_SIZE-1)) & ~(PAGE_SIZE-1))

@@ -7,6 +7,9 @@
 #ifdef ARCH_sh4
 #include <kernel/arch/sh4/kernel.h>
 #endif
+#ifdef ARCH_alpha
+#include <kernel/arch/alpha/kernel.h>
+#endif
 
 #define KSTACK_SIZE (PAGE_SIZE*2)
 #define STACK_SIZE  (PAGE_SIZE*16)

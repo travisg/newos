@@ -1,6 +1,8 @@
 #ifndef _STAGE2_H
 #define _STAGE2_H
 
+#include <boot.h>
+
 // must match SMP_MAX_CPUS in arch_smp.h
 #define MAX_BOOT_CPUS 1
 

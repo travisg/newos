@@ -7,6 +7,9 @@
 #ifdef ARCH_sh4
 #include <kernel/arch/sh4/ktypes.h>
 #endif
+#ifdef ARCH_alpha
+#include <kernel/arch/alpha/ktypes.h>
+#endif
 
 #endif
 
