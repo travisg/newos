@@ -5,19 +5,19 @@
 #ifndef _TYPES_H
 #define _TYPES_H
 
-#ifdef __i386__
+#if defined(__i386__) || defined(__I386__)
 #undef i386
 #define INC_ARCH(path, x) <path/i386/x>
 #endif
-#ifdef __ppc__
+#if defined(__ppc__) || defined(__PPC__)
 #undef ppc
 #define INC_ARCH(path, x) <path/ppc/x>
 #endif
-#ifdef __x86_64__
+#if defined(__x86_64__) || defined(__X86_64__)
 #undef x86_64
 #define INC_ARCH(path, x) <path/x86_64/x>
 #endif
-#ifdef __arm__
+#if defined(__arm__) || defined(__ARM__)
 #undef arm
 #define INC_ARCH(path, x) <path/arm/x>
 #endif

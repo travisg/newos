@@ -7,8 +7,5 @@
 
 #define PAGE_SIZE 4096
 
-#define _BIG_ENDIAN 0
-#define _LITTLE_ENDIAN 1
-
 #endif
 

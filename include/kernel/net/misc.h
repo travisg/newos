@@ -7,8 +7,9 @@
 
 #include <kernel/cpu.h>
 #include <kernel/net/net.h>
+#include <endian.h>
 
-#if _LITTLE_ENDIAN
+#if BYTE_ORDER == LITTLE_ENDIAN
 #define ntohs(n) \
 	((((uint16)(n) & 0xff) << 8) | ((uint16)(n) >> 8))
 #define htons(h) \
@@ -17,7 +18,7 @@
 	(((uint32)(n) << 24) | (((uint32)(n) & 0xff00) << 8) |(((uint32)(n) & 0x00ff0000) >> 8) | ((uint32)(n) >> 24))
 #define htonl(h) \
 	(((uint32)(h) << 24) | (((uint32)(h) & 0xff00) << 8) |(((uint32)(h) & 0x00ff0000) >> 8) | ((uint32)(h) >> 24))
-#elif _BIG_ENDIAN
+#elif BYTE_ORDER == BIG_ENDIAN
 #define ntohs(n) \
 	((uint16)(n))
 #define htons(h) \
@@ -27,7 +28,7 @@
 #define htonl(h) \
 	((uint32)(h))
 #else
-#error need to define _BIG_ENDIAN or _LITTLE_ENDIAN
+#error need to define BYTE_ORDER
 #endif
 
 uint16 ones_sum16(uint32 sum, const void *_buf, int len);

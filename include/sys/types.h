@@ -7,10 +7,18 @@
 #define __SYS_TYPES_H
 
 #include <newos/types.h>
+#include <endian.h>
 
 typedef proc_id    pid_t;
 typedef thread_id  tid_t;
-
+typedef vnode_id   ino_t;
+typedef vnode_id   dev_t;
+typedef uint32     mode_t;
+typedef uint32     nlink_t;
+typedef uint32     uid_t;
+typedef uint32     gid_t;
+typedef uint64     blkcnt_t;
+typedef size_t     blksize_t;
 
 #endif
 

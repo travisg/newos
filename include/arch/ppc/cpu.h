@@ -7,9 +7,6 @@
 
 #define PAGE_SIZE 4096
 
-#define _BIG_ENDIAN 1
-#define _LITTLE_ENDIAN 0
-
 // BAT register defs
 #define BATU_BEPI_MASK	0xfffe0000
 #define BATU_LEN_128K	0x0
