@@ -56,7 +56,7 @@ int sig_test(int arg)
 	for(;;) {
 		err = _kern_snooze(10000000);
 		printf("_kern_snooze returns %d\n", err);
-		_kern_proc_create_proc("/boot/bin/false", "false", NULL, 0, 5);
+		_kern_proc_create_proc("/boot/bin/false", "false", NULL, 0, 5, 0);
 	}
 	return 0;
 }
