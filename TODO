@@ -36,6 +36,7 @@ vfs:
  vnode caching
  getcwd
  attributes (?)
+ fd inheritance
 VM:
  cache layer
 
