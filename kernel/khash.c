@@ -17,9 +17,9 @@ struct hash_table {
 };	
 
 // XXX gross hack
-#define NEXT_ADDR(t, e) ((void *)(((unsigned int)(e)) + (t)->next_ptr_offset))
-#define NEXT(t, e) ((void *)(*(int *)NEXT_ADDR(t, e)))
-#define PUT_IN_NEXT(t, e, val) (*(int *)NEXT_ADDR(t, e) = (int)(val))
+#define NEXT_ADDR(t, e) ((void *)(((unsigned long)(e)) + (t)->next_ptr_offset))
+#define NEXT(t, e) ((void *)(*(unsigned long *)NEXT_ADDR(t, e)))
+#define PUT_IN_NEXT(t, e, val) (*(unsigned long *)NEXT_ADDR(t, e) = (long)(val))
 
 void *hash_init(int table_size, int next_ptr_offset,
 	int compare_func(void *e, void *key),

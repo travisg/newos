@@ -2,8 +2,8 @@
 #define _KHASH_H
 
 struct hash_iterator {
-	int bucket;
 	void *ptr;
+	int bucket;
 };
 
 void *hash_init(int table_size, int next_ptr_offset,
