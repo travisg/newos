@@ -8,6 +8,7 @@
 #include <kernel/arch/cpu.h>
 #include <kernel/heap.h>
 #include <stdio.h>
+#include <stddef.h>
 #include <string.h>
 #include <kernel/dev/blkman.h>
 #include <kernel/module.h>
@@ -19,8 +20,6 @@
 #define DEBUG_MSG_PREFIX "SCSI_DSK -- "
 
 #include <kernel/debug_ext.h>
-
-#define offsetof(type, member)	((size_t)&(((type *)0)->member))
 
 #define DAS_STD_TIMEOUT 10000000
 
