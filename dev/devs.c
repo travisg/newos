@@ -17,16 +17,18 @@
 
 int devs_init(kernel_args *ka)
 {
-#ifdef ARCH_i386
-	pci_bus_init(ka);
 
-	console_dev_init(ka);
-#endif	
-#ifdef ARCH_sh4
-	console_dev_init(ka);
-#endif
 	null_dev_init(ka);
 	zero_dev_init(ka);
+#ifdef ARCH_i386
+	pci_bus_init(ka);
+	console_dev_init(ka);
+#endif	
+
+#ifdef ARCH_sh4
+	console_dev_init(ka);
+	rtl8139_dev_init(ka);
+#endif
 
 #if 0
 	{
