@@ -36,6 +36,9 @@ depsclean:
 allclean: depsclean clean
 	rm -f $(TOOLS)
 
+spotless:
+	rm -rf $(BUILD_DIR)
+
 #$(warning ALL_OBJS = $(ALL_OBJS))
 #$(warning ALL_DEPS = $(ALL_DEPS))
 
