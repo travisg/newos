@@ -15,7 +15,7 @@ NULIBC_HOARD_CFLAGS += -DUSE_PRIVATE_HEAPS=0 -DUSE_SPROC=0 -DNODEBUG -D_REENTRAN
 # build prototypes
 $(NULIBC_HOARD_OBJ_DIR)/%.o: $(NULIBC_HOARD_DIR)/%.cpp 
 	@if [ ! -d $(NULIBC_HOARD_OBJ_DIR) ]; then mkdir -p $(NULIBC_HOARD_OBJ_DIR); fi
-	$(CC) -c $< $(GLOBAL_CFLAGS) $(NULIBC_HOARD_CFLAGS) -Iinclude -Iinclude/nulibc -o $@
+	$(CC) -c $< $(GLOBAL_CFLAGS) $(NULIBC_HOARD_CFLAGS) -fno-exceptions -Iinclude -Iinclude/nulibc -o $@
 
 $(NULIBC_HOARD_OBJ_DIR)/%.d: $(NULIBC_HOARD_DIR)/%.cpp
 	@if [ ! -d $(NULIBC_HOARD_OBJ_DIR) ]; then mkdir -p $(NULIBC_HOARD_OBJ_DIR); fi
@@ -24,7 +24,7 @@ $(NULIBC_HOARD_OBJ_DIR)/%.d: $(NULIBC_HOARD_DIR)/%.cpp
 
 $(NULIBC_HOARD_OBJ_DIR)/%.o: $(NULIBC_HOARD_DIR)/%.c 
 	@if [ ! -d $(NULIBC_HOARD_OBJ_DIR) ]; then mkdir -p $(NULIBC_HOARD_OBJ_DIR); fi
-	$(CC) -c $< $(GLOBAL_CFLAGS) $(NULIBC_HOARD_CFLAGS) -Iinclude -Iinclude/nulibc -o $@
+	$(CC) -c $< $(GLOBAL_CFLAGS) $(NULIBC_HOARD_CFLAGS) -fno-exceptions -Iinclude -Iinclude/nulibc -o $@
 
 $(NULIBC_HOARD_OBJ_DIR)/%.d: $(NULIBC_HOARD_DIR)/%.c
 	@if [ ! -d $(NULIBC_HOARD_OBJ_DIR) ]; then mkdir -p $(NULIBC_HOARD_OBJ_DIR); fi
