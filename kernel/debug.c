@@ -224,6 +224,9 @@ static void kernel_debugger_loop()
 
 void kernel_debugger()
 {
+	/* we're toast, so let all the sem calls whatnot through */
+	kernel_startup = true;
+
 	dbg_save_registers(dbg_register_file);
 
 	kernel_debugger_loop();

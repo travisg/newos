@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -20,7 +20,9 @@
 #define SET_BIT(a, b) ((a) | (1 << (b)))
 #define CLEAR_BIT(a, b) ((a) & (~(1 << (b))))
 
-#define _PACKED __attribute__((packed)) 	
+#define _PACKED __attribute__((packed))
+
+extern bool kernel_startup;
 
 #endif
 

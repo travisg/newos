@@ -34,6 +34,8 @@ static kernel_args ka;
 
 static int main2(void *);
 
+/* global variable that is set during kernel bootup, and unset thereafter */
+bool kernel_startup = true;
 
 int _start(kernel_args *oldka, int cpu);	/* keep compiler happy */
 int _start(kernel_args *oldka, int cpu_num)
@@ -101,6 +103,8 @@ int _start(kernel_args *oldka, int cpu_num)
 		// this is run per cpu for each AP processor after they've been set loose
 		thread_init_percpu(cpu_num);
 	}
+
+	kernel_startup = false;
 	int_enable_interrupts();
 
 	dprintf("main: done... begin idle loop on cpu %d\n", cpu_num);

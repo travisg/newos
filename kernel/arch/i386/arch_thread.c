@@ -167,6 +167,14 @@ void arch_thread_enter_uspace(addr entry, void *args, addr ustack_top)
 	// make sure the fpu is in a good state
 	asm("fninit");
 
+	/*
+	 * semi-hack: touch the user space stack first to page it in before we
+	 * disable interrupts. We can't take a fault with interrupts off
+	 */
+	{
+		int a = *(volatile int *)(ustack_top - 4);
+	}
+
 	int_disable_interrupts();
 
 	i386_set_kstack(thread_get_current_thread()->kernel_stack_base + KSTACK_SIZE);
