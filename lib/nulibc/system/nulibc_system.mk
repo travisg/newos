@@ -6,6 +6,7 @@ NULIBC_SYSTEM_OBJS = \
 
 DEPS += $(NULIBC_SYSTEM_OBJS:.o=.d)
 
+include $(NULIBC_SYSTEM_DIR)/arch/$(ARCH)/nulibc_system_arch.mk
 
 # build prototypes
 $(NULIBC_SYSTEM_OBJ_DIR)/%.o: $(NULIBC_SYSTEM_DIR)/%.c 
