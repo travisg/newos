@@ -25,38 +25,38 @@ boot/$(ARCH)/stage2: $(STAGE2_OBJS)
 	ld -dN -Ttext 0x381278 -e start $(STAGE2_OBJS) -o $@
 
 boot/$(ARCH)/libsa/%.o: boot/$(ARCH)/libsa/%.c
-	gcc $(LIBSACFLAGS) -c $< -o $@
+	$(CC) $(LIBSACFLAGS) -c $< -o $@
 
 boot/$(ARCH)/libsa/%.d: boot/$(ARCH)/libsa/%.c
-	gcc $(LIBSACFLAGS) -M -MG $< -o $@.1
+	$(CC) $(LIBSACFLAGS) -M -MG $< -o $@.1
 	@echo -n $(dir $@) > $@; cat $@.1 >> $@; rm $@.1
 
 boot/$(ARCH)/libkern/%.o: boot/$(ARCH)/libkern/%.c
-	gcc $(LIBKERNCFLAGS) -c $< -o $@
+	$(CC) $(LIBKERNCFLAGS) -c $< -o $@
 
 boot/$(ARCH)/libkern/%.d: boot/$(ARCH)/libkern/%.c
-	gcc $(LIBKERNCFLAGS) -M -MG $< -o $@.1
+	$(CC) $(LIBKERNCFLAGS) -M -MG $< -o $@.1
 	@echo -n $(dir $@) > $@; cat $@.1 >> $@; rm $@.1
 
 boot/$(ARCH)/libkern/%.o: boot/$(ARCH)/libkern/%.S
-	gcc $(LIBKERNCFLAGS) -c $< -o $@
+	$(CC) $(LIBKERNCFLAGS) -c $< -o $@
 
 boot/$(ARCH)/libkern/%.d: boot/$(ARCH)/libkern/%.S
-	gcc $(LIBKERNCFLAGS) -M -MG $< -o $@.1
+	$(CC) $(LIBKERNCFLAGS) -M -MG $< -o $@.1
 	@echo -n $(dir $@) > $@; cat $@.1 >> $@; rm $@.1
 
 boot/$(ARCH)/%.o: boot/$(ARCH)/%.S
-	gcc $(CFLAGS) -D_LOCORE -c $< -o $@
+	$(CC) $(CFLAGS) -D_LOCORE -c $< -o $@
 
 boot/$(ARCH)/%.d: boot/$(ARCH)/%.S
-	gcc $(CFLAGS) -D_LOCORE -M -MG $< -o $@.1
+	$(CC) $(CFLAGS) -D_LOCORE -M -MG $< -o $@.1
 	@echo -n $(dir $@) > $@; cat $@.1 >> $@; rm $@.1
 
 boot/$(ARCH)/%.o: boot/$(ARCH)/%.c
-	gcc $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -c $< -o $@
 
 boot/$(ARCH)/%.d: boot/$(ARCH)/%.c
-	gcc $(CFLAGS) -M -MG $< -o $@.1
+	$(CC) $(CFLAGS) -M -MG $< -o $@.1
 	@echo -n $(dir $@) > $@; cat $@.1 >> $@; rm $@.1
 
 stage2clean:
