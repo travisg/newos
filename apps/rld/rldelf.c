@@ -268,9 +268,11 @@ create_image(char const *name, int num_regions)
 	memset(retval, 0, alloc_size);
 
 	strlcpy(retval->name, name, sizeof(retval->name));
-	retval->imageid= atomic_add(&imageid_count, 1);
+	retval->imageid= imageid_count;
 	retval->refcount= 1;
 	retval->num_regions= num_regions;
+
+	imageid_count+= 1;
 
 	return retval;
 }
