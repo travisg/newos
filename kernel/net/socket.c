@@ -213,8 +213,24 @@ ssize_t socket_sendto(sock_id id, const void *buf, ssize_t len, sockaddr *addr)
 
 int socket_close(sock_id id)
 {
-	// XXX implement
-	return 0;
+	netsocket *s;
+	ssize_t err;
+
+	s = lookup_socket(id);
+	if(!s)
+		return ERR_INVALID_HANDLE;
+
+	switch(s->type) {
+		case SOCK_PROTO_UDP:
+			err = udp_close(s->prot_data);
+			break;
+		case SOCK_PROTO_TCP:
+			err = tcp_close(s->prot_data);
+			break;
+		default:
+			err = ERR_INVALID_ARGS;
+	}
+	return err;
 }
 
 int socket_init(void)

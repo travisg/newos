@@ -1,5 +1,5 @@
 /*
-** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #include <kernel/kernel.h>
@@ -76,6 +76,8 @@ typedef struct tcp_socket {
 	tcp_state state;
 	mutex lock;
 	int ref_count;
+	int last_error;
+
 
 	ipv4_addr local_addr;
 	ipv4_addr remote_addr;
@@ -102,15 +104,17 @@ typedef struct tcp_socket {
 	uint32 retransmit_tx_seq;
 	int retransmit_timeout;
 	int tx_write_buf_size;
-	int unacked_data_len;
+	uint32 unacked_data_len;
 	int duplicate_ack_count;
 	cbuf *write_buffer;
 	net_timer_event retransmit_timer;
 	net_timer_event persist_timer;
+	net_timer_event fin_retransmit_timer;
+	net_timer_event time_wait_timer;
 
 	/* as per example in tcp/ip illustrated */
-	int cwnd;
-	int ssthresh;
+	uint32 cwnd;
+	uint32 ssthresh;
 
 	/* rtt */
 	bool tracking_rtt;
@@ -132,13 +136,17 @@ static tcp_socket *socket_table;
 static mutex socket_table_lock;
 static int next_ephemeral_port = 1024;
 
+/* the following are in bigtime_t units (microseconds) */
 #define SYN_RETRANSMIT_TIMEOUT 1000000
 #define MAX_RETRANSMIT_TIMEOUT 90000000 /* 90 secs */
+
+#define FIN_RETRANSMIT_TIMEOUT 5000
 #define PERSIST_TIMEOUT 500
 #define ACK_DELAY 200
 #define DEFAULT_RX_WINDOW_SIZE (32*1024)
 #define DEFAULT_TX_WRITE_BUF_SIZE (128*1024)
 #define DEFAULT_MAX_SEGMENT_SIZE 536
+#define MSL 30000 /* 30 seconds */
 
 #define SEQUENCE_GTE(a, b) ((int)((a) - (b)) >= 0)
 #define SEQUENCE_LTE(a, b) ((int)((a) - (b)) <= 0)
@@ -154,6 +162,8 @@ static void handle_data(tcp_socket *s, cbuf *buf);
 static void handle_ack_delay_timeout(void *_socket);
 static void handle_persist_timeout(void *_socket);
 static void handle_retransmit_timeout(void *_socket);
+static void handle_fin_retransmit(void *_socket);
+static void handle_time_wait_timeout(void *_socket);
 static int destroy_tcp_socket(tcp_socket *s);
 static tcp_socket *create_tcp_socket(void);
 static void send_ack(tcp_socket *s);
@@ -198,8 +208,14 @@ static void inc_socket_ref(tcp_socket *s)
 
 static void dec_socket_ref(tcp_socket *s)
 {
-	if(atomic_add(&s->ref_count, -1) == 1)
+	if(atomic_add(&s->ref_count, -1) == 1) {
+		// pull the socket out of the hash table
+		mutex_lock(&socket_table_lock);
+		hash_remove(socket_table, s);
+		mutex_unlock(&socket_table_lock);
+
 		destroy_tcp_socket(s);
+	}
 }
 
 static tcp_socket *lookup_socket(ipv4_addr src_addr, ipv4_addr dest_addr, uint16 src_port, uint16 dest_port)
@@ -312,12 +328,12 @@ static void dump_socket(tcp_socket *s)
 	dprintf("\tmss: %u\n", s->mss);
 	dprintf("\tread_sem 0x%x\n", s->read_sem);
 	dprintf("\trx_win_size %u rx_win_low %u rx_win_high %u\n", s->rx_win_size, s->rx_win_low, s->rx_win_high);
-	dprintf("\tread_buffer %p (%d)\n", s->read_buffer, cbuf_get_len(s->read_buffer));
+	dprintf("\tread_buffer %p (%ld)\n", s->read_buffer, cbuf_get_len(s->read_buffer));
 	dprintf("\treassembly_q %p\n", s->reassembly_q);
 	dprintf("\twrite_sem 0x%x writers_waiting %d\n", s->write_sem, s->writers_waiting);
 	dprintf("\ttx_win_low %u tx_win_high %u retransmit_tx_seq %u write_buf_size %d\n",
 		s->tx_win_low, s->tx_win_high, s->retransmit_tx_seq, s->tx_write_buf_size);
-	dprintf("\tunacked_data_len %d write_buffer %p (%d)\n", s->unacked_data_len, s->write_buffer, cbuf_get_len(s->write_buffer));
+	dprintf("\tunacked_data_len %d write_buffer %p (%ld)\n", s->unacked_data_len, s->write_buffer, cbuf_get_len(s->write_buffer));
 }
 
 static void dump_socket_info(int argc, char **argv)
@@ -352,7 +368,7 @@ static void list_sockets(int argc, char **argv)
 		dprintf("\t%p\tlocal ", s);
 		dump_ipv4_addr(s->local_addr); dprintf(".%d\t", s->local_port);
 		dprintf("remote ");
-		dump_ipv4_addr(s->remote_port); dprintf(".%d\t", s->remote_port);
+		dump_ipv4_addr(s->remote_addr); dprintf(".%d\t", s->remote_port);
 		dprintf("\n");
 	}
 }
@@ -389,6 +405,7 @@ int tcp_input(cbuf *buf, ifnet *i, ipv4_addr source_address, ipv4_addr target_ad
 	uint8 packet_flags;
 	uint16 header_len;
 	uint16 data_len;
+	uint32 highest_sequence;
 
 	header = cbuf_get_ptr(buf, 0);
 	header_len = ((ntohs(header->length_flags) >> 12) & 0x0f) * 4;
@@ -401,7 +418,7 @@ int tcp_input(cbuf *buf, ifnet *i, ipv4_addr source_address, ipv4_addr target_ad
 	// check to see if the length looks correct
 	if(header_len > cbuf_get_len(buf)) {
 		// bogus packet length
-		dprintf("tcp_input: received packet with bad length: header len %d, len %d\n", header_len, cbuf_get_len(buf));
+		dprintf("tcp_input: received packet with bad length: header len %d, len %ld\n", header_len, cbuf_get_len(buf));
 		goto ditch_packet;
 	}
 
@@ -443,6 +460,7 @@ int tcp_input(cbuf *buf, ifnet *i, ipv4_addr source_address, ipv4_addr target_ad
 	// get some data from the packet
 	packet_flags = header->length_flags & 0x3f;
 	data_len = cbuf_get_len(buf) - header_len;
+	highest_sequence = header->seq_num + (data_len > 0) ? (data_len - 1) : 0;
 
 	// see if it matches a socket we have
 	s = lookup_socket(source_address, target_address, header->source_port, header->dest_port);
@@ -465,8 +483,8 @@ int tcp_input(cbuf *buf, ifnet *i, ipv4_addr source_address, ipv4_addr target_ad
 	// check for out of window packets
 	if(!(packet_flags & PKT_SYN)) {
 		if(SEQUENCE_LT(header->seq_num, s->rx_win_low)
-			|| SEQUENCE_GT(header->seq_num, s->rx_win_high)
-			&& (!((data_len == 0) && (header->seq_num != s->rx_win_high + 1)))) {
+			|| (SEQUENCE_GT(header->seq_num, s->rx_win_high)
+				&& (!((data_len == 0) && (header->seq_num != s->rx_win_high + 1))))) {
 			/* out of window, ack it */
 			send_ack(s);
 			goto ditch_packet;
@@ -528,17 +546,89 @@ int tcp_input(cbuf *buf, ifnet *i, ipv4_addr source_address, ipv4_addr target_ad
 				buf = NULL; // handle_data will deal with the buffer from now on
 			}
 
-			if(packet_flags & PKT_FIN) {
-				// XXX handle this
+			if((packet_flags & PKT_FIN) && SEQUENCE_GT(s->rx_win_low, highest_sequence)) {
+				// someone wants to close with us, and there's no outstanding data
+
+				// FIN consumed a sequence
+				s->rx_win_low++;
+
+				// send an ack and transition to a new state
+				send_ack(s);
+				s->state = STATE_CLOSE_WAIT;
+
+				// wake up any readers
+				sem_release(s->read_sem, 1);
 			}
 			break;
 		}
-		case STATE_SYN_RCVD:
 		case STATE_CLOSE_WAIT:
+			if(packet_flags & PKT_FIN) {
+				// send another ACK, the original FIN must have been lost
+				send_ack(s);
+			}
+			break;
 		case STATE_LAST_ACK:
-		case STATE_CLOSING:
+			if(packet_flags & PKT_ACK) {
+				// XXX may be technically bad, since there could be pending data still unacked
+				tcp_remote_close(s);
+			}
+			break;
 		case STATE_FIN_WAIT_1:
+			if((packet_flags & (PKT_ACK|PKT_FIN)) == (PKT_ACK|PKT_FIN)
+			    && header->ack_num == (s->tx_win_low + 1)) {
+				// they've acked us and piggybacked a FIN on the same packet
+				// send an ack and transition directly to TIME_WAIT
+
+				// FIN consumes a sequence
+				s->rx_win_low ++;
+				// consume our FIN sequence
+				s->tx_win_low++;
+
+				s->state = STATE_TIME_WAIT;
+				tcp_socket_send(s, NULL, PKT_ACK, NULL, 0, s->tx_win_low);
+				if(set_net_timer(&s->time_wait_timer, 2*MSL, &handle_time_wait_timeout, s, 0) >= 0)
+					inc_socket_ref(s);
+			} else if(packet_flags & PKT_ACK
+				&& header->ack_num == (s->tx_win_low + 1)) {
+				// they've acked us, we need to wait for their FIN
+
+				// consume our FIN sequence
+				s->tx_win_low++;
+				s->state = STATE_FIN_WAIT_2;
+			} else if(packet_flags & PKT_FIN) {
+				// simultaneous close
+
+				// FIN consumes a sequence
+				s->rx_win_low ++;
+				// consume our FIN sequence
+				s->tx_win_low++;
+
+				s->state = STATE_CLOSING;
+				tcp_socket_send(s, NULL, PKT_ACK, NULL, 0, s->tx_win_low);
+			} else if(packet_flags & PKT_ACK)
+				handle_ack(s, header->ack_num, header->win_size, data_len > 0);
+			break;
 		case STATE_FIN_WAIT_2:
+			if(packet_flags & PKT_FIN) {
+				// FIN consumes a sequence
+				s->rx_win_low ++;
+
+				s->state = STATE_TIME_WAIT;
+				tcp_socket_send(s, NULL, PKT_ACK, NULL, 0, s->tx_win_low);
+				if(set_net_timer(&s->time_wait_timer, 2*MSL, &handle_time_wait_timeout, s, 0) >= 0)
+					inc_socket_ref(s);
+			}
+			break;
+		case STATE_CLOSING:
+			if(packet_flags & PKT_ACK) {
+				// XXX do we need to make sure it's a valid ack?
+				s->state = STATE_TIME_WAIT;
+				tcp_socket_send(s, NULL, PKT_ACK, NULL, 0, s->tx_win_low);
+				if(set_net_timer(&s->time_wait_timer, 2*MSL, &handle_time_wait_timeout, s, 0) >= 0)
+					inc_socket_ref(s);
+			}
+			break;
+		case STATE_SYN_RCVD:
 		case STATE_TIME_WAIT:
 		default:
 			dprintf("tcp_receive: incoming packet on socket with unhandled state %d\n", s->state);
@@ -680,7 +770,48 @@ out:
 
 int tcp_close(void *prot_data)
 {
-	return 0;
+	tcp_socket *s = prot_data;
+	int err;
+
+	mutex_lock(&s->lock);
+
+	// handle some special cases
+	switch(s->state) {
+		case STATE_ESTABLISHED:
+			tcp_socket_send(s, NULL, PKT_FIN|PKT_ACK, NULL, 0, s->tx_win_low);
+
+			if(set_net_timer(&s->fin_retransmit_timer, FIN_RETRANSMIT_TIMEOUT, &handle_fin_retransmit, s, 0) >= 0)
+				inc_socket_ref(s);
+			s->state = STATE_FIN_WAIT_1;
+			break;
+		case STATE_CLOSE_WAIT:
+			tcp_socket_send(s, NULL, PKT_FIN|PKT_ACK, NULL, 0, s->tx_win_low);
+
+			if(set_net_timer(&s->fin_retransmit_timer, FIN_RETRANSMIT_TIMEOUT, &handle_fin_retransmit, s, 0) >= 0)
+				inc_socket_ref(s);
+			s->state = STATE_LAST_ACK;
+			break;
+		case STATE_SYN_SENT:
+			s->state = STATE_CLOSED;
+			break;
+		default:
+			// close not supported in this state
+			err = ERR_NET_NOT_CONNECTED;
+			inc_socket_ref(s);
+			goto out;
+	}
+
+	// wake up anyone that may be blocked on this socket
+	sem_release(s->read_sem, 1);
+	sem_release(s->write_sem, 1);
+	s->writers_waiting = false;
+
+	err = NO_ERROR;
+
+out:
+	mutex_unlock(&s->lock);
+	dec_socket_ref(s);
+	return err;
 }
 
 ssize_t tcp_recvfrom(void *prot_data, void *buf, ssize_t len, sockaddr *saddr, int flags, bigtime_t timeout)
@@ -709,9 +840,17 @@ ssize_t tcp_recvfrom(void *prot_data, void *buf, ssize_t len, sockaddr *saddr, i
 			err = sem_acquire(s->read_sem, 1);
 		mutex_lock(&s->lock);
 		if(err < 0) {
-			bytes_read = err;
+			if(s->last_error < 0)
+				bytes_read = s->last_error;
+			else
+				bytes_read = err;
 			goto out;
 		}
+	}
+
+	if(s->state != STATE_ESTABLISHED) {
+		bytes_read = s->last_error;
+		goto out;
 	}
 
 	/* copy as much data as we can */
@@ -753,7 +892,7 @@ ssize_t tcp_sendto(void *prot_data, const void *inbuf, ssize_t len, sockaddr *to
 	inc_socket_ref(s);
 	mutex_lock(&s->lock);
 
-	if(s->state != STATE_ESTABLISHED) {
+	if(s->state != STATE_ESTABLISHED && s->state != STATE_CLOSE_WAIT) {
 		sent = 0;
 		goto out;
 	}
@@ -762,6 +901,11 @@ ssize_t tcp_sendto(void *prot_data, const void *inbuf, ssize_t len, sockaddr *to
 		int buf_size;
 		int chunk_size;
 		cbuf *chunk;
+
+		if(s->state != STATE_ESTABLISHED && s->state != STATE_CLOSE_WAIT) {
+			sent = s->last_error;
+			goto out;
+		}
 
 		// figure out how much of this buffer we can add to the transmit queue
 		buf_size = cbuf_get_len(s->write_buffer);
@@ -809,7 +953,7 @@ static void send_ack(tcp_socket *s)
 	if(cancel_net_timer(&s->ack_delay_timer) >= 0)
 		dec_socket_ref(s);
 
-	if(s->state != STATE_ESTABLISHED)
+	if(s->state != STATE_ESTABLISHED && s->state != STATE_CLOSE_WAIT)
 		return;
 
 	// XXX handle sending any pending data here, have the ack piggyback that
@@ -821,7 +965,7 @@ static void send_ack(tcp_socket *s)
 static void handle_ack(tcp_socket *s, uint32 sequence, uint32 window_size, bool with_data)
 {
 	bool wake_writers = false;
-	int ack_len = 0;
+	uint32 ack_len = 0;
 
 	ASSERT_LOCKED_MUTEX(&s->lock);
 
@@ -858,7 +1002,7 @@ static void handle_ack(tcp_socket *s, uint32 sequence, uint32 window_size, bool 
 			s->smoothed_deviation = s->smoothed_deviation + ((Err < 0 ? -Err : Err) - s->smoothed_deviation) / 4;
 			s->rto = s->smoothed_rtt + 4 * s->smoothed_deviation;
 			s->tracking_rtt = false;
-			dprintf("handle_ack: new rto %d\n", s->rto);
+			dprintf("handle_ack: new rto %ld\n", s->rto);
 		}
 
 
@@ -934,7 +1078,7 @@ static void handle_persist_timeout(void *_socket)
 {
 	tcp_socket *s = (tcp_socket *)_socket;
 
-	dprintf("handle_persist_timeout: entry\n");
+//	dprintf("handle_persist_timeout: entry\n");
 
 	mutex_lock(&s->lock);
 
@@ -981,6 +1125,37 @@ static void handle_retransmit_timeout(void *_socket)
 
 	if(set_net_timer(&s->retransmit_timer, s->retransmit_timeout, &handle_retransmit_timeout, s, NET_TIMER_PENDING_IGNORE) >= 0)
 		inc_socket_ref(s);
+
+	mutex_unlock(&s->lock);
+	dec_socket_ref(s);
+}
+
+static void handle_fin_retransmit(void *_socket)
+{
+	tcp_socket *s = (tcp_socket *)_socket;
+
+	mutex_lock(&s->lock);
+
+	if(s->state != STATE_LAST_ACK && s->state != STATE_FIN_WAIT_1)
+		goto out;
+
+	if(set_net_timer(&s->fin_retransmit_timer, FIN_RETRANSMIT_TIMEOUT, &handle_fin_retransmit, s, NET_TIMER_PENDING_IGNORE) >= 0)
+		inc_socket_ref(s);
+
+	tcp_socket_send(s, NULL, PKT_FIN | PKT_ACK, NULL, 0, s->tx_win_low);
+
+out:
+	mutex_unlock(&s->lock);
+	dec_socket_ref(s);
+}
+
+static void handle_time_wait_timeout(void *_socket)
+{
+	tcp_socket *s = (tcp_socket *)_socket;
+
+	mutex_lock(&s->lock);
+
+	ASSERT(s->state == STATE_TIME_WAIT);
 
 	mutex_unlock(&s->lock);
 	dec_socket_ref(s);
@@ -1110,11 +1285,12 @@ static int tcp_flush_pending_data(tcp_socket *s)
 		&& s->unacked_data_len < cbuf_get_len(s->write_buffer)
 		&& s->unacked_data_len < s->cwnd
 		&& s->state == STATE_ESTABLISHED) {
-		int send_len;
+		size_t send_len;
 		cbuf *packet;
 
+		ASSERT(s->tx_win_high >= s->tx_win_low);
+		ASSERT(s->cwnd >= s->unacked_data_len);
 		send_len = min(min(s->mss, s->tx_win_high - s->tx_win_low), s->cwnd - s->unacked_data_len);
-		ASSERT(send_len >= 0);
 
 		// XXX take care of silly window
 
@@ -1136,7 +1312,7 @@ static int tcp_flush_pending_data(tcp_socket *s)
 
 		packet = cbuf_duplicate_chain(s->write_buffer, s->unacked_data_len, send_len);
 		if(!packet)
-			return 0;
+			return data_flushed;
 
 		s->unacked_data_len += send_len;
 		ASSERT(s->unacked_data_len <= cbuf_get_len(s->write_buffer));
@@ -1213,7 +1389,7 @@ static void tcp_socket_send(tcp_socket *s, cbuf *data, tcp_flags flags, const vo
 	rx_win_high = s->rx_win_low + s->rx_win_size - cbuf_get_len(s->read_buffer) - 1;
 
 #if NET_CHATTY
-	dprintf("** s->rx_win_low %ud s->rx_win_size %ud read_buf_len %d, new win high %ud\n",
+	dprintf("** s->rx_win_low %u s->rx_win_size %ud read_buf_len %d, new win high %ud\n",
 		s->rx_win_low, s->rx_win_size, cbuf_get_len(s->read_buffer), rx_win_high);
 #endif
 	if(SEQUENCE_GTE(rx_win_high, s->rx_win_high)) {
@@ -1255,6 +1431,7 @@ static void tcp_remote_close(tcp_socket *s)
 
 	mutex_lock(&s->lock);
 
+	s->last_error = ERR_NET_REMOTE_CLOSE;
 	s->state = STATE_CLOSED;
 
 	dec_socket_ref(s);
