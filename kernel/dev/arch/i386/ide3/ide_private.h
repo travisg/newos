@@ -62,15 +62,16 @@ typedef	struct s_ide_device
   uint32        magic1;
   ide_hw_id_t   hardware_device;
   uint32        magic2;
-  int           iobase;
+  uint16        iobase;
   int           bus;
   int           device;
-  int           device_type;
+  uint8         device_type;
+  uint8         _reserved;      // for alignment
   uint32        sector_count;
-  int           bytes_per_sector;
+  uint32        bytes_per_sector;
   bool          lba_supported;
-  int           start_block;
-  int           end_block;
+  uint32        start_block;
+  uint32        end_block;
   tPartition    partitions[8];  // 4 Primary + 4 Extended
 } ide_device;
 
@@ -80,12 +81,14 @@ typedef	struct s_ide_device
 
 extern	ide_device      devices[MAX_DEVICES];
 
-#define	DISK_GET_GEOMETRY       1
-#define	DISK_USE_DMA            2
-#define	DISK_USE_BUS_MASTERING  3
-#define	DISK_USE_PIO            4
-#define	DISK_GET_ACOUSTIC_LEVEL 5
-#define	DISK_SET_ACOUSTIC_LEVEL 6
+enum {
+  DISK_GET_GEOMETRY = 1,
+  DISK_USE_DMA,
+  DISK_USE_BUS_MASTERING,
+  DISK_USE_PIO,
+  DISK_GET_ACOUSTIC_LEVEL,
+  DISK_SET_ACOUSTIC_LEVEL
+};
 
 typedef struct s_drive_geometry
 {

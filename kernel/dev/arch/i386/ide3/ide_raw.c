@@ -39,7 +39,7 @@
 #define CB_DC             8   // device control reg       out pio_base_addr2+6
 #define CB_DA             9   // device address reg    in     pio_base_addr2+7
 
-// error register
+// error register (1)
 #define CB_ER_NDAM     0x01   // ATA address mark not found
 #define CB_ER_NTK0     0x02   // ATA track 0 not found
 #define CB_ER_ABRT     0x04   // ATA command aborted
@@ -50,7 +50,7 @@
 #define CB_ER_BBK      0x80   // ATA bad block
 #define CB_ER_ICRC     0x80   // ATA Ultra DMA bad CRC
 
-// drive/head register bits 7-4
+// drive/head register (6) bits 7-4
 #define CB_DH_LBA      0x40   // LBA bit mask
 #define CB_DH_DEV0     0xa0   // select device 0
 #define CB_DH_DEV1     0xb0   // select device 1
@@ -58,7 +58,7 @@
 #define DRIVE_SUPPORT_DMA  0x0100 // test mask for DMA support
 #define DRIVE_SUPPORT_LBA  0x0200 // test mask for LBA support
 
-// status register bits
+// status register (7) bits
 #define CB_STAT_ERR    0x01   // error (ATA)
 #define CB_STAT_CHK    0x01   // check (ATAPI)
 #define CB_STAT_IDX    0x02   // index
@@ -71,21 +71,22 @@
 #define CB_STAT_RDY    0x40   // ready
 #define CB_STAT_BSY    0x80   // busy
 
-// device control register bits
+// device control register (8) bits
 #define CB_DC_NIEN     0x02   // disable interrupts
 #define CB_DC_SRST     0x04   // soft reset
 #define CB_DC_HD15     0x08   // bit should always be set to one
 
 
-// ATAPI commands
+// ATAPI register bits
 
+// error register
 #define CB_ER_P_ILI    0x01   // ATAPI illegal length indication
 #define CB_ER_P_EOM    0x02   // ATAPI end of media
 #define CB_ER_P_ABRT   0x04   // ATAPI command abort
 #define CB_ER_P_MCR    0x08   // ATAPI media change request
 #define CB_ER_P_SNSKEY 0xf0   // ATAPI sense key mask
 
-// ATAPI interrupt reason bits in the sector count register
+// sector count register interrupt reason bits
 #define CB_SC_P_CD     0x01   // ATAPI C/D
 #define CB_SC_P_IO     0x02   // ATAPI I/O
 #define CB_SC_P_REL    0x04   // ATAPI release
@@ -93,7 +94,7 @@
 
 //**************************************************************
 
-// The ATA command set
+// The ATA/ATAPI command set
 
 // Mandatory commands
 #define CMD_EXECUTE_DRIVE_DIAGNOSTIC     0x90
@@ -120,10 +121,6 @@
 #define DIAG_MICROPROCESSOR              0x05
 #define DIAG_SLAVE_DRIVE_MASK            0x80
 
-// Acoustic Management commands
-#define CMD_SET_ACOUSTIC_LEVEL           0x2A
-#define CMD_GET_ACOUSTIC_LEVEL           0xAB
-
 // Command codes for CMD_FORMAT_TRACK
 #define FMT_GOOD_SECTOR                  0x00
 #define FMT_SUSPEND_REALLOC              0x20
@@ -144,6 +141,7 @@
 #define CMD_DOOR_LOCK                    0xDE
 #define CMD_DOOR_UNLOCK                  0xDF
 #define CMD_FLUSH_CACHE                  0xE7 // CMD_REST
+#define CMD_GET_ACOUSTIC_LEVEL           0xAB // proposed for ATA-6
 #define CMD_IDENTIFY_DEVICE              0xEC
 #define CMD_IDENTIFY_DEVICE_PACKET       0xA1
 #define CMD_IDLE                         0x97
@@ -155,6 +153,7 @@
 #define CMD_READ_DMA_QUEUED              0xC7
 #define CMD_READ_MULTIPLE                0xC4
 #define CMD_RESTORE_DRIVE_STATE          0xEA
+#define CMD_SET_ACOUSTIC_LEVEL           0x2A // proposed for ATA-6
 #define CMD_SET_FEATURES                 0xEF
 #define CMD_SET_MULTIPLE_MODE            0xC6
 #define CMD_SLEEP                        0x99
@@ -190,8 +189,8 @@
 // Standard ide base addresses. For pc-card (pcmcia) drives, use
 // unused contiguous address block { 100H < (base1=base2) < 3F0H }
 // Non-standard addresses also exist. For ATA via sound cards try:
-// pio_base2 = 1e8/3e8, irq 11 or 12
-// pio_base3 = 168/368, irq 9 or 10
+// pio_base2 = 168/368, irq 9 or 10
+// pio_base3 = 1e8/3e8, irq 11 or 12
 unsigned int pio_base0_addr1 = 0x1f0; // Command block, ide bus 0
 unsigned int pio_base0_addr2 = 0x3f0; // Control block, ide bus 0
 unsigned int pio_base1_addr1 = 0x170; // Command block, ide bus 1
@@ -249,7 +248,7 @@ static bool ide_wait_busy()
 {
   int i;
 
-  for(i=0; i<10000; i++)
+  for(i=0; i<100000; i++)
 	{
       if ((pio_inbyte(CB_ASTAT) & CB_STAT_BSY) == 0)
         return true;
@@ -298,7 +297,7 @@ static void ide_delay(int bus, int device)
 	return;
 }
 
-static int reg_pio_data_in(int bus, int dev, int cmd, int fr, int sc,
+static uint8 reg_pio_data_in(int bus, int dev, int cmd, int fr, int sc,
 					unsigned int cyl, int head, int sect, uint8 *output,
 					unsigned int numSect, unsigned int multiCnt)
 {
@@ -371,7 +370,7 @@ static int reg_pio_data_in(int bus, int dev, int cmd, int fr, int sc,
     return NO_ERROR;
 }
 
-static int reg_pio_data_out( int bus, int dev, int cmd, int fr, int sc,
+static uint8 reg_pio_data_out( int bus, int dev, int cmd, int fr, int sc,
 			     unsigned int cyl, int head, int sect, const uint8 *output,
 			     unsigned int numSect, unsigned int multiCnt )
 {
@@ -459,7 +458,7 @@ static void ide_btolba(uint32 block, ide_device *device, int *cylinder, int *hea
 //  dprintf("ide_btolba: block %d -> cyl %d head %d sect %d\n", block, *cylinder, *head, *sect);
 }
 
-int	ide_read_block(ide_device *device, char *data, uint32 block, uint8 numSectors)
+uint8 ide_read_block(ide_device *device, char *data, uint32 block, uint8 numSectors)
 {
   int cyl, head, sect;
 
@@ -472,7 +471,7 @@ int	ide_read_block(ide_device *device, char *data, uint32 block, uint8 numSector
 			          0, numSectors, cyl, head, sect, data, numSectors, 2);
 }
 
-int	ide_write_block(ide_device *device, const char *data, uint32 block, uint8 numSectors)
+uint8 ide_write_block(ide_device *device, const char *data, uint32 block, uint8 numSectors)
 {
   int cyl, head, sect;
 
@@ -485,7 +484,7 @@ int	ide_write_block(ide_device *device, const char *data, uint32 block, uint8 nu
 			          0, numSectors, cyl, head, sect, data, numSectors, 2);
 }
 
-void ide_string_conv (char *str, int len)
+static void ide_string_conv(char *str, int len)
 {
   unsigned int i;
   int	       j;
@@ -502,8 +501,8 @@ void ide_string_conv (char *str, int len)
     str[j] = 0;
 }
 
-// ide_reset() - execute a software reset
-bool ide_reset (void)
+// execute a software reset
+bool ide_reset(void)
 {
   unsigned char devCtrl = CB_DC_HD15 | CB_DC_NIEN;
 
@@ -517,10 +516,10 @@ bool ide_reset (void)
   return (ide_wait_busy() ? true : false);
 }
 
-// check devices actually exist on bus
-int ide_drive_present(int bus, int device)
+// check devices actually exist on bus, and if so what type
+static uint8 ide_drive_present(int bus, int device)
 {
-  int               ret = NO_DEVICE;
+  int ret = NO_DEVICE;
   unsigned char devCtrl = CB_DC_HD15 | CB_DC_NIEN;
   uint8 sc, sn, ch=0, cl=0, st=0;
 
@@ -536,76 +535,101 @@ int ide_drive_present(int bus, int device)
   pio_outbyte(CB_SN, 0xaa);
   sc = pio_inbyte(CB_SC);
   sn = pio_inbyte(CB_SN);
-
-  // ensure device exists
+  // ensure a device exists
   if(sc == 0x55 && sn == 0xaa)
     ret = UNKNOWN_DEVICE;
+  // issue a soft bus reset
+  pio_outbyte(CB_DH, CB_DH_DEV0);
+  DELAY400NS;
+  if(ide_reset() == false)
+    dprintf("ide_reset() failed!\n");
+  // re-select device
   pio_outbyte(CB_DH, device ? CB_DH_DEV1 : CB_DH_DEV0);
   DELAY400NS;
-  ide_reset();
-
-  // test type of device
-  pio_outbyte(CB_DH, device ? CB_DH_DEV1 : CB_DH_DEV0);
-  DELAY400NS;
+  // test for type of device
   sc = pio_inbyte(CB_SC);
   sn = pio_inbyte(CB_SN);
+  if((sc == 0x01) && (sn == 0x01))
+    {
+      ret = UNKNOWN_DEVICE;
+      cl = pio_inbyte(CB_CL);
+      ch = pio_inbyte(CB_CH);
+      st = pio_inbyte(CB_STAT);
+      if ((cl == 0x14) && (ch == 0xeb))
+        ret = ATAPI_DEVICE;
+      if ((cl == 0x00) && (ch == 0x00) && (st != 0x00))
+        ret = ATA_DEVICE;
+    }
 
-  if ((sc == 0x01) && (sn == 0x01)) {
-    ret = UNKNOWN_DEVICE;
-    cl = pio_inbyte(CB_CL);
-    ch = pio_inbyte(CB_CH);
-    st = pio_inbyte(CB_STAT);
-    if ((cl == 0x14) && (ch == 0xeb))
-      ret = ATAPI_DEVICE;
-    if ((cl == 0x00) && (ch == 0x00) && (st != 0x00))
-      ret = ATA_DEVICE;
-  }
   dprintf("ide_drive_present: sector count = %d, sector number = %d,
     cl = %x, ch = %x, st = %x, return = %d\n", sc, sn, cl, ch, st, ret);
+
   return (ret ? ret : NO_DEVICE);
 }
 
-int ide_identify_device(int bus, int device)
+uint8 ide_identify_device(int bus, int device)
 {
-  uint8              *buffer;
+  uint8              *buffer = NULL;
   ide_device *ide  = &devices[(bus*2) + device];
 
   ide->device_type = ide_drive_present(bus, device);
   ide->bus         = bus;
   ide->device      = device;
 
-dprintf("ide_identify_device: type %d, bus %d, device %d\n", ide->device_type, bus, device);
+  dprintf("ide_identify_device: type %d, bus %d, device %d\n",
+	  ide->device_type, bus, device);
 
   switch (ide->device_type) {
-    case ATAPI_DEVICE:
-      reg_pio_data_in(bus, device, CMD_IDENTIFY_DEVICE_PACKET,
-        1, 0, 0, 0, 0, buffer, 1, 0);
-      break;
 
     case NO_DEVICE:
+    case UNKNOWN_DEVICE:
+      break;
+
+    case ATAPI_DEVICE:
+      // try for more data with the optional `identify' command
+      buffer = (uint8*)&ide->hardware_device;
+      if(reg_pio_data_in(bus, device, CMD_IDENTIFY_DEVICE_PACKET,
+        1, 0, 0, 0, 0, buffer, 1, 0) == NO_ERROR)
+      {
+      ide_string_conv(ide->hardware_device.model, 40);
+      ide_string_conv(ide->hardware_device.serial, 20);
+      ide_string_conv(ide->hardware_device.firmware, 8);
+
+  dprintf("ide: cd-rom at bus %d, device %d, model = %s\n", bus, device,
+    ide->hardware_device.model);
+  dprintf("ide: cd-rom serial number = %s firmware revision = %s\n",
+    ide->hardware_device.serial, ide->hardware_device.firmware);
+
+      }
       break;
 
     case ATA_DEVICE:
-    case UNKNOWN_DEVICE: // assume ata_device
-    buffer = (uint8*)&ide->hardware_device;
-    if(reg_pio_data_in(bus, device, CMD_IDENTIFY_DEVICE,
-      1, 0, 0, 0, 0, buffer, 1, 0) == NO_ERROR)
-    {
-    ide->device_type = ATA_DEVICE;
-    ide_string_conv(ide->hardware_device.model, 40);
-    ide->sector_count = ide->hardware_device.cyls * ide->hardware_device.heads
-    				  * ide->hardware_device.sectors;
-    ide->bytes_per_sector = 512;
-    ide->lba_supported = ide->hardware_device.capabilities & DRIVE_SUPPORT_LBA;
-    ide->start_block = 0;
-    ide->end_block = ide->sector_count;
+      // try for more data with the optional `identify' command
+      buffer = (uint8*)&ide->hardware_device;
+      if(reg_pio_data_in(bus, device, CMD_IDENTIFY_DEVICE,
+        1, 0, 0, 0, 0, buffer, 1, 0) == NO_ERROR)
+      {
+      ide->device_type = ATA_DEVICE;
+      ide_string_conv(ide->hardware_device.model, 40);
+      ide_string_conv(ide->hardware_device.serial, 20);
+      ide_string_conv(ide->hardware_device.firmware, 8);
+      ide->sector_count = ide->hardware_device.cyls * ide->hardware_device.heads
+                        * ide->hardware_device.sectors;
+      ide->bytes_per_sector = 512;
+      ide->lba_supported = ide->hardware_device.capabilities & DRIVE_SUPPORT_LBA;
+      ide->start_block = 0;
+      ide->end_block = ide->sector_count; // - ide->start_block;
 
-    dprintf ("ide: disk at bus %d, device %d %s\n", bus, device, ide->hardware_device.model);
-    dprintf ("ide/%d/%d: %dMB; %d cyl, %d head, %d sec, %d bytes/sec  (LBA=%d)\n",
-    	bus, device, ide->sector_count * ide->bytes_per_sector / (1000 * 1000),
-    	ide->hardware_device.cyls, ide->hardware_device.heads,
-    	ide->hardware_device.sectors, ide->bytes_per_sector, ide->lba_supported );
-    }
+  dprintf("ide: disk at bus %d, device %d, model = %s\n",
+    bus, device, ide->hardware_device.model);
+  dprintf("ide: disk serial number = %s firmware revision = %s\n",
+    ide->hardware_device.serial, ide->hardware_device.firmware);
+  dprintf("ide/%d/%d: %dMB; %d cyl, %d head, %d sec, %d bytes/sec  (LBA=%d)\n",
+    bus, device, ide->sector_count * ide->bytes_per_sector / (1000 * 1000),
+    ide->hardware_device.cyls, ide->hardware_device.heads,
+    ide->hardware_device.sectors, ide->bytes_per_sector, ide->lba_supported);
+
+      }
 
     default:
       ;
@@ -639,14 +663,18 @@ static bool ide_get_partition_info(ide_device *device, tPartition *partition, ui
 
 	// Try to read partition table
 	if (ide_read_block(device, buffer, position, 1) != NO_ERROR) {
-		dprintf("unable to read partition table\n");
+
+	dprintf("unable to read partition table\n");
+
 		return false;
 	}
 
 	// Check partition table signature
 	if ((partitionBuffer[PART_IDENT_OFFSET]   != 0x55) ||
 	    (partitionBuffer[PART_IDENT_OFFSET+1] != 0xaa)) {
-		dprintf("partition table signature is incorrect\n");
+
+	dprintf("partition table signature is incorrect\n");
+
 		return false;
 	}
 
@@ -657,7 +685,7 @@ static bool ide_get_partition_info(ide_device *device, tPartition *partition, ui
 
 bool ide_get_partitions(ide_device *device)
 {
-  int i, part;
+  uint8 i, j;
 
   memset(&device->partitions, 0, sizeof(tPartition) * MAX_PARTITIONS);
   if(ide_get_partition_info(device, device->partitions, 0) == false)
@@ -680,20 +708,20 @@ bool ide_get_partitions(ide_device *device)
 	  device->partitions[i].sector_count);
     }
 
-    for(part=0; part<4; part++)
+    for(j=0; j<4; j++)
     {
-    if((device->partitions[part].partition_type == PTDosExtended)      ||
-       (device->partitions[part].partition_type == PTWin95ExtendedLBA) ||
-       (device->partitions[part].partition_type == PTLinuxExtended))
+    if((device->partitions[j].partition_type == PTDosExtended)      ||
+       (device->partitions[j].partition_type == PTWin95ExtendedLBA) ||
+       (device->partitions[j].partition_type == PTLinuxExtended))
     {
-      int extOffset = device->partitions[part].starting_block;
+      int extOffset = device->partitions[j].starting_block;
       if(ide_get_partition_info(device, &device->partitions[4], extOffset) == false)
         return false;
       dprintf("Extended Partition Table\n");
       for (i=NUM_PARTITIONS; i<MAX_PARTITIONS; i++)
         {
           device->partitions[i].starting_block += extOffset;
-          dprintf("  %d: flags:%x type:%x start:cy%d hd%d sc%d end: cy%d hd%d sc%d lba:%d len:%d\n",
+          dprintf("  %d: flags:%x type:%x start:cy%d hd%d sc%d end:cy%d hd%d sc%d lba:%d len:%d\n",
 		  i,
 		  device->partitions[i].boot_flags,
 		  device->partitions[i].partition_type,
@@ -709,64 +737,4 @@ bool ide_get_partitions(ide_device *device)
     }
     }
   return true;
-}
-
-static char getHexChar(uint8 value)
-{
-  if(value < 10)
-    return value + '0';
-  return 'A' + (value - 10);
-}
-
-static void dumpHexLine(uint8 *buffer, int numberPerLine)
-{
-  uint8	*copy = buffer;
-  int	i;
-
-  for(i=0; i<numberPerLine; i++)
-    {
-      uint8	value1 = getHexChar(((*copy) >> 4));
-      uint8	value2 = getHexChar(((*copy) & 0xF));
-      dprintf("%c%c ", value1, value2);
-      copy++;
-    }
-  copy = buffer;
-  for(i=0; i<numberPerLine; i++)
-    {
-      if(*copy >= ' ' && *copy <= 'Z')
-		dprintf("%c", *copy);
-      else
-		dprintf(".");
-      copy++;
-    }
-  dprintf("\n");
-}
-
-static void dumpHexBuffer(uint8 *buffer, int size)
-{
-  int	numberPerLine = 8;
-  int	numberOfLines = size / numberPerLine;
-  int	i, j;
-
-  for(i=0; i<numberOfLines; i++)
-    {
-      dprintf("%d ", i*numberPerLine);
-      dumpHexLine(buffer, numberPerLine);
-      buffer += numberPerLine;
-    }
-}
-
-int ide_get_acoustic(ide_device *device, int8* level_ptr)
-{
-	return ERR_UNIMPLEMENTED;
-}
-
-int ide_set_acoustic(ide_device *device, int8 level)
-{
-	pio_outbyte(CB_DH, (device->device == 1) ? CB_DH_DEV1 : CB_DH_DEV0);
-	pio_outbyte(CB_CMD, CMD_SET_ACOUSTIC_LEVEL);
-	pio_outbyte(CB_SC, level);
-	pio_outbyte(CB_STAT, 0xEF);
-
-	return NO_ERROR;
 }
