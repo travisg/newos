@@ -37,7 +37,7 @@ kernelclean:
 include $(KERNEL_DEPS)
 
 # build prototypes - this covers architecture dependant subdirs
-KERNEL_INCLUDES = -Iinclude -Iboot/$(ARCH) -I$(KERNEL_DIR) -I$(KERNEL_ARCH_DIR)
+KERNEL_INCLUDES = -Iinclude -Idev -Iboot/$(ARCH) -I$(KERNEL_DIR) -I$(KERNEL_ARCH_DIR)
 
 $(KERNEL_DIR)/%.o: $(KERNEL_DIR)/%.c
 	$(CC) -c $< $(GLOBAL_CFLAGS) $(KERNEL_INCLUDES) -o $@

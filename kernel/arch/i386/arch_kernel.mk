@@ -1,7 +1,6 @@
 # i386 kernel makefile
 # included from kernel.mk
 KERNEL_OBJS += \
-	$(KERNEL_ARCH_DIR)/arch_console.o \
 	$(KERNEL_ARCH_DIR)/arch_cpu.o \
 	$(KERNEL_ARCH_DIR)/arch_dbg_console.o \
 	$(KERNEL_ARCH_DIR)/arch_debug.o \

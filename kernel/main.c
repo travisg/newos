@@ -11,6 +11,7 @@
 #include <sem.h>
 #include <vfs.h>
 #include <dev.h>
+#include <devs.h>
 
 #include <arch_cpu.h>
 
@@ -57,6 +58,7 @@ int _start(kernel_args *oldka, int cpu)
 		proc_init(&ka);
 		thread_init(&ka);
 		dev_init(&ka);
+		devs_init(&ka);
 	
 		// XXX remove
 		vfs_test();
