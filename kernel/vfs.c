@@ -724,12 +724,14 @@ void *vfs_new_ioctx()
 	if(ioctx == NULL)
 		return NULL;
 
+
+	memset(ioctx, 0, sizeof(struct ioctx) + sizeof(struct file_descriptor) * NEW_FD_TABLE_SIZE);
+
 	if(mutex_init(&ioctx->io_mutex, "ioctx_mutex") < 0) {
 		kfree(ioctx);
 		return NULL;
 	}
 
-	memset(ioctx, 0, sizeof(struct ioctx) + sizeof(struct file_descriptor) * NEW_FD_TABLE_SIZE);
 	ioctx->cwd = root_vnode;
 	ioctx->table_size = NEW_FD_TABLE_SIZE;
 
@@ -948,20 +950,22 @@ static int vfs_mount(char *path, const char *fs_name, bool kernel)
 	mutex_lock(&vfs_mount_op_mutex);
 
 	mount = (struct fs_mount *)kmalloc(sizeof(struct fs_mount));
-	if(mount == NULL)
-		return ERR_NO_MEMORY;
+	if(mount == NULL)  {
+		err = ERR_NO_MEMORY;
+		goto err;
+	}
 
 	mount->mount_point = (char *)kmalloc(strlen(path)+1);
 	if(mount->mount_point == NULL) {
 		err = ERR_NO_MEMORY;
-		goto err;
+		goto err1;
 	}
 	strcpy(mount->mount_point, path);
 
 	mount->fs = find_fs(fs_name);
 	if(mount->fs == NULL) {
 		err = ERR_VFS_INVALID_FS;
-		goto err1;
+		goto err2;
 	}
 
 	recursive_lock_create(&mount->rlock);
@@ -972,13 +976,13 @@ static int vfs_mount(char *path, const char *fs_name, bool kernel)
 		// we haven't mounted anything yet
 		if(strcmp(path, "/") != 0) {
 			err = ERR_VFS_GENERAL;
-			goto err1;
+			goto err3;
 		}
 
 		err = mount->fs->calls->fs_mount(&mount->fscookie, mount->id, NULL, &root_id);
 		if(err < 0) {
 			err = ERR_VFS_GENERAL;
-			goto err1;
+			goto err3;
 		}
 
 		mount->covers_vnode = NULL; // this is the root mount
@@ -990,7 +994,7 @@ static int vfs_mount(char *path, const char *fs_name, bool kernel)
 		fd = sys_open(path, STREAM_TYPE_DIR, 0);
 		if(fd < 0) {
 			err = fd;
-			goto err1;
+			goto err3;
 		}
 
 		// get the vnode this mount will cover
@@ -1000,15 +1004,15 @@ static int vfs_mount(char *path, const char *fs_name, bool kernel)
 
 		if(!covered_vnode) {
 			err = ERR_VFS_GENERAL;
-			goto err1;
+			goto err2;
 		}
+		mount->covers_vnode = covered_vnode;
 
 		// mount it
 		err = mount->fs->calls->fs_mount(&mount->fscookie, mount->id, NULL, &root_id);
 		if(err < 0)
-			goto err1;
+			goto err4;
 
-		mount->covers_vnode = covered_vnode;
 	}
 
 	mutex_lock(&vfs_mount_mutex);
@@ -1020,7 +1024,7 @@ static int vfs_mount(char *path, const char *fs_name, bool kernel)
 
 	err = get_vnode(mount->id, root_id, &mount->root_vnode, 0);
 	if(err < 0)
-		goto err2;
+		goto err5;
 
 	// XXX may be a race here
 	if(mount->covers_vnode)
@@ -1033,14 +1037,18 @@ static int vfs_mount(char *path, const char *fs_name, bool kernel)
 
 	return 0;
 
-err2:
+err5:
 	mount->fs->calls->fs_unmount(mount->fscookie);
+err4:
 	if(mount->covers_vnode)
 		dec_vnode_ref_count(mount->covers_vnode, true, false);
-err1:
+err3:
+	recursive_lock_destroy(&mount->rlock);
+err2:
 	kfree(mount->mount_point);
-err:
+err1:
 	kfree(mount);
+err:
 	mutex_unlock(&vfs_mount_op_mutex);
 
 	return err;
@@ -1105,6 +1113,8 @@ static int vfs_unmount(char *path, bool kernel)
 
 	mutex_unlock(&vfs_vnode_mutex);
 
+	mount->covers_vnode->covered_by = NULL;
+	dec_vnode_ref_count(mount->covers_vnode, true, false);
 	/* release the ref on the root vnode twice */
 	dec_vnode_ref_count(mount->root_vnode, true, false);
 	dec_vnode_ref_count(mount->root_vnode, true, false);
