@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -62,7 +62,7 @@ void _start(unsigned int mem, char *str)
 	unsigned int kernelSize;
 	unsigned int i;
 	unsigned int kernel_entry;
-	
+
 	// Important.  Make sure supervisor threads can fault on read only pages...
 	asm("movl %%eax, %%cr0" : : "a" ((1 << 31) | (1 << 16) | (1 << 5) | 1));
 	asm("cld");			// Ain't nothing but a GCC thang.
@@ -82,7 +82,7 @@ void _start(unsigned int mem, char *str)
 		for (entry = 0; entry < 64; entry++) {
 			if (bootdir[entry].be_type == BE_TYPE_NONE)
 				break;
-		
+
 			bootdir_pages += bootdir[entry].be_size;
 		}
 
@@ -95,23 +95,23 @@ void _start(unsigned int mem, char *str)
 	next_paddr = BOOTDIR_ADDR + bootdir_pages * PAGE_SIZE;
 
 	mmu_init(ka, &next_paddr);
-	
+
 	// load the kernel (3rd entry in the bootdir)
 	load_elf_image((void *)(bootdir[2].be_offset * PAGE_SIZE + BOOTDIR_ADDR), &next_paddr,
 			&ka->kernel_seg0_addr, &ka->kernel_seg1_addr, &kernel_entry);
 
-	if(ka->kernel_seg1_addr.size > 0) 
+	if(ka->kernel_seg1_addr.size > 0)
 		next_vaddr = ROUNDUP(ka->kernel_seg1_addr.start + ka->kernel_seg1_addr.size, PAGE_SIZE);
 	else
 		next_vaddr = ROUNDUP(ka->kernel_seg0_addr.start + ka->kernel_seg0_addr.size, PAGE_SIZE);
-	
+
 	// map in a kernel stack
 	ka->cpu_kstack[0].start = next_vaddr;
 	for(i=0; i<STACK_SIZE; i++) {
 		mmu_map_page(next_vaddr, next_paddr);
 		next_vaddr += PAGE_SIZE;
 		next_paddr += PAGE_SIZE;
-	} 
+	}
 	ka->cpu_kstack[0].size = next_vaddr - ka->cpu_kstack[0].start;
 
 	dprintf("new stack at 0x%x to 0x%x\n", ka->cpu_kstack[0].start, ka->cpu_kstack[0].start + ka->cpu_kstack[0].size);
@@ -119,14 +119,14 @@ void _start(unsigned int mem, char *str)
 	// set up a new idt
 	{
 		struct gdt_idt_descr idt_descr;
-		
+
 		// find a new idt
 		idt = (unsigned int *)next_paddr;
 		ka->arch_args.phys_idt = (unsigned int)idt;
 		next_paddr += PAGE_SIZE;
-	
+
 //		nmessage("idt at ", (unsigned int)idt, "\n");
-	
+
 		// clear it out
 		for(i=0; i<IDT_LIMIT/4; i++) {
 			idt[i] = 0;
@@ -136,11 +136,11 @@ void _start(unsigned int mem, char *str)
 		mmu_map_page(next_vaddr, (unsigned int)idt);
 		ka->arch_args.vir_idt = (unsigned int)next_vaddr;
 		next_vaddr += PAGE_SIZE;
-	
+
 		// load the idt
 		idt_descr.a = IDT_LIMIT - 1;
 		idt_descr.b = (unsigned int *)ka->arch_args.vir_idt;
-		
+
 		asm("lidt	%0;"
 			: : "m" (idt_descr));
 
@@ -150,14 +150,14 @@ void _start(unsigned int mem, char *str)
 	// set up a new gdt
 	{
 		struct gdt_idt_descr gdt_descr;
-		
+
 		// find a new gdt
 		gdt = (unsigned int *)next_paddr;
 		ka->arch_args.phys_gdt = (unsigned int)gdt;
 		next_paddr += PAGE_SIZE;
-	
+
 //		nmessage("gdt at ", (unsigned int)gdt, "\n");
-	
+
 		// put segment descriptors in it
 		gdt[0] = 0;
 		gdt[1] = 0;
@@ -176,10 +176,10 @@ void _start(unsigned int mem, char *str)
 		ka->arch_args.vir_gdt = (unsigned int)next_vaddr;
 		next_vaddr += PAGE_SIZE;
 
-		// load the GDT	
+		// load the GDT
 		gdt_descr.a = GDT_LIMIT - 1;
 		gdt_descr.b = (unsigned int *)ka->arch_args.vir_gdt;
-		
+
 		asm("lgdt	%0;"
 			: : "m" (gdt_descr));
 
@@ -211,7 +211,7 @@ void _start(unsigned int mem, char *str)
 	ka->num_virt_alloc_ranges = 1;
 	ka->arch_args.page_hole = 0xffc00000;
 	ka->num_cpus = 1;
-#if 0			
+#if 0
 	dprintf("kernel args at 0x%x\n", ka);
 	dprintf("pgdir = 0x%x\n", ka->pgdir);
 	dprintf("pgtables[0] = 0x%x\n", ka->pgtables[0]);
@@ -233,7 +233,7 @@ void _start(unsigned int mem, char *str)
 	smp_boot(ka, kernel_entry);
 
 	dprintf("jumping into kernel at 0x%x\n", kernel_entry);
-	
+
 	ka->cons_line = line;
 
 	asm("movl	%0, %%eax;	"			// move stack out of way
@@ -277,21 +277,22 @@ void load_elf_image(void *data, unsigned int *next_paddr, addr_range *ar0, addr_
 
 		/* Clean out the leftover part of the last page */
 		if(segment->p_filesz % PAGE_SIZE > 0) {
-			dprintf("memsetting 0 to va 0x%x, size %d\n", (void*)((unsigned) data + segment->p_offset + segment->p_filesz), PAGE_SIZE  - (segment->p_filesz % PAGE_SIZE));
-			memset((void*)((unsigned) data + segment->p_offset + segment->p_filesz), 0, PAGE_SIZE
+//			dprintf("memsetting 0 to va 0x%x, size %d\n", (void*)((unsigned)segment->p_vaddr + segment->p_filesz), PAGE_SIZE  - (segment->p_filesz % PAGE_SIZE));
+			memset((void*)((unsigned)segment->p_vaddr + segment->p_filesz), 0, PAGE_SIZE
 				- (segment->p_filesz % PAGE_SIZE));
 		}
 
 		/* Map uninitialized portion */
 		for (; segmentOffset < ROUNDUP(segment->p_memsz, PAGE_SIZE); segmentOffset += PAGE_SIZE) {
+//			dprintf("mapping zero page at va 0x%x\n", segment->p_vaddr + segmentOffset);
 			mmu_map_page(segment->p_vaddr + segmentOffset, *next_paddr);
+			memset(segment->p_vaddr + segmentOffset, 0, PAGE_SIZE);
 			(*next_paddr) += PAGE_SIZE;
 		}
 		switch(segmentIndex) {
 			case 0:
 				ar0->start = segment->p_vaddr;
 				ar0->size = segment->p_memsz;
-				*start_addr = segment->p_vaddr;
 				break;
 			case 1:
 				ar1->start = segment->p_vaddr;
@@ -301,6 +302,7 @@ void load_elf_image(void *data, unsigned int *next_paddr, addr_range *ar0, addr_
 				;
 		}
 	}
+	*start_addr = imageHeader->e_entry;
 }
 
 // allocate a page directory and page table to facilitate mapping
@@ -312,7 +314,7 @@ int mmu_init(kernel_args *ka, unsigned int *next_paddr)
 
 	// get the current page directory
 	asm("movl %%cr3, %%eax" : "=a" (old_pgdir));
-	
+
 	// allocate a new pgdir and
 	// copy the old pgdir to the new one
 	pgdir = (unsigned int *)*next_paddr;
@@ -432,7 +434,7 @@ system_time:
 void sleep(long long time)
 {
 	long long start = system_time();
-	
+
 	while(system_time() - start <= time)
 		;
 }
@@ -449,7 +451,7 @@ void sleep(long long time)
 
 #define TIMER_CLKNUM_HZ 1193167
 
-void calculate_cpu_conversion_factor() 
+void calculate_cpu_conversion_factor()
 {
 	unsigned char	low, high;
 	unsigned long	expired;
@@ -458,13 +460,13 @@ void calculate_cpu_conversion_factor()
 	double			timer_usecs;
 
 	/* program the timer to count down mode */
-    outb(0x34, 0x43);              
+    outb(0x34, 0x43);
 
 	outb(0xff, 0x40);		/* low and then high */
 	outb(0xff, 0x40);
 
 	t1 = rdtsc();
-	
+
 	execute_n_instructions(32*20000);
 
 	t2 = rdtsc();
@@ -486,7 +488,7 @@ void calculate_cpu_conversion_factor()
 void clearscreen()
 {
 	int i;
-	
+
 	for(i=0; i< SCREEN_WIDTH*SCREEN_HEIGHT*2; i++) {
 		kScreenBase[i] = 0xf20;
 	}
@@ -517,9 +519,9 @@ void puts(const char *str)
 		}
 		if (screenOffset > SCREEN_WIDTH * SCREEN_HEIGHT)
 			scrup();
-			
+
 		str++;
-	}	
+	}
 }
 
 int dprintf(const char *fmt, ...)

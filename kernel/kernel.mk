@@ -44,7 +44,7 @@ KERNEL = $(KERNEL_OBJ_DIR)/system
 kernel:	$(KERNEL)
 
 $(KERNEL): $(KERNEL_OBJS) $(KLIBS) $(DEV) $(BUS)
-	$(LD) -dN --script=$(KERNEL_ARCH_DIR)/kernel.ld -L $(LIBGCC_PATH) -o $@ $(KERNEL_OBJS) $(DEV) $(BUS) $(LINK_KLIBS) $(LIBGCC)
+	$(LD) --script=$(KERNEL_ARCH_DIR)/kernel.ld -L $(LIBGCC_PATH) -o $@ $(KERNEL_OBJS) $(DEV) $(BUS) $(LINK_KLIBS) $(LIBGCC)
 
 kernelclean:
 	rm -f $(KERNEL_OBJS)
