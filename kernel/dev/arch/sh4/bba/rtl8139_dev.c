@@ -18,6 +18,9 @@
 #include "rtl8139_dev.h"
 #include "rtl8139_priv.h"
 
+#define ASIC_IRQB_B (*(volatile unsigned int*)0xa05f6924)
+
+
 
 #define RTL_WRITE_8(rtl, reg, dat) \
 	*(uint8 *)((rtl)->virt_base + (reg)) = (dat)
@@ -111,7 +114,7 @@ int rtl8139_detect(rtl8139 **rtl)
 		return -1;
 	}
 	memset(*rtl, 0, sizeof(rtl8139));
-	(*rtl)->irq = 0;
+	(*rtl)->irq = 27;
 	(*rtl)->phys_base = 0x01001700;
 	(*rtl)->phys_size = 0x100;	
 	
@@ -151,15 +154,8 @@ int rtl8139_init(rtl8139 *rtl)
 	} while((RTL_READ_8(rtl, RT_CHIPCMD) & RT_CMD_RESET));
 
 	// create a rx and tx buf
-#if 1	
 	rtl->rxbuf = PHYS_ADDR_TO_P1(ADDR_RXBUF);
 	rtl->txbuf = PHYS_ADDR_TO_P1(ADDR_TXBUF0);
-#else
-	rtl->rxbuf_region = vm_create_anonymous_region(vm_get_kernel_aspace_id(), "rtl8139_rxbuf", (void **)&rtl->rxbuf,
-		REGION_ADDR_ANY_ADDRESS, 64*1024 + 16, REGION_WIRING_WIRED_CONTIG, LOCK_KERNEL|LOCK_RW);
-	rtl->txbuf_region = vm_create_anonymous_region(vm_get_kernel_aspace_id(), "rtl8139_txbuf", (void **)&rtl->txbuf,
-		REGION_ADDR_ANY_ADDRESS, 8*1024, REGION_WIRING_WIRED, LOCK_KERNEL|LOCK_RW);
-#endif
 
 		
 	// set up the transmission buf and sem
@@ -171,9 +167,9 @@ int rtl8139_init(rtl8139 *rtl)
 	rtl->reg_spinlock = 0;
 
 	// set up the interrupt handler
-#if 0
-	nt_set_io_interrupt_handler(rtl->irq + 0x20, &rtl8139_int, rtl);
-#endif
+	int_set_io_interrupt_handler(rtl->irq, &rtl8139_int, rtl);
+	
+	ASIC_IRQB_B = 1 << 3;
 	
 	// read the mac address
 	rtl->mac_addr[0] = RTL_READ_8(rtl, RT_IDR0);
@@ -216,7 +212,6 @@ int rtl8139_init(rtl8139 *rtl)
 	// go back to normal mode
 	RTL_WRITE_8(rtl, RT_CFG9346, 0);
 
-#if 1
 		// Setup RX buffers
 	dprintf("rx buffer will be at 0x%lx\n", ADDR_RXBUF);
 	RTL_WRITE_32(rtl, RT_RXBUF, ADDR_RXBUF);	
@@ -225,23 +220,7 @@ int rtl8139_init(rtl8139 *rtl)
 	RTL_WRITE_32(rtl, RT_TXADDR1, ADDR_TXBUF0 + 2*1024);
 	RTL_WRITE_32(rtl, RT_TXADDR2, ADDR_TXBUF0 + 4*1024);
 	RTL_WRITE_32(rtl, RT_TXADDR3, ADDR_TXBUF0 + 6*1024);
-#else
-	// Setup RX buffers
-	*(int *)rtl->rxbuf = 0;
-	vm_get_page_mapping(vm_get_kernel_aspace_id(), rtl->rxbuf, &temp);
-	dprintf("rx buffer will be at 0x%lx\n", temp);
-	RTL_WRITE_32(rtl, RT_RXBUF, temp);
-
-	// Setup TX buffers
-	*(int *)rtl->txbuf = 0;
-	vm_get_page_mapping(vm_get_kernel_aspace_id(), rtl->txbuf, &temp);
-	RTL_WRITE_32(rtl, RT_TXADDR0, temp);
-	RTL_WRITE_32(rtl, RT_TXADDR1, temp + 2*1024);
-	*(int *)(rtl->txbuf + 4*1024) = 0;
-	vm_get_page_mapping(vm_get_kernel_aspace_id(), rtl->txbuf + 4*1024, &temp);
-	RTL_WRITE_32(rtl, RT_TXADDR2, temp);
-	RTL_WRITE_32(rtl, RT_TXADDR3, temp + 2*1024);
-#endif
+	
 	// Reset RXMISSED counter
 	RTL_WRITE_32(rtl, RT_RXMISSED, 0);
 
@@ -304,7 +283,7 @@ restart:
 	sem_acquire(rtl->tx_sem, 1);
 	mutex_lock(&rtl->lock);
 
-#if 1
+#if 0
 	dprintf("XMIT %d %x (%d)\n",rtl->txbn, ptr, len);
 
 	dprintf("dumping packet:");
@@ -511,6 +490,7 @@ static int rtl8139_int(void* data)
 
 	for(;;) {
 		uint16 status = RTL_READ_16(rtl, RT_INTRSTATUS);
+		
 		if(status)
 			RTL_WRITE_16(rtl, RT_INTRSTATUS, status);
 		else
