@@ -441,6 +441,20 @@ int scanf(char const *fmt, ...)
 
 	return i;
 }
+
+int sscanf(char const *str, char const *fmt, ...)
+{
+	va_list args;
+	int i;
+
+	va_start(args, fmt);
+	i = vsscanf(str, fmt, args);
+	va_end(args);
+
+	return i;
+}
+
+
 int fscanf(FILE *stream, char const *fmt, ...)
 {
 	va_list args;

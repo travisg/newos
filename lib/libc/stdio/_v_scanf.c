@@ -10,8 +10,6 @@
 #include <ctype.h>
 #include <unistd.h>
 
-#define MAX_BUFF_SIZE 64
-
 /* gross hack to get this to link inside the kernel */
 #if KERNEL
 #include <kernel/vfs.h>
@@ -26,10 +24,8 @@ int _v_scanf( int (*_read)(void*), void (*_push)(void*, unsigned char),  void* a
 
 struct _sscanf_struct
 {
-
-    int count;
-	int buff_pos;
-	unsigned char* buff;
+	int unget;
+	int count;
 	unsigned char const *str;
     int pos;
 
@@ -38,18 +34,26 @@ struct _sscanf_struct
 static void _sscanf_push(void *p, unsigned char c)
 {
 	struct _sscanf_struct *val = (struct _sscanf_struct*)p;
-	if(val->buff_pos < MAX_BUFF_SIZE)
-		val->buff[val->buff_pos++] = c;
+	
+	if(val->unget >= 0)
+	{
+		//problems
+		return;
+	}
+	val->unget = c;
 
 }
 
 static int _sscanf_read(void* p)
 {
-	struct _sscanf_struct *val = (struct _sscanf_struct*)p;
     int ch;
-	if(val->buff_pos > 0)
+	struct _sscanf_struct *val = (struct _sscanf_struct*)p;
+
+	if(val->unget >= 0)
 	{
-		return val->buff[--val->buff_pos];
+		int c = val->unget;
+		val->unget = -1;
+		return c;
 	}
 
     if((ch = val->str[val->pos++]) == 0)
@@ -65,18 +69,15 @@ int vsscanf(char const *str, char const *format, va_list arg_ptr)
 {
     struct _sscanf_struct *val = (struct _sscanf_struct*)malloc(sizeof(struct _sscanf_struct));
 
-	val->buff = (unsigned char*)malloc(MAX_BUFF_SIZE*sizeof(unsigned char));
-	val->buff_pos = 0;
-	val->count = 0;
-    val->pos = 0;
+	val->unget = -1;
+    val->count = 0;
+	val->pos = 0;
     val->str = str;
-    return _v_scanf(_sscanf_read, _sscanf_push, &val, format, arg_ptr);
+    return _v_scanf(_sscanf_read, _sscanf_push, val, format, arg_ptr);
 }
 
 /**********************************************************/
-
 /* fscanf functions                                       */
-
 /**********************************************************/
 
 struct _fscanf_struct
@@ -133,11 +134,7 @@ static int _fscanf_read(void *p)
         stream->buf_pos=len;
     }
 	c = stream->buf[stream->rpos++];
-/*
-	write(1, "read: \'", 7);
-	write(1, &c, 1);
-	write(1, "\'\r\n", 3);
-*/
+
 	val->count++;
     return (int)c;
 }
@@ -162,6 +159,7 @@ typedef enum
 	LONG,
 	LONGLONG
 } valSize;
+
 /*
 static valSize _getValSize(char c, int (*_read)(void*), void* arg)
 {
@@ -355,17 +353,11 @@ int _v_scanf( int (*_read)(void*), void (*_push)(void*, unsigned char),  void* a
 	unsigned int fieldsRead = 0;
 	unsigned char fch;
 
-//	write(1, "\r\n_v_scanf\r\n", 12);
 
 	while (*format)
 	{
 		long long temp = 0;
 		fch = *format++;
-/*
-		write(1, "fch: \'", 6);
-		write(1, &fch, 1);
-		write(1, "\'\r\n", 3);
-*/
 
     	if(isspace(fch))
     	{
@@ -391,11 +383,6 @@ int _v_scanf( int (*_read)(void*), void (*_push)(void*, unsigned char),  void* a
 keeplooking:
 
 			fch = *format++;
-/*
-			write(1, "fch: \'", 6);
-			write(1, &fch, 1);
-			write(1, "\'\r\n", 3);
-*/
 			switch(fch)
 			{
 				case '%':
