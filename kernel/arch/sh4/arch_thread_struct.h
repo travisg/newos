@@ -3,11 +3,11 @@
 
 // architecture specific thread info
 struct arch_thread {
-	unsigned int foo;
+	unsigned int *sp;
 };
 
 struct arch_proc {
-	unsigned int foo;
+	unsigned int *pgdir;
 };
 
 #endif

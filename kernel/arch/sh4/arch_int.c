@@ -24,7 +24,7 @@ static int sh4_handle_exception(unsigned int code, unsigned int pc, unsigned int
 {
 	int ret;
 
-	dprintf("sh4_handle_exception: entry code 0x%x, pc 0x%x, trap 0x%x, page_fault_addr 0x%x\n", code, pc, trap, page_fault_addr);
+//	dprintf("sh4_handle_exception: entry code 0x%x, pc 0x%x, trap 0x%x, page_fault_addr 0x%x\n", code, pc, trap, page_fault_addr);
 	switch(code) {
 		case 0:  // reset
 		case 1:  // manual reset

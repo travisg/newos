@@ -17,6 +17,8 @@ int arch_cpu_init(kernel_args *ka);
 void reboot();
 
 unsigned int get_sr();
+void sh4_context_switch(unsigned int **old_sp, unsigned int *new_sp);
+void sh4_function_caller();
 
 #endif
 

@@ -635,6 +635,10 @@ int test_thread5()
 	int fd;
 	
 	fd = vfs_open(NULL, "/bus/pci", "", STREAM_TYPE_DEVICE);
+	if(fd < 0) {
+		dprintf("test_thread5: error opening /bus/pci\n");
+		return 1;
+	}
 	
 	vfs_ioctl(fd, 99, NULL, 0);
 
@@ -672,7 +676,10 @@ int test_thread2()
 		char str[65];
 		size_t len = sizeof(str) - 1;
 		
-		vfs_read(0, str, 0, &len);
+		if(vfs_read(0, str, 0, &len) < 0) {
+			dprintf("error reading from console!\n");
+			break;
+		}
 		if(len > 1) dprintf("test_thread2: read %d bytes\n", len);
 		str[len] = 0;
 		kprintf("%s", str);
@@ -693,8 +700,11 @@ int test_thread()
 	while(1) {
 //		a += tid;
 		a++;
-#if 1
+#if 0
 		kprintf_xy(0, tid-1, "thread%d - %d    - %d %d - cpu %d", tid, a, system_time(), smp_get_current_cpu());
+#endif
+#if 0
+		dprintf("thread%d - %d    - %d %d - cpu %d\n", tid, a, system_time(), smp_get_current_cpu());
 #endif
 #if 0
 		kprintf("thread%d - %d    - %d %d - cpu %d\n", tid, a, system_time(), smp_get_current_cpu());
@@ -746,7 +756,7 @@ int panic_thread()
 {
 	dprintf("panic thread starting\n");
 	
-	thread_snooze(5000000);
+	thread_snooze(10000000);
 	panic("gotcha!\n");
 	return 0;
 }
@@ -777,14 +787,16 @@ int thread_test()
 	t = create_kernel_thread("test thread 3", &test_thread3, 5);
 	thread_enqueue_run_q(t);
 
-	t = create_kernel_thread("test thread 4", &test_thread4, 5);
-	thread_enqueue_run_q(t);
-
-	t = create_kernel_thread("test thread 5", &test_thread5, 5);
-	thread_enqueue_run_q(t);
-
-//	t = create_kernel_thread("panic thread", &panic_thread, THREAD_MAX_PRIORITY);
+//	t = create_kernel_thread("test thread 4", &test_thread4, 5);
 //	thread_enqueue_run_q(t);
+
+//	t = create_kernel_thread("test thread 5", &test_thread5, 5);
+//	thread_enqueue_run_q(t);
+
+	t = create_kernel_thread("panic thread", &panic_thread, THREAD_MAX_PRIORITY);
+	thread_enqueue_run_q(t);
+
+	dprintf("thread_test: done creating test threads\n");
 	
 	return 0;
 }

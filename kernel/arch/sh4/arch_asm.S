@@ -14,25 +14,98 @@ FUNC(reboot)
 .align 2
 disable_exceptions_addr:	.long	_disable_exceptions
 
-FUNC(system_time)
-	rts
+FUNC(atomic_add)
+	mov.l	r8,@-r15
+	sts.l	pr,@-r15
+
+	/* disable interrupts */
+	mov.l	disable_interrupts_addr,r1
+	jsr	@r1
 	nop
 
-FUNC(atomic_add)
+	/* load the value, save it, add to it, and store it back */
+	mov.l	@r4,r3
+	mov	r3,r8
+	add	r5,r3
+	mov.l	r3,@r4
+
+	/* restore interrupts */
+	mov.l	restore_interrupts_addr,r1
+	jsr	@r1
+	mov	r0,r4
+	
+	/* return value will be old value */
+	mov	r8,r0
+
+	/* restore the stack */
+	lds.l	@r15+,pr
 	rts
-	nop
+	mov.l	@r15+,r8
 
 FUNC(atomic_and)
-	rts
+	mov.l	r8,@-r15
+	sts.l	pr,@-r15
+
+	/* disable interrupts */
+	mov.l	disable_interrupts_addr,r1
+	jsr	@r1
 	nop
+
+	/* load the value, save it, and it, and store it back */
+	mov.l	@r4,r3
+	mov	r3,r8
+	and	r5,r3
+	mov.l	r3,@r4
+
+	/* restore interrupts */
+	mov.l	restore_interrupts_addr,r1
+	jsr	@r1
+	mov	r0,r4
+	
+	/* return value will be old value */
+	mov	r8,r0
+
+	/* restore the stack */
+	lds.l	@r15+,pr
+	rts
+	mov.l	@r15+,r8
 
 FUNC(atomic_or)
-	rts
+	mov.l	r8,@-r15
+	sts.l	pr,@-r15
+
+	/* disable interrupts */
+	mov.l	disable_interrupts_addr,r1
+	jsr	@r1
 	nop
 
+	/* load the value, save it, or it, and store it back */
+	mov.l	@r4,r3
+	mov	r3,r8
+	or	r5,r3
+	mov.l	r3,@r4
+
+	/* restore interrupts */
+	mov.l	restore_interrupts_addr,r1
+	jsr	@r1
+	mov	r0,r4
+	
+	/* return value will be old value */
+	mov	r8,r0
+
+	/* restore the stack */
+	lds.l	@r15+,pr
+	rts
+	mov.l	@r15+,r8
+
+/* XXX finish */
 FUNC(test_and_set)
 	rts
 	nop
+
+.align 2
+disable_interrupts_addr:	.long	_arch_int_disable_interrupts
+restore_interrupts_addr:	.long	_arch_int_restore_interrupts
 
 FUNC(disable_exceptions)
 	mov.l	bl_bit_mask,r0
@@ -91,3 +164,36 @@ FUNC(get_sr)
 	rts
 	nop
 
+// void sh4_context_switch(unsigned int **old_esp, unsigned int *new_esp);
+FUNC(sh4_context_switch)
+	mov.l	r8,@-r15
+	mov.l	r9,@-r15
+	mov.l	r10,@-r15
+	mov.l	r11,@-r15
+	mov.l	r12,@-r15
+	mov.l	r13,@-r15
+	mov.l	r14,@-r15
+	sts.l	pr,@-r15
+
+	mov.l	r15,@r4
+	mov	r5,r15
+
+	lds.l	@r15+,pr
+	mov.l	@r15+,r14
+	mov.l	@r15+,r13
+	mov.l	@r15+,r12
+	mov.l	@r15+,r11
+	mov.l	@r15+,r10
+	mov.l	@r15+,r9
+	mov.l	@r15+,r8
+
+	rts
+	nop
+
+FUNC(sh4_function_caller)
+_fc_loop:
+	mov.l	@r15+,r2
+	jsr	@r2
+	nop
+	bra	_fc_loop
+	nop

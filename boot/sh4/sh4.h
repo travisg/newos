@@ -130,5 +130,11 @@ struct itlb_data {
 #define TCR2	0xffd80028
 #define TCPR2	0xffd8002c
 
+// interrupt controller stuff
+#define ICR	0xffd00000
+#define IPRA	0xffd00004
+#define IPRB	0xffd00008
+#define IPRC	0xffd0000c
+
 #endif
 

@@ -120,6 +120,12 @@ interrupt_ent:
 	shlr2	r0
 	shlr	r0			/* shift the exception code over 3 bits */
 
+	/* disable interrupts */
+	mov.l	imask,r1
+	stc	sr,r2
+	or	r1,r2
+	ldc	r2,sr	
+
 switch_banks_and_enter_kernel:
 	/* save the saved registers into memory */
 	mov.l	save_stack,r2	
@@ -282,6 +288,7 @@ saved_ssr_addr:	.long	saved_ssr
 saved_sgr_addr:	.long	saved_sgr
 intevt_addr:	.long	0xff000028
 tra_addr:	.long	0xff000020
+imask:		.long	0x000000f0
 
 /* the next memory addresses are used for temporary storage or
    data structures for the kernel to write in. They're in the
