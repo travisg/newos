@@ -1,5 +1,5 @@
 /* 
-** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2004, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #include <kernel/kernel.h>
@@ -14,8 +14,8 @@
 #include <kernel/arch/int.h>
 #include <kernel/arch/faults.h>
 
-#include <kernel/arch/i386/interrupts.h>
-#include <kernel/arch/i386/faults.h>
+#include <kernel/arch/x86_64/interrupts.h>
+#include <kernel/arch/x86_64/faults.h>
 
 #include <boot/stage2.h>
 
@@ -28,12 +28,12 @@ int arch_faults_init(kernel_args *ka)
 	return 0;
 }
 
-int i386_general_protection_fault(int errorcode)
+int x86_64_general_protection_fault(int errorcode)
 {
 	return general_protection_fault(errorcode);
 }
 
-int i386_double_fault(int errorcode)
+int x86_64_double_fault(int errorcode)
 {
 	kprintf("double fault! errorcode = 0x%x\n", errorcode);
 	dprintf("double fault! errorcode = 0x%x\n", errorcode);

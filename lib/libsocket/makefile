@@ -11,7 +11,7 @@ MY_OBJS := \
 	socket.o
 
 MY_INCLUDES := $(STDINCLUDE)
-MY_CFLAGS := 
+MY_CFLAGS := $(USER_CFLAGS)
 MY_LINKSCRIPT := $(LIBS_LDSCRIPT)
 
 include templates/lib.mk

@@ -1,21 +1,15 @@
 /*
-** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
+** Copyright 2004, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
-#ifndef _NEWOS_KERNEL_ARCH_I386_THREAD_STRUCT_H
-#define _NEWOS_KERNEL_ARCH_I386_THREAD_STRUCT_H
-
-struct farcall {
-	unsigned int *esp;
-	unsigned int *ss;
-};
+#ifndef _NEWOS_KERNEL_ARCH_X86_64_THREAD_STRUCT_H
+#define _NEWOS_KERNEL_ARCH_X86_64_THREAD_STRUCT_H
 
 #define IFRAME_TRACE_DEPTH 4
 
 // architecture specific thread info
 struct arch_thread {
-	struct farcall current_stack;
-	struct farcall interrupt_stack;
+	addr_t sp;
 
 	// used to track interrupts on this thread
 	struct iframe *iframes[IFRAME_TRACE_DEPTH];

@@ -24,20 +24,20 @@ typedef struct {
 	// architecture specific
 	int supports_rdtsc;
 	unsigned int system_time_cv_factor;
-	unsigned int phys_pgdir;
-	unsigned int vir_pgdir;
+	addr_t phys_pgdir;
+	addr_t vir_pgdir;
 	unsigned int num_pgtables;
 	unsigned int pgtables[MAX_BOOT_PTABLES];
-	unsigned int phys_idt;
-	unsigned int vir_idt;
-	unsigned int phys_gdt;
-	unsigned int vir_gdt;
+	addr_t phys_idt;
+	addr_t vir_idt;
+	addr_t phys_gdt;
+	addr_t vir_gdt;
 	unsigned int page_hole;
 	// smp stuff
 	unsigned int apic_time_cv_factor; // apic ticks per second
-	unsigned int apic_phys;
+	addr_t apic_phys;
 	unsigned int *apic;
-	unsigned int ioapic_phys;
+	addr_t ioapic_phys;
 	unsigned int *ioapic;
 	unsigned int cpu_apic_id[_MAX_CPUS];
 	unsigned int cpu_os_id[_MAX_CPUS];

@@ -1,5 +1,5 @@
 /*
-** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2004, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #include <kernel/kernel.h>
@@ -7,12 +7,12 @@
 #include <kernel/debug.h>
 #include <kernel/elf.h>
 #include <kernel/arch/debug.h>
-#include <kernel/arch/i386/cpu.h>
+#include <kernel/arch/x86_64/cpu.h>
 
 static void dbg_stack_trace(int argc, char **argv)
 {
 	struct thread *t;
-	uint32 ebp;
+	addr_t rbp;
 	int i;
 
 	if(argc < 2)
@@ -31,45 +31,47 @@ static void dbg_stack_trace(int argc, char **argv)
 	dprintf("frame     \tcaller:<base function+offset>\n");
 	dprintf("-------------------------------\n");
 
-	read_ebp(ebp);
+	rbp = read_rbp();
 	for(;;) {
 		bool is_iframe = false;
 		// see if the ebp matches the iframe
 		for(i=0; i<t->arch_info.iframe_ptr; i++) {
-			if(ebp == ((uint32) t->arch_info.iframes[i] - 8)) {
+			if(rbp == ((addr_t) t->arch_info.iframes[i] - 8)) {
 				// it's an iframe
 				is_iframe = true;
 			}
 		}
 
 		if(is_iframe) {
-			struct iframe *frame = (struct iframe *)(ebp + 8);
+			struct iframe *frame = (struct iframe *)(rbp + 8);
 			dprintf("iframe at %p\n", frame);
-			dprintf(" eax\t0x%x\tebx\t0x%x\tecx\t0x%x\tedx\t0x%x\n", frame->eax, frame->ebx, frame->ecx, frame->edx);
-			dprintf(" esi\t0x%x\tedi\t0x%x\tebp\t0x%x\tesp\t0x%x\n", frame->esi, frame->edi, frame->ebp, frame->esp);
-			dprintf(" eip\t0x%x\teflags\t0x%x", frame->eip, frame->flags);
+			dprintf(" rax\t0x%lx\trbx\t0x%lx\trcx\t0x%lx\trdx\t0x%lx\n", frame->rax, frame->rbx, frame->rcx, frame->rdx);
+			dprintf(" rsi\t0x%lx\trdi\t0x%lx\trbp\t0x%lx\n", frame->rsi, frame->rdi, frame->rbp);
+			dprintf("  r8\t0x%lx\t r9\t0x%lx\tr10\t0x%lx\tr11\t0x%lx\n", frame->r8, frame->r9, frame->r10, frame->r11);
+			dprintf(" r12\t0x%lx\tr13\t0x%lx\tr14\t0x%lx\tr15\t0x%lx\n", frame->r12, frame->r13, frame->r14, frame->r15);
+			dprintf(" rip\t0x%lx\trflags\t0x%lx", frame->rip, frame->flags);
 			if((frame->error_code & 0x4) != 0) {
 				// from user space
-				dprintf("\tuser esp\t0x%x", frame->user_esp);
+				dprintf("\tuser esp\t0x%lx", frame->user_sp);
 			}
 			dprintf("\n");
-			dprintf(" vector\t0x%x\terror code\t0x%x\n", frame->vector, frame->error_code);
- 			ebp = frame->ebp;
+			dprintf(" vector\t0x%lx\terror code\t0x%lx\n", frame->vector, frame->error_code);
+ 			rbp = frame->rbp;
 		} else {
-			uint32 eip = *((uint32 *)ebp + 1);
+			addr_t rip = *((addr_t *)rbp + 1);
 			char symname[256];
 			addr_t base_address;
 
-			if(eip == 0 || ebp == 0)
+			if(rip == 0 || rbp == 0)
 				break;
 
-			if(elf_reverse_lookup_symbol(eip, &base_address, symname, sizeof(symname)) >= 0) {
-				dprintf("0x%x\t0x%x:<0x%x+0x%x>\t'%s'\n", ebp, eip, (unsigned int)base_address,
-					(unsigned int)(eip - base_address), symname);
+			if(elf_reverse_lookup_symbol(rip, &base_address, symname, sizeof(symname)) >= 0) {
+				dprintf("0x%lx\t0x%lx:<0x%lx+0x%lx>\t'%s'\n", rbp, rip, base_address,
+					(addr_t)(rip - base_address), symname);
 			} else {
-				dprintf("0x%x\t0x%x\n", ebp, eip);
+				dprintf("0x%lx\t0x%lx\n", rbp, rip);
 			}
-			ebp = *(uint32 *)ebp;
+			rbp = *(addr_t *)rbp;
 		}
 	}
 }
@@ -90,15 +92,16 @@ int arch_dbg_init2(kernel_args *ka)
 
 void dbg_make_register_file(unsigned int *file, const struct iframe * frame)
 {
-	file[0] = frame->eax;
-	file[1] = frame->ebx;
-	file[2] = frame->ecx;
-	file[3] = frame->edx;
-	file[4] = frame->esp;
-	file[5] = frame->ebp;
-	file[6] = frame->esi;
-	file[7] = frame->edi;
-	file[8] = frame->eip;
+#warning needs to match the actual x86_64 register file size
+	file[0] = frame->rax;
+	file[1] = frame->rbx;
+	file[2] = frame->rcx;
+	file[3] = frame->rdx;
+	file[4] = frame->rsp;
+	file[5] = frame->rbp;
+	file[6] = frame->rsi;
+	file[7] = frame->rdi;
+	file[8] = frame->rip;
 	file[9] = frame->flags;
 	file[10] = frame->cs;
 	file[11] = frame->user_ss;

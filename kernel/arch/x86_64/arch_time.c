@@ -1,12 +1,12 @@
 /* 
-** Copyright 2003, Travis Geiselbrecht. All rights reserved.
+** Copyright 2003-2004, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #include <kernel/kernel.h>
 #include <kernel/debug.h>
 #include <kernel/console.h>
 #include <kernel/arch/time.h>
-#include <kernel/arch/i386/cpu.h>
+#include <kernel/arch/x86_64/cpu.h>
 
 static uint64 last_rdtsc;
 static bool use_rdtsc;
@@ -23,16 +23,28 @@ int arch_time_init(kernel_args *ka)
 void arch_time_tick(void)
 {
 	if(use_rdtsc)
-		last_rdtsc = i386_rdtsc();
+		last_rdtsc = x86_64_rdtsc();
+}
+
+void setup_system_time(unsigned int cv_factor)
+{
+#warning implement setup_system_time
+}
+
+bigtime_t x86_64_cycles_to_time(uint64 cycles)
+{
+#warning implement x86_64_cycles_to_time
+
+	return 0;
 }
 
 bigtime_t arch_get_time_delta(void)
 {
 	if(use_rdtsc) {
 		// XXX race here
-		uint64 delta_rdtsc = i386_rdtsc() - last_rdtsc;
+		uint64 delta_rdtsc = x86_64_rdtsc() - last_rdtsc;
 
-		return i386_cycles_to_time(delta_rdtsc);
+		return x86_64_cycles_to_time(delta_rdtsc);
 	} else 
 		return 0;
 }

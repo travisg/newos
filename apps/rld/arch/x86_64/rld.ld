@@ -1,11 +1,11 @@
 OUTPUT_FORMAT("elf64-x86-64", "elf64-x86-64", "elf64-x86-64")
 OUTPUT_ARCH(i386:x86-64)
 
-ENTRY(_start)
+ENTRY(RLD_STARTUP)
 SEARCH_DIR("libgcc");
 SECTIONS
 {
-	. = 0x00200000 + SIZEOF_HEADERS;
+	. = 0x00100000 + SIZEOF_HEADERS;
 
 	.interp : { *(.interp) }
 	.hash : { *(.hash) }
@@ -48,17 +48,7 @@ SECTIONS
 	__ctor_list = .;
 	PROVIDE (_ctor_list = .);
 	.ctors : { *(.ctors) }
-	__ctor_end = .;
-	PROVIDE (_ctor_end = .);
-
-	__dtor_list = .;
-	PROVIDE (_dtor_list = .);
-	.dtors : { *(.dtors) }
-	__dtor_end = .;
-	PROVIDE (_dtor_end = .);
-
-    .got	 : { *(.got.plt) *(.got) }
-	.dynamic : { *(.dynamic) }
+	PROVIDE (__ctor_end = .);
 
 
 	/* unintialized data (in same segment as writable data) */

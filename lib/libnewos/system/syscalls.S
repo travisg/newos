@@ -1,6 +1,9 @@
 #ifdef ARCH_i386
 #include "arch/i386/syscalls.inc"
 #endif
+#ifdef ARCH_x86_64
+#include "arch/x86_64/syscalls.inc"
+#endif
 #ifdef ARCH_alpha
 #include "arch/alpha/syscalls.inc"
 #endif

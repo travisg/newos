@@ -16,10 +16,11 @@ MY_SRCDIR := $(BOOT_SRCDIR)
 MY_TARGET := $(STAGE2)
 MY_OBJS := \
 	stage2.o \
-	stage2_asm.o \
-	smp_boot.o \
-	smp_trampoline.o \
-	int86.o
+	stage2_asm.o
+
+#	smp_boot.o \
+#	smp_trampoline.o \
+#	int86.o
 
 MY_INCLUDES := $(STDINCLUDE)
 MY_CFLAGS := $(KERNEL_CFLAGS)

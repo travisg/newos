@@ -10,7 +10,8 @@ MY_OBJS := Button.o \
 	Window.o
 
 MY_INCLUDES := $(STDINCLUDE)
-MY_CFLAGS := 
+MY_CFLAGS := $(USER_CFLAGS)
+MY_CPPFLAGS := $(USER_CFLAGS)
 MY_LINKSCRIPT := $(LIBS_LDSCRIPT)
 
 # include sub makefiles

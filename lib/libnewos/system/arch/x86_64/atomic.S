@@ -9,101 +9,56 @@
 
 /* int atomic_add(int *val, int incr) */
 FUNCTION(atomic_add):
-	movl	4(%esp),%edx
-	movl	8(%esp),%eax
 	lock
-	xaddl	%eax,(%edx)
+	xadd	%rsi,(%rdi)
 	ret
 
 /* int atomic_and(int *val, int incr) */
 FUNCTION(atomic_and):
-	movl	4(%esp),%edx
-
-_atomic_and1:
-	movl	8(%esp),%ecx
-	movl	(%edx),%eax
-	andl	%eax,%ecx
+	mov		(%rdi),%rax
+	mov		%rsi,%rcx
+	and		%rax,%rcx
 
 	lock
-	cmpxchgl	%ecx,(%edx)
+	cmpxchg	%rcx,(%rdi)
 
-	jnz		_atomic_and1
+	jnz		atomic_and
 
 	ret
 
 /* int atomic_or(int *val, int incr) */
 FUNCTION(atomic_or):
-	movl	4(%esp),%edx
-
-_atomic_or1:
-	movl	8(%esp),%ecx
-	movl	(%edx),%eax
-	orl		%eax,%ecx
+	mov		(%rdi),%rax
+	mov		%rsi,%rcx
+	or		%rax,%rcx
 
 	lock
-	cmpxchgl	%ecx,(%edx)
+	cmpxchg	%rcx,(%rdx)
 
-	jnz		_atomic_or1
+	jnz		atomic_or
 
 	ret
 
 /* int atomic_set(int *val, int set_to) */
 FUNCTION(atomic_set):
-	movl	4(%esp),%edx
-	movl	8(%esp),%eax
-	xchg	%eax,(%edx)
+	mov		%rsi,%rax
+	xchg	%rax,(%rdi)
 	ret
 
 /* int test_and_set(int *val, int set_to, int test_val) */
 FUNCTION(test_and_set):
-	movl	4(%esp),%edx
-	movl	8(%esp),%ecx
-	movl	12(%esp),%eax
+	mov		%rdx,%rax
 
 	lock
-	cmpxchgl	%ecx,(%edx)
+	cmpxchg	%rsi,(%rdi)
 
 	ret
 
-/* saves the conversion factor needed for system_time */
-cv_factor:
-	.word 0
-
-FUNCTION(setup_system_time):
-	movl	4(%esp),%eax
-	movl	%eax,cv_factor
-	ret
-
-/* long long system_time(); */
-FUNCTION(system_time):
-	/* load 64-bit factor into %eax (low), %edx (high) */
-	rdtsc		/* time in %edx,%eax */
-
-	pushl	%ebx
-	pushl	%ecx
-	movl	cv_factor, %ebx
-	movl	%edx, %ecx	/* save high half */
-	mull	%ebx 		/* truncate %eax, but keep %edx */
-	movl	%ecx, %eax
-	movl	%edx, %ecx	/* save high half of low */
-	mull	%ebx /*, %eax*/
-	/* now compute  [%edx, %eax] + [%ecx], propagating carry */
-	subl	%ebx, %ebx	/* need zero to propagate carry */
-	addl	%ecx, %eax
-	adc		%ebx, %edx
-	popl	%ecx
-	popl	%ebx
-	ret
-
-/* void i386_switch_stack_and_call(addr_t stack, void (*func)(void *), void *arg); */
-FUNCTION(i386_switch_stack_and_call):
-	movl	4(%esp),%eax	// new stack
-	movl	8(%esp),%ecx	// func
-	movl	12(%esp),%edx	// args
-
-	movl	%eax,%esp		// switch the stack
-	pushl	%edx			// push the argument
-	call	*%ecx			// call the target function
+/* void x86_64_switch_stack_and_call(addr_t stack, void (*func)(void *), void *arg); */
+FUNCTION(x86_64_switch_stack_and_call):
+	mov		%rdi,%rsp		// switch the stack
+	push	%rdx			// push the argument
+	call	*%rsi			// call the target function
 _loop:
 	jmp		_loop
 

@@ -9,7 +9,7 @@ MY_OBJS := \
 	crt0.o
 
 MY_INCLUDES := $(STDINCLUDE)
-MY_CFLAGS := 
+MY_CFLAGS := $(USER_CFLAGS)
 
 include templates/combined_object.mk
 
@@ -24,7 +24,7 @@ MY_OBJS := \
 	lib0.o
 
 MY_INCLUDES := $(STDINCLUDE)
-MY_CFLAGS := 
+MY_CFLAGS := $(USER_CFLAGS)
 
 include templates/combined_object.mk
 

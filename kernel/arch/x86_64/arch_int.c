@@ -1,5 +1,5 @@
 /*
-** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2004, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #include <kernel/kernel.h>
@@ -18,8 +18,8 @@
 #include <kernel/arch/vm.h>
 #include <kernel/arch/smp.h>
 
-#include <kernel/arch/i386/interrupts.h>
-#include <kernel/arch/i386/faults.h>
+#include <kernel/arch/x86_64/interrupts.h>
+#include <kernel/arch/x86_64/faults.h>
 
 #include <boot/stage2.h>
 
@@ -40,19 +40,6 @@ static void interrupt_ack(int n)
 		out8(0x20, 0x20);	// EOI to pic 1
 	}
 }
-
-static void _set_gate(desc_table *gate_addr, unsigned int addr_t, int type, int dpl)
-{
-	unsigned int gate1; // first byte of gate desc
-	unsigned int gate2; // second byte of gate desc
-
-	gate1 = (KERNEL_CODE_SEG << 16) | (0x0000ffff & addr_t);
-	gate2 = (0xffff0000 & addr_t) | 0x8000 | (dpl << 13) | (type << 8);
-
-	gate_addr->a = gate1;
-	gate_addr->b = gate2;
-}
-
 void arch_int_enable_io_interrupt(int irq)
 {
 	if(irq > 15)
@@ -81,28 +68,35 @@ void arch_int_disable_io_interrupt(int irq)
 		out8(in8(0xa1) | (1 << (irq - 8)), 0xa1);
 }
 
-void i386_set_task_gate(int n, uint32 seg)
+static void _set_gate(desc_table *gate_addr, addr_t addr, int type, int dpl)
 {
-	idt[n].a = (seg << 16); // tss segment in 31:16
-	idt[n].b = 0x8000 | (0 << 13) | (0x5 << 8); // present, dpl 0, type 5
+	unsigned long gate1; // first byte of gate desc
+	unsigned long gate2; // second byte of gate desc
+
+	gate1 = (KERNEL_CODE_SEG << 16) | (0x0000ffff & addr) |
+		((0xffff0000 & addr) << 32) | 0x8000 | (dpl << 13) | (type << 8);
+	gate2 = (addr >> 32);
+
+	gate_addr->a = gate1;
+	gate_addr->b = gate2;
 }
 
-static void set_intr_gate(int n, void *addr_t)
+static void set_intr_gate(int n, void *addr)
 {
-	_set_gate(&idt[n], (unsigned int)addr_t, 14, 0);
+	_set_gate(&idt[n], (addr_t)addr, 14, 0);
 }
 
 // unused
 #if 0
-static void set_trap_gate(int n, void *addr_t)
+static void set_trap_gate(int n, void *addr)
 {
-	_set_gate(&idt[n], (unsigned int)addr_t, 15, 0);
+	_set_gate(&idt[n], (addr_t)addr, 15, 0);
 }
 #endif
 
-static void set_system_gate(int n, void *addr_t)
+static void set_system_gate(int n, void *addr)
 {
-	_set_gate(&idt[n], (unsigned int)addr_t, 15, 3);
+	_set_gate(&idt[n], (addr_t)addr, 15, 3);
 }
 
 void arch_int_enable_interrupts(void)
@@ -117,43 +111,43 @@ void arch_int_disable_interrupts(void)
 
 bool arch_int_are_interrupts_enabled(void)
 {
-	int flags;
+	unsigned long flags;
 
-	asm("pushfl;\n"
-		"popl %0;\n" : "=g" (flags));
+	asm("pushf;\n"
+		"pop %0;\n" : "=g" (flags));
 	return flags & 0x200 ? 1 : 0;
 }
 
-void i386_handle_trap(struct iframe frame); /* keep the compiler happy, this function must be called only from assembly */
-void i386_handle_trap(struct iframe frame)
+void x86_64_handle_trap(struct iframe frame); /* keep the compiler happy, this function must be called only from assembly */
+void x86_64_handle_trap(struct iframe frame)
 {
 	int ret = INT_NO_RESCHEDULE;
 	struct thread *t = thread_get_current_thread();
 
 	if(t) {
-		i386_push_iframe(&frame);
+		x86_64_push_iframe(&frame);
 		t->int_disable_level++; // make it look like the ints were disabled
 	}
 
 //	if(frame.vector != 0x20)
-//		dprintf("i386_handle_trap: vector 0x%x, ip 0x%x, cpu %d\n", frame.vector, frame.eip, smp_get_current_cpu());
+//		dprintf("x86_64_handle_trap: vector 0x%x, ip 0x%x, cpu %d\n", frame.vector, frame.eip, smp_get_current_cpu());
 	switch(frame.vector) {
 		case 8:
-			ret = i386_double_fault(frame.error_code);
+			ret = x86_64_double_fault(frame.error_code);
 			break;
 		case 13:
-			ret = i386_general_protection_fault(frame.error_code);
+			ret = x86_64_general_protection_fault(frame.error_code);
 			break;
 		case 14: {
-			unsigned int cr2;
+			addr_t cr2;
 			addr_t newip;
 
-			asm ("movl %%cr2, %0" : "=r" (cr2) );
+			asm ("mov  %%cr2, %0" : "=r" (cr2) );
 
 			if(!kernel_startup && (frame.flags & 0x200) == 0) {
 				// ints are were disabled when the page fault was taken, that is very bad
-				panic("i386_handle_trap: page fault at 0x%x, ip 0x%x, write %d with ints disabled\n",
-					cr2, frame.eip, (frame.error_code & 0x2) != 0);
+				panic("x86_64_handle_trap: page fault at 0x%lx, ip 0x%lx, write %d with ints disabled\n",
+					cr2, frame.rip, (frame.error_code & 0x2) != 0);
 			}
 
 			if(!kernel_startup) {
@@ -162,14 +156,14 @@ void i386_handle_trap(struct iframe frame)
 			}
 
 
-			ret = vm_page_fault(cr2, frame.eip,
+			ret = vm_page_fault(cr2, frame.rip,
 				(frame.error_code & 0x2) != 0,
 				(frame.error_code & 0x4) != 0,
 				&newip);
 			if(newip != 0) {
 				// the page fault handler wants us to modify the iframe to set the
 				// IP the cpu will return to to be this ip
-				frame.eip = newip;
+				frame.rip = newip;
 			}
 
 			if(!kernel_startup)
@@ -181,7 +175,7 @@ void i386_handle_trap(struct iframe frame)
 				interrupt_ack(frame.vector - 0x20); // ack the 8239 (if applicable)
 				ret = int_io_interrupt_handler(frame.vector - 0x20);
 			} else {
-				panic("i386_handle_trap: unhandled cpu trap 0x%x at ip 0x%x!\n", frame.vector, frame.eip);
+				panic("x86_64_handle_trap: unhandled cpu trap 0x%lx at ip 0x%lx!\n", frame.vector, frame.rip);
 				ret = INT_NO_RESCHEDULE;
 			}
 			break;
@@ -200,7 +194,7 @@ void i386_handle_trap(struct iframe frame)
 //	dprintf("0x%x cpu %d!\n", thread_get_current_thread_id(), smp_get_current_cpu());
 
 	if(t) {
-		i386_pop_iframe();
+		x86_64_pop_iframe();
 		t->int_disable_level--; // keep the count in sync
 	}
 }
@@ -258,7 +252,7 @@ int arch_int_init(kernel_args *ka)
 	set_intr_gate(46,  &trap46);
 	set_intr_gate(47,  &trap47);
 
-	set_system_gate(SYSCALL_VECTOR, &i386_syscall_vector);
+	set_system_gate(SYSCALL_VECTOR, &x86_64_syscall_vector);
 
 	set_intr_gate(251, &trap251);
 	set_intr_gate(252, &trap252);

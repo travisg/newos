@@ -1,13 +1,13 @@
 /* 
-** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
+** Copyright 2004, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
-#ifndef _NEWOS_KERNEL_ARCH_I386_SMP_PRIV_H
-#define _NEWOS_KERNEL_ARCH_I386_SMP_PRIV_H
+#ifndef _NEWOS_KERNEL_ARCH_X86_64_SMP_PRIV_H
+#define _NEWOS_KERNEL_ARCH_X86_64_SMP_PRIV_H
 
 #include <kernel/arch/timer.h>
 
-int i386_smp_interrupt(int vector);
+int x86_64_smp_interrupt(int vector);
 void arch_smp_ack_interrupt(void);
 int arch_smp_set_apic_timer(bigtime_t relative_timeout, int type);
 int arch_smp_clear_apic_timer(void);
@@ -24,20 +24,20 @@ int arch_smp_clear_apic_timer(void);
 #define APIC_FOCUS         (~(1 << 9))
 #define APIC_SIV           (0xff)
 
-#define APIC_ID            ((unsigned int *) ((unsigned int) apic + 0x020))
-#define APIC_VERSION       ((unsigned int *) ((unsigned int) apic + 0x030))
-#define APIC_TPRI          ((unsigned int *) ((unsigned int) apic + 0x080))
-#define APIC_EOI           ((unsigned int *) ((unsigned int) apic + 0x0b0))
-#define APIC_SIVR          ((unsigned int *) ((unsigned int) apic + 0x0f0))
-#define APIC_ESR           ((unsigned int *) ((unsigned int) apic + 0x280))
-#define APIC_ICR1          ((unsigned int *) ((unsigned int) apic + 0x300))
-#define APIC_ICR2          ((unsigned int *) ((unsigned int) apic + 0x310))
-#define APIC_LVTT          ((unsigned int *) ((unsigned int) apic + 0x320))
-#define APIC_LINT0         ((unsigned int *) ((unsigned int) apic + 0x350))
-#define APIC_LVT3          ((unsigned int *) ((unsigned int) apic + 0x370))
-#define APIC_ICRT          ((unsigned int *) ((unsigned int) apic + 0x380))
-#define APIC_CCRT          ((unsigned int *) ((unsigned int) apic + 0x390))
-#define APIC_TDCR          ((unsigned int *) ((unsigned int) apic + 0x3e0))
+#define APIC_ID            ((unsigned int *) ((addr_t) apic + 0x020))
+#define APIC_VERSION       ((unsigned int *) ((addr_t) apic + 0x030))
+#define APIC_TPRI          ((unsigned int *) ((addr_t) apic + 0x080))
+#define APIC_EOI           ((unsigned int *) ((addr_t) apic + 0x0b0))
+#define APIC_SIVR          ((unsigned int *) ((addr_t) apic + 0x0f0))
+#define APIC_ESR           ((unsigned int *) ((addr_t) apic + 0x280))
+#define APIC_ICR1          ((unsigned int *) ((addr_t) apic + 0x300))
+#define APIC_ICR2          ((unsigned int *) ((addr_t) apic + 0x310))
+#define APIC_LVTT          ((unsigned int *) ((addr_t) apic + 0x320))
+#define APIC_LINT0         ((unsigned int *) ((addr_t) apic + 0x350))
+#define APIC_LVT3          ((unsigned int *) ((addr_t) apic + 0x370))
+#define APIC_ICRT          ((unsigned int *) ((addr_t) apic + 0x380))
+#define APIC_CCRT          ((unsigned int *) ((addr_t) apic + 0x390))
+#define APIC_TDCR          ((unsigned int *) ((addr_t) apic + 0x3e0))
 
 #define APIC_ICR1_WRITE_MASK    0xfff3f000
 #define APIC_ICR1_DELMODE_FIXED 0

@@ -8,37 +8,44 @@
 /* uint64 rdtsc() */
 FUNCTION(rdtsc):
 	rdtsc
+
+	/* this is loaded into eax:edx, lets move edx into the top of rax */
+	shl		$32,%rdx
+	xor		%rax,%rdx
+
 	ret
 
 FUNCTION(execute_n_instructions):
-	movl	4(%esp), %ecx
-	shrl	$4, %ecx
+	mov		%edi,%ecx
+	shr		$4, %ecx
 .again:
-	xorl	%eax, %eax
-	xorl	%eax, %eax
-	xorl	%eax, %eax
-	xorl	%eax, %eax
-	xorl	%eax, %eax
-	xorl	%eax, %eax
-	xorl	%eax, %eax
-	xorl	%eax, %eax
-	xorl	%eax, %eax
-	xorl	%eax, %eax
-	xorl	%eax, %eax
-	xorl	%eax, %eax
-	xorl	%eax, %eax
-	xorl	%eax, %eax
-	xorl	%eax, %eax
-	xorl	%eax, %eax
+	xor		%eax, %eax
+	xor		%eax, %eax
+	xor		%eax, %eax
+	xor		%eax, %eax
+	xor		%eax, %eax
+	xor		%eax, %eax
+	xor		%eax, %eax
+	xor		%eax, %eax
+	xor		%eax, %eax
+	xor		%eax, %eax
+	xor		%eax, %eax
+	xor		%eax, %eax
+	xor		%eax, %eax
+	xor		%eax, %eax
+	xor		%eax, %eax
+	xor		%eax, %eax
 	loop	.again
 	ret
 
 FUNCTION(system_time):
+	// XXX fixme
+#if 0
    	/* load 64-bit factor into %eax (low), %edx (high) */
    	/* hand-assemble rdtsc -- read time stamp counter */
 	rdtsc		/* time in %edx,%eax */
 
-	pushl	%ebx
+	push	%ebx
 	movl	cv_factor, %ebx
 	movl	%edx, %ecx	/* save high half */
 	mull	%ebx 		/* truncate %eax, but keep %edx */
@@ -50,29 +57,30 @@ FUNCTION(system_time):
 	addl	%ecx, %eax
 	adc		%ebx, %edx
 	popl	%ebx
+#endif
 	ret
 
 FUNCTION(cpuid):
- 	pushl	%ebx
- 	pushl	%edi
- 	movl	12(%esp),%eax
- 	movl	16(%esp),%edi
+ 	push	%rbx
+
+	mov		%edi,%eax		/* first arg, cpuid function */
+	
  	cpuid
- 	movl	%eax,0(%edi)
- 	movl	%ebx,4(%edi)
- 	movl	%ecx,8(%edi)
- 	movl	%edx,12(%edi)
- 	popl	%edi
- 	popl	%ebx
+ 	mov		%eax,0(%rsi)
+ 	mov		%ebx,4(%rsi)
+ 	mov		%ecx,8(%rsi)
+ 	mov		%edx,12(%rsi)
+
+ 	pop		%rbx
  	ret
 
-FUNCTION(get_eflags):
- 	pushfl
- 	popl	%eax
+FUNCTION(get_rflags):
+ 	pushfq
+ 	pop		%rax
  	ret
 
-FUNCTION(set_eflags):
- 	pushl	4(%esp)
- 	popfl
+FUNCTION(set_rflags):
+ 	push	%edi
+ 	popfq
 	ret
 

@@ -16,7 +16,7 @@ MY_OBJS := tinfo.o \
 	   pure.o \
 
 MY_INCLUDES := $(STDINCLUDE) -I$(MY_SRCDIR) -I$(TOOLCHAIN_PATH)/include/g++-v3/$(ARCH)
-MY_CPPFLAGS = $(CFLAGS)
+MY_CPPFLAGS = $(USER_CFLAGS) $(CFLAGS)
 MY_LINKSCRIPT := $(LIBS_LDSCRIPT)
 
 # include sub makefiles

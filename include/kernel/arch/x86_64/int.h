@@ -2,8 +2,8 @@
 ** Copyright 2004, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
-#ifndef _NEWOS_KERNEL_ARCH_I386_INT_H
-#define _NEWOS_KERNEL_ARCH_I386_INT_H
+#ifndef _NEWOS_KERNEL_ARCH_X86_64_INT_H
+#define _NEWOS_KERNEL_ARCH_X86_64_INT_H
 
 /* x86 supports 256 interrupt vectors,
  * but all io interrupts are mapped to 0x20+, so we

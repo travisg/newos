@@ -1,5 +1,5 @@
 /*
-** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2004, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #include <kernel/kernel.h>
@@ -10,9 +10,9 @@
 #include <kernel/debug.h>
 #include <kernel/smp.h>
 #include <kernel/debug.h>
-#include <kernel/arch/i386/selector.h>
+#include <kernel/arch/x86_64/selector.h>
 #include <kernel/arch/int.h>
-#include <kernel/arch/i386/interrupts.h>
+#include <kernel/arch/x86_64/interrupts.h>
 #include <newos/errors.h>
 
 #include <boot/stage2.h>
@@ -25,12 +25,8 @@
 static void dbg_in(int argc, char **argv);
 static void dbg_out(int argc, char **argv);
 
-static struct tss **tss;
+static struct tss_64 **tss;
 static int *tss_loaded;
-
-/* tss to switch to a special 'task' on the double fault handler */
-static struct tss double_fault_tss;
-static uint32 double_fault_stack[1024];
 
 static desc_table *gdt = 0;
 
@@ -50,7 +46,7 @@ int arch_cpu_init(kernel_args *ka)
 int arch_cpu_init2(kernel_args *ka)
 {
 	region_id rid;
-	struct tss_descriptor *tss_d;
+	struct descriptor_64 *tss_d;
 	unsigned int i;
 
 	// account for the segment descriptors
@@ -58,9 +54,7 @@ int arch_cpu_init2(kernel_args *ka)
 	vm_create_anonymous_region(vm_get_kernel_aspace_id(), "gdt", (void **)&gdt,
 		REGION_ADDR_EXACT_ADDRESS, PAGE_SIZE, REGION_WIRING_WIRED_ALREADY, LOCK_RW|LOCK_KERNEL);
 
-	i386_selector_init( gdt );  // pass the new gdt
-
-	tss = kmalloc(sizeof(struct tss *) * ka->num_cpus);
+	tss = kmalloc(sizeof(struct tss_64 *) * ka->num_cpus);
 	if(tss == NULL) {
 		panic("arch_cpu_init2: could not allocate buffer for tss pointers\n");
 		return ERR_NO_MEMORY;
@@ -84,57 +78,26 @@ int arch_cpu_init2(kernel_args *ka)
 			return ERR_NO_MEMORY;
 		}
 
-		memset(tss[i], 0, sizeof(struct tss));
-		tss[i]->ss0 = KERNEL_DATA_SEG;
+		memset(tss[i], 0, sizeof(struct tss_64));
 
 		// add TSS descriptor for this new TSS
-		tss_d = (struct tss_descriptor *)&gdt[6 + i];
-		tss_d->limit_00_15 = sizeof(struct tss) & 0xffff;
-		tss_d->limit_19_16 = 0; // not this long
+		tss_d = (struct descriptor_64 *)&gdt[5 + i];
+		tss_d->limit_00_15 = sizeof(struct tss_64) & 0xffff;
+		tss_d->limit_19_16 = 0; // it's not this long
 		tss_d->base_00_15 = (addr_t)tss[i] & 0xffff;
 		tss_d->base_23_16 = ((addr_t)tss[i] >> 16) & 0xff;
-		tss_d->base_31_24 = (addr_t)tss[i] >> 24;
+		tss_d->base_31_24 = ((addr_t)tss[i] >> 24) & 0xff;
+		tss_d->base_63_32 = ((addr_t)tss[i] >> 32) & 0xffffffff;
 		tss_d->type = 0x9;
-		tss_d->zero = 0;
+		tss_d->system = 0;
 		tss_d->dpl = 0;
 		tss_d->present = 1;
-		tss_d->avail = 0;
-		tss_d->zero1 = 0;
-		tss_d->zero2 = 1;
+		tss_d->zero = 0;
 		tss_d->granularity = 1;
+		tss_d->reserved = 0;
+		tss_d->zero2 = 0;
+		tss_d->reserved2 = 0;
 	}
-
-
-	/* set up the double fault tss */
-	memset(&double_fault_tss, 0, sizeof(double_fault_tss));
-	double_fault_tss.sp0 = (uint32)double_fault_stack + sizeof(double_fault_stack);
-	double_fault_tss.ss0 = KERNEL_DATA_SEG;
-	read_cr3(double_fault_tss.cr3); // copy the current cr3 to the double fault cr3
-	double_fault_tss.eip = (uint32)&trap8;
-	double_fault_tss.es = KERNEL_DATA_SEG;
-	double_fault_tss.cs = KERNEL_CODE_SEG;
-	double_fault_tss.ss = KERNEL_DATA_SEG;
-	double_fault_tss.ds = KERNEL_DATA_SEG;
-	double_fault_tss.fs = KERNEL_DATA_SEG;
-	double_fault_tss.gs = KERNEL_DATA_SEG;
-	double_fault_tss.ldt_seg_selector = KERNEL_DATA_SEG;
-
-	tss_d = (struct tss_descriptor *)&gdt[5];
-	tss_d->limit_00_15 = sizeof(struct tss) & 0xffff;
-	tss_d->limit_19_16 = 0; // not this long
-	tss_d->base_00_15 = (addr_t)&double_fault_tss & 0xffff;
-	tss_d->base_23_16 = ((addr_t)&double_fault_tss >> 16) & 0xff;
-	tss_d->base_31_24 = (addr_t)&double_fault_tss >> 24;
-	tss_d->type = 0x9; // tss descriptor, not busy
-	tss_d->zero = 0;
-	tss_d->dpl = 0;
-	tss_d->present = 1;
-	tss_d->avail = 0;
-	tss_d->zero1 = 0;
-	tss_d->zero2 = 1;
-	tss_d->granularity = 1;
-
-	i386_set_task_gate(8, DOUBLE_FAULT_TSS);
 
 	// set up a few debug commands (in, out)
 	dbg_add_command(&dbg_in, "in", "read I/O port");
@@ -143,16 +106,16 @@ int arch_cpu_init2(kernel_args *ka)
 	return 0;
 }
 
-desc_table *i386_get_gdt(void)
+desc_table *x86_64_get_gdt(void)
 {
 	return gdt;
 }
 
-void i386_set_kstack(addr_t kstack)
+void x86_64_set_kstack(addr_t kstack)
 {
 	int curr_cpu = smp_get_current_cpu();
 
-//	dprintf("i386_set_kstack: kstack 0x%x, cpu %d\n", kstack, curr_cpu);
+//	dprintf("x86_64_set_kstack: kstack 0x%x, cpu %d\n", kstack, curr_cpu);
 	if(tss_loaded[curr_cpu] == 0) {
 		short seg = (TSS + 8*curr_cpu);
 		asm("movw  %0, %%ax;"
@@ -160,8 +123,17 @@ void i386_set_kstack(addr_t kstack)
 		tss_loaded[curr_cpu] = 1;
 	}
 
-	tss[curr_cpu]->sp0 = kstack;
+	tss[curr_cpu]->rsp0 = kstack;
 //	dprintf("done\n");
+}
+
+void reboot(void)
+{
+	static uint16 null_idt_descr[3];
+
+	asm("lidt	%0" : : "m" (null_idt_descr));
+	asm("int 	$0");
+	for(;;);
 }
 
 void arch_cpu_invalidate_TLB_range(addr_t start, addr_t end)

@@ -1,5 +1,5 @@
 /*
-** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2004, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #include <kernel/kernel.h>
@@ -13,7 +13,7 @@
 #include <kernel/arch/int.h>
 #include <kernel/arch/cpu.h>
 
-#include <kernel/arch/i386/interrupts.h>
+#include <kernel/arch/x86_64/interrupts.h>
 
 int arch_vm_init(kernel_args *ka)
 {
@@ -55,7 +55,7 @@ int arch_vm_init_endvm(kernel_args *ka)
 
 void arch_vm_aspace_swap(vm_address_space *aspace)
 {
-	i386_swap_pgdir(vm_translation_map_get_pgdir(&aspace->translation_map));
+	x86_64_swap_pgdir(vm_translation_map_get_pgdir(&aspace->translation_map));
 }
 
 

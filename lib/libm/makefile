@@ -7,7 +7,7 @@ MY_SRCDIR := $(LIBS_DIR)/libm
 MY_OBJS :=
 
 MY_INCLUDES := $(STDINCLUDE) -I$(MY_SRCDIR)/common_source
-MY_CFLAGS := 
+MY_CFLAGS := $(USER_CFLAGS)
 MY_LINKSCRIPT := $(LIBS_LDSCRIPT)
 
 # include sub makefiles

@@ -1,6 +1,9 @@
 #ifdef ARCH_i386
 #include "i386/rldreloc.inc"
 #endif
+#ifdef ARCH_x86_64
+#include "x86_64/rldreloc.inc"
+#endif
 #ifdef ARCH_alpha
 #include "alpha/rldreloc.inc"
 #endif

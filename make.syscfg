@@ -92,10 +92,10 @@ ifeq ($(ARCH),x86_64)
 	AR = x86_64-elf-ar
 	OBJCOPY = x86_64-elf-objcopy
 	STRIP = x86_64-elf-strip
-	GLOBAL_CFLAGS = -O2 -g
-	KERNEL_CFLAGS = -fno-pic
+	GLOBAL_CFLAGS = -O2 -g 
+	KERNEL_CFLAGS = -fpic
 	USER_CFLAGS = -fpic
-	GLOBAL_LDFLAGS = -g
+	GLOBAL_LDFLAGS = -g -m elf_x86_64
 	TOOLCHAIN_ARCH = x86_64
 endif
 

@@ -4,8 +4,8 @@
 ** Distributed under the terms of the NewOS License.
 */
 
-#include <kernel/arch/i386/descriptors.h>
-#include <kernel/arch/i386/kernel.h>
+#include <kernel/arch/x86_64/descriptors.h>
+#include <kernel/arch/x86_64/kernel.h>
 
 #define FUNCTION(x) .global x; .type x,@function; x
 
@@ -15,15 +15,15 @@
 .globl name; \
 .align 8; \
 name: \
-	pushl	$vector; \
+	push	$vector; \
 	jmp		int_bottom
 
 #define TRAP(name, vector) \
 .globl name; \
 .align 8; \
 name: \
-	pushl	$0; \
-	pushl	$vector; \
+	push	$0; \
+	push	$vector; \
 	jmp		int_bottom
 
 TRAP(trap0, 0)
@@ -74,58 +74,54 @@ TRAP(trap255, 255)
 .align 16
 .globl int_bottom
 int_bottom:
-	pushl	%edx
-	pushl	%eax
-	pusha
+	/* push all the GP regs except rsp */
+	push	%rax
+	push	%rcx
+	push	%rdx
+	push	%rbx
+	push	%rsp
+	push	%rbp
+	push	%rsi
+	push	%rdi
+	push	%r8
+	push	%r9
+	push	%r10
+	push	%r11
+	push	%r12
+	push	%r13
+	push	%r14
+	push	%r15
 	push	%ds
 	push	%es
 	push	%fs
 	push	%gs
-	movl	$KERNEL_DATA_SEG,%eax
 	cld
-	movl	%eax,%ds
-	movl	%eax,%es
-	movl	%ss,%ebx
-	movl	%esp,%esi
-	cmpl	%eax,%ebx  // check if we changed the stack
-	jne		custom_stack
-  kernel_stack:
-	call	i386_handle_trap
+
+	call	x86_64_handle_trap
+
 	pop		%gs
 	pop		%fs
 	pop		%es
 	pop		%ds
-	popa
-	addl	$16,%esp
-	iret
+	pop		%r15
+	pop		%r14
+	pop		%r13
+	pop		%r12
+	pop		%r11
+	pop		%r10
+	pop		%r9
+	pop		%r8
+	pop		%rdi
+	pop		%rsi
+	pop		%rbp
+	pop		%rsp
+	pop		%rbx
+	pop		%rdx
+	pop		%rcx
+	pop		%rax
 
-	// custom stack -> copy registers to kernel stack and switch there
-  custom_stack:
-	movl	%dr3,%edx  // get_current_thread
-	movl	%eax,%es
-	addl	_interrupt_stack_offset,%edx
-	lss		(%edx),%esp
-	movl	%ebx,%ds
-	subl	$84,%esp
-	movl	%esp,%edi
-	movl	$19,%ecx
-	rep		movsl
-	movl	%eax,%ds
-	subl	$76,%esi
-	movl	%esi,(%edi)  // save custom stack address
-	movl	%ebx,4(%edi)
-	call	i386_handle_trap
-	lss		76(%esp),%esp  // reload custom stack address
-	pop		%gs
-	pop		%fs
-	pop		%es
-	pop		%ds
-	popa
-	addl	$16,%esp
+	add		$16,%rsp
 	iret
-
-_interrupt_stack_offset:
-.long	0
 
 /* syscall entry point. arg passing is as follows:
  * eax: vector number
@@ -136,7 +132,9 @@ _interrupt_stack_offset:
  * jump through syscall_table (in kernel/syscalls.c).
  */ 
 .align 8
-FUNCTION(i386_syscall_vector):
+FUNCTION(x86_64_syscall_vector):
+#warning implement x86_64_syscall_vector
+#if 0
 	/* push a standard iframe to the stack */
 	pushl	$0		// error code 0
 	pushl	$99		// vector 99 (syscall)
@@ -215,7 +213,7 @@ skip_arg_copy:
 
 	/* push the current iframe into the iframe stack */
 	pushl	%ebp
-	call	i386_push_iframe
+	call	x86_64_push_frame
 	addl	$4,%esp
 
 	/* do kernel work upon entry */
@@ -232,7 +230,7 @@ skip_arg_copy:
 	/* do any cleanup work when leaving the kernel */
 	call	thread_atkernel_exit
 
-	call	i386_pop_iframe
+	call	x86_64_pop_iframe
 
 syscall_vector_exit:
 	/* put the kernel stack back where it was before we pushed the args */
@@ -261,41 +259,14 @@ bleh:
 	.ascii	"here 0x%x\n\0"
 
 	.align	4
+#endif
 
-// void	i386_stack_init(struct farcall *interrupt_stack_offset)
-	/* setup in arch_thread.c: arch_thread_init_thread_struct() */
-FUNCTION(i386_stack_init):
-	movl	4(%esp),%eax
-	movl	%eax,_interrupt_stack_offset
-	ret
-
-// void i386_stack_switch(struct farcall new_stack)
-FUNCTION(i386_stack_switch):
-	movl	%dr3,%eax  // get_current_thread
-	movl	(%esp),%edx
-	pushf
-	popl	%ecx
-	addl	_interrupt_stack_offset,%eax
-	cli
-	pushl	%ss
-	cmpl	$KERNEL_DATA_SEG,(%esp)
-	je		kernel_stack2
-		popl	%eax
-		jmp		switch
-  kernel_stack2:
-	popl	4(%eax)
-	movl	%esp,(%eax)
-  switch:
-	lss		4(%esp),%esp
-	pushl	%ecx
-	popf
-	jmp		*%edx
-
-FUNCTION(i386_return_from_signal):
-	addl	$12, %esp	// Flushes the 3 arguments to sa_handler
-	movl	$81, %eax	// This syscall will restore the cpu context to the
-	movl	$0, %ecx	// one existing before calling the signal handler
-	lea		4(%esp), %edx
+#warning make sure this matches the syscall mechanism
+FUNCTION(x86_64_return_from_signal):
+	add		$12, %rsp	// Flushes the 3 arguments to sa_handler
+	mov		$81, %rax	// This syscall will restore the cpu context to the
+	mov		$0, %rcx	// one existing before calling the signal handler
 	int		$99
 	ret
-FUNCTION(i386_end_return_from_signal):
+FUNCTION(x86_64_end_return_from_signal):
+

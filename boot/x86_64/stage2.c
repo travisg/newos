@@ -391,12 +391,15 @@ void _start(unsigned int memsize, void *extended_mem_block, unsigned int extende
 	dprintf("page_hole = 0x%x\n", ka->page_hole);
 #endif
 //	dprintf("finding and booting other cpus...\n");
-	smp_boot(ka, kernel_entry);
+//	smp_boot(ka, kernel_entry);
 
 	dprintf("jumping into kernel at 0x%x\n", kernel_entry);
 
 	ka->cons_line = screenOffset / SCREEN_WIDTH;
 
+	dprintf("spinning cause I suck!\n");
+	for(;;);
+#if 0
 	asm("movl	%0, %%eax;	"			// move stack out of way
 		"movl	%%eax, %%esp; "
 		: : "m" (ka->cpu_kstack[0].start + ka->cpu_kstack[0].size));
@@ -406,6 +409,7 @@ void _start(unsigned int memsize, void *extended_mem_block, unsigned int extende
 		"pushl 	%1;	"					// this is the start address
 		"ret;		"					// jump.
 		: : "g" (ka), "g" (kernel_entry));
+#endif
 }
 
 static void load_elf_image(void *data, unsigned int *next_paddr, addr_range *ar0, addr_range *ar1, unsigned int *start_addr, addr_range *dynamic_section)
@@ -527,10 +531,10 @@ static int mmu_init(kernel_args *ka, unsigned int *next_paddr)
 	pgdir[KERNEL_BASE/(4*1024*1024)] = (unsigned int)pgtable | DEFAULT_PAGE_FLAGS;
 
 	// switch to the new pgdir
-	asm("movl %0, %%eax;"
-		"movl %%eax, %%cr3;" :: "m" (pgdir) : "eax");
+	asm("mov %0, %%rax;"
+		"mov %%rax, %%cr3;" :: "m" (pgdir) : "rax");
 	// Important.  Make sure supervisor threads can fault on read only pages...
-	asm("movl %%eax, %%cr0" : : "a" ((1 << 31) | (1 << 16) | (1 << 5) | 1));
+	asm("mov %%rax, %%cr0" : : "a" ((1 << 31) | (1 << 16) | (1 << 5) | 1));
 		// pkx: moved the paging turn-on to here.
 
 	return 0;
@@ -556,9 +560,9 @@ static int check_cpu(kernel_args *ka)
 	char str[17];
 
 	// check the eflags register to see if the cpuid instruction exists
-	if((get_eflags() & 1<<21) == 0) {
-		set_eflags(get_eflags() | 1<<21);
-		if((get_eflags() & 1<<21) == 0) {
+	if((get_rflags() & 1<<21) == 0) {
+		set_rflags(get_rflags() | 1<<21);
+		if((get_rflags() & 1<<21) == 0) {
 			// we couldn't set the ID bit of the eflags register, this cpu is old
 			return -1;
 		}

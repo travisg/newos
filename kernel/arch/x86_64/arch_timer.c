@@ -1,5 +1,5 @@
 /* 
-** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2004, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #include <boot/stage2.h>
@@ -17,9 +17,9 @@
 
 #include <kernel/arch/timer.h>
 
-#include <kernel/arch/i386/interrupts.h>
-#include <kernel/arch/i386/smp_priv.h>
-#include <kernel/arch/i386/timer.h>
+#include <kernel/arch/x86_64/interrupts.h>
+#include <kernel/arch/x86_64/smp_priv.h>
+#include <kernel/arch/x86_64/timer.h>
 
 #define pit_clock_rate 1193180
 #define pit_max_timer_interval ((bigtime_t)0xffff * 1000000 / pit_clock_rate)

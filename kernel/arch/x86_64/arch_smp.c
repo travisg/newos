@@ -1,5 +1,5 @@
 /*
-** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2004, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #include <boot/stage2.h>
@@ -16,8 +16,8 @@
 #include <kernel/arch/vm.h>
 #include <kernel/arch/smp.h>
 
-#include <kernel/arch/i386/smp_priv.h>
-#include <kernel/arch/i386/timer.h>
+#include <kernel/arch/x86_64/smp_priv.h>
+#include <kernel/arch/x86_64/timer.h>
 
 #include <string.h>
 #include <stdio.h>
@@ -30,14 +30,14 @@ static unsigned int cpu_apic_version[_MAX_CPUS] = { 0 };
 static unsigned int *ioapic = NULL;
 static unsigned int apic_timer_tics_per_sec = 0;
 
-static int i386_timer_interrupt(void* data)
+static int x86_64_timer_interrupt(void* data)
 {
 	arch_smp_ack_interrupt();
 
 	return apic_timer_interrupt();
 }
 
-static int i386_ici_interrupt(void* data)
+static int x86_64_ici_interrupt(void* data)
 {
 	// gin-u-wine inter-cpu interrupt
 //	dprintf("inter-cpu interrupt on cpu %d\n", arch_smp_get_current_cpu());
@@ -46,7 +46,7 @@ static int i386_ici_interrupt(void* data)
 	return smp_intercpu_int_handler();
 }
 
-static int i386_spurious_interrupt(void* data)
+static int x86_64_spurious_interrupt(void* data)
 {
 	// spurious interrupt
 //	dprintf("spurious interrupt on cpu %d\n", arch_smp_get_current_cpu());
@@ -54,7 +54,7 @@ static int i386_spurious_interrupt(void* data)
 	return INT_NO_RESCHEDULE;
 }
 
-static int i386_smp_error_interrupt(void* data)
+static int x86_64_smp_error_interrupt(void* data)
 {
 	// smp error interrupt
 //	dprintf("smp error interrupt on cpu %d\n", arch_smp_get_current_cpu());
@@ -98,10 +98,10 @@ int arch_smp_init(kernel_args *ka)
 		// set up the interrupt handlers for local apic interrupts.
 		// they are mapped to absolute interrupts 0xfb-0xff, but the io handlers are all
 		// base 0x20, so subtract 0x20.
-		int_set_io_interrupt_handler(0xfb - 0x20, &i386_timer_interrupt, NULL, "lapic timer");
-		int_set_io_interrupt_handler(0xfd - 0x20, &i386_ici_interrupt, NULL, "ici");
-		int_set_io_interrupt_handler(0xfe - 0x20, &i386_smp_error_interrupt, NULL, "lapic smp error");
-		int_set_io_interrupt_handler(0xff - 0x20, &i386_spurious_interrupt, NULL, "lapic spurious");
+		int_set_io_interrupt_handler(0xfb - 0x20, &x86_64_timer_interrupt, NULL, "lapic timer");
+		int_set_io_interrupt_handler(0xfd - 0x20, &x86_64_ici_interrupt, NULL, "ici");
+		int_set_io_interrupt_handler(0xfe - 0x20, &x86_64_smp_error_interrupt, NULL, "lapic smp error");
+		int_set_io_interrupt_handler(0xff - 0x20, &x86_64_spurious_interrupt, NULL, "lapic spurious");
 	} else {
 		num_cpus = 1;
 	}

@@ -1,9 +1,9 @@
 /*
-** Copyright 2001-2004, Travis Geiselbrecht. All rights reserved.
+** Copyright 2004, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
-#ifndef _NEWOS_KERNEL_ARCH_I386_KERNEL_H
-#define _NEWOS_KERNEL_ARCH_I386_KERNEL_H
+#ifndef _NEWOS_KERNEL_ARCH_X86_64_KERNEL_H
+#define _NEWOS_KERNEL_ARCH_X86_64_KERNEL_H
 
 // memory layout
 #define KERNEL_BASE 0x80000000

@@ -17,8 +17,8 @@ extern uint64 system_time(void);
 extern void execute_n_instructions(int count);
 void system_time_setup(long a);
 uint64 rdtsc();
-unsigned int get_eflags(void);
-void set_eflags(unsigned int val);
+unsigned long get_rflags(void);
+void set_rflags(unsigned long val);
 void cpuid(unsigned int selector, unsigned int *data);
 
 //void put_uint_dec(unsigned int a);
@@ -38,6 +38,7 @@ void cpuid(unsigned int selector, unsigned int *data);
 #define SCREEN_HEIGHT 25
 #define ADDR_MASK 0xfffff000
 
+#if 0
 // SMP stuff
 extern int smp_boot(kernel_args *ka, unsigned int kernel_entry);
 extern void smp_trampoline(void);
@@ -184,6 +185,7 @@ struct mp_ext_bus
 	unsigned char bus_id;
 	char          name[6];
 };
+#endif
 
 #endif
 
