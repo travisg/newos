@@ -20,7 +20,7 @@
 #include "pcnet32_dev.h"
 #include "pcnet32_priv.h"
 
-#define _PCNET32_VERBOSE
+//#define _PCNET32_VERBOSE
 
 #ifdef _PCNET32_VERBOSE
 # define debug_level_flow 3
@@ -125,6 +125,7 @@ pcnet32 *pcnet32_new(uint32 initmode, uint16 rxbuffer_size,	uint16 txbuffer_size
 		goto err_none;
 
 	memset(nic, 0, sizeof(pcnet32));
+	nic->init_mode = initmode;
 
 	// Make it a 256-descriptor ring. 256*32 bytes long.
 	nic->rxring_count = rxring_count;
@@ -199,6 +200,7 @@ pcnet32 *pcnet32_new(uint32 initmode, uint16 rxbuffer_size,	uint16 txbuffer_size
 	if (nic->thread < 0)
 		goto err_after_interrupt_sem;
 
+	SHOW_FLOW(3, "thread created, id: 0x%x", nic->thread);
 	thread_set_priority(nic->thread, THREAD_HIGHEST_PRIORITY);
 
 	return nic;
@@ -488,6 +490,7 @@ ssize_t pcnet32_rx(pcnet32 *nic, char *buf, ssize_t buf_len)
 		// consume 1 descriptor at a time, whether it's an error or a
 		// valid packet.
 		sem_acquire(nic->rxring_sem, 1);
+		SHOW_FLOW(3, "nic %p rx semaphore was signalled", nic);
 
 		// the semaphor has been released at least once, so we will
 		// lock the rxring and grab the next available descriptor.
@@ -519,6 +522,9 @@ ssize_t pcnet32_rx(pcnet32 *nic, char *buf, ssize_t buf_len)
 
 			// reinitialize the buffer and give it back to the controller.
 			rxdesc_init(nic, index);
+
+			SHOW_FLOW(3, "Got index %d, len %d and cleared it, returning to caller. rxstatus = 0x%x.", index,
+				  nic->rxring[index].message_length, nic->rxring[index].status);
 			
 			// move the tail up.
 			nic->rxring_tail++;
@@ -536,6 +542,7 @@ static bool pcnet32_rxint(pcnet32 *nic)
 	uint32 index;
 
 	index = RXRING_INDEX(nic, nic->rxring_head);
+	SHOW_FLOW(3, "Next rxring index (%d) status = 0x%x.", index, nic->rxring[index].status);
 	if ( !(nic->rxring[index].status & PCNET_RXSTATUS_OWN) )
 	{
 		SHOW_FLOW(3, "Got packet len %d, index %d", nic->rxring[index].message_length, index);
@@ -543,6 +550,7 @@ static bool pcnet32_rxint(pcnet32 *nic)
 		sem_release(nic->rxring_sem, 1);
 		return true;
 	}
+	SHOW_FLOW0(3, "No more packets.");
 
 	return false;
 }
