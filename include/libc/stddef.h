@@ -12,11 +12,11 @@ namespace std
 # endif
 
 # define NULL 0
-// XX note that this is GCC toolchain specific
-# define offsetof(type, member) __offsetof(type, member)
+// XX note that these use GCC toolchain specific features
+# define offsetof(type, member) ((size_t)&(((type *)0)->member))
 
-typedef ::_newos_size_t size_t;
-typedef ::off_t ptrdiff_t;
+typedef __SIZE_TYPE__ size_t;
+typedef __PTRDIFF_TYPE__ ptrdiff_t;
 
 # ifdef __cplusplus
 }}

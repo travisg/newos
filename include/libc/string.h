@@ -8,7 +8,7 @@
 #define __newos__libc_string__hh__
 
 
-#include <newos/types.h>
+#include <stddef.h>
 #include <libc/arch/string.h>
 
 #ifdef __cplusplus
@@ -46,6 +46,8 @@ char       *strtok(char *, char const *);
 # ifdef __cplusplus
 extern "C"
 {
+// define size_t to work in C++
+#  define size_t ::std::size_t
 # endif
 
 /* non standard */
@@ -58,6 +60,7 @@ int    strnicmp(char const *, char const *, size_t);
 size_t strnlen(char const *s, size_t count);
 
 # ifdef __cplusplus
+#  undef size_t
 }
 # endif
 

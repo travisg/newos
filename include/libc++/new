@@ -35,14 +35,14 @@ namespace std
 }
 
 // normal new operators
-void *operator new(size_t);
-void *operator new(size_t, const std::nothrow_t&);
-void *operator new[](size_t);
-void *operator new[](size_t, const std::nothrow_t&);
+void *operator new(::std::size_t);
+void *operator new(::std::size_t, const std::nothrow_t&);
+void *operator new[](::std::size_t);
+void *operator new[](::std::size_t, const std::nothrow_t&);
 
 // placement new operators (should do nothing)
-void *operator new(size_t, void *);
-void *operator new[](size_t, void *);
+void *operator new(::std::size_t, void *);
+void *operator new[](::std::size_t, void *);
 
 // normal delete operators
 void operator delete(void*);

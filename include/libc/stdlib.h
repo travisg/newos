@@ -8,8 +8,11 @@
 # define __newos__libc_stdlib__hh__
 
 
-# include <newos/types.h>
+# include <stddef.h>
 
+# ifdef __cplusplus
+#  include <new>
+# endif
 
 # ifdef __cplusplus
 namespace std
@@ -55,10 +58,6 @@ void exit(int);
 #  include <kernel/heap.h>
 # endif
 
-# ifdef __cplusplus
-#  include <new>
-# endif
-
 # define max(a, b) ((a) > (b) ? (a) : (b))
 # define min(a, b) ((a) < (b) ? (a) : (b))
 
@@ -66,6 +65,8 @@ void exit(int);
 # ifdef __cplusplus
 extern "C"
 {
+// define size_t to be correct in C++
+#  define size_t ::std::size_t
 # endif
 
 int   setenv(char const *, char const *, int);
@@ -74,8 +75,8 @@ void  unsetenv(char const *);
 
 int   heapsort(void *, size_t , size_t , int (*)(void const *, void const *));
 int   mergesort(void *, size_t, size_t, int (*)(void const *, void const *));
-int   radixsort(u_char const **, int, u_char const *, u_int);
-int   sradixsort(u_char const **, int, u_char const *, u_int);
+int   radixsort(unsigned char const **, int, unsigned char const *, unsigned int);
+int   sradixsort(unsigned char const **, int, unsigned char const *, unsigned int);
 
 void * reallocf(void *, size_t);
 void * memalign(size_t, size_t);
@@ -102,6 +103,7 @@ void _exit(int);
 # endif
 
 # ifdef __cplusplus
+#  undef size_t
 }
 # endif
 

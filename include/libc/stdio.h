@@ -9,7 +9,8 @@
 #define __newos__libc_stdio__hh__
 
 
-#include <newos/types.h>
+#include <stddef.h>
+#include <sys/types.h>
 #include <sys/cdefs.h>
 
 #include <stdarg.h>
@@ -27,10 +28,10 @@ namespace std
 
 struct __FILE {
 	int fd; 		/* system file descriptor */
-    off_t rpos;       /* The first unread buffer position */
-	off_t buf_pos;		/* first unwritten buffer position */ 
+    ptrdiff_t rpos;       /* The first unread buffer position */
+	ptrdiff_t buf_pos;		/* first unwritten buffer position */ 
 	unsigned char* buf;		/* buffer */
-	off_t buf_size;	/* buffer size */
+	ptrdiff_t buf_size;	/* buffer size */
     unsigned char unget;     /* for  ungetc */
     int flags;      /* for feof and ferror */
     struct __FILE* next; /* for fflush */
