@@ -1,5 +1,5 @@
 /*
-** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Copyright 2002, Travis Geiselbrecht. All rights reserved.
 ** Copyright 2002, Manuel J. Petit. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -34,6 +34,14 @@ int   putenv(char const *);
 void  unsetenv(char const *);
 
 void  qsort(void *, size_t, size_t, int (*)(void const *, void const *));
+
+int   rand(void);
+void  srand(unsigned);
+long  random(void);
+void  srandom(unsigned long);
+
+void exit(int);
+void _exit(int);
 
 
 #ifdef __cplusplus
