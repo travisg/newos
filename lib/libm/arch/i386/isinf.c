@@ -38,6 +38,7 @@ static const char rcsid[] = "$FreeBSD: src/lib/libc/i386/gen/isinf.c,v 1.6 1999/
 #endif /* LIBC_RCS and not lint */
 
 #include <sys/types.h>
+#include "mathimpl.h"
 
 int
 isnan(d)

@@ -35,6 +35,8 @@
 static char sccsid[] = "@(#)asincos.c	8.1 (Berkeley) 6/4/93";
 #endif /* not lint */
 
+#include "mathimpl.h"
+
 /* ASIN(X)
  * RETURNS ARC SINE OF X
  * DOUBLE PRECISION (IEEE DOUBLE 53 bits, VAX D FORMAT 56 bits)

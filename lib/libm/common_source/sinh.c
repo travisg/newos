@@ -92,9 +92,9 @@ ic(lnovfl, 7.0978271289338397310E2,     9, 1.62E42FEFA39EF)
 #endif
 
 #if defined(vax)||defined(tahoe)
-static max = 126                      ;
+static int max = 126                      ;
 #else	/* defined(vax)||defined(tahoe) */
-static max = 1023                     ;
+static int max = 1023                     ;
 #endif	/* defined(vax)||defined(tahoe) */
 
 

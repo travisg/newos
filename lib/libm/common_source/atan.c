@@ -35,6 +35,8 @@
 static char sccsid[] = "@(#)atan.c	8.1 (Berkeley) 6/4/93";
 #endif /* not lint */
 
+#include "mathimpl.h"
+
 /* ATAN(X)
  * RETURNS ARC TANGENT OF X
  * DOUBLE PRECISION (IEEE DOUBLE 53 bits, VAX D FORMAT 56 bits)

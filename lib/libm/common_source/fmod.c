@@ -35,6 +35,8 @@
 static char sccsid[] = "@(#)fmod.c	8.1 (Berkeley) 6/4/93";
 #endif /* not lint */
 
+#include "mathimpl.h"
+
 /* fmod.c
  *
  * SYNOPSIS
