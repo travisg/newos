@@ -200,7 +200,7 @@ int vm_daemon_init()
 
 	// create a kernel thread to select pages for pageout
 	tid = thread_create_kernel_thread("page daemon", &page_daemon, NULL);
-	thread_set_priority(tid, THREAD_HIGHEST_PRIORITY);
+	thread_set_priority(tid, THREAD_MIN_RT_PRIORITY);
 	thread_resume_thread(tid);
 
 	return 0;

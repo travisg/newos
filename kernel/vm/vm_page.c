@@ -269,7 +269,7 @@ int vm_page_init_postthread(kernel_args *ka)
 	modified_pages_available = sem_create(0, "modified_pages_avail_sem");
 #if 0
 	// create a kernel thread to schedule modified pages to write
-	tid = thread_create_kernel_thread("pageout daemon", &pageout_daemon, THREAD_HIGHEST_PRIORITY);
+	tid = thread_create_kernel_thread("pageout daemon", &pageout_daemon, THREAD_MIN_RT_PRIORITY + 1);
 	thread_resume_thread(tid);
 #endif
 	return 0;

@@ -1471,13 +1471,21 @@ void thread_resched(void)
 	}
 	old_thread->state = old_thread->next_state;
 
+	// search the real-time queue
+	for(i = THREAD_MAX_RT_PRIORITY; i >= THREAD_MIN_RT_PRIORITY; i--) {
+		next_thread = thread_dequeue_run_q(i);
+		if(next_thread)
+			goto found_thread;
+	}
+
+	// search the regular queue
 	for(i = THREAD_MAX_PRIORITY; i > THREAD_IDLE_PRIORITY; i--) {
 		next_thread = thread_lookat_run_q(i);
 		if(next_thread != NULL) {
 			// skip it sometimes
 			if(_rand() > 0x3000) {
 				next_thread = thread_dequeue_run_q(i);
-				break;
+				goto found_thread;
 			}
 			last_thread_pri = i;
 			next_thread = NULL;
@@ -1495,6 +1503,7 @@ void thread_resched(void)
 		}
 	}
 
+found_thread:
 	next_thread->state = THREAD_STATE_RUNNING;
 	next_thread->next_state = THREAD_STATE_READY;
 

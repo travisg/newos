@@ -363,6 +363,7 @@ static int rtl8139_rxint(rtl8139 *rtl, uint16 int_status)
 
 	if(!(RTL_READ_8(rtl, RT_CHIPCMD) & RT_CMD_RX_BUF_EMPTY)) {
 		sem_release_etc(rtl->rx_sem, 1, SEM_FLAG_NO_RESCHED);
+		rc = INT_RESCHEDULE;
 	}
 	return rc;
 }

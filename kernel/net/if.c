@@ -201,7 +201,7 @@ int if_boot_interface(ifnet *i)
 		err = i->rx_thread;
 		goto err1;
 	}
-	thread_set_priority(i->rx_thread, THREAD_HIGH_PRIORITY);
+	thread_set_priority(i->rx_thread, THREAD_MAX_RT_PRIORITY - 2);
 
 	// create the transmit thread
 	i->tx_thread = thread_create_kernel_thread("net_tx_thread", &if_tx_thread, i);
@@ -209,7 +209,7 @@ int if_boot_interface(ifnet *i)
 		err = i->tx_thread;
 		goto err2;
 	}
-	thread_set_priority(i->tx_thread, THREAD_HIGH_PRIORITY);
+	thread_set_priority(i->tx_thread, THREAD_MAX_RT_PRIORITY - 2);
 
 	// start the threads
 	thread_resume_thread(i->rx_thread);
