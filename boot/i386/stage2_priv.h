@@ -10,7 +10,6 @@
 
 extern void _start(unsigned int mem, void *extended_mem_block, unsigned int extended_mem_count, int in_vesa, unsigned int vesa_ptr, unsigned int console_ptr);
 extern void clearscreen(void);
-extern void puts(const char *str);
 extern int dprintf(const char *fmt, ...);
 extern void sleep(uint64 time);
 extern uint64 system_time(void);

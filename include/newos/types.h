@@ -5,7 +5,18 @@
 #ifndef _TYPES_H
 #define _TYPES_H
 
-#define INC_ARCH(path, x) <path/__ARCH__/x>
+#ifdef __i386__
+#define INC_ARCH(path, x) <path/i386/x>
+#endif
+#ifdef __ppc__
+#define INC_ARCH(path, x) <path/ppc/x>
+#endif
+#ifdef __x86_64__
+#define INC_ARCH(path, x) <path/x86_64/x>
+#endif
+#ifdef __arm__
+#define INC_ARCH(path, x) <path/arm/x>
+#endif
 
 #include INC_ARCH(arch,types.h)
 

@@ -8,7 +8,6 @@
 
 extern void _start(unsigned int mem, void *ext_mem_block, int ext_mem_count, int in_vesa, unsigned int vesa_ptr);
 extern void clearscreen(void);
-extern void puts(const char *str);
 extern int dprintf(const char *fmt, ...);
 extern void *kmalloc(unsigned int size);
 extern void kfree(void *ptr);

@@ -76,7 +76,7 @@ static void scrup()
 	line = SCREEN_HEIGHT - 1;
 }
 
-void puts(const char *str)
+int puts(const char *str)
 {
 	while (*str) {
 		if (*str == '\n') {
@@ -93,6 +93,7 @@ void puts(const char *str)
 
 		str++;
 	}
+	return 0;
 }
 
 int dprintf(const char *fmt, ...)

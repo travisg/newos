@@ -13,8 +13,6 @@
 #include <newos/types.h>
 #include <errno.h>
 
-#define BUFFER_SIZE 1024
-
 FILE *stdin;
 FILE *stdout;
 FILE *stderr;
@@ -45,7 +43,7 @@ static FILE *__create_FILE_struct(int fd, int flags)
 		return (FILE *)0;
 
     /* Allocate the buffer*/
-    f->buf = (char *)malloc( BUFFER_SIZE *sizeof(char));
+    f->buf = (char *)malloc( BUFSIZ *sizeof(char));
     if(!f->buf)
     {
         free(f);
@@ -65,7 +63,7 @@ static FILE *__create_FILE_struct(int fd, int flags)
     /* Fill in FILE values*/
     f->rpos = 0;
     f->buf_pos = 0;
-    f->buf_size = BUFFER_SIZE ;
+    f->buf_size = BUFSIZ ;
 	f->fd = fd;
     f->flags = flags;
 

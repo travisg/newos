@@ -818,7 +818,7 @@ static void scrup()
 		kScreenBase[screenOffset + i] = 0x0720;
 }
 
-void puts(const char *str)
+int puts(const char *str)
 {
 	while (*str) {
 		if (*str == '\n') {
@@ -831,6 +831,7 @@ void puts(const char *str)
 
 		str++;
 	}
+	return 0;
 }
 
 int dprintf(const char *fmt, ...)

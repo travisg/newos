@@ -282,4 +282,9 @@ extern float lgammaf_r(float, int *);
 } /* "C" */
 #endif
 
+#if defined(__cplusplus) && !defined(_NEWOS_NO_LIBC_COMPAT)
+
+
+#endif
+
 #endif /* _MATH_H_ */

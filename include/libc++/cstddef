@@ -5,4 +5,11 @@
 
 #define _NEWOS_NO_LIBC_COMPAT
 # include <stddef.h>
+
+namespace std
+{ 
+  using ::ptrdiff_t;
+  using ::size_t;
+}
+
 #undef _NEWOS_NO_LIBC_COMPAT
