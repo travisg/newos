@@ -17,6 +17,9 @@ vfs redo:
  default vfs handlers
 sh4 cache enable - dreamcast
 statistic gathering
+proper error codes (not just -1)
+SMP mailbox check during spin
+improved schedule quantum handling
 
 In Progress:
 VM:
@@ -32,8 +35,6 @@ Finish:
 sh4 console - dreamcast
 sh4 test_and_set - dreamcast
 sh4 invalidate_TLB - dreamcast
-SMP mailbox check during spin
-improved schedule quantum handling
 ide driver cleanup
 
 Fix:
