@@ -194,8 +194,8 @@ port_create(int32 queue_length, const char *name)
 		return ERR_NO_MEMORY;
 	}
 
-	// create sem_r
-	sem_r = sem_create(0, temp_name);
+	// create sem_r with owner set to -1
+	sem_r = sem_create_etc(0, temp_name, -1);
 	if (sem_r < 0) {
 		// cleanup
 		kfree(temp_name);
@@ -203,7 +203,7 @@ port_create(int32 queue_length, const char *name)
 		return sem_r;
 	}
 	// create sem_w
-	sem_w = sem_create(queue_length, temp_name);
+	sem_w = sem_create_etc(queue_length, temp_name, -1);
 	if (sem_w < 0) {
 		// cleanup
 		sem_delete(sem_r);

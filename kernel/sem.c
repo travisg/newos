@@ -22,7 +22,7 @@ struct sem_entry {
 	struct thread_queue q;
 	char      *name;
 	int       lock;
-	proc_id   owner;
+	proc_id   owner;		 // if set to -1, means owned by a port
 };
 
 #define MAX_SEMS 4096
@@ -135,7 +135,7 @@ int sem_init(kernel_args *ka)
 	return 0;
 }
 
-static sem_id sem_create_etc(int count, const char *name, proc_id owner)
+sem_id sem_create_etc(int count, const char *name, proc_id owner)
 {
 	int i;
 	int state;
@@ -591,6 +591,8 @@ int sem_get_next_sem_info(proc_id proc, uint32 *cookie, struct sem_info *info)
 
 	if (cookie == NULL)
 		return ERR_INVALID_ARGS;
+	if (proc < 0)
+		return ERR_INVALID_ARGS;	// prevents sems[].owner == -1 >= means owned by a port
 
 	if (*cookie == NULL) {
 		// return first found

@@ -287,7 +287,7 @@ static int elf_parse_dynamic_section(struct elf_image_info *image)
 // this function first tries to see if the first image and it's already resolved symbol is okay, otherwise
 // it tries to link against the shared_image
 // XXX gross hack and needs to be done better
-static int  elf_resolve_symbol(struct elf_image_info *image, struct Elf32_Sym *sym, struct elf_image_info *shared_image, const char *sym_prepend,addr *sym_addr
+static int  elf_resolve_symbol(struct elf_image_info *image, struct Elf32_Sym *sym, struct elf_image_info *shared_image, const char *sym_prepend,addr *sym_addr)
 {
 	struct Elf32_Sym *sym2;
 	char new_symname[512];

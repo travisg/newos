@@ -21,6 +21,7 @@ struct sem_info {
 };
 
 int sem_init(kernel_args *ka);
+sem_id sem_create_etc(int count, const char *name, proc_id owner);
 sem_id sem_create(int count, const char *name);
 int sem_delete(sem_id id);
 int sem_delete_etc(sem_id id, int return_code);
