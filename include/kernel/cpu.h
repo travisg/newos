@@ -44,6 +44,8 @@ extern inline cpu_ent *get_curr_cpu_struct(void) { return thread_get_current_thr
 cpu_ent *get_cpu_struct(int cpu_num);
 extern inline cpu_ent *get_cpu_struct(int cpu_num) { return &cpu[cpu_num]; }
 
+void cpu_spin(bigtime_t interval);
+
 /* manual implementations of the atomic_* ops */
 int user_atomic_add(int *val, int incr);
 int user_atomic_and(int *val, int incr);

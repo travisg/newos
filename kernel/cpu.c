@@ -30,6 +30,14 @@ int cpu_preboot_init(kernel_args *ka)
 	return arch_cpu_preboot_init(ka);
 }
 
+void cpu_spin(bigtime_t interval)
+{
+	bigtime_t start = system_time();
+
+	while(system_time() - start < interval)
+		;
+}
+
 int user_atomic_add(int *uval, int incr)
 {
 	int val;
