@@ -12,7 +12,7 @@
 
 #define KERNEL_ADDR_MASK 0x80000000
 
-// a macro to test if a pointer is inside kernel space or not
+// a macro to test if a pointer is inside kernel space
 #define is_kernel_address(x) (((addr_t)(x)) & KERNEL_ADDR_MASK)
 
 /*
@@ -25,7 +25,10 @@
 */
 #define USER_BASE   0x100000
 #define USER_SIZE   (0x80000000 - (0x10000 + 0x100000))
-#define USER_TOP    (USER_BASE + USER_SIZE)
+#define USER_TOP    (USER_BASE + (USER_SIZE - 1))
+
+// a macro to test if a pointer is inside user space
+#define is_user_address(x) (((addr_t)(x)) >= USER_BASE && ((addr_t)(x)) <= USER_TOP)
 
 #define USER_STACK_REGION 0x70000000
 #define USER_STACK_REGION_SIZE (USER_BASE + (USER_SIZE - USER_STACK_REGION))

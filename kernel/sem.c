@@ -1,5 +1,5 @@
 /*
-** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2004, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #include <kernel/kernel.h>
@@ -85,7 +85,7 @@ static void dump_sem_info(int argc, char **argv)
 	if(strlen(argv[1]) > 2 && argv[1][0] == '0' && argv[1][1] == 'x') {
 		unsigned long num = atoul(argv[1]);
 
-		if(num > KERNEL_BASE && num <= (KERNEL_BASE + (KERNEL_SIZE - 1))) {
+		if(is_kernel_address(num)) {
 			// XXX semi-hack
 			_dump_sem_info((struct sem_entry *)num);
 			return;
@@ -771,7 +771,7 @@ sem_id user_sem_create(int count, const char *uname)
 		char name[SYS_MAX_OS_NAME_LEN];
 		int rc;
 
-		if((addr_t)uname >= KERNEL_BASE && (addr_t)uname <= KERNEL_TOP)
+		if(is_kernel_address(uname))
 			return ERR_VM_BAD_USER_MEMORY;
 
 		rc = user_strncpy(name, uname, SYS_MAX_OS_NAME_LEN-1);
@@ -802,7 +802,7 @@ int user_sem_acquire(sem_id id, int count)
 
 int user_sem_acquire_etc(sem_id id, int count, int flags, bigtime_t timeout, int *deleted_retcode)
 {
-	if(deleted_retcode != NULL && ((addr_t)deleted_retcode >= KERNEL_BASE && (addr_t)deleted_retcode <= KERNEL_TOP))
+	if(deleted_retcode != NULL && is_kernel_address(deleted_retcode))
 		return ERR_VM_BAD_USER_MEMORY;
 
 	flags = flags | SEM_FLAG_INTERRUPTABLE;
@@ -855,7 +855,7 @@ int user_sem_get_sem_info(sem_id uid, struct sem_info *uinfo)
 	struct sem_info info;
 	int rc, rc2;
 
-	if((addr_t)uinfo >= KERNEL_BASE && (addr_t)uinfo <= KERNEL_TOP)
+	if(is_kernel_address(uinfo))
 		return ERR_VM_BAD_USER_MEMORY;
 
 	rc = sem_get_sem_info(uid, &info);
@@ -871,7 +871,7 @@ int user_sem_get_next_sem_info(proc_id uproc, uint32 *ucookie, struct sem_info *
 	uint32 cookie;
 	int rc, rc2;
 
-	if((addr_t)uinfo >= KERNEL_BASE && (addr_t)uinfo <= KERNEL_TOP)
+	if(is_kernel_address(uinfo))
 		return ERR_VM_BAD_USER_MEMORY;
 
 	rc2 = user_memcpy(&cookie, ucookie, sizeof(uint32));

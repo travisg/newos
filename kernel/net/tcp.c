@@ -1,5 +1,5 @@
 /*
-** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2004, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #include <kernel/kernel.h>
@@ -390,7 +390,7 @@ static void dump_socket_info(int argc, char **argv)
 	if(strlen(argv[1]) > 2 && argv[1][0] == '0' && argv[1][1] == 'x') {
 		unsigned long num = atoul(argv[1]);
 
-		if(num > KERNEL_BASE && num <= (KERNEL_BASE + (KERNEL_SIZE - 1))) {
+		if(is_kernel_address(num)) {
 			// XXX semi-hack
 			dump_socket((tcp_socket *)num);
 			return;

@@ -486,7 +486,7 @@ region_id user_vm_create_anonymous_region(char *uname, void **uaddress, int addr
 	void *address;
 	int rc, rc2;
 
-	if((addr_t)uname >= KERNEL_BASE && (addr_t)uname <= KERNEL_TOP)
+	if(is_kernel_address(uname))
 		return ERR_VM_BAD_USER_MEMORY;
 
 	rc = user_strncpy(name, uname, SYS_MAX_OS_NAME_LEN-1);
@@ -845,13 +845,13 @@ region_id user_vm_map_file(char *uname, void **uaddress, int addr_type,
 	char path[SYS_MAX_PATH_LEN];
 	int rc, rc2;
 
-	if((addr_t)uname >= KERNEL_BASE && (addr_t)uname <= KERNEL_TOP)
+	if(is_kernel_address(uname))
 		return ERR_VM_BAD_USER_MEMORY;
 
-	if((addr_t)uaddress >= KERNEL_BASE && (addr_t)uaddress <= KERNEL_TOP)
+	if(is_kernel_address(uaddress))
 		return ERR_VM_BAD_USER_MEMORY;
 
-	if((addr_t)upath >= KERNEL_BASE && (addr_t)upath <= KERNEL_TOP)
+	if(is_kernel_address(upath))
 		return ERR_VM_BAD_USER_MEMORY;
 
 	rc = user_strncpy(name, uname, SYS_MAX_OS_NAME_LEN-1);
@@ -886,10 +886,10 @@ region_id user_vm_clone_region(char *uname, void **uaddress, int addr_type,
 	void *address;
 	int rc, rc2;
 
-	if((addr_t)uname >= KERNEL_BASE && (addr_t)uname <= KERNEL_TOP)
+	if(is_kernel_address(uname))
 		return ERR_VM_BAD_USER_MEMORY;
 
-	if((addr_t)uaddress >= KERNEL_BASE && (addr_t)uaddress <= KERNEL_TOP)
+	if(is_kernel_address(uaddress))
 		return ERR_VM_BAD_USER_MEMORY;
 
 	rc = user_strncpy(name, uname, SYS_MAX_OS_NAME_LEN-1);
@@ -1066,7 +1066,7 @@ int user_vm_get_region_info(region_id id, vm_region_info *uinfo)
 	vm_region_info info;
 	int rc, rc2;
 
-	if((addr_t)uinfo >= KERNEL_BASE && (addr_t)uinfo <= KERNEL_TOP)
+	if(is_kernel_address(uinfo))
 		return ERR_VM_BAD_USER_MEMORY;
 
 	rc = vm_get_region_info(id, &info);
@@ -1868,9 +1868,9 @@ static int vm_soft_fault(addr_t address, bool is_write, bool is_user)
 
 	address = ROUNDOWN(address, PAGE_SIZE);
 
-	if(address >= KERNEL_BASE && address <= KERNEL_TOP) {
+	if(is_kernel_address(address)) {
 		aspace = vm_get_kernel_aspace();
-	} else if(address >= USER_BASE && address <= USER_TOP) {
+	} else if(is_user_address(address)) {
 		aspace = vm_get_current_user_aspace();
 		if(aspace == NULL) {
 			if(is_user == false) {

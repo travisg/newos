@@ -1,5 +1,5 @@
 /*
-** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2004, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #include <kernel/kernel.h>
@@ -239,7 +239,7 @@ static int user_copy_arg_list(char **args, int argc, char ***kargs)
 
 	*kargs = NULL;
 
-	if((addr_t)args >= KERNEL_BASE && (addr_t)args <= KERNEL_TOP)
+	if(is_kernel_address(args))
 		return ERR_VM_BAD_USER_MEMORY;
 
 	largs = kmalloc((argc + 1) * sizeof(char *));
@@ -254,7 +254,7 @@ static int user_copy_arg_list(char **args, int argc, char ***kargs)
 		if(err < 0)
 			goto error;
 
-		if((addr_t)source >= KERNEL_BASE && (addr_t)source <= KERNEL_TOP){
+		if(is_kernel_address(source)){
 			err = ERR_VM_BAD_USER_MEMORY;
 			goto error;
 		}
@@ -509,9 +509,9 @@ thread_id user_thread_create_user_thread(char *uname, addr_t entry, void *args)
 	int rc;
 	proc_id pid = thread_get_current_thread()->proc->id;
 
-	if((addr_t)uname >= KERNEL_BASE && (addr_t)uname <= KERNEL_TOP)
+	if(is_kernel_address(uname))
 		return ERR_VM_BAD_USER_MEMORY;
-	if(entry >= KERNEL_BASE && entry <= KERNEL_TOP)
+	if(is_kernel_address(entry))
 		return ERR_VM_BAD_USER_MEMORY;
 
 	rc = user_strncpy(name, uname, SYS_MAX_OS_NAME_LEN-1);
@@ -577,9 +577,9 @@ int thread_suspend_thread(thread_id id)
 	return retval;
 }
 
-thread_id thread_get_current_thread_id(void) 
+thread_id thread_get_current_thread_id(void)
 {
-	struct thread *t = thread_get_current_thread(); 
+	struct thread *t = thread_get_current_thread();
 
 	return t ? t->id : 0;
 }
@@ -703,7 +703,7 @@ int user_thread_get_thread_info(thread_id id, struct thread_info *uinfo)
 	struct thread_info info;
 	int err, err2;
 
-	if((addr_t)uinfo >= KERNEL_BASE && (addr_t)uinfo <= KERNEL_TOP) {
+	if(is_kernel_address(uinfo)) {
 		return ERR_VM_BAD_USER_MEMORY;
 	}
 
@@ -786,11 +786,11 @@ int user_thread_get_next_thread_info(uint32 *ucookie, proc_id pid, struct thread
 	uint32 cookie;
 	int err, err2;
 
-	if((addr_t)ucookie >= KERNEL_BASE && (addr_t)ucookie <= KERNEL_TOP) {
+	if(is_kernel_address(ucookie)) {
 		return ERR_VM_BAD_USER_MEMORY;
 	}
 
-	if((addr_t)uinfo >= KERNEL_BASE && (addr_t)uinfo <= KERNEL_TOP) {
+	if(is_kernel_address(uinfo)) {
 		return ERR_VM_BAD_USER_MEMORY;
 	}
 
@@ -1498,7 +1498,7 @@ int user_thread_wait_on_thread(thread_id id, int *uretcode)
 	int retcode;
 	int rc, rc2;
 
-	if((addr_t)uretcode >= KERNEL_BASE && (addr_t)uretcode <= KERNEL_TOP)
+	if(is_kernel_address(uretcode))
 		return ERR_VM_BAD_USER_MEMORY;
 
 	rc = thread_wait_on_thread(id, &retcode);
@@ -1543,7 +1543,7 @@ int user_proc_wait_on_proc(proc_id id, int *uretcode)
 	int retcode;
 	int rc, rc2;
 
-	if((addr_t)uretcode >= KERNEL_BASE && (addr_t)uretcode <= KERNEL_TOP)
+	if(is_kernel_address(uretcode))
 		return ERR_VM_BAD_USER_MEMORY;
 
 	rc = proc_wait_on_proc(id, &retcode);
@@ -1869,7 +1869,7 @@ int user_proc_get_proc_info(proc_id id, struct proc_info *uinfo)
 	struct proc_info info;
 	int err, err2;
 
-	if((addr_t)uinfo >= KERNEL_BASE && (addr_t)uinfo <= KERNEL_TOP) {
+	if(is_kernel_address(uinfo)) {
 		return ERR_VM_BAD_USER_MEMORY;
 	}
 
@@ -1937,11 +1937,11 @@ int user_proc_get_next_proc_info(uint32 *ucookie, struct proc_info *uinfo)
 	uint32 cookie;
 	int err, err2;
 
-	if((addr_t)ucookie >= KERNEL_BASE && (addr_t)ucookie <= KERNEL_TOP) {
+	if(is_kernel_address(ucookie)) {
 		return ERR_VM_BAD_USER_MEMORY;
 	}
 
-	if((addr_t)uinfo >= KERNEL_BASE && (addr_t)uinfo <= KERNEL_TOP) {
+	if(is_kernel_address(uinfo)) {
 		return ERR_VM_BAD_USER_MEMORY;
 	}
 
@@ -2146,9 +2146,9 @@ proc_id user_proc_create_proc(const char *upath, const char *uname, char **args,
 
 	dprintf("user_proc_create_proc : argc=%d \n",argc);
 
-	if((addr_t)upath >= KERNEL_BASE && (addr_t)upath <= KERNEL_TOP)
+	if(is_kernel_address(upath))
 		return ERR_VM_BAD_USER_MEMORY;
-	if((addr_t)uname >= KERNEL_BASE && (addr_t)uname <= KERNEL_TOP)
+	if(is_kernel_address(uname))
 		return ERR_VM_BAD_USER_MEMORY;
 
 	rc = user_copy_arg_list(args, argc, &kargs);
@@ -2312,7 +2312,7 @@ int user_getrlimit(int resource, struct rlimit * urlp)
 	if (urlp == NULL) {
 		return ERR_INVALID_ARGS;
 	}
-	if((addr_t)urlp >= KERNEL_BASE && (addr_t)urlp <= KERNEL_TOP) {
+	if(is_kernel_address(urlp)) {
 		return ERR_VM_BAD_USER_MEMORY;
 	}
 
@@ -2354,7 +2354,7 @@ int user_setrlimit(int resource, const struct rlimit * urlp)
 	if (urlp == NULL) {
 		return ERR_INVALID_ARGS;
 	}
-	if((addr_t)urlp >= KERNEL_BASE && (addr_t)urlp <= KERNEL_TOP) {
+	if(is_kernel_address(urlp)) {
 		return ERR_VM_BAD_USER_MEMORY;
 	}
 

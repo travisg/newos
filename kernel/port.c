@@ -1,5 +1,5 @@
 /*
-** Copyright 2001, Mark-Jan Bastian. All rights reserved.
+** Copyright 2001-2004, Mark-Jan Bastian. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 
@@ -126,7 +126,7 @@ static void dump_port_info(int argc, char **argv)
 	if(strlen(argv[1]) > 2 && argv[1][0] == '0' && argv[1][1] == 'x') {
 		unsigned long num = atoul(argv[1]);
 
-		if(num > KERNEL_BASE && num <= (KERNEL_BASE + (KERNEL_SIZE - 1))) {
+		if(is_kernel_address(num)) {
 			// XXX semi-hack
 			// one can use either address or a port_id, since KERNEL_BASE > MAX_PORTS assumed
 			_dump_port_info((struct port_entry *)num);
@@ -1034,7 +1034,7 @@ port_id user_port_create(int32 queue_length, const char *uname)
 		char name[SYS_MAX_OS_NAME_LEN];
 		int rc;
 
-		if((addr_t)uname >= KERNEL_BASE && (addr_t)uname <= KERNEL_TOP)
+		if(is_kernel_address(uname))
 			return ERR_VM_BAD_USER_MEMORY;
 
 		rc = user_strncpy(name, uname, SYS_MAX_OS_NAME_LEN-1);
@@ -1064,7 +1064,7 @@ port_id	user_port_find(const char *port_name)
 		char name[SYS_MAX_OS_NAME_LEN];
 		int rc;
 
-		if((addr_t)port_name >= KERNEL_BASE && (addr_t)port_name <= KERNEL_TOP)
+		if(is_kernel_address(port_name))
 			return ERR_VM_BAD_USER_MEMORY;
 
 		rc = user_strncpy(name, port_name, SYS_MAX_OS_NAME_LEN-1);
@@ -1086,7 +1086,7 @@ int	user_port_get_info(port_id id, struct port_info *uinfo)
 
 	if (uinfo == NULL)
 		return ERR_INVALID_ARGS;
-	if((addr_t)uinfo >= KERNEL_BASE && (addr_t)uinfo <= KERNEL_TOP)
+	if(is_kernel_address(uinfo))
 		return ERR_VM_BAD_USER_MEMORY;
 
 	res = port_get_info(id, &info);
@@ -1110,9 +1110,9 @@ int	user_port_get_next_port_info(proc_id uproc,
 		return ERR_INVALID_ARGS;
 	if (uinfo == NULL)
 		return ERR_INVALID_ARGS;
-	if((addr_t)ucookie >= KERNEL_BASE && (addr_t)ucookie <= KERNEL_TOP)
+	if(is_kernel_address(ucookie))
 		return ERR_VM_BAD_USER_MEMORY;
-	if((addr_t)uinfo >= KERNEL_BASE && (addr_t)uinfo <= KERNEL_TOP)
+	if(is_kernel_address(uinfo))
 		return ERR_VM_BAD_USER_MEMORY;
 
 	// copy from userspace
@@ -1164,9 +1164,9 @@ ssize_t	user_port_read_etc(port_id uport, int32 *umsg_code, void *umsg_buffer,
 	if (umsg_buffer == NULL)
 		return ERR_INVALID_ARGS;
 
-	if((addr_t)umsg_code >= KERNEL_BASE && (addr_t)umsg_code <= KERNEL_TOP)
+	if(is_kernel_address(umsg_code))
 		return ERR_VM_BAD_USER_MEMORY;
-	if((addr_t)umsg_buffer >= KERNEL_BASE && (addr_t)umsg_buffer <= KERNEL_TOP)
+	if(is_kernel_address(umsg_buffer))
 		return ERR_VM_BAD_USER_MEMORY;
 
 	res = port_read_etc(uport, &msg_code, umsg_buffer, ubuffer_size,
@@ -1195,7 +1195,7 @@ int	user_port_write_etc(port_id uport, int32 umsg_code, void *umsg_buffer,
 {
 	if (umsg_buffer == NULL)
 		return ERR_INVALID_ARGS;
-	if((addr_t)umsg_buffer >= KERNEL_BASE && (addr_t)umsg_buffer <= KERNEL_TOP)
+	if(is_kernel_address(umsg_buffer))
 		return ERR_VM_BAD_USER_MEMORY;
 	return port_write_etc(uport, umsg_code, umsg_buffer, ubuffer_size,
 		uflags | PORT_FLAG_USE_USER_MEMCPY | SEM_FLAG_INTERRUPTABLE, utimeout);

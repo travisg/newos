@@ -1,5 +1,5 @@
 /*
-** Copyright 2002, Travis Geiselbrecht. All rights reserved.
+** Copyright 2002-2004, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #include <kernel/kernel.h>
@@ -43,7 +43,7 @@ int user_atomic_add(int *uval, int incr)
 	int val;
 	int ret;
 
-	if((addr_t)uval >= KERNEL_BASE && (addr_t)uval <= KERNEL_TOP)
+	if(is_kernel_address(uval))
 		goto error;
 
 	if(user_memcpy(&val, uval, sizeof(val)) < 0)
@@ -67,7 +67,7 @@ int user_atomic_and(int *uval, int incr)
 	int val;
 	int ret;
 
-	if((addr_t)uval >= KERNEL_BASE && (addr_t)uval <= KERNEL_TOP)
+	if(is_kernel_address(uval))
 		goto error;
 
 	if(user_memcpy(&val, uval, sizeof(val)) < 0)
@@ -91,7 +91,7 @@ int user_atomic_or(int *uval, int incr)
 	int val;
 	int ret;
 
-	if((addr_t)uval >= KERNEL_BASE && (addr_t)uval <= KERNEL_TOP)
+	if(is_kernel_address(uval))
 		goto error;
 
 	if(user_memcpy(&val, uval, sizeof(val)) < 0)
@@ -115,7 +115,7 @@ int user_atomic_set(int *uval, int set_to)
 	int val;
 	int ret;
 
-	if((addr_t)uval >= KERNEL_BASE && (addr_t)uval <= KERNEL_TOP)
+	if(is_kernel_address(uval))
 		goto error;
 
 	if(user_memcpy(&val, uval, sizeof(val)) < 0)
@@ -139,7 +139,7 @@ int user_test_and_set(int *uval, int set_to, int test_val)
 	int val;
 	int ret;
 
-	if((addr_t)uval >= KERNEL_BASE && (addr_t)uval <= KERNEL_TOP)
+	if(is_kernel_address(uval))
 		goto error;
 
 	if(user_memcpy(&val, uval, sizeof(val)) < 0)
