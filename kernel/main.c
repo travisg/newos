@@ -74,6 +74,9 @@ int _start(kernel_args *oldka, int cpu)
 		// XXX remove
 		thread_test();
 #endif
+#if 0
+		vm_test();
+#endif
 		kprintf("Welcome to the kernel!\n");
 		
 		smp_wake_up_all_non_boot_cpus();

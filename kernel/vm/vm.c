@@ -632,6 +632,7 @@ void vm_test()
 
 	memset((void *)region_addr, 0, PAGE_SIZE * 16);
 
+	dprintf("memsetted the region\n");
 #if 0
 	region2 = vm_map_physical_memory(vm_get_kernel_aspace(), "test_physical_region", (void **)&region_addr,
 		REGION_ADDR_ANY_ADDRESS, PAGE_SIZE * 16, LOCK_RW|LOCK_KERNEL, 0xb8000);
@@ -755,9 +756,6 @@ int vm_init(kernel_args *ka)
 
 	dprintf("vm_init: exit\n");
 	
-	vm_test();
-//	panic("done with tests\n");
-
 	return err;
 }
 
@@ -828,6 +826,14 @@ int vm_soft_fault(addr address, bool is_write, bool is_user)
 		aspace = vm_get_kernel_aspace();
 	} else {
 		aspace = vm_get_current_user_aspace();
+		if(aspace == NULL) {
+			if(is_user == false) {
+				panic("vm_soft_fault: kernel thread accessing invalid user memory!\n");
+			} else {
+				// XXX weird state.
+				panic("vm_soft_fault: non kernel thread accessing user memory that doesn't exist!\n");
+			}
+		}
 	}
 	map = &aspace->virtual_map;
 	

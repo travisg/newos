@@ -77,9 +77,8 @@ void arch_thread_context_switch(struct thread *t_from, struct thread *t_to)
 #if 0
 	int i;
 
-	dprintf("arch_thread_context_switch: cpu %d 0x%x -> 0x%x, pd 0x%x -> 0x%x &old_esp = 0x%p, esp = 0x%p\n",
+	dprintf("arch_thread_context_switch: cpu %d 0x%x -> 0x%x, &old_esp = 0x%p, esp = 0x%p\n",
 		smp_get_current_cpu(), t_from->id, t_to->id,
-		t_from->proc->arch_info.pgdir_phys, t_to->proc->arch_info.pgdir_phys,
 		&t_from->arch_info.esp, t_to->arch_info.esp);
 #endif
 #if 0

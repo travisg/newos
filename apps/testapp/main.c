@@ -24,9 +24,10 @@ int main()
 		c = getc();
 		printf("%c", c);
 	}
-
+#endif
+#if 0
 	for(;;) {
-		sys_snooze(1000000);
+		sys_snooze(100000);
 		printf("booyah!");
 	}
 

@@ -162,11 +162,11 @@ int vm_page_init2(kernel_args *ka)
 
 int vm_page_init_postthread(kernel_args *ka)
 {
-	struct thread *t;
+	thread_id tid;
 	
 	// create a kernel thread to clear out pages
-	t = thread_create_kernel_thread("page scrubber", &page_scrubber, 1);
-	thread_resume_thread(t);
+	tid = thread_create_kernel_thread("page scrubber", &page_scrubber, 1);
+	thread_resume_thread(tid);
 
 	return 0;
 }

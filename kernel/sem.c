@@ -400,6 +400,8 @@ int sem_release_etc(sem_id id, int count, int flags)
 				t->state = THREAD_STATE_READY;
 				ready_threads[ready_threads_count++] = t;
 				released_threads++;
+				t->sem_count = 0;
+				t->blocked_sem_id = -1;
 			}
 		}
 		if(ready_threads_count == READY_THREAD_CACHE_SIZE) {

@@ -168,5 +168,8 @@ int vm_get_page_mapping(vm_address_space *aspace, addr vaddr, addr *paddr);
 int vm_get_physical_page(addr paddr, addr *vaddr, int flags);
 int vm_put_physical_page(addr vaddr);
 
+// XXX remove later
+void vm_test();
+
 #endif
 

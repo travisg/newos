@@ -128,6 +128,7 @@ static int unlock_tmap(vm_translation_map *map)
 			smp_send_broadcast_ici(SMP_MSG_INVL_PAGE_LIST, (unsigned long)map->arch_data->pages_to_invalidate,
 				map->arch_data->num_invalidate_pages, 0, NULL, SMP_MSG_FLAG_SYNC);
 		}
+		map->arch_data->num_invalidate_pages = 0;
 	}
 	return 0;
 }
@@ -265,6 +266,10 @@ static int unmap_tmap(vm_translation_map *map, addr start, addr end)
 	start = ROUNDOWN(start, PAGE_SIZE);
 	end = ROUNDUP(end, PAGE_SIZE);
 
+#if CHATTY_TMAP
+		dprintf("unmap_tmap: asked to free pages 0x%x to 0x%x\n", start, end);
+#endif	
+
 restart:
 	if(start >= end)
 		return 0;
@@ -278,11 +283,14 @@ restart:
 
 	vm_get_physical_page(ADDR_REVERSE_SHIFT(pd[index].addr), (addr *)&pt, PHYSICAL_PAGE_NO_WAIT);
 
-	for(index = VADDR_TO_PTENT(start); index < 1024; index++, start += PAGE_SIZE) {	
+	for(index = VADDR_TO_PTENT(start); (index < 1024) && (start < end); index++, start += PAGE_SIZE) {	
 		if(pt[index].present == 0) {
 			// page mapping not valid
 			continue;
 		}
+#if CHATTY_TMAP
+		dprintf("unmap_tmap: removing page 0x%x\n", start);
+#endif
 		pt[index].present = 0;
 		map->map_count--;
 
@@ -290,9 +298,6 @@ restart:
 			map->arch_data->pages_to_invalidate[map->arch_data->num_invalidate_pages] = start;
 		}
 		map->arch_data->num_invalidate_pages++;
-
-		if(start >= end)
-			break;
 	}
 
 	vm_put_physical_page((addr)pt);
