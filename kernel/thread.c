@@ -78,9 +78,8 @@ struct death_stack {
 };
 static struct death_stack *death_stacks;
 static unsigned int num_death_stacks;
-static unsigned int num_free_death_stacks;
+static unsigned int volatile death_stack_bitmap;
 static sem_id death_stack_sem;
-static spinlock_t death_stack_spinlock;
 
 // thread queues
 static struct thread_queue run_q[THREAD_NUM_PRIORITY_LEVELS] = { { NULL, NULL }, };
@@ -833,31 +832,35 @@ static void dump_next_thread_in_proc(int argc, char **argv)
 
 static int get_death_stack(void)
 {
-	unsigned int i;
+	int i;
+	unsigned int bit;
 	int state;
 
 	sem_acquire(death_stack_sem, 1);
 
-	// grab the thread lock around the search for a death stack to make sure it doesn't
-	// find a death stack that has been returned by a thread that still hasn't been
-	// rescheduled for the last time. Localized hack here and put_death_stack_and_reschedule.
+	// grap the thread lock, find a free spot and release
 	state = int_disable_interrupts();
-	acquire_spinlock(&death_stack_spinlock);
 	GRAB_THREAD_LOCK();
-	release_spinlock(&death_stack_spinlock);
+	bit = death_stack_bitmap;
+	bit = (~bit)&~((~bit)-1);
+	death_stack_bitmap |= bit;
+	RELEASE_THREAD_LOCK();
 
-	for(i=0; i<num_death_stacks; i++) {
-		if(death_stacks[i].in_use == false) {
-			death_stacks[i].in_use = true;
-			break;
-		}
+
+	// sanity checks
+	if( !bit ) {
+		panic("get_death_stack: couldn't find free stack!\n");
+	}
+	if( bit & (bit-1)) {
+		panic("get_death_stack: impossible bitmap result!\n");
 	}
 
-	RELEASE_THREAD_LOCK();
-	int_restore_interrupts(state);
 
-	if(i >= num_death_stacks) {
-		panic("get_death_stack: couldn't find free stack!\n");
+	// bit to number
+	i= -1;
+	while(bit) {
+		bit >>= 1;
+		i += 1;
 	}
 
 	dprintf("get_death_stack: returning 0x%lx\n", death_stacks[i].address);
@@ -869,21 +872,18 @@ static void put_death_stack_and_reschedule(unsigned int index)
 {
 	dprintf("put_death_stack...: passed %d\n", index);
 
-	if(index >= num_death_stacks || death_stacks[index].in_use == false)
-		panic("put_death_stack_and_reschedule: passed invalid stack index %d\n", index);
+	if(index >= num_death_stacks)
+		panic("put_death_stack: passed invalid stack index %d\n", index);
 
-	// disable the interrupts around the semaphore release to prevent the get_death_stack
-	// function from allocating this stack before the reschedule. Kind of a hack, but localized
-	// not an easy way around it.
+	if(!(death_stack_bitmap & (1 << index)))
+		panic("put_death_stack: passed invalid stack index %d\n", index);
+
 	int_disable_interrupts();
-
-	acquire_spinlock(&death_stack_spinlock);
-	sem_release_etc(death_stack_sem, 1, SEM_FLAG_NO_RESCHED);
-
 	GRAB_THREAD_LOCK();
-	release_spinlock(&death_stack_spinlock);
 
-	death_stacks[index].in_use = false;
+	death_stack_bitmap &= ~(1 << index);
+
+	sem_release_etc(death_stack_sem, 1, SEM_FLAG_NO_RESCHED);
 
 	thread_resched();
 }
@@ -968,7 +968,13 @@ int thread_init(kernel_args *ka)
 
 	// create a set of death stacks
 	num_death_stacks = smp_get_num_cpus();
-	num_free_death_stacks = smp_get_num_cpus();
+	if(num_death_stacks > 8*sizeof(death_stack_bitmap)) {
+		/*
+		 * clamp values for really beefy machines
+		 */
+		num_death_stacks = 8*sizeof(death_stack_bitmap);
+	}
+	death_stack_bitmap = 0;
 	death_stacks = (struct death_stack *)kmalloc(num_death_stacks * sizeof(struct death_stack));
 	if(death_stacks == NULL) {
 		panic("error creating death stacks\n");
@@ -990,7 +996,6 @@ int thread_init(kernel_args *ka)
 		}
 	}
 	death_stack_sem = sem_create(num_death_stacks, "death_stack_noavail_sem");
-	death_stack_spinlock = 0;
 
 	// set up some debugger commands
 	dbg_add_command(dump_thread_list, "threads", "list all threads");
