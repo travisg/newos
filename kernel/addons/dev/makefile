@@ -7,5 +7,7 @@ include $(addsuffix /makefile, $(addprefix $(KERNEL_DEV_ADDONS_DIR)/, \
 	console \
 	disk/netblock \
 	disk/scsi/scsi_dsk \
+	net/pcnet32 \
+	net/rtl8139 \
 	tty \
 ))

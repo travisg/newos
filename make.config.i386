@@ -13,10 +13,10 @@ KERNEL_ADDONS += $(addprefix $(KERNEL_ADDONS_BUILD_DIR)/, \
 	modules/generic/blkman/blkman \
 	dev/disk/scsi/scsi_dsk/scsi_dsk \
 	dev/disk/netblock/netblock \
+	dev/net/pcnet32/pcnet32 \
+	dev/net/rtl8139/rtl8139 \
 	dev/arch/i386/keyboard/keyboard \
-	dev/arch/i386/pcnet32/pcnet32 \
 	dev/arch/i386/ps2mouse/ps2mouse \
-	dev/arch/i386/rtl8139/rtl8139 \
 	dev/arch/i386/vesa/vesa \
 	dev/arch/i386/floppy/floppy \
 )

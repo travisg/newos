@@ -8,8 +8,6 @@ include $(addsuffix /makefile, $(addprefix $(KERNEL_DEV_ARCH_ADDONS_DIR)/, \
 	ide2 \
 	ide3 \
 	keyboard \
-	pcnet32 \
 	ps2mouse \
-	rtl8139 \
 	vesa \
 ))
