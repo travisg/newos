@@ -15,7 +15,8 @@ typedef enum {
 	STREAM_TYPE_ANY = 0,
 	STREAM_TYPE_FILE,
 	STREAM_TYPE_DIR,
-	STREAM_TYPE_DEVICE
+	STREAM_TYPE_DEVICE,
+	STREAM_TYPE_PIPE
 } stream_type;
 
 typedef enum {
@@ -136,6 +137,7 @@ int vfs_mount(char *path, const char *device, const char *fs_name, void *args, b
 int vfs_unmount(char *path, bool kernel);
 int vfs_sync(void);
 int vfs_open(char *path, stream_type st, int omode, bool kernel);
+int vfs_open_vnid(fs_id fsid, vnode_id vnid, stream_type st, int omode, bool kernel);
 int vfs_seek(int fd, off_t pos, seek_type seek_type, bool kernel);
 ssize_t vfs_read(int fd, void *buf, off_t pos, ssize_t len, bool kernel);
 ssize_t vfs_write(int fd, const void *buf, off_t pos, ssize_t len, bool kernel);

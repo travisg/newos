@@ -17,6 +17,7 @@
 #include <kernel/fs/rootfs.h>
 #include <kernel/fs/bootfs.h>
 #include <kernel/fs/devfs.h>
+#include <kernel/fs/pipefs.h>
 #include <newos/errors.h>
 
 #include <kernel/fs/rootfs.h>
@@ -1199,21 +1200,12 @@ int vfs_sync(void)
 	return 0;
 }
 
-int vfs_open(char *path, stream_type st, int omode, bool kernel)
+static int _vfs_open(struct vnode *v, stream_type st, int omode, bool kernel)
 {
 	int fd;
-	struct vnode *v;
 	file_cookie cookie;
 	struct file_descriptor *f;
 	int err;
-
-#if MAKE_NOIZE
-	dprintf("vfs_open: entry. path = '%s', omode %d, kernel %d\n", path, omode, kernel);
-#endif
-
-	err = path_to_vnode(path, &v, kernel);
-	if(err < 0)
-		goto err;
 
 	err = v->mount->fs->calls->fs_open(v->mount->fscookie, v->priv_vnode, &cookie, st, omode);
 	if(err < 0)
@@ -1243,6 +1235,38 @@ err1:
 	dec_vnode_ref_count(v, true, false);
 err:
 	return err;
+}
+
+int vfs_open(char *path, stream_type st, int omode, bool kernel)
+{
+	struct vnode *v;
+	int err;
+
+#if MAKE_NOIZE
+	dprintf("vfs_open: entry. path = '%s', omode %d, kernel %d\n", path, omode, kernel);
+#endif
+
+	err = path_to_vnode(path, &v, kernel);
+	if(err < 0)
+		return err;
+
+	return _vfs_open(v, st, omode, kernel);
+}
+
+int vfs_open_vnid(fs_id fsid, vnode_id vnid, stream_type st, int omode, bool kernel)
+{
+	struct vnode *v;
+	int err;
+
+#if MAKE_NOIZE
+	dprintf("vfs_open_vnid: entry. fsid 0x%x, vnid 0x%Lx, omode %d, kernel %d\n", fsid, vnid, omode, kernel);
+#endif
+
+	err = get_vnode(fsid, vnid, &v, 0);
+	if(err < 0)
+		return err;
+
+	return _vfs_open(v, st, omode, kernel);
 }
 
 int vfs_close(int fd, bool kernel)
@@ -2256,6 +2280,13 @@ int vfs_bootstrap_all_filesystems(void)
 	if(err < 0)
 		panic("error mounting devfs\n");
 
+	// bootstrap the pipefs
+	bootstrap_pipefs();
+
+	sys_create("/pipe", STREAM_TYPE_DIR);
+	err = sys_mount("/pipe", NULL, "pipefs", NULL);
+	if(err < 0)
+		panic("error mounting pipefs\n");
 
 	fd = sys_open("/boot/addons/fs", STREAM_TYPE_DIR, 0);
 	if(fd >= 0) {

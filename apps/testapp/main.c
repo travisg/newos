@@ -10,6 +10,8 @@
 #include <sys/resource.h>
 #include <newos/errors.h>
 
+static int pipe_test(void);
+
 static void port_test(void);
 static int port_test_thread_func(void* arg);
 
@@ -376,7 +378,7 @@ int main(int argc, char **argv)
 		}
 	}
 #endif
-#if 1
+#if 0
 	{
 		thread_id id;
 		static double f[5] = { 2.43, 5.23, 342.34, 234123.2, 1.4 };
@@ -402,9 +404,72 @@ int main(int argc, char **argv)
 		printf("passed the test\n");
 	}
 #endif
+#if 1
+	rc = pipe_test();
+#endif
 
 	printf("exiting w/return code %d\n", rc);
 	return rc;
+}
+
+static int pipe_read_thread(void *args)
+{
+	int fd = *(int *)args;
+	int err;
+	char buf[1024];
+	int i;
+
+	for(;;) {
+		err = read(fd, buf, sizeof(buf));
+		printf("pipe_read_thread: read returns %d\n", err);
+		if(err < 0)
+			break;
+
+		printf("'");
+		for(i=0; i<err; i++)
+			printf("%c", buf[i]);
+		printf("'\n");
+	}
+
+	return err;
+}
+
+static int pipe_test(void)
+{
+	int fds[2];
+	int err;
+	char buf[1024];
+	thread_id id;
+
+	err = pipe(fds);
+	printf("pipe returns %d\n", err);
+	printf("%d %d\n", fds[0], fds[1]);
+
+#if 1
+	id = sys_thread_create_thread("pipe read thread", &pipe_read_thread, &fds[1]);
+	sys_thread_resume_thread(id);
+
+	sys_snooze(2000000);
+
+	err = write(fds[0], "this is a test", sizeof("this is a test"));
+	printf("write returns %d\n", err);
+	if(err < 0)
+		return err;
+
+	sys_snooze(2000000);
+
+	close(fds[0]);
+	close(fds[1]);
+#endif
+#if 0
+	// close the reader end and write to it
+	close(fds[1]);
+	err = write(fds[0], "this is a test", sizeof("this is a test"));
+	printf("write returns %d\n", err);
+
+	sys_snooze(2000000);
+#endif
+	return 0;
 }
 
 /*

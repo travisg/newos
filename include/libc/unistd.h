@@ -34,6 +34,7 @@ int   chdir(char *);
 char *getcwd(char *, size_t);
 char *getwd(char *);
 
+int		pipe(int fds[2]);
 
 #ifdef __cplusplus
 } /* extern "C" */

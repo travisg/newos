@@ -9,6 +9,7 @@ MY_OBJS += \
 	$(LIBC_UNISTD_DIR)/getcwd.o \
 	$(LIBC_UNISTD_DIR)/lseek.o \
 	$(LIBC_UNISTD_DIR)/open.o \
+	$(LIBC_UNISTD_DIR)/pipe.o \
 	$(LIBC_UNISTD_DIR)/pread.o \
 	$(LIBC_UNISTD_DIR)/pwrite.o \
 	$(LIBC_UNISTD_DIR)/read.o \

@@ -95,4 +95,8 @@
 #define ERR_NET_REMOTE_CLOSE      ERR_NET_GENERAL-9
 #define ERR_NET_NOT_LISTENING     ERR_NET_GENERAL-10
 
+/* Pipe errors */
+#define ERR_PIPE_GENERAL          -8192
+#define ERR_PIPE_WIDOW            ERR_PIPE_GENERAL-1
+
 #endif
