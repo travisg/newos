@@ -22,8 +22,9 @@ struct kernel_args {
 	unsigned int phys_alloc_range_high;
 	unsigned int virt_alloc_range_low;
 	unsigned int virt_alloc_range_high;
-	unsigned int stack_start;
-	unsigned int stack_end;
+	unsigned int num_cpus;
+	unsigned int cpu_kstack[MAX_BOOT_CPUS];
+	unsigned int cpu_kstack_len[MAX_BOOT_CPUS];
 	// architecture specific
 	unsigned int pgdir;
 	unsigned int num_pgtables;
@@ -34,7 +35,6 @@ struct kernel_args {
 	unsigned int vir_gdt;
 	unsigned int page_hole;
 	// smp stuff
-	unsigned int num_cpus;
 	unsigned int apic_phys;
 	unsigned int *apic;
 	unsigned int ioapic_phys;
@@ -42,8 +42,6 @@ struct kernel_args {
 	unsigned int cpu_apic_id[MAX_BOOT_CPUS];
 	unsigned int cpu_os_id[MAX_BOOT_CPUS];
 	unsigned int cpu_apic_version[MAX_BOOT_CPUS];
-	unsigned int cpu_kstack[MAX_BOOT_CPUS];
-	unsigned int cpu_kstack_len[MAX_BOOT_CPUS];
 };
 
 #endif

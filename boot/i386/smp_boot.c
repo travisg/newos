@@ -121,10 +121,11 @@ static void smp_do_config(struct kernel_args *ka)
 				ka->cpu_os_id[pe->apic_id] = ka->num_cpus;
 				ka->cpu_apic_version[ka->num_cpus] = pe->apic_version;
 				dprintf ("smp: cpu#%d: %s, apic id %d, version %d%s\n",
-					ka->num_cpus++, cpu_family[(pe->signature & 0xf00) >> 8],
+					ka->num_cpus, cpu_family[(pe->signature & 0xf00) >> 8],
 					pe->apic_id, pe->apic_version, (pe->cpu_flags & 0x2) ?
 					", BSP" : "");
 				ptr += 20;
+				ka->num_cpus++;
 				break;
 			case MP_EXT_BUS:
 				ptr += 8;
@@ -210,34 +211,74 @@ static int smp_find_mp_config(struct kernel_args *ka)
 static int smp_setup_apic(struct kernel_args *ka)
 {
 	unsigned int config;
-	dprintf("setting up the apic...");
+//	dprintf("setting up the apic...");
 
+	/* set spurious interrupt vector to 0xff */
 	config = apic_read(APIC_SIVR) & 0xfffffc00;
-	config |= APIC_ENABLE | 0xff; /* set spurious interrupt vector to 0xff */
+	config |= APIC_ENABLE | 0xff;
 	apic_write(APIC_SIVR, config);
-	config = apic_read(APIC_TPRI) & 0xffffff00; /* accept all interrupts */
+#if 0	
+	/* setup LINT0 as ExtINT */
+	config = (apic_read(APIC_LINT0) & 0xffff1c00);
+	config |= APIC_LVT_DM_ExtINT | APIC_LVT_IIPP | APIC_LVT_TM;
+	apic_write(APIC_LINT0, config);
+
+	/* setup LINT1 as NMI */
+	config = (apic_read(APIC_LINT1) & 0xffff1c00);
+	config |= APIC_LVT_DM_NMI | APIC_LVT_IIPP;
+	apic_write(APIC_LINT1, config);
+#endif
+
+	/* setup error vector to 0xfe */
+	config = (apic_read(APIC_LVT3) & 0xffffff00) | 0xfe;
+	apic_write(APIC_LVT3, config);
+
+	/* accept all interrupts */
+	config = apic_read(APIC_TPRI) & 0xffffff00;
 	apic_write(APIC_TPRI, config);
 
 	config = apic_read(APIC_SIVR);
 	apic_write(APIC_EOI, 0);
-
-	config = (apic_read(APIC_LVT3) & 0xffffff00) | 0xfe; /* XXX - set vector */
-	apic_write(APIC_LVT3, config);
 
 	dprintf("done\n");
 	return 0;
 }
 
 // target function of the trampoline code
+// The trampoline code should have the pgdir and a gdt set up for us,
+// along with us being on the final stack for this processor. We need
+// to set up the local APIC and load the global idt and gdt. When we're
+// done, we'll jump into the kernel with the cpu number as an argument.
 static int smp_cpu_ready()
 {
 	struct kernel_args *ka = saved_ka;
 	unsigned int curr_cpu = smp_get_current_cpu(ka);
+	struct gdt_idt_descr idt_descr;	
+	struct gdt_idt_descr gdt_descr;	
 	
 	dprintf("smp_cpu_ready: entry cpu %d\n", curr_cpu);
 
+	// Important.  Make sure supervisor threads can fault on read only pages...
+	asm("movl %%eax, %%cr0" : : "a" ((1 << 31) | (1 << 16) | (1 << 5) | 1));
+	asm("cld");			// Ain't nothing but a GCC thang.
+	asm("fninit");		// initialize floating point unit
+
 	smp_setup_apic(ka);
 
+	// Set up the final idt
+	idt_descr.a = IDT_LIMIT - 1;
+	idt_descr.b = (unsigned int *)ka->vir_idt;
+
+	asm("lidt	%0;"
+		: : "m" (idt_descr));
+
+	// Set up the final gdt
+	gdt_descr.a = GDT_LIMIT - 1;
+	gdt_descr.b = (unsigned int *)ka->vir_gdt;
+
+	asm("lgdt	%0;"
+		: : "m" (gdt_descr));
+	
 	asm("pushl  %0; "					// push the cpu number
 		"pushl 	%1;	"					// kernel args
 		"pushl 	$0x0;"					// dummy retval for call to main
@@ -280,8 +321,8 @@ static int smp_boot_all_cpus(struct kernel_args *ka)
 
 		// create a final stack the trampoline code will put the ap processor on
 		ka->cpu_kstack[i] = ka->virt_alloc_range_high;
-		ka->cpu_kstack_len[i] = STACK_SIZE;
-		for(j=0; j<ka->cpu_kstack_len[i]; j++) {
+		ka->cpu_kstack_len[i] = STACK_SIZE * PAGE_SIZE;
+		for(j=0; j<ka->cpu_kstack_len[i]/PAGE_SIZE; j++) {
 			// map the pages in
 			map_page(ka, ka->phys_alloc_range_high, ka->virt_alloc_range_high);
 			ka->phys_alloc_range_high += PAGE_SIZE;
@@ -297,7 +338,7 @@ static int smp_boot_all_cpus(struct kernel_args *ka)
 		
 		// set the trampoline stack up
 		tramp_stack_ptr = (unsigned int *)(trampoline_stack + PAGE_SIZE - 4);
-		dprintf("tramp_stack top = 0x%x\n", tramp_stack_ptr);
+//		dprintf("tramp_stack top = 0x%x\n", tramp_stack_ptr);
 		// final location of the stack
 		*tramp_stack_ptr = ((unsigned int)final_stack) + STACK_SIZE * PAGE_SIZE - sizeof(unsigned int);
 		tramp_stack_ptr--;
@@ -305,7 +346,7 @@ static int smp_boot_all_cpus(struct kernel_args *ka)
 		*tramp_stack_ptr = ka->pgdir;
 		tramp_stack_ptr--;
 
-		dprintf("tramp_stack = 0x%x, 0x%x\n", *(tramp_stack_ptr + 1), *(tramp_stack_ptr + 2));
+//		dprintf("tramp_stack = 0x%x, 0x%x\n", *(tramp_stack_ptr + 1), *(tramp_stack_ptr + 2));
 		
 		// put a gdt descriptor at the bottom of the stack
 		*((unsigned short *)trampoline_stack) = 0x18-1; // LIMIT
@@ -313,19 +354,20 @@ static int smp_boot_all_cpus(struct kernel_args *ka)
 		// put the gdt at the bottom
 		memcpy(&((unsigned int *)trampoline_stack)[2], (void *)ka->vir_gdt, 6*4);
 
+/*
 		{
 			unsigned int *foo = (unsigned int *)(trampoline_stack + 8);
 			dprintf("gdt == 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x\n",
 				foo[0], foo[1], foo[2], foo[3], foo[4], foo[5]);
 		}
-
+*/
 		/* clear apic errors */
 		if(ka->cpu_apic_version[i] & 0xf0) {
 			apic_write(APIC_ESR, 0);
 			apic_read(APIC_ESR);
 		}
 
-dprintf("sending INIT\n");
+//dprintf("sending INIT\n");
 		/* send (aka assert) INIT IPI */
 		config = (apic_read(APIC_ICR2) & 0x00ffffff) | (ka->cpu_apic_id[i] << 24);
 		apic_write(APIC_ICR2, config); /* set target pe */
@@ -335,7 +377,7 @@ dprintf("sending INIT\n");
 		// wait for pending to end
 		while((apic_read(APIC_ICR1) & 0x00001000) == 0x00001000);
 
-dprintf("deasserting INIT\n");
+//dprintf("deasserting INIT\n");
 		/* deassert INIT */
 		config = (apic_read(APIC_ICR2) & 0x00ffffff) | (ka->cpu_apic_id[i] << 24);
 		apic_write(APIC_ICR2, config);
@@ -349,16 +391,16 @@ dprintf("deasserting INIT\n");
 //		u_sleep (10000);
 		for(j=0; j<100000000; j++)
 			j=j;
-dprintf("done waiting\n");
+//dprintf("done waiting\n");
 
 		/* is this a local apic or an 82489dx ? */
 		num_startups = (ka->cpu_apic_version[i] & 0xf0) ? 2 : 0;
-dprintf("going to send %d STARTUPs\n", num_startups);
+//dprintf("going to send %d STARTUPs\n", num_startups);
 		for (j = 0; j < num_startups; j++) {
 			int j1;
 			
 			/* it's a local apic, so send STARTUP IPIs */
-			dprintf("smp: sending STARTUP\n");
+//			dprintf("smp: sending STARTUP\n");
 			apic_write(APIC_ESR, 0);
 
 			/* set target pe */
@@ -388,11 +430,11 @@ int smp_boot(struct kernel_args *ka)
 	saved_ka = ka;
 
 	if(smp_find_mp_config(ka) > 1) {
-		dprintf("smp_boot: had found > 1 cpus\n");
-		dprintf("post config:\n");
-		dprintf("num_cpus = 0x%p\n", ka->num_cpus);
-		dprintf("apic_phys = 0x%p\n", ka->apic_phys);
-		dprintf("ioapic_phys = 0x%p\n", ka->ioapic_phys);
+//		dprintf("smp_boot: had found > 1 cpus\n");
+//		dprintf("post config:\n");
+//		dprintf("num_cpus = 0x%p\n", ka->num_cpus);
+//		dprintf("apic_phys = 0x%p\n", ka->apic_phys);
+//		dprintf("ioapic_phys = 0x%p\n", ka->ioapic_phys);
 		// map in the apic & ioapic
 		map_page(ka, ka->apic_phys, ka->virt_alloc_range_high);
 		ka->apic = (unsigned int *)ka->virt_alloc_range_high;
@@ -402,8 +444,8 @@ int smp_boot(struct kernel_args *ka)
 		ka->ioapic = (unsigned int *)ka->virt_alloc_range_high;
 		ka->virt_alloc_range_high += PAGE_SIZE;
 
-		dprintf("apic = 0x%p\n", ka->apic);
-		dprintf("ioapic = 0x%p\n", ka->ioapic);
+//		dprintf("apic = 0x%p\n", ka->apic);
+//		dprintf("ioapic = 0x%p\n", ka->ioapic);
 	
 		// set up the apic
 		smp_setup_apic(ka);

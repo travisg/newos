@@ -356,8 +356,12 @@ int vm_init(struct kernel_args *ka)
 	_vm_create_area_struct(kernel_aspace, "free_page_table", (unsigned int)free_page_table, free_page_table_size * sizeof(unsigned int), 0);
 	_vm_create_area_struct(kernel_aspace, "kernel_seg0", (unsigned int)ka->kernel_seg0_base, ka->kernel_seg0_size, 0);
 	_vm_create_area_struct(kernel_aspace, "kernel_seg1", (unsigned int)ka->kernel_seg1_base, ka->kernel_seg1_size, 0);
-	_vm_create_area_struct(kernel_aspace, "idle_thread0_kstack", (unsigned int)ka->stack_start, ka->stack_end - ka->stack_start, 0);
-
+	for(i=0; i < ka->num_cpus; i++) {
+		char temp[64];
+		
+		sprintf(temp, "idle_thread%d_kstack", i);
+		_vm_create_area_struct(kernel_aspace, temp, (unsigned int)ka->cpu_kstack[i], ka->cpu_kstack_len[i], 0);
+	}
 	vm_dump_areas(kernel_aspace);
 
 	dprintf("vm_init: exit\n");

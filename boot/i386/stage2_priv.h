@@ -26,6 +26,14 @@ int dprintf(const char *fmt, ...);
 
 #define _PACKED __attribute__((packed)) 	
 
+#define IDT_LIMIT 0x800
+#define GDT_LIMIT 0x800
+		
+struct gdt_idt_descr {
+	unsigned short a;
+	unsigned int *b;
+} _PACKED;
+
 // SMP stuff
 int smp_boot(struct kernel_args *ka);
 
@@ -45,12 +53,14 @@ int smp_boot(struct kernel_args *ka);
 #define APIC_VERSION       ((unsigned int *) ((unsigned int) ka->apic + 0x030))
 #define APIC_TPRI          ((unsigned int *) ((unsigned int) ka->apic + 0x080))
 #define APIC_EOI           ((unsigned int *) ((unsigned int) ka->apic + 0x0b0))
+#define APIC_LDR           ((unsigned int *) ((unsigned int) ka->apic + 0x0d0))
 #define APIC_SIVR          ((unsigned int *) ((unsigned int) ka->apic + 0x0f0))
 #define APIC_ESR           ((unsigned int *) ((unsigned int) ka->apic + 0x280))
 #define APIC_ICR1          ((unsigned int *) ((unsigned int) ka->apic + 0x300))
 #define APIC_ICR2          ((unsigned int *) ((unsigned int) ka->apic + 0x310))
 #define APIC_LVTT          ((unsigned int *) ((unsigned int) ka->apic + 0x320))
 #define APIC_LINT0         ((unsigned int *) ((unsigned int) ka->apic + 0x350))
+#define APIC_LINT1         ((unsigned int *) ((unsigned int) ka->apic + 0x360))
 #define APIC_LVT3          ((unsigned int *) ((unsigned int) ka->apic + 0x370))
 #define APIC_ICRT          ((unsigned int *) ((unsigned int) ka->apic + 0x380))
 #define APIC_CCRT          ((unsigned int *) ((unsigned int) ka->apic + 0x390))
@@ -70,7 +80,8 @@ int smp_boot(struct kernel_args *ka);
 #define APIC_LVTT_M        0x00010000
 #define APIC_LVTT_TM       0x00020000
 
-#define APIC_LVT_DM        0x00000700
+#define APIC_LVT_DM_ExtINT 0x00000700
+#define APIC_LVT_DM_NMI    0x00000400
 #define APIC_LVT_IIPP      0x00002000
 #define APIC_LVT_TM        0x00008000
 #define APIC_LVT_M         0x00010000

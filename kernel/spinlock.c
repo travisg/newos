@@ -4,9 +4,9 @@
 void acquire_spinlock(int *lock)
 {
 	while(1) {
-		while(*lock)
+		while(*lock != 0)
 			;
-		if(!test_and_set(lock, 1))
+		if(test_and_set(lock, 1) == 0)
 			break;
 	}
 }

@@ -30,6 +30,24 @@
 #define APIC_CCRT          ((unsigned int *) ((unsigned int) apic + 0x390))
 #define APIC_TDCR          ((unsigned int *) ((unsigned int) apic + 0x3e0))
 
+#define APIC_ICR1_WRITE_MASK    0xfff3f000
+#define APIC_ICR1_DELMODE_FIXED 0
+#define APIC_ICR1_DELMODE_LOWESTPRI (1 << 8)
+#define APIC_ICR1_DESTMODE_LOG (1 << 11)
+#define APIC_ICR1_DESTMODE_PHYS 0
+
+#define APIC_ICR1_READ_MASK     0xfff32000
+#define APIC_ICR1_DELSTATUS (1 << 12)
+
+#define APIC_ICR1_DEST_FIELD          (0)
+#define APIC_ICR1_DEST_SELF           (1 << 18)
+#define APIC_ICR1_DEST_ALL            (2 << 18)
+#define APIC_ICR1_DEST_ALL_BUT_SELF   (3 << 18)
+
+
+
+#define APIC_ICR2_MASK     0x00ffffff
+
 #define APIC_TDCR_2        0x00
 #define APIC_TDCR_4        0x01
 #define APIC_TDCR_8        0x02
@@ -60,11 +78,6 @@
 #define APIC_DEST_STARTUP  0x00600
 
 #define LOPRIO_LEVEL       0x00000010
-
-#define APIC_DEST_FIELD          (0)
-#define APIC_DEST_SELF           (1 << 18)
-#define APIC_DEST_ALL            (2 << 18)
-#define APIC_DEST_ALL_BUT_SELF   (3 << 18)
 
 #define IOAPIC_ID          0x0
 #define IOAPIC_VERSION     0x1

@@ -2,11 +2,14 @@
 #include "console.h"
 #include "debug.h"
 #include "int.h"
+#include "spinlock.h"
 
 #include "arch_console.h"
 
 #include <stdarg.h>
 #include <printf.h>
+
+static int console_spinlock = 0;
 
 int kprintf(const char *fmt, ...)
 {
@@ -40,9 +43,11 @@ char con_putch(char c)
 {
 	char ret;
 	int flags = int_disable_interrupts();
+	acquire_spinlock(&console_spinlock);
 
 	ret = arch_con_putch(c);
 
+	release_spinlock(&console_spinlock);
 	int_restore_interrupts(flags);
 
 	return ret;
@@ -51,24 +56,31 @@ char con_putch(char c)
 void con_puts(const char *s)
 {
 	int flags = int_disable_interrupts();
+	acquire_spinlock(&console_spinlock);
 
 	arch_con_puts(s);
 
+	release_spinlock(&console_spinlock);
 	int_restore_interrupts(flags);
 }
 
 void con_puts_xy(const char *s, int x, int y)
 {
 	int flags = int_disable_interrupts();
+	acquire_spinlock(&console_spinlock);
 
 	arch_con_puts_xy(s, x, y);
 
+	release_spinlock(&console_spinlock);
 	int_restore_interrupts(flags);
 }
 
 int con_init(struct kernel_args *ka)
 {
 	dprintf("con_init: entry\n");
+
+	console_spinlock = 0;
+
 	return arch_con_init(ka);
 }
 

@@ -38,11 +38,19 @@ static int i386_timer_interrupt()
 	return timer_interrupt();
 }
 
+static int apic_timer_interrupt()
+{
+	// XXX reset timer
+	
+	return timer_interrupt();
+}
+
 int arch_init_timer(struct kernel_args *ka)
 {
 	dprintf("arch_init_timer: entry\n");
 	
-	int_set_io_interrupt_handler(0, &i386_timer_interrupt);
+	int_set_io_interrupt_handler(0x20, &i386_timer_interrupt);
+	int_set_io_interrupt_handler(0xfb, &apic_timer_interrupt);
 
 	return 0;
 }

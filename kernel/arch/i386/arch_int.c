@@ -4,6 +4,7 @@
 #include "console.h"
 #include "int.h"
 #include "thread.h"
+#include "smp.h"
 
 #include "arch_cpu.h"
 #include "arch_interrupts.h"
@@ -37,10 +38,9 @@ desc_table *idt = NULL;
 
 void interrupt_ack(int n)
 {
-	n -= 0x20;
-	if(n < 0x10) {
+	if(n >= 0x20 && n < 0x30) {
 		// 8239 controlled interrupt
-		if(n > 7)
+		if(n > 0x27)
 			outb(0x20, 0xa0);	// EOI to pic 2	
 		outb(0x20, 0x20);	// EOI to pic 1
 	}
@@ -60,6 +60,8 @@ static void _set_gate(desc_table *gate_addr, unsigned int addr, int type, int dp
 
 void arch_int_enable_io_interrupt(int irq)
 {
+	if(irq < 0x20 || irq >= 0x30) return;
+	irq -= 0x20;
 	// if this is a external interrupt via 8239, enable it here
 	if (irq < 8)
 		outb(inb(0x21) & ~(1 << irq), 0x21);
@@ -69,6 +71,8 @@ void arch_int_enable_io_interrupt(int irq)
 
 void arch_int_disable_io_interrupt(int irq)
 {
+	if(irq < 0x20 || irq >= 0x30) return;
+	irq -= 0x20;
 	// if this is a external interrupt via 8239, disable it here
 	if (irq < 8)
 		outb(inb(0x21) | (1 << irq), 0x21);
@@ -124,6 +128,8 @@ void i386_handle_trap(struct int_frame frame)
 {
 	int ret;
 
+//	if(frame.vector != 0x20)
+		dprintf("i386_handle_trap: vector 0x%x, cpu %d\n", frame.vector, smp_get_current_cpu());
 	switch(frame.vector) {
 		case 8:
 			ret = i386_double_fault(frame.error_code);
@@ -138,17 +144,10 @@ void i386_handle_trap(struct int_frame frame)
 			ret = i386_page_fault(cr2, frame.eip);
 			break;
 		}
-		case 0x20: case 0x21: case 0x22: case 0x23: case 0x24: case 0x25: case 0x26: case 0x27:
-		case 0x28: case 0x29: case 0x2a: case 0x2b: case 0x2c: case 0x2d: case 0x2e: case 0x2f:
-			interrupt_ack(frame.vector); // ack the 8239
-			ret = int_io_interrupt_handler(frame.vector - 0x20);
-			break;
-		case 0x254: case 0x255:
-			ret = i386_smp_interrupt(frame.vector);
-			break;
 		default:
-			kprintf("unhandled interrupt %d\n", frame.vector);
-			ret = INT_NO_RESCHEDULE;
+			interrupt_ack(frame.vector); // ack the 8239 (if applicable)
+			ret = int_io_interrupt_handler(frame.vector);
+			break;
 	}
 	
 	if(ret == INT_RESCHEDULE) {

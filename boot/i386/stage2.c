@@ -115,12 +115,7 @@ void _start(unsigned int mem, char *str)
 
 	// set up a new idt
 	{
-		#define IDT_LIMIT 0x800
-		
-		struct idt_descr {
-			unsigned short a;
-			unsigned int *b;
-		} _PACKED idt_descr;
+		struct gdt_idt_descr idt_descr;
 		
 		// find a new idt
 		idt = (unsigned int *)nextAllocPage;
@@ -148,12 +143,7 @@ void _start(unsigned int mem, char *str)
 
 	// set up a new gdt
 	{
-		#define GDT_LIMIT 0x800
-		
-		struct gdt_descr {
-			unsigned short a;
-			unsigned int *b;
-		} _PACKED gdt_descr;
+		struct gdt_idt_descr gdt_descr;
 		
 		// find a new gdt
 		gdt = (unsigned int *)nextAllocPage;
@@ -210,8 +200,8 @@ void _start(unsigned int mem, char *str)
 	ka->virt_alloc_range_low = KERNEL_BASE;
 	ka->virt_alloc_range_high = next_vpage;
 	ka->page_hole = 0xffc00000;
-	ka->stack_start = new_stack - STACK_SIZE * PAGE_SIZE;
-	ka->stack_end = new_stack;
+	ka->cpu_kstack[0] = new_stack - STACK_SIZE * PAGE_SIZE;
+	ka->cpu_kstack_len[0] = STACK_SIZE * PAGE_SIZE;
 #if 0			
 	dprintf("kernel args at 0x%x\n", ka);
 	dprintf("pgdir = 0x%x\n", ka->pgdir);

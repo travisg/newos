@@ -1,6 +1,7 @@
 #include "kernel.h"
 #include "debug.h"
 #include "int.h"
+#include "spinlock.h"
 
 #include "arch_dbg_console.h"
 
@@ -8,6 +9,7 @@
 #include <printf.h>
 
 static bool serial_debug_on = false;
+static int dbg_spinlock = 0;
 
 int dprintf(const char *fmt, ...)
 {
@@ -29,12 +31,14 @@ char dbg_putch(char c)
 {
 	char ret;
 	int flags = int_disable_interrupts();
+	acquire_spinlock(&dbg_spinlock);
 	
 	if(serial_debug_on)
 		ret = arch_dbg_con_putch(c);
 	else
 		ret = c;
 
+	release_spinlock(&dbg_spinlock);
 	int_restore_interrupts(flags);
 
 	return ret;
@@ -43,10 +47,12 @@ char dbg_putch(char c)
 void dbg_puts(const char *s)
 {
 	int flags = int_disable_interrupts();
+	acquire_spinlock(&dbg_spinlock);
 	
 	if(serial_debug_on)
 		arch_dbg_con_puts(s);
 
+	release_spinlock(&dbg_spinlock);
 	int_restore_interrupts(flags);
 }
 

@@ -12,8 +12,10 @@
 #include "smp.h"
 #include "arch_cpu.h"
 #include "arch_int.h"
+#include "spinlock.h"
 
 static int next_thread_id = 0;
+static int thread_spinlock = 0;
 
 #define CURR_THREAD cur_thread[smp_get_current_cpu()]
 
@@ -232,6 +234,8 @@ int thread_resched()
 	struct thread *next_thread = NULL;
 	int i;
 	
+	acquire_spinlock(&thread_spinlock);
+	
 	for(i = THREAD_MAX_PRIORITY; i >= 0; i--) {
 		next_thread = _lookat_queue_thread(&run_q_head[i], &run_q_tail[i]);
 		if(next_thread != NULL) {
@@ -251,7 +255,10 @@ int thread_resched()
 
 		enqueue_run_q(old_thread);
 		CURR_THREAD = next_thread;
+		release_spinlock(&thread_spinlock);
 		thread_context_switch(old_thread, next_thread);
+	} else {
+		release_spinlock(&thread_spinlock);
 	}		
 
 	return 0;

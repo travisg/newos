@@ -31,7 +31,7 @@ _atomic_and1:
 	lock
 	cmpxchgl	%ecx,(%edx)
 	
-	jnz		_atomic_add1
+	jnz		_atomic_and1
 	
 	ret
 
@@ -48,17 +48,17 @@ _atomic_or1:
 	lock
 	cmpxchgl	%ecx,(%edx)
 	
-	jnz		_atomic_add1
+	jnz		_atomic_or1
 	
 	ret
 
 // int test_and_set(int *val, int set_to)
 .global test_and_set
 test_and_set:
-    movl     8(%esp),%edx     /* load address of variable into ebx */
+    movl     4(%esp),%edx     /* load address of variable into edx */
 
 _test_and_set1:
-    movl     12(%esp),%ecx    /* load the value to set the lock to */
+    movl     8(%esp),%ecx    /* load the value to set the lock to */
     movl     (%edx),%eax      /* load the value of variable into eax */
 
     cmpl     $0, %eax         /* see if someone else got it */
@@ -70,5 +70,4 @@ _test_and_set1:
     jnz      _test_and_set1   /* if zf = 0, cmpxchng failed so redo it */
 
 _test_and_set2:
-    popl     %ebx
     ret
