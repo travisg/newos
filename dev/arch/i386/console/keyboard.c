@@ -6,7 +6,7 @@
 
 #include <arch_cpu.h>
 
-#include "con.h"
+#include "console_dev.h"
 #include "keyboard.h"
 
 #define LSHIFT  42

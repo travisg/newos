@@ -12,7 +12,7 @@
 #include <string.h>
 #include <printf.h>
 
-#include "con.h"
+#include "console_dev.h"
 #include "keyboard.h"
 
 struct console_fs {
