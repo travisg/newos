@@ -568,6 +568,7 @@ static int pcnet32_thread(void *data)
 	while (true)
 	{
 		sem_acquire(nic->interrupt_sem, 1);
+		SHOW_FLOW(3, "Acquired semaphore, status = 0x%x", nic->interrupt_status);
 
 		// check if there is a 'fatal error' (BABL and MERR)
 		if ((nic->interrupt_status & PCNET_STATUS_ERR) &&
@@ -589,6 +590,8 @@ static int pcnet32_thread(void *data)
 
 		// re-enable pcnet interrupts
 		write_csr(nic, PCNET_CSR_STATUS, PCNET_STATUS_IENA);
+
+		SHOW_FLOW(3, "Finished iteration, status = 0x%x", read_csr(nic, PCNET_CSR_STATUS));
 	}
 	return 0;
 }
