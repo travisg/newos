@@ -4,7 +4,7 @@
 #include <kernel/int.h>
 #include <kernel/timer.h>
 #include <kernel/debug.h>
-#include <kernel/vm.h>
+#include <kernel/heap.h>
 
 #include <boot/stage2.h>
 

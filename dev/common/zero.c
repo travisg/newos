@@ -1,6 +1,6 @@
 #include <kernel/kernel.h>
 #include <boot/stage2.h>
-#include <kernel/vm.h>
+#include <kernel/heap.h>
 #include <kernel/vfs.h>
 #include <libc/string.h>
 

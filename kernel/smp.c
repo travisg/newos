@@ -3,7 +3,7 @@
 #include <kernel/debug.h>
 #include <kernel/int.h>
 #include <kernel/smp.h>
-#include <kernel/vm.h>
+#include <kernel/heap.h>
 
 #include <kernel/arch/cpu.h>
 #include <kernel/arch/smp.h>

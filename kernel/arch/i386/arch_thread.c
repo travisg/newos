@@ -2,6 +2,7 @@
 #include <boot/stage2.h>
 #include <kernel/debug.h>
 #include <kernel/vm.h>
+#include <kernel/heap.h>
 #include <kernel/thread.h>
 #include <kernel/arch/thread.h>
 #include <kernel/arch/cpu.h>

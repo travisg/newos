@@ -1,6 +1,7 @@
 #include <kernel/kernel.h>
 
 #include <kernel/vm.h>
+#include <kernel/heap.h>
 #include <kernel/vm_priv.h>
 #include <kernel/debug.h>
 #include <kernel/smp.h>

@@ -1,4 +1,4 @@
-#include <kernel/vm.h>
+#include <kernel/heap.h>
 #include <kernel/khash.h>
 #include <kernel/debug.h>
 #include <libc/string.h>

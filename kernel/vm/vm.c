@@ -1,12 +1,14 @@
 #include <kernel/kernel.h>
 #include <kernel/vm.h>
 #include <kernel/vm_priv.h>
+#include <kernel/heap.h>
 #include <kernel/debug.h>
 #include <kernel/console.h>
-#include <boot/stage2.h>
 #include <kernel/int.h>
 #include <kernel/smp.h>
 #include <kernel/sem.h>
+
+#include <boot/stage2.h>
 
 #include <kernel/arch/cpu.h>
 #include <kernel/arch/pmap.h>
@@ -26,67 +28,7 @@ static unsigned int free_page_table_size = 0;
 
 static void dump_free_page_table(int argc, char **argv);
 
-// heap stuff
-// ripped mostly from nujeffos
-#define HEAP_BASE	(KERNEL_BASE + 0x400000)
 #define HEAP_SIZE	0x00400000
-
-struct heap_page {
-	unsigned short bin_index : 5;
-	unsigned short free_count : 9;
-	unsigned short cleaning : 1;
-	unsigned short in_use : 1;
-} PACKED;
-
-#if 0
-static struct heap_page *heap_alloc_table = (struct heap_page *)HEAP_BASE;
-static int heap_base = PAGE_ALIGN(HEAP_BASE + (HEAP_SIZE / PAGE_SIZE) * sizeof(struct heap_page));
-#else
-static struct heap_page *heap_alloc_table; 
-static int heap_base;
-#endif
-
-struct heap_bin {
-	unsigned int element_size;
-	unsigned int grow_size;
-	unsigned int alloc_count;
-	void *free_list;
-	unsigned int free_count;
-	char *raw_list;
-	unsigned int raw_count;
-};
-static struct heap_bin bins[] = {
-	{16, PAGE_SIZE, 0, 0, 0, 0, 0},
-	{32, PAGE_SIZE, 0, 0, 0, 0, 0},
-	{44, PAGE_SIZE, 0, 0, 0, 0, 0},
-	{64, PAGE_SIZE, 0, 0, 0, 0, 0},
-	{89, PAGE_SIZE, 0, 0, 0, 0, 0},
-	{128, PAGE_SIZE, 0, 0, 0, 0, 0},
-	{256, PAGE_SIZE, 0, 0, 0, 0, 0},
-	{315, PAGE_SIZE, 0, 0, 0, 0, 0},
-	{512, PAGE_SIZE, 0, 0, 0, 0, 0},
-	{1024, PAGE_SIZE, 0, 0, 0, 0, 0},
-	{2048, PAGE_SIZE, 0, 0, 0, 0, 0},
-	{0x1000, 0x1000, 0, 0, 0, 0, 0},
-	{0x2000, 0x2000, 0, 0, 0, 0, 0},
-	{0x3000, 0x3000, 0, 0, 0, 0, 0},
-	{0x4000, 0x4000, 0, 0, 0, 0, 0},
-	{0x5000, 0x5000, 0, 0, 0, 0, 0},
-	{0x6000, 0x6000, 0, 0, 0, 0, 0},
-	{0x7000, 0x7000, 0, 0, 0, 0, 0},
-	{0x8000, 0x8000, 0, 0, 0, 0, 0},
-	{0x9000, 0x9000, 0, 0, 0, 0, 0},
-	{0xa000, 0xa000, 0, 0, 0, 0, 0},
-	{0xb000, 0xb000, 0, 0, 0, 0, 0},
-	{0xc000, 0xc000, 0, 0, 0, 0, 0},
-	{0xd000, 0xd000, 0, 0, 0, 0, 0},
-	{0xe000, 0xe000, 0, 0, 0, 0, 0},
-	{0xf000, 0xf000, 0, 0, 0, 0, 0},
-	{0x10000, 0x10000, 0, 0, 0, 0, 0} // 64k
-};
-
-static const int bin_count = sizeof(bins) / sizeof(struct heap_bin);
-static sem_id heap_sem = -1;
 
 static struct aspace *aspace_list = NULL;
 static struct aspace *kernel_aspace = NULL;
@@ -570,6 +512,7 @@ int vm_init(kernel_args *ka)
 	unsigned int i;
 	int last_used_virt_range = -1;
 	int last_used_phys_range = -1;
+	addr heap_base;
 
 	dprintf("vm_init: entry\n");
 	err = arch_pmap_init(ka);
@@ -607,28 +550,17 @@ int vm_init(kernel_args *ka)
 	}
 
 	// map in the new heap
-	heap_alloc_table = (struct heap_page *)_alloc_vspace_from_ka_struct(ka, HEAP_SIZE);
-	if(heap_alloc_table == 0)
+	heap_base = _alloc_vspace_from_ka_struct(ka, HEAP_SIZE);
+	if(heap_base == 0)
 		panic("could not allocate heap!\n");
 	for(i = 0; i < HEAP_SIZE / PAGE_SIZE; i++) {
 		addr ppage;
 		if(vm_get_free_page((unsigned int *)&ppage) < 0)
 			panic("error getting page for kernel heap!\n");
-		pmap_map_page(ppage * PAGE_SIZE, (addr)heap_alloc_table + i * PAGE_SIZE, LOCK_KERNEL|LOCK_RW);
+		pmap_map_page(ppage * PAGE_SIZE, heap_base + i * PAGE_SIZE, LOCK_KERNEL|LOCK_RW);
 	}
 
-	heap_base = PAGE_ALIGN((unsigned int)heap_alloc_table + (HEAP_SIZE / PAGE_SIZE) * sizeof(struct heap_page));
-	dprintf("heap_alloc_table = 0x%x, heap_base = 0x%x\n", heap_alloc_table, heap_base);
-	
-#if 0
-	for(i = HEAP_BASE; i < HEAP_BASE + HEAP_SIZE; i += PAGE_SIZE) {
-		map_page_into_kspace(ka->phys_alloc_range_high, i, LOCK_RW | LOCK_KERNEL);
-		ka->phys_alloc_range_high += PAGE_SIZE;
-	}
-#endif
-
-	// zero out the heap alloc table at the base of the heap
-	memset((void *)heap_alloc_table, 0, (HEAP_SIZE / PAGE_SIZE) * sizeof(struct heap_page));
+	heap_init(heap_base, HEAP_SIZE);
 	
 	// create the initial kernel address space
 	kernel_aspace = vm_create_aspace("kernel_land", KERNEL_BASE, KERNEL_SIZE);
@@ -638,7 +570,7 @@ int vm_init(kernel_args *ka)
 	arch_vm_init2(ka);
 
 	// allocate areas to represent stuff that already exists
-	_vm_create_area_struct(kernel_aspace, "kernel_heap", ROUNDOWN((unsigned int)heap_alloc_table, PAGE_SIZE), HEAP_SIZE, LOCK_RW|LOCK_KERNEL);
+	_vm_create_area_struct(kernel_aspace, "kernel_heap", ROUNDOWN((unsigned int)heap_base, PAGE_SIZE), HEAP_SIZE, LOCK_RW|LOCK_KERNEL);
 	_vm_create_area_struct(kernel_aspace, "free_page_table", (unsigned int)free_page_table, PAGE_ALIGN(free_page_table_size * sizeof(unsigned int)), LOCK_RW|LOCK_KERNEL);
 	_vm_create_area_struct(kernel_aspace, "kernel_seg0", ROUNDOWN((unsigned int)ka->kernel_seg0_addr.start, PAGE_SIZE), PAGE_ALIGN(ka->kernel_seg0_addr.size), LOCK_RW|LOCK_KERNEL);
 	_vm_create_area_struct(kernel_aspace, "kernel_seg1", ROUNDOWN((unsigned int)ka->kernel_seg1_addr.start, PAGE_SIZE), PAGE_ALIGN(ka->kernel_seg1_addr.size), LOCK_RW|LOCK_KERNEL);
@@ -672,120 +604,7 @@ int vm_init(kernel_args *ka)
 
 int vm_init_postsem(kernel_args *ka)
 {
-	heap_sem = sem_create(1, "heap_sem");
-	if(heap_sem < 0) {
-		panic("error creating heap semaphore\n");
-	}
-	return 0;
-}
-
-static char *raw_alloc(unsigned int size, int bin_index)
-{
-	unsigned int new_heap_ptr;
-	char *retval;
-	struct heap_page *page;
-	unsigned int addr;
-	
-	new_heap_ptr = heap_base + PAGE_ALIGN(size);
-	if(new_heap_ptr > HEAP_BASE + HEAP_SIZE) {
-		dprintf("heap overgrew itself! spinning forever...\n");
-		for(;;);
-	}
-
-	for(addr = heap_base; addr < heap_base + size; addr += PAGE_SIZE) {
-		page = &heap_alloc_table[(addr - HEAP_BASE) / PAGE_SIZE];
-		page->in_use = 1;
-		page->cleaning = 0;
-		page->bin_index = bin_index;
-		if (bin_index < bin_count && bins[bin_index].element_size < PAGE_SIZE)
-			page->free_count = PAGE_SIZE / bins[bin_index].element_size;
-		else
-			page->free_count = 1;
-	}
-	
-	retval = (char *)heap_base;
-	heap_base = new_heap_ptr;
-	return retval;
-}
-
-void *kmalloc(unsigned int size)
-{
-	void *address = NULL;
-	int bin_index;
-	unsigned int i;
-	struct heap_page *page;
-
-	sem_acquire(heap_sem, 1);
-	
-	for (bin_index = 0; bin_index < bin_count; bin_index++)
-		if (size <= bins[bin_index].element_size)
-			break;
-
-	if (bin_index == bin_count) {
-		// XXX fix the raw alloc later.
-		//address = raw_alloc(size, bin_index);
-		goto out;
-	} else {
-		if (bins[bin_index].free_list != NULL) {
-			address = bins[bin_index].free_list;
-			bins[bin_index].free_list = (void *)(*(unsigned int *)bins[bin_index].free_list);
-			bins[bin_index].free_count--;
-		} else {
-			if (bins[bin_index].raw_count == 0) {
-				bins[bin_index].raw_list = raw_alloc(bins[bin_index].grow_size, bin_index);
-				bins[bin_index].raw_count = bins[bin_index].grow_size / bins[bin_index].element_size;
-			}
-
-			bins[bin_index].raw_count--;
-			address = bins[bin_index].raw_list;
-			bins[bin_index].raw_list += bins[bin_index].element_size;
-		}
-		
-		bins[bin_index].alloc_count++;
-		page = &heap_alloc_table[((unsigned int)address - HEAP_BASE) / PAGE_SIZE];
-		for(i = 0; i < bins[bin_index].element_size / PAGE_SIZE; i++)
-			page[i].free_count--;
-	}
-
-out:
-	sem_release(heap_sem, 1);
-	
-//	dprintf("kmalloc: asked to allocate size %d, returning ptr = %p\n", size, address);
-
-	return address;
-}
-
-void kfree(void *address)
-{
-	struct heap_page *page;
-	struct heap_bin *bin;
-	unsigned int i;
-
-	if (address == NULL)
-		return;
-
-	sem_acquire(heap_sem, 1);
-
-//	dprintf("kfree: asked to free at ptr = %p\n", address);
-
-	page = &heap_alloc_table[((unsigned)address - HEAP_BASE) / PAGE_SIZE];
-	
-	// XXX fix later
-	if(page[0].bin_index == bin_count)
-		goto out;
-
-	bin = &bins[page[0].bin_index];
-
-	for(i = 0; i < bin->element_size / PAGE_SIZE; i++)
-		page[i].free_count++;
-
-	*(unsigned int *)address = (unsigned int)bin->free_list;
-	bin->free_list = address;
-	bin->alloc_count--;
-	bin->free_count++;
-
-out:
-	sem_release(heap_sem, 1);
+	return heap_init_postsem(ka);
 }
 
 int vm_mark_page_range_inuse(unsigned int start_page, unsigned int len)

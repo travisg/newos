@@ -3,6 +3,7 @@
 #include <kernel/vfs.h>
 #include <kernel/thread.h>
 #include <kernel/debug.h>
+#include <kernel/heap.h>
 #include <kernel/arch/cpu.h>
 
 #include <sys/elf32.h>

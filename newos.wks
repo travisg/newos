@@ -13,11 +13,9 @@ EndFileGroup "dev"
 AddFileGroup "dev-x86" "/build/ossrc/newos/dev/arch/i386" -nomake
 AddFile "arch_dev.mk" "/build/ossrc/newos/dev/arch/i386/arch_dev.mk"
 AddFile "console.c" "/build/ossrc/newos/dev/arch/i386/console/console.c"
-AddFile "console_dev.h" "/build/ossrc/newos/dev/arch/i386/console/console_dev.h"
 AddFile "keyboard.c" "/build/ossrc/newos/dev/arch/i386/console/keyboard.c"
 AddFile "keyboard.h" "/build/ossrc/newos/dev/arch/i386/console/keyboard.h"
 AddFile "pci.c" "/build/ossrc/newos/dev/arch/i386/pci/pci.c"
-AddFile "pci_bus.h" "/build/ossrc/newos/dev/arch/i386/pci/pci_bus.h"
 EndFileGroup "dev-x86"
 AddFileGroup "x86-boot" "/build/ossrc/newos/boot/i386" -nomake
 AddFile "config.ini" "/build/ossrc/newos/boot/i386/config.ini"
@@ -33,6 +31,10 @@ AddFile "bootfs.c" "/build/ossrc/newos/kernel/fs/bootfs.c"
 AddFile "rootfs.c" "/build/ossrc/newos/kernel/fs/rootfs.c"
 AddFile "fs_kernel.mk" "/build/ossrc/newos/kernel/fs/fs_kernel.mk"
 EndFileGroup "fs"
+AddFileGroup "vm" "/build/ossrc/newos/kernel/vm" -nomake
+AddFile "vm.c" "/build/ossrc/newos/kernel/vm/vm.c"
+AddFile "vm_kernel.mk" "/build/ossrc/newos/kernel/vm/vm_kernel.mk"
+EndFileGroup "vm"
 AddFileGroup "kernel" "/build/ossrc/newos/kernel" -nomake
 AddFile "console.c" "/build/ossrc/newos/kernel/console.c"
 AddFile "debug.c" "/build/ossrc/newos/kernel/debug.c"

@@ -6,6 +6,7 @@ KERNEL_OBJS = \
         $(KERNEL_OBJ_DIR)/elf.o \
         $(KERNEL_OBJ_DIR)/faults.o \
         $(KERNEL_OBJ_DIR)/khash.o \
+        $(KERNEL_OBJ_DIR)/heap.o \
         $(KERNEL_OBJ_DIR)/int.o \
         $(KERNEL_OBJ_DIR)/console.o \
         $(KERNEL_OBJ_DIR)/debug.o \
@@ -15,12 +16,12 @@ KERNEL_OBJS = \
         $(KERNEL_OBJ_DIR)/smp.o \
         $(KERNEL_OBJ_DIR)/syscalls.o \
         $(KERNEL_OBJ_DIR)/thread.o \
-        $(KERNEL_OBJ_DIR)/vfs.o \
-        $(KERNEL_OBJ_DIR)/vm.o
+        $(KERNEL_OBJ_DIR)/vfs.o
 
 KERNEL_INCLUDES = -Iinclude -Idev -Iboot/$(ARCH)
 
 include $(KERNEL_DIR)/fs/fs_kernel.mk
+include $(KERNEL_DIR)/vm/vm_kernel.mk
 
 KERNEL_ARCH_DIR = kernel/arch/$(ARCH)
 include $(KERNEL_ARCH_DIR)/arch_kernel.mk
@@ -52,12 +53,3 @@ $(KERNEL_OBJ_DIR)/%.d: $(KERNEL_DIR)/%.c
 	@mkdir -p $(KERNEL_OBJ_DIR)
 	@echo "making deps for $<..."
 	@($(ECHO) -n $(dir $@); $(CC) $(GLOBAL_CFLAGS) $(KERNEL_INCLUDES) -M -MG $<) > $@
-
-$(KERNEL_OBJ_DIR)/%.d: $(KERNEL_DIR)/%.S
-	@mkdir -p $(KERNEL_OBJ_DIR)
-	@echo "making deps for $<..."
-	@($(ECHO) -n $(dir $@);$(CC) $(GLOBAL_CFLAGS) $(KERNEL_INCLUDES) -M -MG $<) > $@
-
-$(KERNEL_OBJ_DIR)/%.o: $(KERNEL_DIR)/%.S
-	@mkdir -p $(KERNEL_OBJ_DIR)
-	$(CC) -c $< $(GLOBAL_CFLAGS) $(KERNEL_INCLUDES) -o $@

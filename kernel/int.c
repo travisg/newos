@@ -1,7 +1,7 @@
 #include <kernel/kernel.h>
 #include <kernel/int.h>
 #include <kernel/debug.h>
-#include <kernel/vm.h>
+#include <kernel/heap.h>
 #include <kernel/smp.h>
 #include <kernel/arch/int.h>
 #include <boot/stage2.h>

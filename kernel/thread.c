@@ -12,6 +12,7 @@
 #include <kernel/sem.h>
 #include <kernel/vfs.h>
 #include <kernel/elf.h>
+#include <kernel/heap.h>
 #include <boot/stage2.h>
 #include <libc/string.h>
 #include <libc/printf.h>

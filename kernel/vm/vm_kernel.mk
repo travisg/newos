@@ -1,0 +1,15 @@
+KERNEL_VM_DIR = $(KERNEL_DIR)/vm
+KERNEL_VM_OBJ_DIR = $(KERNEL_VM_DIR)/$(OBJ_DIR)
+KERNEL_OBJS += \
+		$(KERNEL_VM_OBJ_DIR)/vm.o
+
+KERNEL_VM_INCLUDES = $(KERNEL_INCLUDES) -I$(KERNEL_VM_DIR)
+
+$(KERNEL_VM_OBJ_DIR)/%.o: $(KERNEL_VM_DIR)/%.c
+	@mkdir -p $(KERNEL_VM_OBJ_DIR)
+	$(CC) -c $< $(GLOBAL_CFLAGS) $(KERNEL_VM_INCLUDES) -o $@
+
+$(KERNEL_VM_OBJ_DIR)/%.d: $(KERNEL_VM_DIR)/%.c
+	@mkdir -p $(KERNEL_VM_OBJ_DIR)
+	@echo "making deps for $<..."
+	@($(ECHO) -n $(dir $@); $(CC) $(GLOBAL_CFLAGS) $(KERNEL_VM_INCLUDES) -M -MG $<) > $@
