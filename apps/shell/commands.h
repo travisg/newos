@@ -3,5 +3,7 @@
 
 int cmd_exit(char *args);
 int cmd_exec(char *args);
+int cmd_ls(char *args);
+int cmd_stat(char *args);
 
 #endif

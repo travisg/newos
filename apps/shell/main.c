@@ -20,7 +20,16 @@ struct command {
 struct command cmds[] = {
 	{"exit", &cmd_exit, 0},
 	{"exec", &cmd_exec, 1},
+	{"ls", &cmd_ls, 1},
+	{"stat", &cmd_stat, 1},
 	{NULL, NULL, 0}
+};
+
+struct path {
+	const char *path;
+} paths[] = {
+	{"/boot/"},
+	{NULL}
 };
 
 int shell_parse(char *buf, int len)
@@ -58,7 +67,7 @@ int shell_parse(char *buf, int len)
 				int j;
 				for(j = strlen(cmds[i].cmd_text); isspace(buf[j]); j++);
 					if(cmds[i].cmd_handler(&buf[j]) != 0)
-					return -1;
+						return -1;
 			}
 			found_command = true;
 			break;
@@ -66,6 +75,20 @@ int shell_parse(char *buf, int len)
 		i++;
 	}	
 	if(found_command == false) {
+/*
+		// search for the command in the /boot directory
+		struct vnode_stat *stat;
+		int rc;
+
+		for(i=0; paths[i].path != NULL; i++) {
+			
+			strcpy(buf, paths[i].path);
+			strcpy(
+
+		rc = sys_stat(
+
+
+*/	
 		printf("Invalid command, please try again.\n");
 	}
 	return 0;
