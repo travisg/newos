@@ -1,5 +1,5 @@
 /*
-** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #include <kernel/kernel.h>
@@ -21,7 +21,7 @@ struct sem_entry {
 	sem_id    id;
 	int       count;
 	struct thread_queue q;
-	char      *name;
+	const char *name;
 	int       lock;
 	proc_id   owner;		 // if set to -1, means owned by a port
 };
@@ -143,24 +143,22 @@ sem_id sem_create_etc(int count, const char *name, proc_id owner)
 	int state;
 	sem_id retval = ERR_SEM_OUT_OF_SLOTS;
 	char *temp_name;
+	int name_len;
 
 	if(sems_active == false)
 		return ERR_SEM_NOT_ACTIVE;
 
-	if(name) {
-		int name_len = strlen(name);
+	if(name == NULL)
+		name = "unnamed sem";
 
-		temp_name = (char *)kmalloc(min(name_len + 1, SYS_MAX_OS_NAME_LEN));
-		if(temp_name == NULL)
-			return ERR_NO_MEMORY;
-		strncpy(temp_name, name, SYS_MAX_OS_NAME_LEN-1);
-		temp_name[SYS_MAX_OS_NAME_LEN-1] = 0;
-	} else {
-		temp_name = (char *)kmalloc(sizeof("default_sem_name")+1);
-		if(temp_name == NULL)
-			return ERR_NO_MEMORY;
-		strcpy(temp_name, "default_sem_name");
-	}
+	name_len = strlen(name) + 1;
+	name_len = min(name_len, SYS_MAX_OS_NAME_LEN);
+
+	temp_name = (char *)kmalloc(name_len);
+	if(temp_name == NULL)
+		return ERR_NO_MEMORY;
+
+	strlcpy(temp_name, name, name_len);
 
 	state = int_disable_interrupts();
 	GRAB_SEM_LIST_LOCK();
