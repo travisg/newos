@@ -126,6 +126,18 @@ skip_pgdir_swap:
 //	popfl
 	ret
 
+/* thread exit stub */
+	.align 4
+i386_uspace_exit_stub:
+	pushl	%eax
+	movl	$1, %ecx
+	lea	(%esp), %edx
+	movl	$25, %eax;
+	int	$99
+	.align 4
+i386_uspace_exit_stub_end:
+
+	
 /* void i386_enter_uspace(addr entry, void *args, addr ustack_top); */
 .global i386_enter_uspace
 i386_enter_uspace:
@@ -138,10 +150,20 @@ i386_enter_uspace:
 	movw	%cx,%fs
 	movw	%cx,%gs
 
+	// copy exit stub to stack
+	movl	$i386_uspace_exit_stub_end, %esi
+_copy_more:
+	lea	-4(%esi), %esi
+	lea	-4(%ebx), %ebx
+	mov	(%esi), %ecx
+	mov	%ecx, (%ebx)
+	cmp	$i386_uspace_exit_stub, %esi
+	jg	_copy_more
+	
+	
 	// push the args onto the user stack
 	movl	%edx,-4(%ebx)	// args
-	xorl	%ecx,%ecx
-	movl	%ecx,-8(%ebx)	// fake return address
+	movl	%ebx,-8(%ebx)	// fake return address to copied exit stub
 	sub		$8,%ebx
 
 	pushl	$0x23			// user data segment
