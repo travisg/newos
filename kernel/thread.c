@@ -50,7 +50,7 @@ static void remove_proc_from_parent(struct proc *parent, struct proc *p);
 static struct proc *create_proc_struct(const char *name, bool kernel);
 static int proc_struct_compare(void *_p, const void *_key);
 static unsigned int proc_struct_hash(void *_p, const void *_key, unsigned int range);
-void proc_reparent_children(struct proc *p);
+static void proc_reparent_children(struct proc *p);
 
 // global
 spinlock_t thread_spinlock = 0;
@@ -2146,7 +2146,7 @@ thread_id proc_get_main_thread(proc_id id)
 
 // reparent each of our children
 // NOTE: must have PROC lock held
-void proc_reparent_children(struct proc *p)
+static void proc_reparent_children(struct proc *p)
 {
 	struct proc *child, *next;
 
@@ -2156,7 +2156,7 @@ void proc_reparent_children(struct proc *p)
 	}
 }
 
-// called in the int handler code when a thread enters the kernel for any reason
+// called in the int handler code when a thread enters the kernel from user space (via syscall)
 void thread_atkernel_entry(void)
 {
 	struct thread *t;
@@ -2186,7 +2186,7 @@ void thread_atkernel_entry(void)
 void thread_atkernel_exit(void)
 {
 	struct thread *t;
-	int global_resched;
+	int resched;
 	bigtime_t now;
 
 //	dprintf("thread_atkernel_exit: entry\n");
@@ -2196,7 +2196,10 @@ void thread_atkernel_exit(void)
 	int_disable_interrupts();
 	GRAB_THREAD_LOCK();
 
-	global_resched = handle_signals(t);
+	resched = handle_signals(t);
+
+	if (resched)
+		thread_resched();
 
 	t->in_kernel = false;
 
@@ -2210,8 +2213,25 @@ void thread_atkernel_exit(void)
 
 	int_restore_interrupts();
 
-	if (global_resched)
-		smp_send_broadcast_ici(SMP_MSG_RESCHEDULE, 0, 0, 0, NULL, SMP_MSG_FLAG_SYNC);
+}
+
+// called at the end of an interrupt routine, tries to deliver signals
+int thread_atinterrupt_exit(void)
+{
+	int resched;
+	struct thread *t;
+
+	t = thread_get_current_thread();
+	if(!t)
+		return INT_NO_RESCHEDULE;
+
+	GRAB_THREAD_LOCK();
+
+	resched = handle_signals(t);
+
+	RELEASE_THREAD_LOCK();
+
+	return resched ? INT_RESCHEDULE : INT_NO_RESCHEDULE;
 }
 
 int user_getrlimit(int resource, struct rlimit * urlp)

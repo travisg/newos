@@ -128,12 +128,10 @@ void i386_handle_trap(struct iframe frame); /* keep the compiler happy, this fun
 void i386_handle_trap(struct iframe frame)
 {
 	int ret = INT_NO_RESCHEDULE;
-	bool adjust_int_disable_count = false;
 	struct thread *t = thread_get_current_thread();
 
 	if(t) {
 		i386_push_iframe(&frame);
-		adjust_int_disable_count = true;
 		t->int_disable_level++; // make it look like the ints were disabled
 	}
 
@@ -160,7 +158,6 @@ void i386_handle_trap(struct iframe frame)
 
 			if(!kernel_startup) {
 				int_restore_interrupts(); // should enable the interrupts
-				adjust_int_disable_count = false;
 				ASSERT(int_are_interrupts_enabled());
 			}
 
@@ -174,6 +171,9 @@ void i386_handle_trap(struct iframe frame)
 				// IP the cpu will return to to be this ip
 				frame.eip = newip;
 			}
+
+			if(!kernel_startup)
+				int_disable_interrupts();
 			break;
 		}
 		default:
@@ -187,20 +187,20 @@ void i386_handle_trap(struct iframe frame)
 			break;
 	}
 
+	// try to deliver signals to the interrupted thread
+	// XXX should we only do it for timer interrupts?
+	ret |= thread_atinterrupt_exit();
 	if(ret == INT_RESCHEDULE) {
-		int_disable_interrupts();
 		GRAB_THREAD_LOCK();
 		thread_resched();
 		RELEASE_THREAD_LOCK();
-		int_restore_interrupts();
 	}
 
 //	dprintf("0x%x cpu %d!\n", thread_get_current_thread_id(), smp_get_current_cpu());
 
 	if(t) {
 		i386_pop_iframe();
-		if(adjust_int_disable_count)
-			t->int_disable_level--; // keep the count in sync
+		t->int_disable_level--; // keep the count in sync
 	}
 }
 

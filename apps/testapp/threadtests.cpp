@@ -12,7 +12,7 @@ int sleep_test(int arg)
 	printf("should display 'booyah!' 10 times, one second apart\n");
 	for(int i = 0; i < 10; i++) {
 		usleep(1000000);
-		printf("booyah!");
+		write(0, "booyah!", strlen("booyah!"));
 	}
 
 	return 0;
@@ -21,9 +21,11 @@ int sleep_test(int arg)
 static int test_thread(void *args)
 {
 	int i = (int)args;
+	char buf[128];
 
 	for(;;) {
-//		printf("%c", 'a' + i);
+		sprintf(buf, "%c", 'a' + i);
+		write(0, buf, 1);
 	}
 	return 0;
 }
@@ -31,14 +33,17 @@ static int test_thread(void *args)
 static int test_thread_self_terminate(void *args)
 {
 	int i = (int)args;
+	char buf[128];
 	bigtime_t start_time = _kern_system_time();
 
 	for(;;) {
 		if(_kern_system_time() - start_time >= 10000000) {
-			printf("thread %c terminating...\n", 'a' + i);
+			sprintf(buf, "thread %c terminating...\n", 'a' + i);
+			write(0, buf, strlen(buf));
 			break;
 		}
-		printf("%c", 'a' + i);
+		sprintf(buf, "%c", 'a' + i);
+		write(0, buf, 1);
 	}
 	return 0;
 }

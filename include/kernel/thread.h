@@ -147,7 +147,8 @@ void thread_dequeue_thread(struct thread *t);
 struct thread *thread_lookat_run_q(int priority);
 void thread_enqueue_run_q(struct thread *t);
 void thread_atkernel_entry(void); // called when the thread enters the kernel on behalf of the thread
-void thread_atkernel_exit(void);
+void thread_atkernel_exit(void); // called when the kernel exits the kernel on behalf of the thread
+int thread_atinterrupt_exit(void); // called upon exit of an interrupt. Attempts signal delivery
 
 int thread_suspend_thread(thread_id id);
 int thread_resume_thread(thread_id id);
