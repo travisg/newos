@@ -29,10 +29,10 @@
 
 #define PAGE_ALIGN(x) (((x) + (PAGE_SIZE-1)) & ~(PAGE_SIZE-1))
 
-int atomic_add(int *val, int incr);
-int atomic_and(int *val, int incr);
-int atomic_or(int *val, int incr);
-int test_and_set(int *val, int set_to);
+int atomic_add(volatile int *val, int incr);
+int atomic_and(volatile int *val, int incr);
+int atomic_or(volatile int *val, int incr);
+int test_and_set(volatile int *val, int set_to);
 
 time_t system_time();
 int arch_cpu_init(kernel_args *ka);

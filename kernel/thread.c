@@ -35,13 +35,13 @@ static int proc_struct_compare(void *_p, void *_key);
 static unsigned int proc_struct_hash(void *_p, void *_key, int range);
 
 // global
-int thread_spinlock = 0;
+spinlock_t thread_spinlock = 0;
 
 // proc list
 static void *proc_hash = NULL;
 static struct proc *kernel_proc = NULL;
 static proc_id next_proc_id = 0;
-static int proc_spinlock = 0;
+static spinlock_t proc_spinlock = 0;
 	// NOTE: PROC lock can be held over a THREAD lock acquisition, 
 	// but not the other way (to avoid deadlock)
 #define GRAB_PROC_LOCK() acquire_spinlock(&proc_spinlock)
@@ -70,7 +70,7 @@ static struct death_stack *death_stacks;
 static unsigned int num_death_stacks;
 static unsigned int num_free_death_stacks;
 static sem_id death_stack_sem;
-static int death_stack_spinlock;
+static spinlock_t death_stack_spinlock;
 
 // thread queues
 static struct thread_queue run_q[THREAD_NUM_PRIORITY_LEVELS] = { { NULL, NULL }, };

@@ -38,8 +38,9 @@ void smp_set_num_cpus(int num_cpus);
 #define smp_get_current_cpu() arch_smp_get_current_cpu()
 
 // spinlock functions
-void acquire_spinlock(int *lock);
-void release_spinlock(int *lock);
+typedef volatile int spinlock_t;
+void acquire_spinlock(spinlock_t *lock);
+void release_spinlock(spinlock_t *lock);
 
 #endif
 

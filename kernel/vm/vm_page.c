@@ -31,7 +31,7 @@ static vm_page *all_pages;
 static addr physical_page_offset;
 static unsigned int num_pages;
 
-static int page_lock;
+static spinlock_t page_lock;
 
 void dump_page_stats(int argc, char **argv);
 void dump_free_page_table(int argc, char **argv);

@@ -21,7 +21,7 @@ struct io_handler {
 };
 
 static struct io_handler **io_handlers = NULL;
-static int int_handler_list_spinlock = 0;
+static spinlock_t int_handler_list_spinlock = 0;
 
 int int_init(kernel_args *ka)
 {

@@ -18,7 +18,7 @@
 #include <kernel/arch/smp.h>
 
 static struct timer_event * volatile events[SMP_MAX_CPUS] = { NULL, };
-static int timer_spinlock[SMP_MAX_CPUS] = { 0, };
+static spinlock_t timer_spinlock[SMP_MAX_CPUS] = { 0, };
 
 int timer_init(kernel_args *ka)
 {
@@ -53,7 +53,7 @@ int timer_interrupt()
 {
 	time_t curr_time = system_time();
 	struct timer_event *event;
-	int *spinlock;
+	spinlock_t *spinlock;
 	int curr_cpu = smp_get_current_cpu();
 	int rc = INT_NO_RESCHEDULE;
 	

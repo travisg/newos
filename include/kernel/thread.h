@@ -14,7 +14,7 @@
 #define THREAD_NUM_PRIORITY_LEVELS 64
 #define THREAD_MAX_PRIORITY (THREAD_NUM_PRIORITY_LEVELS - 1)
 
-extern int thread_spinlock;
+extern spinlock_t thread_spinlock;
 #define GRAB_THREAD_LOCK() acquire_spinlock(&thread_spinlock)
 #define RELEASE_THREAD_LOCK() release_spinlock(&thread_spinlock)
 

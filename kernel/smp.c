@@ -32,23 +32,23 @@ struct smp_msg {
 	int            lock;
 };
 
-static int boot_cpu_spin[SMP_MAX_CPUS] = { 0, };
+static spinlock_t boot_cpu_spin[SMP_MAX_CPUS] = { 0, };
 
 static struct smp_msg *free_msgs = NULL;
 static volatile int free_msg_count = 0;
-static int free_msg_spinlock = 0;
+static spinlock_t free_msg_spinlock = 0;
 
 static struct smp_msg *smp_msgs[SMP_MAX_CPUS] = { NULL, };
-static int cpu_msg_spinlock[SMP_MAX_CPUS] = { 0, };
+static spinlock_t cpu_msg_spinlock[SMP_MAX_CPUS] = { 0, };
 
 static struct smp_msg *smp_broadcast_msgs = NULL;
-static int broadcast_msg_spinlock = 0;
+static spinlock_t broadcast_msg_spinlock = 0;
 
 static bool ici_enabled = false;
 
 static int smp_num_cpus = 1;
 
-void acquire_spinlock(int *lock)
+void acquire_spinlock(spinlock_t *lock)
 {
 	if(smp_num_cpus > 1) {
 		while(1) {
@@ -60,7 +60,7 @@ void acquire_spinlock(int *lock)
 	}
 }
 
-void release_spinlock(int *lock)
+void release_spinlock(spinlock_t *lock)
 {
 	*lock = 0;
 }
@@ -183,7 +183,7 @@ int smp_intercpu_int_handler()
 		// we were the last one to decrement the ref_count
 		// it's our job to remove it from the list & possibly clean it up
 		struct smp_msg **mbox;
-		int *spinlock;
+		spinlock_t *spinlock;
 
 		// clean up the message from one of the mailboxes
 		switch(mailbox_found_in) {

@@ -21,7 +21,7 @@
 
 
 static bool serial_debug_on = false;
-static int dbg_spinlock = 0;
+static spinlock_t dbg_spinlock = 0;
 static int debugger_on_cpu = -1;
 
 struct debugger_command

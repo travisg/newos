@@ -15,7 +15,7 @@
 static cbuf *cbuf_free_list;
 static sem_id free_list_sem;
 static cbuf *cbuf_free_noblock_list;
-static int noblock_spin;
+static spinlock_t noblock_spin;
 
 static void initialize_cbuf(cbuf *buf)
 {

@@ -58,7 +58,7 @@ static pdentry *kernel_pgdir_phys = NULL;
 static pdentry *kernel_pgdir_virt = NULL;
 
 static vm_translation_map *tmap_list;
-static int tmap_list_lock;
+static spinlock_t tmap_list_lock;
 
 #define CHATTY_TMAP 0
 
