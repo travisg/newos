@@ -13,6 +13,7 @@ KERNEL_ADDONS += $(addprefix $(KERNEL_ADDONS_BUILD_DIR)/, \
 	modules/generic/blkman/blkman \
 	dev/disk/scsi/scsi_dsk/scsi_dsk \
 	dev/disk/netblock/netblock \
+	dev/net/ns83820/ns83820 \
 	dev/net/pcnet32/pcnet32 \
 	dev/net/rtl8139/rtl8139 \
 	dev/arch/i386/keyboard/keyboard \
