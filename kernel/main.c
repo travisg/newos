@@ -97,6 +97,9 @@ int _start(kernel_args *oldka, int cpu_num)
 		elf_init(&global_kernel_args);
 		module_init(&global_kernel_args, NULL);
 
+		// load real time from the RTC
+		time_init2(&global_kernel_args);
+
 		// start a thread to finish initializing the rest of the system
 		{
 			thread_id tid;

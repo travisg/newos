@@ -10,6 +10,7 @@
 int arch_time_init(kernel_args *ka);
 void arch_time_tick(void);
 bigtime_t arch_get_time_delta(void);
+bigtime_t arch_get_rtc_delta(void);
 
 #endif
 
