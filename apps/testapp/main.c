@@ -13,6 +13,7 @@ int main()
 	int fd;
 	size_t len;
 	char c;
+	int rc = 0;
 
 	printf("test\n");
 
@@ -37,8 +38,37 @@ int main()
 	printf("waiting 5 seconds\n");
 	sys_snooze(5000000);
 #endif
-	printf("exiting\n");
-	return 0;
+
+// XXX dangerous! This overwrites the beginning of your hard drive
+#if 0
+	{
+		char buf[512];		
+		size_t bytes_read;
+
+		printf("opening /dev/bus/ide/0/0/raw\n");
+		fd = sys_open("/dev/bus/ide/0/0/raw", "", STREAM_TYPE_DEVICE);
+		printf("fd = %d\n", fd);
+
+		bytes_read = 512;
+		rc = sys_read(fd, buf, 0, &bytes_read);
+		printf("rc = %d, bytes_read = %d\n", rc, bytes_read);
+
+		buf[0] = 'f';
+		buf[1] = 'o';
+		buf[2] = 'o';
+		buf[3] = '2';
+		buf[4] = 0;
+
+		bytes_read = 512;		
+		rc = sys_write(fd, buf, 1024, &bytes_read);
+		printf("rc = %d, bytes_read = %d\n", rc, bytes_read);
+
+		sys_close(fd);		
+	}
+#endif
+
+	printf("exiting w/return code %d\n", rc);
+	return rc;
 }
 
 

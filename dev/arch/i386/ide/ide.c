@@ -160,7 +160,7 @@ static int ide_read(void *_fs, void *_vnode, void *_cookie, void *buf, off_t pos
   int			sectors;
   int			currentSector;
   int			sectorsToRead;
-  dprintf("ide_read: entry\n");
+  dprintf("ide_read: entry buf 0x%x, pos 0x%x 0x%x, *len 0x%x\n", buf, pos, *len);
   sem_acquire(fs->sem, 1);
   if(cookie==NULL)
     {
@@ -183,6 +183,7 @@ static int ide_read(void *_fs, void *_vnode, void *_cookie, void *buf, off_t pos
     {
 
       sectorsToRead = (sectors - currentSector) > 255 ? 255 : sectors;
+//   	dprintf("block 0x%x, sectorsToRead 0x%x\n", block, sectorsToRead);
       if(ide_read_block(&devices[(2*cookie->bus) + cookie->device] ,buf,block,sectorsToRead)!=0)
 	{
 	  *len = currentSector * cookie->bytes_per_sector;
@@ -208,8 +209,9 @@ static int ide_write(void *_fs, void *_vnode, void *_cookie, const void *buf, of
   int		sectors;
   int		currentSector;
   int		sectorsToWrite;
+  int       rc;
 
-  dprintf("ide_write: entry\n");
+  dprintf("ide_write: entry buf 0x%x, pos 0x%x 0x%x, *len 0x%x\n", buf, pos, *len);
   sem_acquire(fs->sem, 1);
   if(cookie==NULL)
     {
@@ -230,8 +232,11 @@ static int ide_write(void *_fs, void *_vnode, void *_cookie, const void *buf, of
   while(currentSector < sectors)
     {
       sectorsToWrite = (sectors - currentSector) > 255 ? 255 : sectors;
-      if(ide_write_block(&devices[(2*cookie->bus) + cookie->device],buf,block,sectorsToWrite)!=0)
+//   	dprintf("block 0x%x, sectorsToWrite 0x%x\n", block, sectorsToWrite); 
+      rc = ide_write_block(&devices[(2*cookie->bus) + cookie->device],buf,block,sectorsToWrite);
+      if(rc!=0)
 	{
+//	  dprintf("ide_write: ide_write_block returned %d\n", rc);
 	  *len = currentSector * cookie->bytes_per_sector;
 	  err = -1;
 	  goto err;

@@ -273,6 +273,9 @@ static int reg_pio_data_in( int bus,int dev, int cmd,int fr, int sc,unsigned int
   int	i;
   uint16				*buffer = (uint16*)output;
 
+//  dprintf("reg_pio_data_in: bus %d dev %d cmd %d fr %d sc %d cyl %d head %d sect %d numSect %d multiCnt %d\n",
+//  	bus, dev, cmd, fr, sc, cyl, head, sect, numSect, multiCnt);
+
   devCtrl = CB_DC_HD15 | CB_DC_NIEN;
   devHead = dev ? CB_DH_DEV1 : CB_DH_DEV0;
   devHead = devHead | ( head & 0x4f );
@@ -463,8 +466,9 @@ static int reg_pio_data_out( int bus,int dev, int cmd,int fr, int sc,
        ide_reg_poll();
        if ( numSect < 1 )
 	 {
-	   if ( status & ( CB_STAT_BSY | CB_STAT_DF | CB_STAT_DRQ | CB_STAT_ERR ) )
+	   if ( status & ( CB_STAT_BSY | CB_STAT_DF | CB_STAT_ERR ) )
 	     {
+	       dprintf("status = 0x%x\n", status);
 	       return 1;
 	     }
 	   break;
@@ -479,12 +483,14 @@ static void ide_btochs(uint32 block, ide_device *dev, int *cylinder, int *head, 
   *head = (block % dev->hardware_device.heads) | (dev->device ? DH_DRV1 : 0);
   block /= dev->hardware_device.heads;
   *cylinder = block & 0xFFFF;
+//  dprintf("ide_btochs: block %d -> cyl %d head %d sect %d\n", block, *cylinder, *head, *sect);
 }
 static void ide_btolba(uint32 block, ide_device *dev, int *cylinder,int *head, int *sect)
 {
   *sect = block & 0xFF;
   *cylinder = (block >> 8) & 0xFFFF;
   *head = ((block >> 24) & 0xF) | ( dev->device ? DH_DRV1: 0) | DH_LBA;
+//  dprintf("ide_btolba: block %d -> cyl %d head %d sect %d\n", block, *cylinder, *head, *sect);
 }
 
 int	ide_read_block(ide_device	*device,
