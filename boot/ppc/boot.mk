@@ -13,7 +13,8 @@ STAGE2_OBJS = $(BOOT_OBJ_DIR)/stage2.o \
 	$(BOOT_OBJ_DIR)/stage2_asm.o \
 	$(BOOT_OBJ_DIR)/stage2_mmu.o \
 	$(BOOT_OBJ_DIR)/stage2_of.o \
-	$(BOOT_OBJ_DIR)/stage2_text.o
+	$(BOOT_OBJ_DIR)/stage2_text.o \
+	$(BOOT_OBJ_DIR)/stage2_faults.o
 
 DEPS += $(STAGE2_OBJS:.o=.d)
 

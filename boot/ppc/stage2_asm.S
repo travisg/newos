@@ -142,4 +142,101 @@ setmsr:
 	mtmsr 3
 	blr
 
+.globl system_reset_exception_entry
+system_reset_exception_entry:
+	lis		3,system_reset_exception@ha
+	ori		3,3,system_reset_exception@l
+	mtlr	3
+	blr
+.globl system_reset_exception_entry_end
+system_reset_exception_entry_end:
 
+.globl machine_check_exception_entry
+machine_check_exception_entry:
+	lis		3,machine_check_exception@ha
+	ori		3,3,machine_check_exception@l
+	mtlr	3
+	blr
+.globl machine_check_exception_entry_end
+machine_check_exception_entry_end:
+
+.globl dsi_exception_entry
+dsi_exception_entry:
+	lis		3,dsi_exception@ha
+	ori		3,3,dsi_exception@l
+	mtlr	3
+	blr
+.globl dsi_exception_entry_end
+dsi_exception_entry_end:
+
+.globl isi_exception_entry
+isi_exception_entry:
+	lis		3,isi_exception@ha
+	ori		3,3,isi_exception@l
+	mtlr	3
+	blr
+.globl isi_exception_entry_end
+isi_exception_entry_end:
+
+.globl external_interrupt_entry
+external_interrupt_entry:
+	lis		3,external_interrupt@ha
+	ori		3,3,external_interrupt@l
+	mtlr	3
+	blr
+.globl external_interrupt_entry_end
+external_interrupt_entry_end:
+
+.globl alignment_exception_entry
+alignment_exception_entry:
+	lis		3,alignment_exception@ha
+	ori		3,3,alignment_exception@l
+	mtlr	3
+	blr
+.globl alignment_exception_entry_end
+alignment_exception_entry_end:
+
+.globl program_exception_entry
+program_exception_entry:
+	lis		3,program_exception@ha
+	ori		3,3,program_exception@l
+	mtlr	3
+	blr
+.globl program_exception_entry_end
+program_exception_entry_end:
+
+.globl decrementer_exception_entry
+decrementer_exception_entry:
+	lis		3,decrementer_exception@ha
+	ori		3,3,decrementer_exception@l
+	mtlr	3
+	blr
+.globl decrementer_exception_entry_end
+decrementer_exception_entry_end:
+
+.globl system_call_exception_entry
+system_call_exception_entry:
+	lis		3,system_call_exception@ha
+	ori		3,3,system_call_exception@l
+	mtlr	3
+	blr
+.globl system_call_exception_entry_end
+system_call_exception_entry_end:
+
+.globl trace_exception_entry
+trace_exception_entry:
+	lis		3,trace_exception@ha
+	ori		3,3,trace_exception@l
+	mtlr	3
+	blr
+.globl trace_exception_entry_end
+trace_exception_entry_end:
+
+.globl floating_point_assist_exception_entry
+floating_point_assist_exception_entry:
+	lis		3,floating_point_assist_exception@ha
+	ori		3,3,floating_point_assist_exception@l
+	mtlr	3
+	blr
+.globl floating_point_assist_exception_entry_end
+floating_point_assist_exception_entry_end:

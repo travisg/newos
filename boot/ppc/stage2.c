@@ -23,7 +23,9 @@ void _start(int arg1, int arg2, void *openfirmware)
 
 	printf("arg1 0x%x, arg2 0x%x, openfirmware 0x%x\n", arg1, arg2, openfirmware);
 
-	s2_mmu_init(&ka);
+	printf("msr = 0x%x\n", getmsr());
+
+ 	s2_mmu_init(&ka);
 
 	for(;;);
 }

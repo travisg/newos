@@ -137,6 +137,32 @@ static void tlbia()
 	asm volatile("sync");
 }
 
+#define CACHELINE 64
+
+void syncicache(void *address, int len)
+{
+	int l, off;
+	char *p;
+
+	off = (unsigned int)address & (CACHELINE - 1);
+	len += off;
+
+	l = len;
+	p = (char *)address - off;
+	do {
+		asm volatile ("dcbst 0,%0" :: "r"(p));
+		p += CACHELINE;
+	} while((l -= CACHELINE) > 0);
+	asm volatile ("sync");
+	p = (char *)address - off;
+	do {
+		asm volatile ("icbi 0,%0" :: "r"(p));
+		p += CACHELINE;
+	} while((len -= CACHELINE) > 0);
+	asm volatile ("sync");
+	asm volatile ("isync");
+}
+
 int s2_mmu_init(kernel_args *ka)
 {
 	unsigned int ibats[8];
@@ -150,6 +176,7 @@ int s2_mmu_init(kernel_args *ka)
 		ibats[0] = 0;
 		dbats[0] = 0;
 	}
+	// identity map the first 256Mb of RAM
 	ibats[0] = BATU_LEN_256M | BATU_VS;
 	dbats[0] = BATU_LEN_256M | BATU_VS;
 	ibats[1] = BATL_MC | BATL_PP_RW;
@@ -166,8 +193,19 @@ int s2_mmu_init(kernel_args *ka)
 
 	tlbia();
 
+	s2_faults_init(ka);
+
 	// XXX remove
 	s2_change_framebuffer_addr(0x16008000);
+
+	printf("msr = 0x%x\n", getmsr());
+//	setmsr(getmsr() | 0x400);
+	printf("foo\n");
+
+	*(int *)0x30000000 = 5;
+	printf("here\n");
+
+	for(;;);
 
 	// figure out where physical memory is and what is being used
 	find_phys_memory_map(ka);

@@ -26,6 +26,9 @@ int of_seek(int handle, long long pos);
 
 int s2_mmu_init();
 void mmu_map_page(unsigned int vsid, unsigned long pa, unsigned long va);;
+void syncicache(void *address, int len);
+
+void s2_faults_init(kernel_args *ka);
 
 void getibats(int bats[8]);
 void setibats(int bats[8]);
