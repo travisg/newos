@@ -18,7 +18,7 @@ devclean:
 include $(DEV_DEPS)
 
 # build prototypes
-DEV_INCLUDES = -Iinclude -Iboot/$(ARCH) -I$(KERNEL_DIR) -I$(KERNEL_ARCH_DIR) -I$(DEV_DIR) -I$(DEV_ARCH_DIR)
+DEV_INCLUDES = -Iinclude -Iboot/$(ARCH) -I$(KERNEL_DIR) -I$(KERNEL_ARCH_DIR) -I$(DEV_DIR) $(DEV_ARCH_INCLUDES)
 
 $(DEV_DIR)/%.o: $(DEV_DIR)/%.c
 	$(CC) -c $< $(GLOBAL_CFLAGS) $(DEV_INCLUDES) -o $@
