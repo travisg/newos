@@ -1,8 +1,0 @@
-/*
-** Copyright 2003 Graham Batty. All rights reserved.
-** Distributed under the terms of the NewOS License
-*/
-
-#define _NEWOS_NO_LIBC_COMPAT
-# include <errno.h>
-#undef _NEWOS_NO_LIBC_COMPAT

@@ -9,7 +9,7 @@ MY_OBJS := \
 
 MY_INCLUDES := $(STDINCLUDE)
 MY_CFLAGS := $(USER_CFLAGS)
-MY_LIBS := $(ULIBS) $(MY_TARGETDIR)/librldtest.so
+MY_LIBS := $(MY_TARGETDIR)/librldtest.so -lc -lnewos -lsupc++
 MY_LIBPATHS :=
 MY_DEPS := $(MY_TARGETDIR)/librldtest.so $(MY_TARGETDIR)/girlfriend.so
 MY_GLUE := $(APPSGLUE)

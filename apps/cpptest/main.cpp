@@ -1,6 +1,10 @@
 #include <cstdio>
 #include <typeinfo>
 
+#include <list>
+
+
+
 namespace {
 	struct testconstruction 
 	{
@@ -31,4 +35,10 @@ int main()
 	} catch (int z) {
 		std::printf("object %p threw %d\n", &test, z);
 	}
+
+	int *foo = new int;
+	
+	std::printf("allocated memory with new, address %p\n", foo);
+
+	delete foo;
 }

@@ -14,7 +14,7 @@
 
 void usage(char const *progname)
 {
-	printf("usage: %s [-p #padding] bootblock payload outfile\n", progname);
+	printf("usage: %s [-p #padding] [-v] [-x xres ] [-y yres] [-d bitdepth] bootblock payload outfile\n", progname);
 }
 
 int main(int argc, char *argv[])
@@ -27,6 +27,8 @@ int main(int argc, char *argv[])
 	size_t read_size;
 	size_t written_bytes;
 	int padding;
+	int enable_vesa;
+	int vesa_x, vesa_y, vesa_bit;
 	int infd;
 	int outfd;
 	signed char opt;
@@ -34,12 +36,40 @@ int main(int argc, char *argv[])
 
 	padding = 0;
 	progname = argv[0];
+	enable_vesa = 0;
+	vesa_x = 640;
+	vesa_y = 480;
+	vesa_bit = 16;
 
-	while( (opt = getopt(argc, argv, "p:")) != -1)
+	while( (opt = getopt(argc, argv, "p:vx:y:d:")) != -1)
 		switch (opt) {
 		case 'p':
 			padding= atoi(optarg);
 			if (padding < 0) {
+				usage(progname);
+				return -1;
+			}
+			break;
+		case 'v':
+			enable_vesa = 1;
+			break;
+		case 'x':
+			vesa_x = atoi(optarg);
+			if (vesa_x < 0) {
+				usage(progname);
+				return -1;
+			}
+			break;
+		case 'y':
+			vesa_y = atoi(optarg);
+			if (vesa_y < 0) {
+				usage(progname);
+				return -1;
+			}
+			break;
+		case 'd':
+			vesa_bit = atoi(optarg);
+			if (vesa_bit < 0) {
 				usage(progname);
 				return -1;
 			}
@@ -90,6 +120,16 @@ int main(int argc, char *argv[])
 	printf("size %d, blocks %d (size %d)\n", (unsigned long)st.st_size, blocks, blocks * 512);
 	bootsector[2] = (blocks & 0x00ff);
 	bootsector[3] = (blocks & 0xff00) >> 8;
+
+	if(enable_vesa) {
+		// patch the vesa mode stuff in the bootsector (first few bytes of the second sector)
+		bootsector[512] = 1;
+		bootsector[513] = (vesa_x & 0x00ff);
+		bootsector[514] = (vesa_x & 0xff00) >> 8;
+		bootsector[515] = (vesa_y & 0x00ff);
+		bootsector[516] = (vesa_y & 0xff00) >> 8;
+		bootsector[517] = vesa_bit;
+	}
 
 	write(outfd, bootsector, sizeof(bootsector));
 	written_bytes = sizeof(bootsector);

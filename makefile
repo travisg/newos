@@ -1,3 +1,18 @@
+ifneq ($(SECOND_CALL),true)
+
+# if this is the top level instantiation of make, call back into itself with 
+# the implicit rules option turned off. There has to be a simpler way
+# to do this, but I havne't figured it out.
+MKFLAGS := -r 
+
+.PHONY: all
+all:
+	@SECOND_CALL=true $(MAKE) $(MKFLAGS) -f makefile
+
+%:
+	@SECOND_CALL=true $(MAKE) $(MKFLAGS) -f makefile $@
+
+else
 
 # figures out the system
 include make.syscfg
@@ -12,11 +27,14 @@ FINAL =
 TOOLS =
 ALL_OBJS =
 
+FINAL := $(call TOBUILDDIR, final)
+#$(warning FINAL = $(FINAL))
+
+final: $(FINAL)
+
 # includes the config of the build
 include make.config
 include make.config.$(ARCH)
-
-final: $(FINAL)
 
 include apps/makefile
 include kernel/makefile
@@ -49,3 +67,4 @@ ifeq ($(filter $(MAKECMDGOALS), allclean), )
 -include $(ALL_DEPS)
 endif
 
+endif

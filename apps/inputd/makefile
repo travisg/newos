@@ -13,7 +13,7 @@ MY_OBJS := \
 
 MY_INCLUDES := $(STDINCLUDE)
 MY_CFLAGS := $(USER_CFLAGS)
-MY_LIBS := $(ULIBS)
+MY_LIBS := -lc -lnewos -lsupc++
 MY_LIBPATHS :=
 MY_DEPS :=
 MY_GLUE := $(APPSGLUE)
