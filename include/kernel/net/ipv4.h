@@ -15,6 +15,7 @@ enum {
 	IP_PROT_UDP = 17,
 };
 
+#define NETADDR_TO_IPV4(naddr) (*(ipv4_addr *)&(naddr)->addr[0])
 
 int ipv4_route_add(ipv4_addr network_addr, ipv4_addr netmask, ipv4_addr if_addr, if_id interface_num);
 int ipv4_route_add_gateway(ipv4_addr network_addr, ipv4_addr netmask, ipv4_addr if_addr, if_id interface_num, ipv4_addr gw_addr);

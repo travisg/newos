@@ -10,7 +10,8 @@
 int net_init(kernel_args *ka);
 
 enum {
-	ADDR_TYPE_ETHERNET = 0,
+	ADDR_TYPE_NULL = 0,
+	ADDR_TYPE_ETHERNET,
 	ADDR_TYPE_IP
 };
 

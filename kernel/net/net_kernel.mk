@@ -8,6 +8,7 @@ KERNEL_OBJS += \
 		$(KERNEL_NET_OBJ_DIR)/ipv4.o \
 		$(KERNEL_NET_OBJ_DIR)/misc.o \
 		$(KERNEL_NET_OBJ_DIR)/net.o \
+		$(KERNEL_NET_OBJ_DIR)/socket.o \
 		$(KERNEL_NET_OBJ_DIR)/udp.o 
 
 KERNEL_NET_INCLUDES = $(KERNEL_INCLUDES)

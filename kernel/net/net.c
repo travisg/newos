@@ -13,11 +13,37 @@
 #include <kernel/net/ethernet.h>
 #include <kernel/net/arp.h>
 #include <kernel/net/ipv4.h>
+#include <kernel/net/udp.h>
+#include <kernel/net/socket.h>
 #include <kernel/net/misc.h>
 #include <boot/stage2.h>
+#include <libc/string.h>
 
 thread_id rx_thread_id;
 int net_fd;
+
+static int net_test_thread(void *unused)
+{
+	sock_id id;
+	sockaddr addr;
+
+	thread_snooze(2000000);
+
+	memset(&addr, 0, sizeof(addr));
+	addr.addr.len = 4;
+	addr.addr.type = ADDR_TYPE_IP;
+	addr.port = 9999;
+	id = socket_create(SOCK_PROTO_UDP, 9999, &addr);
+	dprintf("net_test_thread: id %d\n", id);
+
+	for(;;) {
+		ssize_t bytes_read;
+		char buf[64];
+
+		bytes_read = socket_read(id, buf, sizeof(buf));
+		dprintf("net_test_thread: read %d bytes: '%s'\n", bytes_read, buf);
+	}
+}
 
 int net_init(kernel_args *ka)
 {
@@ -31,6 +57,8 @@ int net_init(kernel_args *ka)
 	ethernet_init();
 	arp_init();
 	ipv4_init();
+	udp_init();
+	socket_init();
 
 	// open the network device
 	net_fd = sys_open("/dev/net/rtl8139/0", STREAM_TYPE_DEVICE, 0);
@@ -45,14 +73,21 @@ int net_init(kernel_args *ka)
 	addr->addr.len = 6;
 	addr->addr.type = ADDR_TYPE_ETHERNET;
 	sys_ioctl(net_fd, 10000, &addr->addr.addr[0], 6);
+	addr->broadcast.type = ADDR_TYPE_NULL;
+	addr->netmask.type = ADDR_TYPE_NULL;
 	if_bind_link_address(i, addr);
 
 	// set the ip address for this net interface
 	addr = kmalloc(sizeof(ifaddr));
 	addr->addr.len = 4;
 	addr->addr.type = ADDR_TYPE_IP;
-//	*(ipv4_addr *)&addr->addr.addr[0] = 0xc0a80063; // 192.168.0.99
-	*(ipv4_addr *)&addr->addr.addr[0] = 0x0a000063; // 10.0.0.99
+	NETADDR_TO_IPV4(&addr->addr) = 0x0a000063; // 10.0.0.99
+	addr->netmask.len = 4;
+	addr->netmask.type = ADDR_TYPE_IP;
+	NETADDR_TO_IPV4(&addr->netmask) = 0xffffff00; // 255.255.255.0
+	addr->broadcast.len = 4;
+	addr->broadcast.type = ADDR_TYPE_IP;
+	NETADDR_TO_IPV4(&addr->broadcast) = 0x0a0000ff; // 10.0.0.255
 	if_bind_address(i, addr);
 
 	// set up an initial routing table
@@ -68,6 +103,15 @@ int net_init(kernel_args *ka)
 
 	sys_close(net_fd);
 
+#if 1
+	// start the test thread
+{
+	thread_id id;
+
+	id = thread_create_kernel_thread("net tester", &net_test_thread, NULL);
+	thread_resume_thread(id);
+}
+#endif
 	return 0;
 }
 

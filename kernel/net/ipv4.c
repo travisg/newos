@@ -216,8 +216,6 @@ int ipv4_receive(cbuf *buf, ifnet *i)
 {
 	int err;
 	ipv4_header *header;
-	ifaddr *iaddr;
-	ifaddr ifaddr;
 
 	header = (ipv4_header *)cbuf_get_ptr(buf, 0);
 
@@ -236,18 +234,26 @@ int ipv4_receive(cbuf *buf, ifnet *i)
 	}
 
 	// verify that this packet is for us
-	for(iaddr = i->addr_list; iaddr; iaddr = iaddr->next) {
-		if(iaddr->addr.type == ADDR_TYPE_IP) {
-			if(ntohl(header->dest) == *(ipv4_addr *)&iaddr->addr.addr[0])
-				break;
+	if(ntohl(header->dest) != 0xffffffff) {
+		ifaddr *iaddr;
+		ipv4_addr dest = ntohl(header->dest);
+
+		for(iaddr = i->addr_list; iaddr; iaddr = iaddr->next) {
+			if(iaddr->addr.type == ADDR_TYPE_IP) {
+				// see if it matches one of this interface's ip addresses
+				if(dest == NETADDR_TO_IPV4(&iaddr->addr))
+					break;
+				// see if it matches the broadcast address
+				if(dest == NETADDR_TO_IPV4(&iaddr->broadcast))
+					break;
+			}
+		}
+		if(!iaddr) {
+			dprintf("ipv4 packet for someone else\n");
+			err = NO_ERROR;
+			goto ditch_packet;
 		}
 	}
-	if(!iaddr) {
-		dprintf("ipv4 packet for someone else\n");
-		err = NO_ERROR;
-		goto ditch_packet;
-	}
-	memcpy(&ifaddr, iaddr, sizeof(ifaddr));
 
 	// strip off the ip header
 	cbuf_truncate_head(buf, (header->version_length & 0xf) * 4);

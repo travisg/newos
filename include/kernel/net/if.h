@@ -14,6 +14,8 @@ typedef struct ifaddr {
 	struct ifaddr *next;
 	struct ifnet *if_owner;
 	netaddr addr;
+	netaddr netmask;
+	netaddr broadcast;
 } ifaddr;
 
 enum {

@@ -10,6 +10,10 @@
 #include <kernel/cbuf.h>
 
 int udp_receive(cbuf *buf, ifnet *i, ipv4_addr source_address, ipv4_addr target_address);
+int udp_open(netaddr *addr, uint16 port, void **prot_data);
+int udp_close(void *prot_data);
+ssize_t udp_read(void *prot_data, void *buf, ssize_t len);
+int udp_init(void);
 
 #endif
 

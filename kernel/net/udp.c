@@ -4,7 +4,12 @@
 */
 #include <kernel/kernel.h>
 #include <kernel/cbuf.h>
+#include <kernel/lock.h>
 #include <kernel/debug.h>
+#include <kernel/heap.h>
+#include <kernel/khash.h>
+#include <kernel/sem.h>
+#include <kernel/arch/cpu.h>
 #include <kernel/net/udp.h>
 #include <kernel/net/ipv4.h>
 #include <kernel/net/misc.h>
@@ -24,9 +29,115 @@ typedef struct udp_pseudo_header {
 	uint16 udp_length;
 } _PACKED udp_pseudo_header;
 
+typedef struct udp_queue_elem {
+	struct udp_queue_elem *next;
+	struct udp_queue_elem *prev;
+	ipv4_addr src_address;
+	ipv4_addr target_address;
+	uint16 src_port;
+	uint16 port;
+	int len;
+	cbuf *buf;
+} udp_queue_elem;
+
+typedef struct udp_queue {
+	udp_queue_elem *next;
+	udp_queue_elem *prev;
+	int count;
+} udp_queue;
+
+typedef struct udp_endpoint {
+	struct udp_endpoint *next;
+	mutex lock;
+	sem_id blocking_sem;
+	uint16 port;
+	udp_queue q;
+	int ref_count;
+} udp_endpoint;
+
+static udp_endpoint *endpoints;
+static mutex endpoints_lock;
+
+static int udp_endpoint_compare_func(void *_e, void *_key)
+{
+	udp_endpoint *e = _e;
+	uint16 *port = _key;
+
+	if(e->port == *port)
+		return 0;
+	else
+		return 1;
+}
+
+static unsigned int udp_endpoint_hash_func(void *_e, void *_key, int range)
+{
+	udp_endpoint *e = _e;
+	uint16 *port = _key;
+
+	if(e)
+		return e->port % range;
+	else
+		return *port % range;
+}
+
+static void udp_init_queue(udp_queue *q)
+{
+	q->count = 0;
+	q->next = q->prev = (udp_queue_elem *)q;
+}
+
+static udp_queue_elem *udp_queue_pop(udp_queue *q)
+{
+	if(q->next != (udp_queue_elem *)q) {
+		udp_queue_elem *e = q->next;
+
+		q->next = e->next;
+		e->next->prev = (udp_queue_elem *)q;
+		q->count--;
+		e->next = e->prev = NULL;
+		return e;
+	} else {
+		return NULL;
+	}
+}
+
+static void udp_queue_push(udp_queue *q, udp_queue_elem *e)
+{
+	e->prev = q->prev;
+	e->next = (udp_queue_elem *)q;
+	q->prev->next = e;
+	q->prev = e;
+	q->count++;
+}
+
+static void udp_endpoint_acquire_ref(udp_endpoint *e)
+{
+	atomic_add(&e->ref_count, 1);
+}
+
+static void udp_endpoint_release_ref(udp_endpoint *e)
+{
+	if(atomic_add(&e->ref_count, -1) == 1) {
+		udp_queue_elem *qe;
+
+		mutex_destroy(&e->lock);
+		sem_delete(e->blocking_sem);
+
+		// clear out the queue of packets
+		for(qe = udp_queue_pop(&e->q); qe; qe = udp_queue_pop(&e->q)) {
+			if(qe->buf)
+				cbuf_free_chain(qe->buf);
+			kfree(qe);
+		}
+	}
+}
+
 int udp_receive(cbuf *buf, ifnet *i, ipv4_addr source_address, ipv4_addr target_address)
 {
 	udp_header *header;
+	udp_endpoint *e;
+	udp_queue_elem *qe;
+	uint16 port;
 	int err;
 
 	header = cbuf_get_ptr(buf, 0);
@@ -63,14 +174,130 @@ int udp_receive(cbuf *buf, ifnet *i, ipv4_addr source_address, ipv4_addr target_
 		}
 	}
 
-	// XXX finish here
+	// see if we have an endpoint
+	port = ntohs(header->dest_port);
+	mutex_lock(&endpoints_lock);
+	e = hash_lookup(endpoints, &port);
+	if(e)
+		udp_endpoint_acquire_ref(e);
+	mutex_unlock(&endpoints_lock);
 
+	if(!e) {
+		err = NO_ERROR;
+		goto ditch_packet;
+	}
+
+	// okay, we have an endpoint, lets queue our stuff up and move on
+	qe = kmalloc(sizeof(udp_queue_elem));
+	if(!qe) {
+		udp_endpoint_release_ref(e);
+		err = ERR_NO_MEMORY;
+		goto ditch_packet;
+	}
+	qe->port = ntohs(header->source_port);
+	qe->port = port;
+	qe->src_address = source_address;
+	qe->target_address = target_address;
+	qe->len = ntohs(header->length) - sizeof(udp_header);
+
+	// trim off the udp header
+	cbuf_truncate_head(buf, sizeof(udp_header));
+	qe->buf = buf;
+
+	mutex_lock(&e->lock);
+	udp_queue_push(&e->q, qe);
+	mutex_unlock(&e->lock);
+
+	sem_release(e->blocking_sem, 1);
+
+	udp_endpoint_release_ref(e);
 
 	err = NO_ERROR;
+	return err;
 
 ditch_packet:
 	cbuf_free_chain(buf);
 
 	return err;
+}
+
+int udp_open(netaddr *addr, uint16 port, void **prot_data)
+{
+	udp_endpoint *e;
+
+	e = kmalloc(sizeof(udp_endpoint));
+	if(!e)
+		return ERR_NO_MEMORY;
+
+	mutex_init(&e->lock, "udp endpoint lock");
+	e->blocking_sem = sem_create(0, "udp endpoint sem");
+	e->port = port;
+	e->ref_count = 1;
+	udp_init_queue(&e->q);
+
+	mutex_lock(&endpoints_lock);
+	hash_insert(endpoints, e);
+	mutex_unlock(&endpoints_lock);
+
+	*prot_data = e;
+
+	return 0;
+}
+
+int udp_close(void *prot_data)
+{
+	udp_endpoint *e = prot_data;
+
+	mutex_lock(&endpoints_lock);
+	hash_remove(endpoints, e);
+ 	mutex_unlock(&endpoints_lock);
+
+	udp_endpoint_release_ref(e);
+
+	return 0;
+}
+
+ssize_t udp_read(void *prot_data, void *buf, ssize_t len)
+{
+	udp_endpoint *e = prot_data;
+	udp_queue_elem *qe;
+	int err;
+	ssize_t ret;
+
+retry:
+	err = sem_acquire(e->blocking_sem, 1);
+	if(err < 0)
+		return err;
+
+	// pop an item off the list, if there are any
+	mutex_lock(&e->lock);
+	qe = udp_queue_pop(&e->q);
+	mutex_unlock(&e->lock);
+
+	if(!qe)
+		goto retry;
+
+	// we have the data, copy it out
+	cbuf_memcpy_from_chain(buf, qe->buf, 0, min(qe->len, len));
+	ret = qe->len;
+
+	// free this queue entry
+	cbuf_free_chain(qe->buf);
+	kfree(qe);
+
+	return ret;
+}
+
+int udp_init(void)
+{
+	udp_endpoint e;
+
+	mutex_init(&endpoints_lock, "udp_endpoints lock");
+
+	endpoints = hash_init(256, (addr)&e.next - (addr)&e, &udp_endpoint_compare_func, &udp_endpoint_hash_func);
+	if(!endpoints)
+		return ERR_NO_MEMORY;
+
+	return 0;
 }
 
