@@ -117,9 +117,9 @@ pcnet32 *pcnet32_new(pci_module_hooks *bus, uint32 initmode, uint16 rxbuffer_siz
 	uint16 rxring_count = gringlens[(initmode & PCNET_INIT_RXLEN_MASK) >> PCNET_INIT_RXLEN_POS];
 	uint16 txring_count = gringlens[(initmode & PCNET_INIT_TXLEN_MASK) >> PCNET_INIT_TXLEN_POS];
 
-	SHOW_FLOW(3, "initmode: 0x%.8x, rxring: (%d, %d), txring: (%d, %d)", 
-		  initmode, 
-		  rxring_count, rxbuffer_size, 
+	SHOW_FLOW(3, "initmode: 0x%.8x, rxring: (%d, %d), txring: (%d, %d)",
+		  initmode,
+		  rxring_count, rxbuffer_size,
 		  txring_count, txbuffer_size);
 
 	nic = (pcnet32*)kmalloc(sizeof(pcnet32));
@@ -138,14 +138,14 @@ pcnet32 *pcnet32_new(pci_module_hooks *bus, uint32 initmode, uint16 rxbuffer_siz
 
 	nic->rxring_region = vm_create_anonymous_region(
 		vm_get_kernel_aspace_id(), "pcnet32_rxring", (void**)&nic->rxring,
-		REGION_ADDR_ANY_ADDRESS, nic->rxring_count * sizeof(struct pcnet32_rxdesc), 
+		REGION_ADDR_ANY_ADDRESS, nic->rxring_count * sizeof(struct pcnet32_rxdesc),
 		REGION_WIRING_WIRED_CONTIG, LOCK_KERNEL | LOCK_RW);
 
 	if (nic->rxring_region < 0)
 		goto err_after_kmalloc;
 
 	memset(nic->rxring, 0, nic->rxring_count * sizeof(struct pcnet32_rxdesc));
-	vm_get_page_mapping(vm_get_kernel_aspace_id(), 
+	vm_get_page_mapping(vm_get_kernel_aspace_id(),
 			    (addr_t)nic->rxring, &nic->rxring_phys);
 	SHOW_FLOW(3, "rxring physical address: 0x%x", nic->rxring_phys);
 
@@ -155,7 +155,7 @@ pcnet32 *pcnet32_new(pci_module_hooks *bus, uint32 initmode, uint16 rxbuffer_siz
 
 	if (mutex_init(&nic->rxring_mutex, "pcnet32_rxring") < 0)
 		goto err_after_rxring_sem;
-       
+
 	// setup_transmit_descriptor_ring;
 	nic->txring_count = txring_count;
 	nic->tx_buffersize = txbuffer_size;
@@ -163,21 +163,21 @@ pcnet32 *pcnet32_new(pci_module_hooks *bus, uint32 initmode, uint16 rxbuffer_siz
 
 	nic->txring_region = vm_create_anonymous_region(
 		vm_get_kernel_aspace_id(), "pcnet32_txring", (void**)&nic->txring,
-		REGION_ADDR_ANY_ADDRESS, nic->txring_count * sizeof(struct pcnet32_txdesc), 
+		REGION_ADDR_ANY_ADDRESS, nic->txring_count * sizeof(struct pcnet32_txdesc),
 		REGION_WIRING_WIRED_CONTIG, LOCK_KERNEL | LOCK_RW);
 
 	if (nic->txring_region < 0)
 		goto err_after_rxring_mutex;
 
 	memset(nic->txring, 0, nic->txring_count * sizeof(struct pcnet32_txdesc));
-	vm_get_page_mapping(vm_get_kernel_aspace_id(), 
+	vm_get_page_mapping(vm_get_kernel_aspace_id(),
 			    (addr_t)nic->txring, &nic->txring_phys);
 	SHOW_FLOW(3, "txring physical address: 0x%x", nic->txring_phys);
 
 	// allocate the actual buffers
 	nic->buffers_region = vm_create_anonymous_region(
 		vm_get_kernel_aspace_id(), "pcnet32_buffers", (void**)&nic->buffers,
-		REGION_ADDR_ANY_ADDRESS, 
+		REGION_ADDR_ANY_ADDRESS,
 		(nic->rxring_count * nic->rx_buffersize) +
 		(nic->txring_count * nic->tx_buffersize),
 		REGION_WIRING_WIRED_CONTIG, LOCK_KERNEL | LOCK_RW);
@@ -185,7 +185,7 @@ pcnet32 *pcnet32_new(pci_module_hooks *bus, uint32 initmode, uint16 rxbuffer_siz
 	if (nic->buffers_region < 0)
 		goto err_after_txring_region;
 
-	vm_get_page_mapping(vm_get_kernel_aspace_id(), 
+	vm_get_page_mapping(vm_get_kernel_aspace_id(),
 			    (addr_t)nic->buffers, &nic->buffers_phys);
 
 	nic->rx_buffers = (uint8*)nic->buffers;
@@ -247,7 +247,7 @@ int pcnet32_detect(pcnet32 *dev)
 
 	for (i = 0; pci->get_nth_pci_info(i, &pinfo) >= NO_ERROR; i++)
 	{
-		if (pinfo.vendor_id == AMD_VENDORID && 
+		if (pinfo.vendor_id == AMD_VENDORID &&
 		    (pinfo.device_id == PCNET_DEVICEID ||
 		     pinfo.device_id == PCHOME_DEVICEID))
 		{
@@ -269,8 +269,10 @@ int pcnet32_detect(pcnet32 *dev)
 		{
 			dev->phys_base = pinfo.u.h0.base_registers[i];
 			dev->phys_size = pinfo.u.h0.base_register_sizes[i];
+			SHOW_FLOW(3, "base 0x%lx, size 0x%lx\n", dev->phys_base, dev->phys_size);
 		} else if (pinfo.u.h0.base_registers[i] > 0) {
 			dev->io_port = pinfo.u.h0.base_registers[i];
+			SHOW_FLOW(3, "io_port 0x%x\n", dev->io_port);
 		}
 	}
 
@@ -281,24 +283,24 @@ int pcnet32_init(pcnet32 *nic)
 {
 	int i;
 
-	if(nic->phys_base == 0) {
-		SHOW_FLOW0(3, "nic->phys_base was null.");
-		return -1;
+	SHOW_FLOW(3, "detected device at irq %d, memory base 0x%lx, size 0x%lx, io port base 0x%x",
+		  nic->irq, nic->phys_base, nic->phys_size, nic->io_port);
+
+	if(nic->phys_base > 0) {
+		nic->io_region = vm_map_physical_memory(vm_get_kernel_aspace_id(), "pcnet32_region",
+			(void **)&nic->virt_base, REGION_ADDR_ANY_ADDRESS, nic->phys_size,
+			LOCK_KERNEL|LOCK_RW, nic->phys_base);
+
+		if(nic->io_region < 0) {
+			SHOW_FLOW(3, "error allocating device physical region at %x",
+				  nic->phys_base);
+			return nic->io_region;
+		}
+		SHOW_FLOW(3, "device mapped at virtual address 0x%lx", nic->virt_base);
+	} else {
+		nic->io_region = -1;
+		nic->virt_base = 0; // should generate a panic if someone tries to use it
 	}
-
-	SHOW_FLOW(3, "detected device at irq %d, memory base 0x%lx, size 0x%lx", 
-		  nic->irq, nic->phys_base, nic->phys_size);
-
-	nic->io_region = vm_map_physical_memory(vm_get_kernel_aspace_id(), "pcnet32_region", 
-		(void **)&nic->virt_base, REGION_ADDR_ANY_ADDRESS, nic->phys_size, 
-		LOCK_KERNEL|LOCK_RW, nic->phys_base);
-
-	if(nic->io_region < 0) {
-		SHOW_FLOW(3, "error allocating device physical region at %x", 
-			  nic->phys_base);
-		return nic->io_region;
-	}
-	SHOW_FLOW(3, "device mapped at virtual address 0x%lx", nic->virt_base);
 
 	// before we do this we set up our interrupt handler,
 	// we want to make sure the device is in a semi-known state, so we
@@ -322,7 +324,7 @@ int pcnet32_init(pcnet32 *nic)
 		  nic->mac_addr[3],
 		  nic->mac_addr[4],
 		  nic->mac_addr[5]);
-      
+
 	return 0;
 }
 
@@ -409,12 +411,12 @@ static void rxdesc_init(pcnet32 *nic, uint16 index)
 
 	struct pcnet32_rxdesc *desc = nic->rxring + masked_index;
 	uint32 buffer = BUFFER_PHYS(nic, RXRING_BUFFER(nic, masked_index));
-	
+
 	desc->buffer_addr = buffer;
 	desc->buffer_length = -nic->rx_buffersize;
 	desc->message_length = 0;
 	desc->user = 0;
-	
+
 	// enable the controller to write to this receive buffer.
 	desc->status = PCNET_RXSTATUS_OWN;
 }
@@ -451,7 +453,7 @@ ssize_t pcnet32_xmit(pcnet32 *nic, const char *ptr, ssize_t len)
 	nic->txring[index].buffer_length = -len;
 
 	// Set OWN, STP, and ENP bits of descriptor;
-	nic->txring[index].status |= PCNET_TXSTATUS_OWN | 
+	nic->txring[index].status |= PCNET_TXSTATUS_OWN |
 		PCNET_TXSTATUS_STP | PCNET_TXSTATUS_ENP;
 
 	// tx_queue_tail = tx_queue_tail + 1;
@@ -490,7 +492,7 @@ ssize_t pcnet32_rx(pcnet32 *nic, char *buf, ssize_t buf_len)
 
 		if (nic->rxring[index].status & PCNET_RXSTATUS_ERR)
 		{
-			SHOW_FLOW(3, "rxring descriptor %d reported an error: 0x%.4x", 
+			SHOW_FLOW(3, "rxring descriptor %d reported an error: 0x%.4x",
 				  index, nic->rxring[index].status);
 		}
 
@@ -501,7 +503,7 @@ ssize_t pcnet32_rx(pcnet32 *nic, char *buf, ssize_t buf_len)
 			nic->rxring_tail++;
 			mutex_unlock(&nic->rxring_mutex);
 			continue; // skip this descriptor altogether.
-		} 
+		}
 		else if ((size_t)buf_len >= nic->rxring[index].message_length) // got one
 		{
 			real_len = nic->rxring[index].message_length;
@@ -514,7 +516,7 @@ ssize_t pcnet32_rx(pcnet32 *nic, char *buf, ssize_t buf_len)
 
 			SHOW_FLOW(3, "Got index %d, len %d and cleared it, returning to caller. rxstatus = 0x%x.", index,
 				  nic->rxring[index].message_length, nic->rxring[index].status);
-			
+
 			// move the tail up.
 			nic->rxring_tail++;
 			mutex_unlock(&nic->rxring_mutex);
@@ -568,11 +570,11 @@ static int pcnet32_thread(void *data)
 			pcnet32_stop(nic);
 			pcnet32_start(nic);
 		}
-	
+
 		mutex_lock(&nic->rxring_mutex);
 		while (pcnet32_rxint(nic));
 		mutex_unlock(&nic->rxring_mutex);
-		
+
 		// re-enable pcnet interrupts
 		write_csr(nic, PCNET_CSR_STATUS, PCNET_STATUS_IENA);
 
@@ -596,10 +598,10 @@ static int pcnet32_int(void* data)
 	// clear the bits that caused this to happen and disable pcnet interrupts
 	// for the time being
 	write_csr(nic, PCNET_CSR_STATUS, status & ~PCNET_STATUS_IENA);
-	
+
 	int_restore_interrupts();
         release_spinlock(&nic->control_lock);
-	
+
 	nic->interrupt_status = status;
 	sem_release_etc(nic->interrupt_sem, 1, SEM_FLAG_NO_RESCHED);
 
