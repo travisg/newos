@@ -601,6 +601,23 @@ vm_address_space *vm_create_aspace(const char *name, unsigned int base, unsigned
 	return aspace;	
 }
 
+int vm_delete_aspace(vm_address_space *aspace)
+{
+	vm_region *region;
+
+	// delete all of the regions
+	while(aspace->virtual_map.region_list) {
+		vm_delete_region(aspace, aspace->virtual_map.region_list);
+	}
+
+	(*aspace->translation_map.ops->destroy)(&aspace->translation_map);
+
+	kfree(aspace->name);
+	sem_delete(aspace->virtual_map.sem);
+	kfree(aspace);
+	return 0;
+}
+
 void vm_test()
 {
 	vm_region *region, *region2, *region3;

@@ -61,6 +61,7 @@ SYSCALL5(sys_sem_acquire_etc, 13)
 SYSCALL2(sys_sem_release, 14)
 SYSCALL3(sys_sem_release_etc, 15)
 SYSCALL0(sys_get_current_thread_id, 16)
+SYSCALL0(sys_exit, 17)
 
 syscall0:
 	int		$99

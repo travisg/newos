@@ -152,6 +152,19 @@ i386_enter_uspace:
 	pushl	%eax			// user IP
 	iret
 
+// void i386_switch_stack_and_call(addr stack, void (*func)(void *), void *arg);
+.global i386_switch_stack_and_call
+i386_switch_stack_and_call:
+	movl	4(%esp),%eax	// new stack
+	movl	8(%esp),%ecx	// func
+	movl	12(%esp),%edx	// args
+	
+	movl	%eax,%esp		// switch the stack
+	pushl	%edx			// push the argument
+	call	*%ecx			// call the target function
+_loop:
+	jmp		_loop
+
 null_idt_descr:
 	.word	0
 	.word	0,0

@@ -74,6 +74,10 @@ int syscall_dispatcher(unsigned long call_num, unsigned long arg0, unsigned long
 		case SYSCALL_GET_CURRENT_THREAD_ID:
 			*call_ret = thread_get_current_thread_id();
 			break;
+		case SYSCALL_EXIT_THREAD:
+			thread_exit();
+			*call_ret = 0;
+			break;
 		default:
 			*call_ret = -1;
 			ret = INT_NO_RESCHEDULE;

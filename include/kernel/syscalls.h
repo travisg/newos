@@ -23,6 +23,7 @@ enum {
 	SYSCALL_SEM_RELEASE,
 	SYSCALL_SEM_RELEASE_ETC,
 	SYSCALL_GET_CURRENT_THREAD_ID,
+	SYSCALL_EXIT_THREAD
 };
 
 int syscall_dispatcher(unsigned long call_num, unsigned long arg0, unsigned long arg1,

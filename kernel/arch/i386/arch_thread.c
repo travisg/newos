@@ -25,7 +25,7 @@ int arch_thread_init_thread_struct(struct thread *t)
 	return 0;
 }
 
-int arch_thread_initialize_kthread_stack(struct thread *t, int (*start_func)(void), void (*entry_func)(void))
+int arch_thread_initialize_kthread_stack(struct thread *t, int (*start_func)(void), void (*entry_func)(void), void (*exit_func)(void))
 {
 	unsigned int *kstack = (unsigned int *)t->kernel_stack_region->base;
 	unsigned int kstack_size = t->kernel_stack_region->size;
@@ -40,7 +40,7 @@ int arch_thread_initialize_kthread_stack(struct thread *t, int (*start_func)(voi
 
 	// set the final return address to be thread_kthread_exit
 	kstack_top--;
-	*kstack_top = (unsigned int)&thread_kthread_exit;
+	*kstack_top = (unsigned int)exit_func;
 
 	// set the return address to be the start of the first function
 	kstack_top--;
@@ -64,6 +64,11 @@ int arch_thread_initialize_kthread_stack(struct thread *t, int (*start_func)(voi
 	t->arch_info.esp = kstack_top;
 	
 	return 0;
+}
+
+void arch_thread_switch_kstack_and_call(struct thread *t, addr new_kstack, void (*func)(void *), void *arg)
+{
+	i386_switch_stack_and_call(new_kstack, func, arg);
 }
 
 void arch_thread_context_switch(struct thread *t_from, struct thread *t_to)

@@ -45,6 +45,7 @@ struct fs_calls {
 int vfs_init(kernel_args *ka);
 int vfs_register_filesystem(const char *name, struct fs_calls *calls);
 void *vfs_new_ioctx();
+int vfs_free_ioctx(void *ioctx);
 int vfs_helper_getnext_in_path(const char *path, int *start_pos, int *end_pos);
 int vfs_test();
 

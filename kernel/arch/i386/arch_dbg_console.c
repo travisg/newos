@@ -10,6 +10,8 @@
 
 #include <libc/string.h>
 
+#define BOCHS_E9_HACK 0
+
 static const int dbg_baud_rate = 115200;
 
 int arch_dbg_con_init(kernel_args *ka)
@@ -34,10 +36,14 @@ char arch_dbg_con_read()
 
 static void _arch_dbg_con_putch(const char c)
 {
+#if BOCHS_E9_HACK
+	out8(c, 0xe9);
+#else
 	while ((in8(0x3fd) & 0x64) == 0)
 		;
 		
 	out8(c, 0x3f8);
+#endif
 }
 
 char arch_dbg_con_putch(const char c)

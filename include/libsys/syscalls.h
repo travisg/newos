@@ -41,6 +41,7 @@ int sys_sem_acquire_etc(sem_id id, int count, int flags, time_t timeout);
 int sys_sem_release(sem_id id, int count);
 int sys_sem_release_etc(sem_id id, int count, int flags);
 thread_id sys_get_current_thread_id();
+void sys_exit();
 
 #endif
 

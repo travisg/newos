@@ -4,6 +4,7 @@
 */
 extern int __stdio_init();
 extern int __stdio_deinit();
+extern void sys_exit();
 
 extern int main();
 
@@ -14,5 +15,6 @@ int _start()
 	main();
 	
 	__stdio_deinit();
+	sys_exit();
 	return 0;	
 }

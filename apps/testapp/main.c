@@ -17,7 +17,7 @@ int main()
 	printf("test\n");
 
 	printf("my thread id is %d\n", sys_get_current_thread_id());
-
+#if 1
 	printf("enter something: ");
 
 	for(;;) {
@@ -31,6 +31,8 @@ int main()
 	}
 
 	for(;;);
+#endif
+	printf("exiting\n");
 	return 0;
 }
 

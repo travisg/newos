@@ -23,15 +23,15 @@ enum {
 	THREAD_STATE_RUNNING, // running right now somewhere
 	THREAD_STATE_WAITING, // blocked on something
 	THREAD_STATE_SUSPENDED, // suspended, not in queue
-	THREAD_STATE_MARKED_FOR_DEATH, // ready for manny to kill it
+	THREAD_STATE_FREE_ON_RESCHED, // free the thread structure upon reschedule
 };
 
 struct proc {
 	struct proc *next;
 	proc_id id;
+	int num_threads;
 	char *name;
 	void *ioctx;
-	void *cwd;
 	void *args;
 	vm_address_space *kaspace;
 	vm_address_space *aspace;
@@ -76,7 +76,7 @@ void thread_resched();
 void thread_start_threading();
 void thread_snooze(time_t time);
 int thread_init(kernel_args *ka);
-void thread_kthread_exit();
+void thread_exit();
 struct thread *thread_get_current_thread();
 thread_id thread_get_current_thread_id();
 struct thread *thread_get_thread_struct(thread_id id);

@@ -174,7 +174,7 @@ void i386_handle_trap(struct int_frame frame)
 				interrupt_ack(frame.vector); // ack the 8239 (if applicable)
 				ret = int_io_interrupt_handler(frame.vector);
 			} else {
-				panic("i386_handle_trap: unhandled cpu trap 0x%x!\n", frame.vector);
+				panic("i386_handle_trap: unhandled cpu trap 0x%x at ip 0x%x!\n", frame.vector, frame.eip);
 				ret = INT_NO_RESCHEDULE;
 			}
 			break;

@@ -254,6 +254,29 @@ void *vfs_new_ioctx()
 	return ioctx;
 }
 
+int vfs_free_ioctx(void *_ioctx)
+{
+	struct ioctx *ioctx = (struct ioctx *)_ioctx;
+	int i;
+
+	mutex_lock(&ioctx->io_mutex);
+
+	for(i=0; i<ioctx->table_size; i++) {
+		if(ioctx->fds[i].vnode != NULL) {
+			dec_fd_ref_count(ioctx, i, true);
+			if(ioctx->fds[i].vnode != NULL) {
+				panic("vfs_free_ioctx: fd %d in ioctx 0x%x didn't free after dec of ref count\n", i, ioctx);
+			}
+		}
+	}
+
+	mutex_unlock(&ioctx->io_mutex);
+
+	mutex_destroy(&ioctx->io_mutex);
+
+	kfree(ioctx);
+	return 0;
+}
 
 int vfs_init(kernel_args *ka)
 {

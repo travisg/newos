@@ -35,7 +35,6 @@ static unsigned int proc_struct_hash(void *_p, void *_key, int range);
 
 // global
 int thread_spinlock = 0;
-static thread_id next_thread_id = 0;
 
 // proc list
 static void *proc_hash = NULL;
@@ -53,12 +52,21 @@ static struct timer_event *timers = NULL;
 #define CURR_THREAD cur_thread[smp_get_current_cpu()]
 static struct thread **cur_thread = NULL;
 static void *thread_hash = NULL;
+static thread_id next_thread_id = 0;
 
 static sem_id snooze_sem = -1;
 
+// death stacks
+// used temporarily as a thread cleans itself up
+static void *death_stacks;
+static bool *death_stack_usage;
+static int num_death_stacks;
+static int num_free_death_stacks;
+static sem_id death_stack_sem;
+
 // thread queues
 static struct thread_queue run_q[THREAD_NUM_PRIORITY_LEVELS] = { { NULL, NULL }, };
-static struct thread_queue death_q = { NULL, NULL };
+static struct thread_queue dead_q;
 
 static int _rand();
 static void thread_entry(void);
@@ -142,6 +150,24 @@ static void insert_thread_into_proc(struct proc *p, struct thread *t)
 {
 	t->proc_next = p->thread_list;
 	p->thread_list = t;
+	p->num_threads++;
+}
+
+static void remove_thread_from_proc(struct proc *p, struct thread *t)
+{
+	struct thread *temp, *last = NULL;
+	
+	for(temp = p->thread_list; temp != NULL; temp = temp->proc_next) {
+		if(temp == t) {
+			if(last == NULL) {
+				p->thread_list = temp->proc_next;
+			} else {
+				last->proc_next = temp->proc_next;
+			}
+			p->num_threads--;
+			break;
+		}
+	}
 }
 
 static int thread_struct_compare(void *_t, void *_key)
@@ -155,8 +181,8 @@ static int thread_struct_compare(void *_t, void *_key)
 
 static unsigned int thread_struct_hash(void *_t, void *_key, int range)
 {
-	struct proc *t = _t;
-	struct proc_key *key = _key;
+	struct thread *t = _t;
+	struct thread_key *key = _key;
 	
 	if(t != NULL) 
 		return (t->id % range);
@@ -167,10 +193,19 @@ static unsigned int thread_struct_hash(void *_t, void *_key, int range)
 static struct thread *create_thread_struct(const char *name)
 {
 	struct thread *t;
+	int state;
 	
-	t = (struct thread *)kmalloc(sizeof(struct thread));
-	if(t == NULL)
-		goto err;
+	state = int_disable_interrupts();
+	GRAB_THREAD_LOCK();
+	t = thread_dequeue(&dead_q);
+	RELEASE_THREAD_LOCK();
+	int_restore_interrupts(state);
+
+	if(t == NULL) {
+		t = (struct thread *)kmalloc(sizeof(struct thread));
+		if(t == NULL)
+			goto err;
+	}
 	t->name = (char *)kmalloc(strlen(name) + 1);
 	if(t->name == NULL)
 		goto err1;
@@ -232,7 +267,7 @@ static struct thread *_create_thread(const char *name, struct proc *p, int prior
 
 	if(kernel) {
 		// this sets up an initial kthread stack that runs the entry
-		arch_thread_initialize_kthread_stack(t, (void *)entry, &thread_entry);
+		arch_thread_initialize_kthread_stack(t, (void *)entry, &thread_entry, &thread_exit);
 	} else {
 		// create user stack
 		// XXX make this better. For now just keep trying to create a stack
@@ -258,7 +293,7 @@ static struct thread *_create_thread(const char *name, struct proc *p, int prior
 		// the function this will call will immediately switch the thread into
 		// user space.
 		t->args = (void *)entry;
-		arch_thread_initialize_kthread_stack(t, &_create_user_thread_kentry, &thread_entry);
+		arch_thread_initialize_kthread_stack(t, &_create_user_thread_kentry, &thread_entry, &thread_exit);
 	}
 	
 	state = int_disable_interrupts();
@@ -299,6 +334,7 @@ void thread_resume_thread(struct thread *t)
 	thread_enqueue_run_q(t);
 }
 
+#if 0
 int thread_killer()
 {
 	dprintf("thread_killer: manny is alive!\n");
@@ -333,7 +369,7 @@ retry:
 	}
 	return 0;
 }
-
+#endif
 static const char *state_to_text(int state)
 {
 	switch(state) {
@@ -343,7 +379,7 @@ static const char *state_to_text(int state)
 			return "RUNNING";
 		case THREAD_STATE_WAITING:
 			return "WAITING";
-		case THREAD_STATE_MARKED_FOR_DEATH:
+		case THREAD_STATE_FREE_ON_RESCHED:
 			return "DEATH";
 		default:
 			return "UNKNOWN";
@@ -400,7 +436,7 @@ static void dump_thread_info(int argc, char **argv)
 	// walk through the thread list, trying to match name or id
 	hash_open(thread_hash, &i);
 	while((t = hash_next(thread_hash, &i)) != NULL) {
-		if(strcmp(argv[1], t->name) == 0 || t->id == id) {
+		if((t->name && strcmp(argv[1], t->name) == 0) || t->id == id) {
 			_dump_thread_info(t);
 			break;
 		}
@@ -415,8 +451,17 @@ static void dump_thread_list(int argc, char **argv)
 
 	hash_open(thread_hash, &i);
 	while((t = hash_next(thread_hash, &i)) != NULL) {
-		dprintf("0x%x\t%32s\t0x%x\t%16s\t0x%x\n",
-			t, t->name, t->id, state_to_text(t->state), t->kernel_stack_region->base);
+		dprintf("0x%x", t);
+		if(t->name != NULL)
+			dprintf("\t%32s", t->name);
+		else
+			dprintf("\t%32s", "<NULL>");
+		dprintf("\t0x%x", t->id);
+		dprintf("\t%16s", state_to_text(t->state));
+		if(t->kernel_stack_region != NULL)
+			dprintf("\t0x%x\n", t->kernel_stack_region->base);
+		else
+			dprintf("\t0x%x\n", 0);
 	}
 	hash_close(thread_hash, &i, false);
 }
@@ -472,6 +517,69 @@ static void dump_next_thread_in_proc(int argc, char **argv)
 	}
 }
 
+static addr get_death_stack(void)
+{
+	addr stack = 0;
+	int i;
+	int state;
+
+	sem_acquire(death_stack_sem, 1);
+
+	// grab the thread lock around the search for a death stack to make sure it doesn't
+	// find a death stack that has been returned by a thread that still hasn't been
+	// rescheduled for the last time. Localized hack here and put_death_stack_and_reschedule.
+	state = int_disable_interrupts();
+	GRAB_THREAD_LOCK();
+
+	for(i=0; i<num_death_stacks; i++) {
+		if(death_stack_usage[i] == false) {
+			death_stack_usage[i] = true;
+			stack = ((addr)death_stacks + KSTACK_SIZE * i);
+			break;
+		}
+	}
+
+	RELEASE_THREAD_LOCK();
+	int_restore_interrupts(state);
+
+	if(stack == 0) {
+		panic("get_death_stack: couldn't find free stack!\n");
+	}
+	
+	dprintf("get_death_stack: returning 0x%x\n", stack);
+	
+	return stack;
+}
+
+static void put_death_stack_and_reschedule(addr stack)
+{
+	int index;
+	
+	dprintf("put_death_stack...: passed 0x%x\n", stack);
+	
+	if(stack < (addr)death_stacks || stack >= (addr)death_stacks + num_death_stacks * KSTACK_SIZE) {
+		panic("put_death_stacks was passed invalid stack address 0x%x\n", stack);
+	}
+	
+	index = (stack - (addr)death_stacks) / KSTACK_SIZE;	
+
+
+	if(death_stack_usage[index] == false) {
+		panic("put_death_stacks passed stack 0x%x that wasn't in use!\n", stack);
+	}
+	death_stack_usage[index] = false;
+
+	// disable the interrupts around the semaphore release to prevent the get_death_stack
+	// function from allocating this stack before the reschedule. Kind of a hack, but localized
+	// not an easy way around it.
+	int_disable_interrupts();
+	GRAB_THREAD_LOCK();
+	
+	sem_release_etc(death_stack_sem, 1, SEM_FLAG_NO_RESCHED);	
+
+	thread_resched();	
+}
+
 int thread_init(kernel_args *ka)
 {
 	struct thread *t;
@@ -501,6 +609,9 @@ int thread_init(kernel_args *ka)
 
 	// zero out the run queues
 	memset(run_q, 0, sizeof(run_q));
+	
+	// zero out the dead thread structure q
+	memset(&dead_q, 0, sizeof(dead_q));
 
 	// allocate as many CUR_THREAD slots as there are cpus
 	cur_thread = (struct thread **)kmalloc(sizeof(struct thread *) * smp_get_num_cpus());
@@ -546,13 +657,22 @@ int thread_init(kernel_args *ka)
 		cur_thread[i] = t;
 	}
 
-	// create a worker thread to kill other ones
-	t = thread_create_kernel_thread("manny", &thread_killer, THREAD_MAX_PRIORITY);
-	if(t == NULL) {
-		panic("error creating Manny the thread killer\n");
+	// create a set of death stacks
+	num_death_stacks = smp_get_num_cpus();
+	num_free_death_stacks = smp_get_num_cpus();
+	death_stacks = (void *)kmalloc(num_death_stacks * KSTACK_SIZE);
+	if(death_stacks == NULL) {
+		panic("error creating death stacks\n");
 		return -1;
 	}
-	thread_resume_thread(t);
+	memset(death_stacks, 0, num_death_stacks * KSTACK_SIZE);
+	death_stack_usage = (bool *)kmalloc(sizeof(bool) * num_death_stacks);
+	if(death_stack_usage == NULL) {
+		panic("error creating death stack usage bools\n");
+		return -1;
+	}
+	memset(death_stack_usage, 0, sizeof(bool) * num_death_stacks);
+	death_stack_sem = sem_create(num_death_stacks, "death_stack_noavail_sem");
 
 	// set up some debugger commands
 	dbg_add_command(dump_thread_list, "threads", "list all threads");
@@ -601,23 +721,106 @@ static void thread_entry(void)
 	int_enable_interrupts(); // this essentially simulates a return-from-interrupt
 }
 
-void thread_kthread_exit()
+// used to pass messages between thread_exit and thread_exit2
+struct thread_exit_args {
+	addr death_stack;
+	struct thread *t;
+};
+
+static void thread_exit2(void *_args)
+{
+	struct thread_exit_args args;
+	char *temp;
+	
+	// copy the arguments over, since the source is probably on the kernel stack we're about to delete
+	memcpy(&args, _args, sizeof(struct thread_exit_args));
+	
+	dprintf("thread_exit2, running on death stack 0x%x\n", args.death_stack);
+	
+	// delete the kernel stack region
+	vm_delete_region(vm_get_kernel_aspace(), args.t->kernel_stack_region);
+	args.t->kernel_stack_region = NULL;
+	
+	// delete the name
+	temp = args.t->name;
+	args.t->name = NULL;
+	kfree(temp);
+	
+	// remove this thread from all of the global lists
+	int_disable_interrupts();
+	GRAB_PROC_LOCK();
+	remove_thread_from_proc(kernel_proc, args.t);
+	RELEASE_PROC_LOCK();
+	GRAB_THREAD_LOCK();
+	hash_remove(thread_hash, args.t);
+	RELEASE_THREAD_LOCK();
+	
+	// set the next state to be gone. Will return the thread structure to a ready pool upon reschedule
+	args.t->next_state = THREAD_STATE_FREE_ON_RESCHED;
+
+	// return the death stack and reschedule one last time
+	put_death_stack_and_reschedule(args.death_stack);		
+	// never get to here
+	panic("thread_exit2: made it where it shouldn't have!\n");
+}
+
+void thread_exit()
 {
 	int state;
 	struct thread *t = CURR_THREAD;
+	struct proc *p = t->proc;
+	bool delete_proc = false;
+	addr death_stack;
 	
-	dprintf("kernel thread exiting\n");
-	
-	state = int_disable_interrupts();
-	GRAB_THREAD_LOCK();
-	
-	// put ourselves into the death queue
-	thread_enqueue(t, &death_q);
-	t->next_state = THREAD_STATE_MARKED_FOR_DEATH;
-	
-	thread_resched();
+	dprintf("thread 0x%x exiting\n", t->id);
 
-	// will never make it here
+	// delete the user stack region first
+	if(t->proc->aspace && t->user_stack_region) {
+		vm_region *region = t->user_stack_region;
+		region = NULL;
+		vm_delete_region(t->proc->aspace, region);
+	}
+
+	if(t->proc != kernel_proc) {
+		// remove this thread from the current process and add it to the kernel
+		// put the thread into the kernel proc until it dies
+		state = int_disable_interrupts();
+		GRAB_PROC_LOCK();
+		remove_thread_from_proc(p, t);
+		t->proc = kernel_proc;
+		insert_thread_into_proc(kernel_proc, t);
+		if(p->num_threads <= 0) {
+			hash_remove(proc_hash, p);
+			delete_proc = true;
+		}
+		RELEASE_PROC_LOCK();
+		GRAB_THREAD_LOCK();
+		// reschedule, thus making sure this thread is running in the context of the kernel
+		thread_resched();
+		RELEASE_THREAD_LOCK();
+		int_restore_interrupts(state);
+		
+		dprintf("thread_exit: thread 0x%x now a kernel thread!\n", t->id);
+	}
+
+	// delete the process
+	if(delete_proc) {
+		vm_delete_aspace(p->aspace);
+		vfs_free_ioctx(p->ioctx);
+		kfree(p);
+	}
+
+	death_stack = get_death_stack();	
+	{
+		struct thread_exit_args args;
+
+		args.death_stack = death_stack;
+		args.t = t;
+
+		arch_thread_switch_kstack_and_call(t, death_stack + KSTACK_SIZE, thread_exit2, &args);
+	}
+
+	panic("never can get here\n");
 }
 
 thread_id thread_get_current_thread_id()
@@ -885,6 +1088,9 @@ void thread_resched()
 //			dprintf("enqueueing thread 0x%x into run q. pri = %d\n", old_thread, old_thread->priority);
 			thread_enqueue_run_q(old_thread);
 			break;
+		case THREAD_STATE_FREE_ON_RESCHED:
+			thread_enqueue(old_thread, &dead_q);
+			break;
 		default:
 //			dprintf("not enqueueing thread 0x%x into run q. next_state = %d\n", old_thread, old_thread->next_state);
 			;
@@ -970,8 +1176,8 @@ static struct proc *create_proc_struct(const char *name, bool kernel)
 	if(p->name == NULL)
 		goto error1;
 	strcpy(p->name, name);
+	p->num_threads = 0;
 	p->ioctx = NULL;
-	p->cwd = NULL;
 	p->kaspace = vm_get_kernel_aspace();
 	p->aspace = NULL;
 	p->thread_list = NULL;

@@ -155,6 +155,7 @@ int vm_init(kernel_args *ka);
 int vm_init_postsem(kernel_args *ka);
 int vm_init_postthread(kernel_args *ka);
 vm_address_space *vm_create_aspace(const char *name, unsigned int base, unsigned int size, bool kernel);
+int vm_delete_aspace(vm_address_space *aspace);
 vm_address_space *vm_get_kernel_aspace();
 vm_address_space *vm_get_current_user_aspace();
 vm_region *vm_create_anonymous_region(vm_address_space *aspace, char *name, void **address, int addr_type,
