@@ -1205,7 +1205,6 @@ static int vfs_close(int fd, bool kernel)
 
 	remove_fd(ioctx, fd);
 	put_fd(f);
-	put_fd(f);
 
 	return 0;
 }
