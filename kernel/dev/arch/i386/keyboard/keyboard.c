@@ -202,7 +202,7 @@ static int handle_set1_keycode(unsigned char key)
 			// some invalid key
 //			dprintf("handle_set1_keycode: got invalid raw key 0x%x\n", key);
 			queue_event = false;
-		}			
+		}
 	}
 
 	if(queue_event) {
@@ -252,7 +252,8 @@ static int handle_set1_keycode(unsigned char key)
 				reboot();
 				break;
 			case KEY_SCRLOCK:
-				dbg_set_serial_debug(dbg_get_serial_debug()?false:true);
+				if(event.modifiers & KEY_MODIFIER_DOWN)
+					dbg_set_serial_debug(dbg_get_serial_debug()?false:true);
 				break;
 		}
 
@@ -267,7 +268,7 @@ static int handle_set1_keycode(unsigned char key)
 			event.modifiers |= KEY_MODIFIER_WIN;
 		if(menu)
 			event.modifiers |= KEY_MODIFIER_MENU;
-		
+
 
 		insert_in_buf(&event);
 	}
