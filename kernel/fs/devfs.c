@@ -23,7 +23,7 @@
 #include <stdio.h>
 
 
-#define DEVFS_TRACE 0
+//#define DEVFS_TRACE 1
 
 #if DEVFS_TRACE
 #define TRACE(x) dprintf x
@@ -48,6 +48,7 @@ struct devfs_stream {
 		struct stream_dir {
 			struct devfs_vnode *dir_head;
 			struct devfs_cookie *jar_head;
+			uint32 next_index;
 		} dir;
 		struct stream_dev {
 			dev_ident ident;
@@ -984,99 +985,154 @@ int bootstrap_devfs(void)
 	return vfs_register_filesystem("devfs", &devfs_calls);
 }
 
+// path should be a copied buffer that can be modified, the vnode is returned in parent.
+static int devfs_find_parent_node(char *path, struct devfs_vnode *current, struct devfs_vnode **parent)
+{
+	int i = 0, last = 0;
+	int done = 0;
+
+	*parent = current;
+
+	while (!done)
+	{
+		if (path[i] == '\0') {
+			done = 1; // we've found it so we can exit after this iteration.
+		} else if (path[i] == '/') {
+                        path[i] = '\0';
+                        i++;
+                } else {
+                        i++;
+                        continue;
+                }
+
+                TRACE(("\tpath component '%s'\n", &path[last]));
+
+                // we have a path component
+                current = devfs_find_in_dir(*parent, &path[last]);
+		if (current != NULL) {
+			if (current->stream.type != STREAM_TYPE_DIR) {
+				// we hit an existing file entry, so drop out here.
+				return ERR_VFS_ALREADY_EXISTS;
+			}
+		} else {
+			current = devfs_create_vnode(thedevfs, &path[last]);
+			if (current == NULL) {
+				return ERR_NO_MEMORY;
+			}
+
+			current->stream.type = STREAM_TYPE_DIR;
+			current->stream.u.dir.dir_head = NULL;
+			current->stream.u.dir.jar_head = NULL;
+		
+			hash_insert(thedevfs->vnode_list_hash, current);
+
+			devfs_insert_in_dir(*parent, current);
+		}
+	      
+		last = i;
+		*parent = current;
+        }
+	return 0;
+}
+
 int devfs_publish_device(const char *path, dev_ident ident, struct dev_calls *calls)
 {
-	int err = 0;
-	int i, last;
-	char temp[SYS_MAX_PATH_LEN+1];
-	struct devfs_vnode *dir;
-	struct devfs_vnode *v;
-	bool at_leaf;
-
-	TRACE(("devfs_publish_device: entry path '%s', hooks 0x%x\n", path, calls));
-
-	if(!thedevfs) {
-		panic("devfs_publish_device called before devfs mounted\n");
-		return ERR_GENERAL;
-	}
-
-	// copy the path over to a temp buffer so we can munge it
+	char temp[SYS_MAX_PATH_LEN + 1];
+	char *dir = NULL, 
+	     *name = temp, 
+	     *slash = NULL; // default to no path, just a name.
+	struct devfs_vnode *parent = NULL, 
+		           *child = NULL;
+	int errval = 0;
+	
 	strncpy(temp, path, SYS_MAX_PATH_LEN);
-	temp[SYS_MAX_PATH_LEN] = 0;
+	temp[SYS_MAX_PATH_LEN] = '\0';
 
 	mutex_lock(&thedevfs->lock);
 
-	// create the path leading to the device
-	// parse the path passed in, stripping out '/'
-	dir = thedevfs->root_vnode;
-	v = NULL;
-	i = 0;
-	last = 0;
-	at_leaf = false;
-	for(;;) {
-		if(temp[i] == 0) {
-			at_leaf = true; // we'll be done after this one
-		} else if(temp[i] == '/') {
-			temp[i] = 0;
-			i++;
-		} else {
-			i++;
-			continue;
-		}
+	parent = thedevfs->root_vnode;
 
-		TRACE(("\tpath component '%s'\n", &temp[last]));
-
-		// we have a path component
-		v = devfs_find_in_dir(dir, &temp[last]);
-		if(v) {
-			if(!at_leaf) {
-				// we are not at the leaf of the path, so as long as
-				// this is a dir we're okay
-				if(v->stream.type == STREAM_TYPE_DIR) {
-					last = i;
-					dir = v;
-					continue;
-				}
-			}
-			// we are at the leaf and hit another node
-			// or we aren't but hit a non-dir node.
-			// we're screwed
-			err = ERR_VFS_ALREADY_EXISTS;
-			goto err1;
-		} else {
-			v = devfs_create_vnode(thedevfs, &temp[last]);
-			if(!v) {
-				err = ERR_NO_MEMORY;
-				goto err1;
-			}
-		}
-
-		// set up the new vnode
-		if(at_leaf) {
-			// this is the last component
-			v->stream.type = STREAM_TYPE_DEVICE;
-			v->stream.u.dev.ident = ident;
-			v->stream.u.dev.calls = calls;
-		} else {
-			// this is a dir
-			v->stream.type = STREAM_TYPE_DIR;
-			v->stream.u.dir.dir_head = NULL;
-			v->stream.u.dir.jar_head = NULL;
-		}
-
-		hash_insert(thedevfs->vnode_list_hash, v);
-
-		devfs_insert_in_dir(dir, v);
-
-		if(at_leaf)
-			break;
-		last = i;
-		dir = v;
+	// find the last slash in the line and nul it, left side is path right side is
+	// file node.
+	slash = strrchr(temp, '/');
+	if (slash != NULL) {
+		// there's a slash, so we nul it and assign properly.
+		dir = temp;
+		*slash = '\0';
+		name = slash + 1;
 	}
+
+	TRACE(("Path: %s, file: %s\n", dir, name));
+
+	if (dir != NULL) {
+		errval = devfs_find_parent_node(dir, parent, &parent);
+		if (errval < 0) {
+			TRACE(("Couldn't get parent node\n"));
+			goto err1;
+		}
+	}
+
+	child = devfs_create_vnode(thedevfs, name);
+	if (child == NULL) {
+		errval = ERR_NO_MEMORY;
+		TRACE(("Couldn't create node.\n"));
+		goto err1;
+	}
+
+	child->stream.type = STREAM_TYPE_DEVICE;
+	child->stream.u.dev.ident = ident;
+	child->stream.u.dev.calls = calls;
+
+	hash_insert(thedevfs->vnode_list_hash, child);
+
+	devfs_insert_in_dir(parent, child);
 
 err1:
 	mutex_unlock(&thedevfs->lock);
-	return err;
+	return errval;
 }
 
+// this publishes a device with such that it's path is for eg "{path}/0" (always starts at 0)
+int devfs_publish_indexed_device(const char *dir, dev_ident ident, struct dev_calls *calls)
+{
+	char temp[SYS_MAX_PATH_LEN + 1];
+	char number[SYS_MAX_PATH_LEN + 1];
+	struct devfs_vnode *parent = NULL, 
+		           *child = NULL;
+	int errval = 0;
+	
+	strncpy(temp, dir, SYS_MAX_PATH_LEN);
+	temp[SYS_MAX_PATH_LEN] = '\0';
 
+	mutex_lock(&thedevfs->lock);
+
+	errval = devfs_find_parent_node(temp, thedevfs->root_vnode, &parent);
+	if (errval < 0) {
+		TRACE(("Couldn't get parent node\n"));
+		goto err1;
+	}
+
+	// now stringize the index of the next child node.
+	sprintf(number, "%u", parent->stream.u.dir.next_index);
+	number[SYS_MAX_PATH_LEN] = '\0';
+	++parent->stream.u.dir.next_index;
+
+	child = devfs_create_vnode(thedevfs, number);
+	if (child == NULL) {
+		errval = ERR_NO_MEMORY;
+		TRACE(("Couldn't create node.\n"));
+		goto err1;
+	}
+
+	child->stream.type = STREAM_TYPE_DEVICE;
+	child->stream.u.dev.ident = ident;
+	child->stream.u.dev.calls = calls;
+
+	hash_insert(thedevfs->vnode_list_hash, child);
+
+	devfs_insert_in_dir(parent, child);
+
+err1:
+	mutex_unlock(&thedevfs->lock);
+	return errval;
+}

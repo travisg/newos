@@ -30,5 +30,6 @@ struct dev_calls {
 
 /* api drivers will use to publish devices */
 int devfs_publish_device(const char *path, dev_ident ident, struct dev_calls *calls);
+int devfs_publish_indexed_device(const char *path, dev_ident ident, struct dev_calls *calls);
 
 #endif
