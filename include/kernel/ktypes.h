@@ -12,6 +12,6 @@ typedef uint32 fs_id;
 
 // Handled in arch_ktypes.h
 
-//typedef unsigned long addr;
+//typedef unsigned long addr_t;
 
 #endif

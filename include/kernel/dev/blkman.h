@@ -49,7 +49,7 @@ typedef struct blkdev_params {
 } blkdev_params;
 
 typedef struct phys_vec {
-	addr start;					// physical address
+	addr_t start;					// physical address
 	size_t len;
 } phys_vec;
 
@@ -81,12 +81,12 @@ typedef struct blkdev_interface {
 	// vecs are guaranteed to be sufficient
 	int (*open)( blkdev_cookie cookie, blkdev_handle_cookie *handle );
 	int (*close)( blkdev_handle_cookie handle );
-	
-	int (*read) ( blkdev_handle_cookie handle, const phys_vecs *vecs, 
+
+	int (*read) ( blkdev_handle_cookie handle, const phys_vecs *vecs,
 		off_t pos, size_t num_blocks, size_t *bytes_transferred );
-	int (*write) ( blkdev_handle_cookie handle, const phys_vecs *vecs, 
+	int (*write) ( blkdev_handle_cookie handle, const phys_vecs *vecs,
 		off_t pos, size_t num_blocks, size_t *bytes_transferred );
-	
+
 	int (*ioctl)( blkdev_handle_cookie handle, int op, void *buf, size_t len );
 } blkdev_interface;
 
@@ -95,7 +95,7 @@ typedef struct blkman_interface {
 		const char *name, blkman_dev_cookie *blkman_cookie,
 		blkdev_params *params );
 	int (*unregister_blkdev)( blkman_dev_cookie blkman_cookie );
-	
+
 	int (*set_capacity)( blkman_dev_cookie blkman_cookie, uint64 capacity, size_t block_size );
 } blkman_interface;
 

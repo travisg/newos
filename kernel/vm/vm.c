@@ -53,9 +53,9 @@ static spinlock_t max_commit_lock;
 // function declarations
 static vm_region *_vm_create_region_struct(vm_address_space *aspace, const char *name, int wiring, int lock);
 static int map_backing_store(vm_address_space *aspace, vm_store *store, void **vaddr,
-	off_t offset, addr size, int addr_type, int wiring, int lock, int mapping, vm_region **_region, const char *region_name);
-static int vm_soft_fault(addr address, bool is_write, bool is_user);
-static vm_region *vm_virtual_map_lookup(vm_virtual_map *map, addr address);
+	off_t offset, addr_t size, int addr_type, int wiring, int lock, int mapping, vm_region **_region, const char *region_name);
+static int vm_soft_fault(addr_t address, bool is_write, bool is_user);
+static vm_region *vm_virtual_map_lookup(vm_virtual_map *map, addr_t address);
 
 static int region_compare(void *_r, const void *key)
 {
@@ -216,7 +216,7 @@ static vm_region *_vm_create_region_struct(vm_address_space *aspace, const char 
 }
 
 // must be called with this address space's virtual_map.sem held
-static int find_and_insert_region_slot(vm_virtual_map *map, addr start, addr size, addr end, int addr_type, vm_region *region)
+static int find_and_insert_region_slot(vm_virtual_map *map, addr_t start, addr_t size, addr_t end, int addr_type, vm_region *region)
 {
 	vm_region *last_r = NULL;
 	vm_region *next_r;
@@ -323,7 +323,7 @@ static int find_and_insert_region_slot(vm_virtual_map *map, addr start, addr siz
 
 // a ref to the cache holding this store must be held before entering here
 static int map_backing_store(vm_address_space *aspace, vm_store *store, void **vaddr,
-	off_t offset, addr size, int addr_type, int wiring, int lock, int mapping, vm_region **_region, const char *region_name)
+	off_t offset, addr_t size, int addr_type, int wiring, int lock, int mapping, vm_region **_region, const char *region_name)
 {
 	vm_cache *cache;
 	vm_cache_ref *cache_ref;
@@ -423,11 +423,11 @@ static int map_backing_store(vm_address_space *aspace, vm_store *store, void **v
 	}
 
 	{
-		addr search_addr, search_end;
+		addr_t search_addr, search_end;
 
 		if(addr_type == REGION_ADDR_EXACT_ADDRESS) {
-			search_addr = (addr)*vaddr;
-			search_end = (addr)*vaddr + size;
+			search_addr = (addr_t)*vaddr;
+			search_end = (addr_t)*vaddr + size;
 		} else if(addr_type == REGION_ADDR_ANY_ADDRESS) {
 			search_addr = aspace->virtual_map.base;
 			search_end = aspace->virtual_map.base + (aspace->virtual_map.size - 1);
@@ -439,7 +439,7 @@ static int map_backing_store(vm_address_space *aspace, vm_store *store, void **v
 		err = find_and_insert_region_slot(&aspace->virtual_map, search_addr, size, search_end, addr_type, region);
 		if(err < 0)
 			goto err1b;
-		*vaddr = (addr *)region->base;
+		*vaddr = (addr_t *)region->base;
 	}
 
 	// attach the cache to the region
@@ -480,13 +480,13 @@ err:
 }
 
 region_id user_vm_create_anonymous_region(char *uname, void **uaddress, int addr_type,
-	addr size, int wiring, int lock)
+	addr_t size, int wiring, int lock)
 {
 	char name[SYS_MAX_OS_NAME_LEN];
 	void *address;
 	int rc, rc2;
 
-	if((addr)uname >= KERNEL_BASE && (addr)uname <= KERNEL_TOP)
+	if((addr_t)uname >= KERNEL_BASE && (addr_t)uname <= KERNEL_TOP)
 		return ERR_VM_BAD_USER_MEMORY;
 
 	rc = user_strncpy(name, uname, SYS_MAX_OS_NAME_LEN-1);
@@ -510,7 +510,7 @@ region_id user_vm_create_anonymous_region(char *uname, void **uaddress, int addr
 }
 
 region_id vm_create_anonymous_region(aspace_id aid, char *name, void **address, int addr_type,
-	addr size, int wiring, int lock)
+	addr_t size, int wiring, int lock)
 {
 	int err;
 	vm_region *region;
@@ -580,7 +580,7 @@ region_id vm_create_anonymous_region(aspace_id aid, char *name, void **address, 
 		case REGION_WIRING_WIRED: {
 			// pages aren't mapped at this point, but we just simulate a fault on
 			// every page, which should allocate them
-			addr va;
+			addr_t va;
 			// XXX remove
 			for(va = region->base; va < region->base + region->size; va += PAGE_SIZE) {
 //				dprintf("mapping wired pages: region 0x%x, cache_ref 0x%x 0x%x\n", region, cache_ref, region->cache_ref);
@@ -592,8 +592,8 @@ region_id vm_create_anonymous_region(aspace_id aid, char *name, void **address, 
 			// the pages should already be mapped. This is only really useful during
 			// boot time. Find the appropriate vm_page objects and stick them in
 			// the cache object.
-			addr va;
-			addr pa;
+			addr_t va;
+			addr_t pa;
 			unsigned int flags;
 			int err;
 			vm_page *page;
@@ -622,8 +622,8 @@ region_id vm_create_anonymous_region(aspace_id aid, char *name, void **address, 
 			break;
 		}
 		case REGION_WIRING_WIRED_CONTIG: {
-			addr va;
-			addr phys_addr;
+			addr_t va;
+			addr_t phys_addr;
 			int err;
 			vm_page *page;
 			off_t offset = 0;
@@ -667,13 +667,13 @@ region_id vm_create_anonymous_region(aspace_id aid, char *name, void **address, 
 }
 
 region_id vm_map_physical_memory(aspace_id aid, char *name, void **address, int addr_type,
-	addr size, int lock, addr phys_addr)
+	addr_t size, int lock, addr_t phys_addr)
 {
 	vm_region *region;
 	vm_cache *cache;
 	vm_cache_ref *cache_ref;
 	vm_store *store;
-	addr map_offset;
+	addr_t map_offset;
 	int err;
 
 	vm_address_space *aspace = vm_get_aspace_by_id(aid);
@@ -716,7 +716,7 @@ region_id vm_map_physical_memory(aspace_id aid, char *name, void **address, int 
 	return region->id;
 }
 
-region_id vm_create_null_region(aspace_id aid, char *name, void **address, int addr_type, addr size)
+region_id vm_create_null_region(aspace_id aid, char *name, void **address, int addr_type, addr_t size)
 {
 	vm_region *region;
 	vm_cache *cache;
@@ -754,7 +754,7 @@ region_id vm_create_null_region(aspace_id aid, char *name, void **address, int a
 }
 
 static region_id _vm_map_file(aspace_id aid, char *name, void **address, int addr_type,
-	addr size, int lock, int mapping, const char *path, off_t offset, bool kernel)
+	addr_t size, int lock, int mapping, const char *path, off_t offset, bool kernel)
 {
 	vm_region *region;
 	vm_cache *cache;
@@ -830,26 +830,26 @@ restart:
 }
 
 region_id vm_map_file(aspace_id aid, char *name, void **address, int addr_type,
-	addr size, int lock, int mapping, const char *path, off_t offset)
+	addr_t size, int lock, int mapping, const char *path, off_t offset)
 {
 	return _vm_map_file(aid, name, address, addr_type, size, lock, mapping, path, offset, true);
 }
 
 region_id user_vm_map_file(char *uname, void **uaddress, int addr_type,
-	addr size, int lock, int mapping, const char *upath, off_t offset)
+	addr_t size, int lock, int mapping, const char *upath, off_t offset)
 {
 	char name[SYS_MAX_OS_NAME_LEN];
 	void *address;
 	char path[SYS_MAX_PATH_LEN];
 	int rc, rc2;
 
-	if((addr)uname >= KERNEL_BASE && (addr)uname <= KERNEL_TOP)
+	if((addr_t)uname >= KERNEL_BASE && (addr_t)uname <= KERNEL_TOP)
 		return ERR_VM_BAD_USER_MEMORY;
 
-	if((addr)uaddress >= KERNEL_BASE && (addr)uaddress <= KERNEL_TOP)
+	if((addr_t)uaddress >= KERNEL_BASE && (addr_t)uaddress <= KERNEL_TOP)
 		return ERR_VM_BAD_USER_MEMORY;
 
-	if((addr)upath >= KERNEL_BASE && (addr)upath <= KERNEL_TOP)
+	if((addr_t)upath >= KERNEL_BASE && (addr_t)upath <= KERNEL_TOP)
 		return ERR_VM_BAD_USER_MEMORY;
 
 	rc = user_strncpy(name, uname, SYS_MAX_OS_NAME_LEN-1);
@@ -884,10 +884,10 @@ region_id user_vm_clone_region(char *uname, void **uaddress, int addr_type,
 	void *address;
 	int rc, rc2;
 
-	if((addr)uname >= KERNEL_BASE && (addr)uname <= KERNEL_TOP)
+	if((addr_t)uname >= KERNEL_BASE && (addr_t)uname <= KERNEL_TOP)
 		return ERR_VM_BAD_USER_MEMORY;
 
-	if((addr)uaddress >= KERNEL_BASE && (addr)uaddress <= KERNEL_TOP)
+	if((addr_t)uaddress >= KERNEL_BASE && (addr_t)uaddress <= KERNEL_TOP)
 		return ERR_VM_BAD_USER_MEMORY;
 
 	rc = user_strncpy(name, uname, SYS_MAX_OS_NAME_LEN-1);
@@ -1059,7 +1059,7 @@ int user_vm_get_region_info(region_id id, vm_region_info *uinfo)
 	vm_region_info info;
 	int rc, rc2;
 
-	if((addr)uinfo >= KERNEL_BASE && (addr)uinfo <= KERNEL_TOP)
+	if((addr_t)uinfo >= KERNEL_BASE && (addr_t)uinfo <= KERNEL_TOP)
 		return ERR_VM_BAD_USER_MEMORY;
 
 	rc = vm_get_region_info(id, &info);
@@ -1097,7 +1097,7 @@ int vm_get_region_info(region_id id, vm_region_info *info)
 	return 0;
 }
 
-int vm_get_page_mapping(aspace_id aid, addr vaddr, addr *paddr)
+int vm_get_page_mapping(aspace_id aid, addr_t vaddr, addr_t *paddr)
 {
 	vm_address_space *aspace;
 	unsigned int null_flags;
@@ -1118,7 +1118,7 @@ static void display_mem(int argc, char **argv)
 	int item_size;
 	int display_width;
 	int num = 1;
-	addr address;
+	addr_t address;
 	int i;
 	int j;
 
@@ -1190,7 +1190,7 @@ static void display_mem(int argc, char **argv)
 
 static void dump_cache_ref(int argc, char **argv)
 {
-	addr address;
+	addr_t address;
 	vm_region *region;
 	vm_cache_ref *cache_ref;
 
@@ -1252,7 +1252,7 @@ static const char *page_state_to_text(int state)
 
 static void dump_cache(int argc, char **argv)
 {
-	addr address;
+	addr_t address;
 	vm_cache *cache;
 	vm_page *page;
 
@@ -1519,7 +1519,7 @@ void vm_put_aspace(vm_address_space *aspace)
 	return;
 }
 
-aspace_id vm_create_aspace(const char *name, addr base, addr size, bool kernel)
+aspace_id vm_create_aspace(const char *name, addr_t base, addr_t size, bool kernel)
 {
 	vm_address_space *aspace;
 	int err;
@@ -1658,8 +1658,8 @@ int vm_init(kernel_args *ka)
 {
 	int err = 0;
 	unsigned int i;
-	addr heap_base;
-	addr heap_size;
+	addr_t heap_base;
+	addr_t heap_size;
 	void *null_addr;
 
 	dprintf("vm_init: entry\n");
@@ -1696,14 +1696,14 @@ int vm_init(kernel_args *ka)
 	// create the region and address space hash tables
 	{
 		vm_address_space *aspace;
-		aspace_table = hash_init(ASPACE_HASH_TABLE_SIZE, (addr)&aspace->hash_next - (addr)aspace,
+		aspace_table = hash_init(ASPACE_HASH_TABLE_SIZE, (addr_t)&aspace->hash_next - (addr_t)aspace,
 			&aspace_compare, &aspace_hash);
 		if(aspace_table == NULL)
 			panic("vm_init: error creating aspace hash table\n");
 	}
 	{
 		vm_region *region;
-		region_table = hash_init(REGION_HASH_TABLE_SIZE, (addr)&region->hash_next - (addr)region,
+		region_table = hash_init(REGION_HASH_TABLE_SIZE, (addr_t)&region->hash_next - (addr_t)region,
 			&region_compare, &region_hash);
 		if(region_table == NULL)
 			panic("vm_init: error creating aspace hash table\n");
@@ -1809,7 +1809,7 @@ int vm_init_postthread(kernel_args *ka)
 	return 0;
 }
 
-int vm_page_fault(addr address, addr fault_address, bool is_write, bool is_user, addr *newip)
+int vm_page_fault(addr_t address, addr_t fault_address, bool is_write, bool is_user, addr_t *newip)
 {
 	int err;
 
@@ -1850,7 +1850,7 @@ int vm_page_fault(addr address, addr fault_address, bool is_write, bool is_user,
 #define TRACE
 #endif
 
-static int vm_soft_fault(addr address, bool is_write, bool is_user)
+static int vm_soft_fault(addr_t address, bool is_write, bool is_user)
 {
 	vm_address_space *aspace;
 	vm_virtual_map *map;
@@ -1998,10 +1998,10 @@ static int vm_soft_fault(addr address, bool is_write, bool is_user)
 				vecs->vec[0].len = PAGE_SIZE;
 
 				page = vm_page_allocate_page(PAGE_STATE_FREE);
-				(*aspace->translation_map.ops->get_physical_page)(page->ppn * PAGE_SIZE, (addr *)&vecs->vec[0].start, PHYSICAL_PAGE_CAN_WAIT);
+				(*aspace->translation_map.ops->get_physical_page)(page->ppn * PAGE_SIZE, (addr_t *)&vecs->vec[0].start, PHYSICAL_PAGE_CAN_WAIT);
 				// handle errors here
 				err = cache_ref->cache->store->ops->read(cache_ref->cache->store, cache_offset, vecs);
-				(*aspace->translation_map.ops->put_physical_page)((addr)vecs->vec[0].start);
+				(*aspace->translation_map.ops->put_physical_page)((addr_t)vecs->vec[0].start);
 
 				mutex_lock(&cache_ref->lock);
 
@@ -2064,20 +2064,20 @@ static int vm_soft_fault(addr address, bool is_write, bool is_user)
 
 		// try to get a mapping for the src and dest page so we can copy it
 		for(;;) {
-			(*aspace->translation_map.ops->get_physical_page)(src_page->ppn * PAGE_SIZE, (addr *)&src, PHYSICAL_PAGE_CAN_WAIT);
-			err = (*aspace->translation_map.ops->get_physical_page)(page->ppn * PAGE_SIZE, (addr *)&dest, PHYSICAL_PAGE_NO_WAIT);
+			(*aspace->translation_map.ops->get_physical_page)(src_page->ppn * PAGE_SIZE, (addr_t *)&src, PHYSICAL_PAGE_CAN_WAIT);
+			err = (*aspace->translation_map.ops->get_physical_page)(page->ppn * PAGE_SIZE, (addr_t *)&dest, PHYSICAL_PAGE_NO_WAIT);
 			if(err == NO_ERROR)
 				break;
 
 			// it couldn't map the second one, so sleep and retry
 			// keeps an extremely rare deadlock from occuring
-			(*aspace->translation_map.ops->put_physical_page)((addr)src);
+			(*aspace->translation_map.ops->put_physical_page)((addr_t)src);
 			thread_snooze(5000);
 		}
 
 		memcpy(dest, src, PAGE_SIZE);
-		(*aspace->translation_map.ops->put_physical_page)((addr)src);
-		(*aspace->translation_map.ops->put_physical_page)((addr)dest);
+		(*aspace->translation_map.ops->put_physical_page)((addr_t)src);
+		(*aspace->translation_map.ops->put_physical_page)((addr_t)dest);
 
 		vm_page_set_state(src_page, PAGE_STATE_ACTIVE);
 
@@ -2153,7 +2153,7 @@ static int vm_soft_fault(addr address, bool is_write, bool is_user)
 	return err;
 }
 
-static vm_region *vm_virtual_map_lookup(vm_virtual_map *map, addr address)
+static vm_region *vm_virtual_map_lookup(vm_virtual_map *map, addr_t address)
 {
 	vm_region *region;
 
@@ -2177,7 +2177,7 @@ static vm_region *vm_virtual_map_lookup(vm_virtual_map *map, addr address)
 	return region;
 }
 
-int vm_get_physical_page(addr paddr, addr *vaddr, int flags)
+int vm_get_physical_page(addr_t paddr, addr_t *vaddr, int flags)
 {
 #if DEBUG > 1
 	VERIFY_VM_ASPACE(kernel_aspace);
@@ -2185,7 +2185,7 @@ int vm_get_physical_page(addr paddr, addr *vaddr, int flags)
 	return (*kernel_aspace->translation_map.ops->get_physical_page)(paddr, vaddr, flags);
 }
 
-int vm_put_physical_page(addr vaddr)
+int vm_put_physical_page(addr_t vaddr)
 {
 #if DEBUG > 1
 	VERIFY_VM_ASPACE(kernel_aspace);
@@ -2193,7 +2193,7 @@ int vm_put_physical_page(addr vaddr)
 	return (*kernel_aspace->translation_map.ops->put_physical_page)(vaddr);
 }
 
-void vm_increase_max_commit(addr delta)
+void vm_increase_max_commit(addr_t delta)
 {
 //	dprintf("vm_increase_max_commit: delta 0x%x\n", delta);
 
@@ -2225,7 +2225,7 @@ int user_memset(void *s, char c, size_t count)
 	return arch_cpu_user_memset(s, c, count, &thread_get_current_thread()->fault_handler);
 }
 
-addr vm_get_mem_size(void)
+addr_t vm_get_mem_size(void)
 {
 	return vm_info.physical_page_size * vm_info.physical_pages;
 }

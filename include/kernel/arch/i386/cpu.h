@@ -105,11 +105,11 @@ struct arch_cpu_info {
 #define nop() __asm__ ("nop"::)
 
 void setup_system_time(unsigned int cv_factor);
-void i386_context_switch(struct arch_thread *old, struct arch_thread *new, addr new_pgdir);
-void i386_enter_uspace(addr entry, void *args, addr ustack_top);
-void i386_set_kstack(addr kstack);
-void i386_switch_stack_and_call(addr stack, void (*func)(void *), void *arg);
-void i386_swap_pgdir(addr new_pgdir);
+void i386_context_switch(struct arch_thread *old, struct arch_thread *new, addr_t new_pgdir);
+void i386_enter_uspace(addr_t entry, void *args, addr_t ustack_top);
+void i386_set_kstack(addr_t kstack);
+void i386_switch_stack_and_call(addr_t stack, void (*func)(void *), void *arg);
+void i386_swap_pgdir(addr_t new_pgdir);
 void i386_fsave_swap(void *old_fpu_state, void *new_fpu_state);
 void i386_fxsave_swap(void *old_fpu_state, void *new_fpu_state);
 desc_table *i386_get_gdt(void);

@@ -45,8 +45,8 @@ typedef struct nfs_cookie {
 	} u;
 } nfs_cookie;
 
-#define VNODETOVNID(vno) ((vnode_id)((addr)(vno)))
-#define VNIDTOVNODE(vnid) ((nfs_vnode *)((addr)(vnid)))
+#define VNODETOVNID(vno) ((vnode_id)((addr_t)(vno)))
+#define VNIDTOVNODE(vnid) ((nfs_vnode *)((addr_t)(vnid)))
 
 /* fs calls */
 int nfs_mount(fs_cookie *fs, fs_id id, const char *device, void *args, vnode_id *root_vnid);

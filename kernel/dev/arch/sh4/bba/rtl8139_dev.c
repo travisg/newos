@@ -66,7 +66,7 @@ static int gaps_init()
 	vus * const g216 = REGS(0xa1000000);
 	vul * const g232 = REGL(0xa1000000);
 	int i;
-	
+
 	/* Initialize the "GAPS" PCI glue controller.
 	   It ain't pretty but it works. */
 	g232[0x1418/4] = 0x5a14a501;		/* M */
@@ -116,8 +116,8 @@ int rtl8139_detect(rtl8139 **rtl)
 	memset(*rtl, 0, sizeof(rtl8139));
 	(*rtl)->irq = 27;
 	(*rtl)->phys_base = 0x01001700;
-	(*rtl)->phys_size = 0x100;	
-	
+	(*rtl)->phys_size = 0x100;
+
 	dprintf("detected rtl8139 at irq %d, memory base 0x%lx, size 0x%lx\n",
 			(*rtl)->irq, (*rtl)->phys_base, (*rtl)->phys_size);
 
@@ -128,7 +128,7 @@ int rtl8139_init(rtl8139 *rtl)
 {
 	bigtime_t time;
 	int err = -1;
-	addr temp;
+	addr_t temp;
 
 	dprintf("rtl8139_init: rtl %p\n", rtl);
 
@@ -157,7 +157,7 @@ int rtl8139_init(rtl8139 *rtl)
 	rtl->rxbuf = PHYS_ADDR_TO_P1(ADDR_RXBUF);
 	rtl->txbuf = PHYS_ADDR_TO_P1(ADDR_TXBUF0);
 
-		
+
 	// set up the transmission buf and sem
 	rtl->tx_sem = sem_create(4, "rtl8139_txsem");
 	mutex_init(&rtl->lock, "rtl8139");
@@ -168,9 +168,9 @@ int rtl8139_init(rtl8139 *rtl)
 
 	// set up the interrupt handler
 	int_set_io_interrupt_handler(rtl->irq, &rtl8139_int, rtl);
-	
+
 	ASIC_IRQB_B = 1 << 3;
-	
+
 	// read the mac address
 	rtl->mac_addr[0] = RTL_READ_8(rtl, RT_IDR0);
 	rtl->mac_addr[1] = RTL_READ_8(rtl, RT_IDR0 + 1);
@@ -199,7 +199,7 @@ int rtl8139_init(rtl8139 *rtl)
 	// Set Rx FIFO threashold to 1K, Rx size to 64k+16, 1024 byte DMA burst
 	RTL_WRITE_32(rtl, RT_RXCONFIG, 0x0000de00);
 #endif
-	
+
 	// Set Tx 1024 byte DMA burst
 	RTL_WRITE_32(rtl, RT_TXCONFIG, 0x03000600);
 
@@ -214,13 +214,13 @@ int rtl8139_init(rtl8139 *rtl)
 
 		// Setup RX buffers
 	dprintf("rx buffer will be at 0x%lx\n", ADDR_RXBUF);
-	RTL_WRITE_32(rtl, RT_RXBUF, ADDR_RXBUF);	
+	RTL_WRITE_32(rtl, RT_RXBUF, ADDR_RXBUF);
 		// Setup TX buffers
 	RTL_WRITE_32(rtl, RT_TXADDR0, ADDR_TXBUF0);
 	RTL_WRITE_32(rtl, RT_TXADDR1, ADDR_TXBUF0 + 2*1024);
 	RTL_WRITE_32(rtl, RT_TXADDR2, ADDR_TXBUF0 + 4*1024);
 	RTL_WRITE_32(rtl, RT_TXADDR3, ADDR_TXBUF0 + 6*1024);
-	
+
 	// Reset RXMISSED counter
 	RTL_WRITE_32(rtl, RT_RXMISSED, 0);
 
@@ -490,7 +490,7 @@ static int rtl8139_int(void* data)
 
 	for(;;) {
 		uint16 status = RTL_READ_16(rtl, RT_INTRSTATUS);
-		
+
 		if(status)
 			RTL_WRITE_16(rtl, RT_INTRSTATUS, status);
 		else

@@ -41,13 +41,13 @@ static void interrupt_ack(int n)
 	}
 }
 
-static void _set_gate(desc_table *gate_addr, unsigned int addr, int type, int dpl)
+static void _set_gate(desc_table *gate_addr, unsigned int addr_t, int type, int dpl)
 {
 	unsigned int gate1; // first byte of gate desc
 	unsigned int gate2; // second byte of gate desc
 
-	gate1 = (KERNEL_CODE_SEG << 16) | (0x0000ffff & addr);
-	gate2 = (0xffff0000 & addr) | 0x8000 | (dpl << 13) | (type << 8);
+	gate1 = (KERNEL_CODE_SEG << 16) | (0x0000ffff & addr_t);
+	gate2 = (0xffff0000 & addr_t) | 0x8000 | (dpl << 13) | (type << 8);
 
 	gate_addr->a = gate1;
 	gate_addr->b = gate2;
@@ -81,22 +81,22 @@ void i386_set_task_gate(int n, uint32 seg)
 	idt[n].b = 0x8000 | (0 << 13) | (0x5 << 8); // present, dpl 0, type 5
 }
 
-static void set_intr_gate(int n, void *addr)
+static void set_intr_gate(int n, void *addr_t)
 {
-	_set_gate(&idt[n], (unsigned int)addr, 14, 0);
+	_set_gate(&idt[n], (unsigned int)addr_t, 14, 0);
 }
 
 // unused
 #if 0
-static void set_trap_gate(int n, void *addr)
+static void set_trap_gate(int n, void *addr_t)
 {
-	_set_gate(&idt[n], (unsigned int)addr, 15, 0);
+	_set_gate(&idt[n], (unsigned int)addr_t, 15, 0);
 }
 #endif
 
-static void set_system_gate(int n, void *addr)
+static void set_system_gate(int n, void *addr_t)
 {
-	_set_gate(&idt[n], (unsigned int)addr, 15, 3);
+	_set_gate(&idt[n], (unsigned int)addr_t, 15, 3);
 }
 
 void arch_int_enable_interrupts(void)
@@ -170,7 +170,7 @@ void i386_handle_trap(struct iframe frame)
 			break;
 		case 14: {
 			unsigned int cr2;
-			addr newip;
+			addr_t newip;
 
 			asm ("movl %%cr2, %0" : "=r" (cr2) );
 
@@ -224,7 +224,7 @@ void i386_handle_trap(struct iframe frame)
 			** each is verified to make sure someone doesn't try to clobber it
 			*/
 			if(frame.ecx <= MAX_ARGS) {
-				if((addr)frame.edx >= KERNEL_BASE && (addr)frame.edx <= KERNEL_TOP) {
+				if((addr_t)frame.edx >= KERNEL_BASE && (addr_t)frame.edx <= KERNEL_TOP) {
 					retcode =  ERR_VM_BAD_USER_MEMORY;
 				} else {
 					rc = user_memcpy(args, (void *)frame.edx, frame.ecx * sizeof(unsigned int));

@@ -71,7 +71,7 @@ int hoardGetNumProcessors (void)
 }
 
 static region_id heap_region = -1;
-static addr brk;
+static addr_t brk;
 
 int __heap_init()
 {

@@ -405,7 +405,7 @@ int udp_init(void)
 
 	mutex_init(&endpoints_lock, "udp_endpoints lock");
 
-	endpoints = hash_init(256, (addr)&e.next - (addr)&e, &udp_endpoint_compare_func, &udp_endpoint_hash_func);
+	endpoints = hash_init(256, (addr_t)&e.next - (addr_t)&e, &udp_endpoint_compare_func, &udp_endpoint_hash_func);
 	if(!endpoints)
 		return ERR_NO_MEMORY;
 

@@ -269,7 +269,7 @@ static int maple_init(struct maple_bus *bus)
 
 	mutex_init(&bus->lock, "maple_bus_lock");
 
-	vm_get_page_mapping(vm_get_kernel_aspace_id(), (addr)foo, (addr *)&bus->dma_buffer);
+	vm_get_page_mapping(vm_get_kernel_aspace_id(), (addr_t)foo, (addr_t *)&bus->dma_buffer);
 	bus->dma_buffer = (void *)PHYS_ADDR_TO_P2(bus->dma_buffer);
 	memset(bus->dma_buffer, 0, DMA_BUF_SIZE);
 

@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -16,7 +16,7 @@ int arch_vm_init2(kernel_args *ka)
 	return 0;
 }
 
-int map_page_into_kspace(addr paddr, addr kaddr, int lock)
+int map_page_into_kspace(addr_t paddr, addr_t kaddr, int lock)
 {
 	panic("map_page_into_kspace: XXX finish or dont use!\n");
 	return 0;

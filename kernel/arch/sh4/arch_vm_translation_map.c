@@ -19,8 +19,8 @@
 #include <arch/sh4/vcpu.h>
 
 typedef struct vm_translation_map_arch_info_struct {
-	addr pgdir_virt;
-	addr pgdir_phys;
+	addr_t pgdir_virt;
+	addr_t pgdir_phys;
 	bool is_user;
 } vm_translation_map_arch_info;
 
@@ -66,7 +66,7 @@ static int unlock_tmap(vm_translation_map *map)
 	return -1;
 }
 
-static int map_tmap(vm_translation_map *map, addr va, addr pa, unsigned int lock)
+static int map_tmap(vm_translation_map *map, addr_t va, addr_t pa, unsigned int lock)
 {
 	struct pdent *pd = NULL;
 	struct ptent *pt;
@@ -125,7 +125,7 @@ static int map_tmap(vm_translation_map *map, addr va, addr pa, unsigned int lock
 	return 0;
 }
 
-static int unmap_tmap(vm_translation_map *map, addr start, addr end)
+static int unmap_tmap(vm_translation_map *map, addr_t start, addr_t end)
 {
 	struct pdent *pd;
 	struct ptent *pt;
@@ -171,7 +171,7 @@ static int unmap_tmap(vm_translation_map *map, addr start, addr end)
 	return 0;
 }
 
-static int query_tmap(vm_translation_map *map, addr va, addr *out_physical, unsigned int *out_flags)
+static int query_tmap(vm_translation_map *map, addr_t va, addr_t *out_physical, unsigned int *out_flags)
 {
 	struct pdent *pd;
 	struct ptent *pt;
@@ -217,18 +217,18 @@ static int query_tmap(vm_translation_map *map, addr va, addr *out_physical, unsi
 	return 0;
 }
 
-static addr get_mapped_size_tmap(vm_translation_map *map)
+static addr_t get_mapped_size_tmap(vm_translation_map *map)
 {
 	return map->map_count;
 }
 
-static int protect_tmap(vm_translation_map *map, addr base, addr top, unsigned int attributes)
+static int protect_tmap(vm_translation_map *map, addr_t base, addr_t top, unsigned int attributes)
 {
 	// XXX finish
 	return -1;
 }
 
-static int clear_flags_tmap(vm_translation_map *map, addr va, unsigned int flags)
+static int clear_flags_tmap(vm_translation_map *map, addr_t va, unsigned int flags)
 {
 	struct pdent *pd;
 	struct ptent *pt;
@@ -279,7 +279,7 @@ static void flush_tmap(vm_translation_map *map)
 	// no-op, we aren't caching any tlb invalidations
 }
 
-static int get_physical_page_tmap(addr pa, addr *va, int flags)
+static int get_physical_page_tmap(addr_t pa, addr_t *va, int flags)
 {
 	if(pa >= PHYS_ADDR_SIZE)
 		panic("get_physical_page_tmap: passed invalid address 0x%x\n", pa);
@@ -287,7 +287,7 @@ static int get_physical_page_tmap(addr pa, addr *va, int flags)
 	return NO_ERROR;
 }
 
-static int put_physical_page_tmap(addr va)
+static int put_physical_page_tmap(addr_t va)
 {
 	if(va < P1_AREA && va >= P2_AREA)
 		panic("put_physical_page_tmap: bad address passed 0x%x\n", va);
@@ -327,14 +327,14 @@ int vm_translation_map_create(vm_translation_map *new_map, bool kernel)
 	if(!kernel) {
 		// user
 		// allocate a pgdir
-		new_map->arch_data->pgdir_virt = (addr)kmalloc(PAGE_SIZE);
+		new_map->arch_data->pgdir_virt = (addr_t)kmalloc(PAGE_SIZE);
 		if(new_map->arch_data->pgdir_virt == NULL) {
 			kfree(new_map->arch_data);
 			return -1;
 		}
-		if(((addr)new_map->arch_data->pgdir_virt % PAGE_SIZE) != 0)
+		if(((addr_t)new_map->arch_data->pgdir_virt % PAGE_SIZE) != 0)
 			panic("vm_translation_map_create: malloced pgdir and found it wasn't aligned!\n");
-		vm_get_page_mapping(vm_get_kernel_aspace_id(), (addr)new_map->arch_data->pgdir_virt, (addr *)&new_map->arch_data->pgdir_phys);
+		vm_get_page_mapping(vm_get_kernel_aspace_id(), (addr_t)new_map->arch_data->pgdir_virt, (addr_t *)&new_map->arch_data->pgdir_phys);
 		new_map->arch_data->pgdir_phys = PHYS_TO_P1(new_map->arch_data->pgdir_phys);
 		// zero out the new pgdir
 		memset((void *)new_map->arch_data->pgdir_virt, 0, PAGE_SIZE);
@@ -342,8 +342,8 @@ int vm_translation_map_create(vm_translation_map *new_map, bool kernel)
 	} else {
 		// kernel
 		// we already know the kernel pgdir mapping
-		(addr)new_map->arch_data->pgdir_virt = NULL;
-		(addr)new_map->arch_data->pgdir_phys = vcpu->kernel_pgdir;
+		(addr_t)new_map->arch_data->pgdir_virt = NULL;
+		(addr_t)new_map->arch_data->pgdir_phys = vcpu->kernel_pgdir;
 		new_map->arch_data->is_user = false;
 	}
 
@@ -368,7 +368,7 @@ void vm_translation_map_module_init_post_sem(kernel_args *ka)
 
 // XXX horrible back door to map a page quickly regardless of translation map object, etc.
 // used only during VM setup
-int vm_translation_map_quick_map(kernel_args *ka, addr va, addr pa, unsigned int lock, addr (*get_free_page)(kernel_args *))
+int vm_translation_map_quick_map(kernel_args *ka, addr_t va, addr_t pa, unsigned int lock, addr_t (*get_free_page)(kernel_args *))
 {
 	struct pdent *pd = NULL;
 	struct ptent *pt;
@@ -416,7 +416,7 @@ int vm_translation_map_quick_map(kernel_args *ka, addr va, addr pa, unsigned int
 	return 0;
 }
 
-addr vm_translation_map_get_pgdir(vm_translation_map *map)
+addr_t vm_translation_map_get_pgdir(vm_translation_map *map)
 {
-	return (addr)map->arch_data->pgdir_phys;
+	return (addr_t)map->arch_data->pgdir_phys;
 }

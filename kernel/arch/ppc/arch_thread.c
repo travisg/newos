@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -21,7 +21,7 @@ int arch_thread_initialize_kthread_stack(struct thread *t, int (*start_func)(voi
 	return 0;
 }
 
-void arch_thread_switch_kstack_and_call(struct thread *t, addr new_kstack, void (*func)(void *), void *arg)
+void arch_thread_switch_kstack_and_call(struct thread *t, addr_t new_kstack, void (*func)(void *), void *arg)
 {
 }
 
@@ -33,7 +33,7 @@ void arch_thread_dump_info(void *info)
 {
 }
 
-void arch_thread_enter_uspace(struct thread *t, addr entry, void *args, addr ustack_top)
+void arch_thread_enter_uspace(struct thread *t, addr_t entry, void *args, addr_t ustack_top)
 {
 }
 

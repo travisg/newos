@@ -94,7 +94,7 @@ typedef	struct
 	int		irq;
 	bool		busMasterActivated;
 	uint32		*prd_buf_address;
-	addr		prd_phy_address;
+	addr_t		prd_phy_address;
 	uint8		stat_reg;
 	uint8		rw_control;
 	uint8		*raw_buffer;
@@ -211,7 +211,7 @@ static	uint8	read_register(void *cookie,int reg);
 
 static	int	init_dma(pci_bus_cookie *cookie)
 {
-	addr	temp;
+	addr_t	temp;
 	uint8	val = in8(cookie->io_port + BM_STATUS_REG );
 	TRACE(("entering init_dma status = %d\n",val));
 	if (!( val &( BM_SR_MASK_DRV1 | BM_SR_MASK_DRV0 )))
@@ -229,9 +229,9 @@ static	int	init_dma(pci_bus_cookie *cookie)
 
 	memset(cookie->prd_buf_address, 0, 4096);
 
-	vm_get_page_mapping(vm_get_kernel_aspace_id(), (addr)cookie->prd_buf_address, &cookie->prd_phy_address);
+	vm_get_page_mapping(vm_get_kernel_aspace_id(), (addr_t)cookie->prd_buf_address, &cookie->prd_phy_address);
 	cookie->raw_buffer = (uint8*)0x80000;
-	vm_map_physical_memory(vm_get_kernel_aspace_id(), "test", (void *)&cookie->mapped_address, REGION_ADDR_ANY_ADDRESS,0x10000, LOCK_RW|LOCK_KERNEL, (addr)cookie->raw_buffer);
+	vm_map_physical_memory(vm_get_kernel_aspace_id(), "test", (void *)&cookie->mapped_address, REGION_ADDR_ANY_ADDRESS,0x10000, LOCK_RW|LOCK_KERNEL, (addr_t)cookie->raw_buffer);
 	TRACE(("mapped address is %X\n",cookie->mapped_address));
       	return 0;
 }

@@ -93,15 +93,15 @@ struct thread {
 	int sem_errcode;
 	int sem_flags;
 
-	addr fault_handler;
-	addr entry;
+	addr_t fault_handler;
+	addr_t entry;
 	void *args;
 	struct proc *proc;
 	sem_id return_code_sem;
 	region_id kernel_stack_region_id;
-	addr kernel_stack_base;
+	addr_t kernel_stack_base;
 	region_id user_stack_region_id;
-	addr user_stack_base;
+	addr_t user_stack_base;
 
 	bigtime_t user_time;
 	bigtime_t kernel_time;
@@ -132,7 +132,7 @@ struct thread_info {
 	int state;
 	int priority;
 
-	addr user_stack_base;
+	addr_t user_stack_base;
 
 	bigtime_t user_time;
 	bigtime_t kernel_time;
@@ -169,7 +169,7 @@ extern inline thread_id thread_get_current_thread_id(void) {
 }
 int thread_wait_on_thread(thread_id id, int *retcode);
 
-thread_id thread_create_user_thread(char *name, proc_id pid, addr entry, void *args);
+thread_id thread_create_user_thread(char *name, proc_id pid, addr_t entry, void *args);
 thread_id thread_create_kernel_thread(const char *name, int (*func)(void *args), void *args);
 
 int thread_get_thread_info(thread_id id, struct thread_info *info);
@@ -195,7 +195,7 @@ int user_proc_get_next_proc_info(uint32 *cookie, struct proc_info *info);
 int user_thread_wait_on_thread(thread_id id, int *uretcode);
 proc_id user_proc_create_proc(const char *path, const char *name, char **args, int argc, int priority);
 int user_proc_wait_on_proc(proc_id id, int *uretcode);
-thread_id user_thread_create_user_thread(char *uname, proc_id pid, addr entry, void *args);
+thread_id user_thread_create_user_thread(char *uname, proc_id pid, addr_t entry, void *args);
 int user_thread_set_priority(thread_id id, int priority);
 int user_thread_snooze(bigtime_t time);
 int user_getrlimit(int resource, struct rlimit * rlp);

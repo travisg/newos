@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -7,7 +7,7 @@
 
 // architecture specific thread info
 struct arch_thread {
-	addr sp;
+	addr_t sp;
 };
 
 struct arch_proc {

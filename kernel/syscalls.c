@@ -130,7 +130,7 @@ int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_re
 		case SYSCALL_VM_CREATE_ANONYMOUS_REGION:
 			*call_ret = user_vm_create_anonymous_region(
 				(char *)arg0, (void **)arg1, (int)arg2,
-				(addr)arg3, (int)arg4, (int)arg5);
+				(addr_t)arg3, (int)arg4, (int)arg5);
 			break;
 		case SYSCALL_VM_CLONE_REGION:
 			*call_ret = user_vm_clone_region(
@@ -140,7 +140,7 @@ int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_re
 		case SYSCALL_VM_MAP_FILE:
 			*call_ret = user_vm_map_file(
 				(char *)arg0, (void **)arg1, (int)arg2,
-				(addr)arg3, (int)arg4, (int)arg5, (const char *)arg6,
+				(addr_t)arg3, (int)arg4, (int)arg5, (const char *)arg6,
 				(off_t)INT32TOINT64(arg7, arg8));
 			break;
 			break;
@@ -151,7 +151,7 @@ int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_re
 			*call_ret = user_vm_get_region_info((region_id)arg0, (vm_region_info *)arg1);
 			break;
 		case SYSCALL_THREAD_CREATE_THREAD:
-			*call_ret = user_thread_create_user_thread((char *)arg0, thread_get_current_thread()->proc->id, (addr)arg1, (void *)arg2);
+			*call_ret = user_thread_create_user_thread((char *)arg0, thread_get_current_thread()->proc->id, (addr_t)arg1, (void *)arg2);
 			break;
 		case SYSCALL_THREAD_KILL_THREAD:
 			*call_ret = thread_kill_thread((thread_id)arg0);

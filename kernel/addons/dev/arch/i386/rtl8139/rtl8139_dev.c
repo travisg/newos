@@ -117,7 +117,7 @@ int rtl8139_init(rtl8139 *rtl)
 {
 	bigtime_t time;
 	int err = -1;
-	addr temp;
+	addr_t temp;
 
 	dprintf("rtl8139_init: rtl %p\n", rtl);
 

@@ -801,7 +801,7 @@ int ipv4_init(void)
 	route_table = NULL;
 	curr_identification = system_time();
 
-	frag_table = hash_init(256, (addr)&frag.hash_next - (addr)&frag,
+	frag_table = hash_init(256, (addr_t)&frag.hash_next - (addr_t)&frag,
 		&frag_compare_func, &frag_hash_func);
 
 	set_net_timer(&frag_killer_event, FRAG_KILLER_QUANTUM, &ipv4_frag_killer, NULL, 0);

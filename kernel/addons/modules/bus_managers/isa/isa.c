@@ -91,12 +91,12 @@ static void isa_write_io_32( int mapped_io_addr, uint32 value )
 }
 
 
-static int isa_allocate_iomem( addr base, size_t len )
+static int isa_allocate_iomem( addr_t base, size_t len )
 {
 	return ERR_UNIMPLEMENTED;
 }
 
-static int isa_release_iomem( addr base, size_t len )
+static int isa_release_iomem( addr_t base, size_t len )
 {
 	return ERR_UNIMPLEMENTED;
 }
@@ -114,7 +114,7 @@ static int isa_release_ioports( uint16 ioport_base, size_t len )
 static int isa_get_dma_buffer( void **vaddr, void **paddr )
 {
 	// for now, return the second block of the dma region
-	*vaddr = (void *)((addr)isa_info.dma_region_base + 64*1024);
+	*vaddr = (void *)((addr_t)isa_info.dma_region_base + 64*1024);
 	*paddr = (void *)(64*1024);
 
 	return NO_ERROR;
@@ -140,9 +140,9 @@ static int isa_start_floppy_dma( void *paddr, size_t size, bool write )
 	else
 		out8(0x56, kDMAMode); // single mode, autoinitialization, write transfer, channel 2
 	out8(0, kDMAFlipFlop);
-	out8(((addr)paddr) & 0xff, kDMAAddress);			// LSB
-	out8((((addr)paddr) >> 8) & 0xff, kDMAAddress);	// MSB
-	out8((((addr)paddr) >> 16) & 0xff, kDMAPage);		// Page
+	out8(((addr_t)paddr) & 0xff, kDMAAddress);			// LSB
+	out8((((addr_t)paddr) >> 8) & 0xff, kDMAAddress);	// MSB
+	out8((((addr_t)paddr) >> 16) & 0xff, kDMAPage);		// Page
 	out8(0, kDMAFlipFlop);
 	size--; // the register wants it to be one less than it really is
 	out8(size & 0xff, kDMACount);	// Count LSB

@@ -5,7 +5,7 @@
 #ifndef _NEWOS_KERNEL_ARCH_M68K_KTYPES_H
 #define _NEWOS_KERNEL_ARCH_M68K_KTYPES_H
 
-typedef unsigned long addr;
+typedef unsigned long addr_t;
 
 #endif
 

@@ -70,7 +70,7 @@ static sem_id snooze_sem = -1;
 // used temporarily as a thread cleans itself up
 struct death_stack {
 	region_id rid;
-	addr address;
+	addr_t address;
 	bool in_use;
 };
 static struct death_stack *death_stacks;
@@ -239,7 +239,7 @@ static int user_copy_arg_list(char **args, int argc, char ***kargs)
 
 	*kargs = NULL;
 
-	if((addr)args >= KERNEL_BASE && (addr)args <= KERNEL_TOP)
+	if((addr_t)args >= KERNEL_BASE && (addr_t)args <= KERNEL_TOP)
 		return ERR_VM_BAD_USER_MEMORY;
 
 	largs = kmalloc((argc + 1) * sizeof(char *));
@@ -254,7 +254,7 @@ static int user_copy_arg_list(char **args, int argc, char ***kargs)
 		if(err < 0)
 			goto error;
 
-		if((addr)source >= KERNEL_BASE && (addr)source <= KERNEL_TOP){
+		if((addr_t)source >= KERNEL_BASE && (addr_t)source <= KERNEL_TOP){
 			err = ERR_VM_BAD_USER_MEMORY;
 			goto error;
 		}
@@ -375,7 +375,7 @@ static int _create_user_thread_kentry(void)
 	thread_atkernel_exit();
 
 	// jump to the entry point in user space
-	arch_thread_enter_uspace(t, (addr)t->entry, t->args, t->user_stack_base + STACK_SIZE);
+	arch_thread_enter_uspace(t, (addr_t)t->entry, t->args, t->user_stack_base + STACK_SIZE);
 
 	// never get here
 	return 0;
@@ -398,7 +398,7 @@ static int _create_kernel_thread_kentry(void)
 	return func(t->args);
 }
 
-static thread_id _create_thread(const char *name, proc_id pid, addr entry, void *args, bool kernel)
+static thread_id _create_thread(const char *name, proc_id pid, addr_t entry, void *args, bool kernel)
 {
 	struct thread *t;
 	struct proc *p;
@@ -488,12 +488,12 @@ static thread_id _create_thread(const char *name, proc_id pid, addr entry, void 
 	return t->id;
 }
 
-thread_id user_thread_create_user_thread(char *uname, proc_id pid, addr entry, void *args)
+thread_id user_thread_create_user_thread(char *uname, proc_id pid, addr_t entry, void *args)
 {
 	char name[SYS_MAX_OS_NAME_LEN];
 	int rc;
 
-	if((addr)uname >= KERNEL_BASE && (addr)uname <= KERNEL_TOP)
+	if((addr_t)uname >= KERNEL_BASE && (addr_t)uname <= KERNEL_TOP)
 		return ERR_VM_BAD_USER_MEMORY;
 	if(entry >= KERNEL_BASE && entry <= KERNEL_TOP)
 		return ERR_VM_BAD_USER_MEMORY;
@@ -506,19 +506,19 @@ thread_id user_thread_create_user_thread(char *uname, proc_id pid, addr entry, v
 	return thread_create_user_thread(name, pid, entry, args);
 }
 
-thread_id thread_create_user_thread(char *name, proc_id pid, addr entry, void *args)
+thread_id thread_create_user_thread(char *name, proc_id pid, addr_t entry, void *args)
 {
 	return _create_thread(name, pid, entry, args, false);
 }
 
 thread_id thread_create_kernel_thread(const char *name, int (*func)(void *), void *args)
 {
-	return _create_thread(name, proc_get_kernel_proc()->id, (addr)func, args, true);
+	return _create_thread(name, proc_get_kernel_proc()->id, (addr_t)func, args, true);
 }
 
 static thread_id thread_create_kernel_thread_etc(const char *name, int (*func)(void *), void *args, struct proc *p)
 {
-	return _create_thread(name, p->id, (addr)func, args, true);
+	return _create_thread(name, p->id, (addr_t)func, args, true);
 }
 
 int thread_suspend_thread(thread_id id)
@@ -680,7 +680,7 @@ int user_thread_get_thread_info(thread_id id, struct thread_info *uinfo)
 	struct thread_info info;
 	int err, err2;
 
-	if((addr)uinfo >= KERNEL_BASE && (addr)uinfo <= KERNEL_TOP) {
+	if((addr_t)uinfo >= KERNEL_BASE && (addr_t)uinfo <= KERNEL_TOP) {
 		return ERR_VM_BAD_USER_MEMORY;
 	}
 
@@ -763,11 +763,11 @@ int user_thread_get_next_thread_info(uint32 *ucookie, proc_id pid, struct thread
 	uint32 cookie;
 	int err, err2;
 
-	if((addr)ucookie >= KERNEL_BASE && (addr)ucookie <= KERNEL_TOP) {
+	if((addr_t)ucookie >= KERNEL_BASE && (addr_t)ucookie <= KERNEL_TOP) {
 		return ERR_VM_BAD_USER_MEMORY;
 	}
 
-	if((addr)uinfo >= KERNEL_BASE && (addr)uinfo <= KERNEL_TOP) {
+	if((addr_t)uinfo >= KERNEL_BASE && (addr_t)uinfo <= KERNEL_TOP) {
 		return ERR_VM_BAD_USER_MEMORY;
 	}
 
@@ -1080,7 +1080,7 @@ int thread_init(kernel_args *ka)
 //	dprintf("thread_init: entry\n");
 
 	// create the process hash table
-	proc_hash = hash_init(15, (addr)&kernel_proc->next - (addr)kernel_proc,
+	proc_hash = hash_init(15, (addr_t)&kernel_proc->next - (addr_t)kernel_proc,
 		&proc_struct_compare, &proc_struct_hash);
 
 	// create the kernel process
@@ -1097,7 +1097,7 @@ int thread_init(kernel_args *ka)
 	hash_insert(proc_hash, kernel_proc);
 
 	// create the thread hash table
-	thread_hash = hash_init(15, (addr)&t->all_next - (addr)t,
+	thread_hash = hash_init(15, (addr_t)&t->all_next - (addr_t)t,
 		&thread_struct_compare, &thread_struct_hash);
 
 	// zero out the run queues
@@ -1445,7 +1445,7 @@ int user_thread_wait_on_thread(thread_id id, int *uretcode)
 	int retcode;
 	int rc, rc2;
 
-	if((addr)uretcode >= KERNEL_BASE && (addr)uretcode <= KERNEL_TOP)
+	if((addr_t)uretcode >= KERNEL_BASE && (addr_t)uretcode <= KERNEL_TOP)
 		return ERR_VM_BAD_USER_MEMORY;
 
 	rc = thread_wait_on_thread(id, &retcode);
@@ -1490,7 +1490,7 @@ int user_proc_wait_on_proc(proc_id id, int *uretcode)
 	int retcode;
 	int rc, rc2;
 
-	if((addr)uretcode >= KERNEL_BASE && (addr)uretcode <= KERNEL_TOP)
+	if((addr_t)uretcode >= KERNEL_BASE && (addr_t)uretcode <= KERNEL_TOP)
 		return ERR_VM_BAD_USER_MEMORY;
 
 	rc = proc_wait_on_proc(id, &retcode);
@@ -1816,7 +1816,7 @@ int user_proc_get_proc_info(proc_id id, struct proc_info *uinfo)
 	struct proc_info info;
 	int err, err2;
 
-	if((addr)uinfo >= KERNEL_BASE && (addr)uinfo <= KERNEL_TOP) {
+	if((addr_t)uinfo >= KERNEL_BASE && (addr_t)uinfo <= KERNEL_TOP) {
 		return ERR_VM_BAD_USER_MEMORY;
 	}
 
@@ -1884,11 +1884,11 @@ int user_proc_get_next_proc_info(uint32 *ucookie, struct proc_info *uinfo)
 	uint32 cookie;
 	int err, err2;
 
-	if((addr)ucookie >= KERNEL_BASE && (addr)ucookie <= KERNEL_TOP) {
+	if((addr_t)ucookie >= KERNEL_BASE && (addr_t)ucookie <= KERNEL_TOP) {
 		return ERR_VM_BAD_USER_MEMORY;
 	}
 
-	if((addr)uinfo >= KERNEL_BASE && (addr)uinfo <= KERNEL_TOP) {
+	if((addr_t)uinfo >= KERNEL_BASE && (addr_t)uinfo <= KERNEL_TOP) {
 		return ERR_VM_BAD_USER_MEMORY;
 	}
 
@@ -1930,7 +1930,7 @@ static int proc_create_proc2(void *args)
 	struct proc *p;
 	struct proc_arg *pargs = args;
 	char *path;
-	addr entry;
+	addr_t entry;
 	char ustack_name[128];
 	int tot_top_size;
 	char **uargs;
@@ -2093,9 +2093,9 @@ proc_id user_proc_create_proc(const char *upath, const char *uname, char **args,
 
 	dprintf("user_proc_create_proc : argc=%d \n",argc);
 
-	if((addr)upath >= KERNEL_BASE && (addr)upath <= KERNEL_TOP)
+	if((addr_t)upath >= KERNEL_BASE && (addr_t)upath <= KERNEL_TOP)
 		return ERR_VM_BAD_USER_MEMORY;
-	if((addr)uname >= KERNEL_BASE && (addr)uname <= KERNEL_TOP)
+	if((addr_t)uname >= KERNEL_BASE && (addr_t)uname <= KERNEL_TOP)
 		return ERR_VM_BAD_USER_MEMORY;
 
 	rc = user_copy_arg_list(args, argc, &kargs);
@@ -2259,7 +2259,7 @@ int user_getrlimit(int resource, struct rlimit * urlp)
 	if (urlp == NULL) {
 		return ERR_INVALID_ARGS;
 	}
-	if((addr)urlp >= KERNEL_BASE && (addr)urlp <= KERNEL_TOP) {
+	if((addr_t)urlp >= KERNEL_BASE && (addr_t)urlp <= KERNEL_TOP) {
 		return ERR_VM_BAD_USER_MEMORY;
 	}
 
@@ -2301,7 +2301,7 @@ int user_setrlimit(int resource, const struct rlimit * urlp)
 	if (urlp == NULL) {
 		return ERR_INVALID_ARGS;
 	}
-	if((addr)urlp >= KERNEL_BASE && (addr)urlp <= KERNEL_TOP) {
+	if((addr_t)urlp >= KERNEL_BASE && (addr_t)urlp <= KERNEL_TOP) {
 		return ERR_VM_BAD_USER_MEMORY;
 	}
 

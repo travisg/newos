@@ -52,7 +52,7 @@ static int sh4_handle_exception(void *_frame)
 		case 10: // TLB multi hit
 		case 12: // illegal instruction
 		case 13: // slot illegal instruction
-			dprintf("about to gpf at pc 0x%x, excode %d, TEA 0x%x\n", frame->spc, frame->excode, *(addr *)TEA);
+			dprintf("about to gpf at pc 0x%x, excode %d, TEA 0x%x\n", frame->spc, frame->excode, *(addr_t *)TEA);
 			dprintf("\tframe %p code 0x%x, spc 0x%x, ssr 0x%x, sgr 0x%x, sr 0x%x, pr 0x%x\n",
 				frame, frame->excode, frame->spc, frame->ssr, frame->sgr, get_sr(), frame->pr);
 			dprintf("\tregs: 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x\n",
@@ -126,11 +126,11 @@ static int sh4_handle_exception(void *_frame)
 		case 5:  // TLB protection violation (read)
 		case 6:  // TLB protection violation (write)
 			// make these faults act like a page fault
-			frame->page_fault_addr = *(addr *)TEA;
+			frame->page_fault_addr = *(addr_t *)TEA;
 			frame->excode = (frame->excode == 5) ? EXCEPTION_PAGE_FAULT_READ : EXCEPTION_PAGE_FAULT_WRITE;
 		case EXCEPTION_PAGE_FAULT_READ:
 		case EXCEPTION_PAGE_FAULT_WRITE: {
-			addr newip;
+			addr_t newip;
 			if((frame->ssr & 0x000000f0) == 0) {
 //				dprintf("page_fault: enabling interrupts\n");
 				int_enable_interrupts();

@@ -11,19 +11,19 @@
 
 typedef struct rtl8139 {
 	int irq;
-	addr phys_base;
-	addr phys_size;
-	addr virt_base;
+	addr_t phys_base;
+	addr_t phys_size;
+	addr_t virt_base;
 	uint16 io_port;
 	region_id region;
 	uint8 mac_addr[6];
 	int txbn;
 	int last_txbn;
 	region_id rxbuf_region;
-	addr rxbuf;
+	addr_t rxbuf;
 	sem_id rx_sem;
 	region_id txbuf_region;
-	addr txbuf;
+	addr_t txbuf;
 	sem_id tx_sem;
 	mutex lock;
 	spinlock_t reg_spinlock;

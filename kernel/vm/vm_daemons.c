@@ -14,16 +14,16 @@
 #include <kernel/vm_page.h>
 
 bool trimming_cycle;
-static addr free_memory_low_water;
-static addr free_memory_high_water;
+static addr_t free_memory_low_water;
+static addr_t free_memory_high_water;
 
-static void scan_pages(vm_address_space *aspace, addr free_target)
+static void scan_pages(vm_address_space *aspace, addr_t free_target)
 {
 	vm_region *first_region;
 	vm_region *region;
 	vm_page *page;
-	addr va;
-	addr pa;
+	addr_t va;
+	addr_t pa;
 	unsigned int flags, flags2;
 	int quantum = PAGE_SCAN_QUANTUM;
 
@@ -138,8 +138,8 @@ static int page_daemon()
 	struct hash_iterator i;
 	vm_address_space *old_aspace;
 	vm_address_space *aspace;
-	addr mapped_size;
-	addr free_memory_target;
+	addr_t mapped_size;
+	addr_t free_memory_target;
 	int faults_per_second;
 	bigtime_t now;
 

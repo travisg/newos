@@ -12,7 +12,7 @@
 #include <boot/stage2.h>
 
 static struct ppc_pteg *ptable;
-static addr ptable_size;
+static addr_t ptable_size;
 static unsigned int ptable_hash_mask;
 static region_id ptable_region;
 
@@ -68,7 +68,7 @@ static void destroy_tmap(vm_translation_map *map)
 	recursive_lock_destroy(&map->lock);
 }
 
-static int map_tmap(vm_translation_map *map, addr va, addr pa, unsigned int attributes)
+static int map_tmap(vm_translation_map *map, addr_t va, addr_t pa, unsigned int attributes)
 {
 	unsigned int hash;
 	unsigned int vsid;
@@ -139,7 +139,7 @@ found_spot:
 	return 0;
 }
 
-static struct ppc_pte *lookup_pagetable_entry(vm_translation_map *map, addr va)
+static struct ppc_pte *lookup_pagetable_entry(vm_translation_map *map, addr_t va)
 {
 	unsigned int hash;
 	unsigned int vsid;
@@ -183,7 +183,7 @@ static struct ppc_pte *lookup_pagetable_entry(vm_translation_map *map, addr va)
 	return NULL;
 }
 
-static int unmap_tmap(vm_translation_map *map, addr start, addr end)
+static int unmap_tmap(vm_translation_map *map, addr_t start, addr_t end)
 {
 	struct ppc_pte *pte;
 
@@ -205,7 +205,7 @@ static int unmap_tmap(vm_translation_map *map, addr start, addr end)
 	return 0;
 }
 
-static int query_tmap(vm_translation_map *map, addr va, addr *out_physical, unsigned int *out_flags)
+static int query_tmap(vm_translation_map *map, addr_t va, addr_t *out_physical, unsigned int *out_flags)
 {
 	struct ppc_pte *pte;
 
@@ -227,18 +227,18 @@ static int query_tmap(vm_translation_map *map, addr va, addr *out_physical, unsi
 	return 0;
 }
 
-static addr get_mapped_size_tmap(vm_translation_map *map)
+static addr_t get_mapped_size_tmap(vm_translation_map *map)
 {
 	return map->map_count;
 }
 
-static int protect_tmap(vm_translation_map *map, addr base, addr top, unsigned int attributes)
+static int protect_tmap(vm_translation_map *map, addr_t base, addr_t top, unsigned int attributes)
 {
 	// XXX finish
 	return -1;
 }
 
-static int clear_flags_tmap(vm_translation_map *map, addr va, unsigned int flags)
+static int clear_flags_tmap(vm_translation_map *map, addr_t va, unsigned int flags)
 {
 	struct ppc_pte *pte;
 
@@ -261,13 +261,13 @@ static void flush_tmap(vm_translation_map *map)
 	arch_cpu_global_TLB_invalidate();
 }
 
-static int get_physical_page_tmap(addr pa, addr *va, int flags)
+static int get_physical_page_tmap(addr_t pa, addr_t *va, int flags)
 {
 	PANIC_UNIMPLEMENTED();
 	return 0;
 }
 
-static int put_physical_page_tmap(addr va)
+static int put_physical_page_tmap(addr_t va)
 {
 	PANIC_UNIMPLEMENTED();
 	return 0;
@@ -357,7 +357,7 @@ int vm_translation_map_module_init2(kernel_args *ka)
 
 // XXX horrible back door to map a page quickly regardless of translation map object, etc.
 // used only during VM setup.
-int vm_translation_map_quick_map(kernel_args *ka, addr va, addr pa, unsigned int attributes, addr (*get_free_page)(kernel_args *))
+int vm_translation_map_quick_map(kernel_args *ka, addr_t va, addr_t pa, unsigned int attributes, addr_t (*get_free_page)(kernel_args *))
 {
 	unsigned int hash;
 	unsigned int vsid;
@@ -405,7 +405,7 @@ int vm_translation_map_quick_map(kernel_args *ka, addr va, addr pa, unsigned int
 }
 
 // XXX currently assumes this translation map is active
-static int vm_translation_map_quick_query(addr va, addr *out_physical)
+static int vm_translation_map_quick_query(addr_t va, addr_t *out_physical)
 {
 	PANIC_UNIMPLEMENTED();
 	return 0;

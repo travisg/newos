@@ -39,8 +39,8 @@ struct file_stat {
 // info about a region that external entities may want to know
 typedef struct vm_region_info {
 	region_id id;
-	addr base;
-	addr size;
+	addr_t base;
+	addr_t size;
 	int lock;
 	int wiring;
 	char name[SYS_MAX_OS_NAME_LEN];
@@ -78,7 +78,7 @@ struct thread_info {
 	int state;
 	int priority;
 
-	addr user_stack_base;
+	addr_t user_stack_base;
 
 	bigtime_t user_time;
 	bigtime_t kernel_time;
@@ -168,11 +168,11 @@ int sys_proc_wait_on_proc(proc_id pid, int *retcode);
 int sys_proc_get_proc_info(proc_id id, struct proc_info *info);
 int sys_proc_get_next_proc_info(uint32 *cookie, struct proc_info *info);
 region_id sys_vm_create_anonymous_region(const char *name, void **address, int addr_type,
-	addr size, int wiring, int lock);
+	addr_t size, int wiring, int lock);
 region_id sys_vm_clone_region(const char *name, void **address, int addr_type,
 	region_id source_region, int mapping, int lock);
 region_id sys_vm_map_file(const char *name, void **address, int addr_type,
-	addr size, int lock, int mapping, const char *path, off_t offset);
+	addr_t size, int lock, int mapping, const char *path, off_t offset);
 int sys_vm_delete_region(region_id id);
 int sys_vm_get_region_info(region_id id, vm_region_info *info);
 

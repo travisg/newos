@@ -104,7 +104,7 @@ void arch_thread_dump_info(void *info)
 	dprintf("\tsp: 0x%x\n", at->sp);
 }
 
-void arch_thread_enter_uspace(addr entry, void *args, addr ustack_top)
+void arch_thread_enter_uspace(addr_t entry, void *args, addr_t ustack_top)
 {
     dprintf("arch_thread_entry_uspace: entry 0x%x, ustack_top 0x%x\n",
 	        entry, ustack_top);
@@ -117,7 +117,7 @@ void arch_thread_enter_uspace(addr entry, void *args, addr ustack_top)
 	// never get to here
 }
 
-void arch_thread_switch_kstack_and_call(struct thread *t, addr new_kstack, void (*func)(void *), void *arg)
+void arch_thread_switch_kstack_and_call(struct thread *t, addr_t new_kstack, void (*func)(void *), void *arg)
 {
 	sh4_switch_stack_and_call(new_kstack, func, arg);
 }

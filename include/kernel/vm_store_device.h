@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -8,7 +8,7 @@
 #include <kernel/kernel.h>
 #include <kernel/vm.h>
 
-vm_store *vm_store_create_device(addr base_addr);
+vm_store *vm_store_create_device(addr_t base_addr);
 
 #endif
 

@@ -32,8 +32,8 @@
 #define PAGE_PRESENT  0x10
 
 // Should only be used by vm internals
-int vm_page_fault(addr address, addr fault_address, bool is_write, bool is_user, addr *newip);
-void vm_increase_max_commit(addr delta);
+int vm_page_fault(addr_t address, addr_t fault_address, bool is_write, bool is_user, addr_t *newip);
+void vm_increase_max_commit(addr_t delta);
 int vm_daemon_init(void);
 
 // used by the page daemon to walk the list of address spaces
@@ -41,11 +41,11 @@ int vm_aspace_walk_start(struct hash_iterator *i);
 vm_address_space *vm_aspace_walk_next(struct hash_iterator *i);
 
 // get some data about the number of pages in the system
-addr vm_page_num_pages(void);
-addr vm_page_num_free_pages(void);
+addr_t vm_page_num_pages(void);
+addr_t vm_page_num_free_pages(void);
 
 // allocates memory from the ka structure
-addr vm_alloc_from_ka_struct(kernel_args *ka, unsigned int size, int lock);
+addr_t vm_alloc_from_ka_struct(kernel_args *ka, unsigned int size, int lock);
 
 // a global structure holding data about the vm for informational purposes
 extern vm_info_t vm_info;

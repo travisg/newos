@@ -825,14 +825,14 @@ int vfs_init(kernel_args *ka)
 
 	{
 		struct vnode *v;
-		vnode_table = hash_init(VNODE_HASH_TABLE_SIZE, (addr)&v->next - (addr)v,
+		vnode_table = hash_init(VNODE_HASH_TABLE_SIZE, (addr_t)&v->next - (addr_t)v,
 			&vnode_compare, &vnode_hash);
 		if(vnode_table == NULL)
 			panic("vfs_init: error creating vnode hash table\n");
 	}
 	{
 		struct fs_mount *mount;
-		mounts_table = hash_init(MOUNTS_HASH_TABLE_SIZE, (addr)&mount->next - (addr)mount,
+		mounts_table = hash_init(MOUNTS_HASH_TABLE_SIZE, (addr_t)&mount->next - (addr_t)mount,
 			&mount_compare, &mount_hash);
 		if(mounts_table == NULL)
 			panic("vfs_init: error creating mounts hash table\n");
@@ -1971,14 +1971,14 @@ int user_mount(const char *upath, const char *udevice, const char *ufs_name, voi
 	char device[SYS_MAX_PATH_LEN+1];
 	int rc;
 
-	if((addr)upath >= KERNEL_BASE && (addr)upath <= KERNEL_TOP)
+	if((addr_t)upath >= KERNEL_BASE && (addr_t)upath <= KERNEL_TOP)
 		return ERR_VM_BAD_USER_MEMORY;
 
-	if((addr)ufs_name >= KERNEL_BASE && (addr)ufs_name <= KERNEL_TOP)
+	if((addr_t)ufs_name >= KERNEL_BASE && (addr_t)ufs_name <= KERNEL_TOP)
 		return ERR_VM_BAD_USER_MEMORY;
 
 	if(udevice) {
-		if((addr)udevice >= KERNEL_BASE && (addr)udevice <= KERNEL_TOP)
+		if((addr_t)udevice >= KERNEL_BASE && (addr_t)udevice <= KERNEL_TOP)
 			return ERR_VM_BAD_USER_MEMORY;
 	}
 
@@ -2027,7 +2027,7 @@ int user_open(const char *upath, stream_type st, int omode)
 	char path[SYS_MAX_PATH_LEN];
 	int rc;
 
-	if((addr)upath >= KERNEL_BASE && (addr)upath <= KERNEL_TOP)
+	if((addr_t)upath >= KERNEL_BASE && (addr_t)upath <= KERNEL_TOP)
 		return ERR_VM_BAD_USER_MEMORY;
 
 	rc = user_strncpy(path, upath, SYS_MAX_PATH_LEN-1);
@@ -2050,7 +2050,7 @@ int user_fsync(int fd)
 
 ssize_t user_read(int fd, void *buf, off_t pos, ssize_t len)
 {
-	if((addr)buf >= KERNEL_BASE && (addr)buf <= KERNEL_TOP)
+	if((addr_t)buf >= KERNEL_BASE && (addr_t)buf <= KERNEL_TOP)
 		return ERR_VM_BAD_USER_MEMORY;
 
 	return vfs_read(fd, buf, pos, len, false);
@@ -2058,7 +2058,7 @@ ssize_t user_read(int fd, void *buf, off_t pos, ssize_t len)
 
 ssize_t user_write(int fd, const void *buf, off_t pos, ssize_t len)
 {
-	if((addr)buf >= KERNEL_BASE && (addr)buf <= KERNEL_TOP)
+	if((addr_t)buf >= KERNEL_BASE && (addr_t)buf <= KERNEL_TOP)
 		return ERR_VM_BAD_USER_MEMORY;
 
 	return vfs_write(fd, buf, pos, len, false);
@@ -2071,7 +2071,7 @@ int user_seek(int fd, off_t pos, seek_type seek_type)
 
 int user_ioctl(int fd, int op, void *buf, size_t len)
 {
-	if((addr)buf >= KERNEL_BASE && (addr)buf <= KERNEL_TOP)
+	if((addr_t)buf >= KERNEL_BASE && (addr_t)buf <= KERNEL_TOP)
 		return ERR_VM_BAD_USER_MEMORY;
 	return vfs_ioctl(fd, op, buf, len, false);
 }
@@ -2081,7 +2081,7 @@ int user_create(const char *upath, stream_type stream_type)
 	char path[SYS_MAX_PATH_LEN];
 	int rc;
 
-	if((addr)upath >= KERNEL_BASE && (addr)upath <= KERNEL_TOP)
+	if((addr_t)upath >= KERNEL_BASE && (addr_t)upath <= KERNEL_TOP)
 		return ERR_VM_BAD_USER_MEMORY;
 
 	rc = user_strncpy(path, upath, SYS_MAX_PATH_LEN-1);
@@ -2097,7 +2097,7 @@ int user_unlink(const char *upath)
 	char path[SYS_MAX_PATH_LEN+1];
 	int rc;
 
-	if((addr)upath >= KERNEL_BASE && (addr)upath <= KERNEL_TOP)
+	if((addr_t)upath >= KERNEL_BASE && (addr_t)upath <= KERNEL_TOP)
 		return ERR_VM_BAD_USER_MEMORY;
 
 	rc = user_strncpy(path, upath, SYS_MAX_PATH_LEN);
@@ -2114,10 +2114,10 @@ int user_rename(const char *uoldpath, const char *unewpath)
 	char newpath[SYS_MAX_PATH_LEN+1];
 	int rc;
 
-	if((addr)uoldpath >= KERNEL_BASE && (addr)uoldpath <= KERNEL_TOP)
+	if((addr_t)uoldpath >= KERNEL_BASE && (addr_t)uoldpath <= KERNEL_TOP)
 		return ERR_VM_BAD_USER_MEMORY;
 
-	if((addr)unewpath >= KERNEL_BASE && (addr)unewpath <= KERNEL_TOP)
+	if((addr_t)unewpath >= KERNEL_BASE && (addr_t)unewpath <= KERNEL_TOP)
 		return ERR_VM_BAD_USER_MEMORY;
 
 	rc = user_strncpy(oldpath, uoldpath, SYS_MAX_PATH_LEN);
@@ -2139,10 +2139,10 @@ int user_rstat(const char *upath, struct file_stat *ustat)
 	struct file_stat stat;
 	int rc, rc2;
 
-	if((addr)upath >= KERNEL_BASE && (addr)upath <= KERNEL_TOP)
+	if((addr_t)upath >= KERNEL_BASE && (addr_t)upath <= KERNEL_TOP)
 		return ERR_VM_BAD_USER_MEMORY;
 
-	if((addr)ustat >= KERNEL_BASE && (addr)ustat <= KERNEL_TOP)
+	if((addr_t)ustat >= KERNEL_BASE && (addr_t)ustat <= KERNEL_TOP)
 		return ERR_VM_BAD_USER_MEMORY;
 
 	rc = user_strncpy(path, upath, SYS_MAX_PATH_LEN-1);
@@ -2167,10 +2167,10 @@ int user_wstat(const char *upath, struct file_stat *ustat, int stat_mask)
 	struct file_stat stat;
 	int rc;
 
-	if((addr)upath >= KERNEL_BASE && (addr)upath <= KERNEL_TOP)
+	if((addr_t)upath >= KERNEL_BASE && (addr_t)upath <= KERNEL_TOP)
 		return ERR_VM_BAD_USER_MEMORY;
 
-	if((addr)ustat >= KERNEL_BASE && (addr)ustat <= KERNEL_TOP)
+	if((addr_t)ustat >= KERNEL_BASE && (addr_t)ustat <= KERNEL_TOP)
 		return ERR_VM_BAD_USER_MEMORY;
 
 	rc = user_strncpy(path, upath, SYS_MAX_PATH_LEN);
@@ -2195,7 +2195,7 @@ int user_getcwd(char *buf, size_t size)
 #endif
 
 	// Check if userspace address is inside "shared" kernel space
-	if((addr)buf >= KERNEL_BASE && (addr)buf <= KERNEL_TOP)
+	if((addr_t)buf >= KERNEL_BASE && (addr_t)buf <= KERNEL_TOP)
 		return NULL; //ERR_VM_BAD_USER_MEMORY;
 
 	// Call vfs to get current working directory
@@ -2221,7 +2221,7 @@ int user_setcwd(const char* upath)
 #endif
 
 	// Check if userspace address is inside "shared" kernel space
-	if((addr)upath >= KERNEL_BASE && (addr)upath <= KERNEL_TOP)
+	if((addr_t)upath >= KERNEL_BASE && (addr_t)upath <= KERNEL_TOP)
 		return ERR_VM_BAD_USER_MEMORY;
 
 	// Copy new path to kernel space

@@ -214,16 +214,16 @@ static void	pio_outbyte(uint16 port, uint8 data)
 
 static void	pio_rep_inword(uint16 port, uint16 *addr, unsigned long count)
 {
-  __asm__ __volatile__ 
+  __asm__ __volatile__
     (
-     "rep ; insw" : "=D" (addr), "=c" (count) : "d" (pio_reg_addrs[port]),
+     "rep ; insw" : "=D" (addr_t), "=c" (count) : "d" (pio_reg_addrs[port]),
      "0" (addr), "1" (count)
      );
 }
 
 static void	pio_rep_outword(uint16 port, uint16 *addr, unsigned long count)
 {
-  __asm__ __volatile__ 
+  __asm__ __volatile__
     (
      "rep ; outsw" : "=S" (addr), "=c" (count) : "d" (pio_reg_addrs[port]),
      "0" (addr), "1" (count)
@@ -351,7 +351,7 @@ static int reg_pio_data_in(int bus, int dev, int cmd, int fr, int sc,
         unsigned int wordCnt = multiCnt > numSect ? numSect : multiCnt;
         wordCnt = wordCnt * 256;
         pio_rep_inword(CB_DATA, buffer, wordCnt);
-        DELAY400NS;    
+        DELAY400NS;
         numSect = numSect - multiCnt;
         buffer += wordCnt;
       }
@@ -464,7 +464,7 @@ int	ide_read_block(ide_device *device, char *data, uint32 block, uint8 numSector
     ide_btolba(block, device, &cyl, &head, &sect);
   else
     ide_btochs(block, device, &cyl, &head, &sect);
-    
+
   return reg_pio_data_in(device->bus, device->device, CMD_READ_SECTORS,
 			          0, numSectors, cyl, head, sect, data, numSectors, 2);
 }
@@ -477,7 +477,7 @@ int	ide_write_block(ide_device *device, const char *data, uint32 block, uint8 nu
     ide_btolba(block, device, &cyl, &head, &sect);
   else
     ide_btochs(block, device, &cyl, &head, &sect);
-    
+
   return reg_pio_data_out(device->bus, device->device, CMD_WRITE_SECTORS,
 			          0, numSectors, cyl, head, sect, data, numSectors, 2);
 }
@@ -503,7 +503,7 @@ void ide_string_conv (char *str, int len)
 bool ide_reset (int bus, int device)
 {
   unsigned char devCtrl = CB_DC_HD15 | CB_DC_NIEN;
-	
+
   // Set and then reset the soft reset bit in the Device
   // Control register.  This causes device 0 be selected
   pio_outbyte(CB_DC, devCtrl | CB_DC_SRST);
@@ -520,7 +520,7 @@ bool ide_identify_device(int bus, int device)
 	uint8* buffer;
 	int rc;
 
-	// Store specs for device		
+	// Store specs for device
 	ide->bus         = bus;
 	ide->device      = device;
 
@@ -529,13 +529,13 @@ bool ide_identify_device(int bus, int device)
 	rc = reg_pio_data_in(bus, device, CMD_IDENTIFY_DEVICE,
 						1, 0, 0, 0, 0, buffer, 1, 0);
 
-	if (rc == NO_ERR) {	
+	if (rc == NO_ERR) {
 		// If command was ok, lets assume ATA device
 		ide->device_type = ATA_DEVICE;
-		
+
 		// Convert the model string to ASCIIZ
 		ide_string_conv(ide->hardware_device.model, 40);
-		
+
 		// Get copy over interesting data
 		ide->sector_count = ide->hardware_device.cyls * ide->hardware_device.heads
 		* ide->hardware_device.sectors;
@@ -543,7 +543,7 @@ bool ide_identify_device(int bus, int device)
 		ide->lba_supported = ide->hardware_device.capabilities & DRIVE_SUPPORT_LBA;
 		ide->start_block = 0;
 		ide->end_block = ide->sector_count + ide->start_block;
-		
+
 		// Give some debugging output to show what was found
 		dprintf ("ide: disk at bus %d, device %d %s\n", bus, device, ide->hardware_device.model);
 		dprintf ("ide/%d/%d: %dMB; %d cyl, %d head, %d sec, %d bytes/sec  (LBA=%d)\n",
@@ -624,23 +624,23 @@ static void dumpHexBuffer(uint8 *buffer, int size)
 static bool ide_get_partition_info(ide_device *device, tPartition *partition, uint32 position)
 {
 	char buffer[512];
-	uint8* partitionBuffer = buffer;		
-	
+	uint8* partitionBuffer = buffer;
+
 	// Try to read partition table
 	if (ide_read_block(device, buffer, position, 1) != 0) {
 		dprintf("unable to read partition table\n");
 		return false;
 	}
-	
+
 	// Check partition table signature
 	if (partitionBuffer[PART_MAGIC_OFFSET] != PARTITION_MAGIC1 ||
 		partitionBuffer[PART_MAGIC_OFFSET+1] != PARTITION_MAGIC2) {
 		dprintf("partition table magic is incorrect\n");
 		return false;
 	}
-	
+
 	memcpy(partition, partitionBuffer + PARTITION_OFFSET, sizeof(tPartition) * NUM_PARTITIONS);
-	
+
 	return true;
 }
 
@@ -651,12 +651,12 @@ bool ide_get_partitions(ide_device *device)
   memset(&device->partitions, 0, sizeof(tPartition) * 2 * NUM_PARTITIONS);
   if(ide_get_partition_info(device, device->partitions, 0) == false)
     return false;
-  
+
   dprintf("Primary Partition Table\n");
   for (i = 0; i < NUM_PARTITIONS; i++)
     {
-      dprintf("  %d: flags:%x type:%x start:%d:%d:%d end:%d:%d:%d stblk:%d count:%d\n", 
-	      i, 
+      dprintf("  %d: flags:%x type:%x start:%d:%d:%d end:%d:%d:%d stblk:%d count:%d\n",
+	      i,
 	  device->partitions[i].boot_flags,
 	  device->partitions[i].partition_type,
 	  device->partitions[i].starting_head,
@@ -678,7 +678,7 @@ bool ide_get_partitions(ide_device *device)
         {
           device->partitions[i].starting_block += extOffset;
           dprintf("  %d: flags:%x type:%x start:%d:%d:%d end:%d:%d:%d stblk:%d count:%d\n",
-		  i, 
+		  i,
 		  device->partitions[i].boot_flags,
 		  device->partitions[i].partition_type,
 		  device->partitions[i].starting_head,
@@ -708,7 +708,7 @@ int ide_get_accoustic(ide_device *device, int8* level_ptr)
 int ide_set_accoustic(ide_device *device, int8 level)
 {
 	pio_outbyte(CB_DH, (device->device == 1) ? CB_DH_DEV1 : CB_DH_DEV0);
-	pio_outbyte(CB_CMD, CMD_SET_ACCOUSTIC_LEVEL);	
+	pio_outbyte(CB_CMD, CMD_SET_ACCOUSTIC_LEVEL);
 	pio_outbyte(CB_SC, level);
 	pio_outbyte(CB_STAT, 0xEF);
 

@@ -76,9 +76,9 @@ static int validate_cbuf(cbuf *head)
 		counted_size += buf->len;
 
 		/* make sure the data pointer is inside the buffer */
-		if(((addr)buf->data < (addr)buf->dat)
-		  || ((addr)buf->data - (addr)buf->dat > sizeof(buf->dat))
-		  || ((addr)buf->data + buf->len > (addr)buf->data + sizeof(buf->dat)))
+		if(((addr_t)buf->data < (addr_t)buf->dat)
+		  || ((addr_t)buf->data - (addr_t)buf->dat > sizeof(buf->dat))
+		  || ((addr_t)buf->data + buf->len > (addr_t)buf->data + sizeof(buf->dat)))
 			panic("validate_cbuf: cbuf %p has buffer %p with bad pointer\n", head, buf);
 
 		tail = buf;
@@ -735,7 +735,7 @@ static uint16 _cbuf_ones_cksum16(cbuf *buf, size_t offset, size_t len, uint16 su
 
 	// start checksumming
 	while(buf && len > 0) {
-		void *ptr = (void *)((addr)buf->data + offset);
+		void *ptr = (void *)((addr_t)buf->data + offset);
 		size_t plen = min(len, buf->len - offset);
 
 		sum = ones_sum16(sum, ptr, plen);
@@ -877,20 +877,20 @@ int cbuf_extend_head(cbuf **_buf, size_t extend_bytes)
 	validate_cbuf(buf);
 
 	// first, see how much space we can allocate off the front of the chain
-	if(buf->len < sizeof(buf->dat) && (addr)buf->data != (addr)buf->dat) {
+	if(buf->len < sizeof(buf->dat) && (addr_t)buf->data != (addr_t)buf->dat) {
 		// there is some space at the front of this buffer, lets see how much
 		size_t available;
 		size_t to_extend;
 
 		// check to make sure the data pointer is inside the dat buffer in this cbuf
-		ASSERT((addr)buf->data > (addr)buf->dat);
-		ASSERT((addr)buf->data - (addr)buf->dat < sizeof(buf->dat));
+		ASSERT((addr_t)buf->data > (addr_t)buf->dat);
+		ASSERT((addr_t)buf->data - (addr_t)buf->dat < sizeof(buf->dat));
 
-		available = (addr)buf->data - (addr)buf->dat;
+		available = (addr_t)buf->data - (addr_t)buf->dat;
 		to_extend = min(available, extend_bytes);
 
 		buf->len += to_extend;
-		buf->data = (void *)((addr)buf->data - to_extend);
+		buf->data = (void *)((addr_t)buf->data - to_extend);
 		extend_bytes -= to_extend;
 	}
 
@@ -911,7 +911,7 @@ int cbuf_extend_head(cbuf **_buf, size_t extend_bytes)
 
 			move_size = sizeof(new_buf->dat) - new_buf->len;
 
-			buf->data = (void *)((addr)buf->data + move_size);
+			buf->data = (void *)((addr_t)buf->data + move_size);
 		}
 
 		buf = cbuf_merge_chains(new_buf, buf);
@@ -939,11 +939,11 @@ int cbuf_extend_tail(cbuf *head, size_t extend_bytes)
 		return ERR_INVALID_ARGS;
 
 	// calculate the available space in this cbuf
-	ASSERT((addr)temp->data >= (addr)temp->dat);
-	ASSERT((addr)temp->data - (addr)temp->dat <= sizeof(temp->dat));
-	ASSERT((addr)temp->data + temp->len <= (addr)temp->dat + sizeof(temp->dat));
+	ASSERT((addr_t)temp->data >= (addr_t)temp->dat);
+	ASSERT((addr_t)temp->data - (addr_t)temp->dat <= sizeof(temp->dat));
+	ASSERT((addr_t)temp->data + temp->len <= (addr_t)temp->dat + sizeof(temp->dat));
 
-	available = sizeof(temp->dat) - (temp->len + ((addr)temp->data - (addr)temp->dat));
+	available = sizeof(temp->dat) - (temp->len + ((addr_t)temp->data - (addr_t)temp->dat));
 	if(available > 0) {
 		// we can extend by adding
 		size_t extend_by = min(available, extend_bytes);

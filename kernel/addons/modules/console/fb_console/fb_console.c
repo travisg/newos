@@ -40,8 +40,8 @@ enum {
 
 struct console_desc {
 	// describe the framebuffer
-	addr fb;
-	addr fb_size;
+	addr_t fb;
+	addr_t fb_size;
 	int fb_x;
 	int fb_y;
 	int fb_pixel_bytes;
@@ -416,7 +416,7 @@ int fb_console_dev_init(kernel_args *ka)
 		console.dirty_lines = kmalloc(console.rows);
 		// set up the line pointers
 		for(i=0; i<console.rows; i++) {
-			console.lines[i] = (char *)((addr)console.buf + i*(console.columns+1));
+			console.lines[i] = (char *)((addr_t)console.buf + i*(console.columns+1));
 			console.dirty_lines[i] = 1;
 		}
 		console.num_lines = console.rows;

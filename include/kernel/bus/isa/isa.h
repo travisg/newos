@@ -18,8 +18,8 @@ typedef struct {
 	uint32 (*read_io_32) (int mapped_io_addr);
 	void (*write_io_32) (int mapped_io_addr, uint32 value);
 
-	int (*allocate_iomem) ( addr base, size_t len );
-	int (*release_iomem) ( addr base, size_t len );
+	int (*allocate_iomem) ( addr_t base, size_t len );
+	int (*release_iomem) ( addr_t base, size_t len );
 
 	int (*allocate_ioports) ( uint16 ioport_base, size_t len );
 	int (*release_ioports) ( uint16 ioport_base, size_t len );

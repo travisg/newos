@@ -170,7 +170,7 @@ static void dump_symbol(struct elf_image_info *image, struct Elf32_Sym *sym)
 
 
 /* Take an address to symbol. Taken from the OpenBeOS version of the newos kernel. */
-int elf_reverse_lookup_symbol(addr address, addr *base_address, char *text, int len)
+int elf_reverse_lookup_symbol(addr_t address, addr_t *base_address, char *text, int len)
 {
 	struct elf_image_info **ptr;
 	struct elf_image_info *image;
@@ -256,7 +256,7 @@ static struct Elf32_Sym *elf_find_symbol(struct elf_image_info *image, const cha
 	return NULL;
 }
 
-addr elf_lookup_symbol(image_id id, const char *_symbol)
+addr_t elf_lookup_symbol(image_id id, const char *_symbol)
 {
 	struct elf_image_info *image;
 	struct Elf32_Sym *sym;
@@ -364,7 +364,7 @@ static int elf_parse_dynamic_section(struct elf_image_info *image)
 // this function first tries to see if the first image and it's already resolved symbol is okay, otherwise
 // it tries to link against the shared_image
 // XXX gross hack and needs to be done better
-int elf_resolve_symbol(struct elf_image_info *image, struct Elf32_Sym *sym, struct elf_image_info *shared_image, const char *sym_prepend,addr *sym_addr)
+int elf_resolve_symbol(struct elf_image_info *image, struct Elf32_Sym *sym, struct elf_image_info *shared_image, const char *sym_prepend,addr_t *sym_addr)
 {
 	struct Elf32_Sym *sym2;
 	char new_symname[512];
@@ -462,7 +462,7 @@ static int verify_eheader(struct Elf32_Ehdr *eheader)
 	return 0;
 }
 
-int elf_load_uspace(const char *path, struct proc *p, int flags, addr *entry)
+int elf_load_uspace(const char *path, struct proc *p, int flags, addr_t *entry)
 {
 	struct Elf32_Ehdr eheader;
 	struct Elf32_Phdr *pheaders = NULL;
@@ -936,7 +936,7 @@ int elf_init(kernel_args *ka)
 	kernel_image->regions[1].size = rinfo.size;
 
 	// we know where the dynamic section is
-	kernel_image->dynamic_ptr = (addr)ka->kernel_dynamic_section_addr.start;
+	kernel_image->dynamic_ptr = (addr_t)ka->kernel_dynamic_section_addr.start;
 
 	// parse the dynamic section
 	if(elf_parse_dynamic_section(kernel_image) < 0)

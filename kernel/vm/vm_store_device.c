@@ -12,7 +12,7 @@
 #include <newos/errors.h>
 
 struct device_store_data {
-	addr base_addr;
+	addr_t base_addr;
 };
 
 static void device_destroy(struct vm_store *store)
@@ -80,8 +80,8 @@ static int device_fault(struct vm_store *store, struct vm_address_space *aspace,
 		// make sure this page in the cache that was faulted on is covered in this region
 		if(offset >= region->cache_offset && (offset - region->cache_offset) < region->size) {
 //			dprintf("device_fault: mapping paddr 0x%x to vaddr 0x%x\n",
-//				(addr)(d->base_addr + offset),
-//				(addr)(region->base + (offset - region->cache_offset)));
+//				(addr_t)(d->base_addr + offset),
+//				(addr_t)(region->base + (offset - region->cache_offset)));
 			(*aspace->translation_map.ops->map)(&aspace->translation_map,
 				region->base + (offset - region->cache_offset),
 				d->base_addr + offset, region->lock);
@@ -107,7 +107,7 @@ static vm_store_ops device_ops = {
 	NULL
 };
 
-vm_store *vm_store_create_device(addr base_addr)
+vm_store *vm_store_create_device(addr_t base_addr)
 {
 	vm_store *store;
 	struct device_store_data *d;
@@ -119,7 +119,7 @@ vm_store *vm_store_create_device(addr base_addr)
 	store->magic = VM_STORE_MAGIC;
 	store->ops = &device_ops;
 	store->cache = NULL;
-	store->data = (void *)((addr)store + sizeof(vm_store));
+	store->data = (void *)((addr_t)store + sizeof(vm_store));
 	store->committed_size = 0;
 
 	d = (struct device_store_data *)store->data;

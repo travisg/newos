@@ -244,10 +244,10 @@ static int smp_process_pending_ici(int curr_cpu)
 //	dprintf("  message = %d\n", msg->message);
 	switch(msg->message) {
 		case SMP_MSG_INVL_PAGE_RANGE:
-			arch_cpu_invalidate_TLB_range((addr)msg->data, (addr)msg->data2);
+			arch_cpu_invalidate_TLB_range((addr_t)msg->data, (addr_t)msg->data2);
 			break;
 		case SMP_MSG_INVL_PAGE_LIST:
-			arch_cpu_invalidate_TLB_list((addr *)msg->data, (int)msg->data2);
+			arch_cpu_invalidate_TLB_list((addr_t *)msg->data, (int)msg->data2);
 			break;
 		case SMP_MSG_GLOBAL_INVL_PAGE:
 			arch_cpu_global_TLB_invalidate();

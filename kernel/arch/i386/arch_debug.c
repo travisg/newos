@@ -58,13 +58,13 @@ static void dbg_stack_trace(int argc, char **argv)
 		} else {
 			uint32 eip = *((uint32 *)ebp + 1);
 			char symname[256];
-			addr base_address;
+			addr_t base_address;
 
 			if(eip == 0 || ebp == 0)
 				break;
 
 			if(elf_reverse_lookup_symbol(eip, &base_address, symname, sizeof(symname)) >= 0) {
-				dprintf("0x%x\t0x%x:<0x%x+0x%x>\t'%s'\n", ebp, eip, (unsigned int)base_address, 
+				dprintf("0x%x\t0x%x:<0x%x+0x%x>\t'%s'\n", ebp, eip, (unsigned int)base_address,
 					(unsigned int)(eip - base_address), symname);
 			} else {
 				dprintf("0x%x\t0x%x\n", ebp, eip);

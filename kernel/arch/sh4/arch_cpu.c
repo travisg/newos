@@ -29,21 +29,21 @@ int arch_cpu_init2(kernel_args *ka)
 	return 0;
 }
 
-void sh4_set_kstack(addr kstack)
+void sh4_set_kstack(addr_t kstack)
 {
 //	dprintf("sh4_set_kstack: setting kstack to 0x%x\n", kstack);
 	vcpu->kstack = (unsigned int *)kstack;
 }
 
-void sh4_set_user_pgdir(addr pgdir)
+void sh4_set_user_pgdir(addr_t pgdir)
 {
 //	dprintf("sh4_set_user_pgdir: setting pgdir to 0x%x\n", pgdir);
-	if((addr)vcpu->user_pgdir != pgdir)
+	if((addr_t)vcpu->user_pgdir != pgdir)
 		arch_cpu_global_TLB_invalidate();
 	vcpu->user_pgdir = (unsigned int *)pgdir;
 }
 
-void sh4_invl_page(addr va)
+void sh4_invl_page(addr_t va)
 {
 	int state;
 	int i;
@@ -69,14 +69,14 @@ void sh4_invl_page(addr va)
 	int_restore_interrupts(state);
 }
 
-void arch_cpu_invalidate_TLB_range(addr start, addr end)
+void arch_cpu_invalidate_TLB_range(addr_t start, addr_t end)
 {
 	for(; start < end; start += PAGE_SIZE) {
 		sh4_invl_page(start);
 	}
 }
 
-void arch_cpu_invalidate_TLB_list(addr pages[], int num_pages)
+void arch_cpu_invalidate_TLB_list(addr_t pages[], int num_pages)
 {
 	int i;
 	for(i=0; i<num_pages; i++) {
@@ -106,12 +106,12 @@ void arch_cpu_global_TLB_invalidate()
 	int_restore_interrupts(state);
 }
 
-int arch_cpu_user_memcpy(void *to, const void *from, size_t size, addr *fault_handler)
+int arch_cpu_user_memcpy(void *to, const void *from, size_t size, addr_t *fault_handler)
 {
 	char *tmp = (char *)to;
 	char *s = (char *)from;
 
-	*fault_handler = (addr)&&error;
+	*fault_handler = (addr_t)&&error;
 
 	while(size--)
 		*tmp++ = *s++;
@@ -124,9 +124,9 @@ error:
 	return ERR_VM_BAD_USER_MEMORY;
 }
 
-int arch_cpu_user_strcpy(char *to, const char *from, addr *fault_handler)
+int arch_cpu_user_strcpy(char *to, const char *from, addr_t *fault_handler)
 {
-	*fault_handler = (addr)&&error;
+	*fault_handler = (addr_t)&&error;
 
 	while((*to++ = *from++) != '\0')
 		;
@@ -139,9 +139,9 @@ error:
 	return ERR_VM_BAD_USER_MEMORY;
 }
 
-int arch_cpu_user_strncpy(char *to, const char *from, size_t size, addr *fault_handler)
+int arch_cpu_user_strncpy(char *to, const char *from, size_t size, addr_t *fault_handler)
 {
-	*fault_handler = (addr)&&error;
+	*fault_handler = (addr_t)&&error;
 
 	while(size-- && (*to++ = *from++) != '\0')
 		;
@@ -154,11 +154,11 @@ error:
 	return ERR_VM_BAD_USER_MEMORY;
 }
 
-int arch_cpu_user_memset(void *s, char c, size_t count, addr *fault_handler)
+int arch_cpu_user_memset(void *s, char c, size_t count, addr_t *fault_handler)
 {
 	char *xs = (char *) s;
 
-	*fault_handler = (addr)&&error;
+	*fault_handler = (addr_t)&&error;
 
 	while (count--)
 		*xs++ = c;

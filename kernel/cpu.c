@@ -35,10 +35,10 @@ int user_atomic_add(int *uval, int incr)
 	int val;
 	int ret;
 
-	if((addr)uval >= KERNEL_BASE && (addr)uval <= KERNEL_TOP)
+	if((addr_t)uval >= KERNEL_BASE && (addr_t)uval <= KERNEL_TOP)
 		goto error;
 
-	if(user_memcpy(&val, uval, sizeof(val)) < 0) 
+	if(user_memcpy(&val, uval, sizeof(val)) < 0)
 		goto error;
 
 	ret = val;
@@ -59,10 +59,10 @@ int user_atomic_and(int *uval, int incr)
 	int val;
 	int ret;
 
-	if((addr)uval >= KERNEL_BASE && (addr)uval <= KERNEL_TOP)
+	if((addr_t)uval >= KERNEL_BASE && (addr_t)uval <= KERNEL_TOP)
 		goto error;
 
-	if(user_memcpy(&val, uval, sizeof(val)) < 0) 
+	if(user_memcpy(&val, uval, sizeof(val)) < 0)
 		goto error;
 
 	ret = val;
@@ -83,10 +83,10 @@ int user_atomic_or(int *uval, int incr)
 	int val;
 	int ret;
 
-	if((addr)uval >= KERNEL_BASE && (addr)uval <= KERNEL_TOP)
+	if((addr_t)uval >= KERNEL_BASE && (addr_t)uval <= KERNEL_TOP)
 		goto error;
 
-	if(user_memcpy(&val, uval, sizeof(val)) < 0) 
+	if(user_memcpy(&val, uval, sizeof(val)) < 0)
 		goto error;
 
 	ret = val;
@@ -107,10 +107,10 @@ int user_atomic_set(int *uval, int set_to)
 	int val;
 	int ret;
 
-	if((addr)uval >= KERNEL_BASE && (addr)uval <= KERNEL_TOP)
+	if((addr_t)uval >= KERNEL_BASE && (addr_t)uval <= KERNEL_TOP)
 		goto error;
 
-	if(user_memcpy(&val, uval, sizeof(val)) < 0) 
+	if(user_memcpy(&val, uval, sizeof(val)) < 0)
 		goto error;
 
 	ret = val;
@@ -131,10 +131,10 @@ int user_test_and_set(int *uval, int set_to, int test_val)
 	int val;
 	int ret;
 
-	if((addr)uval >= KERNEL_BASE && (addr)uval <= KERNEL_TOP)
+	if((addr_t)uval >= KERNEL_BASE && (addr_t)uval <= KERNEL_TOP)
 		goto error;
 
-	if(user_memcpy(&val, uval, sizeof(val)) < 0) 
+	if(user_memcpy(&val, uval, sizeof(val)) < 0)
 		goto error;
 
 	ret = val;

@@ -91,9 +91,9 @@ int arch_cpu_init2(kernel_args *ka)
 		tss_d = (struct tss_descriptor *)&gdt[6 + i];
 		tss_d->limit_00_15 = sizeof(struct tss) & 0xffff;
 		tss_d->limit_19_16 = 0; // not this long
-		tss_d->base_00_15 = (addr)tss[i] & 0xffff;
-		tss_d->base_23_16 = ((addr)tss[i] >> 16) & 0xff;
-		tss_d->base_31_24 = (addr)tss[i] >> 24;
+		tss_d->base_00_15 = (addr_t)tss[i] & 0xffff;
+		tss_d->base_23_16 = ((addr_t)tss[i] >> 16) & 0xff;
+		tss_d->base_31_24 = (addr_t)tss[i] >> 24;
 		tss_d->type = 0x9;
 		tss_d->zero = 0;
 		tss_d->dpl = 0;
@@ -122,9 +122,9 @@ int arch_cpu_init2(kernel_args *ka)
 	tss_d = (struct tss_descriptor *)&gdt[5];
 	tss_d->limit_00_15 = sizeof(struct tss) & 0xffff;
 	tss_d->limit_19_16 = 0; // not this long
-	tss_d->base_00_15 = (addr)&double_fault_tss & 0xffff;
-	tss_d->base_23_16 = ((addr)&double_fault_tss >> 16) & 0xff;
-	tss_d->base_31_24 = (addr)&double_fault_tss >> 24;
+	tss_d->base_00_15 = (addr_t)&double_fault_tss & 0xffff;
+	tss_d->base_23_16 = ((addr_t)&double_fault_tss >> 16) & 0xff;
+	tss_d->base_31_24 = (addr_t)&double_fault_tss >> 24;
 	tss_d->type = 0x9; // tss descriptor, not busy
 	tss_d->zero = 0;
 	tss_d->dpl = 0;
@@ -148,7 +148,7 @@ desc_table *i386_get_gdt(void)
 	return gdt;
 }
 
-void i386_set_kstack(addr kstack)
+void i386_set_kstack(addr_t kstack)
 {
 	int curr_cpu = smp_get_current_cpu();
 
@@ -164,14 +164,14 @@ void i386_set_kstack(addr kstack)
 //	dprintf("done\n");
 }
 
-void arch_cpu_invalidate_TLB_range(addr start, addr end)
+void arch_cpu_invalidate_TLB_range(addr_t start, addr_t end)
 {
 	for(; start < end; start += PAGE_SIZE) {
 		invalidate_TLB(start);
 	}
 }
 
-void arch_cpu_invalidate_TLB_list(addr pages[], int num_pages)
+void arch_cpu_invalidate_TLB_list(addr_t pages[], int num_pages)
 {
 	int i;
 	for(i=0; i<num_pages; i++) {
@@ -179,12 +179,12 @@ void arch_cpu_invalidate_TLB_list(addr pages[], int num_pages)
 	}
 }
 
-int arch_cpu_user_memcpy(void *to, const void *from, size_t size, addr *fault_handler)
+int arch_cpu_user_memcpy(void *to, const void *from, size_t size, addr_t *fault_handler)
 {
 	char *tmp = (char *)to;
 	char *s = (char *)from;
 
-	*fault_handler = (addr)&&error;
+	*fault_handler = (addr_t)&&error;
 
 	while(size--)
 		*tmp++ = *s++;
@@ -197,9 +197,9 @@ error:
 	return ERR_VM_BAD_USER_MEMORY;
 }
 
-int arch_cpu_user_strcpy(char *to, const char *from, addr *fault_handler)
+int arch_cpu_user_strcpy(char *to, const char *from, addr_t *fault_handler)
 {
-	*fault_handler = (addr)&&error;
+	*fault_handler = (addr_t)&&error;
 
 	while((*to++ = *from++) != '\0')
 		;
@@ -212,9 +212,9 @@ error:
 	return ERR_VM_BAD_USER_MEMORY;
 }
 
-int arch_cpu_user_strncpy(char *to, const char *from, size_t size, addr *fault_handler)
+int arch_cpu_user_strncpy(char *to, const char *from, size_t size, addr_t *fault_handler)
 {
-	*fault_handler = (addr)&&error;
+	*fault_handler = (addr_t)&&error;
 
 	while(size-- && (*to++ = *from++) != '\0')
 		;
@@ -227,11 +227,11 @@ error:
 	return ERR_VM_BAD_USER_MEMORY;
 }
 
-int arch_cpu_user_memset(void *s, char c, size_t count, addr *fault_handler)
+int arch_cpu_user_memset(void *s, char c, size_t count, addr_t *fault_handler)
 {
 	char *xs = (char *) s;
 
-	*fault_handler = (addr)&&error;
+	*fault_handler = (addr_t)&&error;
 
 	while (count--)
 		*xs++ = c;

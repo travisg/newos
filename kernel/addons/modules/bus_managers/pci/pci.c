@@ -1372,7 +1372,7 @@ pci_module_init(void)
 	                                    REGION_ADDR_ANY_ADDRESS,
 	                                    0x10000,
 	                                    LOCK_RO | LOCK_KERNEL,
-	                                    (addr)0xf0000);
+	                                    (addr_t)0xf0000);
 
 	pirt = find_pir_table();
 	if (pirt) {

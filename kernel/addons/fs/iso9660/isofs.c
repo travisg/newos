@@ -333,7 +333,7 @@ static int isofs_mount(fs_cookie *_fs, fs_id id, const char *device, void *args,
 	}
 
 	// Create and setup hash table
-	fs->vnode_list_hash = hash_init(ISOFS_HASH_SIZE, (addr)&v->all_next - (addr)v,
+	fs->vnode_list_hash = hash_init(ISOFS_HASH_SIZE, (addr_t)&v->all_next - (addr_t)v,
 		&isofs_vnode_compare_func, &isofs_vnode_hash_func);
 	if(fs->vnode_list_hash == NULL) {
 		err = ERR_NO_MEMORY;
@@ -493,7 +493,7 @@ static int isofs_removevnode(fs_cookie _fs, fs_vnode _v, bool r)
 static int isofs_fsync(fs_cookie _fs, fs_vnode _v)
 {
 	struct isofs_vnode *v = (struct isofs_vnode *)_v;
-	
+
 	TOUCH(v);
 
 	TRACE(("isofs_fsync: entry on vnode 0x%x\n", v->id));

@@ -46,12 +46,12 @@ enum {
 typedef
 struct elf_region_t {
 	region_id id;
-	addr start;
-	addr size;
-	addr vmstart;
-	addr vmsize;
-	addr fdstart;
-	addr fdsize;
+	addr_t start;
+	addr_t size;
+	addr_t vmstart;
+	addr_t vmsize;
+	addr_t fdstart;
+	addr_t fdsize;
 	long delta;
 	unsigned flags;
 } elf_region_t;
@@ -70,8 +70,8 @@ struct image_t {
 	int      refcount;
 	unsigned flags;
 
-	addr entry_point;
-	addr dynamic_ptr; // pointer to the dynamic section
+	addr_t entry_point;
+	addr_t dynamic_ptr; // pointer to the dynamic section
 
 
 	// pointer to symbol participation data structures
@@ -460,7 +460,7 @@ map_image(int fd, char const *path, image_t *image, bool fixed)
 
 	for(i= 0; i< image->num_regions; i++) {
 		char     region_name[256];
-		addr     load_address;
+		addr_t     load_address;
 		unsigned addr_specifier;
 
 		sprintf(
@@ -701,7 +701,7 @@ find_symbol(image_t **shimg, const char *name)
 
 static
 int
-resolve_symbol(image_t *image, struct Elf32_Sym *sym, addr *sym_addr)
+resolve_symbol(image_t *image, struct Elf32_Sym *sym, addr_t *sym_addr)
 {
 	struct Elf32_Sym *sym2;
 	char             *symname;
@@ -839,7 +839,7 @@ load_dependencies(image_t *img)
 	unsigned j;
 
 	struct Elf32_Dyn *d;
-	addr   needed_offset;
+	addr_t   needed_offset;
 	char   path[256];
 
 	d = (struct Elf32_Dyn *)img->dynamic_ptr;
@@ -916,7 +916,7 @@ init_dependencies(image_t *img, bool init_head)
 	}
 
 	for(i= 0; i< slot; i++) {
-		addr _initf= init_list[i]->entry_point;
+		addr_t _initf= init_list[i]->entry_point;
 		libinit_f *initf= (libinit_f *)(_initf);
 
 		if(initf) {

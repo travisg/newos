@@ -770,7 +770,7 @@ sem_id user_sem_create(int count, const char *uname)
 		char name[SYS_MAX_OS_NAME_LEN];
 		int rc;
 
-		if((addr)uname >= KERNEL_BASE && (addr)uname <= KERNEL_TOP)
+		if((addr_t)uname >= KERNEL_BASE && (addr_t)uname <= KERNEL_TOP)
 			return ERR_VM_BAD_USER_MEMORY;
 
 		rc = user_strncpy(name, uname, SYS_MAX_OS_NAME_LEN-1);
@@ -801,7 +801,7 @@ int user_sem_acquire(sem_id id, int count)
 
 int user_sem_acquire_etc(sem_id id, int count, int flags, bigtime_t timeout, int *deleted_retcode)
 {
-	if(deleted_retcode != NULL && ((addr)deleted_retcode >= KERNEL_BASE && (addr)deleted_retcode <= KERNEL_TOP))
+	if(deleted_retcode != NULL && ((addr_t)deleted_retcode >= KERNEL_BASE && (addr_t)deleted_retcode <= KERNEL_TOP))
 		return ERR_VM_BAD_USER_MEMORY;
 
 	flags = flags | SEM_FLAG_INTERRUPTABLE;
@@ -854,7 +854,7 @@ int user_sem_get_sem_info(sem_id uid, struct sem_info *uinfo)
 	struct sem_info info;
 	int rc, rc2;
 
-	if((addr)uinfo >= KERNEL_BASE && (addr)uinfo <= KERNEL_TOP)
+	if((addr_t)uinfo >= KERNEL_BASE && (addr_t)uinfo <= KERNEL_TOP)
 		return ERR_VM_BAD_USER_MEMORY;
 
 	rc = sem_get_sem_info(uid, &info);
@@ -870,7 +870,7 @@ int user_sem_get_next_sem_info(proc_id uproc, uint32 *ucookie, struct sem_info *
 	uint32 cookie;
 	int rc, rc2;
 
-	if((addr)uinfo >= KERNEL_BASE && (addr)uinfo <= KERNEL_TOP)
+	if((addr_t)uinfo >= KERNEL_BASE && (addr_t)uinfo <= KERNEL_TOP)
 		return ERR_VM_BAD_USER_MEMORY;
 
 	rc2 = user_memcpy(&cookie, ucookie, sizeof(uint32));

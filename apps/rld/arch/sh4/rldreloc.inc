@@ -15,10 +15,10 @@ relocate_rel(image_t *image, struct Elf32_Rel *rel, int rel_len )
 	int i;
 	struct Elf32_Sym *sym;
 	int vlErr;
-	addr S;
-	addr final_val;
+	addr_t S;
+	addr_t final_val;
 
-#define P         ((addr *)(image->regions[0].delta + rel[i].r_offset))
+#define P         ((addr_t *)(image->regions[0].delta + rel[i].r_offset))
 #define A         (*(P))
 #define B         (image->regions[0].delta)
 
@@ -67,14 +67,14 @@ relocate_rel(image_t *image, struct Elf32_Rel *rel, int rel_len )
 			case R_386_NONE:
 				continue;
 			case R_386_PC32:
-				final_val=S+A-(addr)P;
+				final_val=S+A-(addr_t)P;
 				break;
 #if 0
 			case R_386_GOT32:
 				final_val= G+A;
 				break;
 			case R_386_PLT32:
-				final_val= L+A-(addr)P;
+				final_val= L+A-(addr_t)P;
 				break;
 #endif
 			case R_386_COPY:
@@ -119,11 +119,11 @@ relocate_rela(image_t *image, struct Elf32_Rela *rel, int rel_len )
 	int i;
 	struct Elf32_Sym *sym;
 	int vlErr;
-	addr S;
-	addr final_val;
+	addr_t S;
+	addr_t final_val;
 
-#define P         ((addr *)(image->regions[0].delta + rel[i].r_offset))
-#define A         ((addr)rel[i].r_addend)
+#define P         ((addr_t *)(image->regions[0].delta + rel[i].r_offset))
+#define A         ((addr_t)rel[i].r_addend)
 #define B         (image->regions[0].delta)
 
 	printf("rela_len %d\n", rel_len);
@@ -159,7 +159,7 @@ relocate_rela(image_t *image, struct Elf32_Rela *rel, int rel_len )
 				break;
 			case R_SH_REL32:
 //				printf("REL32: @ %p S 0x%x, A 0x%x, P 0x%x\n", P, S, A, P);
-				final_val = S + A - (addr)P;
+				final_val = S + A - (addr_t)P;
 				break;
 			case R_SH_RELATIVE:
 //				printf("RELATIVE: @ %p B 0x%x A 0x%x *P 0x%x\n", P, B, A, *P);

@@ -14,7 +14,7 @@
 void vm_test()
 {
 //	region_id region, region2, region3;
-//	addr region_addr;
+//	addr_t region_addr;
 //	int i;
 
 	dprintf("vm_test: entry\n");
@@ -22,7 +22,7 @@ void vm_test()
 	dprintf("vm_test 1: creating anonymous region and writing to it\n");
 	{
 		region_id region;
-		addr region_addr;
+		addr_t region_addr;
 
 		region = vm_create_anonymous_region(vm_get_kernel_aspace_id(), "test_region", (void **)&region_addr,
 			REGION_ADDR_ANY_ADDRESS, PAGE_SIZE * 16, REGION_WIRING_LAZY, LOCK_RW|LOCK_KERNEL);
@@ -53,7 +53,7 @@ void vm_test()
 
 		vm_get_region_info(region, &info);
 		dprintf("region = 0x%x, addr = %p, region->base = 0x%lx\n", region, ptr, info.base);
-		if((addr)ptr != info.base)
+		if((addr_t)ptr != info.base)
 			panic("vm_test 2: info returned about region does not match pointer returned\n");
 
 		for(i=0; i<64; i++) {
@@ -67,8 +67,8 @@ void vm_test()
 #if 1
 	dprintf("vm_test 3: testing some functionality of vm_get_page_mapping(), vm_get/put_physical_page()\n");
 	{
-		addr va, pa;
-		addr va2;
+		addr_t va, pa;
+		addr_t va2;
 
 		vm_get_page_mapping(vm_get_kernel_aspace_id(), 0x80000000, &pa);
 		vm_get_physical_page(pa, &va, PHYSICAL_PAGE_CAN_WAIT);

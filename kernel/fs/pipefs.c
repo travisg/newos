@@ -338,7 +338,7 @@ static int pipefs_mount(fs_cookie *_fs, fs_id id, const char *pipefs, void *args
 		goto err1;
 	}
 
-	fs->vnode_list_hash = hash_init(PIPEFS_HASH_SIZE, (addr)&v->all_next - (addr)v,
+	fs->vnode_list_hash = hash_init(PIPEFS_HASH_SIZE, (addr_t)&v->all_next - (addr_t)v,
 		&pipefs_vnode_compare_func, &pipefs_vnode_hash_func);
 	if(fs->vnode_list_hash == NULL) {
 		err = ERR_NO_MEMORY;
@@ -484,7 +484,7 @@ static int pipefs_getvnode(fs_cookie _fs, vnode_id id, fs_vnode *v, bool r)
 static int pipefs_putvnode(fs_cookie _fs, fs_vnode _v, bool r)
 {
 	struct pipefs_vnode *v = (struct pipefs_vnode *)_v;
-	
+
 	TOUCH(v);
 
 	TRACE(("pipefs_putvnode: entry on vnode 0x%Lx, r %d\n", v->id, r));

@@ -33,9 +33,9 @@ struct heap_page {
 } PACKED;
 
 static struct heap_page *heap_alloc_table;
-static addr heap_base_ptr;
-static addr heap_base;
-static addr heap_size;
+static addr_t heap_base_ptr;
+static addr_t heap_base;
+static addr_t heap_size;
 
 struct heap_bin {
 	unsigned int element_size;
@@ -103,7 +103,7 @@ static void dump_bin_list(int argc, char **argv)
 
 // called from vm_init. The heap should already be mapped in at this point, we just
 // do a little housekeeping to set up the data structure.
-int heap_init(addr new_heap_base, unsigned int new_heap_size)
+int heap_init(addr_t new_heap_base, unsigned int new_heap_size)
 {
 	const unsigned int page_entries = PAGE_SIZE / sizeof(struct heap_page);
 	// set some global pointers
@@ -233,7 +233,7 @@ void kfree(void *address)
 	if (address == NULL)
 		return;
 
-	if ((addr)address < heap_base || (addr)address >= (heap_base + heap_size))
+	if ((addr_t)address < heap_base || (addr_t)address >= (heap_base + heap_size))
 		panic("kfree: asked to free invalid address %p\n", address);
 
 	mutex_lock(&heap_lock);
@@ -253,7 +253,7 @@ void kfree(void *address)
 
 	bin = &bins[page[0].bin_index];
 
-	if(bin->element_size <= PAGE_SIZE && (addr)address % bin->element_size != 0)
+	if(bin->element_size <= PAGE_SIZE && (addr_t)address % bin->element_size != 0)
 		panic("kfree: passed invalid pointer %p! Supposed to be in bin for esize 0x%x\n", address, bin->element_size);
 
 	for(i = 0; i < bin->element_size / PAGE_SIZE; i++) {

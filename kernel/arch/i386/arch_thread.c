@@ -86,14 +86,14 @@ int arch_thread_initialize_kthread_stack(struct thread *t, int (*start_func)(voi
 	return 0;
 }
 
-void arch_thread_switch_kstack_and_call(struct thread *t, addr new_kstack, void (*func)(void *), void *arg)
+void arch_thread_switch_kstack_and_call(struct thread *t, addr_t new_kstack, void (*func)(void *), void *arg)
 {
 	i386_switch_stack_and_call(new_kstack, func, arg);
 }
 
 void arch_thread_context_switch(struct thread *t_from, struct thread *t_to)
 {
-	addr new_pgdir;
+	addr_t new_pgdir;
 #if 0
 	int i;
 
@@ -159,7 +159,7 @@ void arch_thread_dump_info(void *info)
 	dprintf("\tfpu_state at %p\n", at->fpu_state);
 }
 
-void arch_thread_enter_uspace(struct thread *t, addr entry, void *args, addr ustack_top)
+void arch_thread_enter_uspace(struct thread *t, addr_t entry, void *args, addr_t ustack_top)
 {
 	dprintf("arch_thread_entry_uspace: thread 0x%x, entry 0x%lx, args %p, ustack_top 0x%lx\n",
 		t->id, entry, args, ustack_top);

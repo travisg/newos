@@ -370,7 +370,7 @@ static int bootfs_mount(fs_cookie *_fs, fs_id id, const char *device, void *args
 		goto err1;
 	}
 
-	fs->vnode_list_hash = hash_init(BOOTFS_HASH_SIZE, (addr)&v->all_next - (addr)v,
+	fs->vnode_list_hash = hash_init(BOOTFS_HASH_SIZE, (addr_t)&v->all_next - (addr_t)v,
 		&bootfs_vnode_compare_func, &bootfs_vnode_hash_func);
 	if(fs->vnode_list_hash == NULL) {
 		err = ERR_NO_MEMORY;

@@ -67,7 +67,7 @@ static int vesa_ioctl(dev_cookie cookie, int op, void *buf, size_t len)
 
 	switch(op) {
 		case IOCTL_DEVFS_GET_FRAMEBUFFER_INFO:
-			if((addr)buf >= KERNEL_BASE && (addr)buf <= KERNEL_TOP)
+			if((addr_t)buf >= KERNEL_BASE && (addr_t)buf <= KERNEL_TOP)
 				err = ERR_VM_BAD_USER_MEMORY;
 			else
 				err = user_memcpy(buf, &vesa.fb_info, sizeof(vesa.fb_info));
@@ -77,7 +77,7 @@ static int vesa_ioctl(dev_cookie cookie, int op, void *buf, size_t len)
 			region_id rid;
 			void *address;
 
-			if((addr)buf >= KERNEL_BASE && (addr)buf <= KERNEL_TOP) {
+			if((addr_t)buf >= KERNEL_BASE && (addr_t)buf <= KERNEL_TOP) {
 				err = ERR_VM_BAD_USER_MEMORY;
 				goto out;
 			}

@@ -83,7 +83,7 @@ static int destroy_netsocket(netsocket *s)
 	mutex_lock(&sock_mutex);
 	hash_remove(sock_table, s);
 	mutex_unlock(&sock_mutex);
-	
+
 	kfree(s);
 
 	return 0;
@@ -313,7 +313,7 @@ int socket_close(sock_id id)
 		// free the socket
 		destroy_netsocket(s);
 	}
-	
+
 	return err;
 }
 
@@ -325,7 +325,7 @@ int socket_init(void)
 
 	mutex_init(&sock_mutex, "socket list mutex");
 
-	sock_table = hash_init(256, (addr)&s.next - (addr)&s, &sock_compare_func, &sock_hash_func);
+	sock_table = hash_init(256, (addr_t)&s.next - (addr_t)&s, &sock_compare_func, &sock_hash_func);
 	if(!sock_table)
 		return ERR_NO_MEMORY;
 

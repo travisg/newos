@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -24,7 +24,7 @@ void arch_thread_context_switch(struct thread *t_from, struct thread *t_to)
 {
 #if 0
 	int i;
-	dprintf("arch_thread_context_switch: 0x%x->0x%x to sp 0x%x\n", 
+	dprintf("arch_thread_context_switch: 0x%x->0x%x to sp 0x%x\n",
 		t_from->id, t_to->id, t_to->arch_info.sp);
 #endif
 #if 0
@@ -34,9 +34,9 @@ void arch_thread_context_switch(struct thread *t_from, struct thread *t_to)
 #endif
 #if 0
 	sh4_set_kstack(t_to->kernel_stack_area->base + KSTACK_SIZE);
-	
+
 	if(t_from->proc->arch_info.pgdir != t_to->proc->arch_info.pgdir)
-		sh4_set_user_pgdir((addr)t_to->proc->arch_info.pgdir);
+		sh4_set_user_pgdir((addr_t)t_to->proc->arch_info.pgdir);
 	sh4_context_switch(&t_from->arch_info.sp, t_to->arch_info.sp);
 #endif
 }
@@ -45,7 +45,7 @@ void arch_thread_dump_info(void *info)
 {
 }
 
-void arch_thread_enter_uspace(addr entry, addr ustack_top)
+void arch_thread_enter_uspace(addr_t entry, addr_t ustack_top)
 {
 }
 

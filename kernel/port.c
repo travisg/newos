@@ -1033,7 +1033,7 @@ port_id user_port_create(int32 queue_length, const char *uname)
 		char name[SYS_MAX_OS_NAME_LEN];
 		int rc;
 
-		if((addr)uname >= KERNEL_BASE && (addr)uname <= KERNEL_TOP)
+		if((addr_t)uname >= KERNEL_BASE && (addr_t)uname <= KERNEL_TOP)
 			return ERR_VM_BAD_USER_MEMORY;
 
 		rc = user_strncpy(name, uname, SYS_MAX_OS_NAME_LEN-1);
@@ -1063,7 +1063,7 @@ port_id	user_port_find(const char *port_name)
 		char name[SYS_MAX_OS_NAME_LEN];
 		int rc;
 
-		if((addr)port_name >= KERNEL_BASE && (addr)port_name <= KERNEL_TOP)
+		if((addr_t)port_name >= KERNEL_BASE && (addr_t)port_name <= KERNEL_TOP)
 			return ERR_VM_BAD_USER_MEMORY;
 
 		rc = user_strncpy(name, port_name, SYS_MAX_OS_NAME_LEN-1);
@@ -1085,7 +1085,7 @@ int	user_port_get_info(port_id id, struct port_info *uinfo)
 
 	if (uinfo == NULL)
 		return ERR_INVALID_ARGS;
-	if((addr)uinfo >= KERNEL_BASE && (addr)uinfo <= KERNEL_TOP)
+	if((addr_t)uinfo >= KERNEL_BASE && (addr_t)uinfo <= KERNEL_TOP)
 		return ERR_VM_BAD_USER_MEMORY;
 
 	res = port_get_info(id, &info);
@@ -1109,9 +1109,9 @@ int	user_port_get_next_port_info(proc_id uproc,
 		return ERR_INVALID_ARGS;
 	if (uinfo == NULL)
 		return ERR_INVALID_ARGS;
-	if((addr)ucookie >= KERNEL_BASE && (addr)ucookie <= KERNEL_TOP)
+	if((addr_t)ucookie >= KERNEL_BASE && (addr_t)ucookie <= KERNEL_TOP)
 		return ERR_VM_BAD_USER_MEMORY;
-	if((addr)uinfo >= KERNEL_BASE && (addr)uinfo <= KERNEL_TOP)
+	if((addr_t)uinfo >= KERNEL_BASE && (addr_t)uinfo <= KERNEL_TOP)
 		return ERR_VM_BAD_USER_MEMORY;
 
 	// copy from userspace
@@ -1152,9 +1152,9 @@ ssize_t	user_port_read_etc(port_id uport, int32 *umsg_code, void *umsg_buffer,
 	if (umsg_buffer == NULL)
 		return ERR_INVALID_ARGS;
 
-	if((addr)umsg_code >= KERNEL_BASE && (addr)umsg_code <= KERNEL_TOP)
+	if((addr_t)umsg_code >= KERNEL_BASE && (addr_t)umsg_code <= KERNEL_TOP)
 		return ERR_VM_BAD_USER_MEMORY;
-	if((addr)umsg_buffer >= KERNEL_BASE && (addr)umsg_buffer <= KERNEL_TOP)
+	if((addr_t)umsg_buffer >= KERNEL_BASE && (addr_t)umsg_buffer <= KERNEL_TOP)
 		return ERR_VM_BAD_USER_MEMORY;
 
 	res = port_read_etc(uport, &msg_code, umsg_buffer, ubuffer_size,
@@ -1177,7 +1177,7 @@ int	user_port_write_etc(port_id uport, int32 umsg_code, void *umsg_buffer,
 {
 	if (umsg_buffer == NULL)
 		return ERR_INVALID_ARGS;
-	if((addr)umsg_buffer >= KERNEL_BASE && (addr)umsg_buffer <= KERNEL_TOP)
+	if((addr_t)umsg_buffer >= KERNEL_BASE && (addr_t)umsg_buffer <= KERNEL_TOP)
 		return ERR_VM_BAD_USER_MEMORY;
 	return port_write_etc(uport, umsg_code, umsg_buffer, ubuffer_size,
 		uflags | PORT_FLAG_USE_USER_MEMCPY | SEM_FLAG_INTERRUPTABLE, utimeout);

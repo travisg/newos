@@ -341,7 +341,7 @@ int if_init(void)
 	next_id = 0;
 
 	// create a hash table to store the interface list
-	ifhash = hash_init(16, (addr)&i->next - (addr)i,
+	ifhash = hash_init(16, (addr_t)&i->next - (addr_t)i,
 		&if_compare_func, &if_hash_func);
 	err = mutex_init(&ifhash_lock, "if list lock");
 	if(err < 0)

@@ -211,7 +211,7 @@ static unsigned int tcp_socket_hash_func(void *_s, const void *_key, unsigned in
 #define inc_socket_ref(s) _inc_socket_ref(s, __FUNCTION__, __LINE__);
 static void _inc_socket_ref(tcp_socket *s, const char *where, int line)
 {
-	if((addr)s < KERNEL_BASE)
+	if((addr_t)s < KERNEL_BASE)
 		panic("inc_socket_ref: %s:%d s %p bad pointer\n", where, line, s);
 	dprintf("inc_socket_ref: %s:%d s %p, %d -> %d\n", where, line, s, s->ref_count, s->ref_count+1);
 #else
@@ -226,7 +226,7 @@ static void inc_socket_ref(tcp_socket *s)
 #define dec_socket_ref(s) _dec_socket_ref(s, __FUNCTION__, __LINE__);
 static void _dec_socket_ref(tcp_socket *s, const char *where, int line)
 {
-	if((addr)s < KERNEL_BASE)
+	if((addr_t)s < KERNEL_BASE)
 		panic("dec_socket_ref: %s:%d s %p bad pointer\n", where, line, s);
 	dprintf("dec_socket_ref: %s:%d s %p, %d -> %d\n", where, line, s, s->ref_count, s->ref_count-1);
 #else
@@ -1661,7 +1661,7 @@ int tcp_init(void)
 
 	mutex_init(&socket_table_lock, "tcp socket table lock");
 
-	socket_table = hash_init(256, (addr)&s.next - (addr)&s, &tcp_socket_compare_func, &tcp_socket_hash_func);
+	socket_table = hash_init(256, (addr_t)&s.next - (addr_t)&s, &tcp_socket_compare_func, &tcp_socket_hash_func);
 	if(!socket_table)
 		return ERR_NO_MEMORY;
 

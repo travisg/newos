@@ -22,7 +22,7 @@ int arch_cpu_init2(kernel_args *ka)
 	return 0;
 }
 
-void arch_cpu_invalidate_TLB_range(addr start, addr end)
+void arch_cpu_invalidate_TLB_range(addr_t start, addr_t end)
 {
 	asm volatile("sync");
 	while(start < end) {
@@ -35,7 +35,7 @@ void arch_cpu_invalidate_TLB_range(addr start, addr end)
 	asm volatile("sync");
 }
 
-void arch_cpu_invalidate_TLB_list(addr pages[], int num_pages)
+void arch_cpu_invalidate_TLB_list(addr_t pages[], int num_pages)
 {
 	int i;
 
@@ -68,12 +68,12 @@ long long system_time(void)
 	return 0;
 }
 
-int arch_cpu_user_memcpy(void *to, const void *from, size_t size, addr *fault_handler)
+int arch_cpu_user_memcpy(void *to, const void *from, size_t size, addr_t *fault_handler)
 {
 	char *tmp = (char *)to;
 	char *s = (char *)from;
 
-	*fault_handler = (addr)&&error;
+	*fault_handler = (addr_t)&&error;
 
 	while(size--)
 		*tmp++ = *s++;
@@ -86,9 +86,9 @@ error:
 	return ERR_VM_BAD_USER_MEMORY;
 }
 
-int arch_cpu_user_strcpy(char *to, const char *from, addr *fault_handler)
+int arch_cpu_user_strcpy(char *to, const char *from, addr_t *fault_handler)
 {
-	*fault_handler = (addr)&&error;
+	*fault_handler = (addr_t)&&error;
 
 	while((*to++ = *from++) != '\0')
 		;
@@ -101,9 +101,9 @@ error:
 	return ERR_VM_BAD_USER_MEMORY;
 }
 
-int arch_cpu_user_strncpy(char *to, const char *from, size_t size, addr *fault_handler)
+int arch_cpu_user_strncpy(char *to, const char *from, size_t size, addr_t *fault_handler)
 {
-	*fault_handler = (addr)&&error;
+	*fault_handler = (addr_t)&&error;
 
 	while(size-- && (*to++ = *from++) != '\0')
 		;
@@ -116,11 +116,11 @@ error:
 	return ERR_VM_BAD_USER_MEMORY;
 }
 
-int arch_cpu_user_memset(void *s, char c, size_t count, addr *fault_handler)
+int arch_cpu_user_memset(void *s, char c, size_t count, addr_t *fault_handler)
 {
 	char *xs = (char *) s;
 
-	*fault_handler = (addr)&&error;
+	*fault_handler = (addr_t)&&error;
 
 	while (count--)
 		*xs++ = c;

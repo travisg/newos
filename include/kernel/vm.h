@@ -19,7 +19,7 @@ typedef struct vm_page {
 	struct vm_page *hash_next;
 
 	off_t offset;
-	addr ppn; // physical page number
+	addr_t ppn; // physical page number
 
 	struct vm_cache_ref *cache_ref;
 
@@ -82,8 +82,8 @@ typedef struct vm_cache {
 // used in vm_get_region_info()
 typedef struct vm_region_info {
 	region_id id;
-	addr base;
-	addr size;
+	addr_t base;
+	addr_t size;
 	int lock;
 	int wiring;
 	char name[SYS_MAX_OS_NAME_LEN];
@@ -94,8 +94,8 @@ typedef struct vm_region {
 	int magic;
 	char *name;
 	region_id id;
-	addr base;
-	addr size;
+	addr_t base;
+	addr_t size;
 	int lock;
 	int wiring;
 	int ref_count;
@@ -120,8 +120,8 @@ typedef struct vm_virtual_map {
 	int change_count;
 	sem_id sem;
 	struct vm_address_space *aspace;
-	addr base;
-	addr size;
+	addr_t base;
+	addr_t size;
 } vm_virtual_map;
 
 enum {
@@ -139,10 +139,10 @@ typedef struct vm_address_space {
 	int ref_count;
 	int fault_count;
 	int state;
-	addr scan_va;
-	addr working_set_size;
-	addr max_working_set;
-	addr min_working_set;
+	addr_t scan_va;
+	addr_t working_set_size;
+	addr_t max_working_set;
+	addr_t min_working_set;
 	bigtime_t last_working_set_adjust;
 	struct vm_address_space *hash_next;
 } vm_address_space;
@@ -205,7 +205,7 @@ int vm_init(kernel_args *ka);
 int vm_init_postsem(kernel_args *ka);
 int vm_init_postthread(kernel_args *ka);
 
-aspace_id vm_create_aspace(const char *name, addr base, addr size, bool kernel);
+aspace_id vm_create_aspace(const char *name, addr_t base, addr_t size, bool kernel);
 int vm_delete_aspace(aspace_id);
 vm_address_space *vm_get_kernel_aspace(void);
 aspace_id vm_get_kernel_aspace_id(void);
@@ -218,21 +218,21 @@ void vm_put_region(vm_region *region);
 #define vm_aspace_swap(aspace) arch_vm_aspace_swap(aspace)
 
 region_id vm_create_anonymous_region(aspace_id aid, char *name, void **address, int addr_type,
-	addr size, int wiring, int lock);
+	addr_t size, int wiring, int lock);
 region_id vm_map_physical_memory(aspace_id aid, char *name, void **address, int addr_type,
-	addr size, int lock, addr phys_addr);
+	addr_t size, int lock, addr_t phys_addr);
 region_id vm_map_file(aspace_id aid, char *name, void **address, int addr_type,
-	addr size, int lock, int mapping, const char *path, off_t offset);
-region_id vm_create_null_region(aspace_id aid, char *name, void **address, int addr_type, addr size);
+	addr_t size, int lock, int mapping, const char *path, off_t offset);
+region_id vm_create_null_region(aspace_id aid, char *name, void **address, int addr_type, addr_t size);
 region_id vm_clone_region(aspace_id aid, char *name, void **address, int addr_type,
 	region_id source_region, int mapping, int lock);
 int vm_delete_region(aspace_id aid, region_id id);
 region_id vm_find_region_by_name(aspace_id aid, const char *name);
 int vm_get_region_info(region_id id, vm_region_info *info);
 
-int vm_get_page_mapping(aspace_id aid, addr vaddr, addr *paddr);
-int vm_get_physical_page(addr paddr, addr *vaddr, int flags);
-int vm_put_physical_page(addr vaddr);
+int vm_get_page_mapping(aspace_id aid, addr_t vaddr, addr_t *paddr);
+int vm_get_physical_page(addr_t paddr, addr_t *vaddr, int flags);
+int vm_put_physical_page(addr_t vaddr);
 
 int user_memcpy(void *to, const void *from, size_t size);
 int user_strcpy(char *to, const char *from);
@@ -240,11 +240,11 @@ int user_strncpy(char *to, const char *from, size_t size);
 int user_memset(void *s, char c, size_t count);
 
 region_id user_vm_create_anonymous_region(char *uname, void **uaddress, int addr_type,
-	addr size, int wiring, int lock);
+	addr_t size, int wiring, int lock);
 region_id user_vm_clone_region(char *uname, void **uaddress, int addr_type,
 	region_id source_region, int mapping, int lock);
 region_id user_vm_map_file(char *uname, void **uaddress, int addr_type,
-	addr size, int lock, int mapping, const char *upath, off_t offset);
+	addr_t size, int lock, int mapping, const char *upath, off_t offset);
 int user_vm_get_region_info(region_id id, vm_region_info *uinfo);
 
 // state of the vm, for informational purposes only
@@ -270,7 +270,7 @@ typedef struct {
 	int page_faults;
 } vm_info_t;
 
-addr vm_get_mem_size(void);
+addr_t vm_get_mem_size(void);
 
 // XXX remove later
 void vm_test(void);

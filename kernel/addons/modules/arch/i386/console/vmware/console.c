@@ -10,12 +10,12 @@
 #include "font.h"
 
 static struct {
-	addr		fb_base;
-	addr		fb_phys_base;
-	addr		fb_size;
-	addr		fifo_base;
-	addr		fifo_phys_base;
-	addr		fifo_size;
+	addr_t		fb_base;
+	addr_t		fb_phys_base;
+	addr_t		fb_size;
+	addr_t		fifo_base;
+	addr_t		fifo_phys_base;
+	addr_t		fifo_size;
 	uint32		scrn_width;
 	uint32		scrn_height;
 	uint32		fb_offset;

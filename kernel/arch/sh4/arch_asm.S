@@ -292,13 +292,13 @@ _fc_loop:
 	bra	_fc_loop
 	nop
 
-// void sh4_switch_stack_and_call(addr stack, void (*func)(void *), void *arg);
+// void sh4_switch_stack_and_call(addr_t stack, void (*func)(void *), void *arg);
 FUNCTION(sh4_switch_stack_and_call):
 	mov		r4,r15
 	jsr		@r5
 	mov		r6,r4
 
-// void sh4_enter_uspace(addr entry, void *args, addr ustack_top);
+// void sh4_enter_uspace(addr_t entry, void *args, addr_t ustack_top);
 FUNCTION(sh4_enter_uspace):
 	ldc		r4,spc		// load the program counter it will switch to
 	mov		r5,r4		// load the args

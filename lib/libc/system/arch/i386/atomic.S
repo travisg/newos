@@ -95,7 +95,7 @@ FUNCTION(system_time):
 	popl	%ebx
 	ret
 
-/* void i386_switch_stack_and_call(addr stack, void (*func)(void *), void *arg); */
+/* void i386_switch_stack_and_call(addr_t stack, void (*func)(void *), void *arg); */
 FUNCTION(i386_switch_stack_and_call):
 	movl	4(%esp),%eax	// new stack
 	movl	8(%esp),%ecx	// func

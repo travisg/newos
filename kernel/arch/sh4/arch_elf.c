@@ -21,10 +21,10 @@ int arch_elf_relocate_rel(struct elf_image_info *image, const char *sym_prepend,
 	int i;
 	struct Elf32_Sym *sym;
 	int vlErr;
-	addr S;
-	addr final_val;
+	addr_t S;
+	addr_t final_val;
 
-#define P         ((addr *)(image->regions[0].delta + rel[i].r_offset))
+#define P         ((addr_t *)(image->regions[0].delta + rel[i].r_offset))
 #define A         (*(P))
 #define B         (image->regions[0].delta)
 
@@ -79,11 +79,11 @@ int arch_elf_relocate_rela(struct elf_image_info *image, const char *sym_prepend
 	int i;
 	struct Elf32_Sym *sym;
 	int vlErr;
-	addr S;
-	addr final_val;
+	addr_t S;
+	addr_t final_val;
 
-#define P         ((addr *)(image->regions[0].delta + rel[i].r_offset))
-#define A         ((addr)rel[i].r_addend)
+#define P         ((addr_t *)(image->regions[0].delta + rel[i].r_offset))
+#define A         ((addr_t)rel[i].r_addend)
 #define B         (image->regions[0].delta)
 
 	TRACE(("rela_len %d\n", rel_len));

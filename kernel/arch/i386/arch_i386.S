@@ -119,7 +119,7 @@ FUNCTION(i386_fxsave_swap):
 	fxrstor	(%eax)
 	ret
 
-/* void i386_context_switch(unsigned int **old_esp, unsigned int *new_esp, addr new_pgdir); */
+/* void i386_context_switch(unsigned int **old_esp, unsigned int *new_esp, addr_t new_pgdir); */
 FUNCTION(i386_context_switch):
 	pusha					/* pushes 8 words onto the stack */
 	movl	36(%esp),%eax	/* save current_stack */
@@ -137,7 +137,7 @@ skip_pgdir_swap:
 	popa
 	ret
 
-/* void i386_swap_pgdir(addr new_pgdir); */
+/* void i386_swap_pgdir(addr_t new_pgdir); */
 FUNCTION(i386_swap_pgdir):
 	movl	4(%esp),%eax
 	movl	%eax,%cr3
@@ -155,7 +155,7 @@ i386_uspace_exit_stub:
 i386_uspace_exit_stub_end:
 
 
-/* void i386_enter_uspace(addr entry, void *args, addr ustack_top); */
+/* void i386_enter_uspace(addr_t entry, void *args, addr_t ustack_top); */
 FUNCTION(i386_enter_uspace):
 	movl	4(%esp),%eax	// get entry point
 	movl	8(%esp),%edx	// get arguments
@@ -189,7 +189,7 @@ _copy_more:
 	pushl	%eax			// user IP
 	iret
 
-/* void i386_switch_stack_and_call(addr stack, void (*func)(void *), void *arg); */
+/* void i386_switch_stack_and_call(addr_t stack, void (*func)(void *), void *arg); */
 FUNCTION(i386_switch_stack_and_call):
 	movl	4(%esp),%eax	// new stack
 	movl	8(%esp),%ecx	// func

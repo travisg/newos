@@ -94,7 +94,7 @@ vm_store *vm_store_create_vnode(void *vnode)
 	store->magic = VM_STORE_MAGIC;
 	store->ops = &vnode_ops;
 	store->cache = NULL;
-	store->data = (void *)((addr)store + sizeof(vm_store));
+	store->data = (void *)((addr_t)store + sizeof(vm_store));
 	store->committed_size = 0;
 
 	d = (struct vnode_store_data *)store->data;
