@@ -226,6 +226,75 @@ retry:
 	return 0;
 }
 
+static const char *state_to_text(int state)
+{
+	switch(state) {
+		case THREAD_STATE_READY:
+			return "READY";
+		case THREAD_STATE_RUNNING:
+			return "RUNNING";
+		case THREAD_STATE_WAITING:
+			return "WAITING";
+		case THREAD_STATE_MARKED_FOR_DEATH:
+			return "DEATH";
+		default:
+			return "UNKNOWN";
+	}
+}
+
+static void dump_thread_info(int argc, char **argv)
+{
+	struct thread *t;
+	int id = -1;
+
+	if(argc < 2) {
+		dprintf("thread: not enough arguments\n");
+		return;
+	}
+
+retry:
+	t = thread_list;
+	while(t != NULL) {
+		if(strcmp(argv[1], t->name) == 0 || t->id == id) {
+			dprintf("THREAD: 0x%x\n", t);
+			dprintf("name: %s\n", t->name);
+			dprintf("all_next:   0x%x\nproc_next:  0x%x\nq_next:     0x%x\n",
+				t->all_next, t->proc_next, t->q_next);
+			dprintf("id:         0x%x\n", t->id);
+			dprintf("state:      %s\n", state_to_text(t->state));
+			dprintf("next_state: %s\n", state_to_text(t->next_state));
+			dprintf("sem_count:  0x%x\n", t->sem_count);
+			dprintf("snooze_sem_id: 0x%x\n", t->snooze_sem_id);
+			dprintf("proc:       0x%x\n", t->proc);
+			dprintf("kernel_stack_area: 0x%x\n", t->kernel_stack_area);
+			dprintf("user_stack_area:   0x%x\n", t->user_stack_area);
+			dprintf("architecture dependant section:\n");
+			arch_thread_dump_info(t->arch_info);
+			return;
+		}
+		t = t->all_next;
+	}
+	if(id == -1) {
+		id = atoi(argv[1]);
+		if(id >= 0) {
+			goto retry;
+		}
+	}
+}
+
+static void dump_thread_list(int argc, char **argv)
+{
+	struct thread *t;
+	TOUCH(argc);TOUCH(argv);
+
+	t = thread_list;
+	while(t != NULL) {
+		dprintf("%32s\t0x%x\t%16s\t0x%x\n",
+			t->name, t->id, state_to_text(t->state), t->kernel_stack_area->base);
+		t = t->all_next;
+	}
+}
+
 int thread_init(struct kernel_args *ka)
 {
 	struct thread *t;
@@ -266,6 +335,10 @@ int thread_init(struct kernel_args *ka)
 
 	// set up a periodic timer (10ms)
 	timer_set_event(10000, TIMER_MODE_PERIODIC, NULL, NULL);
+
+	// set up some debugger commands
+	dbg_add_command(dump_thread_list, "threads", "list all threads");
+	dbg_add_command(dump_thread_info, "thread", "list info about a particular thread");
 
 	return 0;
 }

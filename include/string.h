@@ -29,6 +29,7 @@ void* 	memmove(void * dest,const void * src, size_t n);
 int 	memcmp(const void * cs,const void * ct,size_t count);
 void* 	memscan(void * addr, int c, size_t size);
 char* 	strstr(const char * s1,const char * s2);
+int 	atoi(const char *num);
 
 #ifdef __cplusplus
 }

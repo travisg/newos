@@ -394,6 +394,7 @@ kb_wait:
 	jne 1b
 	popl %eax
 	ret
+#if 0
 /*
  * This routine reboots the machine by asking the keyboard
  * controller to pulse the reset-line low.
@@ -404,4 +405,4 @@ reboot:
 	movb $0xfc,%al		/* pulse reset and A20 low */
 	outb %al,$0x64
 die:	jmp die
-
+#endif

@@ -117,3 +117,17 @@ i386_context_switch:
 	popa
 	popfl
 	ret
+
+null_idt_descr:
+	.word	0
+	.word	0,0
+
+.global reboot
+reboot:
+	lidt	null_idt_descr
+	movl	$0x200,%eax
+	pushl	%eax
+	popf
+	int		$0
+done:
+	jmp		done

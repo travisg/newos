@@ -82,6 +82,7 @@ int smp_intercpu_int_handler()
 		case SMP_MSG_CPU_HALT:
 			kprintf("cpu %d halted!\n", curr_cpu);
 			dprintf("cpu %d halted!\n", curr_cpu);
+			int_disable_interrupts();
 			for(;;);
 			break;
 		case SMP_MSG_1:

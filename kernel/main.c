@@ -33,6 +33,7 @@ int _start(struct kernel_args *oldka, int cpu)
 		arch_cpu_init(&ka);
 		int_init(&ka);
 		vm_init(&ka);
+		dbg_init2(&ka);
 		int_init2(&ka);
 		faults_init(&ka);
 		con_init(&ka);
@@ -42,7 +43,7 @@ int _start(struct kernel_args *oldka, int cpu)
 		proc_init(&ka);
 		thread_init(&ka);
 	
-	#if 1
+	#if 0
 		// XXX remove
 		thread_test();
 	#endif
@@ -101,6 +102,10 @@ int _start(struct kernel_args *oldka, int cpu)
 		dprintf("sending intercpu interrupt\n");
 		smp_send_ici(0, SMP_MSG_INVL_PAGE, 0x80000000, NULL);
 	}
+#endif
+
+#if 1
+	panic("debugger_test\n");	
 #endif
 	kprintf("main: done... spinning forever on cpu %d\n", cpu);
 	dprintf("main: done... spinning forever on cpu %d\n", cpu);

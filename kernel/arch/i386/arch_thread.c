@@ -76,3 +76,9 @@ void arch_thread_context_switch(struct thread *t_from, struct thread *t_to)
 	i386_context_switch(&old_at->esp, new_at->esp);
 }
 
+void arch_thread_dump_info(void *info)
+{
+	struct arch_thread *at = (struct arch_thread *)info;
+
+	dprintf("\tesp: 0x%x\n", at->esp);
+}
