@@ -83,10 +83,13 @@ int			user_port_get_info(port_id id, struct port_info *info);
 int		 	user_port_get_next_port_info(proc_id proc,
 				uint32 *cookie,
 				struct port_info *info);
+ssize_t     user_port_buffer_size(port_id port);
 ssize_t		user_port_buffer_size_etc(port_id port,
 				uint32 flags,
 				bigtime_t timeout);
 int32		user_port_count(port_id port);
+ssize_t 	user_port_read(port_id uport, int32 *umsg_code, void *umsg_buffer,
+				size_t ubuffer_size);
 ssize_t		user_port_read_etc(port_id port,
 				int32 *msg_code,
 				void *msg_buffer,
@@ -94,6 +97,8 @@ ssize_t		user_port_read_etc(port_id port,
 				uint32 flags,
 				bigtime_t timeout);
 int			user_port_set_owner(port_id port, proc_id proc);
+int			user_port_write(port_id uport, int32 umsg_code, void *umsg_buffer,
+				size_t ubuffer_size);
 int			user_port_write_etc(port_id port,
 				int32 msg_code,
 				void *msg_buffer,

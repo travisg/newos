@@ -59,7 +59,7 @@ static int socket_dev_ioctl(dev_cookie cookie, int op, void *buf, size_t len)
 	int err;
 
 	// copy the args over from user space
-	err = user_memcpy(&args, buf, sizeof(args));
+	err = user_memcpy(&args, buf, min(sizeof(args), len));
 	if(err < 0)
 		return err;
 

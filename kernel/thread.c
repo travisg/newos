@@ -49,6 +49,7 @@ static unsigned int proc_struct_hash(void *_p, const void *_key, unsigned int ra
 
 // global
 spinlock_t thread_spinlock = 0;
+const int fault_handler_offset = (addr_t)&(((struct thread *)0)->fault_handler) - (addr_t)0;
 
 // proc list
 static void *proc_hash = NULL;
@@ -502,10 +503,11 @@ static thread_id _create_thread(const char *name, proc_id pid, addr_t entry, voi
 	return t->id;
 }
 
-thread_id user_thread_create_user_thread(char *uname, proc_id pid, addr_t entry, void *args)
+thread_id user_thread_create_user_thread(char *uname, addr_t entry, void *args)
 {
 	char name[SYS_MAX_OS_NAME_LEN];
 	int rc;
+	proc_id pid = thread_get_current_thread()->proc->id;
 
 	if((addr_t)uname >= KERNEL_BASE && (addr_t)uname <= KERNEL_TOP)
 		return ERR_VM_BAD_USER_MEMORY;
@@ -573,6 +575,13 @@ int thread_suspend_thread(thread_id id)
 	}
 
 	return retval;
+}
+
+thread_id thread_get_current_thread_id(void) 
+{
+	struct thread *t = thread_get_current_thread(); 
+
+	return t ? t->id : 0;
 }
 
 int thread_resume_thread(thread_id id)

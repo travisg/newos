@@ -247,6 +247,7 @@ region_id user_vm_clone_region(char *uname, void **uaddress, int addr_type,
 region_id user_vm_map_file(char *uname, void **uaddress, int addr_type,
 	addr_t size, int lock, int mapping, const char *upath, off_t offset);
 int user_vm_get_region_info(region_id id, vm_region_info *uinfo);
+int user_vm_delete_region(region_id id);
 
 // state of the vm, for informational purposes only
 typedef struct {

@@ -973,6 +973,11 @@ static int _vm_delete_region(vm_address_space *aspace, region_id rid)
 	return 0;
 }
 
+int user_vm_delete_region(region_id rid)
+{
+	return vm_delete_region(vm_get_current_user_aspace_id(), rid);
+}
+
 int vm_delete_region(aspace_id aid, region_id rid)
 {
 	vm_address_space *aspace;

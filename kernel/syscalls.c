@@ -15,288 +15,102 @@
 #include <kernel/time.h>
 #include <sys/resource.h>
 
-#define INT32TOINT64(x, y) ((int64)(x) | ((int64)(y) << 32))
+static int syscall_null(void)
+{           
+    return 0;
+}           
+            
+typedef void (*syscall_func)(void);
+            
+struct syscall_table_entry {
+    syscall_func syscall;
+};          
 
-#define arg0  (((uint32 *)arg_buffer)[0])
-#define arg1  (((uint32 *)arg_buffer)[1])
-#define arg2  (((uint32 *)arg_buffer)[2])
-#define arg3  (((uint32 *)arg_buffer)[3])
-#define arg4  (((uint32 *)arg_buffer)[4])
-#define arg5  (((uint32 *)arg_buffer)[5])
-#define arg6  (((uint32 *)arg_buffer)[6])
-#define arg7  (((uint32 *)arg_buffer)[7])
-#define arg8  (((uint32 *)arg_buffer)[8])
-#define arg9  (((uint32 *)arg_buffer)[9])
-#define arg10 (((uint32 *)arg_buffer)[10])
-#define arg11 (((uint32 *)arg_buffer)[11])
-#define arg12 (((uint32 *)arg_buffer)[12])
-#define arg13 (((uint32 *)arg_buffer)[13])
-#define arg14 (((uint32 *)arg_buffer)[14])
-#define arg15 (((uint32 *)arg_buffer)[15])
+#define SYSCALL_ENTRY(func) { ((syscall_func)(func)) }
+        
+const struct syscall_table_entry syscall_table[] = {
+	SYSCALL_ENTRY(syscall_null),				/* 0 */
+	SYSCALL_ENTRY(user_mount),
+	SYSCALL_ENTRY(user_unmount),
+	SYSCALL_ENTRY(user_sync),
+	SYSCALL_ENTRY(user_open),
+	SYSCALL_ENTRY(user_close),					/* 5 */
+	SYSCALL_ENTRY(user_fsync),
+	SYSCALL_ENTRY(user_read),
+	SYSCALL_ENTRY(user_write),
+	SYSCALL_ENTRY(user_seek),
+	SYSCALL_ENTRY(user_ioctl),					/* 10 */
+	SYSCALL_ENTRY(user_create),
+	SYSCALL_ENTRY(user_unlink),
+	SYSCALL_ENTRY(user_rename),
+	SYSCALL_ENTRY(user_rstat),
+	SYSCALL_ENTRY(user_wstat),					/* 15 */
+	SYSCALL_ENTRY(system_time),
+	SYSCALL_ENTRY(user_thread_snooze),
+	SYSCALL_ENTRY(user_sem_create),
+	SYSCALL_ENTRY(user_sem_delete),
+	SYSCALL_ENTRY(user_sem_acquire),		/* 20 */
+	SYSCALL_ENTRY(user_sem_acquire_etc),
+	SYSCALL_ENTRY(user_sem_release),
+	SYSCALL_ENTRY(user_sem_release_etc),
+	SYSCALL_ENTRY(thread_get_current_thread_id),
+	SYSCALL_ENTRY(thread_exit),					/* 25 */
+	SYSCALL_ENTRY(user_proc_create_proc),
+	SYSCALL_ENTRY(user_thread_wait_on_thread),
+	SYSCALL_ENTRY(user_proc_wait_on_proc),
+	SYSCALL_ENTRY(user_vm_create_anonymous_region),
+	SYSCALL_ENTRY(user_vm_clone_region),		/* 30 */
+	SYSCALL_ENTRY(user_vm_map_file),
+	SYSCALL_ENTRY(user_vm_delete_region),
+	SYSCALL_ENTRY(user_vm_get_region_info),
+	SYSCALL_ENTRY(user_thread_create_user_thread),
+	SYSCALL_ENTRY(thread_kill_thread),			/* 35 */
+	SYSCALL_ENTRY(thread_suspend_thread),
+	SYSCALL_ENTRY(thread_resume_thread),
+	SYSCALL_ENTRY(proc_kill_proc),
+	SYSCALL_ENTRY(proc_get_current_proc_id),
+	SYSCALL_ENTRY(user_getcwd),					/* 40 */
+	SYSCALL_ENTRY(user_setcwd),
+	SYSCALL_ENTRY(user_port_create),
+	SYSCALL_ENTRY(user_port_close),
+	SYSCALL_ENTRY(user_port_delete),
+	SYSCALL_ENTRY(user_port_find),				/* 45 */
+	SYSCALL_ENTRY(user_port_get_info),
+	SYSCALL_ENTRY(user_port_get_next_port_info),
+	SYSCALL_ENTRY(user_port_buffer_size),
+	SYSCALL_ENTRY(user_port_buffer_size_etc),
+	SYSCALL_ENTRY(user_port_count),				/* 50 */
+	SYSCALL_ENTRY(user_port_read),
+	SYSCALL_ENTRY(user_port_read_etc),
+	SYSCALL_ENTRY(user_port_set_owner),
+	SYSCALL_ENTRY(user_port_write),
+	SYSCALL_ENTRY(user_port_write_etc),			/* 55 */
+	SYSCALL_ENTRY(user_sem_get_count),
+	SYSCALL_ENTRY(user_sem_get_sem_info),
+	SYSCALL_ENTRY(user_sem_get_next_sem_info),
+	SYSCALL_ENTRY(user_set_sem_owner),
+	SYSCALL_ENTRY(user_dup),					/* 60 */
+	SYSCALL_ENTRY(user_dup2),
+	SYSCALL_ENTRY(user_getrlimit),
+	SYSCALL_ENTRY(user_setrlimit),
+	SYSCALL_ENTRY(user_atomic_add),
+	SYSCALL_ENTRY(user_atomic_and),				/* 65 */
+	SYSCALL_ENTRY(user_atomic_or),
+	SYSCALL_ENTRY(user_atomic_set),
+	SYSCALL_ENTRY(user_test_and_set),
+	SYSCALL_ENTRY(user_thread_get_thread_info),
+	SYSCALL_ENTRY(user_thread_get_next_thread_info), /* 70 */
+	SYSCALL_ENTRY(user_proc_get_proc_info),
+	SYSCALL_ENTRY(user_proc_get_next_proc_info),
+	SYSCALL_ENTRY(user_thread_set_priority),
+	SYSCALL_ENTRY(user_opendir),
+	SYSCALL_ENTRY(user_closedir),				/* 75 */
+	SYSCALL_ENTRY(user_rewinddir),
+	SYSCALL_ENTRY(user_readdir),
+	SYSCALL_ENTRY(user_mkdir),
+	SYSCALL_ENTRY(user_rmdir),
+	SYSCALL_ENTRY(user_vm_get_vm_info),			/* 80 */
+};
 
-int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_ret)
-{
-//	dprintf("syscall_dispatcher: thread 0x%x call 0x%x, arg0 0x%x, arg1 0x%x arg2 0x%x arg3 0x%x arg4 0x%x\n",
-//		thread_get_current_thread_id(), call_num, arg0, arg1, arg2, arg3, arg4);
+int num_syscall_table_entries = sizeof(syscall_table) / sizeof(struct syscall_table_entry);
 
-	switch(call_num) {
-		case SYSCALL_NULL:
-			*call_ret = 0;
-			break;
-		case SYSCALL_MOUNT:
-			*call_ret = user_mount((const char *)arg0, (const char *)arg1, (const char *)arg2, (void *)arg3);
-			break;
-		case SYSCALL_UNMOUNT:
-			*call_ret = user_unmount((const char *)arg0);
-			break;
-		case SYSCALL_SYNC:
-			*call_ret = user_sync();
-			break;
-		case SYSCALL_OPEN:
-			*call_ret = user_open((const char *)arg0, (int)arg1);
-			break;
-		case SYSCALL_CLOSE:
-			*call_ret = user_close((int)arg0);
-			break;
-		case SYSCALL_FSYNC:
-			*call_ret = user_fsync((int)arg0);
-			break;
-		case SYSCALL_READ:
-			*call_ret = user_read((int)arg0, (void *)arg1, (off_t)INT32TOINT64(arg2, arg3), (ssize_t)arg4);
-			break;
-		case SYSCALL_WRITE:
-			*call_ret = user_write((int)arg0, (const void *)arg1, (off_t)INT32TOINT64(arg2, arg3), (ssize_t)arg4);
-			break;
-		case SYSCALL_SEEK:
-			*call_ret = user_seek((int)arg0, (off_t)INT32TOINT64(arg1, arg2), (seek_type)arg3);
-			break;
-		case SYSCALL_IOCTL:
-			*call_ret = user_ioctl((int)arg0, (int)arg1, (void *)arg2, (size_t)arg3);
-			break;
-		case SYSCALL_CREATE:
-			*call_ret = user_create((const char *)arg0);
-			break;
-		case SYSCALL_UNLINK:
-			*call_ret = user_unlink((const char *)arg0);
-			break;
-		case SYSCALL_RENAME:
-			*call_ret = user_rename((const char *)arg0, (const char *)arg1);
-			break;
-		case SYSCALL_RSTAT:
-			*call_ret = user_rstat((const char *)arg0, (struct file_stat *)arg1);
-			break;
-		case SYSCALL_WSTAT:
-			*call_ret = user_wstat((const char *)arg0, (struct file_stat *)arg1, (int)arg2);
-			break;
-		case SYSCALL_SYSTEM_TIME:
-			*call_ret = system_time();
-			break;
-		case SYSCALL_SNOOZE:
-			*call_ret = user_thread_snooze((bigtime_t)INT32TOINT64(arg0, arg1));
-			break;
-		case SYSCALL_SEM_CREATE:
-			*call_ret = user_sem_create((int)arg0, (const char *)arg1);
-			break;
-		case SYSCALL_SEM_DELETE:
-			*call_ret = user_sem_delete((sem_id)arg0);
-			break;
-		case SYSCALL_SEM_ACQUIRE:
-			*call_ret = user_sem_acquire_etc((sem_id)arg0, (int)arg1, 0, 0, NULL);
-			break;
-		case SYSCALL_SEM_ACQUIRE_ETC:
-			*call_ret = user_sem_acquire_etc((sem_id)arg0, (int)arg1, (int)arg2, (bigtime_t)INT32TOINT64(arg3, arg4), (int *)arg5);
-			break;
-		case SYSCALL_SEM_RELEASE:
-			*call_ret = user_sem_release((sem_id)arg0, (int)arg1);
-			break;
-		case SYSCALL_SEM_RELEASE_ETC:
-			*call_ret = user_sem_release_etc((sem_id)arg0, (int)arg1, (int)arg2);
-			break;
-		case SYSCALL_GET_CURRENT_THREAD_ID:
-			*call_ret = thread_get_current_thread_id();
-			break;
-		case SYSCALL_EXIT_THREAD:
-			thread_exit((int)arg0);
-			*call_ret = 0;
-			break;
-		case SYSCALL_PROC_CREATE_PROC:
-			*call_ret = user_proc_create_proc((const char *)arg0, (const char *)arg1, (char **)arg2, (int )arg3, (int)arg4);
-			break;
-		case SYSCALL_THREAD_WAIT_ON_THREAD:
-			*call_ret = user_thread_wait_on_thread((thread_id)arg0, (int *)arg1);
-			break;
-		case SYSCALL_PROC_WAIT_ON_PROC:
-			*call_ret = user_proc_wait_on_proc((proc_id)arg0, (int *)arg1);
-			break;
-		case SYSCALL_VM_CREATE_ANONYMOUS_REGION:
-			*call_ret = user_vm_create_anonymous_region(
-				(char *)arg0, (void **)arg1, (int)arg2,
-				(addr_t)arg3, (int)arg4, (int)arg5);
-			break;
-		case SYSCALL_VM_CLONE_REGION:
-			*call_ret = user_vm_clone_region(
-				(char *)arg0, (void **)arg1, (int)arg2,
-				(region_id)arg3, (int)arg4, (int)arg5);
-			break;
-		case SYSCALL_VM_MAP_FILE:
-			*call_ret = user_vm_map_file(
-				(char *)arg0, (void **)arg1, (int)arg2,
-				(addr_t)arg3, (int)arg4, (int)arg5, (const char *)arg6,
-				(off_t)INT32TOINT64(arg7, arg8));
-			break;
-			break;
-		case SYSCALL_VM_DELETE_REGION:
-			*call_ret = vm_delete_region(vm_get_current_user_aspace_id(), (region_id)arg0);
-			break;
-		case SYSCALL_VM_GET_REGION_INFO:
-			*call_ret = user_vm_get_region_info((region_id)arg0, (vm_region_info *)arg1);
-			break;
-		case SYSCALL_THREAD_CREATE_THREAD:
-			*call_ret = user_thread_create_user_thread((char *)arg0, thread_get_current_thread()->proc->id, (addr_t)arg1, (void *)arg2);
-			break;
-		case SYSCALL_THREAD_KILL_THREAD:
-			*call_ret = thread_kill_thread((thread_id)arg0);
-			break;
-		case SYSCALL_THREAD_SUSPEND_THREAD:
-			*call_ret = thread_suspend_thread((thread_id)arg0);
-			break;
-		case SYSCALL_THREAD_RESUME_THREAD:
-			*call_ret = thread_resume_thread((thread_id)arg0);
-			break;
-		case SYSCALL_PROC_KILL_PROC:
-			*call_ret = proc_kill_proc((proc_id)arg0);
-			break;
-		case SYSCALL_GET_CURRENT_PROC_ID:
-			*call_ret = proc_get_current_proc_id();
-			break;
-		case SYSCALL_GETCWD:
-			*call_ret = user_getcwd((char*)arg0, (size_t)arg1);
-			break;
-		case SYSCALL_SETCWD:
-			*call_ret = user_setcwd((const char*)arg0);
-			break;
-		case SYSCALL_PORT_CREATE:
-			*call_ret = user_port_create((int32)arg0, (const char *)arg1);
-			break;
-		case SYSCALL_PORT_CLOSE:
-			*call_ret = user_port_close((port_id)arg0);
-			break;
-		case SYSCALL_PORT_DELETE:
-			*call_ret = user_port_delete((port_id)arg0);
-			break;
-		case SYSCALL_PORT_FIND:
-			*call_ret = user_port_find((const char *)arg0);
-			break;
-		case SYSCALL_PORT_GET_INFO:
-			*call_ret = user_port_get_info((port_id)arg0, (struct port_info *)arg1);
-			break;
-		case SYSCALL_PORT_GET_NEXT_PORT_INFO:
-			*call_ret = user_port_get_next_port_info((port_id)arg0, (uint32 *)arg1, (struct port_info *)arg2);
-			break;
-		case SYSCALL_PORT_BUFFER_SIZE:
-			*call_ret = user_port_buffer_size_etc((port_id)arg0, PORT_FLAG_INTERRUPTABLE, 0);
-			break;
-		case SYSCALL_PORT_BUFFER_SIZE_ETC:
-			*call_ret = user_port_buffer_size_etc((port_id)arg0, (uint32)arg1 | PORT_FLAG_INTERRUPTABLE, (bigtime_t)INT32TOINT64(arg2, arg3));
-			break;
-		case SYSCALL_PORT_COUNT:
-			*call_ret = user_port_count((port_id)arg0);
-			break;
-		case SYSCALL_PORT_READ:
-			*call_ret = user_port_read_etc((port_id)arg0, (int32*)arg1, (void*)arg2, (size_t)arg3, PORT_FLAG_INTERRUPTABLE, 0);
-			break;
-		case SYSCALL_PORT_READ_ETC:
-			*call_ret = user_port_read_etc((port_id)arg0, (int32*)arg1, (void*)arg2, (size_t)arg3, (uint32)arg4 | PORT_FLAG_INTERRUPTABLE, (bigtime_t)INT32TOINT64(arg5, arg6));
-			break;
-		case SYSCALL_PORT_SET_OWNER:
-			*call_ret = user_port_set_owner((port_id)arg0, (proc_id)arg1);
-			break;
-		case SYSCALL_PORT_WRITE:
-			*call_ret = user_port_write_etc((port_id)arg0, (int32)arg1, (void *)arg2, (size_t)arg3, PORT_FLAG_INTERRUPTABLE, 0);
-			break;
-		case SYSCALL_PORT_WRITE_ETC:
-			*call_ret = user_port_write_etc((port_id)arg0, (int32)arg1, (void *)arg2, (size_t)arg3, (uint32)arg4 | PORT_FLAG_INTERRUPTABLE, (bigtime_t)INT32TOINT64(arg5, arg6));
-			break;
-		case SYSCALL_SEM_GET_COUNT:
-			*call_ret = user_sem_get_count((sem_id)arg0, (int32*)arg1);
-			break;
-		case SYSCALL_SEM_GET_SEM_INFO:
-			*call_ret = user_sem_get_sem_info((sem_id)arg0, (struct sem_info *)arg1);
-			break;
-		case SYSCALL_SEM_GET_NEXT_SEM_INFO:
-			*call_ret = user_sem_get_next_sem_info((proc_id)arg0, (uint32 *)arg1, (struct sem_info *)arg2);
-			break;
-		case SYSCALL_SEM_SET_SEM_OWNER:
-			*call_ret = user_set_sem_owner((sem_id)arg0, (proc_id)arg1);
-			break;
-		case SYSCALL_FDDUP:
-			*call_ret = user_dup(arg0);
-			break;
-		case SYSCALL_FDDUP2:
-			*call_ret = user_dup2(arg0, arg1);
-			break;
-		case SYSCALL_GETRLIMIT:
-			*call_ret = user_getrlimit((int)arg0, (struct rlimit *)arg1);
-			break;
-		case SYSCALL_SETRLIMIT:
-			*call_ret = user_setrlimit((int)arg0, (const struct rlimit *)arg1);
-			break;
-		case SYSCALL_ATOMIC_ADD:
-			*call_ret = user_atomic_add((int *)arg0, (int)arg1);
-			break;
-		case SYSCALL_ATOMIC_AND:
-			*call_ret = user_atomic_and((int *)arg0, (int)arg1);
-			break;
-		case SYSCALL_ATOMIC_OR:
-			*call_ret = user_atomic_or((int *)arg0, (int)arg1);
-			break;
-		case SYSCALL_ATOMIC_SET:
-			*call_ret = user_atomic_set((int *)arg0, (int)arg1);
-			break;
-		case SYSCALL_TEST_AND_SET:
-			*call_ret = user_test_and_set((int *)arg0, (int)arg1, (int)arg2);
-			break;
-		case SYSCALL_THREAD_GET_THREAD_INFO:
-			*call_ret = user_thread_get_thread_info((thread_id)arg0, (struct thread_info *)arg1);
-			break;
-		case SYSCALL_THREAD_GET_NEXT_THREAD_INFO:
-			*call_ret = user_thread_get_next_thread_info((uint32 *)arg0, (proc_id)arg1, (struct thread_info *)arg2);
-			break;
-		case SYSCALL_PROC_GET_PROC_INFO:
-			*call_ret = user_proc_get_proc_info((proc_id)arg0, (struct proc_info *)arg1);
-			break;
-		case SYSCALL_PROC_GET_NEXT_PROC_INFO:
-			*call_ret = user_proc_get_next_proc_info((uint32 *)arg0, (struct proc_info *)arg1);
-			break;
-		case SYSCALL_THREAD_SET_PRIORITY:
-			*call_ret = user_thread_set_priority((thread_id)arg0, (int)arg1);
-			break;
-		case SYSCALL_OPENDDIR:
-			*call_ret = user_opendir((const char *)arg0);
-			break;
-		case SYSCALL_CLOSEDIR:
-			*call_ret = user_closedir((int)arg0);
-			break;
-		case SYSCALL_REWINDDIR:
-			*call_ret = user_rewinddir((int)arg0);
-			break;
-		case SYSCALL_READDIR:
-			*call_ret = user_readdir((int)arg0, (void *)arg1, (size_t)arg2);
-			break;
-		case SYSCALL_MKDIR:
-			*call_ret = user_mkdir((const char *)arg0);
-			break;
-		case SYSCALL_RMDIR:
-			*call_ret = user_rmdir((const char *)arg0);
-			break;
-		case SYSCALL_VM_GET_VM_INFO:
-			*call_ret = user_vm_get_vm_info((vm_info_t *)arg0);
-			break;
-		default:
-			*call_ret = ERR_BAD_SYSCALL;
-	}
-
-//	dprintf("syscall_dispatcher: done with syscall 0x%x\n", call_num);
-
-	return INT_RESCHEDULE;
-}

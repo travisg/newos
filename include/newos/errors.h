@@ -11,7 +11,7 @@
 #define ERR_GENERAL              (-1)
 #define ERR_NO_MEMORY            (ERR_GENERAL-1)
 #define ERR_IO_ERROR             (ERR_GENERAL-2)
-#define ERR_INVALID_ARGS         (ERR_GENERAL-3)
+#define ERR_INVALID_ARGS         (ERR_GENERAL-3)  // do not change, used in kernel/arch/i386/arch_interrupts.S
 #define ERR_TIMED_OUT            (ERR_GENERAL-4)
 #define ERR_NOT_ALLOWED          (ERR_GENERAL-5)
 #define ERR_PERMISSION_DENIED    (ERR_GENERAL-6)

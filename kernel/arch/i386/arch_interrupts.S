@@ -124,6 +124,131 @@ int_bottom:
 _interrupt_stack_offset:
 .long	0
 
+/* syscall entry point. arg passing is as follows:
+ * eax: vector number
+ * ecx: number of words on stack
+ * edx: pointer to args
+ *
+ * algorithm: push all registers, copy arguments to kernel stack, indirect
+ * jump through syscall_table (in kernel/syscalls.c).
+ */
+FUNCTION(i386_syscall_vector):
+	/* save all non-trashed integer regs and load kernel data segments */
+	push	%ebx
+	push	%ebp
+	push	%esi
+	push	%edi
+	push	%ds
+	push	%es
+	push	%fs
+	push	%gs
+	movl	$KERNEL_DATA_SEG,%ebx
+	cld
+	movl	%ebx,%ds
+	movl	%ebx,%es
+
+	/* save the current kernel stack, so we can restore to here in case of any error */
+	mov		%esp,%ebp
+
+#if 0
+	push	num_syscall_table_entries
+	push	%edx
+	push	%ecx
+	push	%eax
+	movl	%dr3,%ebx
+	addl	$12,%ebx
+	pushl	(%ebx)
+	push	$syscall_entry_msg
+	call	dprintf
+	add		$8,%esp
+	pop		%eax
+	pop		%ecx
+	pop		%edx
+	add		$4,%esp
+#endif
+
+	/* sanity check vector number */
+	test	%eax,%eax
+	js		syscall_vector_error
+	cmp		num_syscall_table_entries,%eax
+	jge		syscall_vector_error
+
+	/* sanity check number of args (must be 0-15) */
+	test	$0xfffffff0,%ecx
+	jnz		syscall_vector_error
+
+	/* XXX sanity check kernel space pointer here */
+	/* if the syscall has no args, fast path over the arg copy code */
+	test	%ecx,%ecx
+	jz		skip_arg_copy
+ 
+	/* copy the appropriate number of args to the stack */
+	mov		fault_handler_offset,%esi	// get the offset into the thread structure that fault_handler is
+	mov		%dr3,%ebx					// get the current thread structure
+
+ 	lea		(%ebx,%esi),%ebx
+	mov		$syscall_vector_error,%esi
+	mov		%esi,(%ebx)					// stick the error handler into t->fault_handler
+
+
+	shl		$2,%ecx
+	sub		%ecx,%esp				// move the stack pointer down by the amount we are about to dump on it
+	shr		$2,%ecx
+
+	mov		%edx,%esi				// source is user space stack
+	mov		%esp,%edi				// dest is kernel stack
+	rep 
+	movsl							// copy them
+
+	movl	$0,(%ebx)				// unset the error handler	 
+
+skip_arg_copy:
+	movl	%eax,%esi				// move the vector number over to %esi
+
+	/* do kernel work upon entry */
+	call	thread_atkernel_entry
+
+	/* load the syscall vector table */
+	movl	$syscall_table,%ebx
+	call	*(%ebx,%esi,4)
+
+	mov		%eax,%ebx
+	mov		%edx,%esi
+
+	/* do any cleanup work when leaving the kernel */
+	call	thread_atkernel_exit
+
+	/* restore the return code from the syscall */
+	mov		%esi,%edx
+	mov		%ebx,%eax
+
+syscall_vector_exit:
+	/* put the kernel stack back where it was before we pushed the args */
+	mov		%ebp,%esp
+
+	/* restore saved regs */
+	pop		%gs
+	pop		%fs
+	pop		%es
+	pop		%ds
+	pop		%edi
+	pop		%esi
+	pop		%ebp
+	pop		%ebx
+	iret
+
+syscall_vector_error:
+	movl	$-4,%eax
+	xorl	$0xffffffff,%edx
+	jmp		syscall_vector_exit
+
+syscall_entry_msg:
+	.ascii	"syscall tid 0x%x eax %d ecx %d edx 0x%x max syscall 0x%x\n\0"
+bleh:
+	.ascii	"here 0x%x\n\0"
+
+	.align	4
+
 // void	i386_stack_init(struct farcall *interrupt_stack_offset)
 	/* setup in arch_thread.c: arch_thread_init_thread_struct() */
 FUNCTION(i386_stack_init):

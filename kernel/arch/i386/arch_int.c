@@ -133,10 +133,8 @@ void i386_handle_trap(struct iframe frame)
 
 	if(t) {
 		i386_push_iframe(t, &frame);
-		if(frame.vector != SYSCALL_VECTOR) {
-			adjust_int_disable_count = true;
-			t->int_disable_level++; // make it look like the ints were disabled
-		}
+		adjust_int_disable_count = true;
+		t->int_disable_level++; // make it look like the ints were disabled
 	}
 
 //	if(frame.vector != 0x20)
@@ -178,49 +176,6 @@ void i386_handle_trap(struct iframe frame)
 			}
 			break;
 		}
-		case SYSCALL_VECTOR: {
-			uint64 retcode;
-			unsigned int args[MAX_ARGS];
-			int rc;
-
-
-			thread_atkernel_entry();
-
-#if 0
-{
-			int i;
-
-			dprintf("i386_handle_trap: syscall %d, count %d, ptr 0x%x\n", frame.eax, frame.ecx, frame.edx);
-			dprintf(" call stack:\n");
-			for(i=0; i<frame.ecx; i++)
-				dprintf("\t0x%x\n", ((unsigned int *)frame.edx)[i]);
-}
-#endif
-			/*
-			** syscall interface works as such:
-			** eax has syscall #
-			** ecx has number of args (0-16)
-			** edx has pointer to buffer containing args from first to last
-			** each is verified to make sure someone doesn't try to clobber it
-			*/
-			if(frame.ecx <= MAX_ARGS) {
-				if((addr_t)frame.edx >= KERNEL_BASE && (addr_t)frame.edx <= KERNEL_TOP) {
-					retcode =  ERR_VM_BAD_USER_MEMORY;
-				} else {
-					rc = user_memcpy(args, (void *)frame.edx, frame.ecx * sizeof(unsigned int));
-					if(rc < 0)
-						retcode = ERR_VM_BAD_USER_MEMORY;
-					else
-						ret = syscall_dispatcher(frame.eax, (void *)args, &retcode);
-				}
-			} else {
-				// want to pass too many args into the system
-				retcode = ERR_INVALID_ARGS;
-			}
-			frame.eax = retcode & 0xffffffff;
-			frame.edx = retcode >> 32;
-			break;
-		}
 		default:
 			if(frame.vector >= 0x20) {
 				interrupt_ack(frame.vector - 0x20); // ack the 8239 (if applicable)
@@ -240,9 +195,6 @@ void i386_handle_trap(struct iframe frame)
 		int_restore_interrupts();
 	}
 
-	if(frame.cs == USER_CODE_SEG || frame.vector == SYSCALL_VECTOR) {
-		thread_atkernel_exit();
-	}
 //	dprintf("0x%x cpu %d!\n", thread_get_current_thread_id(), smp_get_current_cpu());
 
 	if(t) {
@@ -305,7 +257,7 @@ int arch_int_init(kernel_args *ka)
 	set_intr_gate(46,  &trap46);
 	set_intr_gate(47,  &trap47);
 
-	set_system_gate(SYSCALL_VECTOR, &trap99);
+	set_system_gate(SYSCALL_VECTOR, &i386_syscall_vector);
 
 	set_intr_gate(251, &trap251);
 	set_intr_gate(252, &trap252);
