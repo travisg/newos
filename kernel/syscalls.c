@@ -33,8 +33,8 @@
 
 int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_ret)
 {
-	dprintf("syscall_dispatcher: thread 0x%x call 0x%x, arg0 0x%x, arg1 0x%x arg2 0x%x arg3 0x%x arg4 0x%x\n",
-		thread_get_current_thread_id(), call_num, arg0, arg1, arg2, arg3, arg4);
+//	dprintf("syscall_dispatcher: thread 0x%x call 0x%x, arg0 0x%x, arg1 0x%x arg2 0x%x arg3 0x%x arg4 0x%x\n",
+//		thread_get_current_thread_id(), call_num, arg0, arg1, arg2, arg3, arg4);
 
 	switch(call_num) {
 		case SYSCALL_NULL:
@@ -230,7 +230,7 @@ int syscall_dispatcher(unsigned long call_num, void *arg_buffer, uint64 *call_re
 			*call_ret = -1;
 	}
 
-	dprintf("syscall_dispatcher: done with syscall 0x%x\n", call_num);
+//	dprintf("syscall_dispatcher: done with syscall 0x%x\n", call_num);
 
 	return INT_RESCHEDULE;
 }
