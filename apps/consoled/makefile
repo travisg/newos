@@ -5,8 +5,8 @@ MY_TARGET :=  $(MY_TARGETDIR)/consoled
 ifeq ($(call FINDINLIST,$(MY_TARGET),$(ALL)),1)
 
 MY_OBJS := \
-	keyboard.o \
-	main.o
+	main.o \
+	keyboard_us.o
 
 MY_INCLUDES := $(STDINCLUDE)
 MY_CFLAGS := $(USER_CFLAGS)
