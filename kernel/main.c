@@ -25,6 +25,8 @@
 #include <kernel/dev/fixed.h>
 #include <kernel/module.h>
 
+#include <kernel/bus/usb/usb.h>
+
 #include <string.h>
 #include <stdlib.h>
 
@@ -54,7 +56,9 @@ int _start(kernel_args *oldka, int cpu_num)
 
 		// setup debug output
 		dbg_init(&global_kernel_args);
+#if _DEFAULT_SERIAL_DBG_ON
 		dbg_set_serial_debug(true);
+#endif
 		dprintf("Welcome to kernel debugger output!\n");
 
 		// init modules

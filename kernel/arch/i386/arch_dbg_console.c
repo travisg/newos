@@ -14,29 +14,28 @@
 
 #include <string.h>
 
-#define BOCHS_E9_HACK 0
-
-// Select between COM1 and COM2 for debug output
-#define USE_COM1 1
+#if _SERIAL_DBG_PORT == 1
+static const int serial_ioport_base = 0x3f8;
+#elif _SERIAL_DBG_PORT == 2
+static const int serial_ioport_base = 0x2f8;
+#elif _SERIAL_DBG_PORT == 0xe9
+#define BOCHS_E9_HACK 1
+#else
+#error _SERIAL_DBG_PORT set to unsupported com port
+#endif
 
 static const int dbg_baud_rate = 115200;
 
 int arch_dbg_con_init(kernel_args *ka)
 {
+#if !BOCHS_E9_HACK
 	short divisor = 115200 / dbg_baud_rate;
 
-#if USE_COM1
-	out8(0x80, 0x3fb);	/* set up to load divisor latch	*/
-	out8(divisor & 0xf, 0x3f8);		/* LSB */
-	out8(divisor >> 8, 0x3f9);		/* MSB */
-	out8(3, 0x3fb);		/* 8N1 */
-#else // COM2
-	out8(0x80, 0x2fb);	/* set up to load divisor latch	*/
-	out8(divisor & 0xf, 0x2f8);		/* LSB */
-	out8(divisor >> 8, 0x2f9);		/* MSB */
-	out8(3, 0x2fb);		/* 8N1 */
+	out8(0x80, serial_ioport_base+3);	/* set up to load divisor latch	*/
+	out8(divisor & 0xf, serial_ioport_base);		/* LSB */
+	out8(divisor >> 8, serial_ioport_base+1);		/* MSB */
+	out8(3, serial_ioport_base+3);		/* 8N1 */
 #endif
-
 	return NO_ERROR;
 }
 
@@ -47,14 +46,12 @@ int arch_dbg_con_init2(kernel_args *ka)
 
 char arch_dbg_con_read(void)
 {
-#if USE_COM1
-	while ((in8(0x3fd) & 1) == 0)
-		;
-	return in8(0x3f8);
+#if BOCHS_E9_HACK
+	return in8(0xe9);
 #else
-	while ((in8(0x2fd) & 1) == 0)
+	while ((in8(serial_ioport_base+5) & 1) == 0)
 		;
-	return in8(0x2f8);
+	return in8(serial_ioport_base);
 #endif
 }
 
@@ -64,16 +61,10 @@ static void _arch_dbg_con_putch(const char c)
 	out8(c, 0xe9);
 #else
 
-#if USE_COM1
-	while ((in8(0x3fd) & 0x20) == 0)
+ 	while ((in8(serial_ioport_base+5) & 0x20) == 0)
 		;
-	out8(c, 0x3f8);
-#else // COM2
-	while ((in8(0x2fd) & 0x20) == 0)
-		;
-	out8(c, 0x2f8);
-#endif
-
+	out8(c, serial_ioport_base);
+ 
 #endif
 }
 

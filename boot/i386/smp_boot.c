@@ -7,7 +7,6 @@
 
 #include <string.h>
 
-#define NO_SMP 0
 #define CHATTY_SMP 0
 
 static unsigned int mp_mem_phys = 0;
@@ -193,7 +192,7 @@ static int smp_find_mp_config(kernel_args *ka)
 		if(mp_flt_ptr != NULL)
 			break;
 	}
-#if NO_SMP
+#if !_WITH_SMP
 	if(0) {
 #else
 	if(mp_flt_ptr != NULL) {

@@ -29,11 +29,18 @@ int dbg_add_command(void (*func)(int, char **), const char *cmd, const char *des
 extern void dbg_save_registers(int *);
 extern void dbg_make_register_file(unsigned int *file, const struct iframe *frame);
 
-#if DEBUG
+#if _ASSERT_LEVEL >= 1
 #define ASSERT(x) \
 	{ if(!(x)) panic("ASSERT FAILED (%s:%d): %s\n", __FILE__, __LINE__, #x); }
 #else
 #define ASSERT(x)
+#endif
+
+#if _ASSERT_LEVEL >= 2
+#define ASSERT2(x) \
+	{ if(!(x)) panic("ASSERT2 FAILED (%s:%d): %s\n", __FILE__, __LINE__, #x); }
+#else
+#define ASSERT2(x)
 #endif
 
 #define PANIC_UNIMPLEMENTED() \

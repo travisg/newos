@@ -11,14 +11,14 @@
 #include <string.h>
 
 /* global per-cpu structure */
-cpu_ent cpu[MAX_BOOT_CPUS];
+cpu_ent cpu[_MAX_CPUS];
 
 int cpu_init(kernel_args *ka)
 {
 	int i;
 
 	memset(cpu, 0, sizeof(cpu));
-	for(i = 0; i < MAX_BOOT_CPUS; i++) {
+	for(i = 0; i < _MAX_CPUS; i++) {
 		cpu[i].info.cpu_num = i;
 	}
 

@@ -40,9 +40,9 @@ typedef struct {
 	unsigned int *apic;
 	unsigned int ioapic_phys;
 	unsigned int *ioapic;
-	unsigned int cpu_apic_id[MAX_BOOT_CPUS];
-	unsigned int cpu_os_id[MAX_BOOT_CPUS];
-	unsigned int cpu_apic_version[MAX_BOOT_CPUS];
+	unsigned int cpu_apic_id[_MAX_CPUS];
+	unsigned int cpu_os_id[_MAX_CPUS];
+	unsigned int cpu_apic_version[_MAX_CPUS];
 } arch_kernel_args;
 
 #endif

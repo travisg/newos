@@ -26,7 +26,7 @@ typedef struct {
 	unsigned int num_virt_alloc_ranges;
 	addr_range virt_alloc_range[MAX_VIRT_ALLOC_ADDR_RANGE];
 	unsigned int num_cpus;
-	addr_range cpu_kstack[MAX_BOOT_CPUS];
+	addr_range cpu_kstack[_MAX_CPUS];
 
 	// framebuffer stuff
 	struct framebuffer {

@@ -11,15 +11,15 @@
 #include <kernel/smp.h>
 #include <kernel/heap.h>
 #include <newos/errors.h>
-
 #include <kernel/cpu.h>
-#include <kernel/arch/cpu.h>
+
 #include <kernel/arch/smp.h>
-//#include <kernel/arch/pmap.h>
 
 #include <string.h>
 
-#define MSG_POOL_SIZE (SMP_MAX_CPUS * 4)
+// without smp code, there's no point compiling this stuff
+#if _WITH_SMP
+#define MSG_POOL_SIZE (_MAX_CPUS * 4)
 
 struct smp_msg {
 	struct smp_msg *next;
@@ -35,17 +35,19 @@ struct smp_msg {
 	int            lock;
 };
 
-#define MAILBOX_LOCAL 1
-#define MAILBOX_BCAST 2
+enum {
+	MAILBOX_LOCAL = 1,
+	MAILBOX_BCAST
+};
 
-static spinlock_t boot_cpu_spin[SMP_MAX_CPUS] = { 0, };
+static spinlock_t boot_cpu_spin[_MAX_CPUS] = { 0, };
 
 static struct smp_msg *free_msgs = NULL;
 static volatile int free_msg_count = 0;
 static spinlock_t free_msg_spinlock = 0;
 
-static struct smp_msg *smp_msgs[SMP_MAX_CPUS] = { NULL, };
-static spinlock_t cpu_msg_spinlock[SMP_MAX_CPUS] = { 0, };
+static struct smp_msg *smp_msgs[_MAX_CPUS] = { NULL, };
+static spinlock_t cpu_msg_spinlock[_MAX_CPUS] = { 0, };
 
 static struct smp_msg *smp_broadcast_msgs = NULL;
 static spinlock_t broadcast_msg_spinlock = 0;
@@ -277,20 +279,6 @@ static int smp_process_pending_ici(int curr_cpu)
 	return retval;
 }
 
-int smp_intercpu_int_handler(void)
-{
-	int retval;
-	int curr_cpu = smp_get_current_cpu();
-
-//	dprintf("smp_intercpu_int_handler: entry on cpu %d\n", curr_cpu);
-
-	retval = smp_process_pending_ici(curr_cpu);
-
-//	dprintf("smp_intercpu_int_handler: done\n");
-
-	return retval;
-}
-
 void smp_send_ici(int target_cpu, int message, unsigned long data, unsigned long data2, unsigned long data3, void *data_ptr, int flags)
 {
 	struct smp_msg *msg;
@@ -431,33 +419,6 @@ void smp_wait_for_ap_cpus(kernel_args *ka)
 	} while(retry == 1);
 }
 
-int smp_init(kernel_args *ka)
-{
-	struct smp_msg *msg;
-	int i;
-
-	dprintf("smp_init: entry\n");
-
-	if(ka->num_cpus > 1) {
-		free_msgs = NULL;
-		free_msg_count = 0;
-		for(i=0; i<MSG_POOL_SIZE; i++) {
-			msg = (struct smp_msg *)kmalloc(sizeof(struct smp_msg));
-			if(msg == NULL) {
-				panic("error creating smp mailboxes\n");
-				return ERR_GENERAL;
-			}
-			memset(msg, 0, sizeof(struct smp_msg));
-			msg->next = free_msgs;
-			free_msgs = msg;
-			free_msg_count++;
-		}
-		smp_num_cpus = ka->num_cpus;
-	}
-	dprintf("smp_init: calling arch_smp_init\n");
-	return arch_smp_init(ka);
-}
-
 void smp_set_num_cpus(int num_cpus)
 {
 	smp_num_cpus = num_cpus;
@@ -489,3 +450,52 @@ int smp_disable_ici()
 	ici_enabled = false;
 	return NO_ERROR;
 }
+#endif
+
+int smp_intercpu_int_handler(void)
+{
+#if _WITH_SMP
+	int retval;
+	int curr_cpu = smp_get_current_cpu();
+
+//	dprintf("smp_intercpu_int_handler: entry on cpu %d\n", curr_cpu);
+
+	retval = smp_process_pending_ici(curr_cpu);
+
+//	dprintf("smp_intercpu_int_handler: done\n");
+
+	return retval;
+#else
+	return INT_NO_RESCHEDULE;
+#endif
+}
+
+int smp_init(kernel_args *ka)
+{
+#if _WITH_SMP
+	struct smp_msg *msg;
+	int i;
+
+	dprintf("smp_init: entry\n");
+
+	if(ka->num_cpus > 1) {
+		free_msgs = NULL;
+		free_msg_count = 0;
+		for(i=0; i<MSG_POOL_SIZE; i++) {
+			msg = (struct smp_msg *)kmalloc(sizeof(struct smp_msg));
+			if(msg == NULL) {
+				panic("error creating smp mailboxes\n");
+				return ERR_GENERAL;
+			}
+			memset(msg, 0, sizeof(struct smp_msg));
+			msg->next = free_msgs;
+			free_msgs = msg;
+			free_msg_count++;
+		}
+		smp_num_cpus = ka->num_cpus;
+	}
+#endif
+	dprintf("smp_init: calling arch_smp_init\n");
+	return arch_smp_init(ka);
+}
+

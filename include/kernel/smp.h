@@ -23,9 +23,13 @@ enum {
 };
 
 int smp_init(kernel_args *ka);
+
+typedef volatile int spinlock_t;
+
 int smp_trap_non_boot_cpus(kernel_args *ka, int cpu);
 void smp_wake_up_all_non_boot_cpus(void);
 void smp_wait_for_ap_cpus(kernel_args *ka);
+
 void smp_send_ici(int target_cpu, int message, unsigned long data, unsigned long data2, unsigned long data3, void *data_ptr, int flags);
 void smp_send_broadcast_ici(int message, unsigned long data, unsigned long data2, unsigned long data3, void *data_ptr, int flags);
 int smp_enable_ici(void);
@@ -36,9 +40,31 @@ void smp_set_num_cpus(int num_cpus);
 int smp_get_current_cpu(void);
 
 // spinlock functions
-typedef volatile int spinlock_t;
 void acquire_spinlock(spinlock_t *lock);
 void release_spinlock(spinlock_t *lock);
+
+#if !_WITH_SMP
+// configuration does not support SMP
+extern inline int smp_trap_non_boot_cpus(kernel_args *ka, int cpu) { return 0; }
+extern inline void smp_wake_up_all_non_boot_cpus(void) {}
+extern inline void smp_wait_for_ap_cpus(kernel_args *ka) {}
+
+extern inline void smp_send_ici(int target_cpu, int message, unsigned long data, 
+	unsigned long data2, unsigned long data3, void *data_ptr, int flags) {}
+extern inline void smp_send_broadcast_ici(int message, unsigned long data, 
+	unsigned long data2, unsigned long data3, void *data_ptr, int flags) {}
+extern inline int smp_enable_ici(void) { return 0; }
+extern inline int smp_disable_ici(void) { return 0; }
+
+extern inline int smp_get_num_cpus(void) { return 1; }
+extern inline void smp_set_num_cpus(int num_cpus) {}
+extern inline int smp_get_current_cpu(void) { return 0; }
+
+// spinlock functions
+extern inline void acquire_spinlock(spinlock_t *lock) {}
+extern inline void release_spinlock(spinlock_t *lock) {}
+
+#endif
 
 #endif
 

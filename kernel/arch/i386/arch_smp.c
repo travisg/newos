@@ -24,9 +24,9 @@
 
 static int num_cpus = 1;
 static unsigned int *apic = NULL;
-static unsigned int cpu_apic_id[SMP_MAX_CPUS] = { 0, 0};
-static unsigned int cpu_os_id[SMP_MAX_CPUS] = { 0, 0};
-static unsigned int cpu_apic_version[SMP_MAX_CPUS] = { 0, 0};
+static unsigned int cpu_apic_id[_MAX_CPUS] = { 0 };
+static unsigned int cpu_os_id[_MAX_CPUS] = { 0 };
+static unsigned int cpu_apic_version[_MAX_CPUS] = { 0 };
 static unsigned int *ioapic = NULL;
 static unsigned int apic_timer_tics_per_sec = 0;
 

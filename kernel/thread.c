@@ -61,7 +61,7 @@ static spinlock_t proc_spinlock = 0;
 #define RELEASE_PROC_LOCK() release_spinlock(&proc_spinlock)
 
 // thread list
-static struct thread *idle_threads[MAX_BOOT_CPUS];
+static struct thread *idle_threads[_MAX_CPUS];
 static void *thread_hash = NULL;
 static thread_id next_thread_id = 1;
 

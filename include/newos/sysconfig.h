@@ -10,7 +10,34 @@
 #if _KERNEL
 
 /* set the debug level of the kernel */
+/* debug level 0 prints no messages, 
+ * >= 1 turns on a lot of debug spew and extra internal consistency checks */
 #define DEBUG 10
+
+/* set the ASSERT level of the kernel:
+ * 0 = no asserts
+ * 1 = critical asserts only
+ * 2 = general assert level
+ */
+#define _ASSERT_LEVEL 2
+
+/* sets if the kernel boots with serial spew on or not */
+#define _DEFAULT_SERIAL_DBG_ON 1
+
+/* set the com port of the serial debugger */
+/* NOTE: a setting of 0xe9 enables the Bochs E9 hack */
+#define _SERIAL_DBG_PORT 1 // com1 
+
+/* compile in support for SMP or not */
+#define _WITH_SMP 1
+
+/* maximum number of supported cpus */
+#define _MAX_CPUS 4
+
+#if !_WITH_SMP
+#undef _MAX_CPUS
+#define _MAX_CPUS 1
+#endif
 
 #else
 

@@ -33,7 +33,7 @@ typedef union cpu_ent {
 	uint32 _align[16]; // 64 bytes
 } cpu_ent;
 
-extern cpu_ent cpu[MAX_BOOT_CPUS];
+extern cpu_ent cpu[_MAX_CPUS];
 
 int cpu_preboot_init(kernel_args *ka);
 int cpu_init(kernel_args *ka);
