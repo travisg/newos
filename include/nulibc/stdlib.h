@@ -33,9 +33,17 @@ int   setenv(char const *, char const *, int);
 int   putenv(char const *);
 void  unsetenv(char const *);
 
+void *bsearch(void const *, void const *, size_t, size_t, int (*) (void const *, void const *));
+int   heapsort(void *, size_t , size_t , int (*)(void const *, void const *));
+int   mergesort(void *, size_t, size_t, int (*)(void const *, void const *));
 void  qsort(void *, size_t, size_t, int (*)(void const *, void const *));
+int   radixsort(u_char const **, int, u_char const *, u_int);
+int   sradixsort(u_char const **, int, u_char const *, u_int);
 
+
+#define	RAND_MAX	0x7fffffff
 int   rand(void);
+int   rand_r(unsigned int *ctx);
 void  srand(unsigned);
 long  random(void);
 void  srandom(unsigned long);
