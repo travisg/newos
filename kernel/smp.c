@@ -54,7 +54,7 @@ void acquire_spinlock(spinlock_t *lock)
 		while(1) {
 			while(*lock != 0)
 				;
-			if(test_and_set(lock, 1) == 0)
+			if(atomic_set(lock, 1) == 0)
 				break;
 		}
 	}

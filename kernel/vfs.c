@@ -444,7 +444,7 @@ void *vfs_get_cache_ptr(void *vnode)
 
 int vfs_set_cache_ptr(void *vnode, void *cache)
 {
-	if(set_if_null(&(((struct vnode *)vnode)->cache), cache))
+	if(test_and_set((int *)&(((struct vnode *)vnode)->cache), (int)cache, 0) == 0)
 		return -1;
 	else
 		return 0;
@@ -1547,7 +1547,7 @@ int vfs_get_cwd(char* buf, size_t size, bool kernel)
 	return rc;
 }
 
-int vfs_set_cwd(const char* path, bool kernel)
+int vfs_set_cwd(char* path, bool kernel)
 {
 	struct ioctx* curr_ioctx;
 	struct vnode* v = NULL;

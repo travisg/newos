@@ -119,8 +119,6 @@ ssize_t vfs_readpage(void *vnode, iovecs *vecs, off_t pos);
 ssize_t vfs_writepage(void *vnode, iovecs *vecs, off_t pos);
 void *vfs_get_cache_ptr(void *vnode);
 int vfs_set_cache_ptr(void *vnode, void *cache);
-int vfs_get_cwd(char* buf, size_t size, bool kernel);
-int vfs_set_cwd(const char* buf, bool kernel);
 
 /* calls kernel code should make for file I/O */
 int sys_mount(const char *path, const char *fs_name);

@@ -48,20 +48,20 @@ _atomic_or1:
 
 	ret
 
-/* int test_and_set(int *val, int set_to) */
-.global test_and_set
-test_and_set:
+/* int atomic_set(int *val, int set_to) */
+.global atomic_set
+atomic_set:
 	movl	4(%esp),%edx
 	movl	8(%esp),%eax
 	xchg	%eax,(%edx)
 	ret
 
-/* int set_if_null(int *val, int set_to) */
-.global set_if_null
-set_if_null:
+/* int test_and_set(int *val, int set_to, int test_val) */
+.global test_and_set
+test_and_set:
 	movl	4(%esp),%edx
 	movl	8(%esp),%ecx
-	xorl	%eax,%eax
+	movl	12(%esp),%eax
 
 	lock
 	cmpxchgl	%ecx,(%edx)
