@@ -6,7 +6,7 @@
 #include <string.h>
 #include <libc/printf.h>
 #include <libc/ctype.h>
-#include <libsys/syscalls.h>
+#include <sys/syscalls.h>
 #include <libsys/stdio.h>
 
 #include "commands.h"

@@ -24,7 +24,7 @@
 
 #if defined(NEWOS)
 
-#include <libsys/syscalls.h>
+#include <sys/syscalls.h>
 
 #define assert(x)
 

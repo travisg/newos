@@ -21,19 +21,19 @@ LIBS_CLEAN += glueclean
 # build prototypes
 $(GLUE_OBJ_DIR)/%.o: $(GLUE_DIR)/%.c 
 	@if [ ! -d $(GLUE_OBJ_DIR) ]; then mkdir -p $(GLUE_OBJ_DIR); fi
-	$(CC) -c $< $(GLOBAL_CFLAGS) -Iinclude -o $@
+	$(CC) -c $< $(GLOBAL_CFLAGS) -Iinclude -Iinclude/nulibc -o $@
 
 $(GLUE_OBJ_DIR)/%.d: $(GLUE_DIR)/%.c
 	@if [ ! -d $(GLUE_OBJ_DIR) ]; then mkdir -p $(GLUE_OBJ_DIR); fi
 	@echo "making deps for $<..."
-	@($(ECHO) -n $(dir $@); $(CC) $(GLOBAL_CFLAGS) -Iinclude -M -MG $<) > $@
+	@($(ECHO) -n $(dir $@); $(CC) $(GLOBAL_CFLAGS) -Iinclude -Iinclude/nulibc -M -MG $<) > $@
 
 $(GLUE_OBJ_DIR)/%.d: $(GLUE_DIR)/%.S
 	@if [ ! -d $(GLUE_OBJ_DIR) ]; then mkdir -p $(GLUE_OBJ_DIR); fi
 	@echo "making deps for $<..."
-	@($(ECHO) -n $(dir $@);$(CC) $(GLOBAL_CFLAGS) -Iinclude -M -MG $<) > $@
+	@($(ECHO) -n $(dir $@);$(CC) $(GLOBAL_CFLAGS) -Iinclude -Iinclude/nulibc -M -MG $<) > $@
 
 $(GLUE_OBJ_DIR)/%.o: $(GLUE_DIR)/%.S
 	@if [ ! -d $(GLUE_OBJ_DIR) ]; then mkdir -p $(GLUE_OBJ_DIR); fi
-	$(CC) -c $< $(GLOBAL_CFLAGS) -Iinclude -o $@
+	$(CC) -c $< $(GLOBAL_CFLAGS) -Iinclude -Iinclude/nulibc -o $@
 

@@ -5,7 +5,7 @@
 #include <types.h>
 #include <string.h>
 #include <libc/printf.h>
-#include <libsys/syscalls.h>
+#include <sys/syscalls.h>
 #include <libsys/stdio.h>
 #include <sys/errors.h>
 

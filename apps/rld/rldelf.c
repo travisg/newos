@@ -7,7 +7,7 @@
 #include <string.h>
 #include <sys/errors.h>
 #include <sys/elf32.h>
-#include <libsys/syscalls.h>
+#include <sys/syscalls.h>
 #include <libsys/stdio.h>
 #include <libc/printf.h>
 

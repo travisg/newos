@@ -6,7 +6,7 @@
 #include <string.h>
 #include <sys/errors.h>
 #include <libc/printf.h>
-#include <libsys/syscalls.h>
+#include <sys/syscalls.h>
 #include <libsys/stdio.h>
 
 int main(void)

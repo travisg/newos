@@ -4,7 +4,7 @@
 */
 
 #include <kernel/user_runtime.h>
-#include <libsys/syscalls.h>
+#include <sys/syscalls.h>
 
 extern int __stdio_init(void);
 extern int __stdio_deinit(void);

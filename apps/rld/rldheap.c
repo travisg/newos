@@ -4,7 +4,7 @@
 */
 
 #include <string.h>
-#include <libsys/syscalls.h>
+#include <sys/syscalls.h>
 #include "rld_priv.h"
 
 

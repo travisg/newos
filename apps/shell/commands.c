@@ -3,7 +3,7 @@
 ** Distributed under the terms of the NewOS License.
 */
 #include <string.h>
-#include <libsys/syscalls.h>
+#include <sys/syscalls.h>
 #include <libsys/stdio.h>
 #include <libsys/malloc.h>
 #include <libc/ctype.h>

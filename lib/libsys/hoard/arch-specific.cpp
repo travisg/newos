@@ -31,7 +31,7 @@ extern "C" {
 
 #ifdef NEWOS
 
-#include <libsys/syscalls.h>
+#include <sys/syscalls.h>
 #include <libsys/stdio.h>
 
 int hoardGetThreadID (void)

@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <libc/printf.h>
 #include <libsys/stdio.h>
-#include <libsys/syscalls.h>
+#include <sys/syscalls.h>
 
 static
 void

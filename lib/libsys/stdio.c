@@ -2,10 +2,10 @@
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
+#include <sys/syscalls.h>
 #include <libc/printf.h>
 #include <libc/string.h>
 #include <libsys/stdio.h>
-#include <libsys/syscalls.h>
 
 int __stdio_init(void);	 /* keep the compiler happy, these two are not supposed */
 int __stdio_deinit(void);/* to be called by anyone except crt0, and crt0 will change soon */

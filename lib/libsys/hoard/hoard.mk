@@ -24,18 +24,18 @@ libhoardclean:
 # build prototypes
 $(LIBHOARD_OBJ_DIR)/%.o: $(LIBHOARD_DIR)/%.cpp 
 	@if [ ! -d $(LIBHOARD_OBJ_DIR) ]; then mkdir -p $(LIBHOARD_OBJ_DIR); fi
-	$(CC) -c $< $(GLOBAL_CFLAGS) $(LIBHOARD_CFLAGS) -Iinclude -o $@
+	$(CC) -c $< $(GLOBAL_CFLAGS) $(LIBHOARD_CFLAGS) -Iinclude -Iinclude/nulibc -o $@
 
 $(LIBHOARD_OBJ_DIR)/%.d: $(LIBHOARD_DIR)/%.cpp
 	@if [ ! -d $(LIBHOARD_OBJ_DIR) ]; then mkdir -p $(LIBHOARD_OBJ_DIR); fi
 	@echo "making deps for $<..."
-	@($(ECHO) -n $(dir $@); $(CC) $(GLOBAL_CFLAGS) $(LIBHOARD_CFLAGS) -Iinclude -M -MG $<) > $@
+	@($(ECHO) -n $(dir $@); $(CC) $(GLOBAL_CFLAGS) $(LIBHOARD_CFLAGS) -Iinclude -Iinclude/nulibc -M -MG $<) > $@
 
 $(LIBHOARD_OBJ_DIR)/%.o: $(LIBHOARD_DIR)/%.c 
 	@if [ ! -d $(LIBHOARD_OBJ_DIR) ]; then mkdir -p $(LIBHOARD_OBJ_DIR); fi
-	$(CC) -c $< $(GLOBAL_CFLAGS) $(LIBHOARD_CFLAGS) -Iinclude -o $@
+	$(CC) -c $< $(GLOBAL_CFLAGS) $(LIBHOARD_CFLAGS) -Iinclude -Iinclude/nulibc -o $@
 
 $(LIBHOARD_OBJ_DIR)/%.d: $(LIBHOARD_DIR)/%.c
 	@if [ ! -d $(LIBHOARD_OBJ_DIR) ]; then mkdir -p $(LIBHOARD_OBJ_DIR); fi
 	@echo "making deps for $<..."
-	@($(ECHO) -n $(dir $@); $(CC) $(GLOBAL_CFLAGS) $(LIBHOARD_CFLAGS) -Iinclude -M -MG $<) > $@
+	@($(ECHO) -n $(dir $@); $(CC) $(GLOBAL_CFLAGS) $(LIBHOARD_CFLAGS) -Iinclude -Iinclude/nulibc -M -MG $<) > $@
