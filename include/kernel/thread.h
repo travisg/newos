@@ -65,6 +65,10 @@ struct proc {
 	pgrp_id pgid;
 	sess_id sid;
 
+	// list of other threads in the same process group and session
+	struct list_node pg_node;
+	struct list_node session_node;
+
 	char name[SYS_MAX_OS_NAME_LEN];
 	int num_threads;
 	int state;
@@ -194,6 +198,7 @@ int proc_wait_on_proc(proc_id id, int *retcode);
 thread_id proc_get_main_thread(proc_id id);
 proc_id proc_get_kernel_proc_id(void);
 proc_id proc_get_current_proc_id(void);
+struct proc *proc_get_current_proc(void);
 char **user_proc_get_arguments(void);
 int user_proc_get_arg_count(void);
 
@@ -212,6 +217,11 @@ int user_thread_snooze(bigtime_t time);
 int user_thread_yield(void);
 int user_getrlimit(int resource, struct rlimit * rlp);
 int user_setrlimit(int resource, const struct rlimit * rlp);
+
+// process group/session group stuff
+int setpgid(proc_id pid, pgrp_id pgid);
+pgrp_id getpgid(proc_id pid);
+sess_id setsid(void);
 
 #endif
 

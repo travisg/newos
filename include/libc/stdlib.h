@@ -45,6 +45,7 @@ void  srand(unsigned);
 # if !_KERNEL
 void abort(void);
 void exit(int);
+void _Exit(int);
 # endif
 
 # ifdef __cplusplus

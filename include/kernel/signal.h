@@ -17,6 +17,10 @@ extern int handle_signals(struct thread *t);
 int send_signal_etc(thread_id tid, uint signal, uint32 flags);
 int send_proc_signal_etc(proc_id pid, uint signal, uint32 flags);
 
+// defined in thread.c
+int send_pgrp_signal_etc(pgrp_id pgrp, uint signal, uint32 flags);
+int send_session_signal_etc(sess_id sid, uint signal, uint32 flags);
+
 int user_send_signal(thread_id tid, uint sig);
 int user_send_proc_signal(thread_id tid, uint sig);
 int user_sigaction(int sig, const struct sigaction *act, struct sigaction *oact);

@@ -1034,9 +1034,9 @@ ssize_t tcp_recvfrom(void *prot_data, void *buf, ssize_t len, sockaddr *saddr, i
 	while(s->state == STATE_ESTABLISHED && s->read_buffer == NULL) {
 		mutex_unlock(&s->lock);
 		if(flags & SOCK_FLAG_TIMEOUT)
-			err = sem_acquire_etc(s->read_sem, 1, SEM_FLAG_TIMEOUT, timeout, NULL);
+			err = sem_acquire_etc(s->read_sem, 1, SEM_FLAG_TIMEOUT|SEM_FLAG_INTERRUPTABLE, timeout, NULL);
 		else
-			err = sem_acquire(s->read_sem, 1);
+			err = sem_acquire_etc(s->read_sem, 1, SEM_FLAG_INTERRUPTABLE, 0, NULL);
 		mutex_lock(&s->lock);
 		if(err < 0) {
 			if(s->last_error < 0)

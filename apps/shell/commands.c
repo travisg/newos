@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <ctype.h>
+#include <newos/tty_priv.h>
 
 #include "commands.h"
 #include "file_utils.h"
@@ -71,8 +72,16 @@ int cmd_create_proc(int argc,char *argv[])
 	if(pid >= 0) {
 		int retcode;
 
+		// create a new process group for the command
+		// XXX big race here. we need to be able to start the process in a halted state, set
+		// the process group, then let it start, or use fork/exec.
+		setpgid(pid, 0);
+
 		if(must_wait) {
+			ioctl(0, _TTY_IOCTL_SET_PGRP, &pid, sizeof(pgrp_id));
 			_kern_proc_wait_on_proc(pid, &retcode);
+			pid = -1;
+			ioctl(0, _TTY_IOCTL_SET_PGRP, &pid, sizeof(pgrp_id));
 		}
 	} else {
 		printf("Error: cannot execute '%s'\n", filename);

@@ -8,6 +8,9 @@ MY_OBJS += \
 	$(LIBC_UNISTD_DIR)/dup2.o \
 	$(LIBC_UNISTD_DIR)/fsync.o \
 	$(LIBC_UNISTD_DIR)/getcwd.o \
+	$(LIBC_UNISTD_DIR)/getpgid.o \
+	$(LIBC_UNISTD_DIR)/getpgrp.o \
+	$(LIBC_UNISTD_DIR)/getsid.o \
 	$(LIBC_UNISTD_DIR)/ioctl.o \
 	$(LIBC_UNISTD_DIR)/lseek.o \
 	$(LIBC_UNISTD_DIR)/open.o \
@@ -15,6 +18,9 @@ MY_OBJS += \
 	$(LIBC_UNISTD_DIR)/pread.o \
 	$(LIBC_UNISTD_DIR)/pwrite.o \
 	$(LIBC_UNISTD_DIR)/read.o \
+	$(LIBC_UNISTD_DIR)/setpgid.o \
+	$(LIBC_UNISTD_DIR)/setpgrp.o \
+	$(LIBC_UNISTD_DIR)/setsid.o \
 	$(LIBC_UNISTD_DIR)/signal.o \
 	$(LIBC_UNISTD_DIR)/sleep.o \
 	$(LIBC_UNISTD_DIR)/sync.o \

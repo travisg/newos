@@ -2,20 +2,20 @@
 
 # configure the network
 exec /boot/bin/netcfg if create /dev/net/rtl8139/0 > /dev/null
-exec /boot/bin/netcfg if addaddr /dev/net/rtl8139/0 ipv4 addr 192.168.0.99 mask 255.255.255.0 broadcast 192.168.0.255 > /dev/null
-exec /boot/bin/netcfg route add net ipv4 addr 192.168.0.0 mask 255.255.255.0 if /dev/net/rtl8139/0 ipv4 addr 192.168.0.99 > /dev/null
+exec /boot/bin/netcfg if addaddr /dev/net/rtl8139/0 ipv4 addr 192.168.0.98 mask 255.255.255.0 broadcast 192.168.0.255 > /dev/null
+exec /boot/bin/netcfg route add net ipv4 addr 192.168.0.0 mask 255.255.255.0 if /dev/net/rtl8139/0 ipv4 addr 192.168.0.98 > /dev/null
 
 # the following settings put the pcnet32 device on my (graham's) vmware NAT setup. This may need modification.
 exec /boot/bin/netcfg if create /dev/net/pcnet32/0 > /dev/null
-exec /boot/bin/netcfg if addaddr /dev/net/pcnet32/0 ipv4 addr 192.168.72.99 mask 255.255.255.0 broadcast 192.168.72.255 > /dev/null
-exec /boot/bin/netcfg route add net ipv4 addr 192.168.72.0 mask 255.255.255.0 if /dev/net/pcnet32/0 ipv4 addr 192.168.72.99 > /dev/null
+exec /boot/bin/netcfg if addaddr /dev/net/pcnet32/0 ipv4 addr 192.168.0.99 mask 255.255.255.0 broadcast 192.168.0.255 > /dev/null
+exec /boot/bin/netcfg route add net ipv4 addr 192.168.0.0 mask 255.255.255.0 if /dev/net/pcnet32/0 ipv4 addr 192.168.0.99 > /dev/null
 
 # if you want to use internet addresses through pcnet32 you will have to modify the following line in the obvious ways.
-exec /boot/bin/netcfg route add default ipv4 addr 192.168.0.1 if /dev/net/rtl8139/0 ipv4 addr 192.168.0.99 > /dev/null
+exec /boot/bin/netcfg route add default ipv4 addr 192.168.0.1 if /dev/net/pcnet32/0 ipv4 addr 192.168.0.99 > /dev/null
 
 # start network daemons
 exec /boot/bin/socketd 23 /boot/bin/telnetd /boot/bin/shell -s /boot/loginscript &
 exec /boot/bin/socketd 1900 /boot/bin/telnetd /boot/bin/shell -s /boot/loginscript &
 
 # start the console daemon
-exec /boot/bin/consoled > /dev/null &
+exec /boot/bin/consoled > /dev/null

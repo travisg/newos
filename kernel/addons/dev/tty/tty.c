@@ -1,5 +1,5 @@
 /*
-** Copyright 2002, Travis Geiselbrecht. All rights reserved.
+** Copyright 2002-2004, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 /* Modified by Justin Smith 2003-07-08 */
@@ -10,6 +10,7 @@
 #include <kernel/int.h>
 #include <kernel/vm.h>
 #include <kernel/sem.h>
+#include <kernel/signal.h>
 #include <kernel/lock.h>
 #include <kernel/dev/fixed.h>
 #include <kernel/fs/devfs.h>
@@ -45,6 +46,7 @@ tty_desc *allocate_new_tty(void)
 			ASSERT(thetty.ttys[i].ref_count == 0);
 			thetty.ttys[i].inuse = true;
 			thetty.ttys[i].ref_count = 1;
+			thetty.ttys[i].pgid = -1;
 			tty = &thetty.ttys[i];
 			break;
 		}
@@ -128,6 +130,16 @@ int tty_ioctl(tty_desc *tty, int op, void *buf, size_t len)
 		case _TTY_IOCTL_IS_A_TTY: {
 			TRACE(("TTY tty_ioctl isatty"));
 			err = 0;
+			break;
+		}
+		case _TTY_IOCTL_SET_PGRP: {
+			TRACE(("TTY tty_ioctl set pgrp"));
+			if(len < sizeof(pgrp_id)) {
+				err = ERR_INVALID_ARGS;
+				break;
+			}
+
+			err = user_memcpy(&tty->pgid, buf, sizeof(pgrp_id));
 			break;
 		}
 		default:
@@ -292,7 +304,7 @@ restart_loop:
 		char c;
 		int i;
 
-        TRACE(("tty_write: regular loop: tty %p, lbuf %p, buf_pos %d, len %d\n", tty, lbuf_array[0], buf_pos, len));
+        TRACE(("tty_write: regular loop: tty %p, endpoint %d, lbuf %p, buf_pos %d, len %d\n", tty, endpoint, lbuf_array[0], buf_pos, len));
 		TRACE(("\tlbuf %p, flags 0x%x, head %d, tail %d, line_start %d\n", lbuf_array[0], lbuf_array[0]->flags, lbuf_array[0]->head, lbuf_array[0]->tail, lbuf_array[0]->line_start));
 
 		// process this data one at a time
@@ -302,6 +314,14 @@ restart_loop:
 		buf_pos++; // advance to next character
 
 		TRACE(("tty_write: char 0x%x\n", c));
+
+		// look for ctrl-c
+		if(c == 0x3 && endpoint == ENDPOINT_MASTER_WRITE) {
+			if(tty->pgid > 0) {
+				dprintf("tty_write: caught break, sending SIGINT to pgrp %d\n", tty->pgid);
+				send_pgrp_signal_etc(tty->pgid, SIGINT, 0);
+			}
+		}
 
 		echo = true;
 		for(i = 0; i < 2 && echo; i++)

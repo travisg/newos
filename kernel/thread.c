@@ -66,6 +66,33 @@ static spinlock_t proc_spinlock = 0;
 #define GRAB_PROC_LOCK() acquire_spinlock(&proc_spinlock)
 #define RELEASE_PROC_LOCK() release_spinlock(&proc_spinlock)
 
+// process groups
+struct pgid_node {
+	pgrp_id id; 
+	struct list_node node;
+	struct list_node list;
+};
+static void *pgid_hash = NULL;
+static int pgid_node_compare(void *_p, const void *_key);
+static unsigned int pgid_node_hash(void *_p, const void *_key, unsigned int range);
+static int add_proc_to_pgroup(struct proc *p, pgrp_id pgid);
+static int remove_proc_from_pgroup(struct proc *p, pgrp_id pgid);
+static struct pgid_node *create_pgroup_struct(pgrp_id pgid);
+static int send_pgrp_signal_etc_locked(pgrp_id pgid, uint signal, uint32 flags);
+
+// session groups
+struct sid_node {
+	pgrp_id id; 
+	struct list_node node;
+	struct list_node list;
+};
+static void *sid_hash = NULL;
+static int sid_node_compare(void *_s, const void *_key);
+static unsigned int sid_node_hash(void *_s, const void *_key, unsigned int range);
+static int add_proc_to_session(struct proc *p, sess_id sid);
+static int remove_proc_from_session(struct proc *p, sess_id sid);
+static struct sid_node *create_session_struct(sess_id sid);
+
 // thread list
 static struct thread *idle_threads[_MAX_CPUS];
 static void *thread_hash = NULL;
@@ -723,10 +750,14 @@ static void _dump_proc_info(struct proc *p)
 {
 	dprintf("PROC: %p\n", p);
 	dprintf("id:            0x%x\n", p->id);
+	dprintf("pgid:          0x%x\n", p->pgid);
+	dprintf("sid:           0x%x\n", p->sid);
 	dprintf("name:          '%s'\n", p->name);
 	dprintf("next:          %p\n", p->next);
-	dprintf("parent:        %p\n", p->parent);
+	dprintf("parent:        %p (0x%x)\n", p->parent, p->parent ? p->parent->id : -1);
 	dprintf("children.next: %p\n", p->children.next);
+	dprintf("siblings.prev: %p\n", p->siblings_node.prev);
+	dprintf("siblings.next: %p\n", p->siblings_node.next);
 	dprintf("num_threads:   %d\n", p->num_threads);
 	dprintf("state:         %d\n", p->state);
 	dprintf("ioctx:         %p\n", p->ioctx);
@@ -1002,28 +1033,24 @@ static void put_death_stack_and_reschedule(unsigned int index)
 	thread_resched();
 }
 
-static int test_thread(void *args)
-{
-	thread_id tid = thread_get_current_thread_id();
-
-	for(;;) {
-		dprintf("test thread %d\n", tid);
-//		thread_yield();
-		thread_snooze(250000);
-	}
-}
-
 int thread_init(kernel_args *ka)
 {
 	struct thread *t;
+	struct pgid_node *pgnode;
+	struct sid_node *snode;
 	unsigned int i;
 
 	dprintf("thread_init: entry\n");
 	kprintf("initializing threading system...\n");
 
 	// create the process hash table
-	proc_hash = hash_init(15, offsetof(struct proc, next),
-		&proc_struct_compare, &proc_struct_hash);
+	proc_hash = hash_init(15, offsetof(struct proc, next), &proc_struct_compare, &proc_struct_hash);
+
+	// create the pgroup hash table
+	pgid_hash = hash_init(15, offsetof(struct pgid_node, node), &pgid_node_compare, &pgid_node_hash);
+
+	// create the session hash table
+	sid_hash = hash_init(15, offsetof(struct sid_node, node), &sid_node_compare, &sid_node_hash);
 
 	// create the kernel process
 	kernel_proc = create_proc_struct("kernel", true);
@@ -1034,9 +1061,15 @@ int thread_init(kernel_args *ka)
 	// the kernel_proc is it's own parent
 	kernel_proc->parent = kernel_proc;
 
-	// it's part of the kernel process group/session
-	kernel_proc->pgid = kernel_proc->id;
-	kernel_proc->sid = kernel_proc->id;
+	// it's part of the kernel process group
+	pgnode = create_pgroup_struct(kernel_proc->id);
+	hash_insert(pgid_hash, pgnode);
+	add_proc_to_pgroup(kernel_proc, kernel_proc->id);
+
+	// ditto with session
+	snode = create_session_struct(kernel_proc->id);
+	hash_insert(sid_hash, snode);
+	add_proc_to_session(kernel_proc, kernel_proc->id);
 
 	kernel_proc->ioctx = vfs_new_ioctx(NULL);
 	if(kernel_proc->ioctx == NULL)
@@ -1136,21 +1169,6 @@ int thread_init(kernel_args *ka)
 	dbg_add_command(dump_next_thread_in_proc, "next_proc", "dump the next thread in the process of the last thread viewed");
 	dbg_add_command(dump_proc_info, "proc", "list info about a particular process");
 
-#if 0
-	// start two threads to test context switching
-	{
-		thread_id tid;
-
-		tid = thread_create_kernel_thread("test thread 1", &test_thread, NULL);
-		thread_set_priority(tid, THREAD_MAX_RT_PRIORITY);
-		thread_resume_thread(tid);
-
-		tid = thread_create_kernel_thread("test thread 2", &test_thread, NULL);
-		thread_set_priority(tid, THREAD_MAX_RT_PRIORITY);
-		thread_resume_thread(tid);
-	}
-#endif
-
 	return 0;
 }
 
@@ -1209,6 +1227,32 @@ void thread_yield(void)
 
 	RELEASE_THREAD_LOCK();
 	int_restore_interrupts();
+}
+
+// NOTE: PROC_LOCK must be held
+static bool check_for_pgrp_connection(pgrp_id pgid, pgrp_id check_for, struct proc *ignore_proc)
+{
+	struct pgid_node *node;
+	struct proc *temp_proc;
+	bool connection = false;
+
+	if(ignore_proc)
+		dprintf("check_for_pgrp_connection: pgid %d check for %d ignore_proc %d\n", pgid, check_for, ignore_proc->id);
+	else
+		dprintf("check_for_pgrp_connection: pgid %d check for %d\n", pgid, check_for);
+
+	node = hash_lookup(pgid_hash, &pgid);
+	if(node) {
+		list_for_every_entry(&node->list, temp_proc, struct proc, pg_node) {
+			ASSERT(temp_proc->pgid == pgid);
+			dprintf(" looking at %d, pgid %d, ppgid %d\n", temp_proc->id, temp_proc->pgid, temp_proc->parent->pgid);
+			if(temp_proc != ignore_proc && temp_proc->parent->pgid == check_for) {
+				connection = true;
+				break;
+			}
+		}
+	}
+	return connection;
 }
 
 // used to pass messages between thread_exit and thread_exit2
@@ -1292,25 +1336,13 @@ void thread_exit(int retcode)
 		if(p->main_thread == t) {
 			// this was main thread in this process
 			delete_proc = true;
-			hash_remove(proc_hash, p);
 			p->state = PROC_STATE_DEATH;
-
-			// reparent each of our children
-			proc_reparent_children(p);
-
-			// remember who our parent was so we can send a signal
-			parent_pid = p->parent->id;
-
-			// remove us from our parent
-			remove_proc_from_parent(p->parent, p);
 		}
 
 		RELEASE_PROC_LOCK();
 		// swap address spaces, to make sure we're running on the kernel's pgdir
 		vm_aspace_swap(kernel_proc->kaspace);
 		int_restore_interrupts();
-
-//		dprintf("thread_exit: thread 0x%x now a kernel thread!\n", t->id);
 	}
 
 	// delete the process
@@ -1338,6 +1370,41 @@ void thread_exit(int retcode)
 				thread_snooze(10000); // 10 ms
 			}
 		}
+
+		int_disable_interrupts();
+		GRAB_PROC_LOCK();
+
+		// see if the process group we are in is going to be orphaned
+		// it's orphaned if no parent of any other process in the group is in the
+		// same process group as our parent
+		if(p->sid == p->parent->sid && p->pgid != p->parent->pgid) {
+			if(!check_for_pgrp_connection(p->pgid, p->parent->pgid, p)) {
+				dprintf("thread_exit: killing process %d orphans process group %d\n", p->id, p->pgid);
+				send_pgrp_signal_etc_locked(p->pgid, SIGHUP, SIG_FLAG_NO_RESCHED);
+				send_pgrp_signal_etc_locked(p->pgid, SIGCONT, SIG_FLAG_NO_RESCHED);
+			}		
+		}
+
+		// remove us from the process list
+		hash_remove(proc_hash, p);
+
+		// reparent each of our children
+		proc_reparent_children(p);
+
+		// we're not part of our process groups and session anymore
+		remove_proc_from_pgroup(p, p->pgid);
+		remove_proc_from_session(p, p->sid);
+
+		// remember who our parent was so we can send a signal
+		parent_pid = p->parent->id;
+
+		// remove us from our parent
+		remove_proc_from_parent(p->parent, p);	
+
+		RELEASE_PROC_LOCK();
+		int_restore_interrupts();
+
+		// clean up resources owned by the process
 		vm_put_aspace(p->aspace);
 		vm_delete_aspace(p->aspace_id);
 		port_delete_owned_ports(p->id);
@@ -1436,7 +1503,7 @@ int thread_wait_on_thread(thread_id id, int *retcode)
 	RELEASE_THREAD_LOCK();
 	int_restore_interrupts();
 
-	rc = sem_acquire_etc(sem, 1, 0, 0, retcode);
+	rc = sem_acquire_etc(sem, 1, SEM_FLAG_INTERRUPTABLE, 0, retcode);
 
 	/* This thread died the way it should, dont ripple a non-error up */
 	if (rc == ERR_SEM_DELETED)
@@ -1712,6 +1779,11 @@ proc_id proc_get_current_proc_id(void)
 	return thread_get_current_thread()->proc->id;
 }
 
+struct proc *proc_get_current_proc(void)
+{
+	return thread_get_current_thread()->proc;
+}
+
 static struct proc *create_proc_struct(const char *name, bool kernel)
 {
 	struct proc *p;
@@ -1726,6 +1798,8 @@ static struct proc *create_proc_struct(const char *name, bool kernel)
 	p->id = atomic_add(&next_proc_id, 1);
 	p->pgid = -1;
 	p->sid = -1;
+	list_clear_node(&p->pg_node);
+	list_clear_node(&p->session_node);
 	strncpy(&p->name[0], name, SYS_MAX_OS_NAME_LEN-1);
 	p->name[SYS_MAX_OS_NAME_LEN-1] = 0;
 	p->num_threads = 0;
@@ -2015,7 +2089,9 @@ proc_id proc_create_proc(const char *path, const char *name, char **args, int ar
 
 	// inheirit the creating processes's process group, session
 	p->pgid = curr_proc->pgid;
+	add_proc_to_pgroup(p, curr_proc->pgid);
 	p->sid = curr_proc->sid;
+	add_proc_to_session(p, curr_proc->sid);
 
 	RELEASE_PROC_LOCK();
 	int_restore_interrupts();
@@ -2171,8 +2247,18 @@ static void proc_reparent_children(struct proc *p)
 	struct proc *child, *next;
 
 	list_for_every_entry_safe(&p->children, child, next, struct proc, siblings_node) {
+		// remove the child from the current proc and add to the parent
 		remove_proc_from_parent(p, child);
 		insert_proc_into_parent(p->parent, child);
+
+		// check to see if this orphans the process group the child is in
+		if(p->sid == child->sid && p->pgid != child->pgid) {
+			if(!check_for_pgrp_connection(child->pgid, p->pgid, NULL)) {
+				dprintf("thread_exit: killing process %d orphans process group %d\n", p->id, child->pgid);
+				send_pgrp_signal_etc_locked(child->pgid, SIGHUP, SIG_FLAG_NO_RESCHED);
+				send_pgrp_signal_etc_locked(child->pgid, SIGCONT, SIG_FLAG_NO_RESCHED);
+			}
+		}
 	}
 }
 
@@ -2332,3 +2418,367 @@ int setrlimit(int resource, const struct rlimit * rlp)
 
 	return 0;
 }
+
+static int pgid_node_compare(void *_p, const void *_key)
+{
+	struct pgid_node *p = _p;
+	const pgrp_id *key = _key;
+
+	if(p->id == *key) return 0;
+	else return 1;
+}
+
+static unsigned int pgid_node_hash(void *_p, const void *_key, unsigned int range)
+{
+	struct pgid_node *p = _p;
+	const pgrp_id *key = _key;
+
+	if(p != NULL)
+		return (p->id % range);
+	else
+		return (*key % range);
+}
+
+// assumes PROC_LOCK is held
+static int add_proc_to_pgroup(struct proc *p, pgrp_id pgid)
+{
+	struct pgid_node *node = hash_lookup(pgid_hash, &pgid);
+
+	if(!node)
+		return ERR_NOT_FOUND;
+
+	p->pgid = pgid;
+	ASSERT(p->pg_node.next == NULL && p->pg_node.prev == NULL);
+	list_add_head(&node->list, &p->pg_node);
+
+	return 0;
+}
+
+static int remove_proc_from_pgroup(struct proc *p, pgrp_id pgid)
+{
+	struct pgid_node *node = hash_lookup(pgid_hash, &pgid);
+
+	if(!node)
+		return ERR_NOT_FOUND;
+
+	ASSERT(p->pgid == pgid);
+	list_delete(&p->pg_node);
+
+	return 0;
+}
+
+static struct pgid_node *create_pgroup_struct(pgrp_id pgid)
+{
+	struct pgid_node *node = kmalloc(sizeof(struct pgid_node));
+	if(!node)
+		return NULL;
+
+	node->id = pgid;
+	list_clear_node(&node->node);
+	list_initialize(&node->list);
+
+	return node;
+}
+
+static int send_pgrp_signal_etc_locked(pgrp_id pgid, uint signal, uint32 flags)
+{
+	struct pgid_node *node;
+	struct proc *p;
+	int err = NO_ERROR;
+
+	node = hash_lookup(pgid_hash, &pgid);
+	if(!node) {
+		err = ERR_NOT_FOUND;
+		goto out;
+	}
+
+	list_for_every_entry(&node->list, p, struct proc, pg_node) {
+		dprintf("send_pgrp_signal_etc: sending sig %d to proc %d in pgid %d\n", signal, p->id, pgid);
+		send_signal_etc(p->main_thread->id, signal, flags | SIG_FLAG_NO_RESCHED);
+	}
+
+out:
+	return err;
+}
+
+int send_pgrp_signal_etc(pgrp_id pgid, uint signal, uint32 flags)
+{
+	int err;
+
+	int_disable_interrupts();
+	GRAB_PROC_LOCK();
+
+	err = send_pgrp_signal_etc_locked(pgid, signal, flags);
+
+	RELEASE_PROC_LOCK();
+	int_restore_interrupts();
+
+	return err;
+}
+
+static int sid_node_compare(void *_s, const void *_key)
+{
+	struct sid_node *s = _s;
+	const sess_id *key = _key;
+
+	if(s->id == *key) return 0;
+	else return 1;
+}
+
+static unsigned int sid_node_hash(void *_s, const void *_key, unsigned int range)
+{
+	struct sid_node *s = _s;
+	const sess_id *key = _key;
+
+	if(s != NULL)
+		return (s->id % range);
+	else
+		return (*key % range);
+}
+
+// assumes PROC_LOCK is held
+static int add_proc_to_session(struct proc *p, sess_id sid)
+{
+	struct sid_node *node = hash_lookup(sid_hash, &sid);
+	if(!node)
+		return ERR_NOT_FOUND;
+
+	p->sid = sid;
+	ASSERT(p->session_node.next == NULL && p->session_node.prev == NULL);
+	list_add_head(&node->list, &p->session_node);
+
+	return 0;
+}
+
+static int remove_proc_from_session(struct proc *p, sess_id sid)
+{
+	struct sid_node *node = hash_lookup(sid_hash, &sid);
+	if(!node)
+		return ERR_NOT_FOUND;
+
+	ASSERT(p->sid == sid);
+	list_delete(&p->session_node);
+
+	return 0;
+}
+
+static struct sid_node *create_session_struct(sess_id sid)
+{
+	struct sid_node *node = kmalloc(sizeof(struct sid_node));
+	if(!node)
+		return NULL;
+
+	node->id = sid;
+	list_clear_node(&node->node);
+	list_initialize(&node->list);
+
+	return node;
+}
+
+int send_session_signal_etc(sess_id sid, uint signal, uint32 flags)
+{
+	struct sid_node *node;
+	struct proc *p;
+	int err = NO_ERROR;
+
+	int_disable_interrupts();
+	GRAB_PROC_LOCK();
+
+	node = hash_lookup(sid_hash, &sid);
+	if(!node) {
+		err = ERR_NOT_FOUND;
+		goto out;
+	}
+
+	list_for_every_entry(&node->list, p, struct proc, session_node) {
+		send_proc_signal_etc(p->main_thread->id, signal, flags | SIG_FLAG_NO_RESCHED);
+	}
+
+out:
+	RELEASE_PROC_LOCK();
+	int_restore_interrupts();
+
+	return err;
+}
+
+int setpgid(proc_id pid, pgrp_id pgid)
+{
+	struct proc *p;
+	struct pgid_node *free_node = NULL;
+	int err;
+
+	if(pid < 0 || pgid < 0)
+		return ERR_INVALID_ARGS;
+
+	if(pid == 0)
+		pid = proc_get_current_proc_id();
+
+	if(pgid == 0)
+		pgid = pid;
+
+	int_disable_interrupts();
+	GRAB_PROC_LOCK();
+
+	p = proc_get_proc_struct_locked(pid);
+	if(!p) {
+		err = ERR_NOT_FOUND;
+		goto out;
+	}
+
+	// see if it's already in the target process group
+	if(p->pgid == pgid) {
+		err = NO_ERROR;
+		goto out;
+	}
+
+	// see if the target process group exists
+	if(hash_lookup(pgid_hash, &pgid) == NULL) {
+		// create it
+		// NOTE, we need to release the proc spinlock because we might have to
+		// block while allocating the node for the process group
+		struct pgid_node *node;
+
+		RELEASE_PROC_LOCK();
+		int_restore_interrupts();
+
+		node = create_pgroup_struct(pgid);
+		if(!node) {
+			err = ERR_NO_MEMORY;
+			goto out2;
+		}			
+
+		int_disable_interrupts();
+		GRAB_PROC_LOCK();
+
+		// check before we add the newly created pgroup struct to the hash.
+		// it could have been created while we had the PROC_LOCK released.
+		if(hash_lookup(pgid_hash, &pgid) != NULL) {
+			free_node = node; // erase it later and use the pgroup that was already added
+		} else {
+			// add our new pgroup node to the list
+			hash_insert(pgid_hash, node); 
+		}
+	}
+
+	// remove the process from it's current group
+	remove_proc_from_pgroup(p, p->pgid);
+
+	// add it to the new group
+	add_proc_to_pgroup(p, pgid);
+
+	err = NO_ERROR;
+
+out:
+	RELEASE_PROC_LOCK();
+	int_restore_interrupts();
+
+	if(free_node)
+		kfree(free_node);
+
+out2:
+	return err;
+}
+
+pgrp_id getpgid(proc_id pid)
+{
+	struct proc *p;
+	pgrp_id retval;
+
+	if(pid < 0)
+		return ERR_INVALID_ARGS;
+
+	if(pid == 0)
+		pid = proc_get_current_proc_id();
+	
+	int_disable_interrupts();
+	GRAB_PROC_LOCK();
+
+	p = proc_get_proc_struct_locked(pid);
+	if(!p) {
+		retval = ERR_NOT_FOUND;
+		goto out;
+	}
+
+	retval = p->pgid;
+
+out:
+	RELEASE_PROC_LOCK();
+	int_restore_interrupts();
+
+	return retval;
+}
+
+sess_id setsid(void)
+{
+	struct proc *p;
+	struct sid_node *free_node = NULL;
+	proc_id pid;
+	sess_id sid;
+	int err;
+
+	pid = proc_get_current_proc_id();
+	sid = pid;
+
+	int_disable_interrupts();
+	GRAB_PROC_LOCK();
+
+	p = proc_get_proc_struct_locked(pid);
+	if(!p) {
+		err = ERR_NOT_FOUND;
+		goto out;
+	}
+
+	// see if it's already in the target session
+	if(p->sid == sid) {
+		err = NO_ERROR;
+		goto out;
+	}
+
+	// see if the target session exists
+	if(hash_lookup(sid_hash, &sid) == NULL) {
+		// create it
+		// NOTE, we need to release the proc spinlock because we might have to
+		// block while allocating the node for the session
+		struct sid_node *node;
+
+		RELEASE_PROC_LOCK();
+		int_restore_interrupts();
+
+		node = create_session_struct(sid);
+		if(!node) {
+			err = ERR_NO_MEMORY;
+			goto out2;
+		}			
+
+		int_disable_interrupts();
+		GRAB_PROC_LOCK();
+
+		// check before we add the newly created pgroup struct to the hash.
+		// it could have been created while we had the PROC_LOCK released.
+		if(hash_lookup(sid_hash, &sid) != NULL) {
+			free_node = node; // erase it later and use the pgroup that was already added
+		} else {
+			// add our new pgroup node to the list
+			hash_insert(sid_hash, node); 
+		}
+	}
+
+	// remove the process from it's current group
+	remove_proc_from_session(p, p->sid);
+
+	// add it to the new group
+	add_proc_to_session(p, sid);
+
+	err = NO_ERROR;
+
+out:
+	RELEASE_PROC_LOCK();
+	int_restore_interrupts();
+
+	if(free_node)
+		kfree(free_node);
+
+out2:
+	return err;
+}
+

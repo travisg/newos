@@ -61,6 +61,9 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
+	// make us be our own session
+	setsid();
+
 	// build an array of args to pass anything we start up
 	spawn_argc = argc - 2;
 	spawn_argv = (char **)malloc(sizeof(char *) * spawn_argc);
@@ -78,6 +81,7 @@ int main(int argc, char **argv)
 		int new_fd;
 		sockaddr addr;
 		int saved_stdin, saved_stdout, saved_stderr;
+		proc_id pid;
 
 		new_fd = socket_accept(listenfd, &addr);
 		if(new_fd < 0)
@@ -92,7 +96,12 @@ int main(int argc, char **argv)
 		dup2(new_fd, 2);
 		close(new_fd);
 
-		_kern_proc_create_proc(spawn_argv[0], spawn_argv[0], spawn_argv, spawn_argc, 5);
+		pid = _kern_proc_create_proc(spawn_argv[0], spawn_argv[0], spawn_argv, spawn_argc, 5);
+
+		if(pid > 0) {
+			// give the spawned process a new process group
+			setpgid(pid, 0);
+		}
 
 		dup2(saved_stdin, 0);
 		dup2(saved_stdout, 1);

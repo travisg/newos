@@ -1,5 +1,5 @@
 /*
-** Copyright 2001, 2003, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2004 Travis Geiselbrecht. All rights reserved.
 ** Copyright 2002, Manuel J. Petit. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -7,8 +7,7 @@
 #ifndef __newos__libc_unistd__hh__
 #define __newos__libc_unistd__hh__
 
-
-#include <newos/types.h>
+#include <sys/types.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -18,6 +17,8 @@ extern "C" {
 #define SEEK_SET 0
 #define SEEK_CUR 1
 #define SEEK_END 2
+
+void    _exit(int);
 
 int     open(char const *, int, ...);
 int     close(int);
@@ -44,6 +45,16 @@ int		pipe(int fds[2]);
 
 /* not strictly supposed to be here, and doesn't quite match unix ioctl() */
 int		ioctl(int, int, void *, size_t);
+
+/* process groups */
+int setpgid(pid_t pid, pid_t pgid);
+pid_t getpgid(pid_t pid);
+int setpgrp(void);
+pid_t getpgrp(void);
+
+/* sessions */
+pid_t getsid(pid_t pid);
+pid_t setsid(void);
 
 #ifdef __cplusplus
 } /* extern "C" */

@@ -216,6 +216,11 @@ int _kern_vm_delete_region(region_id id);
 int _kern_vm_get_region_info(region_id id, vm_region_info *info);
 int _kern_vm_get_vm_info(vm_info_t *uinfo);
 
+/* process group/session group functions */
+int _kern_setpgid(proc_id, pgrp_id);
+pgrp_id _kern_getpgid(proc_id);
+sess_id _kern_setsid(void);
+
 /* kernel port functions */
 port_id		_kern_port_create(int32 queue_length, const char *name);
 int			_kern_port_close(port_id id);

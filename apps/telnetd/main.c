@@ -142,6 +142,11 @@ static int send_opts()
 	return write(socket_fd, buf, 6);
 }
 
+static void sigchld_handler(int signal)
+{
+	_kern_sem_release(wait_sem, 1);
+}
+
 int main(int argc, char **argv)
 {
 	char **spawn_argv;
@@ -155,6 +160,9 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
+	// we're a session leader
+	setsid();
+
 	// build an array of args to pass anything we start up
 	spawn_argc = argc - 1;
 	spawn_argv = (char **)malloc(sizeof(char *) * spawn_argc);
@@ -163,6 +171,9 @@ int main(int argc, char **argv)
 	for(i = 0; i < spawn_argc; i++) {
 		spawn_argv[i] = argv[i + 1];
 	}
+
+	// register for SIGCHLD signals
+	signal(SIGCHLD, &sigchld_handler);
 
 	wait_sem = _kern_sem_create(0, "telnetd wait sem");
 	if(wait_sem < 0)
@@ -213,6 +224,11 @@ int main(int argc, char **argv)
 	if(pid < 0)
 		return -1;
 
+	// create a new process group for the command
+	// XXX big race here. we need to be able to start the process in a halted state, set
+	// the process group, then let it start, or use fork/exec.
+	setpgid(pid, 0);	
+
 	tid = _kern_thread_create_thread("telnet reader", &telnet_reader, NULL);
 	_kern_thread_set_priority(tid, 30);
 	_kern_thread_resume_thread(tid);
@@ -221,7 +237,7 @@ int main(int argc, char **argv)
 	_kern_thread_set_priority(tid, 30);
 	_kern_thread_resume_thread(tid);
 
-	_kern_proc_wait_on_proc(pid, NULL);
+	_kern_sem_acquire(wait_sem, 1);
 
 	return 0;
 }

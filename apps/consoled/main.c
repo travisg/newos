@@ -155,6 +155,9 @@ int main(void)
 		return err;
 	}
 
+	// we're a session leader
+	setsid();
+
 	// move our stdin and stdout to the console
 	dup2(theconsole.tty_slave_fd, 0);
 	dup2(theconsole.tty_slave_fd, 1);
@@ -165,10 +168,15 @@ int main(void)
 		int retcode;
 		char *argv[3];
 
+#if 1
 		argv[0] = "/boot/bin/shell";
 		argv[1] = "-s";
 		argv[2] = "/boot/loginscript";
-		shell_process = start_process("/boot/bin/shell", "console shell", argv, 3, &theconsole);
+		shell_process = start_process("/boot/bin/shell", "shell", argv, 3, &theconsole);
+#else
+		argv[0] = "/boot/bin/vmstat";
+		shell_process = start_process("/boot/bin/vmstat", "vmstat", argv, 1, &theconsole);
+#endif
 		_kern_proc_wait_on_proc(shell_process, &retcode);
 	}
 

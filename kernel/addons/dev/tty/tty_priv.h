@@ -43,6 +43,7 @@ typedef struct tty_desc {
 	int ref_count;
 	int index;
 	mutex lock;
+	pgrp_id pgid;
 	struct line_buffer buf[2]; /* one buffer in either direction */
 } tty_desc;
 

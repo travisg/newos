@@ -116,6 +116,9 @@ const struct syscall_table_entry syscall_table[] = {
 	SYSCALL_ENTRY(user_send_signal),
 	SYSCALL_ENTRY(user_send_proc_signal),
 	SYSCALL_ENTRY(user_set_alarm),				/* 85 */
+	SYSCALL_ENTRY(setpgid),
+	SYSCALL_ENTRY(getpgid),
+	SYSCALL_ENTRY(setsid),
 };
 
 int num_syscall_table_entries = sizeof(syscall_table) / sizeof(struct syscall_table_entry);
