@@ -5,7 +5,6 @@ KERNEL_OBJS += \
 		$(KERNEL_FS_OBJ_DIR)/bootfs.o \
 		$(KERNEL_FS_OBJ_DIR)/devfs.o \
 		$(KERNEL_FS_OBJ_DIR)/isofs.o
-#		$(KERNEL_FS_OBJ_DIR)/envfs.o
 
 KERNEL_FS_INCLUDES = $(KERNEL_INCLUDES)
 
