@@ -380,6 +380,8 @@ void finish_all_requests( ide_device_info *device, int cam_status )
 }
 
 
+// unused
+#if 0
 static void finish_setsense( ide_device_info *device, ide_qrequest *qrequest, 
 	int sense_key, int sense_asc )
 {
@@ -387,6 +389,7 @@ static void finish_setsense( ide_device_info *device, ide_qrequest *qrequest,
 
 	finish_checksense( qrequest );
 }
+#endif
 
 
 cam_sim_interface ide_sim_interface = {

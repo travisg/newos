@@ -419,8 +419,6 @@ int ipv4_output(cbuf *buf, ipv4_addr target_addr, int protocol)
 	if(must_frag)
 		cbuf_free_chain(buf);
 
-out:
-
 	return err;
 }
 

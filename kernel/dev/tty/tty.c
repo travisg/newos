@@ -206,7 +206,6 @@ ssize_t tty_write(tty_desc *tty, const void *buf, ssize_t len, int endpoint)
 	struct line_buffer *other_lbuf;
 	int buf_pos = 0;
 	ssize_t bytes_written = 0;
-	ssize_t data_len;
 	int err;
 	char c;
 

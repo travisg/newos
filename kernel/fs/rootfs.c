@@ -119,6 +119,8 @@ static void insert_cookie_in_jar(struct rootfs_vnode *dir, struct rootfs_cookie 
 	cookie->prev = NULL;
 }
 
+// unused
+#if 0
 static void remove_cookie_from_jar(struct rootfs_vnode *dir, struct rootfs_cookie *cookie)
 {
 	if(cookie->next)
@@ -130,6 +132,7 @@ static void remove_cookie_from_jar(struct rootfs_vnode *dir, struct rootfs_cooki
 
 	cookie->prev = cookie->next = NULL;
 }
+#endif
 
 /* makes sure none of the dircookies point to the vnode passed in */
 static void update_dircookies(struct rootfs_vnode *dir, struct rootfs_vnode *v)
@@ -196,7 +199,7 @@ static int rootfs_is_dir_empty(struct rootfs_vnode *dir)
 static int rootfs_mount(fs_cookie *_fs, fs_id id, const char *device, void *args, vnode_id *root_vnid)
 {
 	struct rootfs *fs;
-	struct rootfs_vnode *v, *v1;
+	struct rootfs_vnode *v;
 	int err;
 
 	TRACE(("rootfs_mount: entry\n"));
@@ -327,7 +330,6 @@ err:
 static int rootfs_getvnode(fs_cookie _fs, vnode_id id, fs_vnode *v, bool r)
 {
 	struct rootfs *fs = (struct rootfs *)_fs;
-	int err;
 
 	TRACE(("rootfs_getvnode: asking for vnode 0x%x 0x%x, r %d\n", id, r));
 
@@ -351,6 +353,8 @@ static int rootfs_putvnode(fs_cookie _fs, fs_vnode _v, bool r)
 {
 	struct rootfs_vnode *v = (struct rootfs_vnode *)_v;
 
+	TOUCH(v);
+
 	TRACE(("rootfs_putvnode: entry on vnode 0x%x 0x%x, r %d\n", v->id, r));
 
 	return 0; // whatever
@@ -360,7 +364,6 @@ static int rootfs_removevnode(fs_cookie _fs, fs_vnode _v, bool r)
 {
 	struct rootfs *fs = (struct rootfs *)_fs;
 	struct rootfs_vnode *v = (struct rootfs_vnode *)_v;
-	struct rootfs_vnode dummy;
 	int err;
 
 	TRACE(("rootfs_removevnode: remove 0x%x (0x%x 0x%x), r %d\n", v, v->id, r));
@@ -377,7 +380,6 @@ static int rootfs_removevnode(fs_cookie _fs, fs_vnode _v, bool r)
 
 	err = 0;
 
-err:
 	if(!r)
 		mutex_unlock(&fs->lock);
 
@@ -390,7 +392,6 @@ static int rootfs_open(fs_cookie _fs, fs_vnode _v, file_cookie *_cookie, stream_
 	struct rootfs_vnode *v = (struct rootfs_vnode *)_v;
 	struct rootfs_cookie *cookie;
 	int err = 0;
-	int start = 0;
 
 	TRACE(("rootfs_open: vnode 0x%x, stream_type %d, oflags 0x%x\n", v, st, oflags));
 
@@ -414,7 +415,6 @@ static int rootfs_open(fs_cookie _fs, fs_vnode _v, file_cookie *_cookie, stream_
 
 	*_cookie = cookie;
 
-err1:
 	mutex_unlock(&fs->lock);
 err:
 	return err;
@@ -426,6 +426,8 @@ static int rootfs_close(fs_cookie _fs, fs_vnode _v, file_cookie _cookie)
 	struct rootfs_vnode *v = _v;
 	struct rootfs_cookie *cookie = _cookie;
 
+	TOUCH(fs);TOUCH(v);TOUCH(cookie);
+
 	TRACE(("rootfs_close: entry vnode 0x%x, cookie 0x%x\n", v, cookie));
 
 	return 0;
@@ -436,6 +438,8 @@ static int rootfs_freecookie(fs_cookie _fs, fs_vnode _v, file_cookie _cookie)
 	struct rootfs *fs = _fs;
 	struct rootfs_vnode *v = _v;
 	struct rootfs_cookie *cookie = _cookie;
+
+	TOUCH(fs);TOUCH(v);TOUCH(cookie);
 
 	TRACE(("rootfs_freecookie: entry vnode 0x%x, cookie 0x%x\n", v, cookie));
 
@@ -456,6 +460,8 @@ static ssize_t rootfs_read(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, void
 	struct rootfs_vnode *v = _v;
 	struct rootfs_cookie *cookie = _cookie;
 	int err = 0;
+
+	TOUCH(v);
 
 	TRACE(("rootfs_read: vnode 0x%x, cookie 0x%x, pos 0x%x 0x%x, len 0x%x\n", v, cookie, pos, len));
 
@@ -552,7 +558,6 @@ static int rootfs_create(fs_cookie _fs, fs_vnode _dir, const char *name, stream_
 	struct rootfs_vnode *dir = _dir;
 	struct rootfs_vnode *new_vnode;
 	struct rootfs_stream *s;
-	int start = 0;
 	int err;
 	bool created_vnode = false;
 
@@ -715,7 +720,6 @@ err:
 
 static int rootfs_rstat(fs_cookie _fs, fs_vnode _v, struct file_stat *stat)
 {
-	struct rootfs *fs = _fs;
 	struct rootfs_vnode *v = _v;
 
 	TRACE(("rootfs_rstat: vnode 0x%x (0x%x 0x%x), stat 0x%x\n", v, v->id, stat));
@@ -730,8 +734,9 @@ static int rootfs_rstat(fs_cookie _fs, fs_vnode _v, struct file_stat *stat)
 
 static int rootfs_wstat(fs_cookie _fs, fs_vnode _v, struct file_stat *stat, int stat_mask)
 {
-	struct rootfs *fs = _fs;
 	struct rootfs_vnode *v = _v;
+
+	TOUCH(v);
 
 	TRACE(("rootfs_wstat: vnode 0x%x (0x%x 0x%x), stat 0x%x\n", v, v->id, stat));
 

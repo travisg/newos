@@ -245,7 +245,6 @@ err:
 
 static int xpt_destroy_bus( xpt_bus_info *bus )
 {
-	int target_id, target_lun;
 	int retcode;	
 	
 	bus->interface->unregistered( bus->sim_cookie );

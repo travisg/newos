@@ -136,7 +136,6 @@ static int if_tx_thread(void *args)
 {
 	ifnet *i = args;
 	cbuf *buf;
-	int err;
 	ssize_t len;
 
 	if(i->fd < 0)
@@ -174,7 +173,6 @@ static int if_tx_thread(void *args)
 static int if_rx_thread(void *args)
 {
 	ifnet *i = args;
-	int err;
 	cbuf *b;
 
 	if(i->fd < 0)
@@ -253,7 +251,6 @@ err2:
 	thread_kill_thread_nowait(i->rx_thread);
 err1:
 	sys_close(i->fd);
-err:
 	return err;
 }
 

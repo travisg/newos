@@ -43,7 +43,6 @@ int xpt_put_device( xpt_device_info *device )
 	recursive_lock_lock( &registration_lock );
 	
 	if( --device->ref_count == 0 && device->temporary ) {
-		bool empty_target;
 		xpt_target_info *target;
 		
 		SHOW_FLOW0( 3, "cleaning up device" );
@@ -137,7 +136,6 @@ err2:
 		bus->targets[target_id] = NULL;
 		kfree( target );
 	}
-err:
 	recursive_lock_unlock( &registration_lock );
 	return NULL;
 }

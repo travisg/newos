@@ -91,8 +91,10 @@ static void smp_do_config(kernel_args *ka)
 	struct mp_ext_pe *pe;
 	struct mp_ext_ioapic *io;
 	struct mp_ext_bus *bus;
+#if CHATTY_SMP
 	const char *cpu_family[] = { "", "", "", "", "Intel 486",
 		"Intel Pentium", "Intel Pentium Pro", "Intel Pentium II" };
+#endif
 
 	/*
 	 * we are not running in standard configuration, so we have to look through

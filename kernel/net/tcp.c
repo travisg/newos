@@ -380,8 +380,6 @@ static void dump_socket(tcp_socket *s)
 
 static void dump_socket_info(int argc, char **argv)
 {
-	int i;
-
 	if(argc < 2) {
 		dprintf("tcp_socket: not enough arguments\n");
 		return;
@@ -440,7 +438,6 @@ static int bind_local_address(tcp_socket *s, netaddr *remote_addr)
 int tcp_input(cbuf *buf, ifnet *i, ipv4_addr source_address, ipv4_addr target_address)
 {
 	tcp_header *header;
-	uint16 port;
 	int err = 0;
 	int length = cbuf_get_len(buf);
 	tcp_socket *s = NULL;

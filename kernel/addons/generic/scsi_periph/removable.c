@@ -31,7 +31,6 @@ int scsi_get_media_status( scsi_handle_info *handle )
 	scsi_device_info *device = handle->device;
 	CCB_SCSIIO *request;
 	err_res res;
-	int retries = 0;
 	int err;
 	
 	mutex_lock( &device->mutex );

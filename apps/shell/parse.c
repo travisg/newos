@@ -549,7 +549,6 @@ err_1:
 int shell_parse(const char *buf, int len)
 {
 	int i;
-	bool found_command = false;
 	int  argc;
 	char *argv[64];
 	char redirect_in[256];

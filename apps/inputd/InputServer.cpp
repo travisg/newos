@@ -74,8 +74,6 @@ void InputServer::PostEvent(const Event &event)
 
 int InputServer::Run()
 {
-	char buf[4096];
-
 	FindDevices();
 
 	for(;;)

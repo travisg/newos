@@ -48,7 +48,6 @@ void out_reg(uint32 index, uint32 value);
 uint32 in_reg(uint32 index);
 static void init_fifo();
 static void writeFIFO(uint32 value);
-static char console_putch(const char c);
 static void clear_screen();
 static void fill_rect(uint32 color, uint32 x, uint32 y, uint32 width, uint32 height);
 static void copy_rect(uint32 src_x, uint32 src_y, uint32 dst_x, uint32 dst_y, uint32 width, uint32 height);
@@ -72,7 +71,6 @@ uint32 in_reg(uint32 index)
 
 static void define_font(uint32 id, uint32 width, uint32 height, uint8 *bits)
 {
-	int words;
 	dprintf("define_font(%u, %u,%u, %p)\n", id, width, height, bits);
 	writeFIFO(SVGA_CMD_DEFINE_BITMAP);
 	writeFIFO(id);
@@ -159,7 +157,7 @@ static int find_and_map(void)
 	out_reg(SVGA_REG_ID, SVGA_ID_2);
 	vcons.bits_per_pixel = in_reg(SVGA_REG_BITS_PER_PIXEL);
 	goto error0;
-error2:
+
 	// unmap vcons.fifo_region
 	vm_delete_region(kai, vcons.fifo_region);
 error1:

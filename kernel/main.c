@@ -116,10 +116,6 @@ int _start(kernel_args *oldka, int cpu_num)
 
 static int main2(void *unused)
 {
-	int err;
-
-	(void)(unused);
-
 	dprintf("start of main2: initializing devices\n");
 
 	// bootstrap all the filesystems

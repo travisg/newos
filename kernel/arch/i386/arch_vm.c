@@ -23,8 +23,6 @@ int arch_vm_init(kernel_args *ka)
 
 int arch_vm_init2(kernel_args *ka)
 {
-	unsigned int *pgdir;
-
 	dprintf("arch_vm_init2: entry\n");
 
 	// account for BIOS area and mark the pages unusable

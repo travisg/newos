@@ -10,7 +10,6 @@
 
 bool ref_lock_excl_lock( ref_lock *lock, mutex *global_lock )
 {
-	bool success;
 	int excl_count, nonexcl_count;
 	
 	excl_count = atomic_add( &lock->excl_count, 1 );
@@ -51,8 +50,6 @@ void ref_lock_excl_unlock( ref_lock *lock )
 
 void ref_lock_destroying_object( ref_lock *lock )
 {
-	int nonexcl_count;
-	
 	lock->destroying = true;
 	
 	sem_release( lock->nonexcl_lock, lock->nonexcl_count + LOCK_MAX_COUNT );
@@ -65,8 +62,6 @@ void ref_lock_destroying_object( ref_lock *lock )
 
 int ref_lock_init( ref_lock *lock )
 {
-	int res;
-	
 	memset( lock, 0, sizeof( lock ));
 	
 	lock->nonexcl_count = 0;

@@ -66,6 +66,8 @@ static void prune_untouched(void)
 	}
 }
 
+// unused
+#if 0
 static void sort_times(void)
 {
 	thread_time *curr, *next, *last;
@@ -96,6 +98,7 @@ static void sort_times(void)
 		}
 	} while(!done);
 }
+#endif
 
 static int gather_info(void)
 {

@@ -285,10 +285,11 @@ static void rtl8139_dumptxstate(rtl8139 *rtl)
 
 void rtl8139_xmit(rtl8139 *rtl, const char *ptr, ssize_t len)
 {
+#if 0
 	int i;
-	int txbn;
+#endif
 
-restart:
+//restart:
 	sem_acquire(rtl->tx_sem, 1);
 	mutex_lock(&rtl->lock);
 
@@ -411,8 +412,6 @@ restart:
 		goto out;
 	}
 	if(tail + len > 0xffff) {
-		int pos = 0;
-
 //		dprintf("packet wraps around\n");
 		memcpy(buf, (const void *)&entry->data[0], 0x10000 - (tail + 4));
 		memcpy((uint8 *)buf + 0x10000 - (tail + 4), (const void *)rtl->rxbuf, len - (0x10000 - (tail + 4)));

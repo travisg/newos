@@ -15,6 +15,8 @@ public:
 	WindowManager(Renderer *screenRenderer);
 	~WindowManager();
 
+	int WaitForExit();
+
 private:
 
 	Window* CreateWindow(Window *parent, const Rect &rect, int eventPort, window_flags flags);

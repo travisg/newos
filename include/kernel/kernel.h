@@ -22,6 +22,8 @@
 
 #define _PACKED __attribute__((packed))
 
+#define TOUCH(x) ((void)(x))
+
 extern bool kernel_startup;
 
 #endif

@@ -173,6 +173,7 @@ void arch_thread_enter_uspace(struct thread *t, addr entry, void *args, addr ust
 	 */
 	{
 		int a = *(volatile int *)(ustack_top - 4);
+		TOUCH(a);
 	}
 
 	int_disable_interrupts();

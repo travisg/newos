@@ -379,7 +379,6 @@ static int handle_exec(scan_info *info,shell_value **out)
 	char *argv[64];
 	char redirect_in[SCAN_SIZE+1];
 	char redirect_out[SCAN_SIZE+1];
-	char buf[SCAN_SIZE+1];
 	int err = SHE_NO_ERROR;
 	int retcode;
 	char *statement;
@@ -414,9 +413,7 @@ err:
 static int handle_load(scan_info *info)
 {
 	char var_name[SCAN_SIZE+1];
-	char temp[SCAN_SIZE+1];
 	shell_value *value;
-	int  scan_type;
 	int  err = SHE_NO_ERROR;
 
 	if(info->sym_code != SVO_IDENT) return SVO_IDENT;

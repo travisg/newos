@@ -139,6 +139,8 @@ static int bootfs_delete_vnode(struct bootfs *fs, struct bootfs_vnode *v, bool f
 	return 0;
 }
 
+// unused
+#if 0
 static void insert_cookie_in_jar(struct bootfs_vnode *dir, struct bootfs_cookie *cookie)
 {
 	cookie->u.dir.next = dir->stream.u.dir.jar_head;
@@ -169,6 +171,7 @@ static void update_dircookies(struct bootfs_vnode *dir, struct bootfs_vnode *v)
 		}
 	}
 }
+#endif
 
 
 static struct bootfs_vnode *bootfs_find_in_dir(struct bootfs_vnode *dir, const char *path)
@@ -205,6 +208,8 @@ static int bootfs_insert_in_dir(struct bootfs_vnode *dir, struct bootfs_vnode *v
 	return 0;
 }
 
+// unused
+#if 0
 static int bootfs_remove_from_dir(struct bootfs_vnode *dir, struct bootfs_vnode *findit)
 {
 	struct bootfs_vnode *v;
@@ -232,6 +237,7 @@ static int bootfs_is_dir_empty(struct bootfs_vnode *dir)
 		return false;
 	return !dir->stream.u.dir.dir_head;
 }
+#endif
 
 // creates a path of vnodes up to the last part of the passed in path.
 // returns the vnode the last segment should be a part of and
@@ -305,7 +311,6 @@ static int bootfs_create_vnode_tree(struct bootfs *fs, struct bootfs_vnode *root
 {
 	int i;
 	boot_entry *entry;
-	int err;
 	struct bootfs_vnode *new_vnode;
 	struct bootfs_vnode *dir;
 	char path[SYS_MAX_PATH_LEN];
@@ -480,7 +485,6 @@ err:
 static int bootfs_getvnode(fs_cookie _fs, vnode_id id, fs_vnode *v, bool r)
 {
 	struct bootfs *fs = (struct bootfs *)_fs;
-	int err;
 
 	TRACE(("bootfs_getvnode: asking for vnode 0x%x 0x%x, r %d\n", id, r));
 
@@ -504,6 +508,8 @@ static int bootfs_putvnode(fs_cookie _fs, fs_vnode _v, bool r)
 {
 	struct bootfs_vnode *v = (struct bootfs_vnode *)_v;
 
+	TOUCH(v);
+
 	TRACE(("bootfs_putvnode: entry on vnode 0x%x 0x%x, r %d\n", v->id, r));
 
 	return 0; // whatever
@@ -513,7 +519,6 @@ static int bootfs_removevnode(fs_cookie _fs, fs_vnode _v, bool r)
 {
 	struct bootfs *fs = (struct bootfs *)_fs;
 	struct bootfs_vnode *v = (struct bootfs_vnode *)_v;
-	struct bootfs_vnode dummy;
 	int err;
 
 	TRACE(("bootfs_removevnode: remove 0x%x (0x%x 0x%x), r %d\n", v, v->id, r));
@@ -530,7 +535,6 @@ static int bootfs_removevnode(fs_cookie _fs, fs_vnode _v, bool r)
 
 	err = 0;
 
-err:
 	if(!r)
 		mutex_unlock(&fs->lock);
 
@@ -543,7 +547,6 @@ static int bootfs_open(fs_cookie _fs, fs_vnode _v, file_cookie *_cookie, stream_
 	struct bootfs_vnode *v = _v;
 	struct bootfs_cookie *cookie;
 	int err = 0;
-	int start = 0;
 
 	TRACE(("bootfs_open: vnode 0x%x, stream_type %d, oflags 0x%x\n", v, st, oflags));
 
@@ -575,7 +578,6 @@ static int bootfs_open(fs_cookie _fs, fs_vnode _v, file_cookie *_cookie, stream_
 
 	*_cookie = cookie;
 
-err1:
 	mutex_unlock(&fs->lock);
 err:
 	return err;
@@ -587,6 +589,8 @@ static int bootfs_close(fs_cookie _fs, fs_vnode _v, file_cookie _cookie)
 	struct bootfs_vnode *v = _v;
 	struct bootfs_cookie *cookie = _cookie;
 
+	TOUCH(fs);TOUCH(v);TOUCH(cookie);
+
 	TRACE(("bootfs_close: entry vnode 0x%x, cookie 0x%x\n", v, cookie));
 
 	return 0;
@@ -597,6 +601,8 @@ static int bootfs_freecookie(fs_cookie _fs, fs_vnode _v, file_cookie _cookie)
 	struct bootfs *fs = _fs;
 	struct bootfs_vnode *v = _v;
 	struct bootfs_cookie *cookie = _cookie;
+
+	TOUCH(fs);TOUCH(v);TOUCH(cookie);
 
 	TRACE(("bootfs_freecookie: entry vnode 0x%x, cookie 0x%x\n", v, cookie));
 
@@ -617,6 +623,8 @@ static ssize_t bootfs_read(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, void
 	struct bootfs_vnode *v = _v;
 	struct bootfs_cookie *cookie = _cookie;
 	ssize_t err = 0;
+
+	TOUCH(v);
 
 	TRACE(("bootfs_read: vnode 0x%x, cookie 0x%x, pos 0x%x 0x%x, len 0x%x\n", v, cookie, pos, len));
 
@@ -689,6 +697,8 @@ static int bootfs_seek(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, off_t po
 	struct bootfs_vnode *v = _v;
 	struct bootfs_cookie *cookie = _cookie;
 	int err = 0;
+
+	TOUCH(v);
 
 	TRACE(("bootfs_seek: vnode 0x%x, cookie 0x%x, pos 0x%x 0x%x, seek_type %d\n", v, cookie, pos, st));
 
@@ -772,7 +782,6 @@ static int bootfs_canpage(fs_cookie _fs, fs_vnode _v)
 
 static ssize_t bootfs_readpage(fs_cookie _fs, fs_vnode _v, iovecs *vecs, off_t pos)
 {
-	struct bootfs *fs = _fs;
 	struct bootfs_vnode *v = _v;
 	unsigned int i;
 
@@ -801,8 +810,9 @@ static ssize_t bootfs_readpage(fs_cookie _fs, fs_vnode _v, iovecs *vecs, off_t p
 
 static ssize_t bootfs_writepage(fs_cookie _fs, fs_vnode _v, iovecs *vecs, off_t pos)
 {
-	struct bootfs *fs = _fs;
 	struct bootfs_vnode *v = _v;
+
+	TOUCH(v);
 
 	TRACE(("bootfs_writepage: vnode 0x%x, vecs 0x%x, pos 0x%x 0x%x\n", v, vecs, pos));
 
@@ -849,7 +859,6 @@ static int bootfs_rstat(fs_cookie _fs, fs_vnode _v, struct file_stat *stat)
 			break;
 	}
 
-err:
 	mutex_unlock(&fs->lock);
 
 	return err;
@@ -858,8 +867,9 @@ err:
 
 static int bootfs_wstat(fs_cookie _fs, fs_vnode _v, struct file_stat *stat, int stat_mask)
 {
-	struct bootfs *fs = _fs;
 	struct bootfs_vnode *v = _v;
+
+	TOUCH(v);
 
 	TRACE(("bootfs_wstat: vnode 0x%x (0x%x 0x%x), stat 0x%x\n", v, v->id, stat));
 

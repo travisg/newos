@@ -369,6 +369,21 @@ int hoardHeap::freeBlock (block *& b,
   return 0;
 }
 
+// Return ceil(log_2(num)).
+// num must be positive.
+static int lg (int num)
+{
+  assert (num > 0);
+  int power = 0;
+  int n = 1;
+  // Invariant: 2^power == n.
+  while (n < num) {
+    n <<= 1;
+    power++;
+  }
+  return power;
+}
+
 // Static initialization of the number of processors (and a mask).
    
 int hoardHeap::_numProcessors;

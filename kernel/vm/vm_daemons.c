@@ -25,7 +25,6 @@ static void scan_pages(vm_address_space *aspace, addr free_target)
 	addr va;
 	addr pa;
 	unsigned int flags, flags2;
-	int err;
 	int quantum = PAGE_SCAN_QUANTUM;
 
 //	dprintf("scan_pages called on aspace 0x%x, id 0x%x, free_target %d\n", aspace, aspace->id, free_target);

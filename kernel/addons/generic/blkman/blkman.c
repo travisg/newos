@@ -101,7 +101,6 @@ static int blkman_register_dev( blkdev_interface *interface, blkdev_cookie cooki
 	
 	return NO_ERROR;
 	
-err5:
 	devfs_unpublish_device( name );
 err4:
 	locked_pool->uninit( device->phys_vecs_pool );
@@ -181,6 +180,8 @@ static int blkman_ioctl( blkman_handle_info *handle, int op, void *buf, size_t l
 #define ROUND_PAGE_DOWN( addr ) ( (addr) & ~(PAGE_SIZE - 1))
 #define ROUND_PAGE_UP( addr ) ( ((addr) + (PAGE_SIZE - 1)) & ~(PAGE_SIZE - 1))
 
+// unused
+#if 0
 static size_t blkman_range2pagenum( addr start, size_t len )
 {
 	addr endof_first_page, beginof_last_page;
@@ -192,6 +193,7 @@ static size_t blkman_range2pagenum( addr start, size_t len )
 		(beginof_last_page - endof_first_page) / PAGE_SIZE + 2 : 
 		1;
 }
+#endif
 
 int vm_get_iovec_page_mapping( 
 	iovec *vec, size_t vec_count, size_t vec_offset, size_t len, 
@@ -752,7 +754,7 @@ err3:
 	module_put( LOCKED_POOL_MODULE_NAME );
 err2:
 	/*module_put( PARTITIONS_MANAGER_MODULE_NAME );*/
-err1:
+//err1:
 	return res;
 }
 

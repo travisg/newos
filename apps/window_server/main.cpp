@@ -324,7 +324,6 @@ int main()
 
 int vesa_find(Renderer **renderer)
 {
-	int i,j,k;
 	int fd;
 	devfs_framebuffer_info fb;
 	int err;
@@ -412,9 +411,8 @@ int main(int argc, char **argv)
 	}
 */
 	WindowManager *wm = new WindowManager(screen);
-
-	for(;;)
-		sys_snooze(1000000);
+	
+	wm->WaitForExit();
 	return 0;
 }
 

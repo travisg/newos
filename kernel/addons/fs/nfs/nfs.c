@@ -30,6 +30,7 @@
 
 static int nfs_getattr(nfs_fs *nfs, nfs_vnode *v, nfs_attrstat *attrstat);
 
+#if NFS_TRACE
 static void dump_fhandle(fhandle *handle)
 {
 	unsigned int i;
@@ -37,6 +38,7 @@ static void dump_fhandle(fhandle *handle)
 	for(i=0; i<sizeof(fhandle); i++)
 		dprintf("%02x", ((uint8 *)handle)[i]);
 }
+#endif
 
 static nfs_vnode *new_vnode_struct(nfs_fs *fs)
 {
@@ -275,6 +277,8 @@ int nfs_sync(fs_cookie fs)
 {
 	nfs_fs *nfs = (nfs_fs *)fs;
 
+	TOUCH(nfs);
+
 	TRACE("nfs_sync: fsid 0x%x\n", nfs->id);
 	return 0;
 }
@@ -368,6 +372,8 @@ int nfs_getvnode(fs_cookie fs, vnode_id id, fs_vnode *v, bool r)
 {
 	nfs_fs *nfs = (nfs_fs *)fs;
 
+	TOUCH(nfs);
+
 	TRACE("nfs_getvnode: fsid 0x%x, vnid 0x%Lx\n", nfs->id, id);
 
 	*v = VNIDTOVNODE(id);
@@ -379,6 +385,8 @@ int nfs_putvnode(fs_cookie fs, fs_vnode _v, bool r)
 {
 	nfs_fs *nfs = (nfs_fs *)fs;
 	nfs_vnode *v = (nfs_vnode *)_v;
+
+	TOUCH(nfs);
 
 	TRACE("nfs_putvnode: fsid 0x%x, vnid 0x%Lx\n", nfs->id, VNODETOVNID(v));
 
@@ -392,6 +400,8 @@ int nfs_removevnode(fs_cookie fs, fs_vnode _v, bool r)
 	nfs_fs *nfs = (nfs_fs *)fs;
 	nfs_vnode *v = (nfs_vnode *)_v;
 
+	TOUCH(nfs);TOUCH(v);
+
 	TRACE("nfs_removevnode: fsid 0x%x, vnid 0x%Lx\n", nfs->id, VNODETOVNID(v));
 
 	return ERR_UNIMPLEMENTED;
@@ -403,6 +413,8 @@ int nfs_open(fs_cookie fs, fs_vnode _v, file_cookie *_cookie, stream_type st, in
 	nfs_vnode *v = (nfs_vnode *)_v;
 	nfs_cookie *cookie;
 	int err;
+
+	TOUCH(nfs);
 
 	TRACE("nfs_open: fsid 0x%x, vnid 0x%Lx, stream_type %d, oflags 0x%x\n", nfs->id, VNODETOVNID(v), st, oflags);
 
@@ -440,6 +452,8 @@ int nfs_close(fs_cookie fs, fs_vnode _v, file_cookie _cookie)
 	nfs_fs *nfs = (nfs_fs *)fs;
 	nfs_vnode *v = (nfs_vnode *)_v;
 
+	TOUCH(nfs);TOUCH(v);
+
 	TRACE("nfs_close: fsid 0x%x, vnid 0x%Lx\n", nfs->id, VNODETOVNID(v));
 
 	return NO_ERROR;
@@ -450,6 +464,8 @@ int nfs_freecookie(fs_cookie fs, fs_vnode _v, file_cookie _cookie)
 	nfs_fs *nfs = (nfs_fs *)fs;
 	nfs_vnode *v = (nfs_vnode *)_v;
 	nfs_cookie *cookie = (nfs_cookie *)_cookie;
+
+	TOUCH(nfs);TOUCH(v);
 
 	TRACE("nfs_freecookie: fsid 0x%x, vnid 0x%Lx\n", nfs->id, VNODETOVNID(v));
 
@@ -462,6 +478,8 @@ int nfs_fsync(fs_cookie fs, fs_vnode _v)
 {
 	nfs_fs *nfs = (nfs_fs *)fs;
 	nfs_vnode *v = (nfs_vnode *)_v;
+
+	TOUCH(nfs);TOUCH(v);
 
 	TRACE("nfs_fsync: fsid 0x%x, vnid 0x%Lx\n", nfs->id, VNODETOVNID(v));
 
@@ -598,7 +616,6 @@ ssize_t nfs_read(fs_cookie fs, fs_vnode _v, file_cookie _cookie, void *buf, off_
 			err = ERR_GENERAL;
 	}
 
-err:
 	sem_release(v->sem, 1);
 
 	return err;
@@ -679,7 +696,6 @@ ssize_t nfs_write(fs_cookie fs, fs_vnode _v, file_cookie _cookie, const void *bu
 			err = ERR_GENERAL;
 	}
 
-err:
 	sem_release(v->sem, 1);
 
 	return err;
@@ -769,6 +785,8 @@ int nfs_ioctl(fs_cookie fs, fs_vnode _v, file_cookie cookie, int op, void *buf, 
 	nfs_fs *nfs = (nfs_fs *)fs;
 	nfs_vnode *v = (nfs_vnode *)_v;
 
+	TOUCH(nfs);TOUCH(v);
+
 	TRACE("nfs_ioctl: fsid 0x%x, vnid 0x%Lx, op %d, buf %p, len %ld\n", nfs->id, VNODETOVNID(v), op, buf, len);
 
 	return ERR_UNIMPLEMENTED;
@@ -778,6 +796,8 @@ int nfs_canpage(fs_cookie fs, fs_vnode _v)
 {
 	nfs_fs *nfs = (nfs_fs *)fs;
 	nfs_vnode *v = (nfs_vnode *)_v;
+
+	TOUCH(nfs);TOUCH(v);
 
 	TRACE("nfs_canpage: fsid 0x%x, vnid 0x%Lx\n", nfs->id, VNODETOVNID(v));
 
@@ -789,6 +809,8 @@ ssize_t nfs_readpage(fs_cookie fs, fs_vnode _v, iovecs *vecs, off_t pos)
 	nfs_fs *nfs = (nfs_fs *)fs;
 	nfs_vnode *v = (nfs_vnode *)_v;
 
+	TOUCH(nfs);TOUCH(v);
+
 	TRACE("nfs_readpage: fsid 0x%x, vnid 0x%Lx, vecs %p, pos 0x%Lx\n", nfs->id, VNODETOVNID(v), vecs, pos);
 
 	return ERR_UNIMPLEMENTED;
@@ -798,6 +820,8 @@ ssize_t nfs_writepage(fs_cookie fs, fs_vnode _v, iovecs *vecs, off_t pos)
 {
 	nfs_fs *nfs = (nfs_fs *)fs;
 	nfs_vnode *v = (nfs_vnode *)_v;
+
+	TOUCH(nfs);TOUCH(v);
 
 	TRACE("nfs_writepage: fsid 0x%x, vnid 0x%Lx, vecs %p, pos 0x%Lx\n", nfs->id, VNODETOVNID(v), vecs, pos);
 
@@ -809,6 +833,8 @@ int nfs_create(fs_cookie fs, fs_vnode _dir, const char *name, stream_type st, vo
 	nfs_fs *nfs = (nfs_fs *)fs;
 	nfs_vnode *dir = (nfs_vnode *)_dir;
 
+	TOUCH(nfs);TOUCH(dir);
+
 	TRACE("nfs_create: fsid 0x%x, vnid 0x%Lx, name '%s', stream_type %d\n", nfs->id, VNODETOVNID(dir), name, st);
 
 	return ERR_UNIMPLEMENTED;
@@ -818,6 +844,8 @@ int nfs_unlink(fs_cookie fs, fs_vnode _dir, const char *name)
 {
 	nfs_fs *nfs = (nfs_fs *)fs;
 	nfs_vnode *dir = (nfs_vnode *)_dir;
+
+	TOUCH(nfs);TOUCH(dir);
 
 	TRACE("nfs_unlink: fsid 0x%x, vnid 0x%Lx, name '%s'\n", nfs->id, VNODETOVNID(dir), name);
 
@@ -829,6 +857,8 @@ int nfs_rename(fs_cookie fs, fs_vnode _olddir, const char *oldname, fs_vnode _ne
 	nfs_fs *nfs = (nfs_fs *)fs;
 	nfs_vnode *olddir = (nfs_vnode *)_olddir;
 	nfs_vnode *newdir = (nfs_vnode *)_newdir;
+
+	TOUCH(nfs);TOUCH(olddir);TOUCH(newdir);
 
 	TRACE("nfs_rename: fsid 0x%x, vnid 0x%Lx, oldname '%s', newdir 0x%Lx, newname '%s'\n", nfs->id, VNODETOVNID(olddir), oldname, VNODETOVNID(newdir), newname);
 
@@ -887,6 +917,8 @@ int nfs_wstat(fs_cookie fs, fs_vnode _v, struct file_stat *stat, int stat_mask)
 {
 	nfs_fs *nfs = (nfs_fs *)fs;
 	nfs_vnode *v = (nfs_vnode *)_v;
+
+	TOUCH(nfs);TOUCH(v);
 
 	TRACE("nfs_wstat: fsid 0x%x, vnid 0x%Lx, stat %p, stat_mask 0x%x\n", nfs->id, VNODETOVNID(v), stat, stat_mask);
 

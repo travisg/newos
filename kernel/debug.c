@@ -330,7 +330,6 @@ ssize_t dbg_write(const void *buf, ssize_t len)
 
 int dbg_add_command(void (*func)(int, char **), const char *name, const char *desc)
 {
-	int flags;
 	struct debugger_command *cmd;
 
 	cmd = (struct debugger_command *)kmalloc(sizeof(struct debugger_command));

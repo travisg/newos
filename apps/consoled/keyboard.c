@@ -106,7 +106,6 @@ int process_key_events(_key_event *kevents, int num_events, char *out_buf, int b
 
 		// deal with the common case first
 		if(kevents[i].keycode < KEY_NONE) {
-			bool shift;
 			const char *keymap;
 
 			if(kevents[i].modifiers & KEY_MODIFIER_SHIFT) {

@@ -203,6 +203,7 @@ static int pipefs_delete_vnode(struct pipefs *fs, struct pipefs_vnode *v, bool f
 	return 0;
 }
 
+#if 0
 static void insert_cookie_in_jar(struct pipefs_vnode *dir, struct pipefs_cookie *cookie)
 {
 	ASSERT(dir->stream.type == STREAM_TYPE_DIR);
@@ -227,6 +228,7 @@ static void remove_cookie_from_jar(struct pipefs_vnode *dir, struct pipefs_cooki
 
 	cookie->u.dir.prev = cookie->u.dir.next = NULL;
 }
+#endif
 
 /* makes sure none of the dircookies point to the vnode passed in */
 static void update_dircookies(struct pipefs_vnode *dir, struct pipefs_vnode *v)
@@ -297,6 +299,7 @@ static int pipefs_remove_from_dir(struct pipefs_vnode *dir, struct pipefs_vnode 
 	return -1;
 }
 
+#if 0
 static int pipefs_is_dir_empty(struct pipefs_vnode *dir)
 {
 	ASSERT(dir->stream.type == STREAM_TYPE_DIR);
@@ -304,6 +307,7 @@ static int pipefs_is_dir_empty(struct pipefs_vnode *dir)
 
 	return !dir->stream.u.dir.dir_head;
 }
+#endif
 
 static int pipefs_mount(fs_cookie *_fs, fs_id id, const char *pipefs, void *args, vnode_id *root_vnid)
 {
@@ -458,7 +462,6 @@ err:
 static int pipefs_getvnode(fs_cookie _fs, vnode_id id, fs_vnode *v, bool r)
 {
 	struct pipefs *fs = (struct pipefs *)_fs;
-	int err;
 
 	TRACE(("pipefs_getvnode: asking for vnode 0x%Lx, r %d\n", id, r));
 
@@ -481,6 +484,8 @@ static int pipefs_getvnode(fs_cookie _fs, vnode_id id, fs_vnode *v, bool r)
 static int pipefs_putvnode(fs_cookie _fs, fs_vnode _v, bool r)
 {
 	struct pipefs_vnode *v = (struct pipefs_vnode *)_v;
+	
+	TOUCH(v);
 
 	TRACE(("pipefs_putvnode: entry on vnode 0x%Lx, r %d\n", v->id, r));
 
@@ -491,7 +496,6 @@ static int pipefs_removevnode(fs_cookie _fs, fs_vnode _v, bool r)
 {
 	struct pipefs *fs = (struct pipefs *)_fs;
 	struct pipefs_vnode *v = (struct pipefs_vnode *)_v;
-	struct pipefs_vnode dummy;
 	int err;
 
 	TRACE(("pipefs_removevnode: remove 0x%x (0x%Lx), r %d\n", v, v->id, r));
@@ -508,7 +512,6 @@ static int pipefs_removevnode(fs_cookie _fs, fs_vnode _v, bool r)
 
 	err = 0;
 
-err:
 	if(!r)
 		mutex_unlock(&fs->hash_lock);
 
@@ -517,11 +520,9 @@ err:
 
 static int pipefs_open(fs_cookie _fs, fs_vnode _v, file_cookie *_cookie, stream_type st, int oflags)
 {
-	struct pipefs *fs = _fs;
 	struct pipefs_vnode *v = _v;
 	struct pipefs_cookie *cookie;
 	int err = 0;
-	int start = 0;
 
 	TRACE(("pipefs_open: vnode 0x%x, oflags 0x%x\n", v, oflags));
 
@@ -562,7 +563,6 @@ err:
 
 static int pipefs_close(fs_cookie _fs, fs_vnode _v, file_cookie _cookie)
 {
-	struct pipefs *fs = _fs;
 	struct pipefs_vnode *v = _v;
 	struct pipefs_cookie *cookie = _cookie;
 	int err = 0;
@@ -598,7 +598,6 @@ static int pipefs_close(fs_cookie _fs, fs_vnode _v, file_cookie _cookie)
 
 static int pipefs_freecookie(fs_cookie _fs, fs_vnode _v, file_cookie _cookie)
 {
-	struct pipefs *fs = _fs;
 	struct pipefs_vnode *v = _v;
 	struct pipefs_cookie *cookie = _cookie;
 
@@ -854,7 +853,6 @@ err:
 
 static int pipefs_seek(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, off_t pos, seek_type st)
 {
-	struct pipefs *fs = _fs;
 	struct pipefs_vnode *v = _v;
 	struct pipefs_cookie *cookie = _cookie;
 	int err = 0;
@@ -1023,7 +1021,6 @@ static int pipefs_rename(fs_cookie _fs, fs_vnode _olddir, const char *oldname, f
 
 static int pipefs_rstat(fs_cookie _fs, fs_vnode _v, struct file_stat *stat)
 {
-	struct pipefs *fs = _fs;
 	struct pipefs_vnode *v = _v;
 
 	TRACE(("pipefs_rstat: vnode 0x%x (0x%Lx), stat 0x%x\n", v, v->id, stat));
@@ -1038,8 +1035,9 @@ static int pipefs_rstat(fs_cookie _fs, fs_vnode _v, struct file_stat *stat)
 
 static int pipefs_wstat(fs_cookie _fs, fs_vnode _v, struct file_stat *stat, int stat_mask)
 {
-	struct pipefs *fs = _fs;
 	struct pipefs_vnode *v = _v;
+
+	TOUCH(v);
 
 	TRACE(("pipefs_wstat: vnode 0x%x (0x%Lx), stat 0x%x\n", v, v->id, stat));
 
@@ -1082,9 +1080,6 @@ static struct fs_calls pipefs_calls = {
 
 int bootstrap_pipefs(void)
 {
-	region_id rid;
-	vm_region_info rinfo;
-
 	dprintf("bootstrap_pipefs: entry\n");
 
 	return vfs_register_filesystem("pipefs", &pipefs_calls);

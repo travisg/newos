@@ -254,7 +254,7 @@ invalid_ccb:
 	ccb->cam_status = CAM_REQ_INVALID;
 	goto err;
 	
-invalid_device:
+//invalid_device:
 	ccb->cam_status = CAM_DEV_NOT_THERE;
 	
 err:

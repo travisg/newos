@@ -145,6 +145,8 @@ static void dump_image_info(struct elf_image_info *image)
 	dprintf(" pltrel_len 0x%x\n", image->pltrel_len);
 }
 
+// unused
+#if 0
 static void dump_symbol(struct elf_image_info *image, struct Elf32_Sym *sym)
 {
 
@@ -157,7 +159,7 @@ static void dump_symbol(struct elf_image_info *image, struct Elf32_Sym *sym)
 	dprintf(" st_other 0x%x\n", sym->st_other);
 	dprintf(" st_shndx %d\n", sym->st_shndx);
 }
-
+#endif
 
 
 #if 0
@@ -411,7 +413,6 @@ int elf_resolve_symbol(struct elf_image_info *image, struct Elf32_Sym *sym, stru
 static int elf_relocate(struct elf_image_info *image, const char *sym_prepend)
 {
 	int res = NO_ERROR;
-	int i;
 
 //	dprintf("top of elf_relocate\n");
 //	dump_image_info(image);
@@ -911,7 +912,6 @@ error0:
 int elf_init(kernel_args *ka)
 {
 	vm_region_info rinfo;
-	int err;
 
 	mutex_init(&image_lock, "kimages_lock");
 	mutex_init(&image_load_lock, "kimages_load_lock");

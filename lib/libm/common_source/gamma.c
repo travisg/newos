@@ -31,10 +31,6 @@
  * SUCH DAMAGE.
  */
 
-#ifndef lint
-static char sccsid[] = "@(#)gamma.c	8.1 (Berkeley) 6/4/93";
-#endif /* not lint */
-
 /*
  * This code by P. McIlroy, Oct 1992;
  *
@@ -176,7 +172,6 @@ large_gam(double x)
 {
 	double z;
 	double p;
-	int i;
 	struct Double t;
 	struct Double u;
 	struct Double v;
@@ -210,7 +205,6 @@ small_gam(double x)
 	double y;
 	double ym1;
 	double t;
-	double x1;
 	struct Double yy;
 	struct Double r;
 
@@ -278,7 +272,6 @@ static
 struct Double
 ratfun_gam(double z, double c)
 {
-	int i;
 	double p;
 	double q;
 	struct Double r;

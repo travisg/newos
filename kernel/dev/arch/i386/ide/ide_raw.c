@@ -202,10 +202,13 @@ static uint8 pio_inbyte(uint16 port)
   return in8(pio_reg_addrs[port]);
 }
 
+// unused
+#if 0
 static uint16 pio_inword(uint16 port)
 {
   return in16(pio_reg_addrs[port]);
 }
+#endif
 
 static void	pio_outbyte(uint16 port, uint8 data)
 {
@@ -305,7 +308,6 @@ static int reg_pio_data_in(int bus, int dev, int cmd, int fr, int sc,
     unsigned char cylHigh;
     unsigned char status;
     uint16        *buffer = (uint16*)output;
-    int           i;
 
 //  dprintf("reg_pio_data_in: bus %d dev %d cmd %d fr %d sc %d cyl %d head %d sect %d numSect %d multiCnt %d\n",
 //  	bus, dev, cmd, fr, sc, cyl, head, sect, numSect, multiCnt);
@@ -576,6 +578,8 @@ void ide_raw_init(int base1, int base2)
   pio_reg_addrs[CB_DA  ] = pio_base_addr2 + 7;  // 9
 }
 
+// unused
+#if 0
 static char getHexChar(uint8 value)
 {
   if(value < 10)
@@ -611,7 +615,7 @@ static void dumpHexBuffer(uint8 *buffer, int size)
 {
   int	numberPerLine = 8;
   int	numberOfLines = size / numberPerLine;
-  int	i, j;
+  int	i;
 
   for(i=0; i<numberOfLines; i++)
     {
@@ -620,6 +624,7 @@ static void dumpHexBuffer(uint8 *buffer, int size)
       buffer += numberPerLine;
     }
 }
+#endif
 
 static bool ide_get_partition_info(ide_device *device, tPartition *partition, uint32 position)
 {

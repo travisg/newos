@@ -92,11 +92,7 @@ const char shifted_caps_keymap[] = {
 
 int process_key_events(_key_event &kevent, Event &event)
 {
-	int i;
 	static bool caps = false;
-	static bool numlock = false;
-	static int leds = 0;
-	int buf_pos = 0;
 	char c;
 
 	// fill out some of the common stuff first
@@ -105,7 +101,6 @@ int process_key_events(_key_event &kevent, Event &event)
 
 	// deal with the common case first
 	if(kevent.keycode < KEY_NONE) {
-		bool shift;
 		const char *keymap;
 
 		if(kevent.modifiers & KEY_MODIFIER_SHIFT) {

@@ -53,8 +53,6 @@ int icmp_input(cbuf *buf, ifnet *i, ipv4_addr source_ipaddr)
 
 	switch(header->type) {
 		case 0: { // echo reply
-			icmp_echo_header *eheader = (icmp_echo_header *)header;
-
 			break;
 		}
 		case 8: { // echo request

@@ -12,6 +12,13 @@
 static int fd;
 static sem_id exit_sem;
 
+int nettest1(void);
+int nettest2(void);
+int nettest3(void);
+int nettest4(void);
+int nettest5(void);
+int nettest6(void);
+
 static int read_thread(void *args)
 {
 	char buf[1024];
@@ -53,7 +60,7 @@ static int write_thread(void *args)
 	return 0;
 }
 
-static int nettest1(void)
+int nettest1(void)
 {
 	int err;
 	sockaddr addr;
@@ -89,7 +96,7 @@ static int nettest1(void)
 	return 0;
 }
 
-static int nettest2(void)
+int nettest2(void)
 {
 	int err;
 	sockaddr addr;
@@ -117,7 +124,7 @@ static int nettest2(void)
 	return 0;
 }
 
-static int nettest3(void)
+int nettest3(void)
 {
 	int err;
 	sockaddr addr;
@@ -154,7 +161,7 @@ static int nettest3(void)
 	return 0;
 }
 
-static int nettest4(void)
+int nettest4(void)
 {
 	int err;
 	sockaddr addr;
@@ -183,7 +190,7 @@ static int nettest4(void)
 	return 0;
 }
 
-static int nettest5(void)
+int nettest5(void)
 {
 	int err;
 	sockaddr addr;
@@ -229,7 +236,7 @@ static int nettest5(void)
 	return 0;
 }
 
-static int nettest6(void)
+int nettest6(void)
 {
 	int err;
 	sockaddr addr;

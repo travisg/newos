@@ -103,7 +103,6 @@ static struct dev_calls rtl8139_hooks = {
 int rtl8139_dev_init(kernel_args *ka)
 {
 	rtl8139 *rtl;
-	int fd;
 
 	dprintf("rtl8139_dev_init: entry\n");
 

@@ -145,8 +145,6 @@ static int read_pio_16( channel_info *channel, uint16 *data, int count,
 			*(data++) = isa->read_io_16( ioaddr  );
 			
 	} else {
-		uint32 *cur_data = (uint32 *)data;
-		
 		for( ; count > 0; count -= 2 )
 			*(data++) = isa->read_io_32( ioaddr );
 	}

@@ -35,7 +35,6 @@ static int telnet_reader(void *arg)
 {
 	unsigned char buf[4096];
 	ssize_t len;
-	ssize_t write_len;
 	int i;
 	enum {
 		NORMAL = 0,

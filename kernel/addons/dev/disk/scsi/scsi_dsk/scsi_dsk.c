@@ -200,6 +200,8 @@ abort:
 }
 
 
+// unused
+#if 0
 static int log2( uint32 x )
 {
 	int y;
@@ -210,6 +212,7 @@ static int log2( uint32 x )
 			
 	return y;
 }
+#endif
 
 static int das_ioctl( das_handle_info *handle, int op, void *buf, size_t len )
 {

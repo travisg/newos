@@ -55,6 +55,8 @@ typedef struct message {
 #define CMD_READBLOCK 2
 #define CMD_WRITEBLOCK 3
 
+// unused
+#if 0
 static void dump_message(message *msg)
 {
 	dprintf("message:\n");
@@ -64,6 +66,7 @@ static void dump_message(message *msg)
 	dprintf(" arg: %d\n", ntohl(msg->arg));
 	dprintf(" arg2: %d\n", ntohl(msg->arg2));
 }
+#endif
 
 static int validate_message(message *msg, int len)
 {

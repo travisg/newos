@@ -9,7 +9,7 @@
 #include <newos/errors.h>
 
 
-static void port_test(void);
+void port_test(void);
 static int port_test_thread_func(void* arg);
 
 /*
@@ -18,7 +18,7 @@ static int port_test_thread_func(void* arg);
 
 port_id test_p1, test_p2, test_p3, test_p4;
 
-static void port_test(void)
+void port_test(void)
 {
 	char testdata[5];
 	thread_id t;

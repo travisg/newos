@@ -106,7 +106,6 @@ int cmd_cat(int argc, char *argv[])
 	int rc;
 	int fd;
 	char buf[257];
-	int len;
 
 	if(argc < 2) {
 		printf("not enough arguments to cat\n");

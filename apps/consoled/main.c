@@ -72,8 +72,6 @@ static int console_writer(void *arg)
 
 static int start_console(struct console *con)
 {
-	int err;
-
 	memset(con, 0, sizeof(struct console));
 
 	con->wait_sem = sys_sem_create(0, "console wait sem");

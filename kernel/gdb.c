@@ -195,8 +195,6 @@ static
 int
 gdb_parse_command(unsigned int *regfile)
 {
-	int retval;
-
 	if(!gdb_verify_checksum()) {
 		gdb_nak();
 		return INIT;
@@ -219,7 +217,6 @@ gdb_parse_command(unsigned int *regfile)
 
 		case 'q':
 			{
-				extern unsigned _start;
 				extern unsigned __data_start;
 				extern unsigned __bss_start;
 
@@ -266,8 +263,6 @@ gdb_parse_command(unsigned int *regfile)
 
 		case 'g':
 			{
-				int cpu;
-
 				/*
 				 * command 'g' is used for reading the register
 				 * file. Faked by now.

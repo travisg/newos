@@ -107,8 +107,6 @@ static void scrup(struct console_desc *con)
 
 static void scrdown(struct console_desc *con)
 {
-	unsigned long i;
-
 	ASSERT(con->scroll_top <= con->scroll_bottom);
 
 	if(con->scroll_bottom - con->scroll_top > 1) {

@@ -141,8 +141,11 @@ static char sccsid[] = "@(#)random.c	8.2 (Berkeley) 5/19/95";
  */
 #define	MAX_TYPES	5		/* max number of types above */
 
+// not supported by NewOS right now
+#if 0
 static long degrees[MAX_TYPES] =	{ DEG_0, DEG_1, DEG_2, DEG_3, DEG_4 };
 static long seps [MAX_TYPES] =	{ SEP_0, SEP_1, SEP_2, SEP_3, SEP_4 };
+#endif
 
 /*
  * Initially, everything is set up as if from:

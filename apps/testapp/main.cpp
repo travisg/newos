@@ -90,11 +90,13 @@ retry_line:
 
 int foo(int argc, char **argv)
 {
+	int rc = 0;
+#if 0
 	int fd;
 	size_t len;
 	char c;
-	int rc = 0;
 	int cnt;
+#endif
 
 #if 0
 	fd = sys_open("/dev/net/rtl8139/0", "", STREAM_TYPE_DEVICE);

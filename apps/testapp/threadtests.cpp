@@ -43,6 +43,7 @@ static int test_thread_self_terminate(void *args)
 	return 0;
 }
 
+#if 0
 static int dummy_thread(void *args)
 {
 	return 1;
@@ -66,6 +67,7 @@ static int fpu_cruncher_thread(void *args)
 			printf("error: y %f\n", y);
 	}
 }
+#endif
 
 int thread_spawn_test(int arg)
 {

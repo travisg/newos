@@ -84,7 +84,6 @@ vm_store *vm_store_create_vnode(void *vnode)
 {
 	vm_store *store;
 	struct vnode_store_data *d;
-	int err;
 
 	store = kmalloc(sizeof(vm_store) + sizeof(struct vnode_store_data));
 	if(store == NULL) {

@@ -192,7 +192,6 @@ void vm_test()
 	{
 		void *ptr, *ptr2;
 		region_id rid, rid2;
-		char *blah;
 		int fd;
 
 		fd = sys_open("/boot/kernel", STREAM_TYPE_FILE, 0);

@@ -21,7 +21,6 @@ int dev_init(kernel_args *ka)
 int dev_scan_drivers(kernel_args *ka)
 {
 	int fd;
-	int err;
 
 	fd = sys_open("/boot/addons/dev", STREAM_TYPE_DIR, 0);
 	if(fd >= 0) {

@@ -157,6 +157,8 @@ static int devfs_delete_vnode(struct devfs *fs, struct devfs_vnode *v, bool forc
 	return 0;
 }
 
+// unused
+#if 0
 static void insert_cookie_in_jar(struct devfs_vnode *dir, struct devfs_cookie *cookie)
 {
 	cookie->u.dir.next = dir->stream.u.dir.jar_head;
@@ -175,6 +177,7 @@ static void remove_cookie_from_jar(struct devfs_vnode *dir, struct devfs_cookie 
 
 	cookie->u.dir.prev = cookie->u.dir.next = NULL;
 }
+#endif
 
 /* makes sure none of the dircookies point to the vnode passed in */
 static void update_dircookies(struct devfs_vnode *dir, struct devfs_vnode *v)
@@ -244,12 +247,15 @@ static int devfs_remove_from_dir(struct devfs_vnode *dir, struct devfs_vnode *fi
 	return -1;
 }
 
+// unused
+#if 0
 static int devfs_is_dir_empty(struct devfs_vnode *dir)
 {
 	if(dir->stream.type != STREAM_TYPE_DIR)
 		return false;
 	return !dir->stream.u.dir.dir_head;
 }
+#endif
 
 
 static int devfs_get_partition_info( struct devfs *fs, struct devfs_vnode *v, 
@@ -279,7 +285,6 @@ static int devfs_set_partition( struct devfs *fs, struct devfs_vnode *v,
 {
 	struct devfs_part_map *part_map;
 	struct devfs_vnode *part_node;
-	struct devfs_vnode *v1;
 	int res;
 	char part_name[30];
 	devfs_partition_info info;
@@ -422,7 +427,6 @@ static int devfs_mount(fs_cookie *_fs, fs_id id, const char *devfs, void *args, 
 
 	return 0;
 
-err4:
 	devfs_delete_vnode(fs, v, true);
 err3:
 	hash_uninit(fs->vnode_list_hash);
@@ -503,7 +507,6 @@ err:
 static int devfs_getvnode(fs_cookie _fs, vnode_id id, fs_vnode *v, bool r)
 {
 	struct devfs *fs = (struct devfs *)_fs;
-	int err;
 
 	TRACE(("devfs_getvnode: asking for vnode 0x%x 0x%x, r %d\n", id, r));
 
@@ -527,6 +530,8 @@ static int devfs_putvnode(fs_cookie _fs, fs_vnode _v, bool r)
 {
 	struct devfs_vnode *v = (struct devfs_vnode *)_v;
 
+	TOUCH(v);
+
 	TRACE(("devfs_putvnode: entry on vnode 0x%x 0x%x, r %d\n", v->id, r));
 
 	return 0; // whatever
@@ -536,7 +541,6 @@ static int devfs_removevnode(fs_cookie _fs, fs_vnode _v, bool r)
 {
 	struct devfs *fs = (struct devfs *)_fs;
 	struct devfs_vnode *v = (struct devfs_vnode *)_v;
-	struct devfs_vnode dummy;
 	int err;
 
 	TRACE(("devfs_removevnode: remove 0x%x (0x%x 0x%x), r %d\n", v, v->id, r));
@@ -553,7 +557,6 @@ static int devfs_removevnode(fs_cookie _fs, fs_vnode _v, bool r)
 
 	err = 0;
 
-err:
 	if(!r)
 		mutex_unlock(&fs->lock);
 
@@ -566,7 +569,6 @@ static int devfs_open(fs_cookie _fs, fs_vnode _v, file_cookie *_cookie, stream_t
 	struct devfs_vnode *v = _v;
 	struct devfs_cookie *cookie;
 	int err = 0;
-	int start = 0;
 
 	TRACE(("devfs_open: vnode 0x%x, oflags 0x%x\n", v, oflags));
 
@@ -601,7 +603,6 @@ static int devfs_open(fs_cookie _fs, fs_vnode _v, file_cookie *_cookie, stream_t
 
 	*_cookie = cookie;
 
-err1:
 	mutex_unlock(&fs->lock);
 err:
 	return err;
@@ -609,7 +610,6 @@ err:
 
 static int devfs_close(fs_cookie _fs, fs_vnode _v, file_cookie _cookie)
 {
-	struct devfs *fs = _fs;
 	struct devfs_vnode *v = _v;
 	struct devfs_cookie *cookie = _cookie;
 	int err;
@@ -628,7 +628,6 @@ static int devfs_close(fs_cookie _fs, fs_vnode _v, file_cookie _cookie)
 
 static int devfs_freecookie(fs_cookie _fs, fs_vnode _v, file_cookie _cookie)
 {
-	struct devfs *fs = _fs;
 	struct devfs_vnode *v = _v;
 	struct devfs_cookie *cookie = _cookie;
 
@@ -714,7 +713,6 @@ err:
 
 static ssize_t devfs_write(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, const void *buf, off_t pos, ssize_t len)
 {
-	struct devfs *fs = _fs;
 	struct devfs_vnode *v = _v;
 	struct devfs_cookie *cookie = _cookie;
 
@@ -804,7 +802,6 @@ static int devfs_ioctl(fs_cookie _fs, fs_vnode _v, file_cookie _cookie, int op, 
 
 static int devfs_canpage(fs_cookie _fs, fs_vnode _v)
 {
-	struct devfs *fs = _fs;
 	struct devfs_vnode *v = _v;
 
 	TRACE(("devfs_canpage: vnode 0x%x\n", v));
@@ -820,7 +817,6 @@ static int devfs_canpage(fs_cookie _fs, fs_vnode _v)
 
 static ssize_t devfs_readpage(fs_cookie _fs, fs_vnode _v, iovecs *vecs, off_t pos)
 {
-	struct devfs *fs = _fs;
 	struct devfs_vnode *v = _v;
 
 	TRACE(("devfs_readpage: vnode 0x%x, vecs 0x%x, pos 0x%x 0x%x\n", v, vecs, pos));
@@ -851,7 +847,6 @@ static ssize_t devfs_readpage(fs_cookie _fs, fs_vnode _v, iovecs *vecs, off_t po
 
 static ssize_t devfs_writepage(fs_cookie _fs, fs_vnode _v, iovecs *vecs, off_t pos)
 {
-	struct devfs *fs = _fs;
 	struct devfs_vnode *v = _v;
 
 	TRACE(("devfs_writepage: vnode 0x%x, vecs 0x%x, pos 0x%x 0x%x\n", v, vecs, pos));
@@ -925,7 +920,6 @@ static int devfs_rename(fs_cookie _fs, fs_vnode _olddir, const char *oldname, fs
 
 static int devfs_rstat(fs_cookie _fs, fs_vnode _v, struct file_stat *stat)
 {
-	struct devfs *fs = _fs;
 	struct devfs_vnode *v = _v;
 
 	TRACE(("devfs_rstat: vnode 0x%x (0x%x 0x%x), stat 0x%x\n", v, v->id, stat));
@@ -940,8 +934,9 @@ static int devfs_rstat(fs_cookie _fs, fs_vnode _v, struct file_stat *stat)
 
 static int devfs_wstat(fs_cookie _fs, fs_vnode _v, struct file_stat *stat, int stat_mask)
 {
-	struct devfs *fs = _fs;
 	struct devfs_vnode *v = _v;
+
+	TOUCH(v);
 
 	TRACE(("devfs_wstat: vnode 0x%x (0x%x 0x%x), stat 0x%x\n", v, v->id, stat));
 
@@ -984,9 +979,6 @@ static struct fs_calls devfs_calls = {
 
 int bootstrap_devfs(void)
 {
-	region_id rid;
-	vm_region_info rinfo;
-
 	dprintf("bootstrap_devfs: entry\n");
 
 	return vfs_register_filesystem("devfs", &devfs_calls);
@@ -1084,7 +1076,6 @@ int devfs_publish_device(const char *path, dev_ident ident, struct dev_calls *ca
 
 err1:
 	mutex_unlock(&thedevfs->lock);
-err:
 	return err;
 }
 

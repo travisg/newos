@@ -8,7 +8,7 @@
 
 int main(int argc, char *argv[])
 {
-	int i, rc;
+	int rc;
 
 	if(argc < 4) {
 		printf("not enough arguments to mount:\n");

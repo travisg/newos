@@ -14,10 +14,13 @@
 
 #include "zfs.h"
 
+// unused
+#if 0
 static int zfs_read_superblock(zfs_fs *fs)
 {
 	return 0;
 }
+#endif
 
 int zfs_mount(fs_cookie *fs, fs_id id, const char *device, void *args, vnode_id *root_vnid)
 {

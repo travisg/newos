@@ -99,12 +99,15 @@ int shell_value_get_number(shell_value *value,long int *number)
 	return SHE_NO_ERROR;
 }
 
+// unused
+#if 0
 static void shell_var_free(shell_var *var)
 {
 	shell_value_free(var->value);
 	free(var->name);
 	free(var);
 }
+#endif
 
 shell_value *shell_value_init_number(long int value)
 {
@@ -182,7 +185,6 @@ shell_value *shell_value_clone(shell_value *var)
 int shell_value_neg(shell_value *out)
 {
 	long int value;
-   char tmp[255];
 	int err;
 
 	err = shell_value_get_number(out,&value);
@@ -200,7 +202,6 @@ int shell_value_do_operation(shell_value *out,const shell_value *other,int oper_
 	long int i1;
 	long int i2;
 	long int i3;
-	char *check;
 	int err;
 
 	if(out->isnumber != other->isnumber) return SHE_INVALID_TYPE;
@@ -261,7 +262,6 @@ static shell_var *shell_var_init_value(const char *name,shell_value *value)
 
 	return current;
 
-err1:
 	free(current->name);
 err2:
 	free(current);
@@ -287,9 +287,7 @@ static int shell_var_add(const char *var_name,shell_value *value)
 
 	return SHE_NO_ERROR;
 
-err2:
 	free(current->name);
-err1:
 	free(current);
 	return SHE_NO_MEMORY;
 }
@@ -313,8 +311,6 @@ static  shell_var * find_shell_var_by_name(const char *name)
 static int shell_var_set(const char *var_name,shell_value *value)
 {
 	shell_var *current;
-	char *new_value;
-	int err;
 
 	current = find_shell_var_by_name(var_name);
 

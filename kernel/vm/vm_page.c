@@ -126,6 +126,10 @@ static int pageout_daemon()
 
 	dprintf("pageout daemon starting\n");
 
+	// XXX remove
+	dprintf("pageout daemon disabled, exiting...\n");
+	return -1;
+
 	for(;;) {
 		sem_acquire(modified_pages_available, 1);
 
@@ -302,11 +306,12 @@ int vm_page_init_postthread(kernel_args *ka)
 	thread_resume_thread(tid);
 
 	modified_pages_available = sem_create(0, "modified_pages_avail_sem");
-#if 0
+
 	// create a kernel thread to schedule modified pages to write
-	tid = thread_create_kernel_thread("pageout daemon", &pageout_daemon, THREAD_MIN_RT_PRIORITY + 1);
+	tid = thread_create_kernel_thread("pageout daemon", &pageout_daemon, NULL);
+	thread_set_priority(tid, THREAD_MIN_RT_PRIORITY + 1);
 	thread_resume_thread(tid);
-#endif
+
 	return 0;
 }
 
@@ -849,7 +854,6 @@ addr vm_alloc_from_ka_struct(kernel_args *ka, unsigned int size, int lock)
 	addr vspot;
 	addr pspot;
 	unsigned int i;
-	int curr_phys_alloc_range = 0;
 
 	// find the vaddr to allocate at
 	vspot = vm_alloc_vspace_from_ka_struct(ka, size);

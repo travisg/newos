@@ -25,6 +25,12 @@
 thread_id rx_thread_id;
 int net_fd;
 
+#define NET_TEST1 0
+#define NET_TEST2 0
+#define NET_TEST3 0
+#define NET_TEST4 0
+
+#if NET_TEST2
 static int net_test_thread2(void *unused)
 {
 	sock_id id;
@@ -56,12 +62,13 @@ static int net_test_thread2(void *unused)
 		bytes_written = socket_sendto(id, buf, strlen(buf), &saddr);
 	}
 }
+#endif
 
+#if NET_TEST3
 static int net_test_thread3(void *unused)
 {
 	sock_id id;
 	sockaddr addr;
-	char buf[64];
 
 	thread_snooze(2000000);
 
@@ -83,7 +90,9 @@ static int net_test_thread3(void *unused)
 			(long long)bytes_read, NETADDR_TO_IPV4(saddr.addr), saddr.port, buf);
 	}
 }
+#endif
 
+#if NET_TEST4
 static uint64 transferred_data = 0;
 
 static int net_test_thread4_watcher(void *unused)
@@ -103,7 +112,6 @@ static int net_test_thread4(void *unused)
 {
 	sock_id id;
 	sockaddr addr;
-	char buf[64];
 	int err;
 
 	thread_snooze(2000000);
@@ -153,7 +161,9 @@ retry:
 
 	return 0;
 }
+#endif
 
+#if NET_TEST1
 static int net_test_thread(void *unused)
 {
 	sock_id id;
@@ -183,6 +193,7 @@ static int net_test_thread(void *unused)
 		bytes_written = socket_sendto(id, buf, bytes_read, &saddr);
 	}
 }
+#endif
 
 int net_init(kernel_args *ka)
 {
@@ -203,7 +214,6 @@ int net_init(kernel_args *ka)
 
 int net_init_postdev(kernel_args *ka)
 {
-	int err;
 	ifnet *i;
 	ifaddr *address;
 
@@ -254,7 +264,7 @@ int net_init_postdev(kernel_args *ka)
 	if_boot_interface(i);
 
 
-#if 0
+#if NET_TEST
 	// start the test thread
 {
 	thread_id id;
@@ -263,7 +273,7 @@ int net_init_postdev(kernel_args *ka)
 	thread_resume_thread(id);
 }
 #endif
-#if 0
+#if NET_TEST4
 	// start the test thread
 {
 	thread_id id;
@@ -274,7 +284,7 @@ int net_init_postdev(kernel_args *ka)
 	thread_resume_thread(id);
 }
 #endif
-#if 0
+#if NET_TEST2 || NET_TEST3
 	// start the other test threads
 {
 	thread_id id;

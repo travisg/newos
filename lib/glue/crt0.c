@@ -21,7 +21,6 @@ void _call_ctors(void);
 
 int _start(struct uspace_prog_args_t *uspa)
 {
-	int i;
 	int retcode;
 	_call_ctors();
 

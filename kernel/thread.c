@@ -85,7 +85,7 @@ static struct thread_queue dead_q;
 static int _rand(void);
 static void thread_entry(void);
 static struct thread *thread_get_thread_struct_locked(thread_id id);
-static struct proc *proc_get_proc_struct(proc_id id);
+//static struct proc *proc_get_proc_struct(proc_id id); // unused
 static struct proc *proc_get_proc_struct_locked(proc_id id);
 static void thread_kthread_exit(void);
 static void deliver_signal(struct thread *t, int signal);
@@ -700,7 +700,6 @@ int thread_get_next_thread_info(uint32 *_cookie, proc_id pid, struct thread_info
 	struct thread *t;
 	struct proc *p;
 	struct thread_info info;
-	thread_id tid;
 	int err;
 	thread_id cookie;
 
@@ -1247,7 +1246,6 @@ struct thread_exit_args {
 static void thread_exit2(void *_args)
 {
 	struct thread_exit_args args;
-	char *temp;
 
 	// copy the arguments over, since the source is probably on the kernel stack we're about to delete
 	memcpy(&args, _args, sizeof(struct thread_exit_args));
@@ -1552,6 +1550,8 @@ static struct thread *thread_get_thread_struct_locked(thread_id id)
 	return hash_lookup(thread_hash, &key);
 }
 
+// unused
+#if 0
 static struct proc *proc_get_proc_struct(proc_id id)
 {
 	struct proc *p;
@@ -1566,6 +1566,7 @@ static struct proc *proc_get_proc_struct(proc_id id)
 
 	return p;
 }
+#endif
 
 static struct proc *proc_get_proc_struct_locked(proc_id id)
 {
@@ -2006,7 +2007,6 @@ proc_id proc_create_proc(const char *path, const char *name, char **args, int ar
 	thread_id tid;
 	proc_id pid;
 	int err;
-	int sem_retcode;
 	struct proc_arg *pargs;
 
 	dprintf("proc_create_proc: entry '%s', name '%s' args = %p argc = %d\n", path, name, args, argc);
@@ -2080,7 +2080,7 @@ err1:
 	RELEASE_PROC_LOCK();
 	int_restore_interrupts();
 	delete_proc_struct(p);
-err:
+//err:
 	return err;
 }
 
@@ -2123,7 +2123,6 @@ error:
 int proc_kill_proc(proc_id id)
 {
 	struct proc *p;
-	struct thread *t;
 	thread_id tid = -1;
 	int retval = 0;
 

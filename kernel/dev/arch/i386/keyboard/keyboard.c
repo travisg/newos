@@ -148,7 +148,6 @@ static void insert_in_buf(_key_event *event)
 
 static int handle_set1_keycode(unsigned char key)
 {
-	int k;
 	int retval = INT_NO_RESCHEDULE;
 	_key_event event;
 	bool queue_event = true; // we will by default queue the key
@@ -309,8 +308,6 @@ static int keyboard_seek(dev_cookie cookie, off_t pos, seek_type st)
 
 static ssize_t keyboard_read(dev_cookie cookie, void *buf, off_t pos, ssize_t len)
 {
-	_key_event *events = (_key_event *)buf;
-
 	if(len < 0)
 		return 0;
 

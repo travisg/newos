@@ -80,7 +80,7 @@ static int xpt_init()
 
 err7:
 	/*xpt_uninit_ccb_alloc();*/
-err6:
+//err6:
 	xpt_shutting_down = true;
 	sem_release( xpt_start_rescan, 1 );	
 	thread_wait_on_thread( xpt_rescan_thread, &tmp );

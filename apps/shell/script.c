@@ -117,7 +117,6 @@ int run_script(const char *file_name)
 
 	}
 
-err:
 	free_text_file(&(info.data));
 	return err;
 }

@@ -31,10 +31,6 @@
  * SUCH DAMAGE.
  */
 
-#ifndef lint
-static char sccsid[] = "@(#)floor.c	8.1 (Berkeley) 6/4/93";
-#endif /* not lint */
-
 #include "mathimpl.h"
 
 vc(L, 4503599627370496.0E0 ,0000,5c00,0000,0000, 55, 1.0) /* 2**55 */

@@ -229,7 +229,6 @@ int arp_lookup(ifnet *i, ipv4_addr sender_ipaddr, ipv4_addr ip_addr, netaddr *li
 {
 	arp_cache_entry *e;
 	arp_wait_request *wait;
-	int err;
 	bool wakeup_retransmit_thread;
 
 	// if it's a loopback interface, just return, the address wont matter anyway
@@ -435,7 +434,6 @@ static int arp_retransmit_thread(void *unused)
 
 static int arp_cleanup_thread(void *unused)
 {
-	struct hash_iterator i;
 	arp_cache_entry *e;
 	arp_cache_entry *last;
 	arp_cache_entry *temp;

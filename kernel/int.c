@@ -50,7 +50,6 @@ int int_init2(kernel_args *ka)
 int int_set_io_interrupt_handler(int vector, int (*func)(void*), void* data)
 {
 	struct io_handler *io;
-	int state;
 
 	if(vector < 0 || vector >= NUM_IO_VECTORS)
 		return ERR_INVALID_ARGS;

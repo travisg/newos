@@ -188,6 +188,8 @@ Log<MemoryRequest>& processHeap::getLog (int i)
 #endif
 
 
+// unused, moved to heap.cpp
+#if 0
 // Return ceil(log_2(num)).
 // num must be positive.
 static int lg (int num)
@@ -202,6 +204,7 @@ static int lg (int num)
   }
   return power;
 }
+#endif
 
 
 // Hash out the thread id to a heap and return an index to that heap.

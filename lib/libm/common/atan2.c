@@ -31,10 +31,6 @@
  * SUCH DAMAGE.
  */
 
-#ifndef lint
-static char sccsid[] = "@(#)atan2.c	8.1 (Berkeley) 6/4/93";
-#endif /* not lint */
-
 /* ATAN2(Y,X)
  * RETURN ARG (X+iY)
  * DOUBLE PRECISION (VAX D format 56 bits, IEEE DOUBLE 53 BITS)

@@ -10,9 +10,6 @@
 
 int main(void)
 {
-	int fd;
-	size_t len;
-	char c;
 	int rc = 0;
 
 	printf("VM test\n");
@@ -83,8 +80,7 @@ int main(void)
 	{
 		// create a couple of big regions and time it
 		region_id region;
-		region_id region2;
-		void *ptr, *ptr2;
+		void *ptr;
 		bigtime_t t;
 
 		printf("running some timing tests on region creation/deletion.\n");

@@ -29,11 +29,10 @@ static int pipe_read_thread(void *args)
 	return err;
 }
 
-static int pipe_test(void)
+int pipe_test(void)
 {
 	int fds[2];
 	int err;
-	char buf[1024];
 	thread_id id;
 
 	err = pipe(fds);

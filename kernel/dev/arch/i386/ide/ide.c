@@ -349,7 +349,6 @@ static bool ide_attach_device(int bus, int device)
 //--------------------------------------------------------------------------------
 static bool ide_attach_buses(unsigned int bus)
 {
-	char devpath[256];
 	int found = 0;
 	int dev;
 

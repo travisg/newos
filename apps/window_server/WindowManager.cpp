@@ -58,6 +58,13 @@ WindowManager::~WindowManager()
 	sys_sem_delete(fCursorLock);
 }
 
+int WindowManager::WaitForExit()
+{
+	for(;;)
+		sys_snooze(1000000);
+	return 0;
+}
+
 Window* WindowManager::CreateWindow(Window *parent, const Rect &rect, int eventPort, window_flags flags)
 {
 	while (fWindowArray[fNextWindowID % kMaxWindows] != 0)

@@ -55,13 +55,10 @@ static int check_cpu(void);
 //   supervisor mode
 void _start(unsigned int mem, int in_vesa, unsigned int vesa_ptr, unsigned int console_ptr)
 {
-	unsigned int new_stack;
 	unsigned int *idt;
 	unsigned int *gdt;
 	unsigned int next_vaddr;
 	unsigned int next_paddr;
-	unsigned int nextAllocPage;
-	unsigned int kernelSize;
 	unsigned int i;
 	unsigned int kernel_entry;
 
@@ -105,7 +102,7 @@ void _start(unsigned int mem, int in_vesa, unsigned int vesa_ptr, unsigned int c
 	next_paddr = BOOTDIR_ADDR + bootdir_pages * PAGE_SIZE;
 
 	if(in_vesa) {
-		struct VBEInfoBlock *info = (struct VBEInfoBlock *)vesa_ptr;
+		//struct VBEInfoBlock *info = (struct VBEInfoBlock *)vesa_ptr;
 		struct VBEModeInfoBlock *mode_info = (struct VBEModeInfoBlock *)(vesa_ptr + 0x200);
 
 		ka->fb.enabled = 1;
@@ -424,7 +421,6 @@ static void mmu_map_page(unsigned int vaddr, unsigned int paddr)
 
 static int check_cpu(void)
 {
-	unsigned int i;
 	unsigned int data[4];
 	char str[17];
 
@@ -538,7 +534,6 @@ not_so_quick_sample:
 	}
 
 	/* slow sample */
-slow_sample:
 	do {
 		outb(0x00, 0x43); /* latch counter value */
 		s_low = inb(0x40);

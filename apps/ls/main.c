@@ -32,10 +32,13 @@ static void display_l(const char *filename, struct file_stat *stat)
 	printf("%s %12Ld %s\n", type, stat->size, filename);
 }
 
+// unused
+#if 0
 static void display(const char *filename, struct file_stat *stat)
 {
 	printf("%s\n", filename);
 }
+#endif
 
 int main(int argc, char *argv[])
 {
@@ -64,7 +67,6 @@ int main(int argc, char *argv[])
 		case STREAM_TYPE_DIR: {
 			int fd;
 			char buf[1024];
-			int len;
 
 			fd = sys_open(arg, STREAM_TYPE_DIR, 0);
 			if(fd < 0) {

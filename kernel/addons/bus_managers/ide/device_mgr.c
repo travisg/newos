@@ -194,7 +194,6 @@ static bool scan_device_int( ide_device_info *device, bool atapi )
 	ide_bus_info *bus = device->bus;
 	int dummy;
 	int status;
-	int res;
 	
 	SHOW_FLOW0( 3, "" );
 	

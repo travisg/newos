@@ -351,7 +351,6 @@ ssize_t udp_sendto(void *prot_data, const void *inbuf, ssize_t len, sockaddr *to
 	udp_header *header;
 	int total_len;
 	cbuf *buf;
-	uint8 *bufptr;
 	udp_pseudo_header pheader;
 	ipv4_addr srcaddr;
 	int err;

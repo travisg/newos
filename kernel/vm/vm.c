@@ -56,9 +56,6 @@ static int map_backing_store(vm_address_space *aspace, vm_store *store, void **v
 	off_t offset, addr size, int addr_type, int wiring, int lock, int mapping, vm_region **_region, const char *region_name);
 static int vm_soft_fault(addr address, bool is_write, bool is_user);
 static vm_region *vm_virtual_map_lookup(vm_virtual_map *map, addr address);
-static int vm_region_acquire_ref(vm_region *region);
-static void vm_region_release_ref(vm_region *region);
-static void vm_region_release_ref2(vm_region *region);
 
 static int region_compare(void *_r, const void *key)
 {
@@ -725,7 +722,6 @@ region_id vm_create_null_region(aspace_id aid, char *name, void **address, int a
 	vm_cache *cache;
 	vm_cache_ref *cache_ref;
 	vm_store *store;
-	addr map_offset;
 	int err;
 
 	vm_address_space *aspace = vm_get_aspace_by_id(aid);
@@ -765,7 +761,6 @@ static region_id _vm_map_file(aspace_id aid, char *name, void **address, int add
 	vm_cache_ref *cache_ref;
 	vm_store *store;
 	void *v;
-	addr map_offset;
 	int err;
 
 	vm_address_space *aspace = vm_get_aspace_by_id(aid);
@@ -960,7 +955,6 @@ static int __vm_delete_region(vm_address_space *aspace, vm_region *region)
 
 static int _vm_delete_region(vm_address_space *aspace, region_id rid)
 {
-	vm_region *temp, *last = NULL;
 	vm_region *region;
 
 	dprintf("vm_delete_region: aspace id 0x%x, region id 0x%x\n", aspace->id, rid);
@@ -1324,7 +1318,6 @@ static void _dump_region(vm_region *region)
 
 static void dump_region(int argc, char **argv)
 {
-	int i;
 	vm_region *region;
 
 	if(argc < 2) {
@@ -1411,7 +1404,6 @@ static void _dump_aspace(vm_address_space *aspace)
 
 static void dump_aspace(int argc, char **argv)
 {
-	int i;
 	vm_address_space *aspace;
 
 	if(argc < 2) {
@@ -1493,7 +1485,6 @@ aspace_id vm_get_current_user_aspace_id(void)
 
 void vm_put_aspace(vm_address_space *aspace)
 {
-	vm_region *region;
 	bool removeit = false;
 
 	VERIFY_VM_ASPACE(aspace);
@@ -1667,8 +1658,6 @@ int vm_init(kernel_args *ka)
 {
 	int err = 0;
 	unsigned int i;
-	int last_used_virt_range = -1;
-	int last_used_phys_range = -1;
 	addr heap_base;
 	addr heap_size;
 	void *null_addr;

@@ -34,7 +34,6 @@ struct pci_config *pci_list;
 
 static int pci_open(dev_ident ident, dev_cookie *_cookie)
 {
-	struct pci_cookie *cookie;
 	struct pci_config *c = (struct pci_config *)ident;
 
 	dprintf("pci_open: entry on '%s'\n", c->full_path);

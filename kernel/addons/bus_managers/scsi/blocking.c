@@ -91,6 +91,8 @@ err:
 	return ERR_NOT_FOUND;
 }
 
+// unused
+#if 0
 static void xpt_unblock_device_direct( xpt_bus_info *bus, xpt_device_info *device, 
 	bool start_service_thread )
 {
@@ -98,6 +100,7 @@ static void xpt_unblock_device_direct( xpt_bus_info *bus, xpt_device_info *devic
 	
 	xpt_unblock_device_int( bus, device, start_service_thread );
 }
+#endif
 
 int xpt_cont_send_bus( xpt_bus_info *bus )
 {

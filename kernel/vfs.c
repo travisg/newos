@@ -93,7 +93,6 @@ static mutex vfs_vnode_mutex;
 #define VNODE_HASH_TABLE_SIZE 1024
 static void *vnode_table;
 static struct vnode *root_vnode;
-static vnode_id next_vnode_id = 0;
 
 #define MOUNTS_HASH_TABLE_SIZE 16
 static void *mounts_table;
@@ -732,7 +731,6 @@ void *vfs_new_ioctx(void *_parent_ioctx)
 	size_t table_size;
 	struct ioctx *ioctx;
 	struct ioctx *parent_ioctx;
-	int i;
 
 	parent_ioctx = (struct ioctx *)_parent_ioctx;
 	if(parent_ioctx) {
@@ -823,8 +821,6 @@ int vfs_free_ioctx(void *_ioctx)
 
 int vfs_init(kernel_args *ka)
 {
-	int err;
-
 	dprintf("vfs_init: entry\n");
 
 	{
@@ -1045,10 +1041,6 @@ int vfs_mount(char *path, const char *device, const char *fs_name, void *args, b
 
 		mount->covers_vnode = NULL; // this is the root mount
 	} else {
-		int fd;
-		struct ioctx *ioctx;
-		void *null_cookie;
-
 		err = path_to_vnode(path,&covered_vnode,kernel);
 		if(err < 0) {
 			goto err2;
@@ -1257,11 +1249,11 @@ static int _vfs_open(struct vnode *v, stream_type st, int omode, bool kernel)
 
 	return fd;
 
-err2:
+//err2:
 	free_fd(f);
 err1:
 	dec_vnode_ref_count(v, true, false);
-err:
+//err:
 	return err;
 }
 
@@ -1458,7 +1450,6 @@ int vfs_create(char *path, stream_type stream_type, void *args, bool kernel)
 
 	err = v->mount->fs->calls->fs_create(v->mount->fscookie, v->priv_vnode, filename, stream_type, args, &vnid);
 
-err1:
 	dec_vnode_ref_count(v, true, false);
 err:
 	return err;
@@ -1480,7 +1471,6 @@ int vfs_unlink(char *path, bool kernel)
 
 	err = v->mount->fs->calls->fs_unlink(v->mount->fscookie, v->priv_vnode, filename);
 
-err1:
 	dec_vnode_ref_count(v, true, false);
 err:
 	return err;
@@ -1531,7 +1521,6 @@ int vfs_rstat(char *path, struct file_stat *stat, bool kernel)
 
 	err = v->mount->fs->calls->fs_rstat(v->mount->fscookie, v->priv_vnode, stat);
 
-err1:
 	dec_vnode_ref_count(v, true, false);
 err:
 	return err;
@@ -1552,7 +1541,6 @@ int vfs_wstat(char *path, struct file_stat *stat, int stat_mask, bool kernel)
 
 	err = v->mount->fs->calls->fs_wstat(v->mount->fscookie, v->priv_vnode, stat, stat_mask);
 
-err1:
 	dec_vnode_ref_count(v, true, false);
 err:
 	return err;
@@ -1561,7 +1549,6 @@ err:
 int vfs_get_vnode_from_fd(int fd, bool kernel, void **vnode)
 {
 	struct ioctx *ioctx;
-	int err;
 
 	ioctx = get_current_ioctx(kernel);
 	*vnode = get_vnode_from_fd(ioctx, fd);
@@ -1640,7 +1627,7 @@ ssize_t vfs_writepage(void *_v, iovecs *vecs, off_t pos)
 static int vfs_get_cwd(char* buf, size_t size, bool kernel)
 {
 	// Get current working directory from io context
-	struct vnode* v = get_current_ioctx(kernel)->cwd;
+//	struct vnode* v = get_current_ioctx(kernel)->cwd;
 	int rc;
 
 #if MAKE_NOIZE
