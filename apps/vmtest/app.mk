@@ -19,9 +19,9 @@ APPS_CLEAN += vmtestappclean
 
 $(VMTESTAPP_OBJ_DIR)/%.o: $(VMTESTAPP_DIR)/%.c
 	@if [ ! -d $(VMTESTAPP_OBJ_DIR) ]; then mkdir -p $(VMTESTAPP_OBJ_DIR); fi
-	$(CC) -c $< $(GLOBAL_CFLAGS) $(APPS_INCLUDES) -o $@
+	$(CC) -c $< $(APPS_CFLAGS) $(APPS_INCLUDES) -o $@
 
 $(VMTESTAPP_OBJ_DIR)/%.d: $(VMTESTAPP_DIR)/%.c
 	@if [ ! -d $(VMTESTAPP_OBJ_DIR) ]; then mkdir -p $(VMTESTAPP_OBJ_DIR); fi
 	@echo "making deps for $<..."
-	@($(ECHO) -n $(dir $@); $(CC) $(GLOBAL_CFLAGS) $(APPS_INCLUDES) -M -MG $<) > $@
+	@($(ECHO) -n $(dir $@); $(CC) $(APPS_CFLAGS) $(APPS_INCLUDES) -M -MG $<) > $@

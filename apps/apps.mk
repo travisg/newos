@@ -2,6 +2,7 @@ APPS_DIR = apps
 
 APPS =
 APPS_CLEAN =
+APPS_CFLAGS = $(GLOBAL_CFLAGS) $(USER_CFLAGS)
 APPS_INCLUDES = -Iinclude -Iinclude/nulibc
 
 APPS_LDSCRIPT = $(APPS_DIR)/ldscripts/$(ARCH)/app.ld

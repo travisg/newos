@@ -20,9 +20,9 @@ APPS_CLEAN += falseappclean
 $(FALSEAPP_OBJ_DIR)/%.o: $(FALSEAPP_DIR)/%.c
 	@if [ ! -d $(FALSEAPP_OBJ_DIR) ]; then mkdir -p $(FALSEAPP_OBJ_DIR); fi
 	@mkdir -p $(FALSEAPP_OBJ_DIR)
-	$(CC) -c $< $(GLOBAL_CFLAGS) $(APPS_INCLUDES) -o $@
+	$(CC) -c $< $(APPS_CFLAGS) $(APPS_INCLUDES) -o $@
 
 $(FALSEAPP_OBJ_DIR)/%.d: $(FALSEAPP_DIR)/%.c
 	@if [ ! -d $(FALSEAPP_OBJ_DIR) ]; then mkdir -p $(FALSEAPP_OBJ_DIR); fi
 	@echo "making deps for $<..."
-	@($(ECHO) -n $(dir $@); $(CC) $(GLOBAL_CFLAGS) $(APPS_INCLUDES) -M -MG $<) > $@
+	@($(ECHO) -n $(dir $@); $(CC) $(APPS_CFLAGS) $(APPS_INCLUDES) -M -MG $<) > $@

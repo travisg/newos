@@ -20,9 +20,9 @@ APPS_CLEAN += fiboappclean
 $(FIBOAPP_OBJ_DIR)/%.o: $(FIBOAPP_DIR)/%.c
 	@if [ ! -d $(FIBOAPP_OBJ_DIR) ]; then mkdir -p $(FIBOAPP_OBJ_DIR); fi
 	@mkdir -p $(FIBOAPP_OBJ_DIR)
-	$(CC) -c $< $(GLOBAL_CFLAGS) $(APPS_INCLUDES) -o $@
+	$(CC) -c $< $(APPS_CFLAGS) $(APPS_INCLUDES) -o $@
 
 $(FIBOAPP_OBJ_DIR)/%.d: $(FIBOAPP_DIR)/%.c
 	@if [ ! -d $(FIBOAPP_OBJ_DIR) ]; then mkdir -p $(FIBOAPP_OBJ_DIR); fi
 	@echo "making deps for $<..."
-	@($(ECHO) -n $(dir $@); $(CC) $(GLOBAL_CFLAGS) $(APPS_INCLUDES) -M -MG $<) > $@
+	@($(ECHO) -n $(dir $@); $(CC) $(APPS_CFLAGS) $(APPS_INCLUDES) -M -MG $<) > $@

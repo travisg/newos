@@ -20,9 +20,9 @@ APPS_CLEAN += fortuneappclean
 $(FORTUNEAPP_OBJ_DIR)/%.o: $(FORTUNEAPP_DIR)/%.c
 	@if [ ! -d $(FORTUNEAPP_OBJ_DIR) ]; then mkdir -p $(FORTUNEAPP_OBJ_DIR); fi
 	@mkdir -p $(FORTUNEAPP_OBJ_DIR)
-	$(CC) -c $< $(GLOBAL_CFLAGS) $(APPS_INCLUDES) -o $@
+	$(CC) -c $< $(APPS_CFLAGS) $(APPS_INCLUDES) -o $@
 
 $(FORTUNEAPP_OBJ_DIR)/%.d: $(FORTUNEAPP_DIR)/%.c
 	@if [ ! -d $(FORTUNEAPP_OBJ_DIR) ]; then mkdir -p $(FORTUNEAPP_OBJ_DIR); fi
 	@echo "making deps for $<..."
-	@($(ECHO) -n $(dir $@); $(CC) $(GLOBAL_CFLAGS) $(APPS_INCLUDES) -M -MG $<) > $@
+	@($(ECHO) -n $(dir $@); $(CC) $(APPS_CFLAGS) $(APPS_INCLUDES) -M -MG $<) > $@
