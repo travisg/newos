@@ -31,6 +31,7 @@ KERNEL_INCLUDES = -Iinclude
 
 include $(KERNEL_DIR)/fs/fs_kernel.mk
 include $(KERNEL_DIR)/vm/vm_kernel.mk
+include $(KERNEL_DIR)/net/net_kernel.mk
 
 KERNEL_ARCH_DIR = kernel/arch/$(ARCH)
 include $(KERNEL_ARCH_DIR)/arch_kernel.mk
