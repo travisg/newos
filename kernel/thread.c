@@ -237,7 +237,7 @@ static int user_copy_arg_list(char **args, int argc, char ***kargs)
 	int err;
 	int cnt;
 	char *source;
-	char buf[SYS_THREAD_ARG_LENGTH_MAX+1];
+	char buf[SYS_THREAD_ARG_LENGTH_MAX];
 
 	*kargs = NULL;
 
@@ -253,19 +253,20 @@ static int user_copy_arg_list(char **args, int argc, char ***kargs)
 
 	for(cnt = 0; cnt < argc; cnt++) {
 		err = user_memcpy(&source, &(args[cnt]), sizeof(char *));
-		if(err < 0) goto error;
+		if(err < 0)
+			goto error;
 
 		if((addr)source >= KERNEL_BASE && (addr)source <= KERNEL_TOP){
 			err = ERR_VM_BAD_USER_MEMORY;
 			goto error;
 		}
 
-		err = user_strncpy(buf,source, SYS_THREAD_ARG_LENGTH_MAX);
-		if(err < 0) goto error;
+		err = user_strncpy(buf,source, SYS_THREAD_ARG_LENGTH_MAX - 1);
+		if(err < 0)
+			goto error;
+		buf[SYS_THREAD_ARG_LENGTH_MAX - 1] = 0;
 
-		buf[SYS_THREAD_ARG_LENGTH_MAX] = 0;
 		largs[cnt] = kstrdup(buf);
-
 		if(largs[cnt] == NULL){
 			err = ERR_NO_MEMORY;
 			goto error;
@@ -1663,7 +1664,7 @@ static int proc_create_proc2(void *args)
 	return 0;
 }
 
-proc_id proc_create_proc(const char *path, const char *name,char **args,int argc, int priority)
+proc_id proc_create_proc(const char *path, const char *name, char **args, int argc, int priority)
 {
 	struct proc *p;
 	thread_id tid;
@@ -1698,7 +1699,6 @@ proc_id proc_create_proc(const char *path, const char *name,char **args,int argc
 	}
 	pargs->argc = argc;
 	pargs->args = args;
-
 
 	// create a kernel thread, but under the context of the new process
 	tid = thread_create_kernel_thread_etc(name, proc_create_proc2, pargs, p);
@@ -1736,7 +1736,7 @@ proc_id proc_create_proc(const char *path, const char *name,char **args,int argc
 	return sem_retcode;
 }
 
-proc_id user_proc_create_proc(const char *upath, const char *uname,char **args,int argc, int priority)
+proc_id user_proc_create_proc(const char *upath, const char *uname, char **args, int argc, int priority)
 {
 	char path[SYS_MAX_PATH_LEN];
 	char name[SYS_MAX_OS_NAME_LEN];
@@ -1749,7 +1749,8 @@ proc_id user_proc_create_proc(const char *upath, const char *uname,char **args,i
 		return ERR_VM_BAD_USER_MEMORY;
 	if((addr)uname >= KERNEL_BASE && (addr)uname <= KERNEL_TOP)
 		return ERR_VM_BAD_USER_MEMORY;
-	rc = user_copy_arg_list(args,argc,&kargs);
+
+	rc = user_copy_arg_list(args, argc, &kargs);
 	if(rc < 0)
 		goto error;
 
@@ -1765,7 +1766,7 @@ proc_id user_proc_create_proc(const char *upath, const char *uname,char **args,i
 
 	name[SYS_MAX_OS_NAME_LEN-1] = 0;
 
-	return proc_create_proc(path, name,kargs,argc, priority);
+	return proc_create_proc(path, name, kargs, argc, priority);
 error:
 	free_arg_list(kargs,argc);
 	return rc;

@@ -263,7 +263,7 @@ int panic(const char *fmt, ...)
 int dprintf(const char *fmt, ...)
 {
 	va_list args;
-	char temp[128];
+	char temp[512];
 	int ret = 0;
 
 	if(serial_debug_on) {
