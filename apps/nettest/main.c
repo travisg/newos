@@ -9,7 +9,8 @@
 #include <stdlib.h>
 #include <socket/socket.h>
 
-int fd;
+static int fd;
+static sem_id exit_sem;
 
 static int read_thread(void *args)
 {
@@ -28,25 +29,34 @@ static int read_thread(void *args)
 			printf("%c", buf[i]);
 	}
 
+	sys_sem_release(exit_sem, 1);
+
 	return 0;
 }
 
 static int write_thread(void *args)
 {
 	char c;
+	ssize_t len;
 
 	for(;;) {
 		c = getchar();
-		socket_write(fd, &c, sizeof(c));
+		len = socket_write(fd, &c, sizeof(c));
+		if(len < 0) {
+			printf("\nsocket_write returns %d\n", len);
+			break;
+		}
 	}
+
+	sys_sem_release(exit_sem, 1);
+
 	return 0;
 }
 
-int main(int argc, char **argv)
+static int nettest1(void)
 {
 	int err;
 	sockaddr addr;
-	int i;
 
 	fd = socket_create(SOCK_PROTO_TCP, 0);
 	printf("created socket, fd %d\n", fd);
@@ -68,11 +78,224 @@ int main(int argc, char **argv)
 	if(err < 0)
 		return err;
 
+	exit_sem = sys_sem_create(0, "exit");
+
 	sys_thread_resume_thread(sys_thread_create_thread("read_thread", &read_thread, NULL));
 	sys_thread_resume_thread(sys_thread_create_thread("write_thread", &write_thread, NULL));
 
 	for(;;)
-		sys_snooze(1000000);
+		sys_sem_acquire(exit_sem, 1);
+
+	return 0;
+}
+
+static int nettest2(void)
+{
+	int err;
+	sockaddr addr;
+
+	fd = socket_create(SOCK_PROTO_TCP, 0);
+	printf("created socket, fd %d\n", fd);
+	if(fd < 0)
+		return 0;
+
+	memset(&addr, 0, sizeof(addr));
+	addr.addr.len = 4;
+	addr.addr.type = ADDR_TYPE_IP;
+	addr.port = 9;
+	NETADDR_TO_IPV4(addr.addr) = IPV4_DOTADDR_TO_ADDR(63,203,215,73);
+
+	err = socket_connect(fd, &addr);
+	printf("socket_connect returns %d\n", err);
+	if(err < 0)
+		return err;
+
+	for(;;) {
+		char buf[4096];
+		socket_write(fd, buf, sizeof(buf));
+	}
+	return 0;
+}
+
+static int nettest3(void)
+{
+	int err;
+	sockaddr addr;
+
+	fd = socket_create(SOCK_PROTO_TCP, 0);
+	printf("created socket, fd %d\n", fd);
+	if(fd < 0)
+		return 0;
+
+	memset(&addr, 0, sizeof(addr));
+	addr.addr.len = 4;
+	addr.addr.type = ADDR_TYPE_IP;
+	addr.port = 1900;
+	NETADDR_TO_IPV4(addr.addr) = IPV4_DOTADDR_TO_ADDR(63,203,215,73);
+
+	err = socket_connect(fd, &addr);
+	printf("socket_connect returns %d\n", err);
+	if(err < 0)
+		return err;
+
+	for(;;) {
+		char buf[4096];
+		ssize_t len;
+
+		len = socket_read(fd, buf, sizeof(buf));
+		printf("socket_read returns %d\n", len);
+		if(len <= 0)
+			break;
+	}
+
+	err = socket_close(fd);
+	printf("socket_close returns %d\n", err);
+
+	return 0;
+}
+
+static int nettest4(void)
+{
+	int err;
+	sockaddr addr;
+
+	fd = socket_create(SOCK_PROTO_TCP, 0);
+	printf("created socket, fd %d\n", fd);
+	if(fd < 0)
+		return 0;
+
+	memset(&addr, 0, sizeof(addr));
+	addr.addr.len = 4;
+	addr.addr.type = ADDR_TYPE_IP;
+	addr.port = 1900;
+	NETADDR_TO_IPV4(addr.addr) = IPV4_DOTADDR_TO_ADDR(63,203,215,73);
+
+	err = socket_connect(fd, &addr);
+	printf("socket_connect returns %d\n", err);
+	if(err < 0)
+		return err;
+
+	sys_snooze(5000000);
+
+	err = socket_close(fd);
+	printf("socket_close returns %d\n", err);
+
+	return 0;
+}
+
+static int nettest5(void)
+{
+	int err;
+	sockaddr addr;
+	int new_fd;
+
+	fd = socket_create(SOCK_PROTO_TCP, 0);
+	printf("created socket, fd %d\n", fd);
+	if(fd < 0)
+		return 0;
+
+	memset(&addr, 0, sizeof(addr));
+	addr.addr.len = 4;
+	addr.addr.type = ADDR_TYPE_IP;
+	addr.port = 1900;
+	NETADDR_TO_IPV4(addr.addr) = IPV4_DOTADDR_TO_ADDR(0,0,0,0);
+
+	err = socket_bind(fd, &addr);
+	printf("socket_bind returns %d\n", err);
+	if(err < 0)
+		return 0;
+
+	err = socket_listen(fd);
+	printf("socket_listen returns %d\n", err);
+	if(err < 0)
+		return 0;
+
+	new_fd = socket_accept(fd, &addr);
+	printf("socket_accept returns %d\n", new_fd);
+	if(new_fd < 0)
+		return 0;
+
+	err = socket_write(new_fd, "hello world!\n", strlen("hello world!\n"));
+	printf("socket_write returns %d\n", err);
+
+	printf("sleeping for 5 seconds\n");
+	sys_snooze(5000000);
+
+	printf("closing fd %d\n", new_fd);
+	socket_close(new_fd);
+	printf("closing fd %d\n", fd);
+	socket_close(fd);
+
+	return 0;
+}
+
+static int nettest6(void)
+{
+	int err;
+	sockaddr addr;
+	int new_fd;
+
+	fd = socket_create(SOCK_PROTO_TCP, 0);
+	printf("created socket, fd %d\n", fd);
+	if(fd < 0)
+		return 0;
+
+	memset(&addr, 0, sizeof(addr));
+	addr.addr.len = 4;
+	addr.addr.type = ADDR_TYPE_IP;
+	addr.port = 1900;
+	NETADDR_TO_IPV4(addr.addr) = IPV4_DOTADDR_TO_ADDR(0,0,0,0);
+
+	err = socket_bind(fd, &addr);
+	printf("socket_bind returns %d\n", err);
+	if(err < 0)
+		return 0;
+
+	err = socket_listen(fd);
+	printf("socket_listen returns %d\n", err);
+	if(err < 0)
+		return 0;
+
+	for(;;) {
+		int saved_stdin, saved_stdout, saved_stderr;
+		char *argv;
+
+		new_fd = socket_accept(fd, &addr);
+		printf("socket_accept returns %d\n", new_fd);
+		if(new_fd < 0)
+			continue;
+
+		saved_stdin = sys_dup(0);
+		saved_stdout = sys_dup(1);
+		saved_stderr = sys_dup(2);
+
+		sys_dup2(new_fd, 0);
+		sys_dup2(new_fd, 1);
+		sys_dup2(new_fd, 2);
+		sys_close(new_fd);
+
+		// XXX launch
+		argv = "/boot/bin/shell";
+		err = sys_proc_create_proc("/boot/bin/shell", "shell", &argv, 1, 5);
+
+		sys_dup2(saved_stdin, 0);
+		sys_dup2(saved_stdout, 1);
+		sys_dup2(saved_stderr, 2);
+		sys_close(saved_stdin);
+		sys_close(saved_stdout);
+		sys_close(saved_stderr);
+		printf("sys_proc_create_proc returns %d\n", err);
+	}
+}
+
+int main(int argc, char **argv)
+{
+//	nettest1();
+//	nettest2();
+//	nettest3();
+//	nettest4();
+//	nettest5();
+	nettest6();
 
 	return 0;
 }
