@@ -35,7 +35,8 @@ static struct {
 	int32		cursor_visible;
 	region_id	fb_region;
 	region_id	fifo_region;
-	uint16		ports;
+	uint16		index_port;
+	uint16		value_port;
 } vcons;
 
 static uint8 bit_reversed[256];
@@ -61,14 +62,14 @@ static void copy_bitmap(uint32 id, uint32 src_x, uint32 src_y, uint32 dst_x, uin
 
 void out_reg(uint32 index, uint32 value)
 {
-	out32(index, vcons.ports + SVGA_INDEX_PORT);
-	out32(value, vcons.ports + SVGA_VALUE_PORT);
+	out32(index, vcons.index_port);
+	out32(value, vcons.value_port);
 }
 
 uint32 in_reg(uint32 index)
 {
-	out32(index, vcons.ports + SVGA_INDEX_PORT);
-	return in32(vcons.ports + SVGA_VALUE_PORT);
+	out32(index, vcons.index_port);
+	return in32(vcons.value_port);
 }
 
 static void define_font(uint32 id, uint32 width, uint32 height, uint8 *bits)
@@ -144,7 +145,9 @@ static int find_and_map(void)
 
 	foundit = false;
 	for(i = 0; pci->get_nth_pci_info(i, &pinfo) >= NO_ERROR; i++) {
-		if(pinfo.vendor_id == PCI_VENDOR_ID_VMWARE && pinfo.device_id == PCI_DEVICE_ID_VMWARE_SVGA2) {
+		dprintf("vmware: looking at 0x%x:0x%x\n", pinfo.vendor_id, pinfo.device_id);
+		if(pinfo.vendor_id == PCI_VENDOR_ID_VMWARE &&
+			(pinfo.device_id == PCI_DEVICE_ID_VMWARE_SVGA2 || pinfo.device_id == PCI_DEVICE_ID_VMWARE_SVGA)) {
 			foundit = true;
 			break;
 		}
@@ -155,12 +158,26 @@ static int find_and_map(void)
 		goto error0;
 	}
 
-	dprintf("vmware SVGA2 device detected at pci %d:%d:%d\n", pinfo.bus, pinfo.device, pinfo.function);
-	vcons.ports = pinfo.u.h0.base_registers[0];
+	switch(pinfo.device_id) {
+		case PCI_DEVICE_ID_VMWARE_SVGA:
+			dprintf("vmware SVGA device detected at pci %d:%d:%d\n", pinfo.bus, pinfo.device, pinfo.function);
+			vcons.index_port = SVGA_LEGACY_BASE_PORT + SVGA_INDEX_PORT * 4;
+			vcons.value_port = SVGA_LEGACY_BASE_PORT + SVGA_VALUE_PORT * 4;
+			break;
+		case PCI_DEVICE_ID_VMWARE_SVGA2:
+			dprintf("vmware SVGA2 device detected at pci %d:%d:%d\n", pinfo.bus, pinfo.device, pinfo.function);
+			vcons.index_port = pinfo.u.h0.base_registers[0] + SVGA_INDEX_PORT;
+			vcons.value_port = pinfo.u.h0.base_registers[0] + SVGA_VALUE_PORT;
+			break;
+	}
 	vcons.fb_phys_base = pinfo.u.h0.base_registers[1];
 	vcons.fb_size = MIN(pinfo.u.h0.base_register_sizes[1], SVGA_FB_MAX_SIZE);
 	vcons.fifo_phys_base = pinfo.u.h0.base_registers[2];
 	vcons.fifo_size = MIN(pinfo.u.h0.base_register_sizes[2], SVGA_MEM_SIZE);
+
+	dprintf("vmware: phys base 0x%x, size 0x%X\n", vcons.fb_phys_base, vcons.fb_size);
+	dprintf("vmware: fifo phys base 0x%x, fifo size 0x%X\n", vcons.fifo_phys_base, vcons.fifo_size);
+
 	vcons.fb_region = vm_map_physical_memory(kai, "vmw:fb", (void **)&vcons.fb_base, REGION_ADDR_ANY_ADDRESS, vcons.fb_size, LOCK_KERNEL | LOCK_RW, vcons.fb_phys_base);
 	if (vcons.fb_region < 0)
 	{
