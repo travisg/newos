@@ -103,6 +103,7 @@ static char rcsid[] = "$Id$";
 #include <string.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include "stage1.h"
 #include "inflate.h"
 
 typedef unsigned char uch;
@@ -417,7 +418,7 @@ int *m;                 /* maximum lookup bits, returns actual */
         w += l;                 /* previous table always l bits */
 
         /* compute minimum size table less than or equal to l bits */
-        z = (z = g - w) > (unsigned)l ? l : z;  /* upper limit on table size */
+        z = (z = g - w) > (unsigned)l ? (unsigned)l : z;  /* upper limit on table size */
         if ((f = 1 << (j = k - w)) > a + 1)     /* try a k-w bit table */
         {                       /* too few codes for k-w bit table */
           f -= a + 1;           /* deduct codes from patterns left */
@@ -1027,7 +1028,7 @@ ulg gunzip(const uch *in, uch *out, uch *inflate_buf)
 
 	inbuf += inptr;
 
-	if (outbuf - out != *(ulg *)(inbuf + 4))
+	if ((ulg)(outbuf - out) != *(ulg *)(inbuf + 4))
 		panic("Invalid size %d != %d\n", outbuf - out, *(ulg *)(inbuf + 4));
 
 	if (crc32(out, outbuf - out) != *(ulg *)inbuf)

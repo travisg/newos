@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <boot/stage2.h>
 #include <boot/bootdir.h>
+#include "stage1.h"
 #include "inflate.h"
 
 // needed for console stuff
@@ -14,14 +15,7 @@ static unsigned int line = 0;
 #define SCREEN_HEIGHT 24
 #define PAGE_SIZE 4096
 
-extern void _start(unsigned int mem, int in_vesa, unsigned int vesa_ptr);
-extern void clearscreen(void);
-extern void puts(const char *str);
-extern int dprintf(const char *fmt, ...);
-void *kmalloc(int size);
-void kfree(void *ptr);
-
-static unsigned char *heap_ptr = 0x1000000;
+static unsigned char *heap_ptr = (unsigned char *)0x1000000;
 
 extern void *_end;
 #define TARGET ((void *)0x400000)
@@ -36,18 +30,18 @@ void _start(unsigned int mem, int in_vesa, unsigned int vesa_ptr)
 
 	dprintf("stage1 boot, decompressing system");
 
-	len = gunzip(&_end, TARGET, kmalloc(32*1024));
+	len = gunzip((unsigned char const *)&_end, TARGET, kmalloc(32*1024));
 	dprintf("done, len %d\n", len);
 
 	dprintf("finding stage2...");
-	stage2_entry = ((char *)bootdir + bootdir->bd_entry[1].be_offset * PAGE_SIZE + bootdir->bd_entry[1].be_code_ventr);
+	stage2_entry = (void*)((char *)bootdir + bootdir->bd_entry[1].be_offset * PAGE_SIZE + bootdir->bd_entry[1].be_code_ventr);
 	dprintf("entry at %p\n", stage2_entry);
 
 	// jump into stage2
 	stage2_entry(mem, in_vesa, vesa_ptr, screenOffset);
 }
 
-void *kmalloc(int size)
+void *kmalloc(unsigned int size)
 {
 //	dprintf("kmalloc: size %d, ptr %p\n", size, heap_ptr - size);
 
