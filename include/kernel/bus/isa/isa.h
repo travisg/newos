@@ -25,7 +25,7 @@ typedef struct {
 	int (*release_ioports) ( uint16 ioport_base, size_t len );
 
 	int (*get_dma_buffer) ( void **vaddr, void **paddr );
-	int (*start_floppy_dma) ( void *paddr ); // XXX make this more generic
+	int (*start_floppy_dma) ( void *paddr, size_t size, bool write ); // XXX make this more generic
 } isa_bus_manager;
 
 #endif

@@ -120,7 +120,7 @@ static int isa_get_dma_buffer( void **vaddr, void **paddr )
 	return NO_ERROR;
 }
 
-static int isa_start_floppy_dma( void *paddr )
+static int isa_start_floppy_dma( void *paddr, size_t size, bool write )
 {
 	enum {
 		kDMAAddress = 4,
@@ -135,14 +135,18 @@ static int isa_start_floppy_dma( void *paddr )
 	// Set up the DMA controller to transfer data from the floppy
 	// controller.
 	out8(0x14, kDMACommand);	// Disable DMA
-	out8(0x56, kDMAMode);
+	if(write)
+		out8(0x5a, kDMAMode); // single mode, autoinitialization, read transfer, channel 2
+	else
+		out8(0x56, kDMAMode); // single mode, autoinitialization, write transfer, channel 2
 	out8(0, kDMAFlipFlop);
 	out8(((addr)paddr) & 0xff, kDMAAddress);			// LSB
 	out8((((addr)paddr) >> 8) & 0xff, kDMAAddress);	// MSB
 	out8((((addr)paddr) >> 16) & 0xff, kDMAPage);		// Page
 	out8(0, kDMAFlipFlop);
-	out8(0xff, kDMACount);	// Count LSB (512 bytes)
-	out8(1, kDMACount);		// Count MSB
+	size--; // the register wants it to be one less than it really is
+	out8(size & 0xff, kDMACount);	// Count LSB
+	out8((size >> 8) & 0xff, kDMACount); // Count MSB
 	out8(2, kDMAChannelMask);	// Release channel 2
 	out8(0x10, kDMACommand);	// Reenable DMA
 

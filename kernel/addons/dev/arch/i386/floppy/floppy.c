@@ -27,18 +27,29 @@
 
 #define SECTORS_PER_TRACK 18
 #define NUM_HEADS 2
+#define SECTORS_PER_CYLINDER (SECTORS_PER_TRACK * NUM_HEADS)
 #define SECTOR_SIZE 512
-#define MOTOR_TIMEOUT 10000000		// 10 seconds
+#define TRACK_SIZE (SECTOR_SIZE * SECTORS_PER_CYLINDER)
+#define NUM_TRACKS 80
+#define DISK_SIZE (TRACK_SIZE * NUM_TRACKS)
+#define MOTOR_TIMEOUT 5000000		// 10 seconds
 #define MOTOR_SPINUP_DELAY 500000	// 500 msecs
 
 typedef struct {
 	int iobase;
 	int drive_num;
 	sem_id io_completion_sem;
+	bool io_pending;
+	mutex lock;
 	spinlock_t spinlock;
 	isa_bus_manager *isa;
 	struct timer_event motor_timer;
 } floppy;
+
+typedef struct {
+	floppy *flp;
+	off_t pos;
+} floppy_cookie;
 
 typedef struct {
 	uint8 id;
@@ -85,55 +96,254 @@ static void wait_for_rqm(floppy *flp);
 static void send_command(floppy *flp, const uint8 *data, int len);
 static void read_result(floppy *flp, uint8 *data, int len);
 static void recalibrate_drive(floppy *flp);
+static void config_drive(floppy *flp);
 static int motor_callback(void *arg);
+static size_t read_sectors(floppy *flp, void *buf, int lba, int num_sectors);
+static size_t write_sectors(floppy *flp, const void *buf, int lba, int num_sectors);
+static size_t read_track(floppy *flp, void *buf, int lba);
 
-static int floppy_open(dev_ident ident, dev_cookie *cookie)
+static int floppy_open(dev_ident ident, dev_cookie *_cookie)
 {
 	floppy *flp = (floppy *)ident;
+	floppy_cookie *cookie;
 
-	*cookie = flp;
+	cookie = (floppy_cookie *)kmalloc(sizeof(floppy_cookie));
+	if(!cookie)
+		return ERR_NO_MEMORY;
+
+	cookie->flp = flp;
+	cookie->pos = 0;
+
+	*_cookie = cookie;
 
 	return 0;
 }
 
-static int floppy_freecookie(dev_cookie cookie)
+static int floppy_freecookie(dev_cookie _cookie)
+{
+	floppy_cookie *cookie = (floppy_cookie *)_cookie;
+
+	kfree(cookie);
+
+	return 0;
+}
+
+static int floppy_seek(dev_cookie _cookie, off_t pos, seek_type st)
+{
+	floppy_cookie *cookie = (floppy_cookie *)_cookie;
+	int err = 0;
+
+	TRACE("seek: pos %Ld, st %d\n", pos, st);
+
+	mutex_lock(&cookie->flp->lock);
+
+	switch(st) {
+		case SEEK_END:
+			pos += DISK_SIZE;
+			goto SEEK_SET;
+		case SEEK_CUR:
+			pos += cookie->pos;
+SEEK_SET:
+		case SEEK_SET:
+			if(pos < 0)
+				pos = 0;
+			if(pos > DISK_SIZE)
+				pos = DISK_SIZE;
+			cookie->pos = pos;
+			break;
+		default:
+			err = ERR_INVALID_ARGS;
+	}
+
+	mutex_unlock(&cookie->flp->lock);
+
+	return err;
+}
+
+static int floppy_close(dev_cookie _cookie)
 {
 	return 0;
 }
 
-static int floppy_seek(dev_cookie cookie, off_t pos, seek_type st)
+static ssize_t floppy_read(dev_cookie _cookie, void *_buf, off_t pos, ssize_t len)
 {
-	return ERR_NOT_ALLOWED;
-}
-
-static int floppy_close(dev_cookie cookie)
-{
-	return 0;
-}
-
-static ssize_t floppy_read(dev_cookie cookie, void *buf, off_t pos, ssize_t len)
-{
-	floppy *flp = (floppy *)cookie;
-
-	return ERR_NOT_ALLOWED;
-}
-
-static ssize_t floppy_write(dev_cookie cookie, const void *buf, off_t pos, ssize_t len)
-{
-	floppy *flp = (floppy *)cookie;
-
-	return ERR_NOT_ALLOWED;
-}
-
-static int floppy_ioctl(dev_cookie cookie, int op, void *buf, size_t len)
-{
-	floppy *flp = (floppy *)cookie;
+	floppy_cookie *cookie = (floppy_cookie *)_cookie;
+	ssize_t bytes_read = 0;
 	int err;
 
-	dprintf("floppy_ioctl: op %d, buf %p, len %Ld\n", op, buf, (long long)len);
+	if(len <= 0)
+		return 0;
 
-	if(!flp)
-		return ERR_IO_ERROR;
+	TRACE("read: pos %Ld, len %ld\n", pos, len);
+
+	mutex_lock(&cookie->flp->lock);
+
+	if(pos < 0)
+		pos = cookie->pos;
+
+	// handle partial first block
+	if((pos % SECTOR_SIZE) != 0) {
+		ssize_t toread;
+		char buf[SECTOR_SIZE];
+
+		err = read_sectors(cookie->flp, buf, pos / SECTOR_SIZE, 1);
+		if(err <= 0)
+			goto out;
+
+		TRACE("read: 1 pos %Ld, len %ld, bytes_read %ld\n", pos, len, bytes_read);
+
+		toread = min(len, SECTOR_SIZE);
+		toread = min(toread, SECTOR_SIZE - (pos % SECTOR_SIZE));
+		err = user_memcpy(_buf, buf + (pos % SECTOR_SIZE), toread);
+		if(err < 0)
+			goto out;
+		len -= toread;
+		bytes_read += toread;
+		pos += toread;
+	}
+
+	// read the middle blocks
+	while(len >= SECTOR_SIZE) {
+		TRACE("read: 2 pos %Ld, len %ld, bytes_read %ld\n", pos, len, bytes_read);
+
+		// try to read as many sectors as we can
+		err = read_sectors(cookie->flp, (char *)_buf + bytes_read, pos / SECTOR_SIZE, len / SECTOR_SIZE);
+		if(err <= 0)
+			goto out;
+
+		TRACE("write: 2 write_sectors returned %d (%d bytes)\n", err, err * SECTOR_SIZE);
+
+		len -= err * SECTOR_SIZE;
+		bytes_read += err * SECTOR_SIZE;
+		pos += err * SECTOR_SIZE;
+	}
+
+	// handle partial last block
+	if(len > 0 && (len % SECTOR_SIZE) != 0) {
+		char buf[SECTOR_SIZE];
+
+		err = read_sectors(cookie->flp, buf, pos / SECTOR_SIZE, 1);
+		if(err <= 0)
+			goto out;
+
+		TRACE("read: 3 pos %Ld, len %ld, bytes_read %ld\n", pos, len, bytes_read);
+
+		err = user_memcpy((char *)_buf + bytes_read, buf, len);
+		if(err < 0)
+			goto out;
+
+		bytes_read += len;
+		pos += len;
+	}
+
+	cookie->pos = pos;
+
+out:
+	mutex_unlock(&cookie->flp->lock);
+
+	return bytes_read;
+}
+
+static ssize_t floppy_write(dev_cookie _cookie, const void *_buf, off_t pos, ssize_t len)
+{
+	floppy_cookie *cookie = (floppy_cookie *)_cookie;
+	ssize_t bytes_written = 0;
+	int err;
+
+	if(len <= 0)
+		return 0;
+
+	TRACE("write: pos %Ld, len %ld\n", pos, len);
+
+	mutex_lock(&cookie->flp->lock);
+
+	if(pos < 0)
+		pos = cookie->pos;
+
+	// handle partial first block
+	if((pos % SECTOR_SIZE) != 0) {
+		ssize_t towrite;
+		char buf[SECTOR_SIZE];
+
+		/* read in a sector */
+		err = read_sectors(cookie->flp, buf, pos / SECTOR_SIZE, 1);
+		if(err <= 0)
+			goto out;
+
+		/* copy the modified data over */
+		towrite = min(len, SECTOR_SIZE);
+		towrite = min(towrite, SECTOR_SIZE - (pos % SECTOR_SIZE));
+		err = user_memcpy(buf + (pos % SECTOR_SIZE), _buf, towrite);
+		if(err < 0)
+			goto out;
+
+		/* write this sector back out */
+		err = write_sectors(cookie->flp, buf, pos / SECTOR_SIZE, 1);
+		if(err <= 0)
+			goto out;
+
+		TRACE("write: 1 pos %Ld, len %ld, bytes_written %ld\n", pos, len, bytes_written);
+
+		len -= towrite;
+		bytes_written += towrite;
+		pos += towrite;
+	}
+
+	// write the middle blocks
+	while(len >= SECTOR_SIZE) {
+		TRACE("write: 2 pos %Ld, len %ld, bytes_written %ld\n", pos, len, bytes_written);
+
+		// try to write as many sectors as we can
+		err = write_sectors(cookie->flp, (char *)_buf + bytes_written, pos / SECTOR_SIZE, len / SECTOR_SIZE);
+		if(err <= 0)
+			goto out;
+
+		TRACE("write: 2 write_sectors returned %d (%d bytes)\n", err, err * SECTOR_SIZE);
+
+		len -= err * SECTOR_SIZE;
+		bytes_written += err * SECTOR_SIZE;
+		pos += err * SECTOR_SIZE;
+	}
+
+	// handle partial last block
+	if(len > 0 && (len % SECTOR_SIZE) != 0) {
+		char buf[SECTOR_SIZE];
+
+		/* read in a sector */
+		err = read_sectors(cookie->flp, buf, pos / SECTOR_SIZE, 1);
+		if(err <= 0)
+			goto out;
+
+		/* copy the modified data over */
+		err = user_memcpy(buf, (char *)_buf + bytes_written, len);
+		if(err < 0)
+			goto out;
+
+		/* write the sector back out */
+		err = write_sectors(cookie->flp, buf, pos / SECTOR_SIZE, 1);
+		if(err <= 0)
+			goto out;
+
+		TRACE("write: 3 pos %Ld, len %ld, bytes_written %ld\n", pos, len, bytes_written);
+
+		bytes_written += len;
+		pos += len;
+	}
+
+	cookie->pos = pos;
+
+out:
+	mutex_unlock(&cookie->flp->lock);
+
+	return bytes_written;
+}
+
+static int floppy_ioctl(dev_cookie _cookie, int op, void *buf, size_t len)
+{
+	floppy_cookie *cookie = (floppy_cookie *)_cookie;
+	int err;
+
+	dprintf("floppy_ioctl: op %d, buf %p, len %ld\n", op, buf, len);
 
 	switch(op) {
 		default:
@@ -162,9 +372,7 @@ int dev_bootstrap(void);
 int dev_bootstrap(void)
 {
 	floppy *flp;
-
 	isa_bus_manager *isa;
-	bool foundit = false;
 
 	if(module_get(ISA_MODULE_NAME, 0, (void **)&isa) < 0) {
 		dprintf("floppy_dev_init: no isa bus found..\n");
@@ -187,12 +395,14 @@ int dev_bootstrap(void)
 	// create device node
 	devfs_publish_device("disk/floppy/0", flp, &floppy_hooks);
 
+#if 0
 	{
 		// test the drive
 		uint8 sector[SECTOR_SIZE];
 		int i;
 		int ret;
 
+		/* read in a sector, print it out */
 		dprintf("reading sector 0...\n");
 		ret = read_sector(flp, sector, 0);
 		dprintf("ret %d\n", ret);
@@ -200,12 +410,21 @@ int dev_bootstrap(void)
 			dprintf("[%d] 0x%x\n", i, sector[i]);
 		}
 
+		/* write out a sector */
+		for(i = 0; i < 512; i++) {
+			sector[i] = i;
+		}
+
+		dprintf("writing sector 0...\n");
+		ret = write_sector(flp, sector, 0);
+		dprintf("ret %d\n", ret);
 
 //		read_sector(flp, sector, 1);
 
 //		read_sector(flp, sector, 2800);
 //		read_sector(flp, sector, 0);
 	}
+#endif
 
 	return 0;
 }
@@ -214,15 +433,18 @@ static int floppy_irq_handler(void *arg)
 {
 	floppy *flp = (floppy *)arg;
 
-	TRACE("irq: flp %p\n", flp);
-
 	acquire_spinlock(&flp->spinlock);
 
 	// see if an irq is pending
 	if((read_reg(flp, STATUS_A) & 0x80) != 0) {
 		// pending irq, release the sem
-		TRACE("irq: was pending, releasing sem\n");
-		sem_release_etc(flp->io_completion_sem, 1, SEM_FLAG_NO_RESCHED);
+		if(flp->io_pending) {
+			TRACE("irq: %p io was pending, releasing sem\n", flp);
+			flp->io_pending = false;
+			sem_release_etc(flp->io_completion_sem, 1, SEM_FLAG_NO_RESCHED);
+		} else {
+			TRACE("irq: %p got irq, but no io was pending\n", flp);
+		}
 	}
 
 	release_spinlock(&flp->spinlock);
@@ -246,7 +468,9 @@ static int floppy_detect(floppy **_flp, int chain, int drive)
 	flp->drive_num = drive;
 
 	flp->io_completion_sem = sem_create(0, "floppy io sem");
+	mutex_init(&flp->lock, "floppy lock");
 	flp->spinlock = 0;
+	flp->io_pending = false;
 
 	// set up the interrupt controller
 	int_set_io_interrupt_handler(0x20 + 6, &floppy_irq_handler, flp);
@@ -263,13 +487,19 @@ static int floppy_init(floppy *flp)
 
 	turn_on_motor(flp);
 
+	// set high speed
+	write_reg(flp, DATA_RATE_SELECT, 0x0); // 500 kbps
+
 	// recalibrate the drive
 	recalibrate_drive(flp);
+
+	// enable implicit seek
+	config_drive(flp);
 }
 
 static void write_reg(floppy *flp, floppy_reg_selector selector, uint8 data)
 {
-	TRACE("write to 0x%x, data 0x%x\n", flp->iobase + selector, data);
+//	TRACE("write to 0x%x, data 0x%x\n", flp->iobase + selector, data);
 
 	out8(data, flp->iobase + selector);
 }
@@ -279,7 +509,7 @@ static uint8 read_reg(floppy *flp, floppy_reg_selector selector)
 	uint8 data;
 
 	data = in8(flp->iobase + selector);
-	TRACE("read from 0x%x = 0x%x\n", flp->iobase + selector, data);
+//	TRACE("read from 0x%x = 0x%x\n", flp->iobase + selector, data);
 	return data;
 }
 
@@ -329,8 +559,6 @@ static void send_command(floppy *flp, const uint8 *data, int len)
 {
 	int i;
 
-//	turn_on_motor(flp);
-
 	for(i = 0; i < len; i++) {
 		wait_for_rqm(flp);
 		write_reg(flp, DATA, data[i]);
@@ -359,8 +587,11 @@ static void recalibrate_drive(floppy *flp)
 		uint8 command[2] = { 7, 0 }; // recalibrate command
 		uint8 result[2];
 
+		flp->io_pending = true;
+
 		// send the recalibrate command
 		send_command(flp, command, sizeof(command));
+
 		sem_acquire(flp->io_completion_sem, 1);
 
 		command[0] = 8;
@@ -381,6 +612,18 @@ static void recalibrate_drive(floppy *flp)
 	TRACE("recalibration successful\n");
 }
 
+static void config_drive(floppy *flp)
+{
+	uint8 command[4];
+
+	command[0] = 0x13; // configure command
+	command[1] = 0;
+	command[2] = 0x70; // Implied Seek, FIFO, Poll Disable
+	command[3] = 0;
+
+	send_command(flp, command, sizeof(command));
+}
+
 static void fill_command_from_lba(floppy *flp, floppy_command *cmd, int lba)
 {
 	cmd->cylinder = lba / (SECTORS_PER_TRACK * NUM_HEADS);
@@ -389,40 +632,156 @@ static void fill_command_from_lba(floppy *flp, floppy_command *cmd, int lba)
 	cmd->drive = (flp->drive_num & 0x3) | (cmd->head << 2);
 }
 
-static size_t read_sector(floppy *flp, void *buf, int lba)
+static size_t read_sectors(floppy *flp, void *buf, int lba, int num_sectors)
 {
 	floppy_command cmd;
 	floppy_result res;
-	int i;
 	void *dma_buffer_v, *dma_buffer_p;
 
-	TRACE("read_sector: buf %p, lba %d\n", buf, lba);
+	TRACE("read_sectors: buf %p, lba %d, num_sectors %d\n", buf, lba, num_sectors);
+
+	// figure out how many sectors we can really read if we do multi sector read
+	num_sectors = min(num_sectors, SECTORS_PER_CYLINDER - (lba % SECTORS_PER_CYLINDER));
+	TRACE("read_sectors: going to read %d sectors\n", num_sectors);
 
 	// get a dma buffer to do work in
 	flp->isa->get_dma_buffer(&dma_buffer_v, &dma_buffer_p);
-	TRACE("read_sector: vbuf %p, pbuf %p\n", dma_buffer_v, dma_buffer_p);
+	TRACE("read_sectors: vbuf %p, pbuf %p\n", dma_buffer_v, dma_buffer_p);
 
-	memset(dma_buffer_v, 0, 64*1024);
+//	memset(dma_buffer_v, 0, 64*1024);
+
+	// make sure the motor is on
+	turn_on_motor(flp);
 
 	// setup the dma engine
-	flp->isa->start_floppy_dma(dma_buffer_p);
+	flp->isa->start_floppy_dma(dma_buffer_p, num_sectors * SECTOR_SIZE, false);
 
-	cmd.id = 0x46; // read MFM, one head
+	cmd.id = 0xc6; // multi-track, read MFM, one head
 	cmd.sector_size = 2; // 512 bytes
 	cmd.track_length = SECTORS_PER_TRACK;
 	cmd.gap3_length = 27; // 3.5" floppy
 	cmd.data_length = 0xff;
 	fill_command_from_lba(flp, &cmd, lba);
 
-	send_command(flp, &cmd, sizeof(cmd));
+	flp->io_pending = true;
 
-	read_result(flp, &res, sizeof(res));
+	send_command(flp, (uint8 *)&cmd, sizeof(cmd));
+
+	sem_acquire(flp->io_completion_sem, 1);
+
+	read_result(flp, (uint8 *)&res, sizeof(res));
 	if(res.st0 & 0xc0)
 		return ERR_IO_ERROR;
 
 	// copy the sector back to the passed in buffer
-	memcpy(buf, dma_buffer_v, SECTOR_SIZE);
+	memcpy(buf, dma_buffer_v, num_sectors * SECTOR_SIZE);
 
-	return SECTOR_SIZE;
+#if 0
+	{
+		int i;
+		for(i = 0; i < 512; i++) {
+			dprintf("[%d] 0x%x\n", i, ((char *)buf)[i]);
+		}
+	}
+#endif
+
+	return num_sectors;
+}
+
+static size_t write_sectors(floppy *flp, const void *buf, int lba, int num_sectors)
+{
+	floppy_command cmd;
+	floppy_result res;
+	void *dma_buffer_v, *dma_buffer_p;
+
+	TRACE("write_sectors: buf %p, lba %d, num_sectors %d\n", buf, lba, num_sectors);
+
+	// figure out how many sectors we can really write if we do multi sector read
+	num_sectors = min(num_sectors, SECTORS_PER_CYLINDER - (lba % SECTORS_PER_CYLINDER));
+	TRACE("write_sectors: going to write %d sectors\n", num_sectors);
+
+	// get a dma buffer to do work in
+	flp->isa->get_dma_buffer(&dma_buffer_v, &dma_buffer_p);
+	TRACE("write_sectors: vbuf %p, pbuf %p\n", dma_buffer_v, dma_buffer_p);
+
+//	memset(dma_buffer_v, 0, 64*1024);
+	memcpy(dma_buffer_v, buf, num_sectors * SECTOR_SIZE);
+
+	// make sure the motor is on
+	turn_on_motor(flp);
+
+	// setup the dma engine
+	flp->isa->start_floppy_dma(dma_buffer_p, num_sectors * SECTOR_SIZE, true);
+
+	cmd.id = 0xc5; // multi-track, write MFM, one head
+	cmd.sector_size = 2; // 512 bytes
+	cmd.track_length = SECTORS_PER_TRACK;
+	cmd.gap3_length = 27; // 3.5" floppy
+	cmd.data_length = 0xff;
+	fill_command_from_lba(flp, &cmd, lba);
+
+	flp->io_pending = true;
+
+	send_command(flp, (uint8 *)&cmd, sizeof(cmd));
+
+	sem_acquire(flp->io_completion_sem, 1);
+
+	read_result(flp, (uint8 *)&res, sizeof(res));
+	if(res.st0 & 0xc0)
+		return ERR_IO_ERROR;
+
+	return num_sectors;
+}
+
+static size_t read_track(floppy *flp, void *buf, int lba)
+{
+	floppy_command cmd;
+	floppy_result res;
+	void *dma_buffer_v, *dma_buffer_p;
+
+	TRACE("read_track: buf %p, lba %d\n", buf, lba);
+
+	// get a dma buffer to do work in
+	flp->isa->get_dma_buffer(&dma_buffer_v, &dma_buffer_p);
+	TRACE("read_track: vbuf %p, pbuf %p\n", dma_buffer_v, dma_buffer_p);
+
+//	memset(dma_buffer_v, 0, 64*1024);
+
+	// make sure the motor is on
+	turn_on_motor(flp);
+
+	// setup the dma engine
+	flp->isa->start_floppy_dma(dma_buffer_p, TRACK_SIZE, false);
+
+	cmd.id = 0x42; // read MFM, one track
+	cmd.sector_size = 2; // 512 bytes
+	cmd.track_length = SECTORS_PER_TRACK;
+	cmd.gap3_length = 27; // 3.5" floppy
+	cmd.data_length = 0xff;
+	fill_command_from_lba(flp, &cmd, lba);
+
+	flp->io_pending = true;
+
+	send_command(flp, (uint8 *)&cmd, sizeof(cmd));
+
+	sem_acquire(flp->io_completion_sem, 1);
+
+	read_result(flp, (uint8 *)&res, sizeof(res));
+	if(res.st0 & 0xc0)
+		return ERR_IO_ERROR;
+
+	// copy the sector back to the passed in buffer
+	memcpy(buf, dma_buffer_v, TRACK_SIZE);
+
+#if 0
+	{
+		int i;
+		for(i = 0; i < 512; i++) {
+			dprintf("[%d] 0x%x\n", i, ((char *)buf)[i]);
+		}
+	}
+#endif
+
+	return TRACK_SIZE;
 }
 
