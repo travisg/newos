@@ -6,7 +6,9 @@ ifeq ($(call FINDINLIST,$(MY_TARGET),$(ALL)),1)
 
 MY_OBJS := \
 	app.o \
-	ircreader.o
+	ircengine.o \
+	ircreader.o \
+	term.o
 
 MY_INCLUDES := $(STDINCLUDE)
 MY_CFLAGS := $(USER_CFLAGS)
