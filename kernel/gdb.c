@@ -546,7 +546,7 @@ cmd_gdb(int argc, char **argv)
 	{
 		dbg_make_register_file(local_regfile, interrupt_frame);
 	} else {
-		memcpy(local_regfile, interrupt_frame, sizeof(unsigned int) * GDB_REGISTER_FILE_COUNT);
+		memcpy(local_regfile, dbg_register_file, sizeof(unsigned int) * GDB_REGISTER_FILE_COUNT);
 	}
 
 	gdb_state_machine(local_regfile);
