@@ -14,8 +14,14 @@
 
 #include "rld_priv.h"
 
+#if ARCH_sh4
+#define ELF_PREPEND_UNDERSCORE 1
+#endif
 
-#define	PAGE_SIZE 4096
+#ifndef ELF_PREPEND_UNDERSCORE
+#define ELF_PREPEND_UNDERSCORE 0
+#endif
+
 #define	PAGE_MASK ((PAGE_SIZE)-1)
 #define	PAGE_OFFS(y) ((y)&(PAGE_MASK))
 #define	PAGE_BASE(y) ((y)&~(PAGE_MASK))
@@ -78,6 +84,7 @@ struct image_t {
 	int                rela_len;
 	struct Elf32_Rel  *pltrel;
 	int                pltrel_len;
+	int                pltrel_type; // DT_REL or DT_RELA
 
 	unsigned           num_needed;
 	struct image_t   **needed;
@@ -610,6 +617,9 @@ parse_dynamic_segment(image_t *image)
 			case DT_PLTRELSZ:
 				image->pltrel_len = d[i].d_un.d_val;
 				break;
+			case DT_PLTREL:
+				image->pltrel_type = d[i].d_un.d_val;
+				break;
 			default:
 				continue;
 		}
@@ -625,17 +635,30 @@ parse_dynamic_segment(image_t *image)
 
 static
 struct Elf32_Sym *
-find_symbol_xxx(image_t *img, const char *name)
+find_symbol_xxx(image_t *img, const char *_symbol)
 {
 	unsigned int hash;
 	unsigned int i;
+	const char *symbol;
+
+	/* some architectures prepend a '_' to symbols, so lets do it here for lookups */
+#if ELF_PREPEND_UNDERSCORE
+	char new_symbol[SYS_MAX_NAME_LEN];
+
+	new_symbol[0] = '_';
+	new_symbol[1] = 0;
+	strlcat(new_symbol, _symbol, SYS_MAX_NAME_LEN);
+	symbol = new_symbol;
+#else
+	symbol = _symbol;
+#endif
 
 	if(img->dynamic_ptr) {
-		hash = elf_hash(name) % HASHTABSIZE(img);
+		hash = elf_hash(symbol) % HASHTABSIZE(img);
 		for(i = HASHBUCKETS(img)[hash]; i != STN_UNDEF; i = HASHCHAINS(img)[i]) {
 			if(img->syms[i].st_shndx!= SHN_UNDEF) {
 				if((ELF32_ST_BIND(img->syms[i].st_info)== STB_GLOBAL) || (ELF32_ST_BIND(img->syms[i].st_info)== STB_WEAK)) {
-					if(!strcmp(SYMNAME(img, &img->syms[i]), name)) {
+					if(!strcmp(SYMNAME(img, &img->syms[i]), symbol)) {
 						return &img->syms[i];
 					}
 				}
@@ -751,6 +774,10 @@ load_container(char const *path, char const *name, bool fixed)
 		return found;
 	}
 
+#if DEBUG_RLD
+	printf("rld: load_container: path '%s', name '%s' entry\n", path, name);
+#endif
+
 	fd= sys_open(path, STREAM_TYPE_FILE, 0);
 	FATAL((fd< 0), "cannot open file %s\n", path);
 
@@ -780,6 +807,21 @@ load_container(char const *path, char const *name, bool fixed)
 	FATAL(!dynamic_success, "troubles handling dynamic section\n");
 
 	image->entry_point= eheader.e_entry + image->regions[0].delta;
+
+#if DEBUG_RLD
+	{
+		int i;
+
+		printf("rld: load_container: path '%s', name '%s' loaded:\n", path, name);
+		printf("\tregions:\n");
+		for(i=0; i<image->num_regions; i++) {
+			printf("\t\tid %d 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x\n",
+				image->regions[i].id, image->regions[i].start, image->regions[i].size,
+				image->regions[i].vmstart, image->regions[i].vmsize, image->regions[i].fdstart,
+				image->regions[i].fdsize, image->regions[i].delta, image->regions[i].flags);
+		}
+	}
+#endif
 
 	sys_close(fd);
 
@@ -920,7 +962,6 @@ load_program(char const *path, void **entry)
 {
 	image_t *image;
 	image_t *iter;
-
 
 	image = load_container(path, NEWOS_MAGIC_APPNAME, true);
 

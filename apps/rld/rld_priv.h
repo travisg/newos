@@ -10,6 +10,7 @@
 #include <sys/types.h>
 #include <newos/user_runtime.h>
 
+#define DEBUG_RLD 0
 
 #define NEWOS_MAGIC_APPNAME	"__NEWOS_APP__"
 
