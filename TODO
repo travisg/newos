@@ -21,8 +21,8 @@ scheduler updates:
  better quantum handling
  priority boost on sem block
 improved kernel debugger support:
- symbol lookups
- stack tracing
+ better symbol lookup
+ disassembly
 kernel slab allocator
 vfs:
  vnode caching
@@ -37,31 +37,26 @@ VM:
  page out
 Improved bus managers (BeOS style)
 Fully relocatable kernel, stage2 relocates
-
-In Progress:
-
 signals
-tty layer
 disk based filesystem
-kernel module loading:
- modules
 RLD
  lazy binding
  so initialization
  dl_open() et load_addon()
-TCP/IP stack:
- TCP protocol
- better initialization
- user space punch-down
-new build system
 IDE bus manager
+net:
+ dns lookup
+
+In Progress:
+
+GUI
 
 Finish:
 
 use fxsave instead of fsave where appropriate
-move more per-cpu stuff to the global cpu[] array
 
 Fix:
 
+Net stack needs to use memory more efficiently
 Places in kernel where page fault with ints off happens
 Random reboot on heavy fibo usage
