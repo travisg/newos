@@ -143,6 +143,10 @@ void print_sections(section *first)
     }
 }
 
+#ifdef sparc
+#define xBIG_ENDIAN
+#endif
+
 #ifdef xBIG_ENDIAN
 unsigned int fix(unsigned int x)
 {
