@@ -55,28 +55,22 @@ int syscall_dispatcher(unsigned long call_num, unsigned long arg0, unsigned long
 			*call_ret = 0;
 			break;
 		case SYSCALL_SEM_CREATE:
-			*call_ret = sem_create((int)arg0, (const char *)arg1);
+			*call_ret = user_sem_create((int)arg0, (const char *)arg1);
 			break;
 		case SYSCALL_SEM_DELETE:
-			*call_ret = sem_delete((sem_id)arg0);
+			*call_ret = user_sem_delete((sem_id)arg0);
 			break;
 		case SYSCALL_SEM_ACQUIRE:
-			*call_ret = sem_acquire_etc((sem_id)arg0, (int)arg1, SEM_FLAG_INTERRUPTABLE, 0, NULL);
+			*call_ret = user_sem_acquire_etc((sem_id)arg0, (int)arg1, SEM_FLAG_INTERRUPTABLE, 0, NULL);
 			break;
-		case SYSCALL_SEM_ACQUIRE_ETC: {
-			int retcode;
-			*call_ret = sem_acquire_etc((sem_id)arg0, (int)arg1, (int)arg2 | SEM_FLAG_INTERRUPTABLE, (time_t)INT32TOINT64(arg3, arg4), &retcode);
-			if(arg5 != 0) {
-				// XXX protect the copy
-				*(int *)arg5 = retcode;
-			}
+		case SYSCALL_SEM_ACQUIRE_ETC:
+			*call_ret = user_sem_acquire_etc((sem_id)arg0, (int)arg1, (int)arg2 | SEM_FLAG_INTERRUPTABLE, (time_t)INT32TOINT64(arg3, arg4), (int *)arg5);
 			break;
-		}
 		case SYSCALL_SEM_RELEASE:
-			*call_ret = sem_release((sem_id)arg0, (int)arg1);
+			*call_ret = user_sem_release((sem_id)arg0, (int)arg1);
 			break;
 		case SYSCALL_SEM_RELEASE_ETC:
-			*call_ret = sem_release_etc((sem_id)arg0, (int)arg1, (int)arg2);
+			*call_ret = user_sem_release_etc((sem_id)arg0, (int)arg1, (int)arg2);
 			break;
 		case SYSCALL_GET_CURRENT_THREAD_ID:
 			*call_ret = thread_get_current_thread_id();
@@ -86,33 +80,21 @@ int syscall_dispatcher(unsigned long call_num, unsigned long arg0, unsigned long
 			*call_ret = 0;
 			break;
 		case SYSCALL_PROC_CREATE_PROC:
-			*call_ret = proc_create_proc((const char *)arg0, (const char *)arg1, (int)arg2);
+			*call_ret = user_proc_create_proc((const char *)arg0, (const char *)arg1, (int)arg2);
 			break;
-		case SYSCALL_THREAD_WAIT_ON_THREAD: {
-			int retcode;
-			*call_ret = thread_wait_on_thread((thread_id)arg0, &retcode);
-			if(arg1 != 0) {
-				// XXX protect the copy
-				*(int *)arg1 = retcode;
-			}
+		case SYSCALL_THREAD_WAIT_ON_THREAD:
+			*call_ret = user_thread_wait_on_thread((thread_id)arg0, (int *)arg1);
 			break;
-		}
-		case SYSCALL_PROC_WAIT_ON_PROC: {
-			int retcode;
-			*call_ret = proc_wait_on_proc((proc_id)arg0, &retcode);
-			if(arg1 != 0) {
-				// XXX protect the copy
-				*(int *)arg1 = retcode;
-			}
+		case SYSCALL_PROC_WAIT_ON_PROC:
+			*call_ret = user_proc_wait_on_proc((proc_id)arg0, (int *)arg1);
 			break;
-		}
 		case SYSCALL_VM_CREATE_ANONYMOUS_REGION:
-			*call_ret = vm_create_anonymous_region(vm_get_current_user_aspace_id(),
+			*call_ret = user_vm_create_anonymous_region(vm_get_current_user_aspace_id(),
 				(char *)arg0, (void **)arg1, (int)arg2,
 				(addr)arg3, (int)arg4, (int)arg5);
 			break;
 		case SYSCALL_VM_CLONE_REGION:
-			*call_ret = vm_clone_region(vm_get_current_user_aspace_id(),
+			*call_ret = user_vm_clone_region(vm_get_current_user_aspace_id(),
 				(char *)arg0, (void **)arg1, (int)arg2,
 				(region_id)arg3, (int)arg4);
 			break;
@@ -123,14 +105,11 @@ int syscall_dispatcher(unsigned long call_num, unsigned long arg0, unsigned long
 		case SYSCALL_VM_DELETE_REGION:
 			*call_ret = vm_delete_region(vm_get_current_user_aspace_id(), (region_id)arg0);
 			break;
-		case SYSCALL_VM_FIND_REGION_BY_NAME:
-			*call_ret = vm_find_region_by_name(vm_get_current_user_aspace_id(), (const char *)arg0);
-			break;
 		case SYSCALL_VM_GET_REGION_INFO:
-			*call_ret = vm_get_region_info((region_id)arg0, (vm_region_info *)arg1);
+			*call_ret = user_vm_get_region_info((region_id)arg0, (vm_region_info *)arg1);
 			break;
 		case SYSCALL_THREAD_CREATE_THREAD:
-			*call_ret = thread_create_user_thread((char *)arg0, thread_get_current_thread()->proc->id, (int)arg1, (addr)arg2);
+			*call_ret = user_thread_create_user_thread((char *)arg0, thread_get_current_thread()->proc->id, (int)arg1, (addr)arg2);
 			break;
 		case SYSCALL_THREAD_KILL_THREAD:
 			*call_ret = thread_kill_thread((thread_id)arg0);

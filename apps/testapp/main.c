@@ -131,6 +131,20 @@ int main()
 */
 	}
 #endif
+#if 0
+	{
+		void *buf = (void *)0x60000000;	
+		int fd;
+		int rc;
+		int len = 512;
+
+		fd = sys_open("/boot/testapp", "", STREAM_TYPE_FILE);
+
+		rc = sys_read(fd, buf, 0, &len);
+		printf("rc from read = 0x%x\n", rc);
+		sys_close(fd);
+	}
+#endif
 	printf("exiting w/return code %d\n", rc);
 	return rc;
 }

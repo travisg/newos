@@ -7,6 +7,7 @@
 
 #include <types.h>
 #include <kernel/ktypes.h>
+#include <sys/defines.h>
 
 typedef enum {
 	STREAM_TYPE_NULL = 0,
@@ -36,6 +37,7 @@ typedef struct vm_region_info {
 	addr size;
 	int lock;
 	int wiring;
+	char name[SYS_MAX_OS_NAME_LEN];	
 } vm_region_info;
 
 // args for the create_area funcs
@@ -96,7 +98,6 @@ region_id sys_vm_clone_region(char *name, void **address, int addr_type,
 	region_id source_region, int lock);	
 // mmap file
 int sys_vm_delete_region(region_id id);
-region_id sys_vm_find_region_by_name(const char *name);
 int sys_vm_get_region_info(region_id id, vm_region_info *info);
 
 #endif

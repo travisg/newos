@@ -143,11 +143,21 @@ sem_id sem_create(int count, const char *name)
 	if(sems_active == false)
 		return ERR_SEM_NOT_ACTIVE;
 
-	temp_name = (char *)kmalloc(strlen(name)+1);
-	if(temp_name == NULL)
-		return ERR_NO_MEMORY;
-	strcpy(temp_name, name);
+	if(name) {
+		int name_len = strlen(name);
 
+		temp_name = (char *)kmalloc(min(name_len + 1, SYS_MAX_OS_NAME_LEN));
+		if(temp_name == NULL)
+			return ERR_NO_MEMORY;
+		strncpy(temp_name, name, SYS_MAX_OS_NAME_LEN-1);
+		temp_name[SYS_MAX_OS_NAME_LEN-1] = 0;
+	} else {
+		temp_name = (char *)kmalloc(sizeof("default_sem_name")+1);
+		if(temp_name == NULL)
+			return ERR_NO_MEMORY;
+		strcpy(temp_name, "default_sem_name");		
+	}
+	
 	state = int_disable_interrupts();
 	GRAB_SEM_LIST_LOCK();
 
@@ -560,5 +570,77 @@ static int remove_thread_from_sem(struct thread *t, struct sem_entry *sem, struc
 		sem->count -= delta;
 	}
 	return NO_ERROR;
+}
+
+sem_id user_sem_create(int count, const char *uname)
+{
+	if(uname != NULL) {
+		char name[SYS_MAX_OS_NAME_LEN];
+		int rc;
+
+		if((addr)uname >= KERNEL_BASE && (addr)uname <= KERNEL_TOP)
+			return ERR_VM_BAD_USER_MEMORY;
+
+		rc = user_strncpy(name, uname, SYS_MAX_OS_NAME_LEN-1);
+		if(rc < 0)
+			return rc;
+		name[SYS_MAX_OS_NAME_LEN-1] = 0;
+
+		return sem_create(count, name);
+	} else {
+		return sem_create(count, NULL);
+	}
+}
+
+int user_sem_delete(sem_id id)
+{
+	return sem_delete(id);
+}
+
+int user_sem_delete_etc(sem_id id, int return_code)
+{
+	return sem_delete_etc(id, return_code);
+}
+
+int user_sem_acquire(sem_id id, int count)
+{
+	return sem_acquire(id, count);
+}
+
+int user_sem_acquire_etc(sem_id id, int count, int flags, time_t timeout, int *deleted_retcode)
+{
+	if(deleted_retcode != NULL && ((addr)deleted_retcode >= KERNEL_BASE && (addr)deleted_retcode <= KERNEL_TOP))
+		return ERR_VM_BAD_USER_MEMORY;
+
+	if(deleted_retcode == NULL) {
+		return sem_acquire_etc(id, count, flags, timeout, deleted_retcode);
+	} else {
+		int uretcode;
+		int rc, rc2;
+
+		rc = user_memcpy(&uretcode, deleted_retcode, sizeof(uretcode));
+		if(rc < 0)
+			return rc;
+
+		rc = sem_acquire_etc(id, count, flags, timeout, &uretcode);
+		if(rc < 0)
+			return rc;
+
+		rc2 = user_memcpy(deleted_retcode, &uretcode, sizeof(uretcode));
+		if(rc2 < 0)
+			return rc2;
+
+		return rc;
+	}
+}
+
+int user_sem_release(sem_id id, int count)
+{
+	return sem_release(id, count);
+}
+
+int user_sem_release_etc(sem_id id, int count, int flags)
+{
+	return sem_release_etc(id, count, flags);
 }
 

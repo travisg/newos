@@ -232,6 +232,7 @@ static struct thread *create_thread_struct(const char *name)
 	t->id = atomic_add(&next_thread_id, 1);
 	t->proc = NULL;
 	t->sem_blocking = -1;
+	t->fault_handler = 0;
 	t->kernel_stack_region_id = -1;
 	t->kernel_stack_base = 0;
 	t->user_stack_region_id = -1;
@@ -345,7 +346,7 @@ static thread_id _create_thread(const char *name, proc_id pid, int priority, add
 			sprintf(stack_name, "%s_stack%d", p->name, t->id);
 			t->user_stack_region_id = vm_create_anonymous_region(p->aspace_id, stack_name,
 				(void **)&t->user_stack_base,
-				REGION_ADDR_ANY_ADDRESS, STACK_SIZE, REGION_WIRING_WIRED, LOCK_RW);
+				REGION_ADDR_ANY_ADDRESS, STACK_SIZE, REGION_WIRING_LAZY, LOCK_RW);
 			if(t->user_stack_region_id < 0) {
 				t->user_stack_base -= STACK_SIZE;
 			} else {
@@ -366,6 +367,24 @@ static thread_id _create_thread(const char *name, proc_id pid, int priority, add
 	t->state = THREAD_STATE_SUSPENDED;
 
 	return t->id;
+}
+
+thread_id user_thread_create_user_thread(char *uname, proc_id pid, int priority, addr entry)
+{
+	char name[SYS_MAX_OS_NAME_LEN];
+	int rc;
+
+	if((addr)uname >= KERNEL_BASE && (addr)uname <= KERNEL_TOP)
+		return ERR_VM_BAD_USER_MEMORY;
+	if(entry >= KERNEL_BASE && entry <= KERNEL_TOP)
+		return ERR_VM_BAD_USER_MEMORY;
+
+	rc = user_strncpy(name, uname, SYS_MAX_OS_NAME_LEN-1);
+	if(rc < 0)
+		return rc;
+	name[SYS_MAX_OS_NAME_LEN-1] = 0;
+
+	return thread_create_user_thread(name, pid, priority, entry);
 }
 
 thread_id thread_create_user_thread(char *name, proc_id pid, int priority, addr entry)
@@ -1078,6 +1097,25 @@ static void thread_kthread_exit()
 	thread_exit(0);
 }
 
+int user_thread_wait_on_thread(thread_id id, int *uretcode)
+{
+	int retcode;
+	int rc, rc2;
+
+	if((addr)uretcode >= KERNEL_BASE && (addr)uretcode <= KERNEL_TOP)
+		return ERR_VM_BAD_USER_MEMORY;
+
+	rc = thread_wait_on_thread(id, &retcode);
+	if(rc < 0)
+		return rc;
+
+	rc2 = user_memcpy(uretcode, &retcode, sizeof(retcode));
+	if(rc2 < 0)
+		return rc2;
+	
+	return rc;
+}
+
 int thread_wait_on_thread(thread_id id, int *retcode)
 {
 	sem_id sem;
@@ -1098,6 +1136,25 @@ int thread_wait_on_thread(thread_id id, int *retcode)
 	int_restore_interrupts(state);
 
 	return sem_acquire_etc(sem, 1, 0, 0, retcode);
+}
+
+int user_proc_wait_on_proc(proc_id id, int *uretcode)
+{
+	int retcode;
+	int rc, rc2;
+
+	if((addr)uretcode >= KERNEL_BASE && (addr)uretcode <= KERNEL_TOP)
+		return ERR_VM_BAD_USER_MEMORY;
+
+	rc = proc_wait_on_proc(id, &retcode);
+	if(rc < 0)
+		return rc;
+
+	rc2 = user_memcpy(uretcode, &retcode, sizeof(retcode));
+	if(rc2 < 0)
+		return rc2;
+	
+	return rc;
 }
 
 int proc_wait_on_proc(proc_id id, int *retcode)
@@ -1596,6 +1653,30 @@ static int proc_create_proc2(void)
 
 	// never gets here
 	return 0;
+}
+
+proc_id user_proc_create_proc(const char *upath, const char *uname, int priority)
+{
+	char path[SYS_MAX_PATH_LEN];
+	char name[SYS_MAX_OS_NAME_LEN];
+	int rc;
+
+	if((addr)upath >= KERNEL_BASE && (addr)upath <= KERNEL_TOP)
+		return ERR_VM_BAD_USER_MEMORY;
+	if((addr)uname >= KERNEL_BASE && (addr)uname <= KERNEL_TOP)
+		return ERR_VM_BAD_USER_MEMORY;
+
+	rc = user_strncpy(path, upath, SYS_MAX_PATH_LEN-1);
+	if(rc < 0)
+		return rc;
+	path[SYS_MAX_PATH_LEN-1] = 0;
+
+	rc = user_strncpy(name, uname, SYS_MAX_OS_NAME_LEN-1);
+	if(rc < 0)
+		return rc;
+	name[SYS_MAX_OS_NAME_LEN-1] = 0;
+
+	return proc_create_proc(path, name, priority);
 }
 
 proc_id proc_create_proc(const char *path, const char *name, int priority)

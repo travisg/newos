@@ -77,14 +77,13 @@ SYSCALL6(sys_vm_create_anonymous_region, 22)
 SYSCALL5(sys_vm_clone_region, 23);
 //SYSCALL0(sys_vm_mmap_file, 24);
 SYSCALL1(sys_vm_delete_region, 25);
-SYSCALL1(sys_vm_find_region_by_name, 26);
-SYSCALL2(sys_vm_get_region_info, 27);
-SYSCALL3(sys_thread_create_thread, 28);
-SYSCALL1(sys_thread_kill_thread, 29);
-SYSCALL1(sys_thread_suspend_thread, 30);
-SYSCALL1(sys_thread_resume_thread, 31);
-SYSCALL1(sys_proc_kill_proc, 32);
-SYSCALL0(sys_get_current_proc_id, 33);
+SYSCALL2(sys_vm_get_region_info, 26);
+SYSCALL3(sys_thread_create_thread, 27);
+SYSCALL1(sys_thread_kill_thread, 28);
+SYSCALL1(sys_thread_suspend_thread, 29);
+SYSCALL1(sys_thread_resume_thread, 30);
+SYSCALL1(sys_proc_kill_proc, 31);
+SYSCALL0(sys_get_current_proc_id, 32);
 
 syscall0:
 	int		$99

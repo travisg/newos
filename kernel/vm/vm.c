@@ -379,6 +379,36 @@ err:
 	return err;
 }
 
+region_id user_vm_create_anonymous_region(aspace_id aid, char *uname, void **uaddress, int addr_type,
+	addr size, int wiring, int lock)
+{
+	char name[SYS_MAX_OS_NAME_LEN];
+	void *address;
+	int rc, rc2;
+	
+	if((addr)uname >= KERNEL_BASE && (addr)uname <= KERNEL_TOP)
+		return ERR_VM_BAD_USER_MEMORY;
+
+	rc = user_strncpy(name, uname, SYS_MAX_OS_NAME_LEN-1);
+	if(rc < 0)
+		return rc;
+	name[SYS_MAX_OS_NAME_LEN-1] = 0;
+
+	rc = user_memcpy(&address, uaddress, sizeof(address));
+	if(rc < 0)
+		return rc;
+
+	rc = vm_create_anonymous_region(aid, name, &address, addr_type, size, wiring, lock);
+	if(rc < 0)
+		return rc;
+
+	rc2 = user_memcpy(uaddress, &address, sizeof(address));
+	if(rc2 < 0)
+		return rc2;
+
+	return rc;
+}
+
 region_id vm_create_anonymous_region(aspace_id aid, char *name, void **address, int addr_type,
 	addr size, int wiring, int lock)
 {
@@ -547,6 +577,36 @@ region_id vm_map_physical_memory(aspace_id aid, char *name, void **address, int 
 	return region->id;
 }
 
+region_id user_vm_clone_region(aspace_id aid, char *uname, void **uaddress, int addr_type,
+	region_id source_region, int lock)
+{
+	char name[SYS_MAX_OS_NAME_LEN];
+	void *address;
+	int rc, rc2;
+	
+	if((addr)uname >= KERNEL_BASE && (addr)uname <= KERNEL_TOP)
+		return ERR_VM_BAD_USER_MEMORY;
+
+	rc = user_strncpy(name, uname, SYS_MAX_OS_NAME_LEN-1);
+	if(rc < 0)
+		return rc;
+	name[SYS_MAX_OS_NAME_LEN-1] = 0;
+
+	rc = user_memcpy(&address, uaddress, sizeof(address));
+	if(rc < 0)
+		return rc;
+
+	rc = vm_clone_region(aid, name, &address, addr_type, source_region, lock);
+	if(rc < 0)
+		return rc;
+
+	rc2 = user_memcpy(uaddress, &address, sizeof(address));
+	if(rc2 < 0)
+		return rc2;
+
+	return rc;
+}
+	
 region_id vm_clone_region(aspace_id aid, char *name, void **address, int addr_type,
 	region_id source_region, int lock)
 {
@@ -692,6 +752,25 @@ static void vm_region_release_ref2(vm_region *region)
 	}
 }
 
+int user_vm_get_region_info(region_id id, vm_region_info *uinfo)
+{
+	vm_region_info info;
+	int rc, rc2;
+
+	if((addr)uinfo >= KERNEL_BASE && (addr)uinfo <= KERNEL_TOP)
+		return ERR_VM_BAD_USER_MEMORY;
+
+	rc = vm_get_region_info(id, &info);
+	if(rc < 0)
+		return rc;
+
+	rc2 = user_memcpy(uinfo, &info, sizeof(info));
+	if(rc2 < 0)
+		return rc2;
+
+	return rc;
+}
+
 int vm_get_region_info(region_id id, vm_region_info *info)
 {
 	vm_region *region;
@@ -715,6 +794,8 @@ int vm_get_region_info(region_id id, vm_region_info *info)
 	info->size = region->size;
 	info->lock = region->lock;
 	info->wiring = region->wiring;
+	strncpy(info->name, region->name, SYS_MAX_OS_NAME_LEN-1);
+	info->name[SYS_MAX_OS_NAME_LEN-1] = 0;
 	
 	vm_region_release_ref(region);
 	
@@ -1276,18 +1357,28 @@ int vm_init_postthread(kernel_args *ka)
 	return 0;
 }
 
-int vm_page_fault(addr address, addr fault_address, bool is_write, bool is_user)
+int vm_page_fault(addr address, addr fault_address, bool is_write, bool is_user, addr *newip)
 {
 	int err;
 
 	dprintf("vm_page_fault: page fault at 0x%x, ip 0x%x\n", address, fault_address);
 
+	*newip = 0;
+
 	err = vm_soft_fault(address, is_write, is_user);
 	if(err < 0) {
 		if(!is_user) {
-			// unhandled page fault in the kernel
-			panic("vm_page_fault: unhandled page fault in kernel space at 0x%x, ip 0x%x\n",
-				address, fault_address);
+			struct thread *t = thread_get_current_thread();
+			if(t->fault_handler != 0) {
+				// this will cause the arch dependant page fault handler to 
+				// modify the IP on the interrupt frame or whatever to return
+				// to this address
+				*newip = t->fault_handler;
+			} else {
+				// unhandled page fault in the kernel
+				panic("vm_page_fault: unhandled page fault in kernel space at 0x%x, ip 0x%x\n",
+					address, fault_address);
+			}
 		} else {
 			dprintf("vm_page_fault: killing process 0x%x\n", thread_get_current_thread()->proc->id);
 			proc_kill_proc(thread_get_current_thread()->proc->id);
@@ -1314,9 +1405,9 @@ static int vm_soft_fault(addr address, bool is_write, bool is_user)
 	
 	address = ROUNDOWN(address, PAGE_SIZE);
 	
-	if(address >= KERNEL_BASE && address <= KERNEL_BASE + (KERNEL_SIZE - 1)) {
+	if(address >= KERNEL_BASE && address <= KERNEL_TOP) {
 		aspace = vm_get_kernel_aspace();
-	} else {
+	} else if(address >= USER_BASE && address <= USER_TOP) {
 		aspace = vm_get_current_user_aspace();
 		if(aspace == NULL) {
 			if(is_user == false) {
@@ -1327,6 +1418,10 @@ static int vm_soft_fault(addr address, bool is_write, bool is_user)
 				panic("vm_soft_fault: non kernel thread accessing user memory that doesn't exist!\n");
 			}
 		}
+	} else {
+		// the hit was probably in the 64k DMZ between kernel and user space
+		// this keeps a user space thread from passing a buffer that crosses into kernel space
+		return ERR_VM_PF_FATAL;
 	}
 	map = &aspace->virtual_map;
 	
@@ -1491,4 +1586,18 @@ void vm_increase_max_commit(addr delta)
 	int_restore_interrupts(state);
 }
 
+int user_memcpy(void *to, void *from, size_t size)
+{
+	return arch_cpu_user_memcpy(to, from, size, &thread_get_current_thread()->fault_handler);
+}
+
+int user_strcpy(char *to, const char *from)
+{
+	return arch_cpu_user_strcpy(to, from, &thread_get_current_thread()->fault_handler);
+}
+
+int user_strncpy(char *to, const char *from, size_t size)
+{
+	return arch_cpu_user_strncpy(to, from, size, &thread_get_current_thread()->fault_handler);
+}
 

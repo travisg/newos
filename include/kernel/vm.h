@@ -71,7 +71,8 @@ typedef struct vm_region_info {
 	addr size;
 	int lock;
 	int wiring;
-} vm_region_info;	
+	char name[SYS_MAX_OS_NAME_LEN];
+} vm_region_info;
 
 // vm region
 typedef struct vm_region {
@@ -182,6 +183,16 @@ int vm_get_region_info(region_id id, vm_region_info *info);
 int vm_get_page_mapping(vm_address_space *aspace, addr vaddr, addr *paddr);
 int vm_get_physical_page(addr paddr, addr *vaddr, int flags);
 int vm_put_physical_page(addr vaddr);
+
+int user_memcpy(void *to, void *from, size_t size);
+int user_strcpy(char *to, const char *from);
+int user_strncpy(char *to, const char *from, size_t size);
+
+region_id user_vm_create_anonymous_region(aspace_id aid, char *uname, void **uaddress, int addr_type,
+	addr size, int wiring, int lock);
+region_id user_vm_clone_region(aspace_id aid, char *uname, void **uaddress, int addr_type,
+	region_id source_region, int lock);
+int user_vm_get_region_info(region_id id, vm_region_info *uinfo);
 
 // XXX remove later
 void vm_test();

@@ -8,7 +8,7 @@
 #include <kernel/vm.h>
 
 // Should only be used by vm internals
-int vm_page_fault(addr address, addr fault_address, bool is_write, bool is_user);
+int vm_page_fault(addr address, addr fault_address, bool is_write, bool is_user, addr *newip);
 void vm_increase_max_commit(addr delta);
 
 // allocates memory from the ka structure

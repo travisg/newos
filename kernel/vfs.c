@@ -991,8 +991,27 @@ int sys_stat(const char *path, const char *stream, stream_type stream_type, stru
 	return vfs_stat(path, stream, stream_type, stat, true);
 }
 
-int user_open(const char *path, const char *stream, stream_type stream_type)
+int user_open(const char *upath, const char *ustream, stream_type stream_type)
 {
+	char path[SYS_MAX_PATH_LEN];
+	char stream[SYS_MAX_NAME_LEN];
+	int rc;
+	
+	if((addr)upath >= KERNEL_BASE && (addr)upath <= KERNEL_TOP)
+		return ERR_VM_BAD_USER_MEMORY;
+	if((addr)ustream >= KERNEL_BASE && (addr)ustream <= KERNEL_TOP)
+		return ERR_VM_BAD_USER_MEMORY;
+
+	rc = user_strncpy(path, upath, SYS_MAX_PATH_LEN-1);
+	if(rc < 0)
+		return rc;
+	path[SYS_MAX_PATH_LEN-1] = 0;
+
+	rc = user_strncpy(stream, ustream, SYS_MAX_NAME_LEN-1);
+	if(rc < 0)
+		return rc;
+	stream[SYS_MAX_NAME_LEN-1] = 0;
+	
 	return vfs_open(path, stream, stream_type, false);
 }
 
@@ -1003,16 +1022,54 @@ int user_seek(int fd, off_t pos, seek_type seek_type)
 
 int user_read(int fd, void *buf, off_t pos, size_t *len)
 {
-	return vfs_read(fd, buf, pos, len, false);
+	size_t ulen;
+	int rc;
+	int rc2;
+	
+	if((addr)buf >= KERNEL_BASE && (addr)buf <= KERNEL_TOP)
+		return ERR_VM_BAD_USER_MEMORY;
+
+	rc = user_memcpy(&ulen, len, sizeof(ulen));
+	if(rc < 0)
+		return rc;
+	
+	rc = vfs_read(fd, buf, pos, &ulen, false);
+	if(rc < 0)
+		return rc;
+	
+	rc2 = user_memcpy(len, &ulen, sizeof(ulen));
+	if(rc2 < 0)
+		return rc2;
+
+	return rc;
 }
 
-int user_write(int fd, const void *buf, off_t pos, size_t *len)
+int user_write(int fd, const void *buf, off_t pos, size_t *ulen)
 {
-	return vfs_write(fd, buf, pos, len, false);
+	size_t len;
+	int rc;
+	int rc2;
+	
+	if((addr)buf >= KERNEL_BASE && (addr)buf <= KERNEL_TOP)
+		return ERR_VM_BAD_USER_MEMORY;
+
+	rc = user_memcpy(&len, ulen, sizeof(len));
+	if(rc < 0)
+		return rc;
+	rc = vfs_write(fd, buf, pos, &len, false);
+
+	rc2 = user_memcpy(ulen, &len, sizeof(len));
+	if(rc2 < 0)
+		return rc2;
+
+	return rc;
+
 }
 
 int user_ioctl(int fd, int op, void *buf, size_t len)
 {
+	if((addr)buf >= KERNEL_BASE && (addr)buf <= KERNEL_TOP)
+		return ERR_VM_BAD_USER_MEMORY;
 	return vfs_ioctl(fd, op, buf, len, false);
 }
 
@@ -1021,13 +1078,51 @@ int user_close(int fd)
 	return vfs_close(fd, false);
 }
 
-int user_create(const char *path, const char *stream, stream_type stream_type)
+int user_create(const char *upath, const char *ustream, stream_type stream_type)
 {
+	char path[SYS_MAX_PATH_LEN];
+	char stream[SYS_MAX_NAME_LEN];
+	int rc;
+	
+	if((addr)upath >= KERNEL_BASE && (addr)upath <= KERNEL_TOP)
+		return ERR_VM_BAD_USER_MEMORY;
+	if((addr)ustream >= KERNEL_BASE && (addr)ustream <= KERNEL_TOP)
+		return ERR_VM_BAD_USER_MEMORY;
+
+	rc = user_strncpy(path, upath, SYS_MAX_PATH_LEN-1);
+	if(rc < 0)
+		return rc;
+	path[SYS_MAX_PATH_LEN-1] = 0;
+
+	rc = user_strncpy(stream, ustream, SYS_MAX_NAME_LEN-1);
+	if(rc < 0)
+		return rc;
+	stream[SYS_MAX_NAME_LEN-1] = 0;
+
 	return vfs_create(path, stream, stream_type, false);
 }
 
-int user_stat(const char *path, const char *stream, stream_type stream_type, struct vnode_stat *stat)
+int user_stat(const char *upath, const char *ustream, stream_type stream_type, struct vnode_stat *stat)
 {
+	char path[SYS_MAX_PATH_LEN];
+	char stream[SYS_MAX_NAME_LEN];
+	int rc;
+	
+	if((addr)upath >= KERNEL_BASE && (addr)upath <= KERNEL_TOP)
+		return ERR_VM_BAD_USER_MEMORY;
+	if((addr)ustream >= KERNEL_BASE && (addr)ustream <= KERNEL_TOP)
+		return ERR_VM_BAD_USER_MEMORY;
+
+	rc = user_strncpy(path, upath, SYS_MAX_PATH_LEN-1);
+	if(rc < 0)
+		return rc;
+	path[SYS_MAX_PATH_LEN-1] = 0;
+
+	rc = user_strncpy(stream, ustream, SYS_MAX_NAME_LEN-1);
+	if(rc < 0)
+		return rc;
+	stream[SYS_MAX_NAME_LEN-1] = 0;
+
 	return vfs_stat(path, stream, stream_type, stat, false);
 }
 

@@ -153,6 +153,7 @@ void i386_handle_trap(struct int_frame frame)
 			break;
 		case 14: {
 			unsigned int cr2;
+			addr newip;
 		
 			asm volatile("movl %%cr2, %0;" : "=g" (cr2));
 			
@@ -163,7 +164,13 @@ void i386_handle_trap(struct int_frame frame)
 			}
 			ret = vm_page_fault(cr2, frame.eip,
 				(frame.error_code & 0x2) != 0,
-				(frame.error_code & 0x4) != 0);
+				(frame.error_code & 0x4) != 0,
+				&newip);
+			if(newip != 0) {
+				// the page fault handler wants us to modify the iframe to set the 
+				// IP the cpu will return to to be this ip
+				frame.eip = newip;
+			}
 			break;
 		}
 		case 99: {

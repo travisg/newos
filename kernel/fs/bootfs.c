@@ -560,14 +560,17 @@ int bootfs_read(void *_fs, void *_vnode, void *_cookie, void *buf, off_t pos, si
 				*len = 0;
 				goto err;
 			}
-
 			if(strlen(cookie->u.dir.ptr->name) + 1 > *len) {
 				*len = 0;
 				err = ERR_VFS_INSUFFICIENT_BUF;
 				goto err;
 			}
 			
-			strcpy(buf, cookie->u.dir.ptr->name);
+			err = user_strcpy(buf, cookie->u.dir.ptr->name);
+			if(err < 0) {
+				*len = 0;
+				goto err;
+			}
 			*len = strlen(cookie->u.dir.ptr->name) + 1;
 			
 			cookie->u.dir.ptr = cookie->u.dir.ptr->dir_next;
@@ -592,8 +595,11 @@ int bootfs_read(void *_fs, void *_vnode, void *_cookie, void *buf, off_t pos, si
 				// trim the read
 				*len = cookie->s->u.file.len - pos;
 			}
-			memcpy(buf, cookie->s->u.file.start + pos, *len);
-
+			err = user_memcpy(buf, cookie->s->u.file.start + pos, *len);
+			if(err < 0) {
+				*len = 0;
+				goto err;
+			}
 			cookie->u.file.pos = pos + *len;
 			break;
 		default:

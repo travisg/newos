@@ -21,6 +21,15 @@ int sem_acquire_etc(sem_id id, int count, int flags, time_t timeout, int *delete
 int sem_release(sem_id id, int count);
 int sem_release_etc(sem_id id, int count, int flags);
 
+sem_id user_sem_create(int count, const char *name);
+int user_sem_delete(sem_id id);
+int user_sem_delete_etc(sem_id id, int return_code);
+int user_sem_acquire(sem_id id, int count);
+int user_sem_acquire_etc(sem_id id, int count, int flags, time_t timeout, int *deleted_retcode);
+int user_sem_release(sem_id id, int count);
+int user_sem_release_etc(sem_id id, int count, int flags);
+
+
 int sem_interrupt_thread(struct thread *t);
 
 #endif
