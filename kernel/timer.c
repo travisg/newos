@@ -34,6 +34,15 @@ int timer_init(kernel_args *ka)
 	return 0;
 }
 
+int timer_init_percpu(kernel_args *ka, int cpu_num)
+{
+	// start a hardware timer on this cpu
+	// XXX can we assume this for all architectures?
+	arch_timer_set_hardware_timer(TICK_RATE, HW_TIMER_REPEATING);
+
+	return 0;
+}
+
 // NOTE: expects interrupts to be off
 static void add_event_to_list(struct timer_event *event, struct timer_event * volatile *list)
 {
@@ -64,11 +73,9 @@ int timer_interrupt(void)
 	cpu_ent *cpu = get_curr_cpu_struct();
 	int rc = INT_NO_RESCHEDULE;
 
-	// increment the system timer
+	// cpu 0 gets to increment the system timer
 	if(cpu->info.cpu_num == 0)
 		time_tick(TICK_RATE);
-
-//	dprintf("timer_interrupt: time 0x%Lx, cpu %d\n", system_time(), cpu->info.cpu_num);
 
 	curr_time = system_time_lores();
 

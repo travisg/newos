@@ -92,6 +92,9 @@ int arch_smp_init(kernel_args *ka)
 		vm_create_anonymous_region(vm_get_kernel_aspace_id(), "ioapic", (void *)&ioapic,
 			REGION_ADDR_EXACT_ADDRESS, PAGE_SIZE, REGION_WIRING_WIRED_ALREADY, LOCK_RW|LOCK_KERNEL);
 
+		// set up the local apic on the boot cpu
+		arch_smp_init_percpu(ka, 1);
+
 		int_set_io_interrupt_handler(0xfb, &i386_timer_interrupt, NULL);
 		int_set_io_interrupt_handler(0xfd, &i386_ici_interrupt, NULL);
 		int_set_io_interrupt_handler(0xfe, &i386_smp_error_interrupt, NULL);
@@ -99,6 +102,62 @@ int arch_smp_init(kernel_args *ka)
 	} else {
 		num_cpus = 1;
 	}
+
+	return 0;
+}
+
+static int smp_setup_apic(kernel_args *ka)
+{
+	unsigned int config;
+
+	/* set spurious interrupt vector to 0xff */
+	config = apic_read(APIC_SIVR) & 0xfffffc00;
+	config |= APIC_ENABLE | 0xff;
+	apic_write(APIC_SIVR, config);
+#if 0
+	/* setup LINT0 as ExtINT */
+	config = (apic_read(APIC_LINT0) & 0xffff1c00);
+	config |= APIC_LVT_DM_ExtINT | APIC_LVT_IIPP | APIC_LVT_TM;
+	apic_write(APIC_LINT0, config);
+
+	/* setup LINT1 as NMI */
+	config = (apic_read(APIC_LINT1) & 0xffff1c00);
+	config |= APIC_LVT_DM_NMI | APIC_LVT_IIPP;
+	apic_write(APIC_LINT1, config);
+#endif
+
+	/* setup timer */
+	config = apic_read(APIC_LVTT) & ~APIC_LVTT_MASK;
+	config |= 0xfb | APIC_LVTT_M; // vector 0xfb, timer masked
+	apic_write(APIC_LVTT, config);
+
+	apic_write(APIC_ICRT, 0); // zero out the clock
+
+	config = apic_read(APIC_TDCR) & ~0x0000000f;
+	config |= APIC_TDCR_1; // clock division by 1
+	apic_write(APIC_TDCR, config);
+
+	/* setup error vector to 0xfe */
+	config = (apic_read(APIC_LVT3) & 0xffffff00) | 0xfe;
+	apic_write(APIC_LVT3, config);
+
+	/* accept all interrupts */
+	config = apic_read(APIC_TPRI) & 0xffffff00;
+	apic_write(APIC_TPRI, config);
+
+	config = apic_read(APIC_SIVR);
+	apic_write(APIC_EOI, 0);
+
+//	dprintf("done\n");
+	return 0;
+}
+
+int arch_smp_init_percpu(kernel_args *ka, int cpu_num)
+{
+	// set up the local apic on the current cpu
+	dprintf("arch_smp_init_percpu: setting up the apic on cpu %d", cpu_num);
+	smp_setup_apic(ka);
+
 	return 0;
 }
 
@@ -165,6 +224,9 @@ int arch_smp_set_apic_timer(bigtime_t relative_timeout, int type)
 		config |= APIC_LVTT_TM; // periodic
 
 	apic_write(APIC_LVTT, config);
+
+	dprintf("arch_smp_set_apic_timer: config 0x%x, timeout %Ld, tics/sec %d, tics %d\n", 
+		config, relative_timeout, apic_timer_tics_per_sec, ticks);
 
 	apic_write(APIC_ICRT, ticks); // start it up
 

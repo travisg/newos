@@ -23,6 +23,7 @@ enum {
 };
 
 int smp_init(kernel_args *ka);
+int smp_init_percpu(kernel_args *ka, int cpu_num);
 
 typedef volatile int spinlock_t;
 

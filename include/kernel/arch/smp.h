@@ -9,6 +9,7 @@
 #include <boot/stage2.h>
 
 int arch_smp_init(kernel_args *ka);
+int arch_smp_init_percpu(kernel_args *ka, int cpu_num);
 void arch_smp_send_ici(int target_cpu);
 void arch_smp_send_broadcast_ici(void);
 

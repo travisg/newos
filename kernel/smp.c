@@ -500,3 +500,8 @@ int smp_init(kernel_args *ka)
 	return arch_smp_init(ka);
 }
 
+int smp_init_percpu(kernel_args *ka, int cpu_num)
+{
+	return arch_smp_init_percpu(ka, cpu_num);
+}
+

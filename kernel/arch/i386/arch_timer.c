@@ -44,11 +44,14 @@ static void set_isa_hardware_timer(bigtime_t relative_timeout, int type)
 		out8(next_ticks & 0xff, 0x40);
 		out8((next_ticks >> 8) & 0xff, 0x40);
 	}
+
+	arch_int_enable_io_interrupt(0x20);
 }
 
 static void clear_isa_hardware_timer(void)
 {
-	// XXX do something here
+	// mask out the timer
+	arch_int_disable_io_interrupt(0x20);
 }
 
 static int isa_timer_interrupt(void* data)
@@ -79,8 +82,9 @@ void arch_timer_clear_hardware_timer()
 int arch_init_timer(kernel_args *ka)
 {
 	dprintf("arch_init_timer: entry\n");
-	
+
 	int_set_io_interrupt_handler(0x20, &isa_timer_interrupt, NULL);
+	clear_isa_hardware_timer();
 	// apic timer interrupt set up by smp code
 
 	return 0;

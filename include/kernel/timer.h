@@ -25,6 +25,7 @@ struct timer_event {
 };
 
 int timer_init(kernel_args *ka);
+int timer_init_percpu(kernel_args *ka, int cpu_num);
 int timer_interrupt(void);
 void timer_setup_timer(timer_callback func, void *data, struct timer_event *event);
 int timer_set_event(bigtime_t relative_time, timer_mode mode, struct timer_event *event);

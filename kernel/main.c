@@ -113,6 +113,10 @@ int _start(kernel_args *oldka, int cpu_num)
 		smp_enable_ici(); // ici's were previously being ignored
 		thread_start_threading();
 	} else {
+		smp_init_percpu(&global_kernel_args, cpu_num);
+
+		timer_init_percpu(&global_kernel_args, cpu_num);
+
 		// this is run per cpu for each AP processor after they've been set loose
 		thread_init_percpu(cpu_num);
 	}
@@ -143,6 +147,13 @@ static int main2(void *unused)
 	fixed_devs_init(&global_kernel_args);
 	dev_scan_drivers(&global_kernel_args);
 
+#if 0
+	// XXX remove later
+	{
+		void *foo;
+		module_get(USB_BUS_MODULE_NAME, 0, &foo);
+	}
+#endif
 	net_init_postdev(&global_kernel_args);
 
 	/* remove this later, just a hack for right now */
