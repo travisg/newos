@@ -530,11 +530,12 @@ int thread_suspend_thread(thread_id id)
 			retval = ERR_NOT_ALLOWED;
 		} else if(t->in_kernel == true) {
 			t->pending_signals |= SIG_SUSPEND;
+			retval = NO_ERROR;
 		} else {
 			t->next_state = THREAD_STATE_SUSPENDED;
 			global_resched = true;
+			retval = NO_ERROR;
 		}
-		retval = NO_ERROR;
 	} else {
 		retval = ERR_INVALID_HANDLE;
 	}
