@@ -43,6 +43,7 @@ int fixed_devs_init(kernel_args *ka)
 	rtl8139_dev_init(ka);
 #endif
 	fb_console_dev_init(ka);
+	tty_dev_init(ka);
 
 	return 0;
 }

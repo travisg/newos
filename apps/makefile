@@ -20,6 +20,7 @@ include $(addsuffix /makefile, $(addprefix $(APPS_DIR)/, \
 	top \
 	nettest \
 	irc \
+	consoled \
 ))
 
 

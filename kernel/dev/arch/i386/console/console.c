@@ -188,7 +188,6 @@ static ssize_t _console_write(const void *buf, size_t len)
 		c = &((const char *)buf)[i];
 		switch(*c) {
 			case '\n':
-				cr();
 				lf();
 				break;
 			case '\r':

@@ -23,7 +23,7 @@ int main()
 {
 	setup_io();
 
-	printf("init: Welcome to NewOS!\n");
+	printf("init: Welcome to NewOS!\r\n");
 
 	if(1) {
 		proc_id pid;
@@ -39,16 +39,15 @@ int main()
 	while(1) {
 		proc_id pid;
 
-		pid = sys_proc_create_proc("/boot/bin/shell", "/boot/bin/shell", NULL, 0, 5);
+		pid = sys_proc_create_proc("/boot/bin/consoled", "/boot/bin/consoled", NULL, 0, 5);
 		if(pid >= 0) {
 			int retcode;
-			printf("init: spawned shell, pid 0x%x\n", pid);
+			printf("init: spawned consoled, pid 0x%x\r\n", pid);
 			sys_proc_wait_on_proc(pid, &retcode);
-			printf("init: shell exited with return code %d\n", retcode);
 		}
 	}
 
-	printf("init exiting\n");
+	printf("init exiting\r\n");
 
 	return 0;
 }

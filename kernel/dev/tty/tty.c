@@ -8,7 +8,9 @@
 #include <kernel/heap.h>
 #include <kernel/int.h>
 #include <kernel/vm.h>
+#include <kernel/sem.h>
 #include <kernel/lock.h>
+#include <kernel/dev/fixed.h>
 #include <kernel/fs/devfs.h>
 #include <newos/errors.h>
 
@@ -18,457 +20,409 @@
 #include <string.h>
 #include <stdio.h>
 
-#if 0
-#include "font.h"
+#include "tty_priv.h"
 
-int tty_dev_init(kernel_args *ka);
+#include <newos/tty_priv.h>
 
-#if 0
-// this version makes the sh4 compiler throw up
-#define WRAP(x, limit) ((x) % (limit))
-#define INC_WITH_WRAP(x, limit) WRAP((x) + 1, (limit))
+#if TTY_TRACE
+#define TRACE(x) dprintf x
 #else
-#define WRAP(x, limit) (((x) >= (limit)) ? ((x) - (limit)) : (x))
-#define INC_WITH_WRAP(x, limit) WRAP((x) + 1, (limit))
+#define TRACE(x)
 #endif
 
-enum {
-	CONSOLE_OP_WRITEXY = 2376
-};
+tty_global thetty;
 
-#define TAB_SIZE 8
-#define TAB_MASK 7
-
-struct console_desc {
-	// describe the framebuffer
-	addr fb;
-	addr fb_size;
-	int fb_x;
-	int fb_y;
-	int fb_pixel_bytes;
-
-	// describe the setup we have
-	int rows;
-	int columns;
-
-	// describe the current state
-	int x;
-	int y;
-	int color;
-	int bcolor;
-	int saved_x;
-	int saved_y;
-
-	// text buffers
-	char *buf;
-	int first_line;
-	int num_lines;
-	char **lines;
-	uint8 *dirty_lines;
-	void *render_buf;
-
-	// renderer function
-	void (*render_line)(char *line, int line_num);
-
-	mutex lock;
-	int keyboard_fd;
-};
-
-static struct console_desc console;
-
-static void render_line16(char *line, int line_num)
+tty_desc *allocate_new_tty(void)
 {
-	int x;
-	int y;
 	int i;
-	uint16 *fb_spot = (uint16 *)(console.fb + line_num * CHAR_HEIGHT * console.fb_x * 2);
+	tty_desc *tty = NULL;
 
-	for(y = 0; y < CHAR_HEIGHT; y++) {
-		uint16 *render_spot = console.render_buf;
-		for(x = 0; x < console.columns; x++) {
-			if(line[x]) {
-				uint8 bits = FONT[CHAR_HEIGHT * line[x] + y];
-				for(i = 0; i < CHAR_WIDTH; i++) {
-					if(bits & 1) *render_spot = console.color;
-					else *render_spot = console.bcolor;
-					bits >>= 1;
-					render_spot++;
-				}
-			} else {
-				// null character, ignore the rest of the line
-				memset(render_spot, 0, (console.columns - x) * CHAR_WIDTH * 2);
-				break;
-			}
+	mutex_lock(&thetty.lock);
+
+	for(i=0; i<NUM_TTYS; i++) {
+		if(thetty.ttys[i].inuse == false) {
+			ASSERT(thetty.ttys[i].ref_count == 0);
+			thetty.ttys[i].inuse = true;
+			thetty.ttys[i].ref_count = 1;
+			tty = &thetty.ttys[i];
+			break;
 		}
-		memcpy(fb_spot, console.render_buf, console.fb_x * 2);
-		fb_spot += console.fb_x;
-	}
-}
-
-static void render_line32(char *line, int line_num)
-{
-	int x;
-	int y;
-	int i;
-	uint32 *fb_spot = (uint32 *)(console.fb + line_num * CHAR_HEIGHT * console.fb_x * 4);
-
-	for(y = 0; y < CHAR_HEIGHT; y++) {
-		uint32 *render_spot = console.render_buf;
-		for(x = 0; x < console.columns; x++) {
-			if(line[x]) {
-				uint8 bits = FONT[CHAR_HEIGHT * line[x] + y];
-				for(i = 0; i < CHAR_WIDTH; i++) {
-					if(bits & 1) *render_spot = console.color;
-					else *render_spot = console.bcolor;
-					bits >>= 1;
-					render_spot++;
-				}
-			} else {
-				// null character, ignore the rest of the line
-				memset(render_spot, 0, (console.columns - x) * CHAR_WIDTH * 4);
-				break;
-			}
-
-		}
-		memcpy(fb_spot, console.render_buf, console.fb_x * 4);
-		fb_spot += console.fb_x;
-	}
-}
-
-// scans through the lines, seeing if any needs to be repainted
-static void repaint()
-{
-	int i;
-	int line_num;
-
-	line_num = console.first_line;
-	for(i = 0; i < console.rows; i++) {
-//		dprintf("line_num = %d\n", line_num);
-		if(console.dirty_lines[line_num]) {
-//			dprintf("repaint(): rendering line %d %d\n", line_num, i);
-			console.render_line(console.lines[line_num], i);
-			console.dirty_lines[line_num] = 0;
-		}
-		line_num = INC_WITH_WRAP(line_num, console.num_lines);
-	}
-}
-
-static void scrup(void)
-{
-	int i;
-	int line_num;
-	int last_line;
-
-	// move the pointer to the top line down one
-	console.first_line = INC_WITH_WRAP(console.first_line, console.num_lines);
-
-//	dprintf("scrup: first_line now %d\n", console.first_line);
-
-	line_num = console.first_line;
-	for(i=0; i<console.rows; i++) {
-		console.dirty_lines[line_num] = 1;
-		line_num = INC_WITH_WRAP(line_num, console.num_lines);
 	}
 
-	// clear out the last line
-	last_line = WRAP(console.first_line + console.rows, console.num_lines);
-	console.lines[last_line][0] = 0;
+	mutex_unlock(&thetty.lock);
+
+	return tty;
 }
 
-static void lf(void)
+void inc_tty_ref(tty_desc *tty)
 {
-	if(console.y + 1 < console.rows) {
-		console.y++;
-		return;
-	}
-	scrup();
+	mutex_lock(&thetty.lock);
+	tty->ref_count++;
+	if(tty->ref_count == 1)
+		tty->inuse = true;
+	mutex_unlock(&thetty.lock);
 }
 
-static void cr(void)
+void dec_tty_ref(tty_desc *tty)
 {
-	console.x = 0;
+	mutex_lock(&thetty.lock);
+	tty->ref_count--;
+	if(tty->ref_count == 0)
+		tty->inuse = false;
+	mutex_unlock(&thetty.lock);
 }
 
-static void del(void)
+static int tty_insert_char(struct line_buffer *lbuf, char c, bool move_line_start)
 {
-	int target_line = WRAP(console.first_line + console.y, console.num_lines);
+	bool was_empty = (AVAILABLE_READ(lbuf) == 0);
 
-	if(console.x > 0) {
-		console.x--;
-		console.lines[target_line][console.x] = ' ';
-		console.dirty_lines[target_line] = 1;
-	}
-}
-
-static void save_cur(void)
-{
-	console.saved_x = console.x;
-	console.saved_y = console.y;
-}
-
-static void restore_cur(void)
-{
-	console.x = console.saved_x;
-	console.y = console.saved_y;
-}
-
-static char console_putch(const char c)
-{
-	int target_line;
-
-	if(console.x+1 >= console.columns) {
-		cr();
-		lf();
-	}
-
-	target_line = WRAP(console.first_line + console.y, console.num_lines);
-//	dprintf("target_line = %d\n", target_line);
-	console.lines[target_line][console.x++] = c;
-	console.lines[target_line][console.x] = 0;
-	console.dirty_lines[target_line] = 1;
-
- 	return c;
-}
-
-static void tab(void)
-{
-	console.x = (console.x + TAB_SIZE) & ~TAB_MASK;
-	if (console.x >= console.columns) {
-		console.x -= console.columns;
-		lf();
-	}
-}
-
-static int console_open(dev_ident ident, dev_cookie *cookie)
-{
-	return 0;
-}
-
-static int console_freecookie(dev_cookie cookie)
-{
-	return 0;
-}
-
-static int console_seek(dev_cookie cookie, off_t pos, seek_type st)
-{
-//	dprintf("console_seek: entry\n");
-
-	return ERR_NOT_ALLOWED;
-}
-
-static int console_close(dev_cookie cookie)
-{
-//	dprintf("console_close: entry\n");
+	// poke data into the endpoint
+	lbuf->buffer[lbuf->head] = c;
+	INC_HEAD(lbuf);
+	if(move_line_start)
+		lbuf->line_start = lbuf->head;
+	if(was_empty && AVAILABLE_READ(lbuf) > 0)
+		sem_release(lbuf->read_sem, 1);
 
 	return 0;
 }
 
-static ssize_t console_read(dev_cookie cookie, void *buf, off_t pos, ssize_t len)
-{
-	return sys_read(console.keyboard_fd, buf, 0, len);
-}
-
-static ssize_t _console_write(const void *buf, size_t len)
-{
-	size_t i;
-	const char *c;
-
-	for(i=0; i<len; i++) {
-		c = &((const char *)buf)[i];
-		switch(*c) {
-			case '\n':
-				cr();
-				lf();
-				break;
-			case '\r':
-				cr();
-				break;
-			case 0x8: // backspace
-				del();
-				break;
-			case '\t': // tab
-				tab();
-				break;
-			case '\0':
-				break;
-			default:
-				console_putch(*c);
-		}
-	}
-	return len;
-}
-
-static ssize_t console_write(dev_cookie cookie, const void *buf, off_t pos, ssize_t len)
-{
-	ssize_t err;
-
-//	dprintf("console_write: entry, len = %d\n", len);
-
-	mutex_lock(&console.lock);
-
-	err = _console_write(buf, len);
-//	update_cursor(x, y);
-	repaint();
-
-	mutex_unlock(&console.lock);
-
-	return err;
-}
-
-static int console_ioctl(dev_cookie cookie, int op, void *buf, size_t len)
+int tty_ioctl(tty_desc *tty, int op, void *buf, size_t len)
 {
 	int err;
 
+	mutex_lock(&tty->lock);
+
 	switch(op) {
-		case CONSOLE_OP_WRITEXY: {
-			int x,y;
-			mutex_lock(&console.lock);
+		case _TTY_IOCTL_GET_TTY_NUM:
+			err = tty->index;
+			break;
+		case _TTY_IOCTL_GET_TTY_FLAGS: {
+			struct tty_flags flags;
 
-			x = ((int *)buf)[0];
-			y = ((int *)buf)[1];
+			flags.input_flags = tty->buf[ENDPOINT_MASTER_WRITE].flags;
+			flags.output_flags = tty->buf[ENDPOINT_SLAVE_WRITE].flags;
 
-			save_cur();
-//			gotoxy(x, y);
-			if(_console_write(((char *)buf) + 2*sizeof(int), len - 2*sizeof(int)) > 0)
-				err = 0; // we're okay
-			else
-				err = ERR_IO_ERROR;
-			restore_cur();
-			mutex_unlock(&console.lock);
+			err = user_memcpy(buf, &flags, sizeof(flags));
+			if(err < 0)
+				break;
+
+			err = 0;
+			break;
+		}
+		case _TTY_IOCTL_SET_TTY_FLAGS: {
+			struct tty_flags flags;
+
+			err = user_memcpy(&flags, buf, sizeof(flags));
+			if(err < 0)
+				break;
+
+			tty->buf[ENDPOINT_MASTER_WRITE].flags = flags.input_flags;
+			tty->buf[ENDPOINT_SLAVE_WRITE].flags = flags.output_flags;
+
+			err = 0;
 			break;
 		}
 		default:
 			err = ERR_INVALID_ARGS;
 	}
 
+	mutex_unlock(&tty->lock);
+
 	return err;
 }
 
-static struct dev_calls console_hooks = {
-	&console_open,
-	&console_close,
-	&console_freecookie,
-	&console_seek,
-	&console_ioctl,
-	&console_read,
-	&console_write,
-	/* cannot page from /dev/console */
-	NULL,
-	NULL,
-	NULL
-};
-
-int fb_console_dev_init(kernel_args *ka)
+ssize_t tty_read(tty_desc *tty, void *buf, ssize_t len, int endpoint)
 {
-	if(ka->fb.enabled) {
-		int i;
+	struct line_buffer *lbuf;
+	ssize_t bytes_read = 0;
+	ssize_t data_len;
+	int err;
 
-		dprintf("fb_console_dev_init: framebuffer found at 0x%lx, x %d, y %d, bit depth %d\n",
-			ka->fb.mapping.start, ka->fb.x_size, ka->fb.y_size, ka->fb.bit_depth);
-
-		memset(&console, 0, sizeof(console));
-
-		if(ka->fb.already_mapped) {
-			console.fb = ka->fb.mapping.start;
-		} else {
-			vm_map_physical_memory(vm_get_kernel_aspace_id(), "vesa_fb", (void *)&console.fb, REGION_ADDR_ANY_ADDRESS,
-				ka->fb.mapping.size, LOCK_RW|LOCK_KERNEL, ka->fb.mapping.start);
-		}
-
-		console.fb_x = ka->fb.x_size;
-		console.fb_y = ka->fb.y_size;
-		console.fb_pixel_bytes = ka->fb.bit_depth / 8;
-		console.fb_size = ka->fb.mapping.size;
-
-		switch(console.fb_pixel_bytes) {
-			case 2:
-				console.render_line = &render_line16;
-				console.color = 0xffff;
-				console.bcolor = 0;
-				break;
-			case 4:
-				console.render_line = &render_line32;
-				console.color = 0x00ffffff;
-				console.bcolor = 0;
-				break;
-			case 1:
-			default:
-				return 0;
-		}
-
-		dprintf("framebuffer mapped at 0x%lx\n", console.fb);
-
-		// figure out the number of rows/columns we have
-		console.rows = console.fb_y / CHAR_HEIGHT;
-		console.columns = console.fb_x / CHAR_WIDTH;
-		dprintf("%d rows %d columns\n", console.rows, console.columns);
-
-		console.x = 0;
-		console.y = 0;
-		console.saved_x = 0;
-		console.saved_y = 0;
-
-		dprintf("console %p\n", &console);
-
-		// allocate some memory for this
-		console.render_buf = kmalloc(console.fb_x * console.fb_pixel_bytes);
-		memset((void *)console.render_buf, 0, console.fb_x * console.fb_pixel_bytes);
-		console.buf = kmalloc(console.rows * (console.columns+1));
-		memset(console.buf, 0, console.rows * (console.columns+1));
-		console.lines = kmalloc(console.rows * sizeof(char *));
-		console.dirty_lines = kmalloc(console.rows);
-		// set up the line pointers
-		for(i=0; i<console.rows; i++) {
-			console.lines[i] = (char *)((addr)console.buf + i*(console.columns+1));
-			console.dirty_lines[i] = 1;
-		}
-		console.num_lines = console.rows;
-		console.first_line = 0;
-
-		repaint();
-
-		mutex_init(&console.lock, "console_lock");
-		console.keyboard_fd = sys_open("/dev/keyboard", STREAM_TYPE_DEVICE, 0);
-		if(console.keyboard_fd < 0)
-			panic("fb_console_dev_init: error opening /dev/keyboard\n");
-
-		// create device node
-		devfs_publish_device("console", NULL, &console_hooks);
-
-#if 0
-{
-	int x, y;
-
-	for(y=0; y<console.fb_y; y++) {
-		uint16 row[console.fb_x];
-		for(x = 0; x<console.fb_x; x++) {
-			row[x] = x;
-		}
-		dprintf("%d\n", y);
-		memcpy(console.fb + y*console.fb_x*2, row, sizeof(row));
+	if(len < 0) {
+		bytes_read = ERR_INVALID_ARGS;
+		goto err;
 	}
-	panic("foo\n");
+	if(len == 0) {
+		bytes_read = 0;
+		goto err;
+	}
+
+	ASSERT(endpoint == ENDPOINT_MASTER_READ || endpoint == ENDPOINT_SLAVE_READ);
+	lbuf = &tty->buf[endpoint];
+
+	// wait for data in the buffer
+	err = sem_acquire_etc(lbuf->read_sem, 1, SEM_FLAG_INTERRUPTABLE, 0, NULL);
+	if(err == ERR_SEM_INTERRUPTED)
+		return err;
+
+	mutex_lock(&tty->lock);
+
+	// quick sanity check
+	ASSERT(lbuf->len > 0);
+	ASSERT(lbuf->head < lbuf->len);
+	ASSERT(lbuf->tail < lbuf->len);
+	ASSERT(lbuf->line_start < lbuf->len);
+
+	// figure out how much data is ready to be read
+	data_len = AVAILABLE_READ(lbuf);
+	len = min(data_len, len);	
+
+	ASSERT(len > 0);
+
+	while(len > 0) {
+		ssize_t copy_len = len;
+
+		if(lbuf->tail + copy_len > lbuf->len) {
+			copy_len = lbuf->len - lbuf->tail;
+		}
+
+		err = user_memcpy((char *)buf + bytes_read, lbuf->buffer + lbuf->tail, copy_len);
+		if(err < 0) {
+			sem_release(lbuf->read_sem, 1);
+			goto err;
+		}
+
+		// update the buffer pointers
+		lbuf->tail = (lbuf->tail + copy_len) % lbuf->len;
+		len -= copy_len;
+		bytes_read += copy_len;
+	}
+
+	// is there more data available?
+	if(AVAILABLE_READ(lbuf) > 0)
+		sem_release(lbuf->read_sem, 1);
+
+	// did it used to be full?
+	if(data_len == lbuf->len - 1)
+		sem_release(lbuf->write_sem, 1);
+
+err:
+	mutex_unlock(&tty->lock);
+
+	return bytes_read;
 }
-#endif
 
-#if 0
+ssize_t tty_write(tty_desc *tty, const void *buf, ssize_t len, int endpoint)
 {
-		int i,j,k;
+	struct line_buffer *lbuf;
+	struct line_buffer *other_lbuf;
+	int buf_pos = 0;
+	ssize_t bytes_written = 0;
+	ssize_t data_len;
+	int err;
+	char c;
 
-		for(k=0;; k++) {
-			for(i=0; i<ka->fb.y_size; i++) {
-				uint16 row[ka->fb.x_size];
-				for(j=0; j<ka->fb.x_size; j++) {
-					uint8 byte = j+i+k;
-					row[j] = byte;
+	if(len < 0) {
+		bytes_written = ERR_INVALID_ARGS;
+		goto err;
+	}
+	if(len == 0) {
+		bytes_written = 0;
+		goto err;
+	}
+
+	ASSERT(endpoint == ENDPOINT_MASTER_WRITE || endpoint == ENDPOINT_SLAVE_WRITE);
+	lbuf = &tty->buf[endpoint];
+	other_lbuf = &tty->buf[(endpoint == ENDPOINT_MASTER_WRITE) ? ENDPOINT_SLAVE_WRITE : ENDPOINT_MASTER_WRITE];
+
+restart:
+	// wait on space in the circular buffer
+	err = sem_acquire_etc(lbuf->write_sem, 1, SEM_FLAG_INTERRUPTABLE, 0, NULL);
+	if(err == ERR_SEM_INTERRUPTED) {
+		bytes_written = err;
+		goto err;
+	}
+
+	mutex_lock(&tty->lock);
+	
+	// quick sanity check
+	ASSERT(lbuf->len > 0);
+	ASSERT(lbuf->head < lbuf->len);
+	ASSERT(lbuf->tail < lbuf->len);
+	ASSERT(lbuf->line_start < lbuf->len);
+
+	if(AVAILABLE_WRITE(lbuf) == 0)
+		goto exit_loop;
+
+tty_write_special_state:
+	// process any pending state
+	while(lbuf->state != TTY_STATE_NORMAL) {
+		bool wrote_char = false;
+
+		TRACE(("tty_write: special state machine: tty %p, lbuf %p, state %d\n", tty, lbuf, lbuf->state));
+		TRACE(("\tlbuf %p, head %d, tail %d, line_start %d\n", lbuf, lbuf->head, lbuf->tail, lbuf->line_start));
+		switch(lbuf->state) {
+			case TTY_STATE_NORMAL:
+				// fall through and enter the regular write routine
+				break;
+			case TTY_STATE_WRITE_CR:
+				// stick it in the ring buffer
+				c = '\r';
+				tty_insert_char(lbuf, c, false);
+				wrote_char = true;
+
+				lbuf->state = TTY_STATE_WRITE_LF;
+				break;
+			case TTY_STATE_WRITE_LF:
+				// stick a LF in the ring buffer
+				c = '\n';
+				tty_insert_char(lbuf, c, true); // move the line ptr up, since we are done with the line
+				wrote_char = true;
+				
+				lbuf->state = TTY_STATE_NORMAL;
+				break;
+			default:
+				panic("tty_write: unhandled tty state %d on tty %p\n", lbuf->state, tty);
+		}
+		if(wrote_char) {
+			if(lbuf->flags & TTY_FLAG_ECHO) {
+				if(AVAILABLE_WRITE(other_lbuf) == 0) {
+					// XXX deal with this case					
 				}
-				memcpy(console.fb + i*ka->fb.x_size*2, row, sizeof(row));
+				tty_insert_char(other_lbuf, c, true);
+			}
+		}				
+		if(AVAILABLE_WRITE(lbuf) == 0) 
+			goto exit_loop;
+
+	}	
+
+	while(buf_pos < len) {
+		bool wrote_char = false;
+
+		TRACE(("tty_write: regular loop: tty %p, lbuf %p, buf_pos %d, len %d\n", tty, lbuf, buf_pos, len));
+		TRACE(("\tlbuf %p, head %d, tail %d, line_start %d\n", lbuf, lbuf->head, lbuf->tail, lbuf->line_start));
+		if(AVAILABLE_WRITE(lbuf) == 0)
+			goto exit_loop;
+		// process this data one at a time
+		err = user_memcpy(&c, (char *)buf + buf_pos, sizeof(c));	// XXX make this more efficient
+		if(err < 0) {
+			sem_release(lbuf->write_sem, 1);
+			goto err;
+		}
+		buf_pos++; // advance to next character
+		bytes_written++;
+
+		if(lbuf->flags & TTY_FLAG_CANON) {
+			// do line editing
+			switch(c) {
+				case '\n': // end of line
+					if(lbuf->flags & TTY_FLAG_NLCR) {
+						lbuf->state = TTY_STATE_WRITE_CR;
+						goto tty_write_special_state;
+					}
+					// fall through and write it normally
+				default:
+					// stick it in the ring buffer
+					tty_insert_char(lbuf, c, false);
+					wrote_char = true;
+					break;
+				case 0x08: // backspace
+					// back the head pointer up one if it can
+					if(lbuf->head != lbuf->line_start) {
+						DEC_HEAD(lbuf);
+						wrote_char = true;
+					}
+					break;
+				case '\r': // CR
+				case 0:
+					// eat it
+					break;
+			}
+		} else {
+			// no line editing
+			switch(c) {
+				case '\n': // end of line
+					if(lbuf->flags & TTY_FLAG_NLCR) {
+						lbuf->state = TTY_STATE_WRITE_CR;
+						goto tty_write_special_state;
+					}					
+					// fall through and write it normally
+				default:
+					tty_insert_char(lbuf, c, true);
+					wrote_char = true;
+					break;
+			}
+					
+		}
+		if(wrote_char) {
+			if(lbuf->flags & TTY_FLAG_ECHO) {
+				if(AVAILABLE_WRITE(other_lbuf) == 0) {
+					// XXX deal with this case					
+				}
+				tty_insert_char(other_lbuf, c, true);
 			}
 		}
+	}
+
+exit_loop:
+	// is there more space available?
+	if(AVAILABLE_WRITE(lbuf) > 0)
+		sem_release(lbuf->write_sem, 1);
+
+	// did we process everything for the request?
+	if(buf_pos < len) {
+		mutex_unlock(&tty->lock);
+		goto restart;	
+	}
+
+err:
+	mutex_unlock(&tty->lock);
+	
+	return bytes_written;
 }
-#endif
+
+int tty_dev_init(kernel_args *ka)
+{
+	int i, j;
+	int err;
+
+	// setup the global tty structure
+	memset(&thetty, 0, sizeof(thetty));
+	err = mutex_init(&thetty.lock, "tty master lock");
+	if(err < 0)
+		panic("could not create master tty lock\n");
+
+	// set up the individual tty nodes
+	for(i=0; i<NUM_TTYS; i++) {
+		thetty.ttys[i].inuse = false;
+		thetty.ttys[i].index = i;
+		thetty.ttys[i].ref_count = 0;
+		if(mutex_init(&thetty.ttys[i].lock, "tty lock") < 0)
+			panic("couldn't create tty lock\n");
+
+		// set up the two buffers (one for each direction)
+		for(j=0; j<2; j++) {
+			thetty.ttys[i].buf[j].read_sem = sem_create(0, "tty read sem");
+			if(thetty.ttys[i].buf[j].read_sem < 0)
+				panic("couldn't create tty read sem\n");
+			thetty.ttys[i].buf[j].write_sem = sem_create(1, "tty write sem");
+			if(thetty.ttys[i].buf[j].write_sem < 0)
+				panic("couldn't create tty write sem\n");
+
+			thetty.ttys[i].buf[j].head = 0;
+			thetty.ttys[i].buf[j].tail = 0;
+			thetty.ttys[i].buf[j].line_start = 0;
+			thetty.ttys[i].buf[j].len = TTY_BUFFER_SIZE;
+			thetty.ttys[i].buf[j].state = TTY_STATE_NORMAL;
+			if(j == ENDPOINT_SLAVE_WRITE)
+				thetty.ttys[i].buf[j].flags = TTY_FLAG_NLCR; // slave writes to this one, translate LR to CRLF
+			else if(j == ENDPOINT_MASTER_WRITE)
+				thetty.ttys[i].buf[j].flags = TTY_FLAG_CANON | TTY_FLAG_ECHO | TTY_FLAG_NLCR; // master writes into this one. do line editing and echo back
+		}
+	}
+
+	// create device node
+	devfs_publish_device("tty/master", NULL, &ttym_hooks);
+
+	for(i=0; i<NUM_TTYS; i++) {
+		char buf[128];
+
+		sprintf(buf, "tty/slave/%d", i);
+		devfs_publish_device(buf, &thetty.ttys[i], &ttys_hooks);
 	}
 
 	return 0;
 }
-#endif
+

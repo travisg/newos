@@ -22,6 +22,9 @@ static void display_l(const char *filename, struct file_stat *stat)
 		case STREAM_TYPE_DIR:
 			type = "DIR ";
 			break;
+		case STREAM_TYPE_PIPE:
+			type = "PIPE";
+			break;
 		default:
 			type = "UNKN";
 	}

@@ -13,5 +13,6 @@ int fixed_devs_init(kernel_args *ka);
 int null_dev_init(kernel_args *ka);
 int zero_dev_init(kernel_args *ka);
 int fb_console_dev_init(kernel_args *ka);
+int tty_dev_init(kernel_args *ka);
 
 #endif
