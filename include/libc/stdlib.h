@@ -61,6 +61,15 @@ void  srand(unsigned);
 long  random(void);
 void  srandom(unsigned long);
 
+/* getopt related items */
+extern char *optarg;
+extern int optind;
+extern int optopt;
+extern int opterr;
+extern int optreset;
+
+int getopt(int argc, char * const *argv, const char *optstring);
+
 #if !KERNEL
 void abort(void);
 void exit(int);
