@@ -34,18 +34,20 @@ rldmain(void *arg)
 {
 	int retval;
 	unsigned long entry;
-	struct uspace_prog_args_t *rld_args= (struct uspace_prog_args_t *)arg;
+	struct uspace_prog_args_t *uspa= (struct uspace_prog_args_t *)arg;
 
 	rldheap_init();
 
 	entry= 0;
 
-	rld_args->rld_export= &exports;
+	uspa->rld_export= &exports;
 
-	load_program(rld_args->prog_path, (void**)&entry);
+	rldelf_init(uspa);
+
+	load_program(uspa->prog_path, (void**)&entry);
 
 	if(entry) {
-		retval= ((int(*)(void*))(entry))(rld_args);
+		retval= ((int(*)(void*))(entry))(uspa);
 	} else {
 		return -1;
 	}

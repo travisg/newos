@@ -9,6 +9,7 @@
 #include <sys/errors.h>
 #include <sys/elf32.h>
 #include <sys/syscalls.h>
+#include <kernel/user_runtime.h>
 #include <kernel/arch/cpu.h>
 
 #include "rld_priv.h"
@@ -27,8 +28,9 @@ enum {
 	RFLAG_RW             = 0x0001,
 	RFLAG_ANON           = 0x0002,
 
-	RFLAG_SORTED         = 0x0800,
-	RFLAG_SYMBOLIC       = 0x1000,
+	RFLAG_SORTED         = 0x0400,
+	RFLAG_SYMBOLIC       = 0x0800,
+	RFLAG_RELOCATED      = 0x1000,
 	RFLAG_PROTECTED      = 0x2000,
 	RFLAG_INITIALIZED    = 0x4000,
 	RFLAG_NEEDAGIRLFRIEND= 0x8000
@@ -97,6 +99,7 @@ static image_queue_t loaded_images= { 0, 0 };
 static unsigned      loaded_image_count= 0;
 static unsigned      imageid_count= 0;
 
+static struct uspace_prog_args_t const *uspa;
 
 
 #define STRING(image, offset) ((char *)(&(image)->strtab[(offset)]))
@@ -549,8 +552,31 @@ parse_dynamic_segment(image_t *image)
 }
 
 static
-struct
-Elf32_Sym *find_symbol(image_t **shimg, const char *name)
+struct Elf32_Sym *
+find_symbol_xxx(image_t *img, const char *name)
+{
+	unsigned int hash;
+	unsigned int i;
+
+	if(img->dynamic_ptr) {
+		hash = elf_hash(name) % HASHTABSIZE(img);
+		for(i = HASHBUCKETS(img)[hash]; i != STN_UNDEF; i = HASHCHAINS(img)[i]) {
+			if(img->syms[i].st_shndx!= SHN_UNDEF) {
+				if((ELF32_ST_BIND(img->syms[i].st_info)== STB_GLOBAL) || (ELF32_ST_BIND(img->syms[i].st_info)== STB_WEAK)) {
+					if(!strcmp(SYMNAME(img, &img->syms[i]), name)) {
+						return &img->syms[i];
+					}
+				}
+			}
+		}
+	}
+
+	return NULL;
+}
+
+static
+struct Elf32_Sym *
+find_symbol(image_t **shimg, const char *name)
 {
 	image_t *iter;
 	unsigned int hash;
@@ -717,6 +743,11 @@ relocate_image(image_t *image)
 {
 	int res = NO_ERROR;
 	int i;
+
+	if(image->flags & RFLAG_RELOCATED) {
+		return true;
+	}
+	image->flags|= RFLAG_RELOCATED;
 
 	// deal with the rels first
 	if(image->rel) {
@@ -892,16 +923,28 @@ init_dependencies(image_t *img, bool init_head)
 
 	for(i= 0; i< slot; i++) {
 		addr _initf= init_list[i]->entry_point;
-		void (*initf)(void)= (void(*)(void))(_initf);
+		libinit_f *initf= (libinit_f *)(_initf);
 
 		if(initf) {
-			initf();
+			initf(init_list[i]->imageid, uspa);
 		}
 	}
 
 	rldfree(init_list);
 }
 
+
+/*
+ * exported functions:
+ *
+ *	+ load_program()
+ *	+ load_library()
+ *	+ load_addon()
+ *	+ unload_program()
+ *	+ unload_library()
+ *	+ unload_addon()
+ *	+ dynamic_symbol()
+ */
 dynmodule_id
 load_program(char const *path, void **entry)
 {
@@ -941,7 +984,12 @@ load_library(char const *path)
 	image_t *iter;
 
 
-	image = load_container(path, NEWOS_MAGIC_APPNAME, true);
+	image = find_image(path);
+	if(image) {
+		return image->imageid;
+	}
+
+	image = load_container(path, path, false);
 
 	iter= loaded_images.head;
 	while(iter) {
@@ -960,7 +1008,37 @@ load_library(char const *path)
 		iter= iter->next;
 	};
 
-	init_dependencies(loaded_images.head, true);
+	init_dependencies(image, true);
 
 	return image->imageid;
+}
+
+void *
+dynamic_symbol(dynmodule_id imid, char const *symname)
+{
+	image_t *iter;
+
+	iter= loaded_images.head;
+	while(iter) {
+		if(iter->imageid== imid) {
+			struct Elf32_Sym *sym= find_symbol_xxx(iter, symname);
+
+			if(sym) {
+				return (void*)(sym->st_value + iter->regions[0].delta);
+			}
+		}
+
+		iter= iter->next;
+	}
+
+	return NULL;
+}
+
+/*
+ * init routine, just get hold of the uspa args
+ */
+void
+rldelf_init(struct uspace_prog_args_t const *_uspa)
+{
+	uspa= _uspa;
 }

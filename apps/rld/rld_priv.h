@@ -8,6 +8,7 @@
 
 
 #include <types.h>
+#include <kernel/user_runtime.h>
 
 
 #define NEWOS_MAGIC_APPNAME	"__NEWOS_APP__"
@@ -18,9 +19,14 @@ int rldmain(void *arg);
 dynmodule_id load_program(char const *path, void **entry);
 dynmodule_id load_library(char const *path);
 dynmodule_id load_addon(char const *path);
-dynmodule_id unload_program(char const *path, void **entry);
-dynmodule_id unload_library(char const *path, void **entry);
-dynmodule_id unload_addon(char const *path, void **entry);
+dynmodule_id unload_program(char const *path);
+dynmodule_id unload_library(char const *path);
+dynmodule_id unload_addon(char const *path);
+
+void *dynamic_symbol(dynmodule_id imid, char const *symbol);
+
+
+void  rldelf_init(struct uspace_prog_args_t const *uspa);
 
 void  rldheap_init(void);
 void *rldalloc(size_t);

@@ -11,7 +11,7 @@ export_dl_open(char const *name, unsigned flags)
 	(void)(name);
 	(void)(flags);
 
-	return -1;
+	return load_library(name);
 }
 
 int
@@ -30,5 +30,5 @@ export_dl_sym(int lib, char const *sym, unsigned flags)
 	(void)(sym);
 	(void)(flags);
 
-	return 0;
+	return dynamic_symbol(lib, sym);
 }

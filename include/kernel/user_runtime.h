@@ -35,5 +35,7 @@ struct uspace_prog_args_t
 	struct rld_export_t *rld_export;
 };
 
+typedef void (libinit_f)(unsigned, struct uspace_prog_args_t const *);
+
 
 #endif

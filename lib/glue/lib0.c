@@ -1,5 +1,6 @@
 /*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Copyright 2002, Manuel J. Petit. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 
@@ -15,12 +16,23 @@ int _start(unsigned image_id, struct uspace_prog_args_t *);
 static void _call_ctors(void);
 
 int
-_start(unsigned image_id, struct uspace_prog_args_t *uspa)
+_start(unsigned imid, struct uspace_prog_args_t *uspa)
 {
 	int i;
 	int retcode;
+	void *ibc;
+	void *iac;
 
+	ibc= uspa->rld_export->dl_sym(imid, "INIT_BEFORE_CTORS", 0);
+	iac= uspa->rld_export->dl_sym(imid, "INIT_AFTER_CTORS", 0);
+
+	if(ibc) {
+		((libinit_f*)(ibc))(imid, uspa);
+	}
 	_call_ctors();
+	if(iac) {
+		((libinit_f*)(iac))(imid, uspa);
+	}
 
 	return 0;
 }

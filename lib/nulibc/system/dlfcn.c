@@ -1,5 +1,5 @@
 /* 
-** Copyright 2001, Manuel J. Petit. All rights reserved.
+** Copyright 2002, Manuel J. Petit. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 
@@ -26,4 +26,11 @@ int
 dlclose(void *img)
 {
 	return rld->dl_close((unsigned)img, 0);
+}
+
+
+void
+__init__dlfcn(struct uspace_prog_args_t *uspa)
+{
+	rld= uspa->rld_export;
 }

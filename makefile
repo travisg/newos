@@ -70,7 +70,7 @@ ifeq ($(ARCH),i386)
 		OBJCOPY = i386-linux-objcopy
 		STRIP = i386-linux-strip
 	endif
-	GLOBAL_CFLAGS = -O1
+	GLOBAL_CFLAGS = -O2
 	KERNEL_CFLAGS = -fno-pic
 	USER_CFLAGS = -fpic
 	GLOBAL_LDFLAGS =

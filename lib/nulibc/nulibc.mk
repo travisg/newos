@@ -13,6 +13,7 @@ include $(NULIBC_DIR)/unistd/nulibc_unistd.mk
 CFLAGS += 
 
 NULIBC_OBJS = \
+	$(NULIBC_OBJ_DIR)/nulibc_init.o \
 	$(NULIBC_HOARD_OBJS) \
 	$(NULIBC_LOCALE_OBJS) \
 	$(NULIBC_STDIO_OBJS) \
