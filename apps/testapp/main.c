@@ -34,7 +34,7 @@ int main()
 
 	for(;;);
 #endif
-#if 0
+#if 1
 	printf("waiting 5 seconds\n");
 	sys_snooze(5000000);
 #endif
@@ -56,7 +56,7 @@ int main()
 		}
 	}
 #endif
-#if 1
+#if 0
 	fd = sys_open("/dev/net/rtl8139/0", "", STREAM_TYPE_DEVICE);
 	if(fd >= 0) {
 		int foo = 0;

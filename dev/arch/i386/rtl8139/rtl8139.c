@@ -67,14 +67,17 @@ static int rtl8139_create(void *_fs, void *_base_vnode, const char *path, const 
 static int rtl8139_read(void *_fs, void *_vnode, void *_cookie, void *buf, off_t pos, size_t *len)
 {
 	struct rtl8139_fs *fs = _fs;
+	int err;
 	
 	if(*len < 1500)
 		return -1;
 	if(fs->rtl == NULL)
 		return -1;
-	*len = rtl8139_rx(fs->rtl, buf, *len);
-	if(*len < 0)
-		return *len;
+	err = rtl8139_rx(fs->rtl, buf, *len);
+	if(err < 0)
+		return err;
+	else
+		*len = err;
 	return 0;
 }
 
@@ -99,6 +102,14 @@ static int rtl8139_ioctl(void *_fs, void *_vnode, void *_cookie, int op, void *b
 	dprintf("rtl8139_ioctl: op %d, buf 0x%x, len %d\n", op, buf, len);
 
 	switch(op) {
+		case 10000: // get the ethernet MAC address
+			if(len >= sizeof(fs->rtl->mac_addr)) {
+				memcpy(buf, fs->rtl->mac_addr, sizeof(fs->rtl->mac_addr));
+				err = 0;
+			} else {
+				err = -1;
+			}
+			break;
 		case 87912: // set the rtl pointer
 			fs->rtl = buf;
 			err = 0;

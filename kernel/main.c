@@ -14,6 +14,7 @@
 #include <kernel/sem.h>
 #include <kernel/vfs.h>
 #include <kernel/dev.h>
+#include <kernel/net/net.h>
 #include <dev/devs.h>
 #include <bus/bus.h>
 
@@ -62,12 +63,13 @@ int _start(kernel_args *oldka, int cpu)
 		vm_init_postsem(&ka);
 		vfs_init(&ka);
 		thread_init(&ka);
+		vm_init_postthread(&ka);
 		dev_init(&ka);
 		bus_init(&ka);
 		devs_init(&ka);
 		con_init(&ka);
-
-		vm_init_postthread(&ka);
+		
+		net_init(&ka);
 #if 0
 		// XXX remove
 		vfs_test();

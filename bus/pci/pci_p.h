@@ -11,7 +11,7 @@ struct pci_config_address {
 		bus : 8,
 		reserved : 7,
 		enable : 1;
-} _PACKED;
+};
 
 void dump_pci_config(struct pci_cfg *cfg);
 int pci_probe(uint8 bus, uint8 unit, uint8 function, struct pci_cfg *cfg);

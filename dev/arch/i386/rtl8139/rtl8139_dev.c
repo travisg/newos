@@ -303,8 +303,24 @@ restart:
 //	dprintf("entry->status = 0x%x\n", entry->status);
 //	dprintf("entry->len = 0x%x\n", entry->len);
 
-	rc = entry->len;
-	// XXX do stuff here
+	// copy the buffer
+	if(entry->len > buf_len) {
+		dprintf("rtl8139_rx: packet too large for buffer\n");
+		RTL_WRITE_16(grtl, RT_RXBUFTAIL, TAILREG_TO_TAIL(RTL_READ_16(grtl, RT_RXBUFHEAD)));
+		mutex_unlock(&rtl->lock);
+		sem_release(rtl->rx_sem, 1);
+		return -1;
+	}
+	if(tail + entry->len > 0xffff) {
+		int pos = 0;
+		
+		dprintf("packet wraps around\n");
+		memcpy(buf, (const void *)&entry->data[0], 0x10000 - tail);
+		memcpy((uint8 *)buf + 0x10000 - tail, (const void *)rtl->rxbuf, entry->len - (0x10000 - tail));
+	} else {
+		memcpy(buf, (const void *)&entry->data[0], entry->len);
+	}
+	rc = entry->len;	
 
 	// calculate the new tail
 	tail = (tail + entry->len + 4 + 3) & ~3;
@@ -393,6 +409,7 @@ static int rtl8139_int()
 			dprintf("buf 0x%x, head 0x%x, tail 0x%x\n", 
 				RTL_READ_32(grtl, RT_RXBUF), RTL_READ_16(grtl, RT_RXBUFHEAD), RTL_READ_16(grtl, RT_RXBUFTAIL));
 			RTL_WRITE_32(grtl, RT_RXMISSED, 0);
+			RTL_WRITE_16(grtl, RT_RXBUFTAIL, TAILREG_TO_TAIL(RTL_READ_16(grtl, RT_RXBUFHEAD)));
 		}
 		if(status & RT_INT_RXFIFO_OVERFLOW) {
 			dprintf("RX fifo overflow!\n");
