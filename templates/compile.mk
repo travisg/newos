@@ -23,4 +23,4 @@ $(MY_TARGETDIR_IN)/%.o: $(MY_SRCDIR_IN)/%.c
 $(MY_TARGETDIR_IN)/%.o: $(MY_SRCDIR_IN)/%.S
 	@$(MKDIR)
 	@echo assembling $<
-	@$(CC) -c $< $(GLOBAL_CFLAGS) $(MY_CFLAGS_IN) $(MY_INCLUDES_IN) -MD -MT $@ -MF $(@:%o=%d) -o $@
+	@$(CC) -c $< $(GLOBAL_ASFLAGS) $(GLOBAL_CFLAGS) $(MY_CFLAGS_IN) $(MY_INCLUDES_IN) -MD -MT $@ -MF $(@:%o=%d) -o $@
