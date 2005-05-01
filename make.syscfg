@@ -24,10 +24,11 @@ ifeq ($(HOSTTYPE),macintosh)
 	endif
 endif
 
-# allow for a specific PLATFORM to override ARCH
+# default platform and arch
 ifeq ($(PLATFORM),)
 	ifeq ($(ARCH),)
 		#	by default, build for a i386-pc
+		ARCH := i386
 		PLATFORM := pc
 	endif
 endif
@@ -39,11 +40,13 @@ endif
 ifeq ($(PLATFORM),mac)
 ARCH := ppc
 endif
-ifeq ($(PLATFORM),pc)
-ARCH := i386
-endif
 ifeq ($(PLATFORM),xbox)
 ARCH := i386
+endif
+
+# some arches only support one platform
+ifeq ($(ARCH),x86_64)
+PLATFORM := pc
 endif
 
 # build the TARGET variable
