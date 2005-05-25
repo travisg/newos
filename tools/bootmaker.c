@@ -45,6 +45,9 @@
 #ifdef i386
 #define xLITTLE_ENDIAN 1
 #endif
+#ifdef __x86_64
+#define xLITTLE_ENDIAN 1
+#endif
 #ifdef __ppc__
 #define xBIG_ENDIAN 1
 #endif
