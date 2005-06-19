@@ -43,10 +43,16 @@ endif
 ifeq ($(PLATFORM),xbox)
 ARCH := i386
 endif
+ifeq ($(PLATFORM),dreamcast)
+ARCH := sh4
+endif
 
 # some arches only support one platform
 ifeq ($(ARCH),x86_64)
 PLATFORM := pc
+endif
+ifeq ($(ARCH),sh4)
+PLATFORM := dreamcast
 endif
 
 # build the TARGET variable
@@ -86,6 +92,7 @@ endif
 #	the "| cat" below looks unnecesary, this is
 #	to avoid a bug in liberty in certain versions
 #	of gmake for BeOS
+CC :=
 FOO := $(shell $(TOOLCHAIN_ARCH)-newos-gcc --version | cat)
 ifneq ($(FOO),)
 $(warning found newos toolchain!)
@@ -97,19 +104,34 @@ $(warning found newos toolchain!)
 	OBJDUMP = $(TOOLCHAIN_ARCH)-newos-objdump
 	STRIP = $(TOOLCHAIN_ARCH)-newos-strip
 	SIZE = $(TOOLCHAIN_ARCH)-newos-size
-else
+endif 
+
+FOO := $(shell $(TOOLCHAIN_ARCH)-elf-gcc --version | cat)
+ifneq ($(FOO),)
+$(warning WARNING: custom newos toolchain not found!)
+$(warning falling back to elf toolchain)
+	CC = $(TOOLCHAIN_ARCH)-elf-gcc
+	LD = $(TOOLCHAIN_ARCH)-elf-ld
+	AS = $(TOOLCHAIN_ARCH)-elf-as
+	AR = $(TOOLCHAIN_ARCH)-elf-ar
+	OBJCOPY = $(TOOLCHAIN_ARCH)-elf-objcopy
+	OBJDUMP = $(TOOLCHAIN_ARCH)-elf-objdump
+	STRIP = $(TOOLCHAIN_ARCH)-elf-strip
+	SIZE = $(TOOLCHAIN_ARCH)-elf-size
+endif
+ifeq ($(CC),)
 $(warning WARNING: custom newos toolchain not found!)
 $(warning This build will probably fail miserably)
 $(warning Download the appropriate toolchain for your build environment)
 $(warning at http://newos.sourceforge.net/download.php)
-CC = $(HOST_CC)
-LD = $(HOST_LD)
-AS = $(HOST_AS)
-AR = $(HOST_AR)
-OBJCOPY = $(HOST_OBJCOPY)
-OBJDUMP = $(HOST_OBJDUMP)
-STRIP = $(HOST_STRIP)
-SIZE = $(HOST_SIZE)
+	CC = $(HOST_CC)
+	LD = $(HOST_LD)
+	AS = $(HOST_AS)
+	AR = $(HOST_AR)
+	OBJCOPY = $(HOST_OBJCOPY)
+	OBJDUMP = $(HOST_OBJDUMP)
+	STRIP = $(HOST_STRIP)
+	SIZE = $(HOST_SIZE)
 endif
 
 # set up some particular options for various architectures
@@ -145,7 +167,7 @@ ifeq ($(ARCH),arm)
 endif
 
 ifeq ($(ARCH),sh4)
-	GLOBAL_CFLAGS = -ml -m4-single-only -mhitachi -O1
+	GLOBAL_CFLAGS = -ml -m4-single-only -mhitachi -O2 -g
 	KERNEL_CFLAGS = -fno-pic
 	USER_CFLAGS = -fpic
 	GLOBAL_LDFLAGS = -EL
