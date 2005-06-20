@@ -66,6 +66,14 @@
 #define _MAX_CPUS 1
 #endif
 
+#if PLATFORM_xbox
+/* xbox will always be single processor */
+#undef _WITH_SMP
+#define _WITH_SMP 0
+#undef _MAX_CPUS
+#define _MAX_CPUS 1
+#endif
+
 #else
 
 #endif

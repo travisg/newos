@@ -1,0 +1,33 @@
+KERNEL_ADDONS += $(addprefix $(KERNEL_ADDONS_BUILD_DIR)/, \
+	modules/console/vga_text/vga_text \
+	modules/console/vmware/vmware \
+	modules/console/fb_console/fb_console \
+	modules/bus_managers/isa/isa \
+	modules/busses/ide/ide_isa/ide_isa \
+	modules/bus_managers/ide/ide \
+	modules/bus_managers/scsi/scsi \
+	modules/bus_managers/pci/pci \
+	modules/bus_managers/usb/usb \
+	modules/busses/usb/ohci/ohci \
+	modules/generic/locked_pool/locked_pool \
+	modules/generic/scsi_periph/scsi_periph \
+	modules/generic/blkman/blkman \
+	dev/disk/scsi/scsi_dsk/scsi_dsk \
+	dev/disk/netblock/netblock \
+	dev/disk/floppy/floppy \
+	dev/net/ns83820/ns83820 \
+	dev/net/pcnet32/pcnet32 \
+	dev/net/rtl8139/rtl8139 \
+	dev/input/pckeyboard/keyboard \
+	dev/input/ps2mouse/mouse \
+	dev/graphics/vesa/vesa \
+)
+
+#APPS += $(addprefix $(APPS_BUILD_DIR)/, \
+#	disktest/disktest \
+#)
+
+# unused
+#	dev/arch/i386/ide/ide \
+#	dev/arch/i386/ide2/ide \
+#	dev/arch/i386/ide3/ide \

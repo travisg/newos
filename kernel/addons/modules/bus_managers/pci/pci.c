@@ -1166,6 +1166,10 @@ pci_scan_bus(uint8 bus)
 
 			for (func = 0; func < nfunc; func++)
 				pci_device_probe(bus, dev, func);
+
+			// XXX hack for xbox
+			if(vend == 0x10de && device == 0x02a0)
+				break; // we dont need to search any more devices on this bus
 		}
 	}
 }
