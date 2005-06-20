@@ -76,12 +76,17 @@ include templates/app.mk
 MAKEFLOP := $(BOOT_SRCDIR)/makeflop
 CONFIG_FILE := $(BOOT_SRCDIR)/config.ini
 
-$(FINAL): $(BOOTBLOCK) $(STAGE1) $(STAGE2) $(ALL) $(TOOLS) $(MAKEFLOP) $(CONFIG_FILE) $(BOOTBLOCK)
-	$(BOOTMAKER) --strip-debug --strip-binary $(STRIP) $(CONFIG_FILE) -o $(FINAL).prepre
-	gzip -f -9 $(FINAL).prepre
-	cat $(STAGE1) $(FINAL).prepre.gz > $(FINAL).pre
+$(FINAL): $(BOOTBLOCK) $(STAGE1) $(TOOLS) $(MAKEFLOP)
+	cat $(STAGE1) > $(FINAL).pre
 	$(MAKEFLOP) -p $(shell expr 18 \* 2 \* 512) $(BOOTBLOCK) $(FINAL).pre $(FINAL)
 	@rm -f $(FINAL).pre $(FINAL).prepre $(FINAL).prepre.gz
+
+#$(FINAL): $(BOOTBLOCK) $(STAGE1) $(STAGE2) $(ALL) $(TOOLS) $(MAKEFLOP) $(CONFIG_FILE)
+#	$(BOOTMAKER) --strip-debug --strip-binary $(STRIP) $(CONFIG_FILE) -o $(FINAL).prepre
+#	gzip -f -9 $(FINAL).prepre
+#	cat $(STAGE1) $(FINAL).prepre.gz > $(FINAL).pre
+#	$(MAKEFLOP) -p $(shell expr 18 \* 2 \* 512) $(BOOTBLOCK) $(FINAL).pre $(FINAL)
+#	@rm -f $(FINAL).pre $(FINAL).prepre $(FINAL).prepre.gz
 
 $(STAGE1): $(STAGE1).elf
 	$(OBJCOPY) -O binary $< $@

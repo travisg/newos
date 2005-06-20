@@ -1,5 +1,5 @@
-#KERNEL_ADDONS += $(addprefix $(KERNEL_ADDONS_BUILD_DIR)/, \
-#)
+KERNEL_ADDONS := $(addprefix $(KERNEL_ADDONS_BUILD_DIR)/, \
+)
 
-#APPS += $(addprefix $(APPS_BUILD_DIR)/, \
-#)
+APPS := $(addprefix $(APPS_BUILD_DIR)/, \
+)

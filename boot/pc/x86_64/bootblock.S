@@ -38,10 +38,15 @@
 /*
  ** Moved to gas syntax 2005, TG
  */
+/*
+ ** Extended to support x86-64 long mode
+ */
 
 #define VESA_X_TARGET 640
 #define VESA_Y_TARGET 480
 #define VESA_BIT_DEPTH_TARGET 16
+
+#define PGTABLE_BASE 0x8000
 
 /* org is 0x7c00
  */
@@ -123,6 +128,74 @@ no_vesa:
 
 	cli
 
+	// switch back into protected mode
+	mov		%cr0, %eax
+	or		$1, %al
+	mov		%eax,%cr0              // enter protected mode
+	
+.code32
+	.byte 0x66
+	ljmp	$0x8,$(prot_mode)  	// flush prefetch queue and enter 32-bit mode
+
+.code16
+prot_mode:
+	// we're back into 16-bit protected mode
+
+// set up a stack of long mode page tables to identity map the first 16MB of ram
+
+	/* zero out 3 pages of ram where we're going to build some page tables */
+	xor		%al, %al
+	mov		$PGTABLE_BASE, %edi
+	mov		$0x3000, %cx
+	rep		stosb
+
+	/* top level page table */
+	mov		$((PGTABLE_BASE + 0x1000) | 0x3), %ax
+	mov		%ax, PGTABLE_BASE
+	mov		$((PGTABLE_BASE + 0x2000) | 0x3), %ax
+	mov		%ax, (PGTABLE_BASE + 0x1000)
+
+	/* 2MB pages to identity map the first 16MB ram */
+	mov		$(0 | (1<<7) | 3), %ax
+	mov		%ax, (PGTABLE_BASE + 0x2000)
+	add		$0x1000, %ax
+	mov		%ax, (PGTABLE_BASE + 0x2008)
+	add		$0x1000, %ax
+	mov		%ax, (PGTABLE_BASE + 0x2010)
+	add		$0x1000, %ax
+	mov		%ax, (PGTABLE_BASE + 0x2018)
+
+	// set the page table base
+	mov		$PGTABLE_BASE, %eax
+	mov		%eax, %cr3
+	
+	// set CR4.PAE
+	mov		%cr4, %eax
+	bts		$5, %eax
+	mov		%eax, %cr4
+
+	// enable long mode
+	// EFER.LME=1
+	mov		$0xc0000080, %ecx
+	rdmsr
+	bts		$8, %eax
+	wrmsr
+
+	// enable paging, which will really enable long mode (CR0.PG)
+	mov		%cr0, %eax
+	bts		$31, %eax
+	mov		%eax, %cr0
+
+.code32
+	.byte 0x66
+	ljmp	$0x18,$(long_64_mode)  	// enter 64-bit mode
+
+.code64
+long_64_mode:
+	
+	jmp	.
+
+#if 0
 	// switch back to protected mode and jump into our loaded image
 	mov		$0xcf, %al
 	mov		%al, (gdt + 14)       // set desc. 1 and 2
@@ -173,26 +246,7 @@ no_probe_mem:
 	call	*%ebx              // jump to stage1 entry
 inf:
 	jmp		inf
-
-// find memory size by testing
-// OUT: eax = memory size
-find_mem_size_probe:
-	mov		$0x31323738, %eax   // test value
-	mov		$0x100ff0, %esi     // start above conventional mem + HMA = 1 MB + 1024 Byte
-_fms_loop:
-	mov		(%esi), %edx        // read value
-	mov		%eax, (%esi)        //   write test value
-	mov		(%esi), %ecx        //   read it again
-	mov		%edx, (%esi)        // write back old value
-	cmp		%eax, %ecx
-	jnz		_fms_loop_out    // read value != test value -> above mem limit
-	add		$0x1000, %esi       // test next page (4 K)
-	jmp		_fms_loop
-_fms_loop_out:
-	mov		%esi, %eax
-	sub		$0x1000, %eax
-	add		$0x10, %eax
-	ret
+#endif
 
 .code16
 // read sectors into memory
@@ -317,6 +371,9 @@ gdt:
 	// descriptor 2:
 	.long 0x0000ffff  // base - limit: 0 - 0xfffff * 4K
 	.long 0x008f9200  // type: 16 bit, data read/write, <present>, privilege 0
+	// descriptor 3:  long mode 64-bit code segment
+	.long 0x0000ffff  // base & limit are ignored
+	.long 0x00af9a00  // type: 64 bit, code, <present>, priviledge 0
 
 retrycnt:
 	.byte 3
@@ -333,6 +390,27 @@ ext_mem_count:
 	.word	0xaa55             // magic number for boot sector
 
 // second sector of the boot code
+
+.code32
+// find memory size by testing
+// OUT: eax = memory size
+find_mem_size_probe:
+	mov		$0x31323738, %eax   // test value
+	mov		$0x100ff0, %esi     // start above conventional mem + HMA = 1 MB + 1024 Byte
+_fms_loop:
+	mov		(%esi), %edx        // read value
+	mov		%eax, (%esi)        //   write test value
+	mov		(%esi), %ecx        //   read it again
+	mov		%edx, (%esi)        // write back old value
+	cmp		%eax, %ecx
+	jnz		_fms_loop_out    // read value != test value -> above mem limit
+	add		$0x1000, %esi       // test next page (4 K)
+	jmp		_fms_loop
+_fms_loop_out:
+	mov		%esi, %eax
+	sub		$0x1000, %eax
+	add		$0x10, %eax
+	ret
 
 .code16
 	// use int 0x15, EAX=0xe820 to test for memory
