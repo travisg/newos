@@ -1772,6 +1772,9 @@ int vm_init_postsem(kernel_args *ka)
 {
 	vm_region *region;
 
+	// have the heap finish it's initialization
+	heap_init_postsem(ka);
+
 	// fill in all of the semaphores that were not allocated before
 	// since we're still single threaded and only the kernel address space exists,
 	// it isn't that hard to find all of the ones we need to create
@@ -1788,7 +1791,7 @@ int vm_init_postsem(kernel_args *ka)
 	region_hash_sem = sem_create(WRITE_COUNT, "region_hash_sem");
 	aspace_hash_sem = sem_create(WRITE_COUNT, "aspace_hash_sem");
 
-	return heap_init_postsem(ka);
+	return 0;
 }
 
 int vm_init_postthread(kernel_args *ka)
