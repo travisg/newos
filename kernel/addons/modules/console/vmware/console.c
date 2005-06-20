@@ -37,6 +37,7 @@ static struct {
 	region_id	fifo_region;
 	uint16		index_port;
 	uint16		value_port;
+	uint32		svga_id;
 } vcons;
 
 static uint8 bit_reversed[256];
@@ -175,6 +176,7 @@ static int find_and_map(void)
 	vcons.fifo_phys_base = pinfo.u.h0.base_registers[2];
 	vcons.fifo_size = MIN(pinfo.u.h0.base_register_sizes[2], SVGA_MEM_SIZE);
 
+	dprintf("vmware: index port 0x%x, value port 0x%x\n", vcons.index_port, vcons.value_port);
 	dprintf("vmware: phys base 0x%x, size 0x%X\n", vcons.fb_phys_base, vcons.fb_size);
 	dprintf("vmware: fifo phys base 0x%x, fifo size 0x%X\n", vcons.fifo_phys_base, vcons.fifo_size);
 
@@ -192,8 +194,14 @@ static int find_and_map(void)
 		dprintf("Error mapping vmw::fifo: %x\n", err);
 		goto error1;
 	}
-	out_reg(SVGA_REG_ID, SVGA_ID_2);
+
+	// XXX this makes the emulation unhappy (crashes vmware)
+//	out_reg(SVGA_REG_ID, SVGA_ID_2);
+//	vcons.svga_id = in_reg(SVGA_REG_ID);
+//	dprintf("vmware: svga version %d\n", vcons.svga_id);
+	
 	vcons.bits_per_pixel = in_reg(SVGA_REG_BITS_PER_PIXEL);
+	dprintf("vmware: bpp %d\n", vcons.bits_per_pixel);
 
 	err = NO_ERROR;
 	goto error0;
@@ -249,11 +257,18 @@ writeFIFO(uint32 value)
 		while (in_reg(SVGA_REG_BUSY)) ;
 	}
 	vmwareFIFO[vmwareFIFO[SVGA_FIFO_NEXT_CMD] / sizeof(uint32)] = value;
-	vmwareFIFO[SVGA_FIFO_NEXT_CMD] += sizeof(uint32);
-	if (vmwareFIFO[SVGA_FIFO_NEXT_CMD] == vmwareFIFO[SVGA_FIFO_MAX])
-	{
-		vmwareFIFO[SVGA_FIFO_NEXT_CMD] = vmwareFIFO[SVGA_FIFO_MIN];
-	}
+
+    if(vmwareFIFO[SVGA_FIFO_NEXT_CMD] == vmwareFIFO[SVGA_FIFO_MAX] - sizeof(uint32)) {
+        vmwareFIFO[SVGA_FIFO_NEXT_CMD] = vmwareFIFO[SVGA_FIFO_MIN];
+    } else {
+        vmwareFIFO[SVGA_FIFO_NEXT_CMD] += sizeof(uint32);
+    }
+
+//	vmwareFIFO[SVGA_FIFO_NEXT_CMD] += sizeof(uint32);
+//	if (vmwareFIFO[SVGA_FIFO_NEXT_CMD] == vmwareFIFO[SVGA_FIFO_MAX])
+//	{
+//		vmwareFIFO[SVGA_FIFO_NEXT_CMD] = vmwareFIFO[SVGA_FIFO_MIN];
+//	}
 }
 
 static void clear_screen()
@@ -395,6 +410,23 @@ static int vmware_init(void)
 		dprintf("screen cleared\n");
 		load_font();
 		dprintf("font loaded\n");
+
+	dprintf("vmware: fb_start 0x%x\n", in_reg(SVGA_REG_FB_START));
+	dprintf("vmware: fb_offset 0x%x\n", in_reg(SVGA_REG_FB_OFFSET));
+	dprintf("vmware: fb_max_size 0x%x\n", in_reg(SVGA_REG_FB_MAX_SIZE));
+	dprintf("vmware: fb_size 0x%x\n", in_reg(SVGA_REG_FB_SIZE));
+
+	dprintf("vmware: capabilities 0x%x\n", in_reg(SVGA_REG_CAPABILITIES));
+	dprintf("vmware: mem_start 0x%x\n", in_reg(SVGA_REG_MEM_START));
+	dprintf("vmware: mem_size 0x%x\n", in_reg(SVGA_REG_MEM_SIZE));
+
+
+		// XXX pretty color pattern
+		int i;
+		uint32 *ptr = (uint32 *)vcons.fb_base;
+		for(i=0; i < 12340; i++) {
+			ptr[i] = i;
+		}
 	}
 	return err;
 }
