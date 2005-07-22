@@ -81,6 +81,7 @@ $(FINAL): $(BOOTBLOCK) $(STAGE1) $(STAGE2) $(ALL) $(TOOLS) $(MAKEFLOP) $(CONFIG_
 	gzip -f -9 $(FINAL).prepre
 	cat $(STAGE1) $(FINAL).prepre.gz > $(FINAL).pre
 	$(MAKEFLOP) -p $(shell expr 18 \* 2 \* 512) $(BOOTBLOCK) $(FINAL).pre $(FINAL)
+	$(MAKEFLOP) -p $(shell expr 18 \* 2 \* 512 \* 80) $(BOOTBLOCK) $(FINAL).pre $(FINAL).flp
 	@rm -f $(FINAL).pre $(FINAL).prepre $(FINAL).prepre.gz
 
 $(STAGE1): $(STAGE1).elf
