@@ -73,7 +73,8 @@ MY_GLUE :=
 
 include templates/app.mk
 
-MAKEFLOP := $(BOOT_SRCDIR)/makeflop
+MAKEFLOP := $(BOOT_TARGETDIR)/makeflop
+MAKEFLOPSRC := $(BOOT_SRCDIR)/makeflop.c
 CONFIG_FILE := $(BOOT_SRCDIR)/config.ini
 
 $(FINAL): $(BOOTBLOCK) $(STAGE1) $(STAGE2) $(ALL) $(TOOLS) $(MAKEFLOP) $(CONFIG_FILE) $(BOOTBLOCK)
@@ -98,6 +99,6 @@ else
 	dd if=$(FINAL) of=$(BOOT_IMAGE_TARGET) bs=18k
 endif
 
-$(MAKEFLOP): $(MAKEFLOP).c
-	$(HOST_CC) -O $(MAKEFLOP).c -o $@
+$(MAKEFLOP): $(MAKEFLOPSRC)
+	$(HOST_CC) -O $(MAKEFLOPSRC) -o $@
 

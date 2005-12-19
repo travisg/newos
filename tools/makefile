@@ -1,10 +1,15 @@
+TOOLS_SRC_DIR := tools
+TOOLS_BUILD_DIR := $(call TOBUILDDIR, tools)
 
-TOOLS_DIR := tools
+BOOTMAKER := $(TOOLS_BUILD_DIR)/bootmaker
+NETBOOT := $(TOOLS_BUILD_DIR)/netboot
+BIN2H := $(TOOLS_BUILD_DIR)/bin2h
+BIN2ASM := $(TOOLS_BUILD_DIR)/bin2asm
 
-BOOTMAKER := $(TOOLS_DIR)/bootmaker
-NETBOOT := $(TOOLS_DIR)/netboot
-BIN2H := $(TOOLS_DIR)/bin2h
-BIN2ASM := $(TOOLS_DIR)/bin2asm
+BOOTMAKERSRC := $(TOOLS_SRC_DIR)/bootmaker.c
+NETBOOTSRC := $(TOOLS_SRC_DIR)/netboot.c
+BIN2HSRC := $(TOOLS_SRC_DIR)/bin2h.c
+BIN2ASMSRC := $(TOOLS_SRC_DIR)/bin2asm.c
 
 TOOLS := \
 	$(BOOTMAKER) \
@@ -21,17 +26,21 @@ endif
 
 tools: $(TOOLS)
 
-$(NETBOOT): $(NETBOOT).c
-	$(HOST_CC) -O2 -o $@ $(NETBOOT).c $(NETBOOT_LINK_ARGS)
+$(NETBOOT): $(NETBOOTSRC)
+	@$(MKDIR)
+	$(HOST_CC) -O2 -o $@ $(NETBOOTSRC) $(NETBOOT_LINK_ARGS)
 
-$(BIN2ASM): $(BIN2ASM).c
-	$(HOST_CC) -O2 -o $@ $(BIN2ASM).c
+$(BIN2ASM): $(BIN2ASMSRC)
+	@$(MKDIR)
+	$(HOST_CC) -O2 -o $@ $(BIN2ASMSRC)
 
-$(BIN2H): $(BIN2H).c
-	$(HOST_CC) -O2 -o $@ $(BIN2H).c
+$(BIN2H): $(BIN2HSRC)
+	@$(MKDIR)
+	$(HOST_CC) -O2 -o $@ $(BIN2HSRC)
 
-$(BOOTMAKER): $(BOOTMAKER).c tools/sparcbootblock.h
-	$(HOST_CC) -O2 -o $@ $(BOOTMAKER).c
+$(BOOTMAKER): $(BOOTMAKERSRC) tools/sparcbootblock.h
+	@$(MKDIR)
+	$(HOST_CC) -O2 -o $@ $(BOOTMAKERSRC)
 
 toolsclean:
 	rm -f $(TOOLS)
