@@ -12,6 +12,7 @@ include $(addsuffix /makefile, $(addprefix $(KERNEL_DEV_ADDONS_DIR)/, \
 	input/ps2mouse \
 	net/ns83820 \
 	net/pcnet32 \
+	net/rhine \
 	net/rtl8139 \
 	tty \
 ))
