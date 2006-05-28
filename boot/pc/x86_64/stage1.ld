@@ -18,9 +18,8 @@ SECTIONS
 	/* writable data  */
 	. = ALIGN(0x1000);
 	__data_start = .;
-	.data : { *(.data .gnu.linkonce.d.* .bss) }
+	.data : { *(.data .gnu.linkonce.d.* .got* .bss) }
 
-	/* . = ALIGN(0x1000); */
 	_end = . ;
 
 	/* Strip unnecessary stuff */

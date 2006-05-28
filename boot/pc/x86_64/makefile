@@ -39,6 +39,7 @@ MY_TARGETDIR := $(BOOT_TARGETDIR)
 MY_SRCDIR := $(BOOT_SRCDIR)
 MY_TARGET := $(STAGE1).elf
 MY_OBJS := \
+	stage1_entry.o \
 	stage1.o \
 	inflate.o
 

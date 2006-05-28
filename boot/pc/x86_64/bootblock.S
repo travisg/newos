@@ -26,7 +26,7 @@
  */
 
 /*
- ** Copyright 2001-2004, Travis Geiselbrecht. All rights reserved.
+ ** Copyright 2001-2006, Travis Geiselbrecht. All rights reserved.
  ** Distributed under the terms of the NewOS License.
  */
 
@@ -115,7 +115,7 @@ unreal:
 	call	find_mem_size_real
 
 	// try to probe vesa if the shift key is held
-#if 1
+#if 0
 	in		$0x60, %al          // read data from keyboard
 	and		$0x7f, %al
 	cmp		$42, %al            // try to set VESA mode iff left shift key was pressed
@@ -192,61 +192,13 @@ prot_mode:
 
 .code64
 long_64_mode:
-	
-	jmp	.
-
-#if 0
-	// switch back to protected mode and jump into our loaded image
-	mov		$0xcf, %al
-	mov		%al, (gdt + 14)       // set desc. 1 and 2
-	mov		%al, (gdt + 22)       //   to 32-bit segment
-	lgdt	gdt             	// load global descriptor table
-
-	mov		%cr0, %eax
-	or		$1, %al
-	mov		%eax,%cr0              // enter protected mode
-
-.code32
-	.byte 0x66
-	ljmp	$0x8,$(code32)  	// flush prefetch queue and enter 32-bit mode
-
-code32:
-	// load descriptors and set up the stack
-	mov		$0x10, %ax          // load descriptor 2 in all segment selectors (except cs)
-	mov		%ax, %ds
-	mov		%ax, %es
-	mov		%ax, %fs
-	mov		%ax, %gs
-	mov		%ax, %ss
-	mov		$0x10000,%ebp
-	mov		%ebp, %esp
-
-	// push some arguments to the boot image
-	pushl	vesa_info
-
-	mov		in_vesa, %al
-	push	%eax
-
-	mov		ext_mem_count, %al
-	push	%eax
-
-	mov		ext_mem_info, %edx
-	push	%edx
-
-	// if we didn't find any info in the extended memory search, do a memory probe
-	xor		%eax, %eax			// default memsize = 0
-	or		%edx, %edx			
-	jnz		no_probe_mem		// if ext_mem_info is a real pointer, we don't need to probe
-
-	call	find_mem_size_probe
-no_probe_mem:
-	push	%eax
-
-	mov		$0x100000, %ebx
-	call	*%ebx              // jump to stage1 entry
-inf:
-	jmp		inf
-#endif
+	// set up args to the boot image
+	mov		$vesa_info, %ecx
+	mov		$in_vesa, %edx
+	mov		ext_mem_count, %si
+	mov		ext_mem_info, %edi
+	mov		$0x100000, %eax
+	call	*%rax              // jump to stage1 entry
 
 .code16
 // read sectors into memory
@@ -372,15 +324,11 @@ gdt:
 	.long 0x0000ffff  // base - limit: 0 - 0xfffff * 4K
 	.long 0x008f9200  // type: 16 bit, data read/write, <present>, privilege 0
 	// descriptor 3:  long mode 64-bit code segment
-	.long 0x0000ffff  // base & limit are ignored
+	.long 0x00000000  // base & limit are ignored
 	.long 0x00af9a00  // type: 64 bit, code, <present>, priviledge 0
 
 retrycnt:
 	.byte 3
-in_vesa:
-    .byte 0
-vesa_info:
-	.long 0
 ext_mem_info:
  	.long 0
 ext_mem_count:
@@ -390,27 +338,6 @@ ext_mem_count:
 	.word	0xaa55             // magic number for boot sector
 
 // second sector of the boot code
-
-.code32
-// find memory size by testing
-// OUT: eax = memory size
-find_mem_size_probe:
-	mov		$0x31323738, %eax   // test value
-	mov		$0x100ff0, %esi     // start above conventional mem + HMA = 1 MB + 1024 Byte
-_fms_loop:
-	mov		(%esi), %edx        // read value
-	mov		%eax, (%esi)        //   write test value
-	mov		(%esi), %ecx        //   read it again
-	mov		%edx, (%esi)        // write back old value
-	cmp		%eax, %ecx
-	jnz		_fms_loop_out    // read value != test value -> above mem limit
-	add		$0x1000, %esi       // test next page (4 K)
-	jmp		_fms_loop
-_fms_loop_out:
-	mov		%esi, %eax
-	sub		$0x1000, %eax
-	add		$0x10, %eax
-	ret
 
 .code16
 	// use int 0x15, EAX=0xe820 to test for memory
@@ -512,5 +439,10 @@ done_vesa_good:
 done_vesa_bad:
 	xor		%ax, %ax
 	ret
+
+in_vesa:
+    .byte 0
+vesa_info:
+	.long 0
 
 .skip (1024 - .)

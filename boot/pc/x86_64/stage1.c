@@ -1,5 +1,5 @@
 /*
-** Copyright 2001-2004, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2006, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #include <string.h>
@@ -24,15 +24,19 @@ static unsigned char *heap_ptr = (unsigned char *)0x1000000;
 extern void *_end;
 #define TARGET ((void *)0x400000)
 
-void _start(unsigned int mem, void *ext_mem_block, int ext_mem_count, int in_vesa, unsigned int vesa_ptr)
+void stage1_main(void *ext_mem_block, int ext_mem_count, int in_vesa, unsigned long vesa_ptr)
 {
 	unsigned long len;
 	boot_dir *bootdir = TARGET;
-	void (*stage2_entry)(unsigned int mem, void *ext_mem_block, int ext_mem_count, int in_vesa, unsigned int vesa_ptr, int console_ptr);
+	void (*stage2_entry)(void *ext_mem_block, int ext_mem_count, int in_vesa, unsigned int vesa_ptr, int console_ptr);
 
 	clearscreen();
 
-	dprintf("stage1 boot, decompressing system");
+	dprintf("stage1 boot\n");
+	dprintf("ext_mem_block %p, count %d\n", ext_mem_block, ext_mem_count);
+	dprintf("in_vesa %d, vesa_ptr 0x%lx\n", ext_mem_block, ext_mem_count);
+	
+	dprintf("decompressing system, payload at %p...\n", &_end);
 
 	len = gunzip((unsigned char const *)&_end, TARGET, kmalloc(32*1024));
 	dprintf("done, len %d\n", len);
@@ -42,7 +46,7 @@ void _start(unsigned int mem, void *ext_mem_block, int ext_mem_count, int in_ves
 	dprintf("entry at %p\n", stage2_entry);
 
 	// jump into stage2
-	stage2_entry(mem, ext_mem_block, ext_mem_count, in_vesa, vesa_ptr, screenOffset);
+	stage2_entry(ext_mem_block, ext_mem_count, in_vesa, vesa_ptr, screenOffset);
 }
 
 void *kmalloc(unsigned int size)
