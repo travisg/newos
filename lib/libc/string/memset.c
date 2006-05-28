@@ -23,9 +23,11 @@ memset(void *s, int c, size_t count)
 			*xs++ = c;
 
 		// write to aligned memory dword-wise
-		for ( len = count/sizeof(size_t); len > 0; len-- )
-			*((size_t *)xs)++ = cc;
-
+		for ( len = count/sizeof(size_t); len > 0; len-- ) {
+			*(size_t *)xs = cc;
+			xs += sizeof(size_t);
+		}
+			
 		count &= sizeof(size_t)-1;
 	}
 
