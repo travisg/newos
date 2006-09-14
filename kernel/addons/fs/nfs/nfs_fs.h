@@ -73,7 +73,7 @@ enum mount_proc {
 
 #define MOUNTPROG 100005
 #define MOUNTVERS 1
-#define MOUNTPORT 1023
+#define MOUNTPORT 772
 
 /*
 * The maximum number of bytes of data in a READ or WRITE

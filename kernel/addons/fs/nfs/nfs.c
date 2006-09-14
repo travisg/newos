@@ -140,7 +140,7 @@ static int parse_ipv4_addr_str(ipv4_addr *ip_addr, char *ip_addr_string)
 	return NO_ERROR;
 }
 
-static int nfs_mount_fs(nfs_fs *nfs, const char *server_path)
+int nfs_mount_fs(nfs_fs *nfs, const char *server_path)
 {
 	struct mount_args args;
 	char buf[128];
@@ -167,7 +167,7 @@ static int nfs_mount_fs(nfs_fs *nfs, const char *server_path)
 	return 0;
 }
 
-static int nfs_unmount_fs(nfs_fs *nfs)
+int nfs_unmount_fs(nfs_fs *nfs)
 {
 	struct mount_args args;
 	int err;
@@ -408,13 +408,13 @@ int nfs_removevnode(fs_cookie fs, fs_vnode _v, bool r)
 	return ERR_UNIMPLEMENTED;
 }
 
-static int nfs_opendir(fs_cookie _fs, fs_vnode _v, dir_cookie *_cookie)
+int nfs_opendir(fs_cookie _fs, fs_vnode _v, dir_cookie *_cookie)
 {
 	struct nfs_vnode *v = (struct nfs_vnode *)_v;
 	struct nfs_cookie *cookie;
 	int err = 0;
 
-	TRACE(("nfs_opendir: vnode 0x%x\n", v));
+	TRACE("nfs_opendir: vnode %p\n", v);
 
 	if(v->st != STREAM_TYPE_DIR)
 		return ERR_VFS_NOT_DIR;
@@ -432,7 +432,7 @@ static int nfs_opendir(fs_cookie _fs, fs_vnode _v, dir_cookie *_cookie)
 	return err;
 }
 
-static int nfs_closedir(fs_cookie _fs, fs_vnode _v, dir_cookie _cookie)
+int nfs_closedir(fs_cookie _fs, fs_vnode _v, dir_cookie _cookie)
 {
 	struct nfs_fs *fs = _fs;
 	struct nfs_vnode *v = _v;
@@ -440,7 +440,7 @@ static int nfs_closedir(fs_cookie _fs, fs_vnode _v, dir_cookie _cookie)
 
 	TOUCH(fs);TOUCH(v);TOUCH(cookie);
 
-	TRACE(("nfs_closedir: entry vnode 0x%x, cookie 0x%x\n", v, cookie));
+	TRACE("nfs_closedir: entry vnode %p, cookie %p\n", v, cookie);
 
 	if(v->st != STREAM_TYPE_DIR)
 		return ERR_VFS_NOT_DIR;
@@ -451,7 +451,7 @@ static int nfs_closedir(fs_cookie _fs, fs_vnode _v, dir_cookie _cookie)
 	return 0;
 }
 
-static int nfs_rewinddir(fs_cookie _fs, fs_vnode _v, dir_cookie _cookie)
+int nfs_rewinddir(fs_cookie _fs, fs_vnode _v, dir_cookie _cookie)
 {
 	struct nfs_vnode *v = _v;
 	struct nfs_cookie *cookie = _cookie;
@@ -459,7 +459,7 @@ static int nfs_rewinddir(fs_cookie _fs, fs_vnode _v, dir_cookie _cookie)
 
 	TOUCH(v);
 
-	TRACE(("nfs_rewinddir: vnode 0x%x, cookie 0x%x\n", v, cookie));
+	TRACE("nfs_rewinddir: vnode %p, cookie %p\n", v, cookie);
 
 	if(v->st != STREAM_TYPE_DIR)
 		return ERR_VFS_NOT_DIR;
@@ -469,14 +469,14 @@ static int nfs_rewinddir(fs_cookie _fs, fs_vnode _v, dir_cookie _cookie)
 	cookie->u.dir.nfscookie = 0;
 	cookie->u.dir.at_end = false;
 
-	sem_acquire(v->sem, 1);
+	sem_release(v->sem, 1);
 
 	return err;
 }
 
 #define READDIR_BUF_SIZE (MAXNAMLEN + 64)
 
-static ssize_t _nfs_readdir(nfs_fs *nfs, nfs_vnode *v, nfs_cookie *cookie, void *buf, ssize_t len)
+ssize_t _nfs_readdir(nfs_fs *nfs, nfs_vnode *v, nfs_cookie *cookie, void *buf, ssize_t len)
 {
 	uint8 abuf[READDIR_BUF_SIZE];
 	nfs_readdirargs *args = (nfs_readdirargs *)abuf;
@@ -524,7 +524,7 @@ static ssize_t _nfs_readdir(nfs_fs *nfs, nfs_vnode *v, nfs_cookie *cookie, void 
 	return ntohl(res->data[i + 1]);
 }
 
-static int nfs_readdir(fs_cookie _fs, fs_vnode _v, dir_cookie _cookie, void *buf, size_t len)
+int nfs_readdir(fs_cookie _fs, fs_vnode _v, dir_cookie _cookie, void *buf, size_t len)
 {
 	struct nfs_fs *fs = _fs;
 	struct nfs_vnode *v = _v;
@@ -533,7 +533,7 @@ static int nfs_readdir(fs_cookie _fs, fs_vnode _v, dir_cookie _cookie, void *buf
 
 	TOUCH(v);
 
-	TRACE(("nfs_readdir: vnode 0x%x, cookie 0x%x, len 0x%x\n", v, cookie, len));
+	TRACE("nfs_readdir: vnode %p, cookie %p, len 0x%x\n", v, cookie, len);
 
 	if(v->st != STREAM_TYPE_DIR)
 		return ERR_VFS_NOT_DIR;
@@ -542,7 +542,7 @@ static int nfs_readdir(fs_cookie _fs, fs_vnode _v, dir_cookie _cookie, void *buf
 
 	err = _nfs_readdir(fs, v, cookie, buf, len);
 
-	sem_acquire(v->sem, 1);
+	sem_release(v->sem, 1);
 
 	return err;
 }
@@ -621,7 +621,7 @@ int nfs_fsync(fs_cookie fs, fs_vnode _v)
 
 #define READ_BUF_SIZE 1024
 
-static ssize_t nfs_readfile(nfs_fs *nfs, nfs_vnode *v, nfs_cookie *cookie, void *buf, off_t pos, ssize_t len)
+ssize_t nfs_readfile(nfs_fs *nfs, nfs_vnode *v, nfs_cookie *cookie, void *buf, off_t pos, ssize_t len)
 {
 	uint8 abuf[4 + sizeof(nfs_fattr) + READ_BUF_SIZE];
 	nfs_readargs *args = (nfs_readargs *)abuf;
@@ -700,7 +700,7 @@ ssize_t nfs_read(fs_cookie fs, fs_vnode _v, file_cookie _cookie, void *buf, off_
 
 #define WRITE_BUF_SIZE 1024
 
-static ssize_t nfs_writefile(nfs_fs *nfs, nfs_vnode *v, nfs_cookie *cookie, const void *buf, off_t pos, ssize_t len)
+ssize_t nfs_writefile(nfs_fs *nfs, nfs_vnode *v, nfs_cookie *cookie, const void *buf, off_t pos, ssize_t len)
 {
 	uint8 abuf[sizeof(nfs_writeargs) + WRITE_BUF_SIZE];
 	nfs_writeargs *args = (nfs_writeargs *)abuf;
