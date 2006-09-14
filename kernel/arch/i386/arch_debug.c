@@ -45,15 +45,15 @@ static void dbg_stack_trace(int argc, char **argv)
 		if(is_iframe) {
 			struct iframe *frame = (struct iframe *)(ebp + 8);
 			dprintf("iframe at %p\n", frame);
-			dprintf(" eax\t0x%x\tebx\t0x%x\tecx\t0x%x\tedx\t0x%x\n", frame->eax, frame->ebx, frame->ecx, frame->edx);
-			dprintf(" esi\t0x%x\tedi\t0x%x\tebp\t0x%x\tesp\t0x%x\n", frame->esi, frame->edi, frame->ebp, frame->esp);
-			dprintf(" eip\t0x%x\teflags\t0x%x", frame->eip, frame->flags);
+			dprintf(" eax\t0x%08x\tebx\t0x%08x\tecx\t0x%08x\tedx\t0x%08x\n", frame->eax, frame->ebx, frame->ecx, frame->edx);
+			dprintf(" esi\t0x%08x\tedi\t0x%08x\tebp\t0x%08x\tesp\t0x%08x\n", frame->esi, frame->edi, frame->ebp, frame->esp);
+			dprintf(" eip\t0x%08x\teflags\t0x%08x", frame->eip, frame->flags);
 			if((frame->error_code & 0x4) != 0) {
 				// from user space
-				dprintf("\tuser esp\t0x%x", frame->user_esp);
+				dprintf("\tuser esp\t0x%08x", frame->user_esp);
 			}
 			dprintf("\n");
-			dprintf(" vector\t0x%x\terror code\t0x%x\n", frame->vector, frame->error_code);
+			dprintf(" vector\t0x%08x\terror code\t0x%08x\n", frame->vector, frame->error_code);
  			ebp = frame->ebp;
 		} else {
 			uint32 eip = *((uint32 *)ebp + 1);
