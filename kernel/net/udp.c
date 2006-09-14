@@ -13,6 +13,7 @@
 #include <kernel/net/udp.h>
 #include <kernel/net/ipv4.h>
 #include <kernel/net/misc.h>
+#include <stdlib.h>
 
 typedef struct udp_header {
 	uint16 source_port;
@@ -57,6 +58,7 @@ typedef struct udp_endpoint {
 
 static udp_endpoint *endpoints;
 static mutex endpoints_lock;
+static int next_ephemeral_port;
 
 static int udp_endpoint_compare_func(void *_e, const void *_key)
 {
@@ -130,6 +132,11 @@ static void udp_endpoint_release_ref(udp_endpoint *e)
 			kfree(qe);
 		}
 	}
+}
+
+static int udp_allocate_ephemeral_port(void)
+{
+	return atomic_add(&next_ephemeral_port, 1) % 0x10000;
 }
 
 int udp_input(cbuf *buf, ifnet *i, ipv4_addr source_address, ipv4_addr target_address)
@@ -243,20 +250,28 @@ int udp_open(void **prot_data)
 	return 0;
 }
 
-int udp_bind(void *prot_data, sockaddr *addr)
+static int _udp_bind(udp_endpoint *e, int port)
 {
-	udp_endpoint *e = prot_data;
 	int err;
 
 	mutex_lock(&e->lock);
 
 	if(e->port == 0) {
-		// XXX search to make sure this port isn't used already
-		if(addr->port != e->port) {
-			// remove it from the hashtable
+
+		// make up a port number if one isn't passed in
+		if (port == 0)
+			port = udp_allocate_ephemeral_port();
+
+		dprintf("_udp_bind: setting endprint %p to port %d\n", e, port);
+
+		if(port != e->port) {
+
+			// XXX search to make sure this port isn't used already
+
+			// remove it from the hashtable, stick it back with the new port
 			mutex_lock(&endpoints_lock);
 			hash_remove(endpoints, e);
-			e->port = addr->port;
+			e->port = port;
 			hash_insert(endpoints, e);
 			mutex_unlock(&endpoints_lock);
 		}
@@ -268,6 +283,14 @@ int udp_bind(void *prot_data, sockaddr *addr)
 	mutex_unlock(&e->lock);
 
 	return err;
+}
+
+int udp_bind(void *prot_data, sockaddr *addr)
+{
+	udp_endpoint *e = prot_data;
+
+	// XXX does not support binding src ip address
+	return _udp_bind(e, addr->port);
 }
 
 int udp_connect(void *prot_data, sockaddr *addr)
@@ -361,6 +384,10 @@ ssize_t udp_sendto(void *prot_data, const void *inbuf, ssize_t len, sockaddr *to
 	if(toaddr->port < 0 || toaddr->port > 0xffff)
 		return ERR_INVALID_ARGS;
 
+	// find us a local port if no one has already
+	if (e->port == 0)
+		_udp_bind(e, 0);
+
 	// allocate a buffer to hold the data + header
 	total_len = len + sizeof(udp_header);
 	buf = cbuf_get_chain(total_len);
@@ -409,6 +436,8 @@ ssize_t udp_sendto(void *prot_data, const void *inbuf, ssize_t len, sockaddr *to
 int udp_init(void)
 {
 	mutex_init(&endpoints_lock, "udp_endpoints lock");
+
+	next_ephemeral_port = rand() % 32000 + 1024;
 
 	endpoints = hash_init(256, offsetof(udp_endpoint, next), 
 		&udp_endpoint_compare_func, &udp_endpoint_hash_func);

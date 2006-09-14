@@ -45,21 +45,13 @@ int rpc_set_port(rpc_state *state, int port)
 
 int rpc_open_socket(rpc_state *state, netaddr *server_addr)
 {
-	sockaddr saddr;
-
 	mutex_lock(&state->lock);
 
-	// XXX make better
-	saddr.port = 784;
-	saddr.addr.len = 4;
-	saddr.addr.type = ADDR_TYPE_IP;
-	memset(&saddr.addr.addr[0], 0, 4);
 	state->socket = socket_create(SOCK_PROTO_UDP, 0);
 	if(state->socket < 0) {
 		mutex_unlock(&state->lock);
 		return state->socket;
 	}
-	socket_bind(state->socket, &saddr);
 
 	state->server_addr.port = RPC_PORT;
 	memcpy(&state->server_addr.addr, server_addr, sizeof(netaddr));

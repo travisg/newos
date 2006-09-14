@@ -428,9 +428,7 @@ static int bind_local_address(tcp_socket *s, netaddr *remote_addr)
 	// find a local port to bind this socket to
 	// XXX hack hack hack
 	if(s->local_port == 0) {
-		s->local_port = atomic_add(&next_ephemeral_port, 1);
-		if(s->local_port >= 0x10000)
-			s->local_port = 0;
+		s->local_port = atomic_add(&next_ephemeral_port, 1) % 0x10000;
 	}
 
 	return err;
