@@ -1,5 +1,5 @@
 /*
-** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2006, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #ifndef _NEWOS_KERNEL_NET_MISC_H
@@ -10,14 +10,25 @@
 #include <endian.h>
 
 #if BYTE_ORDER == LITTLE_ENDIAN
+#if defined(_ARCH_BSWAP16)
+#define ntohs(n) _ARCH_BSWAP16(n)
+#define htons(n) _ARCH_BSWAP16(n)
+#else
 #define ntohs(n) \
 	((((uint16)(n) & 0xff) << 8) | ((uint16)(n) >> 8))
 #define htons(h) \
 	((((uint16)(h) & 0xff) << 8) | ((uint16)(h) >> 8))
+#endif
+
+#if defined(_ARCH_BSWAP32)
+#define ntohl(n) _ARCH_BSWAP32(n)
+#define htonl(n) _ARCH_BSWAP32(n)
+#else
 #define ntohl(n) \
 	(((uint32)(n) << 24) | (((uint32)(n) & 0xff00) << 8) |(((uint32)(n) & 0x00ff0000) >> 8) | ((uint32)(n) >> 24))
 #define htonl(h) \
 	(((uint32)(h) << 24) | (((uint32)(h) & 0xff00) << 8) |(((uint32)(h) & 0x00ff0000) >> 8) | ((uint32)(h) >> 24))
+#endif
 #elif BYTE_ORDER == BIG_ENDIAN
 #define ntohs(n) \
 	((uint16)(n))
