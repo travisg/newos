@@ -30,7 +30,7 @@ typedef struct nfs_fs {
 /* vnode structure */
 typedef struct nfs_vnode {
 	nfs_fs *fs;
-	sem_id sem;
+	mutex lock;
 	stream_type st;
 	fhandle nfs_handle;
 } nfs_vnode;

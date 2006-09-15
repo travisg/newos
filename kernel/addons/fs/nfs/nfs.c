@@ -49,8 +49,7 @@ static nfs_vnode *new_vnode_struct(nfs_fs *fs)
 	if(!v)
 		return NULL;
 
-	v->sem = sem_create(1, "nfs vnode sem");
-	if(v->sem < 0) {
+	if (mutex_init(&v->lock, "nfs vnode lock") < 0) {
 		kfree(v);
 		return NULL;
 	}
@@ -62,7 +61,7 @@ static nfs_vnode *new_vnode_struct(nfs_fs *fs)
 
 static void destroy_vnode_struct(nfs_vnode *v)
 {
-	sem_delete(v->sem);
+	mutex_destroy(&v->lock);
 	kfree(v);
 }
 
@@ -289,7 +288,7 @@ int nfs_lookup(fs_cookie fs, fs_vnode _dir, const char *name, vnode_id *id)
 
 	TRACE("nfs_lookup: fsid 0x%x, dirvnid 0x%Lx, name '%s'\n", nfs->id, VNODETOVNID(dir), name);
 
-	sem_acquire(dir->sem, 1);
+	mutex_lock(&dir->lock);
 
 	{
 		uint8 buf[sizeof(nfs_diropargs)];
@@ -361,7 +360,7 @@ int nfs_lookup(fs_cookie fs, fs_vnode _dir, const char *name, vnode_id *id)
 	err = NO_ERROR;
 
 out:
-	sem_release(dir->sem, 1);
+	mutex_unlock(&dir->lock);
 
 	return err;
 }
@@ -461,12 +460,12 @@ static int nfs_rewinddir(fs_cookie _fs, fs_vnode _v, dir_cookie _cookie)
 	if(v->st != STREAM_TYPE_DIR)
 		return ERR_VFS_NOT_DIR;
 
-	sem_acquire(v->sem, 1);
+	mutex_lock(&v->lock);
 
 	cookie->u.dir.nfscookie = 0;
 	cookie->u.dir.at_end = false;
 
-	sem_release(v->sem, 1);
+	mutex_unlock(&v->lock);
 
 	return err;
 }
@@ -535,11 +534,11 @@ static int nfs_readdir(fs_cookie _fs, fs_vnode _v, dir_cookie _cookie, void *buf
 	if(v->st != STREAM_TYPE_DIR)
 		return ERR_VFS_NOT_DIR;
 
-	sem_acquire(v->sem, 1);
+	mutex_lock(&v->lock);
 
 	err = _nfs_readdir(fs, v, cookie, buf, len);
 
-	sem_release(v->sem, 1);
+	mutex_unlock(&v->lock);
 
 	return err;
 }
@@ -695,11 +694,11 @@ ssize_t nfs_read(fs_cookie fs, fs_vnode _v, file_cookie _cookie, void *buf, off_
 	if(v->st == STREAM_TYPE_DIR)
 		return ERR_VFS_IS_DIR;
 
-	sem_acquire(v->sem, 1);
+	mutex_lock(&v->lock);
 
 	err = nfs_readfile(nfs, v, cookie, buf, pos, len, true);
 
-	sem_release(v->sem, 1);
+	mutex_unlock(&v->lock);
 
 	return err;
 }
@@ -767,7 +766,7 @@ ssize_t nfs_write(fs_cookie fs, fs_vnode _v, file_cookie _cookie, const void *bu
 
 	TRACE("nfs_write: fsid 0x%x, vnid 0x%Lx, buf %p, pos 0x%Lx, len %ld\n", nfs->id, VNODETOVNID(v), buf, pos, len);
 
-	sem_acquire(v->sem, 1);
+	mutex_lock(&v->lock);
 
 	switch(v->st) {
 		case STREAM_TYPE_FILE:
@@ -780,7 +779,7 @@ ssize_t nfs_write(fs_cookie fs, fs_vnode _v, file_cookie _cookie, const void *bu
 			err = ERR_GENERAL;
 	}
 
-	sem_release(v->sem, 1);
+	mutex_unlock(&v->lock);
 
 	return err;
 }
@@ -799,7 +798,7 @@ int nfs_seek(fs_cookie fs, fs_vnode _v, file_cookie _cookie, off_t pos, seek_typ
 	if(v->st == STREAM_TYPE_DIR) 
 		return ERR_VFS_IS_DIR;
 
-	sem_acquire(v->sem, 1);
+	mutex_lock(&v->lock);
 
 	err = nfs_getattr(nfs, v, &attrstat);
 	if(err < 0)
@@ -836,7 +835,7 @@ int nfs_seek(fs_cookie fs, fs_vnode _v, file_cookie _cookie, off_t pos, seek_typ
 	}
 
 out:
-	sem_release(v->sem, 1);
+	mutex_unlock(&v->lock);
 
 	return err;
 }
@@ -883,7 +882,7 @@ ssize_t nfs_readpage(fs_cookie fs, fs_vnode _v, iovecs *vecs, off_t pos)
 	if(v->st == STREAM_TYPE_DIR)
 		return ERR_VFS_IS_DIR;
 
-	sem_acquire(v->sem, 1);
+	mutex_lock(&v->lock);
 
 	for (i=0; i < vecs->num; i++) {
 		readfile_return = nfs_readfile(nfs, v, NULL, vecs->vec[i].start, pos, vecs->vec[i].len, false);
@@ -906,7 +905,7 @@ ssize_t nfs_readpage(fs_cookie fs, fs_vnode _v, iovecs *vecs, off_t pos)
 	}
 
 out:
-	sem_release(v->sem, 1);
+	mutex_unlock(&v->lock);
 
 	return total_bytes_read;
 }
@@ -1001,7 +1000,7 @@ int nfs_rstat(fs_cookie fs, fs_vnode _v, struct file_stat *stat)
 
 	TRACE("nfs_rstat: fsid 0x%x, vnid 0x%Lx, stat %p\n", nfs->id, VNODETOVNID(v), stat);
 
-	sem_acquire(v->sem, 1);
+	mutex_lock(&v->lock);
 
 	err = nfs_getattr(nfs, v, &attrstat);
 	if(err < 0)
@@ -1030,7 +1029,7 @@ int nfs_rstat(fs_cookie fs, fs_vnode _v, struct file_stat *stat)
 	err = NO_ERROR;
 
 out:
-	sem_release(v->sem, 1);
+	mutex_unlock(&v->lock);
 
 	return err;
 }
