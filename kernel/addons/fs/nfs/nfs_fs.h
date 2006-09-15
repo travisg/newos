@@ -1,10 +1,11 @@
 /*
-** Copyright 2002, Travis Geiselbrecht. All rights reserved.
+** Copyright 2002-2006, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #ifndef _NFS_FS_H
 #define _NFS_FS_H
 
+/* NFS v2 stuff */
 /* From RFC 1094 */
 
 enum nfs_stat {
@@ -60,7 +61,6 @@ enum nfs_proc {
 
 #define NFSPROG 100003
 #define NFSVERS 2
-#define NFSPORT 2049
 
 enum mount_proc {
 	MOUNTPROC_NULL,
@@ -73,7 +73,6 @@ enum mount_proc {
 
 #define MOUNTPROG 100005
 #define MOUNTVERS 1
-#define MOUNTPORT 772
 
 /*
 * The maximum number of bytes of data in a READ or WRITE

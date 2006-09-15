@@ -1,5 +1,5 @@
 /*
-** Copyright 2002, Travis Geiselbrecht. All rights reserved.
+** Copyright 2002-2006, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #ifndef _RPC_H
@@ -8,7 +8,7 @@
 #include <kernel/kernel.h>
 #include <kernel/lock.h>
 
-#define RPC_PORT 111
+/* RPC stuff */
 #define RPC_VERS 2
 
 typedef enum {
@@ -69,6 +69,29 @@ struct call_body {
 	// insert auth here
 };
 
+/* portmapper stuff */
+/* RFC 1057 */
+#define RPC_PMAP_PORT 111
+#define RPC_PMAP_PROG 100000
+#define RPC_PMAP_VERS 2
+
+struct rpc_pmap_mapping {
+	unsigned int prog;
+	unsigned int vers;
+	unsigned int prot;
+	unsigned int port;
+};
+
+enum rpc_pmap_proc {
+	PMAPPROC_NULL = 0,
+	PMAPPROC_SET = 1,
+	PMAPPROC_UNSET = 2,
+	PMAPPROC_GETPORT = 3,
+	PMAPPROC_DUMP = 4,
+	PMAPPROC_CALLIT = 5,
+};
+
+/* rpc api */
 #define RPC_BUF_LEN 8192
 
 typedef struct rpc_state {
@@ -81,9 +104,11 @@ typedef struct rpc_state {
 
 int rpc_init_state(rpc_state *state);
 int rpc_destroy_state(rpc_state *state);
-sock_id rpc_open_socket(rpc_state *state, netaddr *server_addr);
+sock_id rpc_open_socket(rpc_state *state, const netaddr *server_addr);
 int rpc_set_port(rpc_state *state, int port);
 int rpc_call(rpc_state *state, unsigned int prog, unsigned int vers, unsigned int proc,
 	const void *out_data, int out_data_len, void *in_data, int in_data_len);
+
+int rpc_pmap_lookup(const netaddr *server_addr, unsigned int prog, unsigned int vers, unsigned int prot, int *port);
 
 #endif

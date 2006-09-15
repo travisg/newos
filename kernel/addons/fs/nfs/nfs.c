@@ -1,5 +1,5 @@
 /*
-** Copyright 2002, Travis Geiselbrecht. All rights reserved.
+** Copyright 2002-2006, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #include <kernel/kernel.h>
@@ -140,7 +140,7 @@ static int parse_ipv4_addr_str(ipv4_addr *ip_addr, char *ip_addr_string)
 	return NO_ERROR;
 }
 
-int nfs_mount_fs(nfs_fs *nfs, const char *server_path)
+static int nfs_mount_fs(nfs_fs *nfs, const char *server_path)
 {
 	struct mount_args args;
 	char buf[128];
@@ -150,7 +150,7 @@ int nfs_mount_fs(nfs_fs *nfs, const char *server_path)
 	strlcpy(args.dirpath, server_path, sizeof(args.dirpath));
 	args.len = htonl(strlen(args.dirpath));
 
-	rpc_set_port(&nfs->rpc, MOUNTPORT);
+	rpc_set_port(&nfs->rpc, nfs->mount_port);
 
 	err = rpc_call(&nfs->rpc, MOUNTPROG, MOUNTVERS, MOUNTPROC_MNT, &args, ntohl(args.len) + 4, buf, sizeof(buf));
 	if(err < 0)
@@ -164,10 +164,13 @@ int nfs_mount_fs(nfs_fs *nfs, const char *server_path)
 	// we should have the root handle now
 	memcpy(&nfs->root_vnode->nfs_handle, &buf[4], sizeof(nfs->root_vnode->nfs_handle));
 
+	// set the rpc port to the nfs server
+	rpc_set_port(&nfs->rpc, nfs->nfs_port);
+
 	return 0;
 }
 
-int nfs_unmount_fs(nfs_fs *nfs)
+static int nfs_unmount_fs(nfs_fs *nfs)
 {
 	struct mount_args args;
 	int err;
@@ -176,7 +179,7 @@ int nfs_unmount_fs(nfs_fs *nfs)
 	strlcpy(args.dirpath, nfs->server_path, sizeof(args.dirpath));
 	args.len = htonl(strlen(args.dirpath));
 
-	rpc_set_port(&nfs->rpc, MOUNTPORT);
+	rpc_set_port(&nfs->rpc, nfs->mount_port);
 
 	err = rpc_call(&nfs->rpc, MOUNTPROG, MOUNTVERS, MOUNTPROC_UMNT, &args, ntohl(args.len) + 4, NULL, 0);
 
@@ -215,21 +218,17 @@ int nfs_mount(fs_cookie *fs, fs_id id, const char *device, void *args, vnode_id 
 	}
 
 	nfs->id = id;
-	nfs->server_addr = ip_addr;
+	nfs->server_addr.type = ADDR_TYPE_IP;
+	nfs->server_addr.len = 4;
+	NETADDR_TO_IPV4(nfs->server_addr) = ip_addr;
 
 	// set up the rpc state
 	rpc_init_state(&nfs->rpc);
+	rpc_open_socket(&nfs->rpc, &nfs->server_addr);
 
-	// connect
-	{
-		netaddr server_addr;
-
-		server_addr.type = ADDR_TYPE_IP;
-		server_addr.len = 4;
-		NETADDR_TO_IPV4(server_addr) = ip_addr;
-
-		rpc_open_socket(&nfs->rpc, &server_addr);
-	}
+	// look up the port numbers for mount and nfs
+	rpc_pmap_lookup(&nfs->server_addr, MOUNTPROG, MOUNTVERS, IP_PROT_UDP, &nfs->mount_port);
+	rpc_pmap_lookup(&nfs->server_addr, NFSPROG, NFSVERS, IP_PROT_UDP, &nfs->nfs_port);
 
 	nfs->root_vnode = new_vnode_struct(nfs);
 	nfs->root_vnode->st = STREAM_TYPE_DIR;
@@ -238,8 +237,6 @@ int nfs_mount(fs_cookie *fs, fs_id id, const char *device, void *args, vnode_id 
 	err = nfs_mount_fs(nfs, nfs->server_path);
 	if(err < 0)
 		goto err2;
-
-	rpc_set_port(&nfs->rpc, NFSPORT);
 
 	*fs = nfs;
 	*root_vnid = VNODETOVNID(nfs->root_vnode);
@@ -332,7 +329,7 @@ int nfs_lookup(fs_cookie fs, fs_vnode _dir, const char *name, vnode_id *id)
 			/* copy the file handle over */
 			memcpy(&new_v->nfs_handle, &res->file, sizeof(new_v->nfs_handle));
 
-			err = vfs_get_vnode(nfs->id, VNODETOVNID(new_v), (fs_vnode *)&new_v2);
+			err = vfs_get_vnode(nfs->id, VNODETOVNID(new_v), (fs_vnode *)(void *)&new_v2);
 			if(err < 0) {
 				destroy_vnode_struct(new_v);
 				err = ERR_NOT_FOUND;
@@ -408,7 +405,7 @@ int nfs_removevnode(fs_cookie fs, fs_vnode _v, bool r)
 	return ERR_UNIMPLEMENTED;
 }
 
-int nfs_opendir(fs_cookie _fs, fs_vnode _v, dir_cookie *_cookie)
+static int nfs_opendir(fs_cookie _fs, fs_vnode _v, dir_cookie *_cookie)
 {
 	struct nfs_vnode *v = (struct nfs_vnode *)_v;
 	struct nfs_cookie *cookie;
@@ -432,7 +429,7 @@ int nfs_opendir(fs_cookie _fs, fs_vnode _v, dir_cookie *_cookie)
 	return err;
 }
 
-int nfs_closedir(fs_cookie _fs, fs_vnode _v, dir_cookie _cookie)
+static int nfs_closedir(fs_cookie _fs, fs_vnode _v, dir_cookie _cookie)
 {
 	struct nfs_fs *fs = _fs;
 	struct nfs_vnode *v = _v;
@@ -451,7 +448,7 @@ int nfs_closedir(fs_cookie _fs, fs_vnode _v, dir_cookie _cookie)
 	return 0;
 }
 
-int nfs_rewinddir(fs_cookie _fs, fs_vnode _v, dir_cookie _cookie)
+static int nfs_rewinddir(fs_cookie _fs, fs_vnode _v, dir_cookie _cookie)
 {
 	struct nfs_vnode *v = _v;
 	struct nfs_cookie *cookie = _cookie;
@@ -476,7 +473,7 @@ int nfs_rewinddir(fs_cookie _fs, fs_vnode _v, dir_cookie _cookie)
 
 #define READDIR_BUF_SIZE (MAXNAMLEN + 64)
 
-ssize_t _nfs_readdir(nfs_fs *nfs, nfs_vnode *v, nfs_cookie *cookie, void *buf, ssize_t len)
+static ssize_t _nfs_readdir(nfs_fs *nfs, nfs_vnode *v, nfs_cookie *cookie, void *buf, ssize_t len)
 {
 	uint8 abuf[READDIR_BUF_SIZE];
 	nfs_readdirargs *args = (nfs_readdirargs *)abuf;
@@ -524,7 +521,7 @@ ssize_t _nfs_readdir(nfs_fs *nfs, nfs_vnode *v, nfs_cookie *cookie, void *buf, s
 	return ntohl(res->data[i + 1]);
 }
 
-int nfs_readdir(fs_cookie _fs, fs_vnode _v, dir_cookie _cookie, void *buf, size_t len)
+static int nfs_readdir(fs_cookie _fs, fs_vnode _v, dir_cookie _cookie, void *buf, size_t len)
 {
 	struct nfs_fs *fs = _fs;
 	struct nfs_vnode *v = _v;
@@ -589,6 +586,9 @@ int nfs_close(fs_cookie fs, fs_vnode _v, file_cookie _cookie)
 
 	TRACE("nfs_close: fsid 0x%x, vnid 0x%Lx\n", nfs->id, VNODETOVNID(v));
 
+	if(v->st == STREAM_TYPE_DIR) 
+		return ERR_VFS_IS_DIR;
+
 	return NO_ERROR;
 }
 
@@ -601,6 +601,9 @@ int nfs_freecookie(fs_cookie fs, fs_vnode _v, file_cookie _cookie)
 	TOUCH(nfs);TOUCH(v);
 
 	TRACE("nfs_freecookie: fsid 0x%x, vnid 0x%Lx\n", nfs->id, VNODETOVNID(v));
+
+	if(v->st == STREAM_TYPE_DIR) 
+		return ERR_VFS_IS_DIR;
 
 	kfree(cookie);
 
@@ -621,13 +624,15 @@ int nfs_fsync(fs_cookie fs, fs_vnode _v)
 
 #define READ_BUF_SIZE 1024
 
-ssize_t nfs_readfile(nfs_fs *nfs, nfs_vnode *v, nfs_cookie *cookie, void *buf, off_t pos, ssize_t len)
+static ssize_t nfs_readfile(nfs_fs *nfs, nfs_vnode *v, nfs_cookie *cookie, void *buf, off_t pos, ssize_t len, bool updatecookiepos)
 {
 	uint8 abuf[4 + sizeof(nfs_fattr) + READ_BUF_SIZE];
 	nfs_readargs *args = (nfs_readargs *)abuf;
 	nfs_readres  *res  = (nfs_readres *)abuf;
 	int err;
 	ssize_t total_read = 0;
+
+	TRACE("nfs_readfile: v %p, buf %p, pos %Ld, len %d\n", v, buf, pos, len);
 
 	/* check args */
 	if(pos < 0)
@@ -672,7 +677,8 @@ ssize_t nfs_readfile(nfs_fs *nfs, nfs_vnode *v, nfs_cookie *cookie, void *buf, o
 			break;
 	}
 
-	cookie->u.file.pos = pos;
+	if (updatecookiepos)
+		cookie->u.file.pos = pos;
 
 	return total_read;
 }
@@ -691,7 +697,7 @@ ssize_t nfs_read(fs_cookie fs, fs_vnode _v, file_cookie _cookie, void *buf, off_
 
 	sem_acquire(v->sem, 1);
 
-	err = nfs_readfile(nfs, v, cookie, buf, pos, len);
+	err = nfs_readfile(nfs, v, cookie, buf, pos, len, true);
 
 	sem_release(v->sem, 1);
 
@@ -700,7 +706,7 @@ ssize_t nfs_read(fs_cookie fs, fs_vnode _v, file_cookie _cookie, void *buf, off_
 
 #define WRITE_BUF_SIZE 1024
 
-ssize_t nfs_writefile(nfs_fs *nfs, nfs_vnode *v, nfs_cookie *cookie, const void *buf, off_t pos, ssize_t len)
+static ssize_t nfs_writefile(nfs_fs *nfs, nfs_vnode *v, nfs_cookie *cookie, const void *buf, off_t pos, ssize_t len, bool updatecookiepos)
 {
 	uint8 abuf[sizeof(nfs_writeargs) + WRITE_BUF_SIZE];
 	nfs_writeargs *args = (nfs_writeargs *)abuf;
@@ -746,7 +752,8 @@ ssize_t nfs_writefile(nfs_fs *nfs, nfs_vnode *v, nfs_cookie *cookie, const void 
 		total_written += to_write;
 	}
 
-	cookie->u.file.pos = pos;
+	if (updatecookiepos)
+		cookie->u.file.pos = pos;
 
 	return total_written;
 }
@@ -764,7 +771,7 @@ ssize_t nfs_write(fs_cookie fs, fs_vnode _v, file_cookie _cookie, const void *bu
 
 	switch(v->st) {
 		case STREAM_TYPE_FILE:
-			err = nfs_writefile(nfs, v, cookie, buf, pos, len);
+			err = nfs_writefile(nfs, v, cookie, buf, pos, len, true);
 			break;
 		case STREAM_TYPE_DIR:
 			err = ERR_NOT_ALLOWED;
@@ -784,69 +791,46 @@ int nfs_seek(fs_cookie fs, fs_vnode _v, file_cookie _cookie, off_t pos, seek_typ
 	nfs_vnode *v = (nfs_vnode *)_v;
 	nfs_cookie *cookie = (nfs_cookie *)_cookie;
 	int err = NO_ERROR;
+	nfs_attrstat attrstat;
+	off_t file_len;
 
 	TRACE("nfs_seek: fsid 0x%x, vnid 0x%Lx, pos 0x%Lx, seek_type %d\n", nfs->id, VNODETOVNID(v), pos, st);
 
+	if(v->st == STREAM_TYPE_DIR) 
+		return ERR_VFS_IS_DIR;
+
 	sem_acquire(v->sem, 1);
 
-	switch(v->st) {
-		case STREAM_TYPE_FILE: {
-			nfs_attrstat attrstat;
-			off_t file_len;
+	err = nfs_getattr(nfs, v, &attrstat);
+	if(err < 0)
+		goto out;
 
-			err = nfs_getattr(nfs, v, &attrstat);
-			if(err < 0)
-				goto out;
+	file_len = ntohl(attrstat.attributes.size);
 
-			file_len = ntohl(attrstat.attributes.size);
-
-			switch(st) {
-				case _SEEK_SET:
-					if(pos < 0)
-						pos = 0;
-					if(pos > file_len)
-						pos = file_len;
-					cookie->u.file.pos = pos;
-					break;
-				case _SEEK_CUR:
-					if(pos + cookie->u.file.pos > file_len)
-						cookie->u.file.pos = file_len;
-					else if(pos + cookie->u.file.pos < 0)
-						cookie->u.file.pos = 0;
-					else
-						cookie->u.file.pos += pos;
-					break;
-				case _SEEK_END:
-					if(pos > 0)
-						cookie->u.file.pos = file_len;
-					else if(pos + file_len < 0)
-						cookie->u.file.pos = 0;
-					else
-						cookie->u.file.pos = pos + file_len;
-					break;
-				default:
-					err = ERR_INVALID_ARGS;
-
-			}
+	switch(st) {
+		case _SEEK_SET:
+			if(pos < 0)
+				pos = 0;
+			if(pos > file_len)
+				pos = file_len;
+			cookie->u.file.pos = pos;
 			break;
-		}
-		case STREAM_TYPE_DIR:
-			switch(st) {
-				// only valid args are seek_type _SEEK_SET, pos 0.
-				// this rewinds to beginning of directory
-				case _SEEK_SET:
-					if(pos == 0) {
-						cookie->u.dir.nfscookie = 0;
-						cookie->u.dir.at_end = false;
-					} else {
-						err = ERR_INVALID_ARGS;
-					}
-					break;
-				case _SEEK_CUR:
-				case _SEEK_END:
-				default:
-					err = ERR_INVALID_ARGS;
-			}
+		case _SEEK_CUR:
+			if(pos + cookie->u.file.pos > file_len)
+				cookie->u.file.pos = file_len;
+			else if(pos + cookie->u.file.pos < 0)
+				cookie->u.file.pos = 0;
+			else
+				cookie->u.file.pos += pos;
+			break;
+		case _SEEK_END:
+			if(pos > 0)
+				cookie->u.file.pos = file_len;
+			else if(pos + file_len < 0)
+				cookie->u.file.pos = 0;
+			else
+				cookie->u.file.pos = pos + file_len;
+			break;
 		default:
 			err = ERR_INVALID_ARGS;
 	}
@@ -878,19 +862,53 @@ int nfs_canpage(fs_cookie fs, fs_vnode _v)
 
 	TRACE("nfs_canpage: fsid 0x%x, vnid 0x%Lx\n", nfs->id, VNODETOVNID(v));
 
-	return ERR_UNIMPLEMENTED;
+	if(v->st == STREAM_TYPE_FILE) 
+		return 1;
+	else
+		return 0;
 }
 
 ssize_t nfs_readpage(fs_cookie fs, fs_vnode _v, iovecs *vecs, off_t pos)
 {
 	nfs_fs *nfs = (nfs_fs *)fs;
 	nfs_vnode *v = (nfs_vnode *)_v;
+	unsigned int i;
+	ssize_t readfile_return;
+	ssize_t total_bytes_read = 0;
 
 	TOUCH(nfs);TOUCH(v);
 
 	TRACE("nfs_readpage: fsid 0x%x, vnid 0x%Lx, vecs %p, pos 0x%Lx\n", nfs->id, VNODETOVNID(v), vecs, pos);
+	
+	if(v->st == STREAM_TYPE_DIR)
+		return ERR_VFS_IS_DIR;
 
-	return ERR_UNIMPLEMENTED;
+	sem_acquire(v->sem, 1);
+
+	for (i=0; i < vecs->num; i++) {
+		readfile_return = nfs_readfile(nfs, v, NULL, vecs->vec[i].start, pos, vecs->vec[i].len, false);
+		TRACE("nfs_readpage: nfs_readfile returns %d\n", readfile_return);
+		if (readfile_return < 0)
+			goto out;
+
+		pos += readfile_return;
+		total_bytes_read += readfile_return;
+
+		if ((size_t)readfile_return < vecs->vec[i].len) {
+			/* we have hit the end of file, zero out the rest */
+			for (; i < vecs->num; i++) {
+				memset(vecs->vec[i].start + readfile_return, 0, vecs->vec[i].len - readfile_return);
+				total_bytes_read += vecs->vec[i].len - readfile_return;
+
+				readfile_return = 0; // after the first pass, wipe out entire pages
+			}
+		}
+	}
+
+out:
+	sem_release(v->sem, 1);
+
+	return total_bytes_read;
 }
 
 ssize_t nfs_writepage(fs_cookie fs, fs_vnode _v, iovecs *vecs, off_t pos)
@@ -901,6 +919,9 @@ ssize_t nfs_writepage(fs_cookie fs, fs_vnode _v, iovecs *vecs, off_t pos)
 	TOUCH(nfs);TOUCH(v);
 
 	TRACE("nfs_writepage: fsid 0x%x, vnid 0x%Lx, vecs %p, pos 0x%Lx\n", nfs->id, VNODETOVNID(v), vecs, pos);
+
+	if(v->st == STREAM_TYPE_DIR)
+		return ERR_VFS_IS_DIR;
 
 	return ERR_UNIMPLEMENTED;
 }

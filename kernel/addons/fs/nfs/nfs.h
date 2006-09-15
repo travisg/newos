@@ -1,5 +1,5 @@
 /*
-** Copyright 2002, Travis Geiselbrecht. All rights reserved.
+** Copyright 2002-2006, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #ifndef _NFS_H
@@ -15,12 +15,16 @@
 /* fs structure */
 typedef struct nfs_fs {
 	fs_id id;
-	ipv4_addr server_addr;
-	rpc_state rpc;
-	char server_path[MNTPATHLEN];
 	mutex lock;
 
 	struct nfs_vnode *root_vnode;
+
+	rpc_state rpc;
+	netaddr server_addr;
+	int mount_port;
+	int nfs_port;
+
+	char server_path[MNTPATHLEN];
 } nfs_fs;
 
 /* vnode structure */

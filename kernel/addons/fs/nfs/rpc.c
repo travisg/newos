@@ -41,9 +41,11 @@ int rpc_set_port(rpc_state *state, int port)
 	state->server_addr.port = port;
 
 	mutex_unlock(&state->lock);
+
+	return 0;
 }
 
-int rpc_open_socket(rpc_state *state, netaddr *server_addr)
+int rpc_open_socket(rpc_state *state, const netaddr *server_addr)
 {
 	mutex_lock(&state->lock);
 
@@ -53,7 +55,7 @@ int rpc_open_socket(rpc_state *state, netaddr *server_addr)
 		return state->socket;
 	}
 
-	state->server_addr.port = RPC_PORT;
+	state->server_addr.port = 0; // default to no port
 	memcpy(&state->server_addr.addr, server_addr, sizeof(netaddr));
 
 	mutex_unlock(&state->lock);
@@ -74,6 +76,11 @@ int rpc_call(rpc_state *state, unsigned int prog, unsigned int vers, unsigned in
 	sockaddr fromaddr;
 
 	mutex_lock(&state->lock);
+
+	if (state->server_addr.port == 0) {
+		err = ERR_NET_BAD_ADDRESS;
+		goto err;
+	}
 
 	// build the header
 	header = (struct msg_header *)&state->buf[0];
@@ -181,8 +188,8 @@ int rpc_call(rpc_state *state, unsigned int prog, unsigned int vers, unsigned in
 			if(htonl(*(rpc_accept_stat *)&state->buf[pos]) == RPC_SUCCESS) {
 //				dprintf("\taccept stat: SUCCESS\n");
 				pos += 4;
-				// good call, copy the remainder of the data to the out buffer
-				memcpy(in_data, &state->buf[pos], len - pos);
+				// good call, copy the remainder of the data to the in buffer
+				memcpy(in_data, &state->buf[pos], min(len - pos, in_data_len));
 				err = len - pos;
 			} else {
 //				dprintf("\taccept stat: %d\n", htonl(*(rpc_accept_stat *)&state->buf[pos]));
@@ -197,6 +204,44 @@ int rpc_call(rpc_state *state, unsigned int prog, unsigned int vers, unsigned in
 
 err:
 	mutex_unlock(&state->lock);
+
+	return err;
+}
+
+int rpc_pmap_lookup(const netaddr *server_addr, unsigned int prog, unsigned int vers, unsigned int prot, int *port)
+{
+	struct rpc_state rpc;
+	int err;
+	struct rpc_pmap_mapping mapping;
+	int netport;
+
+//	dprintf("rpc_pmap_lookup: prog %d vers %d prot %d\n", prog, vers, prot);
+
+	rpc_init_state(&rpc);
+	err = rpc_open_socket(&rpc, server_addr);	
+	if (err < 0)
+		goto out;
+
+	rpc_set_port(&rpc, RPC_PMAP_PORT);
+
+	mapping.prog = htonl(prog);
+	mapping.vers = htonl(vers);
+	mapping.prot = htonl(prot);
+	mapping.port = 0;
+
+	err = rpc_call(&rpc, RPC_PMAP_PROG, RPC_PMAP_VERS, PMAPPROC_GETPORT, 
+			&mapping, sizeof(mapping), &netport, sizeof(netport));
+	if (err < 0)
+		goto out;
+
+	*port = ntohl(netport);
+
+//	dprintf("rpc_pmap_lookup: port %d\n", *port);
+
+	err = 0;
+
+out:
+	rpc_destroy_state(&rpc);
 
 	return err;
 }
