@@ -97,21 +97,21 @@ static int parse_mount(const char *mount, char *address, int address_len, char *
 static int nfs_handle_hash_compare(void *a, const void *key)
 {
 	struct nfs_vnode *v = (struct nfs_vnode *)a;
-	fhandle *handle = (fhandle *)key;
+	nfs_fhandle *handle = (nfs_fhandle *)key;
 
-	return memcmp(&v->nfs_handle, handle, sizeof(*handle));
+	return memcmp(&v->nfs_handle, handle, sizeof(nfs_fhandle));
 }
 
 static unsigned int nfs_handle_hash(void *a, const void *key, unsigned int range)
 {
-	fhandle *hashit;
+	nfs_fhandle *hashit;
 	unsigned int hash;
 	unsigned int i;
 
 	if (key)
-		hashit = (fhandle *)key;
+		hashit = (nfs_fhandle *)key;
 	else
-		hashit = (fhandle *)&((nfs_vnode *)a)->nfs_handle;
+		hashit = (nfs_fhandle *)&((nfs_vnode *)a)->nfs_handle;
 
 #if NFS_TRACE
 	dprintf("nfs_handle_hash: hashit ");
@@ -119,8 +119,8 @@ static unsigned int nfs_handle_hash(void *a, const void *key, unsigned int range
 #endif	
 
 	hash = 0;
-	for (i=0; i < sizeof(hashit->handle) / sizeof(unsigned int); i++) {
-		hash += ((unsigned int *)hashit->handle)[i];
+	for (i=0; i < sizeof(*hashit) / sizeof(unsigned int); i++) {
+		hash += ((unsigned int *)hashit)[i];
 	}
 	hash += hash >> 16;
 
@@ -808,8 +808,7 @@ static ssize_t nfs_writefile(nfs_fs *nfs, nfs_vnode *v, nfs_cookie *cookie, cons
 		memcpy(&args->file, &v->nfs_handle, sizeof(args->file));
 		args->beginoffset = 0; // unused
 		args->offset = htonl(pos);
-		args->totalcount = 0; // unused
-		args->len = htonl(to_write);
+		args->totalcount = htonl(to_write);
 		err = user_memcpy(args->data, (const uint8 *)buf + total_written, to_write);
 		if(err < 0) {
 			total_written = err;

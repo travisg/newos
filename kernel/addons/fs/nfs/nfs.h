@@ -35,7 +35,7 @@ typedef struct nfs_vnode {
 	nfs_fs *fs;
 	mutex lock;
 	stream_type st;
-	fhandle nfs_handle;
+	nfs_fhandle nfs_handle;
 } nfs_vnode;
 
 typedef struct nfs_cookie {

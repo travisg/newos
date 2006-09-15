@@ -104,8 +104,15 @@ struct mount_args {
 };
 
 typedef struct {
-	unsigned char handle[FHSIZE];
-} fhandle;
+	int status;
+	unsigned int tsize;
+	unsigned int bsize;
+	unsigned int blocks;
+	unsigned int bfree;
+	unsigned int bavail;
+} nfs_statfsres;
+
+typedef unsigned char nfs_fhandle[FHSIZE];
 
 typedef struct {
 	int len;
@@ -135,18 +142,16 @@ typedef struct {
 } nfs_fattr;
 
 typedef struct {
-	fhandle dir;
-	nfs_filename name;
-} nfs_diropargs;
+	unsigned int mode;
+	unsigned int uid;
+	unsigned int gid;
+	unsigned int size;
+	nfs_timeval  atime;
+	nfs_timeval  mtime;
+} nfs_sattr;
 
 typedef struct {
-	int status;
-	fhandle file;
-	nfs_fattr attributes;
-} nfs_diropres;
-
-typedef struct {
-	fhandle file;
+	nfs_fhandle file;
 	unsigned int offset;
 	unsigned int count;
 	unsigned int totalcount;
@@ -160,11 +165,10 @@ typedef struct {
 } nfs_readres;
 
 typedef struct {
-	fhandle file;
+	nfs_fhandle file;
 	unsigned int beginoffset;
 	unsigned int offset;
 	unsigned int totalcount;
-	unsigned int len;
 	unsigned char data[0];
 } nfs_writeargs;
 
@@ -174,7 +178,18 @@ typedef struct {
 } nfs_attrstat;
 
 typedef struct {
-	fhandle dir;
+	nfs_fhandle dir;
+	nfs_filename name;
+} nfs_diropargs;
+
+typedef struct {
+	int status;
+	nfs_fhandle file;
+	nfs_fattr attributes;
+} nfs_diropres;
+
+typedef struct {
+	nfs_fhandle dir;
 	unsigned int cookie;
 	unsigned int count;
 } nfs_readdirargs;
@@ -183,5 +198,15 @@ typedef struct {
 	int status;
 	unsigned int data[0];
 } nfs_readdirres;
+
+typedef struct {
+	nfs_diropargs from;
+	nfs_diropargs to;
+} nfs_renameargs;
+
+typedef struct {
+	nfs_fhandle from;
+	nfs_diropargs to;
+} nfs_linkargs;
 
 #endif
