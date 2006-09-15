@@ -5,6 +5,7 @@
 #include <kernel/kernel.h>
 #include <kernel/vfs.h>
 #include <kernel/heap.h>
+#include <kernel/khash.h>
 #include <kernel/debug.h>
 #include <kernel/lock.h>
 #include <kernel/sem.h>
@@ -32,12 +33,12 @@
 static int nfs_getattr(nfs_fs *nfs, nfs_vnode *v, nfs_attrstat *attrstat);
 
 #if NFS_TRACE
-static void dump_fhandle(fhandle *handle)
+static void dump_fhandle(const fhandle *handle)
 {
 	unsigned int i;
 
 	for(i=0; i<sizeof(fhandle); i++)
-		dprintf("%02x", ((uint8 *)handle)[i]);
+		dprintf("%02x", ((const uint8 *)handle)[i]);
 }
 #endif
 
@@ -54,6 +55,7 @@ static nfs_vnode *new_vnode_struct(nfs_fs *fs)
 		return NULL;
 	}
 
+	v->hash_next = NULL;
 	v->fs = fs;
 
 	return v;
@@ -90,6 +92,45 @@ static int parse_mount(const char *mount, char *address, int address_len, char *
 	strcpy(server_path, &mount[b+1]);
 
 	return NO_ERROR;
+}
+
+static int nfs_handle_hash_compare(void *a, const void *key)
+{
+	struct nfs_vnode *v = (struct nfs_vnode *)a;
+	fhandle *handle = (fhandle *)key;
+
+	return memcmp(&v->nfs_handle, handle, sizeof(*handle));
+}
+
+static unsigned int nfs_handle_hash(void *a, const void *key, unsigned int range)
+{
+	fhandle *hashit;
+	unsigned int hash;
+	unsigned int i;
+
+	if (key)
+		hashit = (fhandle *)key;
+	else
+		hashit = (fhandle *)&((nfs_vnode *)a)->nfs_handle;
+
+#if NFS_TRACE
+	dprintf("nfs_handle_hash: hashit ");
+	dump_fhandle(hashit);
+#endif	
+
+	hash = 0;
+	for (i=0; i < sizeof(hashit->handle) / sizeof(unsigned int); i++) {
+		hash += ((unsigned int *)hashit->handle)[i];
+	}
+	hash += hash >> 16;
+
+	hash %= range;
+
+#if NFS_TRACE
+	dprintf(" hash 0x%x\n", hash);
+#endif
+
+	return hash;
 }
 
 static int parse_ipv4_addr_str(ipv4_addr *ip_addr, char *ip_addr_string)
@@ -237,12 +278,23 @@ int nfs_mount(fs_cookie *fs, fs_id id, const char *device, void *args, vnode_id 
 	if(err < 0)
 		goto err2;
 
+	// build the vnode hash table and stick the root vnode in it
+	nfs->handle_hash = hash_init(1024, offsetof(struct nfs_vnode, hash_next), 
+			nfs_handle_hash_compare,
+			nfs_handle_hash);
+	if (!nfs->handle_hash) {
+		err = ERR_NO_MEMORY;
+		goto err2;
+	}
+	hash_insert(nfs->handle_hash, nfs->root_vnode);
+
 	*fs = nfs;
 	*root_vnid = VNODETOVNID(nfs->root_vnode);
 
 	return 0;
 
 err2:
+	destroy_vnode_struct(nfs->root_vnode);
 	rpc_destroy_state(&nfs->rpc);
 err1:
 	mutex_destroy(&nfs->lock);
@@ -261,6 +313,8 @@ int nfs_unmount(fs_cookie fs)
 	vfs_put_vnode(nfs->id, VNODETOVNID(nfs->root_vnode));
 
 	nfs_unmount_fs(nfs);
+
+	hash_uninit(nfs->handle_hash);
 
 	rpc_destroy_state(&nfs->rpc);
 
@@ -310,46 +364,67 @@ int nfs_lookup(fs_cookie fs, fs_vnode _dir, const char *name, vnode_id *id)
 
 		/* see if the lookup was successful */
 		if(htonl(res->status) == NFS_OK) {
-			nfs_vnode *new_v;
-			nfs_vnode *new_v2;
+			nfs_vnode *v;
+			nfs_vnode *v2;
+			bool newvnode;
 
 			/* successful lookup */
 #if NFS_TRACE
 			dprintf("nfs_lookup: result of lookup of '%s'\n", name);
 			dprintf("\tfhandle: "); dump_fhandle(&res->file); dprintf("\n");
 			dprintf("\tsize: %d\n", ntohl(res->attributes.size));
+			nfs_handle_hash(NULL, &res->file, 1024);
 #endif
-			new_v = new_vnode_struct(nfs);
-			if(new_v == NULL) {
-				err = ERR_NO_MEMORY;
-				goto out;
+
+			/* see if the vnode already exists */
+			newvnode = false;
+			v = hash_lookup(nfs->handle_hash, &res->file);
+			if (v == NULL) {
+				/* didn't find it, create a new one */
+				v = new_vnode_struct(nfs);
+				if(v == NULL) {
+					err = ERR_NO_MEMORY;
+					goto out;
+				}
+
+				/* copy the file handle over */
+				memcpy(&v->nfs_handle, &res->file, sizeof(v->nfs_handle));
+
+				/* figure out the stream type from the return value and cache it */
+				switch(ntohl(res->attributes.ftype)) {
+					case NFREG:
+						v->st = STREAM_TYPE_FILE;
+						break;
+					case NFDIR:
+						v->st = STREAM_TYPE_DIR;
+						break;
+					default:
+						v->st = -1;
+				}
+
+				/* add it to the handle -> vnode lookup table */
+				mutex_lock(&nfs->lock);
+				hash_insert(nfs->handle_hash, v);
+				mutex_unlock(&nfs->lock);
+				newvnode = true;
 			}
 
-			/* copy the file handle over */
-			memcpy(&new_v->nfs_handle, &res->file, sizeof(new_v->nfs_handle));
-
-			err = vfs_get_vnode(nfs->id, VNODETOVNID(new_v), (fs_vnode *)(void *)&new_v2);
+			/* request that the vfs layer look it up */
+			err = vfs_get_vnode(nfs->id, VNODETOVNID(v), (fs_vnode *)(void *)&v2);
 			if(err < 0) {
-				destroy_vnode_struct(new_v);
+				if (newvnode) {
+					mutex_lock(&nfs->lock);
+					hash_remove(nfs->handle_hash, v);
+					mutex_unlock(&nfs->lock);
+					destroy_vnode_struct(v);
+				}
 				err = ERR_NOT_FOUND;
 				goto out;
 			}
 
-			ASSERT(new_v == new_v2);
+			ASSERT(v == v2);
 
-			/* figure out the stream type from the return value and cache it */
-			switch(ntohl(res->attributes.ftype)) {
-				case NFREG:
-					new_v->st = STREAM_TYPE_FILE;
-					break;
-				case NFDIR:
-					new_v->st = STREAM_TYPE_DIR;
-					break;
-				default:
-					new_v->st = -1;
-			}
-
-			*id = VNODETOVNID(new_v);
+			*id = VNODETOVNID(v);
 		} else {
 			TRACE("nfs_lookup: '%s' not found\n", name);
 			err = ERR_NOT_FOUND;
@@ -387,6 +462,9 @@ int nfs_putvnode(fs_cookie fs, fs_vnode _v, bool r)
 
 	TRACE("nfs_putvnode: fsid 0x%x, vnid 0x%Lx\n", nfs->id, VNODETOVNID(v));
 
+	mutex_lock(&nfs->lock);
+	hash_remove(nfs->handle_hash, v);
+	mutex_unlock(&nfs->lock);
 	destroy_vnode_struct(v);
 
 	return NO_ERROR;

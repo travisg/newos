@@ -17,6 +17,8 @@ typedef struct nfs_fs {
 	fs_id id;
 	mutex lock;
 
+	void *handle_hash;
+
 	struct nfs_vnode *root_vnode;
 
 	rpc_state rpc;
@@ -29,6 +31,7 @@ typedef struct nfs_fs {
 
 /* vnode structure */
 typedef struct nfs_vnode {
+	struct nfs_vnode *hash_next; // next in the per mount vnode table
 	nfs_fs *fs;
 	mutex lock;
 	stream_type st;
