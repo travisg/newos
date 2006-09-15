@@ -1587,6 +1587,7 @@ err:
 int vfs_create(char *path, void *args, bool kernel)
 {
 	int err;
+	struct vnode *dir;
 	struct vnode *v;
 	char filename[SYS_MAX_NAME_LEN];
 	vnode_id vnid;
@@ -1595,13 +1596,28 @@ int vfs_create(char *path, void *args, bool kernel)
 	dprintf("vfs_create: path '%s', args %p, kernel %d\n", path, args, kernel);
 #endif
 
-	err = path_to_dir_vnode(path, &v, filename, kernel);
+	err = path_to_dir_vnode(path, &dir, filename, kernel);
 	if(err < 0)
 		goto err;
 
-	err = v->mount->fs->calls->fs_create(v->mount->fscookie, v->priv_vnode, filename, args, &vnid);
+	err = dir->mount->fs->calls->fs_create(dir->mount->fscookie, dir->priv_vnode, filename, args, &vnid);
+	dec_vnode_ref_count(dir, true, false);
+	if (err < 0)
+		goto err;
+
+	/* the file system has created a new vnode for us */
+	// XXX for now just decrement a ref on it to kill it. We will
+	// eventually create a new file handle and pass it back
+	err = get_vnode(dir->fsid, vnid, &v, false);	
+	if (err < 0) {
+		goto err;
+	}
 
 	dec_vnode_ref_count(v, true, false);
+	dec_vnode_ref_count(v, true, false);
+
+	err = 0;
+	
 err:
 	return err;
 }
