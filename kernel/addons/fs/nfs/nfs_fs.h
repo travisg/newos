@@ -98,10 +98,18 @@ enum mount_proc {
 /* The maximum number of bytes in a name argument. */
 #define MNTNAMLEN 255
 
-struct mount_args {
-	unsigned int len;
-	char dirpath[MAXPATHLEN];
-};
+/* nfs structures
+ * NOTE: They don't necessarilly match what is on the wire precisely.
+ * Routines exist to pack/unpack data
+ */
+
+typedef struct {
+	const char *dirpath;
+} nfs_mountargs;
+#define NFS_MOUNTPATH_MAXLEN (ROUNDUP(MNTPATHLEN, 4) + 4)
+#define NFS_MOUNTARGS_MAXLEN NFS_MOUNTPATH_MAXLEN
+
+size_t nfs_pack_mountargs(uint8 *buf, const nfs_mountargs *args);
 
 typedef struct {
 	int status;
@@ -115,9 +123,11 @@ typedef struct {
 typedef unsigned char nfs_fhandle[FHSIZE];
 
 typedef struct {
-	int len;
-	char name[MAXNAMLEN];
+	const char *name;
 } nfs_filename;
+#define NFS_FILENAME_MAXLEN (ROUNDUP(MAXNAMLEN, 4) + 4)
+
+size_t nfs_pack_filename(uint8 *buf, const nfs_filename *name);
 
 typedef struct {
 	unsigned int seconds;
@@ -151,18 +161,22 @@ typedef struct {
 } nfs_sattr;
 
 typedef struct {
-	nfs_fhandle file;
+	nfs_fhandle *file;
 	unsigned int offset;
 	unsigned int count;
 	unsigned int totalcount;
 } nfs_readargs;
+#define NFS_READARGS_MAXLEN (FHSIZE + 3 * 4)
+size_t nfs_pack_readargs(uint8 *buf, const nfs_readargs *args);
 
 typedef struct {
-	int status;
-	nfs_fattr attributes;
+	int 		status;
+	nfs_fattr 	*attributes;
 	unsigned int len;
-	unsigned char data[0];
+	unsigned char *data;
 } nfs_readres;
+#define NFS_READRES_MAXLEN (4 + sizeof(nfs_fattr) + 4)
+void nfs_unpack_readres(uint8 *buf, nfs_readres *res);
 
 typedef struct {
 	nfs_fhandle file;
@@ -174,25 +188,36 @@ typedef struct {
 
 typedef struct {
 	int status;
-	nfs_fattr attributes;
+	nfs_fattr *attributes;
 } nfs_attrstat;
+#define NFS_ATTRSTAT_MAXLEN (4 + sizeof(nfs_fattr))
+void nfs_unpack_attrstat(uint8 *buf, nfs_attrstat *res);
 
 typedef struct {
-	nfs_fhandle dir;
+	nfs_fhandle *dir;
 	nfs_filename name;
 } nfs_diropargs;
+#define NFS_DIROPARGS_MAXLEN (FHSIZE + NFS_FILENAME_MAXLEN)
+
+size_t nfs_pack_diropargs(uint8 *buf, const nfs_diropargs *args);
 
 typedef struct {
 	int status;
-	nfs_fhandle file;
-	nfs_fattr attributes;
+	nfs_fhandle *file;
+	nfs_fattr *attributes;
 } nfs_diropres;
+#define NFS_DIROPRES_MAXLEN (4 + FHSIZE + sizeof(nfs_fattr))
+
+void nfs_unpack_diropres(uint8 *buf, nfs_diropres *res);
 
 typedef struct {
-	nfs_fhandle dir;
+	nfs_fhandle *dir;
 	unsigned int cookie;
 	unsigned int count;
 } nfs_readdirargs;
+#define NFS_READDIRARGS_MAXLEN (FHSIZE + 4 + 4)
+
+size_t nfs_pack_readdirargs(uint8 *buf, const nfs_readdirargs *args);
 
 typedef struct {
 	int status;

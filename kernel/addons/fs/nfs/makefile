@@ -6,6 +6,7 @@ ifeq ($(call FINDINLIST,$(MY_TARGET),$(ALL)),1)
 
 MY_OBJS := \
 	nfs.o \
+	nfs_xdr.o \
 	rpc.o
 
 MY_INCLUDES := -Iinclude

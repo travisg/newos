@@ -30,7 +30,7 @@
 #define TRACE(x...)
 #endif
 
-static int nfs_getattr(nfs_fs *nfs, nfs_vnode *v, nfs_attrstat *attrstat);
+static int nfs_getattr(nfs_fs *nfs, nfs_vnode *v, uint8 *attrstatbuf, nfs_attrstat *attrstat);
 
 #if NFS_TRACE
 static void dump_fhandle(const fhandle *handle)
@@ -182,17 +182,18 @@ static int parse_ipv4_addr_str(ipv4_addr *ip_addr, char *ip_addr_string)
 
 static int nfs_mount_fs(nfs_fs *nfs, const char *server_path)
 {
-	struct mount_args args;
+	uint8 sendbuf[256];
 	char buf[128];
+	nfs_mountargs args;
+	size_t arglen;
 	int err;
-
-	memset(&args, sizeof(args), 0);
-	strlcpy(args.dirpath, server_path, sizeof(args.dirpath));
-	args.len = htonl(strlen(args.dirpath));
 
 	rpc_set_port(&nfs->rpc, nfs->mount_port);
 
-	err = rpc_call(&nfs->rpc, MOUNTPROG, MOUNTVERS, MOUNTPROC_MNT, &args, ntohl(args.len) + 4, buf, sizeof(buf));
+	args.dirpath = server_path;
+	arglen = nfs_pack_mountargs(sendbuf, &args);
+
+	err = rpc_call(&nfs->rpc, MOUNTPROG, MOUNTVERS, MOUNTPROC_MNT, sendbuf, arglen, buf, sizeof(buf));
 	if(err < 0)
 		return err;
 
@@ -212,16 +213,17 @@ static int nfs_mount_fs(nfs_fs *nfs, const char *server_path)
 
 static int nfs_unmount_fs(nfs_fs *nfs)
 {
-	struct mount_args args;
+	uint8 sendbuf[256];
+	size_t arglen;
+	nfs_mountargs args;
 	int err;
-
-	memset(&args, sizeof(args), 0);
-	strlcpy(args.dirpath, nfs->server_path, sizeof(args.dirpath));
-	args.len = htonl(strlen(args.dirpath));
 
 	rpc_set_port(&nfs->rpc, nfs->mount_port);
 
-	err = rpc_call(&nfs->rpc, MOUNTPROG, MOUNTVERS, MOUNTPROC_UMNT, &args, ntohl(args.len) + 4, NULL, 0);
+	args.dirpath = nfs->server_path;
+	arglen = nfs_pack_mountargs(sendbuf, &args);
+
+	err = rpc_call(&nfs->rpc, MOUNTPROG, MOUNTVERS, MOUNTPROC_UMNT, sendbuf, arglen, NULL, 0);
 
 	return err;
 }
@@ -345,25 +347,28 @@ int nfs_lookup(fs_cookie fs, fs_vnode _dir, const char *name, vnode_id *id)
 	mutex_lock(&dir->lock);
 
 	{
-		uint8 buf[sizeof(nfs_diropargs)];
-		nfs_diropargs *args = (nfs_diropargs *)buf;
-		nfs_diropres  *res  = (nfs_diropres  *)buf;
-		int namelen = min(MAXNAMLEN, strlen(name));
+		uint8 sendbuf[NFS_DIROPARGS_MAXLEN];
+		nfs_diropargs args;
+		size_t arglen;
+
+		uint8 resbuf[NFS_DIROPRES_MAXLEN];
+		nfs_diropres  res;
 
 		/* set up the args structure */
-		memcpy(&args->dir, &dir->nfs_handle, sizeof(args->dir));
+		args.dir = &dir->nfs_handle;
+		args.name.name = name;
+		arglen = nfs_pack_diropargs(sendbuf, &args);
 
-		args->name.len = htonl(namelen);
-		memcpy(args->name.name, name, namelen);
-
-		err = rpc_call(&nfs->rpc, NFSPROG, NFSVERS, NFSPROC_LOOKUP, args, sizeof(nfs_diropargs), buf, sizeof(buf));
+		err = rpc_call(&nfs->rpc, NFSPROG, NFSVERS, NFSPROC_LOOKUP, sendbuf, arglen, resbuf, sizeof(resbuf));
 		if(err < 0) {
 			err = ERR_NOT_FOUND;
 			goto out;
 		}
 
+		nfs_unpack_diropres(resbuf, &res);
+
 		/* see if the lookup was successful */
-		if(htonl(res->status) == NFS_OK) {
+		if(res.status == NFS_OK) {
 			nfs_vnode *v;
 			nfs_vnode *v2;
 			bool newvnode;
@@ -372,13 +377,13 @@ int nfs_lookup(fs_cookie fs, fs_vnode _dir, const char *name, vnode_id *id)
 #if NFS_TRACE
 			dprintf("nfs_lookup: result of lookup of '%s'\n", name);
 			dprintf("\tfhandle: "); dump_fhandle(&res->file); dprintf("\n");
-			dprintf("\tsize: %d\n", ntohl(res->attributes.size));
+			dprintf("\tsize: %d\n", res->attributes.size);
 			nfs_handle_hash(NULL, &res->file, 1024);
 #endif
 
 			/* see if the vnode already exists */
 			newvnode = false;
-			v = hash_lookup(nfs->handle_hash, &res->file);
+			v = hash_lookup(nfs->handle_hash, res.file);
 			if (v == NULL) {
 				/* didn't find it, create a new one */
 				v = new_vnode_struct(nfs);
@@ -388,10 +393,10 @@ int nfs_lookup(fs_cookie fs, fs_vnode _dir, const char *name, vnode_id *id)
 				}
 
 				/* copy the file handle over */
-				memcpy(&v->nfs_handle, &res->file, sizeof(v->nfs_handle));
+				memcpy(&v->nfs_handle, res.file, sizeof(v->nfs_handle));
 
 				/* figure out the stream type from the return value and cache it */
-				switch(ntohl(res->attributes.ftype)) {
+				switch(res.attributes->ftype) {
 					case NFREG:
 						v->st = STREAM_TYPE_FILE;
 						break;
@@ -552,9 +557,11 @@ static int nfs_rewinddir(fs_cookie _fs, fs_vnode _v, dir_cookie _cookie)
 
 static ssize_t _nfs_readdir(nfs_fs *nfs, nfs_vnode *v, nfs_cookie *cookie, void *buf, ssize_t len)
 {
-	uint8 abuf[READDIR_BUF_SIZE];
-	nfs_readdirargs *args = (nfs_readdirargs *)abuf;
-	nfs_readdirres  *res  = (nfs_readdirres *)abuf;
+	uint8 resbuf[READDIR_BUF_SIZE];
+	nfs_readdirres  *res  = (nfs_readdirres *)resbuf;
+	uint8 argbuf[NFS_READDIRARGS_MAXLEN];
+	nfs_readdirargs args;
+	size_t arglen;
 	ssize_t err = 0;
 	int i;
 	int namelen;
@@ -567,11 +574,12 @@ static ssize_t _nfs_readdir(nfs_fs *nfs, nfs_vnode *v, nfs_cookie *cookie, void 
 		return 0;
 
 	/* put together the message */
-	memcpy(&args->dir, &v->nfs_handle, sizeof(args->dir));
-	args->cookie = cookie->u.dir.nfscookie;
-	args->count = htonl(min(len, READDIR_BUF_SIZE));
+	args.dir = &v->nfs_handle;
+	args.cookie = cookie->u.dir.nfscookie;
+	args.count = min(len, READDIR_BUF_SIZE);
+	arglen = nfs_pack_readdirargs(argbuf, &args);
 
-	err = rpc_call(&nfs->rpc, NFSPROG, NFSVERS, NFSPROC_READDIR, args, sizeof(*args), abuf, sizeof(abuf));
+	err = rpc_call(&nfs->rpc, NFSPROG, NFSVERS, NFSPROC_READDIR, argbuf, arglen, resbuf, sizeof(resbuf));
 	if(err < 0)
 		return err;
 
@@ -703,9 +711,12 @@ int nfs_fsync(fs_cookie fs, fs_vnode _v)
 
 static ssize_t nfs_readfile(nfs_fs *nfs, nfs_vnode *v, nfs_cookie *cookie, void *buf, off_t pos, ssize_t len, bool updatecookiepos)
 {
-	uint8 abuf[4 + sizeof(nfs_fattr) + READ_BUF_SIZE];
-	nfs_readargs *args = (nfs_readargs *)abuf;
-	nfs_readres  *res  = (nfs_readres *)abuf;
+	uint8 resbuf[NFS_READRES_MAXLEN + READ_BUF_SIZE];
+	nfs_readres  res;
+
+	uint8 argbuf[NFS_READARGS_MAXLEN];
+	nfs_readargs args;
+	size_t arglen;
 	int err;
 	ssize_t total_read = 0;
 
@@ -725,32 +736,35 @@ static ssize_t nfs_readfile(nfs_fs *nfs, nfs_vnode *v, nfs_cookie *cookie, void 
 		ssize_t to_read = min(len, READ_BUF_SIZE);
 
 		/* put together the message */
-		memcpy(&args->file, &v->nfs_handle, sizeof(args->file));
-		args->offset = htonl(pos);
-		args->count = htonl(to_read);
-		args->totalcount = 0; // unused
+		args.file = &v->nfs_handle;
+		args.offset = pos;
+		args.count = to_read;
+		args.totalcount = 0; // unused
+		arglen = nfs_pack_readargs(argbuf, &args);
 
-		err = rpc_call(&nfs->rpc, NFSPROG, NFSVERS, NFSPROC_READ, args, sizeof(*args), abuf, sizeof(abuf));
+		err = rpc_call(&nfs->rpc, NFSPROG, NFSVERS, NFSPROC_READ, argbuf, arglen, resbuf, sizeof(resbuf));
 		if(err < 0)
 			break;
 
+		nfs_unpack_readres(resbuf, &res);
+
 		/* get response */
-		if(ntohl(res->status) != NFS_OK)
+		if(res.status != NFS_OK)
 			break;
 
 		/* see how much we read */
-		err = user_memcpy((uint8 *)buf + total_read, res->data, ntohl(res->len));
+		err = user_memcpy((uint8 *)buf + total_read, res.data, res.len);
 		if(err < 0) {
 			total_read = err; // bad user give me bad buffer
 			break;
 		}
 
-		pos += ntohl(res->len);
-		len -= ntohl(res->len);
-		total_read += ntohl(res->len);
+		pos += res.len;
+		len -= res.len;
+		total_read += res.len;
 
 		/* short read, we're done */
-		if((ssize_t)ntohl(res->len) != to_read)
+		if((ssize_t)res.len != to_read)
 			break;
 	}
 
@@ -785,6 +799,7 @@ ssize_t nfs_read(fs_cookie fs, fs_vnode _v, file_cookie _cookie, void *buf, off_
 
 static ssize_t nfs_writefile(nfs_fs *nfs, nfs_vnode *v, nfs_cookie *cookie, const void *buf, off_t pos, ssize_t len, bool updatecookiepos)
 {
+#if 0
 	uint8 abuf[sizeof(nfs_writeargs) + WRITE_BUF_SIZE];
 	nfs_writeargs *args = (nfs_writeargs *)abuf;
 	nfs_attrstat  *res  = (nfs_attrstat *)abuf;
@@ -832,6 +847,8 @@ static ssize_t nfs_writefile(nfs_fs *nfs, nfs_vnode *v, nfs_cookie *cookie, cons
 		cookie->u.file.pos = pos;
 
 	return total_written;
+#endif
+	return ERR_UNIMPLEMENTED;
 }
 
 ssize_t nfs_write(fs_cookie fs, fs_vnode _v, file_cookie _cookie, const void *buf, off_t pos, ssize_t len)
@@ -867,6 +884,7 @@ int nfs_seek(fs_cookie fs, fs_vnode _v, file_cookie _cookie, off_t pos, seek_typ
 	nfs_vnode *v = (nfs_vnode *)_v;
 	nfs_cookie *cookie = (nfs_cookie *)_cookie;
 	int err = NO_ERROR;
+	uint8 attrstatbuf[NFS_ATTRSTAT_MAXLEN];
 	nfs_attrstat attrstat;
 	off_t file_len;
 
@@ -877,11 +895,11 @@ int nfs_seek(fs_cookie fs, fs_vnode _v, file_cookie _cookie, off_t pos, seek_typ
 
 	mutex_lock(&v->lock);
 
-	err = nfs_getattr(nfs, v, &attrstat);
+	err = nfs_getattr(nfs, v, attrstatbuf, &attrstat);
 	if(err < 0)
 		goto out;
 
-	file_len = ntohl(attrstat.attributes.size);
+	file_len = attrstat.attributes->size;
 
 	switch(st) {
 		case _SEEK_SET:
@@ -1063,15 +1081,24 @@ int nfs_rmdir(fs_cookie _fs, fs_vnode _base_dir, const char *name)
 	return ERR_UNIMPLEMENTED;
 }
 
-static int nfs_getattr(nfs_fs *nfs, nfs_vnode *v, nfs_attrstat *attrstat)
+static int nfs_getattr(nfs_fs *nfs, nfs_vnode *v, uint8 *buf, nfs_attrstat *attrstat)
 {
-	return rpc_call(&nfs->rpc, NFSPROG, NFSVERS, NFSPROC_GETATTR, &v->nfs_handle, sizeof(v->nfs_handle), attrstat, sizeof(nfs_attrstat));
+	int err;
+
+	err = rpc_call(&nfs->rpc, NFSPROG, NFSVERS, NFSPROC_GETATTR, &v->nfs_handle, sizeof(v->nfs_handle), buf, NFS_ATTRSTAT_MAXLEN);
+	if (err < 0)
+		return err;
+
+	nfs_unpack_attrstat(buf, attrstat);
+
+	return err;
 }
 
 int nfs_rstat(fs_cookie fs, fs_vnode _v, struct file_stat *stat)
 {
 	nfs_fs *nfs = (nfs_fs *)fs;
 	nfs_vnode *v = (nfs_vnode *)_v;
+	uint8 attrstatbuf[NFS_ATTRSTAT_MAXLEN];
 	nfs_attrstat attrstat;
 	int err;
 
@@ -1079,19 +1106,19 @@ int nfs_rstat(fs_cookie fs, fs_vnode _v, struct file_stat *stat)
 
 	mutex_lock(&v->lock);
 
-	err = nfs_getattr(nfs, v, &attrstat);
+	err = nfs_getattr(nfs, v, attrstatbuf, &attrstat);
 	if(err < 0)
 		goto out;
 
-	if(ntohl(attrstat.status) != NFS_OK) {
+	if(attrstat.status != NFS_OK) {
 		err = ERR_IO_ERROR;
 		goto out;
 	}
 
 	/* copy the stat over from the nfs attrstat */
 	stat->vnid = VNODETOVNID(v);
-	stat->size = ntohl(attrstat.attributes.size);
-	switch(ntohl(attrstat.attributes.ftype)) {
+	stat->size = attrstat.attributes->size;
+	switch(attrstat.attributes->ftype) {
 		case NFREG:
 			stat->type = STREAM_TYPE_FILE;
 			break;
