@@ -18,6 +18,7 @@ struct command cmds[] = {
 	{"exec", &cmd_exec},
 	{"stat", &cmd_stat},
 	{"mkdir", &cmd_mkdir},
+	{"touch", &cmd_touch},
 	{"cat", &cmd_cat},
 	{"cd", &cmd_cd},
 	{"pwd", &cmd_pwd},
@@ -108,11 +109,30 @@ int cmd_mkdir(int argc, char *argv[])
 	return 0;
 }
 
+int cmd_touch(int argc, char *argv[])
+{
+	int rc;
+
+	if(argc < 2) {
+		printf("not enough arguments to touch\n");
+		return 0;
+	}
+
+	rc = _kern_create(argv[1]);
+	if (rc < 0) {
+		printf("_kern_create() returned error: %s\n", strerror(rc));
+	} else {
+		printf("%s successfully created.\n", argv[1]);
+	}
+
+	return 0;
+}
+
 int cmd_cat(int argc, char *argv[])
 {
 	int rc;
 	int fd;
-	char buf[257];
+	char buf[4096];
 
 	if(argc < 2) {
 		printf("not enough arguments to cat\n");
@@ -126,7 +146,7 @@ int cmd_cat(int argc, char *argv[])
 	}
 
 	for(;;) {
-		rc = read(fd, buf, sizeof(buf) -1);
+		rc = read(fd, buf, sizeof(buf));
 		if(rc <= 0)
 			break;
 
@@ -199,6 +219,7 @@ int cmd_help(int argc, char *argv[])
 	printf("exit : quits this copy of the shell\n");
 	printf("exec <file> : load this file as a binary and run it\n");
 	printf("mkdir <path> : makes a directory at <path>\n");
+	printf("touch <path> : creates a file at <path>\n");
 	printf("cd <path> : sets the current working directory at <path>\n");
 	printf("ls <path> : directory list of <path>. If no path given it lists the current dir\n");
 	printf("stat <file> : gives detailed file statistics of <file>\n");
