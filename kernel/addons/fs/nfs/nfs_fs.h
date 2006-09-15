@@ -111,8 +111,10 @@ typedef struct {
 
 size_t nfs_pack_mountargs(uint8 *buf, const nfs_mountargs *args);
 
+typedef int nfs_status;
+
 typedef struct {
-	int status;
+	nfs_status status;
 	unsigned int tsize;
 	unsigned int bsize;
 	unsigned int blocks;
@@ -170,7 +172,7 @@ typedef struct {
 size_t nfs_pack_readargs(uint8 *buf, const nfs_readargs *args);
 
 typedef struct {
-	int 		status;
+	nfs_status	status;
 	nfs_fattr 	*attributes;
 	unsigned int len;
 	unsigned char *data;
@@ -187,7 +189,7 @@ typedef struct {
 } nfs_writeargs;
 
 typedef struct {
-	int status;
+	nfs_status status;
 	nfs_fattr *attributes;
 } nfs_attrstat;
 #define NFS_ATTRSTAT_MAXLEN (4 + sizeof(nfs_fattr))
@@ -198,7 +200,6 @@ typedef struct {
 	nfs_filename name;
 } nfs_diropargs;
 #define NFS_DIROPARGS_MAXLEN (FHSIZE + NFS_FILENAME_MAXLEN)
-
 size_t nfs_pack_diropargs(uint8 *buf, const nfs_diropargs *args);
 
 typedef struct {
@@ -207,7 +208,6 @@ typedef struct {
 	nfs_fattr *attributes;
 } nfs_diropres;
 #define NFS_DIROPRES_MAXLEN (4 + FHSIZE + sizeof(nfs_fattr))
-
 void nfs_unpack_diropres(uint8 *buf, nfs_diropres *res);
 
 typedef struct {
@@ -216,13 +216,19 @@ typedef struct {
 	unsigned int count;
 } nfs_readdirargs;
 #define NFS_READDIRARGS_MAXLEN (FHSIZE + 4 + 4)
-
 size_t nfs_pack_readdirargs(uint8 *buf, const nfs_readdirargs *args);
 
 typedef struct {
-	int status;
+	nfs_status status;
 	unsigned int data[0];
 } nfs_readdirres;
+
+typedef struct {
+	nfs_diropargs where;
+	nfs_sattr attributes;
+} nfs_createargs;
+#define NFS_CREATEARGS_MAXLEN (NFS_DIROPARGS_MAXLEN + sizeof(nfs_sattr))
+size_t nfs_pack_createopargs(uint8 *buf, const nfs_createargs *args);
 
 typedef struct {
 	nfs_diropargs from;

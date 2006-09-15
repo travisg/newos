@@ -33,11 +33,11 @@
 static int nfs_getattr(nfs_fs *nfs, nfs_vnode *v, uint8 *attrstatbuf, nfs_attrstat *attrstat);
 
 #if NFS_TRACE
-static void dump_fhandle(const fhandle *handle)
+static void dump_fhandle(const nfs_fhandle *handle)
 {
 	unsigned int i;
 
-	for(i=0; i<sizeof(fhandle); i++)
+	for(i=0; i<sizeof(nfs_fhandle); i++)
 		dprintf("%02x", ((const uint8 *)handle)[i]);
 }
 #endif
@@ -104,14 +104,14 @@ static int nfs_handle_hash_compare(void *a, const void *key)
 
 static unsigned int nfs_handle_hash(void *a, const void *key, unsigned int range)
 {
-	nfs_fhandle *hashit;
+	const nfs_fhandle *hashit;
 	unsigned int hash;
 	unsigned int i;
 
 	if (key)
-		hashit = (nfs_fhandle *)key;
+		hashit = (const nfs_fhandle *)key;
 	else
-		hashit = (nfs_fhandle *)&((nfs_vnode *)a)->nfs_handle;
+		hashit = (const nfs_fhandle *)&((nfs_vnode *)a)->nfs_handle;
 
 #if NFS_TRACE
 	dprintf("nfs_handle_hash: hashit ");
@@ -131,6 +131,48 @@ static unsigned int nfs_handle_hash(void *a, const void *key, unsigned int range
 #endif
 
 	return hash;
+}
+
+static int nfs_status_to_error(nfs_status status)
+{
+	switch (status) {
+		case NFS_OK:
+			return NO_ERROR;
+		case NFSERR_PERM:
+			return ERR_PERMISSION_DENIED;
+		case NFSERR_NOENT:
+			return ERR_VFS_PATH_NOT_FOUND;
+		case NFSERR_IO:
+			return ERR_IO_ERROR;
+		case NFSERR_NXIO:
+			return ERR_NOT_FOUND;
+		case NFSERR_ACCES:
+			return ERR_PERMISSION_DENIED;
+		case NFSERR_EXIST:
+			return ERR_VFS_ALREADY_EXISTS;
+		case NFSERR_NODEV:
+			return ERR_NOT_FOUND;
+		case NFSERR_NOTDIR:
+			return ERR_VFS_NOT_DIR;
+		case NFSERR_ISDIR:
+			return ERR_VFS_IS_DIR;
+		case NFSERR_FBIG:
+			return ERR_TOO_BIG;
+		case NFSERR_NOSPC:
+			return ERR_VFS_OUT_OF_SPACE;
+		case NFSERR_ROFS:
+			return ERR_VFS_READONLY_FS;
+		case NFSERR_NAMETOOLONG:
+			return ERR_VFS_PATH_TOO_LONG;
+		case NFSERR_NOTEMPTY:
+			return ERR_VFS_DIR_NOT_EMPTY;
+		case NFSERR_DQUOT:
+			return ERR_VFS_EXCEEDED_QUOTA;
+		case NFSERR_STALE:
+			return ERR_INVALID_HANDLE;
+		default:
+			return ERR_GENERAL;
+	}
 }
 
 static int parse_ipv4_addr_str(ipv4_addr *ip_addr, char *ip_addr_string)
@@ -199,7 +241,7 @@ static int nfs_mount_fs(nfs_fs *nfs, const char *server_path)
 
 #if NFS_TRACE
 	TRACE("nfs_mount_fs: have root fhandle: ");
-	dump_fhandle((fhandle *)&buf[4]);
+	dump_fhandle((const nfs_fhandle *)&buf[4]);
 	TRACE("\n");
 #endif
 	// we should have the root handle now
@@ -376,9 +418,9 @@ int nfs_lookup(fs_cookie fs, fs_vnode _dir, const char *name, vnode_id *id)
 			/* successful lookup */
 #if NFS_TRACE
 			dprintf("nfs_lookup: result of lookup of '%s'\n", name);
-			dprintf("\tfhandle: "); dump_fhandle(&res->file); dprintf("\n");
-			dprintf("\tsize: %d\n", res->attributes.size);
-			nfs_handle_hash(NULL, &res->file, 1024);
+			dprintf("\tfhandle: "); dump_fhandle(res.file); dprintf("\n");
+			dprintf("\tsize: %d\n", res.attributes->size);
+			nfs_handle_hash(NULL, res.file, 1024);
 #endif
 
 			/* see if the vnode already exists */
@@ -1020,28 +1062,174 @@ ssize_t nfs_writepage(fs_cookie fs, fs_vnode _v, iovecs *vecs, off_t pos)
 	return ERR_UNIMPLEMENTED;
 }
 
+static int _nfs_create(nfs_fs *nfs, nfs_vnode *dir, const char *name, stream_type type, vnode_id *new_vnid)
+{
+	int err;
+	uint8 argbuf[NFS_CREATEARGS_MAXLEN];
+	nfs_createargs args;
+	size_t arglen;
+	uint8 resbuf[NFS_DIROPRES_MAXLEN];
+	nfs_diropres res;
+	nfs_vnode *v, *v2;
+	int proc;
+
+	/* start building the args */
+	args.where.dir = &dir->nfs_handle;
+	args.where.name.name = name;
+	args.attributes.mode = 0777;
+	args.attributes.uid = 0;
+	args.attributes.gid = 0;
+	args.attributes.size = 0;
+	args.attributes.atime.seconds = 0;
+	args.attributes.atime.useconds = 0;
+	args.attributes.mtime.seconds = 0;
+	args.attributes.mtime.useconds = 0;
+	arglen = nfs_pack_createopargs(argbuf, &args);
+
+	switch (type) {
+		case STREAM_TYPE_FILE:
+			proc = NFSPROC_CREATE;
+			break;
+		case STREAM_TYPE_DIR:
+			proc = NFSPROC_MKDIR;
+			break;
+		default:
+			return panic("_nfs_create asked to make file type it doesn't understand\n");
+	}
+
+	err = rpc_call(&nfs->rpc, NFSPROG, NFSVERS, proc, argbuf, arglen, resbuf, sizeof(resbuf));
+	if (err < 0)
+		return err;
+
+	nfs_unpack_diropres(resbuf, &res);
+
+	if (res.status != NFS_OK) {
+		err = nfs_status_to_error(res.status);
+		goto err;
+	}
+
+	/* if new_vnid is null, the layers above us aren't requesting that we bring the vnode into existence */
+	if (new_vnid == NULL) {
+		err = 0;
+		goto out;
+	}
+
+	/* create a new vnode */
+	v = new_vnode_struct(nfs);
+	if (v == NULL) {
+		err = ERR_NO_MEMORY;
+		/* weird state here. we've created a file but failed */
+		goto err;
+	}
+
+	/* copy the file handle over */
+	memcpy(&v->nfs_handle, res.file, sizeof(v->nfs_handle));
+
+	/* figure out the stream type from the return value and cache it */
+	switch (res.attributes->ftype) {
+		case NFREG:
+			v->st = STREAM_TYPE_FILE;
+			break;
+		case NFDIR:
+			v->st = STREAM_TYPE_DIR;
+			break;
+		default:
+			v->st = -1;
+	}
+
+	/* add it to the handle -> vnode lookup table */
+	mutex_lock(&nfs->lock);
+	hash_insert(nfs->handle_hash, v);
+	mutex_unlock(&nfs->lock);
+
+	/* request that the vfs layer look it up */
+	err = vfs_get_vnode(nfs->id, VNODETOVNID(v), (fs_vnode *)(void *)&v2);
+	if (err < 0) {
+		mutex_lock(&nfs->lock);
+		hash_remove(nfs->handle_hash, v);
+		mutex_unlock(&nfs->lock);
+		destroy_vnode_struct(v);
+		err = ERR_NOT_FOUND;
+		goto err;
+	}
+
+	*new_vnid = VNODETOVNID(v);
+
+	err = 0;
+
+out:
+err:
+	return err;
+}
+
 int nfs_create(fs_cookie fs, fs_vnode _dir, const char *name, void *create_args, vnode_id *new_vnid)
 {
 	nfs_fs *nfs = (nfs_fs *)fs;
 	nfs_vnode *dir = (nfs_vnode *)_dir;
+	int err;
 
 	TOUCH(nfs);TOUCH(dir);
 
 	TRACE("nfs_create: fsid 0x%x, vnid 0x%Lx, name '%s'\n", nfs->id, VNODETOVNID(dir), name);
 
-	return ERR_UNIMPLEMENTED;
+	mutex_lock(&dir->lock);
+
+	err = _nfs_create(nfs, dir, name, STREAM_TYPE_FILE, new_vnid);
+
+	mutex_unlock(&dir->lock);
+
+	return err;
+}
+
+static int _nfs_unlink(nfs_fs *nfs, nfs_vnode *dir, const char *name, stream_type type)
+{
+	int err;
+	uint8 argbuf[NFS_DIROPARGS_MAXLEN];
+	nfs_diropargs args;
+	size_t arglen;
+	nfs_status res;
+	int proc;
+
+	/* start building the args */
+	args.dir = &dir->nfs_handle;
+	args.name.name = name;
+	arglen = nfs_pack_diropargs(argbuf, &args);
+
+	switch (type) {
+		case STREAM_TYPE_FILE:
+			proc = NFSPROC_REMOVE;
+			break;
+		case STREAM_TYPE_DIR:
+			proc = NFSPROC_RMDIR;
+			break;
+		default:
+			return panic("_nfs_unlink asked to remove file type it doesn't understand\n");
+	}
+
+	err = rpc_call(&nfs->rpc, NFSPROG, NFSVERS, proc, argbuf, arglen, &res, sizeof(res));
+	if (err < 0)
+		return err;
+
+	return nfs_status_to_error(ntohl(res));
 }
 
 int nfs_unlink(fs_cookie fs, fs_vnode _dir, const char *name)
 {
 	nfs_fs *nfs = (nfs_fs *)fs;
 	nfs_vnode *dir = (nfs_vnode *)_dir;
+	int err;
 
 	TOUCH(nfs);TOUCH(dir);
 
 	TRACE("nfs_unlink: fsid 0x%x, vnid 0x%Lx, name '%s'\n", nfs->id, VNODETOVNID(dir), name);
 
-	return ERR_UNIMPLEMENTED;
+	mutex_lock(&dir->lock);
+
+	err = _nfs_unlink(nfs, dir, name, STREAM_TYPE_FILE);
+
+	mutex_unlock(&dir->lock);
+
+	return err;
 }
 
 int nfs_rename(fs_cookie fs, fs_vnode _olddir, const char *oldname, fs_vnode _newdir, const char *newname)
@@ -1061,24 +1249,38 @@ int nfs_mkdir(fs_cookie _fs, fs_vnode _base_dir, const char *name)
 {
 	nfs_fs *nfs = (nfs_fs *)_fs;
 	nfs_vnode *dir = (nfs_vnode *)_base_dir;
+	int err;
 
 	TOUCH(nfs);TOUCH(dir);
 
 	TRACE("nfs_mkdir: fsid 0x%x, vnid 0x%Lx, name '%s'\n", nfs->id, VNODETOVNID(dir), name);
 
-	return ERR_UNIMPLEMENTED;
+	mutex_lock(&dir->lock);
+
+	err = _nfs_create(nfs, dir, name, STREAM_TYPE_DIR, NULL);
+
+	mutex_unlock(&dir->lock);
+
+	return err;
 }
 
 int nfs_rmdir(fs_cookie _fs, fs_vnode _base_dir, const char *name)
 {
 	nfs_fs *nfs = (nfs_fs *)_fs;
 	nfs_vnode *dir = (nfs_vnode *)_base_dir;
+	int err;
 
 	TOUCH(nfs);TOUCH(dir);
 
 	TRACE("nfs_rmdir: fsid 0x%x, vnid 0x%Lx, name '%s'\n", nfs->id, VNODETOVNID(dir), name);
 
-	return ERR_UNIMPLEMENTED;
+	mutex_lock(&dir->lock);
+
+	err = _nfs_unlink(nfs, dir, name, STREAM_TYPE_DIR);
+
+	mutex_unlock(&dir->lock);
+
+	return err;
 }
 
 static int nfs_getattr(nfs_fs *nfs, nfs_vnode *v, uint8 *buf, nfs_attrstat *attrstat)
@@ -1091,7 +1293,7 @@ static int nfs_getattr(nfs_fs *nfs, nfs_vnode *v, uint8 *buf, nfs_attrstat *attr
 
 	nfs_unpack_attrstat(buf, attrstat);
 
-	return err;
+	return nfs_status_to_error(attrstat->status);
 }
 
 int nfs_rstat(fs_cookie fs, fs_vnode _v, struct file_stat *stat)

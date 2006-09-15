@@ -13,6 +13,51 @@
 #include "nfs_fs.h"
 #include "rpc.h"
 
+static inline void nfs_swap_timeval(nfs_timeval *val)
+{
+	val->seconds = ntohl(val->seconds);
+	val->useconds = ntohl(val->useconds);
+}
+
+static inline void nfs_copyswap_timeval(nfs_timeval *dst, const nfs_timeval *src)
+{
+	dst->seconds = ntohl(src->seconds);
+	dst->useconds = ntohl(src->useconds);
+}
+
+static void nfs_swap_fattr(nfs_fattr *attr)
+{
+	/* 1:1 mapping, just need to endian swap */
+	attr->ftype = ntohl(attr->ftype);
+	attr->mode = ntohl(attr->mode);
+	attr->nlink = ntohl(attr->nlink);
+	attr->uid = ntohl(attr->uid);
+	attr->gid = ntohl(attr->gid);
+	attr->size = ntohl(attr->size);
+	attr->blocksize = ntohl(attr->blocksize);
+	attr->rdev = ntohl(attr->rdev);
+	attr->blocks = ntohl(attr->blocks);
+	attr->fsid = ntohl(attr->fsid);
+	attr->fileid = ntohl(attr->fileid);
+	nfs_swap_timeval(&attr->atime);
+	nfs_swap_timeval(&attr->mtime);
+	nfs_swap_timeval(&attr->ctime);
+}
+
+static size_t nfs_pack_sattr(uint8 *buf, const nfs_sattr *attr)
+{
+	nfs_sattr *dstattr = (nfs_sattr *)buf;
+
+	dstattr->mode = ntohl(attr->mode);
+	dstattr->uid = ntohl(attr->uid);
+	dstattr->gid = ntohl(attr->gid);
+	dstattr->size = ntohl(attr->size);
+	nfs_copyswap_timeval(&dstattr->atime, &attr->atime);
+	nfs_copyswap_timeval(&dstattr->mtime, &attr->mtime);
+
+	return sizeof(nfs_sattr);
+}
+
 static inline size_t nfs_pack_string(uint8 *buf, const char *string, size_t maxlen)
 {
 	size_t stringlen = strlen(string);
@@ -62,29 +107,13 @@ size_t nfs_pack_readargs(uint8 *buf, const nfs_readargs *args)
 	return sizeof(nfs_fhandle) + 3 * 4;
 }
 
-static inline void nfs_swap_timeval(nfs_timeval *val)
+size_t nfs_pack_createopargs(uint8 *buf, const nfs_createargs *args)
 {
-	val->seconds = ntohl(val->seconds);
-	val->useconds = ntohl(val->useconds);
-}
+	size_t off;
 
-static void nfs_swap_fattr(nfs_fattr *attr)
-{
-	/* 1:1 mapping, just need to endian swap */
-	attr->ftype = ntohl(attr->ftype);
-	attr->mode = ntohl(attr->mode);
-	attr->nlink = ntohl(attr->nlink);
-	attr->uid = ntohl(attr->uid);
-	attr->gid = ntohl(attr->gid);
-	attr->size = ntohl(attr->size);
-	attr->blocksize = ntohl(attr->blocksize);
-	attr->rdev = ntohl(attr->rdev);
-	attr->blocks = ntohl(attr->blocks);
-	attr->fsid = ntohl(attr->fsid);
-	attr->fileid = ntohl(attr->fileid);
-	nfs_swap_timeval(&attr->atime);
-	nfs_swap_timeval(&attr->mtime);
-	nfs_swap_timeval(&attr->ctime);
+	off = nfs_pack_diropargs(buf, &args->where);
+	off += nfs_pack_sattr(buf + off, &args->attributes);
+	return off;
 }
 
 void nfs_unpack_diropres(uint8 *buf, nfs_diropres *res)
