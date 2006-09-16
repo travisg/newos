@@ -1,5 +1,5 @@
 /*
-** Copyright 2001, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2006, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #ifndef _SYS_ERRORS_H
@@ -56,6 +56,9 @@
 #define ERR_VFS_WRONG_STREAM_TYPE   (ERR_VFS_GENERAL-12)
 #define ERR_VFS_ALREADY_MOUNTPOINT (ERR_VFS_GENERAL-13)
 #define ERR_VFS_IS_DIR           (ERR_VFS_GENERAL-14)
+#define ERR_VFS_OUT_OF_SPACE     (ERR_VFS_GENERAL-15)
+#define ERR_VFS_PATH_TOO_LONG    (ERR_VFS_GENERAL-16)
+#define ERR_VFS_EXCEEDED_QUOTA   (ERR_VFS_GENERAL-17)
 
 /* VM errors */
 #define ERR_VM_GENERAL           (-4096)
