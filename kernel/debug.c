@@ -408,3 +408,24 @@ bool dbg_get_serial_debug()
 	return serial_debug_on;
 }
 
+void hexdump(const void *_ptr, size_t len)
+{
+	const unsigned char *ptr = _ptr;
+	size_t i;
+
+	dprintf("hexdump ptr %p, len %d\n", ptr, len);
+	
+	while (len > 0) {
+		dprintf("%08lx: ", (addr_t)ptr);
+		for (i=0; i < min(len, 16); i++) {
+			dprintf("%02x ", *ptr);
+			ptr++;
+		}
+		dprintf("\n");
+		if (len < 16)
+			break;
+		len -= 16;
+	}
+}
+
+

@@ -25,6 +25,8 @@ int panic(const char *fmt, ...) __PRINTFLIKE(1,2);
 void kernel_debugger(void);
 int dbg_add_command(void (*func)(int, char **), const char *cmd, const char *desc);
 
+void hexdump(const void *ptr, size_t len);
+
 /* arch provided */
 extern void dbg_save_registers(int *);
 extern void dbg_make_register_file(unsigned int *file, const struct iframe *frame);
