@@ -19,6 +19,7 @@ KERNEL_ADDONS += $(addprefix $(KERNEL_ADDONS_BUILD_DIR)/, \
 	dev/net/pcnet32/pcnet32 \
 	dev/net/rhine/rhine \
 	dev/net/rtl8139/rtl8139 \
+	dev/net/rtl8169/rtl8169 \
 	dev/input/pckeyboard/keyboard \
 	dev/input/ps2mouse/mouse \
 	dev/graphics/vesa/vesa \

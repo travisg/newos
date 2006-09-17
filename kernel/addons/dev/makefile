@@ -14,5 +14,6 @@ include $(addsuffix /makefile, $(addprefix $(KERNEL_DEV_ADDONS_DIR)/, \
 	net/pcnet32 \
 	net/rhine \
 	net/rtl8139 \
+	net/rtl8169 \
 	tty \
 ))
