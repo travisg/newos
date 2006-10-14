@@ -21,6 +21,11 @@
 #undef arm
 #define INC_ARCH(path, x) <path/arm/x>
 #endif
+#if defined(__sh4__) || defined(__SH4__)
+#undef sh4
+#define INC_ARCH(path, x) <path/sh4/x>
+#endif
+
 
 #include INC_ARCH(arch,types.h)
 

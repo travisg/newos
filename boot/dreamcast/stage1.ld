@@ -1,21 +1,14 @@
 OUTPUT_FORMAT("elf32-shl", "elf32-shl", "elf32-shl")
 OUTPUT_ARCH(sh)
-  PHDRS 
-  {
-  	text PT_LOAD;
-  	data PT_LOAD;
-  }
-  
+ 
 ENTRY(__start)
 SECTIONS
 {
-/*	. = 0x8c100000 + 0x1200 + SIZEOF_HEADERS; */
-	. = 0x8c000000 + 0x5000 + SIZEOF_HEADERS;
+	. = 0x8c000000;
 
 	/* text/read-only data */
 	.text :	{ *(.text .gnu.linkonce.t.*) }
-
-	.rodata : { *(.rodata) }
+	.rodata : { *(.rodata .rodata.*) }
 
 	/* writable data  */
 /*	. = ALIGN(0x1000);*/

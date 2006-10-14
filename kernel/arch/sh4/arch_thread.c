@@ -1,5 +1,5 @@
 /*
-** Copyright 2001-2004, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2006, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #include <kernel/kernel.h>
@@ -11,6 +11,11 @@
 #include <string.h>
 
 static struct thread *curr_thread = NULL;
+
+int arch_thread_init(kernel_args *ka)
+{
+	return 0;
+}
 
 int arch_proc_init_proc_struct(struct proc *p, bool kernel)
 {
@@ -80,7 +85,7 @@ int arch_thread_initialize_kthread_stack(struct thread *t, int (*start_func)(voi
 	return 0;
 }
 
-void arch_thread_context_switch(struct thread *t_from, struct thread *t_to)
+void arch_thread_context_switch(struct thread *t_from, struct thread *t_to, struct vm_translation_map_struct *new_tmap)
 {
 #if 0
 	int i;
@@ -95,7 +100,7 @@ void arch_thread_context_switch(struct thread *t_from, struct thread *t_to)
 	sh4_set_kstack(t_to->kernel_stack_base + KSTACK_SIZE);
 
 	if(t_to->proc->aspace != NULL) {
-		sh4_set_user_pgdir(vm_translation_map_get_pgdir(&t_to->proc->aspace->translation_map));
+		sh4_set_user_pgdir(vm_translation_map_get_pgdir(new_tmap));
 	} else {
 		sh4_set_user_pgdir(NULL);
 	}
@@ -135,4 +140,31 @@ void arch_thread_set_current_thread(struct thread *t)
 {
 	curr_thread = t;
 }
+
+/* signal stuff */
+
+
+int
+arch_setup_signal_frame(struct thread *t, struct sigaction *sa, int sig, int sig_mask)
+{
+	PANIC_UNIMPLEMENTED();
+
+	return 0;
+}
+
+int64
+arch_restore_signal_frame(void)
+{
+	PANIC_UNIMPLEMENTED();
+
+	return 0;
+}
+
+
+void
+arch_check_syscall_restart(struct thread *t)
+{
+	PANIC_UNIMPLEMENTED();
+}
+
 

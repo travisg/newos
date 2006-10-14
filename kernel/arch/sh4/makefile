@@ -10,6 +10,7 @@ MY_OBJS += \
 	$(KERNEL_ARCH_SH4_DIR)/arch_faults.o \
 	$(KERNEL_ARCH_SH4_DIR)/arch_int.o \
 	$(KERNEL_ARCH_SH4_DIR)/arch_smp.o \
+	$(KERNEL_ARCH_SH4_DIR)/arch_time.o \
 	$(KERNEL_ARCH_SH4_DIR)/arch_timer.o \
 	$(KERNEL_ARCH_SH4_DIR)/arch_thread.o \
 	$(KERNEL_ARCH_SH4_DIR)/arch_vm.o \

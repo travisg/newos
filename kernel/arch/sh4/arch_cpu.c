@@ -24,6 +24,11 @@ int arch_cpu_init(kernel_args *ka)
 	return 0;
 }
 
+int arch_cpu_init_percpu(kernel_args *ka, int curr_cpu)
+{
+	return 0;
+}
+
 int arch_cpu_init2(kernel_args *ka)
 {
 	return 0;

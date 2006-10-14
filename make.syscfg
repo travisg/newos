@@ -167,7 +167,7 @@ ifeq ($(ARCH),arm)
 endif
 
 ifeq ($(ARCH),sh4)
-	GLOBAL_CFLAGS = -ml -m4-single-only -mhitachi -O2 -g
+	GLOBAL_CFLAGS = -ml -m4-single-only -mhitachi -O2 -g -D__SH4__
 	KERNEL_CFLAGS = -fno-pic
 	USER_CFLAGS = -fpic
 	GLOBAL_LDFLAGS = -EL

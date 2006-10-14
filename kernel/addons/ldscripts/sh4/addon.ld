@@ -31,17 +31,12 @@ SECTIONS
 	.rela.bss : { *(.rela.bss) }
 	.rel.plt : { *(.rel.plt) }
 	.rela.plt : { *(.rela.plt) }
-	.init : { *(.init) } =0x9090
+	.init : { *(.init) }
 	.plt : { *(.plt) }
 
 	/* text/read-only data */
-	.text :	{ *(.text .gnu.linkonce.t.*) } =0x9090
-
-  	.rodata :
-	{ 
- 		*(.rodata)
- 		. = ALIGN(0x1000);
- 	} =0x9000
+	.text :	{ *(.text .gnu.linkonce.t.*) }
+  	.rodata : { *(.rodata .rodata.*) }
 
 	/* writable data  */
   	. = ALIGN(0x1000) + (. & (0x1000 - 1));

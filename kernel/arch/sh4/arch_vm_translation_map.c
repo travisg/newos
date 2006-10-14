@@ -342,8 +342,8 @@ int vm_translation_map_create(vm_translation_map *new_map, bool kernel)
 	} else {
 		// kernel
 		// we already know the kernel pgdir mapping
-		(addr_t)new_map->arch_data->pgdir_virt = NULL;
-		(addr_t)new_map->arch_data->pgdir_phys = vcpu->kernel_pgdir;
+		new_map->arch_data->pgdir_virt = (addr_t)NULL;
+		new_map->arch_data->pgdir_phys = (addr_t)vcpu->kernel_pgdir;
 		new_map->arch_data->is_user = false;
 	}
 
