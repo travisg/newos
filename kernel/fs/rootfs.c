@@ -635,13 +635,13 @@ static int rootfs_mkdir(fs_cookie _fs, fs_vnode _base_dir, const char *name)
 	int err;
 	bool created_vnode = false;
 
-	TRACE(("rootfs_create: dir 0x%x, name = '%s'\n", dir, name));
+	TRACE(("rootfs_mkdir: dir 0x%x, name = '%s'\n", dir, name));
 
 	mutex_lock(&fs->lock);
 
 	new_vnode = rootfs_find_in_dir(dir, name);
 	if(new_vnode == NULL) {
-		dprintf("rootfs_create: creating new vnode\n");
+		dprintf("rootfs_mkdir: creating new vnode\n");
 		new_vnode = rootfs_create_vnode(fs);
 		if(new_vnode == NULL) {
 			err = ERR_NO_MEMORY;
