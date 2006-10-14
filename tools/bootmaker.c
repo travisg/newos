@@ -468,11 +468,7 @@ Elf32_Off elf32_find_entry(void *buf, int size)
 	}
 #endif
 
-	header = (struct Elf32_Ehdr *)cbuf;
-	pheader = (struct Elf32_Phdr *)&cbuf[SWAPIT(header->e_phoff)];
-
-	// XXX only looking at the first program header. Should be ok
-	return SWAPIT(pheader->p_offset);
+	return SWAPIT(header->e_entry);
 #undef SWAPIT
 }
 
@@ -512,11 +508,8 @@ Elf64_Off elf64_find_entry(void *buf, int size)
 	}
 #endif
 
-	header = (struct Elf64_Ehdr *)cbuf;
-	pheader = (struct Elf64_Phdr *)&cbuf[SWAPIT(header->e_phoff)];
-
-	// XXX only looking at the first program header. Should be ok
-	return SWAPIT(pheader->p_offset);
+	// XXX 64bit entrypoint doesn't fit here
+	return SWAPIT(header->e_entry);
 #undef SWAPIT
 }
 

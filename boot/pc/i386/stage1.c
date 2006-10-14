@@ -38,7 +38,7 @@ void _start(unsigned int mem, void *ext_mem_block, int ext_mem_count, int in_ves
 	dprintf("done, len %d\n", len);
 
 	dprintf("finding stage2...");
-	stage2_entry = (void*)((char *)bootdir + bootdir->bd_entry[1].be_offset * PAGE_SIZE + bootdir->bd_entry[1].be_code_ventr);
+	stage2_entry = (void*)(bootdir->bd_entry[1].be_code_ventr);
 	dprintf("entry at %p\n", stage2_entry);
 
 	// jump into stage2
