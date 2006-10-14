@@ -714,7 +714,7 @@ region_id vm_map_physical_memory(aspace_id aid, char *name, void **address, int 
 
 	// modify the pointer returned to be offset back into the new region
 	// the same way the physical address in was offset
-	((addr_t)(*address)) += map_offset;
+	(*address) = (void *)(((addr_t)*address) + map_offset);
 	return region->id;
 }
 
