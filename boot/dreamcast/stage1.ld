@@ -4,7 +4,7 @@ OUTPUT_ARCH(sh)
 ENTRY(__start)
 SECTIONS
 {
-	. = 0x8c000000;
+	. = 0x8c010000;
 
 	/* text/read-only data */
 	.text :	{ *(.text .gnu.linkonce.t.*) }

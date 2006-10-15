@@ -6,17 +6,16 @@
 #include <boot/stage2.h>
 #include <arch/cpu.h>
 #include <arch/sh4/sh4.h>
-#include <arch/sh4/vcpu.h>
+//#include <arch/sh4/vcpu.h>
 
 #include <string.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <newos/elf32.h>
 #include "serial.h"
-#include "mmu.h"
+//#include "mmu.h"
 
-#define BOOTDIR 0x8c001000
-#define P2_AREA 0x8c000000
+#define BOOTDIR 0x8c011000
 #define PHYS_ADDR_START 0x0c000000
 
 #define ROUNDUP(a, b) (((a) + ((b)-1)) & ~((b)-1))
@@ -25,15 +24,16 @@
 void test_interrupt();
 void switch_stacks_and_call(unsigned int stack, unsigned int call_addr, unsigned int call_arg, unsigned int call_arg2);
 
-void load_elf_image(void *data, unsigned int *next_paddr, addr_range *ar0, addr_range *ar1, unsigned int *start_addr, addr_range *dynamic_section);
+void load_elf_image(void *data, addr_range *kernel_mapping, addr_range *ar0, addr_range *ar1, unsigned int *start_addr, addr_range *dynamic_section);
 
-int _start()
+int _start(void);
+
+int _start(void)
 {
 	unsigned int i;
 	boot_entry *bootdir = (boot_entry *)BOOTDIR;
 	unsigned int bootdir_len;
-	unsigned int next_vaddr;
-	unsigned int next_paddr;
+	unsigned int next_addr;
 	unsigned int kernel_entry;
 	kernel_args *ka;
 
@@ -50,56 +50,47 @@ int _start()
 	}
 
 	dprintf("bootdir is %d pages long\n", bootdir_len);
-	next_paddr = PHYS_ADDR_START + bootdir_len * PAGE_SIZE;
+	next_addr = BOOTDIR + bootdir_len * PAGE_SIZE;
 
 	// find a location for the kernel args
-	ka = (kernel_args *)(P2_AREA + bootdir_len * PAGE_SIZE);
+	ka = (kernel_args *)next_addr;
 	memset(ka, 0, sizeof(kernel_args));
-	next_paddr += PAGE_SIZE;
+	next_addr += PAGE_SIZE;
 
-	// initialize the vcpu
-	vcpu_init(ka);
-	mmu_init(ka, &next_paddr);
+	// start recording allocated ranges
+	ka->phys_alloc_range[0].start = P1_TO_PHYS_ADDR(BOOTDIR);
+
+	// map in a kernel stack
+	ka->cpu_kstack[0].start = next_addr;
+	ka->cpu_kstack[0].size = PAGE_SIZE * 2;
+	next_addr += PAGE_SIZE * 2;
+
+	// finished with this range of memory
+	ka->phys_alloc_range[0].size = P1_TO_PHYS_ADDR(next_addr) - ka->phys_alloc_range[0].start;
+	ka->num_phys_alloc_ranges = 1;
 
 	// map the kernel text & data
-	load_elf_image((void *)(bootdir[2].be_offset * PAGE_SIZE + BOOTDIR), &next_paddr,
+	load_elf_image((void *)(bootdir[2].be_offset * PAGE_SIZE + BOOTDIR), &ka->phys_alloc_range[1],
 			&ka->kernel_seg0_addr, &ka->kernel_seg1_addr, &kernel_entry, &ka->kernel_dynamic_section_addr);
 	dprintf("mapped kernel from 0x%x to 0x%x\n", ka->kernel_seg0_addr.start, ka->kernel_seg1_addr.start + ka->kernel_seg1_addr.size);
 	dprintf("kernel entry @ 0x%x\n", kernel_entry);
-
-#if 0
-	dprintf("diffing the mapped memory\n");
-	dprintf("memcmp = %d\n", memcmp((void *)KERNEL_LOAD_ADDR, (void *)BOOTDIR + bootdir[2].be_offset * PAGE_SIZE, PAGE_SIZE));
-	dprintf("done diffing the memory\n");
-#endif
-
-	next_vaddr = ROUNDUP(ka->kernel_seg1_addr.start + ka->kernel_seg1_addr.size, PAGE_SIZE);
-
-	// map in a kernel stack
-	ka->cpu_kstack[0].start = next_vaddr;
-	for(i=0; i<2; i++) {
-		mmu_map_page(next_vaddr, next_paddr);
-		next_vaddr += PAGE_SIZE;
-		next_paddr += PAGE_SIZE;
-	}
-	ka->cpu_kstack[0].size = next_vaddr - ka->cpu_kstack[0].start;
-
-	// record this first region of allocation space
-	ka->phys_alloc_range[0].start = PHYS_ADDR_START;
-	ka->phys_alloc_range[0].size = next_paddr - PHYS_ADDR_START;
-	ka->num_phys_alloc_ranges = 1;
-	ka->virt_alloc_range[0].start = ka->kernel_seg0_addr.start;
-	ka->virt_alloc_range[0].size  = next_vaddr - ka->virt_alloc_range[0].start;
-	ka->virt_alloc_range[1].start = ka->kernel_seg1_addr.start;
-	ka->virt_alloc_range[1].size  = next_vaddr - ka->virt_alloc_range[1].start;
-	ka->num_virt_alloc_ranges = 2;
+	ka->num_phys_alloc_ranges++;
 
 	ka->fb.enabled = 1;
 	ka->fb.x_size = 640;
 	ka->fb.y_size = 480;
 	ka->fb.bit_depth = 16;
+	// RGB555
+	ka->fb.red_mask_size = 5;
+	ka->fb.red_field_position = 0;
+	ka->fb.green_mask_size = 5;
+	ka->fb.red_field_position = 5;
+	ka->fb.blue_mask_size = 5;
+	ka->fb.red_field_position = 10;
 	ka->fb.mapping.start = 0xa5000000;
 	ka->fb.mapping.size = ka->fb.x_size * ka->fb.y_size * 2;
+	ka->fb.phys_addr.start = 0x5000000;
+	ka->fb.phys_addr.size = ka->fb.mapping.size;
 	ka->fb.already_mapped = 1;
 
 	ka->cons_line = 0;
@@ -110,6 +101,7 @@ int _start()
 	ka->phys_mem_range[0].size  = 16*1024*1024;
 	ka->num_phys_mem_ranges = 1;
 	ka->num_cpus = 1;
+	ka->num_virt_alloc_ranges = 0; // we're using the P1 area
 
 	for(i=0; i<ka->num_phys_alloc_ranges; i++) {
 		dprintf("prange %d start = 0x%x, size = 0x%x\n",
@@ -139,7 +131,7 @@ asm(".text\n"
 "	jsr	@r1\n"
 "	mov	r7,r5");
 
-void load_elf_image(void *data, unsigned int *next_paddr, addr_range *ar0, addr_range *ar1, unsigned int *start_addr, addr_range *dynamic_section)
+void load_elf_image(void *data, addr_range *kernel_mapping, addr_range *ar0, addr_range *ar1, unsigned int *start_addr, addr_range *dynamic_section)
 {
 	struct Elf32_Ehdr *imageHeader = (struct Elf32_Ehdr*) data;
 	struct Elf32_Phdr *segments = (struct Elf32_Phdr*)(imageHeader->e_phoff + (unsigned) imageHeader);
@@ -149,6 +141,9 @@ void load_elf_image(void *data, unsigned int *next_paddr, addr_range *ar0, addr_
 	ar0->size = 0;
 	ar1->size = 0;
 	dynamic_section->size = 0;
+
+	kernel_mapping->start = 0;
+	kernel_mapping->size = 0;
 
 	for (segmentIndex = 0; segmentIndex < imageHeader->e_phnum; segmentIndex++) {
 		struct Elf32_Phdr *segment = &segments[segmentIndex];
@@ -173,10 +168,15 @@ void load_elf_image(void *data, unsigned int *next_paddr, addr_range *ar0, addr_
 			segmentOffset < ROUNDUP(segment->p_filesz, PAGE_SIZE);
 			segmentOffset += PAGE_SIZE) {
 
-			mmu_map_page(segment->p_vaddr + segmentOffset, *next_paddr);
-			memcpy((void *)ROUNDOWN(segment->p_vaddr + segmentOffset, PAGE_SIZE),
+			addr_t paddr_pagealigned = ROUNDOWN(segment->p_vaddr + segmentOffset, PAGE_SIZE);
+
+			if (kernel_mapping->start == 0)
+				kernel_mapping->start = P1_TO_PHYS_ADDR(paddr_pagealigned);
+
+			memcpy((void *)paddr_pagealigned,
 				(void *)ROUNDOWN((unsigned)data + segment->p_offset + segmentOffset, PAGE_SIZE), PAGE_SIZE);
-			(*next_paddr) += PAGE_SIZE;
+
+			kernel_mapping->size += PAGE_SIZE;
 		}
 
 		/* Clean out the leftover part of the last page */
@@ -190,9 +190,8 @@ void load_elf_image(void *data, unsigned int *next_paddr, addr_range *ar0, addr_
 		/* Map uninitialized portion */
 		for (; segmentOffset < ROUNDUP(segment->p_memsz, PAGE_SIZE); segmentOffset += PAGE_SIZE) {
 			dprintf("mapping zero page at va 0x%x\n", segment->p_vaddr + segmentOffset);
-			mmu_map_page(segment->p_vaddr + segmentOffset, *next_paddr);
 			memset((void *)(segment->p_vaddr + segmentOffset), 0, PAGE_SIZE);
-			(*next_paddr) += PAGE_SIZE;
+			kernel_mapping->size += PAGE_SIZE;
 		}
 		switch(foundSegmentIndex) {
 			case 0:

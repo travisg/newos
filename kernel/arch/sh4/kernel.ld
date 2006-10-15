@@ -5,7 +5,7 @@ ENTRY(__start)
 SEARCH_DIR("libgcc");
 SECTIONS
 {
-	. = 0xc0000000 + SIZEOF_HEADERS;
+	. = 0x8c800000 + SIZEOF_HEADERS;
 
 	.interp : { *(.interp) }
 	.hash : { *(.hash) }

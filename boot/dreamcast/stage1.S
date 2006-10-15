@@ -4,7 +4,7 @@
 */
 /* addresses of values stored in the bootdir, which starts on the next
    page after this code. */
-#define BASE 0x8c000000
+#define BASE 0x8c010000
 #define BOOTDIR_BASE (BASE + 0x1000)
 
 /* a couple of pointers into the second bootdir entry */

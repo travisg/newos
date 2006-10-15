@@ -11,10 +11,7 @@ MY_SRCDIR := $(BOOT_SRCDIR)
 MY_TARGET := $(STAGE2)
 MY_OBJS := \
 	stage2.o \
-	serial.o \
-	mmu.o \
-	vcpu.o \
-	vcpu_c.o
+	serial.o
 
 MY_INCLUDES := $(STDINCLUDE)
 MY_CFLAGS := $(KERNEL_CFLAGS)
