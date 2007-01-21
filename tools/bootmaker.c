@@ -435,7 +435,6 @@ char *getvaldef(section *s, char *name, char *def)
 Elf32_Off elf32_find_entry(void *buf, int size)
 {
 	struct Elf32_Ehdr *header;
-	struct Elf32_Phdr *pheader;
 	char *cbuf = buf;
 	int byte_swap;
 	int index;
@@ -468,6 +467,7 @@ Elf32_Off elf32_find_entry(void *buf, int size)
 	}
 #endif
 
+	header = (struct Elf32_Ehdr *)buf;
 	return SWAPIT(header->e_entry);
 #undef SWAPIT
 }
@@ -475,7 +475,6 @@ Elf32_Off elf32_find_entry(void *buf, int size)
 Elf64_Off elf64_find_entry(void *buf, int size)
 {
 	struct Elf64_Ehdr *header;
-	struct Elf64_Phdr *pheader;
 	char *cbuf = buf;
 	int byte_swap;
 	int index;
@@ -509,6 +508,7 @@ Elf64_Off elf64_find_entry(void *buf, int size)
 #endif
 
 	// XXX 64bit entrypoint doesn't fit here
+	header = (struct Elf64_Ehdr *)buf;
 	return SWAPIT(header->e_entry);
 #undef SWAPIT
 }
