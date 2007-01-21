@@ -11,7 +11,7 @@ MY_OBJS := \
 	usb_hub.o \
 	usb_pipe.o
 
-MY_INCLUDES := -Iinclude
+MY_INCLUDES := $(STDINCLUDE)
 MY_CFLAGS := $(KERNEL_CFLAGS)
 MY_LIBS := $(LIBKERNEL)
 MY_LIBPATHS :=

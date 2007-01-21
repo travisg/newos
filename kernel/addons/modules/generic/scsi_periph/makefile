@@ -12,7 +12,7 @@ MY_OBJS := \
 	removable.o \
 	scsi_periph.o
 
-MY_INCLUDES := -Iinclude
+MY_INCLUDES := $(STDINCLUDE)
 MY_CFLAGS := $(KERNEL_CFLAGS)
 MY_LIBS := $(LIBKERNEL)
 MY_LIBPATHS :=

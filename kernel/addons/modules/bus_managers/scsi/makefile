@@ -20,7 +20,7 @@ MY_OBJS := \
 	xpt.o \
 	xpt_io.o 
 
-MY_INCLUDES := -Iinclude
+MY_INCLUDES := $(STDINCLUDE)
 MY_CFLAGS := $(KERNEL_CFLAGS)
 MY_LIBS := $(LIBKERNEL)
 MY_LIBPATHS :=

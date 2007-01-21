@@ -13,7 +13,7 @@ MY_OBJS := \
 	isa_ide_bus.o \
 	pci_ide_bus.o
 
-MY_INCLUDES := $(STDINCLUDES)
+MY_INCLUDES := $(STDINCLUDE)
 MY_CFLAGS := $(KERNEL_CFLAGS)
 MY_LIBS := $(LIBKERNEL)
 MY_LIBPATHS :=

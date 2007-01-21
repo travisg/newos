@@ -9,7 +9,7 @@ MY_OBJS += \
 	tty_master.o \
 	tty_slave.o
 
-MY_INCLUDES := $(STDINCLUDES)
+MY_INCLUDES := $(STDINCLUDE)
 MY_CFLAGS := $(KERNEL_CFLAGS)
 MY_LIBS := $(LIBKERNEL)
 MY_LIBPATHS :=

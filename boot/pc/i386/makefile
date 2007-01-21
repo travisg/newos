@@ -2,7 +2,7 @@
 BOOT_SRCDIR := $(GET_LOCAL_DIR)
 BOOT_TARGETDIR := $(call TOBUILDDIR, boot)
 
-STAGE2 := $(BOOT_TARGETDIR)/stage2
+STAGE2 := $(BOOT_TARGETDIR)/stage2/stage2
 
 ifeq ($(OSTYPE),cygwin)
 	BOOT_IMAGE_TARGET ?= a:
@@ -11,7 +11,7 @@ else
 endif
 
 # make a rule for the stage2
-MY_TARGETDIR := $(BOOT_TARGETDIR)
+MY_TARGETDIR := $(BOOT_TARGETDIR)/stage2
 MY_SRCDIR := $(BOOT_SRCDIR)
 MY_TARGET := $(STAGE2)
 MY_OBJS := \
@@ -32,10 +32,10 @@ MY_GLUE :=
 
 include templates/app.mk
 
-STAGE1 = $(BOOT_TARGETDIR)/stage1
+STAGE1 = $(BOOT_TARGETDIR)/stage1/stage1
 
 # rules for stage1
-MY_TARGETDIR := $(BOOT_TARGETDIR)
+MY_TARGETDIR := $(BOOT_TARGETDIR)/stage1
 MY_SRCDIR := $(BOOT_SRCDIR)
 MY_TARGET := $(STAGE1).elf
 MY_OBJS := \
@@ -54,9 +54,9 @@ MY_GLUE :=
 include templates/app.mk
 
 # rules to build the bootblock
-BOOTBLOCK = $(BOOT_TARGETDIR)/bootblock
+BOOTBLOCK = $(BOOT_TARGETDIR)/bootblock/bootblock
 
-MY_TARGETDIR := $(BOOT_TARGETDIR)
+MY_TARGETDIR := $(BOOT_TARGETDIR)/bootblock
 MY_SRCDIR := $(BOOT_SRCDIR)
 MY_TARGET := $(BOOTBLOCK).elf
 MY_OBJS := \

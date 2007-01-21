@@ -19,7 +19,7 @@ MY_OBJS := \
 	scsi2atapi.o \
 	sync.o 
 
-MY_INCLUDES := -Iinclude
+MY_INCLUDES := $(STDINCLUDE)
 MY_CFLAGS := $(KERNEL_CFLAGS)
 MY_LIBS := $(LIBKERNEL)
 MY_LIBPATHS :=

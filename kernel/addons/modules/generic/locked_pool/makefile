@@ -6,7 +6,7 @@ ifeq ($(call FINDINLIST,$(MY_TARGET),$(ALL)),1)
 MY_OBJS := \
 	locked_pool.o 
 
-MY_INCLUDES := -Iinclude
+MY_INCLUDES := $(STDINCLUDE)
 MY_CFLAGS := $(KERNEL_CFLAGS)
 MY_LIBS := $(LIBKERNEL)
 MY_LIBPATHS :=
