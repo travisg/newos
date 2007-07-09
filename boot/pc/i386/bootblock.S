@@ -151,6 +151,8 @@ code32:
 	// push some arguments to the boot image
 	pushl	vesa_info
 
+	xor		%eax,%eax
+
 	mov		in_vesa, %al
 	push	%eax
 
