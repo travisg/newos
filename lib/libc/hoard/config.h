@@ -80,7 +80,8 @@ enum { SUPERBLOCK_FULLNESS_GROUP = 9 };
 #define CACHE_LINE 64
 #endif
 
-#ifdef __GNUG__
+//#ifdef __GNUG__
+#if 0 // doesn't work in gcc 4.2+
 // Use the max operator, an extension to C++ found in GNU C++.
 #define MAX(a,b) ((a) >? (b))
 #else

@@ -334,7 +334,7 @@ ext_mem_info:
 ext_mem_count:
 	.byte 0
 
-.skip (510 - .)
+.skip (_start + 510 - .)
 	.word	0xaa55             // magic number for boot sector
 
 // second sector of the boot code
@@ -445,4 +445,4 @@ in_vesa:
 vesa_info:
 	.long 0
 
-.skip (1024 - .)
+.skip (_start + 1024 - .)
