@@ -7,8 +7,8 @@ MY_STATIC_TARGET := $(LIBS_BUILD_DIR)/libsocket.a
 
 MY_TARGETDIR := $(LIBS_BUILD_DIR)/libsocket
 MY_SRCDIR := $(LIBS_DIR)/libsocket
-MY_OBJS := \
-	socket.o
+MY_SRCS := \
+	socket.c
 
 MY_INCLUDES := $(STDINCLUDE)
 MY_CFLAGS := $(USER_CFLAGS)

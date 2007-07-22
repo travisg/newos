@@ -4,15 +4,15 @@ MY_SRCDIR := $(APPS_DIR)/shell
 MY_TARGET :=  $(MY_TARGETDIR)/shell
 ifeq ($(call FINDINLIST,$(MY_TARGET),$(ALL)),1)
 
-MY_OBJS := \
-	commands.o \
-	main.o \
-	parse.o \
-	statements.o \
-	shell_vars.o \
-	file_utils.o \
-	script.o \
-	args.o
+MY_SRCS := \
+	commands.c \
+	main.c \
+	parse.c \
+	statements.c \
+	shell_vars.c \
+	file_utils.c \
+	script.c \
+	args.c
 
 MY_INCLUDES := $(STDINCLUDE)
 MY_CFLAGS := $(USER_CFLAGS)

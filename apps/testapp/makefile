@@ -4,15 +4,15 @@ MY_SRCDIR := $(APPS_DIR)/testapp
 MY_TARGET :=  $(MY_TARGETDIR)/testapp
 ifeq ($(call FINDINLIST,$(MY_TARGET),$(ALL)),1)
 
-MY_OBJS := \
-	main.o \
-	misctests.o \
-	fputests.o \
-	pipetests.o \
-	porttests.o \
-	sigtests.o \
-	threadtests.o \
-	vmtests.o
+MY_SRCS := \
+	main.cpp \
+	misctests.cpp \
+	fputests.cpp \
+	pipetests.cpp \
+	porttests.cpp \
+	sigtests.cpp \
+	threadtests.cpp \
+	vmtests.cpp
 
 MY_INCLUDES := $(STDINCLUDE)
 MY_CFLAGS := $(USER_CFLAGS)

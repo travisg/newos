@@ -1,18 +1,18 @@
 # net makefile
 KERNEL_NET_DIR := net
 
-MY_OBJS += \
-	$(KERNEL_NET_DIR)/arp.o \
-	$(KERNEL_NET_DIR)/ethernet.o \
-	$(KERNEL_NET_DIR)/icmp.o \
-	$(KERNEL_NET_DIR)/if.o \
-	$(KERNEL_NET_DIR)/ipv4.o \
-	$(KERNEL_NET_DIR)/loopback.o \
-	$(KERNEL_NET_DIR)/misc.o \
-	$(KERNEL_NET_DIR)/net.o \
-	$(KERNEL_NET_DIR)/net_control.o \
-	$(KERNEL_NET_DIR)/net_timer.o \
-	$(KERNEL_NET_DIR)/socket.o \
-	$(KERNEL_NET_DIR)/socket_dev.o \
-	$(KERNEL_NET_DIR)/udp.o \
-	$(KERNEL_NET_DIR)/tcp.o
+MY_SRCS += \
+	$(KERNEL_NET_DIR)/arp.c \
+	$(KERNEL_NET_DIR)/ethernet.c \
+	$(KERNEL_NET_DIR)/icmp.c \
+	$(KERNEL_NET_DIR)/if.c \
+	$(KERNEL_NET_DIR)/ipv4.c \
+	$(KERNEL_NET_DIR)/loopback.c \
+	$(KERNEL_NET_DIR)/misc.c \
+	$(KERNEL_NET_DIR)/net.c \
+	$(KERNEL_NET_DIR)/net_control.c \
+	$(KERNEL_NET_DIR)/net_timer.c \
+	$(KERNEL_NET_DIR)/socket.c \
+	$(KERNEL_NET_DIR)/socket_dev.c \
+	$(KERNEL_NET_DIR)/udp.c \
+	$(KERNEL_NET_DIR)/tcp.c

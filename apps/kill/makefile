@@ -4,8 +4,8 @@ MY_SRCDIR := $(APPS_DIR)/kill
 MY_TARGET :=  $(MY_TARGETDIR)/kill
 ifeq ($(call FINDINLIST,$(MY_TARGET),$(ALL)),1)
 
-MY_OBJS := \
-	main.o
+MY_SRCS := \
+	main.c
 
 MY_INCLUDES := $(STDINCLUDE)
 MY_CFLAGS := $(USER_CFLAGS)

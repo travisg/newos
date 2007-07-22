@@ -1,7 +1,7 @@
 # libc system makefile
 LIBC_SYSTEM_DIR := system
 
-MY_OBJS += \
-	$(LIBC_SYSTEM_DIR)/dlfcn.o \
-	$(LIBC_SYSTEM_DIR)/rlimit.o \
-	$(LIBC_SYSTEM_DIR)/syscalls.o
+MY_SRCS += \
+	$(LIBC_SYSTEM_DIR)/dlfcn.c \
+	$(LIBC_SYSTEM_DIR)/rlimit.c \
+	$(LIBC_SYSTEM_DIR)/syscalls.S

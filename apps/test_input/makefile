@@ -5,8 +5,8 @@ MY_SRCDIR := $(APPS_DIR)/test_input
 MY_TARGET :=  $(MY_TARGETDIR)/test_input
 ifeq ($(call FINDINLIST,$(MY_TARGET),$(ALL)),1)
 
-MY_OBJS := \
-	test_input.o
+MY_SRCS := \
+	test_input.c
 
 
 MY_INCLUDES := $(STDINCLUDE)

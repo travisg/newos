@@ -4,11 +4,11 @@ MY_SRCDIR := $(APPS_DIR)/irc
 MY_TARGET :=  $(MY_TARGETDIR)/irc
 ifeq ($(call FINDINLIST,$(MY_TARGET),$(ALL)),1)
 
-MY_OBJS := \
-	app.o \
-	ircengine.o \
-	ircreader.o \
-	term.o
+MY_SRCS := \
+	app.cpp \
+	ircengine.cpp \
+	ircreader.cpp \
+	term.cpp
 
 MY_INCLUDES := $(STDINCLUDE)
 MY_CFLAGS := $(USER_CFLAGS)

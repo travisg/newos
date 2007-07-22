@@ -1,7 +1,7 @@
 KERNEL_UTIL_DIR := util
 
-MY_OBJS += \
-	$(KERNEL_UTIL_DIR)/khash.o \
-	$(KERNEL_UTIL_DIR)/lock.o \
-	$(KERNEL_UTIL_DIR)/queue.o
+MY_SRCS += \
+	$(KERNEL_UTIL_DIR)/khash.c \
+	$(KERNEL_UTIL_DIR)/lock.c \
+	$(KERNEL_UTIL_DIR)/queue.c
 

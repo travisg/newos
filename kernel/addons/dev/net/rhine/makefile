@@ -4,9 +4,9 @@ MY_TARGETDIR := $(call TOBUILDDIR, $(MY_SRCDIR))
 MY_TARGET := $(MY_TARGETDIR)/rhine
 ifeq ($(call FINDINLIST,$(MY_TARGET),$(ALL)),1)
 
-MY_OBJS := \
-	rhine.o \
-	rhine_dev.o
+MY_SRCS := \
+	rhine.c \
+	rhine_dev.c
 
 MY_INCLUDES := $(STDINCLUDE)
 MY_CFLAGS := $(KERNEL_CFLAGS)

@@ -3,9 +3,9 @@ MY_TARGETDIR := $(call TOBUILDDIR, $(MY_SRCDIR))
 MY_TARGET := $(MY_TARGETDIR)/ide
 ifeq ($(call FINDINLIST,$(MY_TARGET),$(ALL)),1)
 
-MY_OBJS := \
-	ide.o \
-	ide_raw.o
+MY_SRCS := \
+	ide.c \
+	ide_raw.c
 
 MY_INCLUDES := $(STDINCLUDE)
 MY_CFLAGS := $(KERNEL_CFLAGS)

@@ -4,10 +4,10 @@ MY_TARGETDIR := $(call TOBUILDDIR, $(MY_SRCDIR))
 MY_TARGET :=  $(MY_TARGETDIR)/nfs
 ifeq ($(call FINDINLIST,$(MY_TARGET),$(ALL)),1)
 
-MY_OBJS := \
-	nfs.o \
-	nfs_xdr.o \
-	rpc.o
+MY_SRCS := \
+	nfs.c \
+	nfs_xdr.c \
+	rpc.c
 
 MY_INCLUDES := -Iinclude
 MY_CFLAGS := $(KERNEL_CFLAGS)

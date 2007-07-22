@@ -4,8 +4,8 @@ MY_TARGETDIR := $(call TOBUILDDIR, $(MY_SRCDIR))
 MY_TARGET := $(MY_TARGETDIR)/mouse
 ifeq ($(call FINDINLIST,$(MY_TARGET),$(ALL)),1)
 
-MY_OBJS := \
-    ps2mouse.o \
+MY_SRCS := \
+    ps2mouse.c \
 
 MY_INCLUDES := $(STDINCLUDE)
 MY_CFLAGS := $(KERNEL_CFLAGS)

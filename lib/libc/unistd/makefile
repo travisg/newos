@@ -1,29 +1,29 @@
 # libc unistd makefile
 LIBC_UNISTD_DIR := unistd
 
-MY_OBJS += \
-	$(LIBC_UNISTD_DIR)/chdir.o \
-	$(LIBC_UNISTD_DIR)/close.o \
-	$(LIBC_UNISTD_DIR)/dup.o \
-	$(LIBC_UNISTD_DIR)/dup2.o \
-	$(LIBC_UNISTD_DIR)/fsync.o \
-	$(LIBC_UNISTD_DIR)/getcwd.o \
-	$(LIBC_UNISTD_DIR)/getpgid.o \
-	$(LIBC_UNISTD_DIR)/getpgrp.o \
-	$(LIBC_UNISTD_DIR)/getsid.o \
-	$(LIBC_UNISTD_DIR)/ioctl.o \
-	$(LIBC_UNISTD_DIR)/lseek.o \
-	$(LIBC_UNISTD_DIR)/open.o \
-	$(LIBC_UNISTD_DIR)/pipe.o \
-	$(LIBC_UNISTD_DIR)/pread.o \
-	$(LIBC_UNISTD_DIR)/pwrite.o \
-	$(LIBC_UNISTD_DIR)/read.o \
-	$(LIBC_UNISTD_DIR)/setpgid.o \
-	$(LIBC_UNISTD_DIR)/setpgrp.o \
-	$(LIBC_UNISTD_DIR)/setsid.o \
-	$(LIBC_UNISTD_DIR)/signal.o \
-	$(LIBC_UNISTD_DIR)/sleep.o \
-	$(LIBC_UNISTD_DIR)/sync.o \
-	$(LIBC_UNISTD_DIR)/unlink.o \
-	$(LIBC_UNISTD_DIR)/usleep.o \
-	$(LIBC_UNISTD_DIR)/write.o
+MY_SRCS += \
+	$(LIBC_UNISTD_DIR)/chdir.c \
+	$(LIBC_UNISTD_DIR)/close.c \
+	$(LIBC_UNISTD_DIR)/dup.c \
+	$(LIBC_UNISTD_DIR)/dup2.c \
+	$(LIBC_UNISTD_DIR)/fsync.c \
+	$(LIBC_UNISTD_DIR)/getcwd.c \
+	$(LIBC_UNISTD_DIR)/getpgid.c \
+	$(LIBC_UNISTD_DIR)/getpgrp.c \
+	$(LIBC_UNISTD_DIR)/getsid.c \
+	$(LIBC_UNISTD_DIR)/ioctl.c \
+	$(LIBC_UNISTD_DIR)/lseek.c \
+	$(LIBC_UNISTD_DIR)/open.c \
+	$(LIBC_UNISTD_DIR)/pipe.c \
+	$(LIBC_UNISTD_DIR)/pread.c \
+	$(LIBC_UNISTD_DIR)/pwrite.c \
+	$(LIBC_UNISTD_DIR)/read.c \
+	$(LIBC_UNISTD_DIR)/setpgid.c \
+	$(LIBC_UNISTD_DIR)/setpgrp.c \
+	$(LIBC_UNISTD_DIR)/setsid.c \
+	$(LIBC_UNISTD_DIR)/signal.c \
+	$(LIBC_UNISTD_DIR)/sleep.c \
+	$(LIBC_UNISTD_DIR)/sync.c \
+	$(LIBC_UNISTD_DIR)/unlink.c \
+	$(LIBC_UNISTD_DIR)/usleep.c \
+	$(LIBC_UNISTD_DIR)/write.c

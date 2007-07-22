@@ -3,15 +3,15 @@ MY_TARGETDIR := $(call TOBUILDDIR, $(MY_SRCDIR))
 MY_TARGET := $(MY_TARGETDIR)/ide2
 ifeq ($(call FINDINLIST,$(MY_TARGET),$(ALL)),1)
 
-MY_OBJS := \
-	ata_ide_drive.o \
-	atapi_ide_drive.o \
-	ide.o \
-	ide_bus.o \
-	ide_drive.o \
-	ide_raw.o \
-	isa_ide_bus.o \
-	pci_ide_bus.o
+MY_SRCS := \
+	ata_ide_drive.c \
+	atapi_ide_drive.c \
+	ide.c \
+	ide_bus.c \
+	ide_drive.c \
+	ide_raw.c \
+	isa_ide_bus.c \
+	pci_ide_bus.c
 
 MY_INCLUDES := $(STDINCLUDE)
 MY_CFLAGS := $(KERNEL_CFLAGS)

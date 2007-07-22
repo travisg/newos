@@ -3,8 +3,8 @@ MY_TARGETDIR := $(call TOBUILDDIR, $(MY_SRCDIR))
 MY_TARGET :=  $(MY_TARGETDIR)/locked_pool
 ifeq ($(call FINDINLIST,$(MY_TARGET),$(ALL)),1)
 
-MY_OBJS := \
-	locked_pool.o 
+MY_SRCS := \
+	locked_pool.c 
 
 MY_INCLUDES := $(STDINCLUDE)
 MY_CFLAGS := $(KERNEL_CFLAGS)

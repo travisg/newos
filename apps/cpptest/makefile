@@ -4,8 +4,8 @@ MY_SRCDIR := $(APPS_DIR)/cpptest
 MY_TARGET :=  $(MY_TARGETDIR)/cpptest
 ifeq ($(call FINDINLIST,$(MY_TARGET),$(ALL)),1)
 
-MY_OBJS := \
-	main.o
+MY_SRCS := \
+	main.cpp
 
 MY_INCLUDES := $(STDINCLUDE)
 MY_CFLAGS := $(USER_CFLAGS)

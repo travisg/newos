@@ -1,9 +1,9 @@
 # dev makefile
 KERNEL_DEV_DIR := dev
 
-MY_OBJS += \
-	$(KERNEL_DEV_DIR)/fixed.o \
-	$(KERNEL_DEV_DIR)/beos.o
+MY_SRCS += \
+	$(KERNEL_DEV_DIR)/fixed.c \
+	$(KERNEL_DEV_DIR)/beos.c
 
 # include sub makefiles
 include $(addsuffix /makefile, $(addprefix $(KERNEL_DIR)/$(KERNEL_DEV_DIR)/, \

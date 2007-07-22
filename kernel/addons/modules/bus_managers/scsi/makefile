@@ -4,21 +4,21 @@ MY_TARGETDIR := $(call TOBUILDDIR, $(MY_SRCDIR))
 MY_TARGET :=  $(MY_TARGETDIR)/scsi
 ifeq ($(call FINDINLIST,$(MY_TARGET),$(ALL)),1)
 
-MY_OBJS := \
-	async.o \
-	blocking.o \
-	bus_interface.o \
-	bus_mgr.o \
-	ccb_mgr.o \
-	device_mgr.o \
-	dpc.o \
-	periph_interface.o \
-	periph_mgr.o \
-	queuing.o \
-	scsi_lock.o \
-	sg_mgr.o \
-	xpt.o \
-	xpt_io.o 
+MY_SRCS := \
+	async.c \
+	blocking.c \
+	bus_interface.c \
+	bus_mgr.c \
+	ccb_mgr.c \
+	device_mgr.c \
+	dpc.c \
+	periph_interface.c \
+	periph_mgr.c \
+	queuing.c \
+	scsi_lock.c \
+	sg_mgr.c \
+	xpt.c \
+	xpt_io.c 
 
 MY_INCLUDES := $(STDINCLUDE)
 MY_CFLAGS := $(KERNEL_CFLAGS)

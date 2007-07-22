@@ -3,11 +3,12 @@ MY_STATIC_TARGET := $(LIBS_BUILD_DIR)/libwin.a
 
 MY_TARGETDIR := $(LIBS_BUILD_DIR)/libwin
 MY_SRCDIR := $(LIBS_DIR)/libwin
-MY_OBJS := Button.o \
-	Canvas.o \
-	Connection.o \
-	Rect.o \
-	Window.o
+MY_SRCS := \
+	Button.cpp \
+	Canvas.cpp \
+	Connection.cpp \
+	Rect.cpp \
+	Window.cpp
 
 MY_INCLUDES := $(STDINCLUDE)
 MY_CFLAGS := $(USER_CFLAGS)

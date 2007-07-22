@@ -1,35 +1,35 @@
 # libc string makefile
 LIBC_STRING_DIR := string
 
-MY_OBJS += \
-	$(LIBC_STRING_DIR)/bcopy.o \
-	$(LIBC_STRING_DIR)/bzero.o \
-	$(LIBC_STRING_DIR)/memchr.o \
-	$(LIBC_STRING_DIR)/memcmp.o \
-	$(LIBC_STRING_DIR)/memcpy.o \
-	$(LIBC_STRING_DIR)/memmove.o \
-	$(LIBC_STRING_DIR)/memset.o \
-	$(LIBC_STRING_DIR)/strcat.o \
-	$(LIBC_STRING_DIR)/strchr.o \
-	$(LIBC_STRING_DIR)/strcmp.o \
-	$(LIBC_STRING_DIR)/strcoll.o \
-	$(LIBC_STRING_DIR)/strcpy.o \
-	$(LIBC_STRING_DIR)/strdup.o \
-	$(LIBC_STRING_DIR)/strerror.o \
-	$(LIBC_STRING_DIR)/strlcat.o \
-	$(LIBC_STRING_DIR)/strlcpy.o \
-	$(LIBC_STRING_DIR)/strlen.o \
-	$(LIBC_STRING_DIR)/strncat.o \
-	$(LIBC_STRING_DIR)/strncmp.o \
-	$(LIBC_STRING_DIR)/strncpy.o \
-	$(LIBC_STRING_DIR)/strnicmp.o \
-	$(LIBC_STRING_DIR)/strnlen.o \
-	$(LIBC_STRING_DIR)/strpbrk.o \
-	$(LIBC_STRING_DIR)/strrchr.o \
-	$(LIBC_STRING_DIR)/strspn.o \
-	$(LIBC_STRING_DIR)/strstr.o \
-	$(LIBC_STRING_DIR)/strtok.o \
-	$(LIBC_STRING_DIR)/strxfrm.o
+MY_SRCS += \
+	$(LIBC_STRING_DIR)/bcopy.c \
+	$(LIBC_STRING_DIR)/bzero.c \
+	$(LIBC_STRING_DIR)/memchr.c \
+	$(LIBC_STRING_DIR)/memcmp.c \
+	$(LIBC_STRING_DIR)/memcpy.c \
+	$(LIBC_STRING_DIR)/memmove.c \
+	$(LIBC_STRING_DIR)/memset.c \
+	$(LIBC_STRING_DIR)/strcat.c \
+	$(LIBC_STRING_DIR)/strchr.c \
+	$(LIBC_STRING_DIR)/strcmp.c \
+	$(LIBC_STRING_DIR)/strcoll.c \
+	$(LIBC_STRING_DIR)/strcpy.c \
+	$(LIBC_STRING_DIR)/strdup.c \
+	$(LIBC_STRING_DIR)/strerror.c \
+	$(LIBC_STRING_DIR)/strlcat.c \
+	$(LIBC_STRING_DIR)/strlcpy.c \
+	$(LIBC_STRING_DIR)/strlen.c \
+	$(LIBC_STRING_DIR)/strncat.c \
+	$(LIBC_STRING_DIR)/strncmp.c \
+	$(LIBC_STRING_DIR)/strncpy.c \
+	$(LIBC_STRING_DIR)/strnicmp.c \
+	$(LIBC_STRING_DIR)/strnlen.c \
+	$(LIBC_STRING_DIR)/strpbrk.c \
+	$(LIBC_STRING_DIR)/strrchr.c \
+	$(LIBC_STRING_DIR)/strspn.c \
+	$(LIBC_STRING_DIR)/strstr.c \
+	$(LIBC_STRING_DIR)/strtok.c \
+	$(LIBC_STRING_DIR)/strxfrm.c
 
 include $(addsuffix /makefile, $(addprefix $(MY_SRCDIR)/string/, \
 	arch/$(ARCH) \

@@ -4,7 +4,7 @@ ifeq ($(call FINDINLIST,$(MY_TARGET),$(ALL)),1)
 
 MY_TARGETDIR := $(LIBS_BUILD_DIR)/libm
 MY_SRCDIR := $(LIBS_DIR)/libm
-MY_OBJS :=
+MY_SRCS :=
 
 MY_INCLUDES := $(STDINCLUDE) -I$(MY_SRCDIR)/common_source
 MY_CFLAGS := $(USER_CFLAGS)

@@ -3,8 +3,8 @@ MY_TARGETDIR := $(call TOBUILDDIR, $(MY_SRCDIR))
 MY_TARGET :=  $(MY_TARGETDIR)/scsi_dsk
 ifeq ($(call FINDINLIST,$(MY_TARGET),$(ALL)),1)
 
-MY_OBJS := \
-	scsi_dsk.o 
+MY_SRCS := \
+	scsi_dsk.c 
 
 MY_INCLUDES := -Iinclude
 MY_CFLAGS := $(KERNEL_CFLAGS)

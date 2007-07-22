@@ -4,8 +4,8 @@ MY_SRCDIR := $(APPS_DIR)/init
 MY_TARGET :=  $(MY_TARGETDIR)/init
 ifeq ($(call FINDINLIST,$(MY_TARGET),$(ALL)),1)
 
-MY_OBJS := \
-	init.o
+MY_SRCS := \
+	init.c
 
 MY_INCLUDES := $(STDINCLUDE)
 MY_CFLAGS := $(USER_CFLAGS)

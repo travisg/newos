@@ -14,12 +14,12 @@ endif
 MY_TARGETDIR := $(BOOT_TARGETDIR)/stage2
 MY_SRCDIR := $(BOOT_SRCDIR)
 MY_TARGET := $(STAGE2)
-MY_OBJS := \
-	stage2.o \
-	stage2_asm.o \
-	smp_boot.o \
-	smp_trampoline.o \
-	int86.o
+MY_SRCS := \
+	stage2.c \
+	stage2_asm.S \
+	smp_boot.c \
+	smp_trampoline.S \
+	int86.S
 
 MY_INCLUDES := $(STDINCLUDE)
 MY_CFLAGS := $(KERNEL_CFLAGS)
@@ -38,9 +38,9 @@ STAGE1 = $(BOOT_TARGETDIR)/stage1/stage1
 MY_TARGETDIR := $(BOOT_TARGETDIR)/stage1
 MY_SRCDIR := $(BOOT_SRCDIR)
 MY_TARGET := $(STAGE1).elf
-MY_OBJS := \
-	stage1.o \
-	inflate.o
+MY_SRCS := \
+	stage1.c \
+	inflate.c
 
 MY_INCLUDES := $(STDINCLUDE)
 MY_CFLAGS := $(KERNEL_CFLAGS)
@@ -59,8 +59,8 @@ BOOTBLOCK = $(BOOT_TARGETDIR)/bootblock/bootblock
 MY_TARGETDIR := $(BOOT_TARGETDIR)/bootblock
 MY_SRCDIR := $(BOOT_SRCDIR)
 MY_TARGET := $(BOOTBLOCK).elf
-MY_OBJS := \
-	bootblock.o
+MY_SRCS := \
+	bootblock.S
 
 MY_INCLUDES :=
 MY_CFLAGS := 

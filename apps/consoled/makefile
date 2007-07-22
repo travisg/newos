@@ -4,9 +4,9 @@ MY_SRCDIR := $(APPS_DIR)/consoled
 MY_TARGET :=  $(MY_TARGETDIR)/consoled
 ifeq ($(call FINDINLIST,$(MY_TARGET),$(ALL)),1)
 
-MY_OBJS := \
-	main.o \
-	keyboard_us.o
+MY_SRCS := \
+	main.c \
+	keyboard_us.c
 
 MY_INCLUDES := $(STDINCLUDE)
 MY_CFLAGS := $(USER_CFLAGS)

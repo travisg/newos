@@ -4,8 +4,8 @@ MY_TARGETDIR := $(call TOBUILDDIR, $(MY_SRCDIR))
 MY_TARGET :=  $(MY_TARGETDIR)/iso9660
 ifeq ($(call FINDINLIST,$(MY_TARGET),$(ALL)),1)
 
-MY_OBJS := \
-	isofs.o
+MY_SRCS := \
+	isofs.c
 
 MY_INCLUDES := -Iinclude
 MY_CFLAGS := $(KERNEL_CFLAGS)

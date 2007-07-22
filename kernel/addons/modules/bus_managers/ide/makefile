@@ -4,20 +4,20 @@ MY_TARGETDIR := $(call TOBUILDDIR, $(MY_SRCDIR))
 MY_TARGET :=  $(MY_TARGETDIR)/ide
 ifeq ($(call FINDINLIST,$(MY_TARGET),$(ALL)),1)
 
-MY_OBJS := \
-	ata.o \
-	atapi.o \
-	basic_prot.o \
-	channel_mgr.o \
-	device_mgr.o \
-	ide.o \
-	ide_sim.o \
-	DMA.o \
-	PIO.o \
-	queuing.o \
-	scsi2ata.o \
-	scsi2atapi.o \
-	sync.o 
+MY_SRCS := \
+	ata.c \
+	atapi.c \
+	basic_prot.c \
+	channel_mgr.c \
+	device_mgr.c \
+	ide.c \
+	ide_sim.c \
+	DMA.c \
+	PIO.c \
+	queuing.c \
+	scsi2ata.c \
+	scsi2atapi.c \
+	sync.c 
 
 MY_INCLUDES := $(STDINCLUDE)
 MY_CFLAGS := $(KERNEL_CFLAGS)

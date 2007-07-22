@@ -4,8 +4,8 @@ MY_SRCDIR := $(APPS_DIR)/rldtest
 MY_TARGET :=  $(MY_TARGETDIR)/rldtest
 ifeq ($(call FINDINLIST,$(MY_TARGET),$(ALL)),1)
 
-MY_OBJS := \
-	rldtest.o
+MY_SRCS := \
+	rldtest.c
 
 MY_INCLUDES := $(STDINCLUDE)
 MY_CFLAGS := $(USER_CFLAGS)
@@ -21,8 +21,8 @@ MY_TARGETDIR := $(APPS_BUILD_DIR)/rldtest
 MY_SRCDIR := $(APPS_DIR)/rldtest
 MY_TARGET := $(MY_TARGETDIR)/librldtest.so
 
-MY_OBJS := \
-	shared.o
+MY_SRCS := \
+	shared.c
 
 MY_INCLUDES := $(STDINCLUDE)
 MY_CFLAGS := $(USER_CFLAGS)
@@ -35,8 +35,8 @@ MY_TARGETDIR := $(APPS_BUILD_DIR)/rldtest
 MY_SRCDIR := $(APPS_DIR)/rldtest
 MY_TARGET := $(MY_TARGETDIR)/girlfriend.so
 
-MY_OBJS := \
-	girlfriend.o
+MY_SRCS := \
+	girlfriend.c
 
 MY_INCLUDES := $(STDINCLUDE)
 MY_CFLAGS := $(USER_CFLAGS)

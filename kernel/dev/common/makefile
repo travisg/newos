@@ -1,6 +1,6 @@
 # dev common makefile
 KERNEL_DEV_COMMON_DIR := dev/common
 
-MY_OBJS += \
-	$(KERNEL_DEV_COMMON_DIR)/null.o \
-	$(KERNEL_DEV_COMMON_DIR)/zero.o
+MY_SRCS += \
+	$(KERNEL_DEV_COMMON_DIR)/null.c \
+	$(KERNEL_DEV_COMMON_DIR)/zero.c

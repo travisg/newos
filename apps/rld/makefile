@@ -4,14 +4,14 @@ MY_SRCDIR := $(APPS_DIR)/rld
 MY_TARGET :=  $(MY_TARGETDIR)/rld.so
 ifeq ($(call FINDINLIST,$(MY_TARGET),$(ALL)),1)
 
-MY_OBJS := \
-	rld0.o \
-	rld.o \
-	rldelf.o \
-	rldunix.o \
-	rldbeos.o \
-	rldheap.o \
-	rldaux.o
+MY_SRCS := \
+	rld0.c \
+	rld.c \
+	rldelf.c \
+	rldunix.c \
+	rldbeos.c \
+	rldheap.c \
+	rldaux.c
 
 MY_INCLUDES := $(STDINCLUDE)
 MY_CFLAGS := $(USER_CFLAGS)

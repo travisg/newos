@@ -4,11 +4,11 @@ MY_TARGETDIR := $(call TOBUILDDIR, $(MY_SRCDIR))
 MY_TARGET :=  $(MY_TARGETDIR)/fat
 ifeq ($(call FINDINLIST,$(MY_TARGET),$(ALL)),1)
 
-MY_OBJS := \
-	fat.o \
-	fat_dir.o \
-	fat_file.o \
-	fat_vnode.o
+MY_SRCS := \
+	fat.c \
+	fat_dir.c \
+	fat_file.c \
+	fat_vnode.c
 
 MY_INCLUDES := -Iinclude
 MY_CFLAGS := $(KERNEL_CFLAGS)

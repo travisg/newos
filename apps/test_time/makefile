@@ -6,8 +6,8 @@ MY_TARGET :=  $(MY_TARGETDIR)/test_time
 ifeq ($(call FINDINLIST,$(MY_TARGET),$(ALL)),1)
 
 
-MY_OBJS := \
-	test_time.o
+MY_SRCS := \
+	test_time.c
 
 
 MY_INCLUDES := $(STDINCLUDE)

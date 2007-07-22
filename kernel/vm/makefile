@@ -1,13 +1,13 @@
 # vm makefile
 KERNEL_VM_DIR := vm
 
-MY_OBJS += \
-	$(KERNEL_VM_DIR)/vm.o \
-	$(KERNEL_VM_DIR)/vm_cache.o \
-	$(KERNEL_VM_DIR)/vm_daemons.o \
-	$(KERNEL_VM_DIR)/vm_page.o \
-	$(KERNEL_VM_DIR)/vm_store_anonymous_noswap.o \
-	$(KERNEL_VM_DIR)/vm_store_device.o \
-	$(KERNEL_VM_DIR)/vm_store_null.o \
-	$(KERNEL_VM_DIR)/vm_store_vnode.o \
-	$(KERNEL_VM_DIR)/vm_tests.o
+MY_SRCS += \
+	$(KERNEL_VM_DIR)/vm.c \
+	$(KERNEL_VM_DIR)/vm_cache.c \
+	$(KERNEL_VM_DIR)/vm_daemons.c \
+	$(KERNEL_VM_DIR)/vm_page.c \
+	$(KERNEL_VM_DIR)/vm_store_anonymous_noswap.c \
+	$(KERNEL_VM_DIR)/vm_store_device.c \
+	$(KERNEL_VM_DIR)/vm_store_null.c \
+	$(KERNEL_VM_DIR)/vm_store_vnode.c \
+	$(KERNEL_VM_DIR)/vm_tests.c

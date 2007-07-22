@@ -5,8 +5,8 @@ ifeq ($(call FINDINLIST,$(MY_TARGET),$(ALL)),1)
 
 MY_TARGETDIR := $(LIBS_BUILD_DIR)/glue
 MY_SRCDIR := $(LIBS_DIR)/glue
-MY_OBJS := \
-	crt0.o
+MY_SRCS := \
+	crt0.c
 
 MY_INCLUDES := $(STDINCLUDE)
 MY_CFLAGS := $(USER_CFLAGS)
@@ -20,8 +20,8 @@ ifeq ($(call FINDINLIST,$(MY_TARGET),$(ALL)),1)
 
 MY_TARGETDIR := $(LIBS_BUILD_DIR)/glue
 MY_SRCDIR := $(LIBS_DIR)/glue
-MY_OBJS := \
-	lib0.o
+MY_SRCS := \
+	lib0.c
 
 MY_INCLUDES := $(STDINCLUDE)
 MY_CFLAGS := $(USER_CFLAGS)

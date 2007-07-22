@@ -4,10 +4,10 @@ MY_TARGETDIR := $(call TOBUILDDIR, $(MY_SRCDIR))
 MY_TARGET :=  $(MY_TARGETDIR)/tty
 ifeq ($(call FINDINLIST,$(MY_TARGET),$(ALL)),1)
 
-MY_OBJS += \
-	tty.o \
-	tty_master.o \
-	tty_slave.o
+MY_SRCS += \
+	tty.c \
+	tty_master.c \
+	tty_slave.c
 
 MY_INCLUDES := $(STDINCLUDE)
 MY_CFLAGS := $(KERNEL_CFLAGS)

@@ -107,6 +107,9 @@ int IRCEngine::SignOn()
 	if(mSocket < 0)
 		return mSocket;
 
+	printf("connecting to %d.%d.%d.%d port %d\n", mServerSockaddr.addr.addr[0], mServerSockaddr.addr.addr[1],
+			mServerSockaddr.addr.addr[1], mServerSockaddr.addr.addr[2], mServerSockaddr.port);
+
 	err = socket_connect(mSocket, &mServerSockaddr);
 	printf("socket_connect returns %ld\n", err);
 	if(err < 0)

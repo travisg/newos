@@ -7,28 +7,30 @@ LINKHACK = $(KERNEL_BUILD_DIR)/linkhack
 
 MY_TARGETDIR := $(KERNEL_BUILD_DIR)
 MY_SRCDIR := $(KERNEL_DIR)
-MY_OBJS := \
-	main.o \
-	elf.o \
-	faults.o \
-	heap.o \
-	int.o \
-	console.o \
-	debug.o \
-	gdb.o \
-	dev.o \
-	timer.o \
-	time.o \
-	port.o \
-	sem.o \
-	signal.o \
-	smp.o \
-	syscalls.o \
-	thread.o \
-	cbuf.o \
-	cpu.o \
-	vfs.o \
-	module.o
+MY_SRCS := \
+	main.c \
+	elf.c \
+	faults.c \
+	heap.c \
+	int.c \
+	console.c \
+	debug.c \
+	gdb.c \
+	dev.c \
+	timer.c \
+	time.c \
+	port.c \
+	sem.c \
+	signal.c \
+	smp.c \
+	syscalls.c \
+	thread.c \
+	cbuf.c \
+	cpu.c \
+	vfs.c \
+	module.c \
+	foo.cpp \
+	bar.S
 
 MY_INCLUDES := $(STDINCLUDE)
 MY_CFLAGS := $(KERNEL_CFLAGS)

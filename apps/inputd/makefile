@@ -4,12 +4,12 @@ MY_SRCDIR := $(APPS_DIR)/inputd
 MY_TARGET :=  $(MY_TARGETDIR)/inputd
 ifeq ($(call FINDINLIST,$(MY_TARGET),$(ALL)),1)
 
-MY_OBJS := \
-	InputDevice.o \
-	InputServer.o \
-	KeyboardDevice.o \
-	main.o \
-	PS2Device.o
+MY_SRCS := \
+	InputDevice.cpp \
+	InputServer.cpp \
+	KeyboardDevice.cpp \
+	main.cpp \
+	PS2Device.cpp
 
 MY_INCLUDES := $(STDINCLUDE)
 MY_CFLAGS := $(USER_CFLAGS)
