@@ -28,9 +28,7 @@ MY_SRCS := \
 	cbuf.c \
 	cpu.c \
 	vfs.c \
-	module.c \
-	foo.cpp \
-	bar.S
+	module.c
 
 MY_INCLUDES := $(STDINCLUDE)
 MY_CFLAGS := $(KERNEL_CFLAGS)
