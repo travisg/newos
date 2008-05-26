@@ -9,19 +9,19 @@ SECTIONS
 	/* text/read-only data */
 	.text :	{ *(.text .gnu.linkonce.t.*) }
 
-	__ctor_list = .;
-	.ctors : { *(.ctors) }
-	__ctor_end = .;
-
 	.rodata : { *(.rodata .rodata.*) }
 
 	/* writable data  */
-	. = ALIGN(0x1000);
-	__data_start = .;
 	.data : { *(.data .gnu.linkonce.d.* .got* .bss) }
+
+	/* payload */
+	. = ALIGN(0x1000);
+	_payload_start = .;
+	.payload : { *(.payload) }
+	_payload_end = .;
 
 	_end = . ;
 
 	/* Strip unnecessary stuff */
-	/DISCARD/ : { *(.comment .note .eh_frame .dtors .stab .stabstr .debug*) }
+	/DISCARD/ : { *(.comment .note .eh_frame .ctors .dtors .stab .stabstr .debug*) }
 }

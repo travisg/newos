@@ -6,7 +6,6 @@
 #define _STAGE1_H
 
 
-extern void stage1_main(void *ext_mem_block, int ext_mem_count, int in_vesa, unsigned long vesa_ptr);
 extern void clearscreen(void);
 extern int dprintf(const char *fmt, ...);
 extern void *kmalloc(unsigned int size);

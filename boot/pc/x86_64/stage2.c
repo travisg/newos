@@ -76,6 +76,8 @@ void _start(unsigned int memsize, void *extended_mem_block, unsigned int extende
 	dprintf("stage2 bootloader entry.\n");
 	dprintf("args: memsize 0x%x, emem_block %p, emem_count %d, in_vesa %d\n", 
 		memsize, extended_mem_block, extended_mem_count, in_vesa);
+	
+	for (;;);
 
 	// verify we can run on this cpu
 	if(check_cpu(ka) < 0) {

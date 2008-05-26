@@ -19,12 +19,83 @@ static unsigned int line = 0;
 #define SCREEN_HEIGHT 25
 #define PAGE_SIZE 4096
 
-static unsigned char *heap_ptr = (unsigned char *)0x1000000;
+static unsigned char *heap_ptr = (unsigned char *)0x01000000; // 16MB
 
-extern void *_end;
-#define TARGET ((void *)0x400000)
+extern void *_payload_start;
+extern void *_payload_end;
+#define TARGET ((void *)0x400000) // 4MB
 
-void stage1_main(void *ext_mem_block, int ext_mem_count, int in_vesa, unsigned long vesa_ptr)
+struct multiboot_info {
+	uint32 flags;
+
+	uint32 mem_lower;
+	uint32 mem_upper;
+
+	uint32 boot_device;
+
+	uint32 cmdline;
+
+	uint32 mods_count;
+	uint32 mods_addr;
+
+	uint32 syms[4];
+
+	uint32 mmap_length;
+	uint32 mmap_addr;
+	
+	uint32 drives_length;
+	uint32 drives_addr;
+
+	uint32 config_table;
+
+	uint32 boot_loader_name;
+
+	uint32 apm_table;
+
+	uint32 vbe_control_info;
+	uint32 vbe_mode_info;
+	uint32 vbe_mode;
+	uint32 vbe_interface_seg;
+	uint32 vbe_interface_off;
+	uint32 vbe_interface_len;
+};
+
+void stage1_main(void *multiboot_info);
+
+static uint32 read32(const void *ptr, unsigned int offset)
+{
+	return *(const uint32 *)((const char *)ptr + offset);
+}
+
+static void dump_multiboot(const void *multiboot)
+{
+	uint32 flags = read32(multiboot, 0);
+
+	dprintf("flags 0x%x\n", flags);
+
+	if (flags & (1<<0)) {
+		dprintf("mem_lower 0x%x\n", read32(multiboot, 4));
+		dprintf("mem_upper 0x%x\n", read32(multiboot, 8));
+	}
+	if (flags & (1<<1)) {
+		dprintf("boot_device 0x%x\n", read32(multiboot, 12));
+	}
+	if (flags & (1<<2)) {
+		dprintf("cmdline 0x%x\n", read32(multiboot, 16));
+	}
+	if (flags & (1<<3)) {
+		dprintf("mods_count 0x%x\n", read32(multiboot, 20));
+		dprintf("mods_addr 0x%x\n", read32(multiboot, 24));
+	}
+	if (flags & (1<<6)) {
+		dprintf("mmap_length 0x%x\n", read32(multiboot, 44));
+		dprintf("mmap_addr 0x%x\n", read32(multiboot, 48));
+	}
+
+}
+
+//void stage1_main(void *ext_mem_block, int ext_mem_count, int in_vesa, unsigned long vesa_ptr)
+void stage1_main(void *multiboot_info)
 {
 	unsigned long len;
 	boot_dir *bootdir = TARGET;
@@ -33,25 +104,30 @@ void stage1_main(void *ext_mem_block, int ext_mem_count, int in_vesa, unsigned l
 	clearscreen();
 
 	dprintf("stage1 boot\n");
-	dprintf("ext_mem_block %p, count %d\n", ext_mem_block, ext_mem_count);
-	dprintf("in_vesa %d, vesa_ptr 0x%lx\n", ext_mem_block, ext_mem_count);
-	
-	dprintf("decompressing system, payload at %p...\n", &_end);
+	dprintf("multiboot info %p\n", multiboot_info);
+	dump_multiboot(multiboot_info);
 
-	len = gunzip((unsigned char const *)&_end, TARGET, kmalloc(32*1024));
+	dprintf("%lld\n", 0x123456789abcdefLL);
+
+	dprintf("decompressing system, payload at %p...\n", &_payload_start);
+
+	len = gunzip((unsigned char const *)&_payload_start, TARGET, kmalloc(32*1024));
 	dprintf("done, len %d\n", len);
 
+
+#if 1
 	dprintf("finding stage2...");
 	stage2_entry = (void*)((char *)bootdir + bootdir->bd_entry[1].be_offset * PAGE_SIZE + bootdir->bd_entry[1].be_code_ventr);
 	dprintf("entry at %p\n", stage2_entry);
 
 	// jump into stage2
-	stage2_entry(ext_mem_block, ext_mem_count, in_vesa, vesa_ptr, screenOffset);
+	stage2_entry(0,0,0,0,0);
+#endif
 }
 
 void *kmalloc(unsigned int size)
 {
-//	dprintf("kmalloc: size %d, ptr %p\n", size, heap_ptr - size);
+	dprintf("kmalloc: size %d, ptr %p\n", size, heap_ptr - size);
 
 	return (heap_ptr -= size);
 }
@@ -113,7 +189,6 @@ int dprintf(const char *fmt, ...)
 	puts(temp);
 	return ret;
 }
-
 
 int panic(const char *fmt, ...)
 {

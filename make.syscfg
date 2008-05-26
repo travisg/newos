@@ -232,6 +232,10 @@ $(warning LIBGCC_PATH = $(LIBGCC_PATH))
 ifneq ($(ARCH),sh4)
 LIBGCC_INCLUDE += -I$(LIBGCC_PATH)/include
 endif
+ifeq ($(ARCH),x86_64)
+LIBGCC32_PATH := $(dir $(shell $(CC) $(GLOBAL_CFLAGS) -m32 -print-libgcc-file-name))
+$(warning LIBGCC32_PATH = $(LIBGCC32_PATH))
+endif
 
 
 # print some info

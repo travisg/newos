@@ -108,7 +108,7 @@ static char rcsid[] = "$Id$";
 
 typedef unsigned char uch;
 typedef unsigned short ush;
-typedef unsigned long ulg;
+typedef unsigned int ulg;
 
 #define memzero(a, b) memset(a, 0, b)
 
@@ -1013,8 +1013,6 @@ static ulg crc32(uch *buff, int len)
 
 ulg gunzip(const uch *in, uch *out, uch *inflate_buf)
 {
-	printf("in 0x%lx\n", *(unsigned long *)in);
-	
 	if (in[2] != 8) panic("Unsupported compression method");
 	if (in[3] & 0xe3) panic("Unsupported gzip format");
 
