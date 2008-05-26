@@ -26,8 +26,11 @@ extern void *kmalloc(unsigned int size);
 extern void kfree(void *ptr);
 extern int panic(const char *fmt, ...);
 
-int mmu_init(kernel_args *ka, addr_t *next_paddr);
+int mmu_init(kernel_args *ka);
 void mmu_map_page(addr_t vaddr, addr_t paddr);
+
+extern addr_t next_paddr;
+extern kernel_args *ka;
 
 //void put_uint_dec(unsigned int a);
 //void put_uint_hex(unsigned int a);
@@ -37,9 +40,10 @@ void mmu_map_page(addr_t vaddr, addr_t paddr);
 #define ROUNDUP(a, b) (((a) + ((b) - 1)) & (~((b) - 1)))
 #define ROUNDOWN(a, b) (((a) / (b)) * (b))
 
+#define min(a, b) ((a) < (b) ? (a) : (b))
+#define max(a, b) ((a) > (b) ? (a) : (b))
+
 #define PAGE_SIZE 0x1000
-#define KERNEL_BASE 0x80000000
-#define KERNEL_ENTRY 0x80000080
 #define STACK_SIZE 2
 #define DEFAULT_PAGE_FLAGS (1 | 2) // present/rw
 #define SCREEN_WIDTH 80

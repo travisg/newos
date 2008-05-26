@@ -53,3 +53,33 @@ void dump_multiboot(const void *multiboot)
 	}
 }
 
+void fill_ka_memranges(const void *multiboot)
+{
+	uint32 flags;
+
+	flags = read32(multiboot, 0);
+
+	if (flags & (1<<6)) {
+		unsigned int index = 0;
+		unsigned int len = read32(multiboot, 44);
+		struct multiboot_mmap *mmap = (struct multiboot_mmap *)(addr_t)read32(multiboot, 48);
+		
+		ka->num_phys_mem_ranges = 0;
+
+		while (index < (len / sizeof(struct multiboot_mmap))) {
+			if (mmap[index].type == 1) {
+				uint64 addr = ((uint64)mmap[index].base_addr_high << 32) | mmap[index].base_addr_low;
+				uint64 length = ((uint64)mmap[index].len_high << 32) | mmap[index].len_low;
+
+				ka->phys_mem_range[ka->num_phys_mem_ranges].start = addr;
+				ka->phys_mem_range[ka->num_phys_mem_ranges].size = length;
+				ka->num_phys_mem_ranges++;
+			}
+
+			index++;
+		}
+	} else {
+		panic("no multiboot mmap\n");
+	}
+}
+

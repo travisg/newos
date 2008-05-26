@@ -30,7 +30,7 @@ typedef struct {
 	addr_t vir_idt;
 	addr_t phys_gdt;
 	addr_t vir_gdt;
-	unsigned int page_hole;
+
 	// smp stuff
 	unsigned int apic_time_cv_factor; // apic ticks per second
 	addr_t apic_phys;

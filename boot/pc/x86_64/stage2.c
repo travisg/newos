@@ -12,7 +12,7 @@
 #include <string.h>
 #include <stdarg.h>
 #include <stdio.h>
-#include <newos/elf32.h>
+#include <newos/elf64.h>
 
 // we're running out of the first 'file' contained in the bootdir, which is
 // a set of binaries and data packed back to back, described by an array
@@ -23,7 +23,10 @@ static const boot_entry *bootdir = (boot_entry*)BOOTDIR_ADDR;
 // stick the kernel arguments in a pseudo-random page that will be mapped
 // at least during the call into the kernel. The kernel should copy the
 // data out and unmap the page.
-static kernel_args *ka = (kernel_args *)0x20000;
+kernel_args *ka = (kernel_args *)0x20000;
+
+// next paddr to allocate
+addr_t next_paddr;
 
 // needed for message
 static unsigned short *kScreenBase = (unsigned short*) 0xb8000;
@@ -36,8 +39,8 @@ static unsigned int bootdir_pages = 0;
 
 // function decls for this module
 static void calculate_cpu_conversion_factor(void);
-static void load_elf_image(void *data, unsigned int *next_paddr,
-	addr_range *ar0, addr_range *ar1, unsigned int *start_addr, addr_range *dynamic_section);
+static void load_elf_image(void *data,
+	addr_range *ar0, addr_range *ar1, addr_t *start_addr, addr_range *dynamic_section);
 static void sort_addr_range(addr_range *range, int count);
 
 // memory structure returned by int 0x15, ax 0xe820
@@ -58,10 +61,10 @@ void stage2_main(void *multiboot_info, unsigned int memsize, void *extended_mem_
 {
 	unsigned int *idt;
 	unsigned int *gdt;
+	addr_t kernel_base;
 	addr_t next_vaddr;
-	addr_t next_paddr;
 	unsigned int i;
-	unsigned int kernel_entry;
+	addr_t kernel_entry;
 
 	asm("cld");			// Ain't nothing but a GCC thang.
 	asm("fninit");		// initialize floating point unit
@@ -116,29 +119,34 @@ void stage2_main(void *multiboot_info, unsigned int memsize, void *extended_mem_
 	}
 #endif
 
-	mmu_init(ka, &next_paddr);
+	mmu_init(ka);
 
-	for (;;);
-
-	// load the kernel (3rd entry in the bootdir)
-	load_elf_image((void *)(bootdir[2].be_offset * PAGE_SIZE + BOOTDIR_ADDR), &next_paddr,
+	// load the kernel (1st entry in the bootdir)
+	load_elf_image((void *)((uint64)bootdir[1].be_offset * PAGE_SIZE + BOOTDIR_ADDR),
 			&ka->kernel_seg0_addr, &ka->kernel_seg1_addr, &kernel_entry, &ka->kernel_dynamic_section_addr);
 
-	if(ka->kernel_seg1_addr.size > 0)
+	// find the footprint of the kernel
+	if (ka->kernel_seg1_addr.size > 0)
 		next_vaddr = ROUNDUP(ka->kernel_seg1_addr.start + ka->kernel_seg1_addr.size, PAGE_SIZE);
 	else
 		next_vaddr = ROUNDUP(ka->kernel_seg0_addr.start + ka->kernel_seg0_addr.size, PAGE_SIZE);
 
+	if (ka->kernel_seg1_addr.size > 0) {
+		kernel_base = ROUNDOWN(min(ka->kernel_seg0_addr.start, ka->kernel_seg1_addr.start), PAGE_SIZE);
+	} else {
+		kernel_base = ROUNDOWN(ka->kernel_seg0_addr.start, PAGE_SIZE);
+	}
+
 	// map in a kernel stack
 	ka->cpu_kstack[0].start = next_vaddr;
-	for(i=0; i<STACK_SIZE; i++) {
+	for (i=0; i<STACK_SIZE; i++) {
 		mmu_map_page(next_vaddr, next_paddr);
 		next_vaddr += PAGE_SIZE;
 		next_paddr += PAGE_SIZE;
 	}
 	ka->cpu_kstack[0].size = next_vaddr - ka->cpu_kstack[0].start;
 
-//	dprintf("new stack at 0x%x to 0x%x\n", ka->cpu_kstack[0].start, ka->cpu_kstack[0].start + ka->cpu_kstack[0].size);
+	dprintf("new stack at 0x%lx to 0x%lx\n", ka->cpu_kstack[0].start, ka->cpu_kstack[0].start + ka->cpu_kstack[0].size);
 
 	// set up a new gdt
 	{
@@ -146,27 +154,18 @@ void stage2_main(void *multiboot_info, unsigned int memsize, void *extended_mem_
 
 		// find a new gdt
 		gdt = (unsigned int *)next_paddr;
-		ka->arch_args.phys_gdt = (unsigned int)gdt;
+		ka->arch_args.phys_gdt = (addr_t)gdt;
 		next_paddr += PAGE_SIZE;
-
-//		nmessage("gdt at ", (unsigned int)gdt, "\n");
 
 		// put segment descriptors in it
 		gdt[0] = 0;
 		gdt[1] = 0;
-		gdt[2] = 0x0000ffff; // seg 0x8  -- kernel 4GB code
-		gdt[3] = 0x00cf9a00;
-		gdt[4] = 0x0000ffff; // seg 0x10 -- kernel 4GB data
-		gdt[5] = 0x00cf9200;
-		gdt[6] = 0x0000ffff; // seg 0x1b -- ring 3 4GB code
-		gdt[7] = 0x00cffa00;
-		gdt[8] = 0x0000ffff; // seg 0x23 -- ring 3 4GB data
-		gdt[9] = 0x00cff200;
-		// gdt[10] & gdt[11] will be filled later by the kernel
+		gdt[2] = 0x00000000; // seg 0x8  -- ring 0, 64bit code
+		gdt[3] = 0x00af9a00;
 
 		// map the gdt into virtual space
-		mmu_map_page(next_vaddr, (unsigned int)gdt);
-		ka->arch_args.vir_gdt = (unsigned int)next_vaddr;
+		mmu_map_page(next_vaddr, (addr_t)gdt);
+		ka->arch_args.vir_gdt = (addr_t)next_vaddr;
 		next_vaddr += PAGE_SIZE;
 
 		// load the GDT
@@ -175,46 +174,7 @@ void stage2_main(void *multiboot_info, unsigned int memsize, void *extended_mem_
 
 		asm("lgdt	%0;"
 			: : "m" (gdt_descr));
-
-//		nmessage("gdt at virtual address ", next_vpage, "\n");
 	}
-
-#if 0
-	{
-		struct regs r;
-		struct ebios_struct {
-			uint32 base_addr_low;
-			uint32 base_addr_high;
-			uint32 length_low;
-			uint32 length_high;
-			uint8 type;
-		} *buf = (struct ebios_struct *)0xf000;
-
-		memset(buf, 0, sizeof(struct ebios_struct));
-
-		r.ebx = 0;
-		do {
-			r.eax = 0xe820;
-			r.ecx = 0x20;
-			r.edx = 'SMAP';
-			r.esi = 0;
-			r.edi = 0x1000;
-			r.es = 0;
-			r.flags = 0;
-
-			int86(0x15, &r);
-
-			if(r.flags & 0x1) {
-				dprintf("error calling int 0x15 e820\n");
-				break;
-			}
-
-			dprintf("flags 0x%x base 0x%x 0x%x length 0x%x 0x%x type %d\n",
-				r.flags, buf->base_addr_low, buf->base_addr_high, buf->length_low, buf->length_high, buf->type);
-			for(;;);
-		} while(r.ebx != 0);
-	}
-#endif
 
 	// set up a new idt
 	{
@@ -222,10 +182,8 @@ void stage2_main(void *multiboot_info, unsigned int memsize, void *extended_mem_
 
 		// find a new idt
 		idt = (unsigned int *)next_paddr;
-		ka->arch_args.phys_idt = (unsigned int)idt;
+		ka->arch_args.phys_idt = (addr_t)idt;
 		next_paddr += PAGE_SIZE;
-
-//		nmessage("idt at ", (unsigned int)idt, "\n");
 
 		// clear it out
 		for(i=0; i<IDT_LIMIT/4; i++) {
@@ -233,8 +191,8 @@ void stage2_main(void *multiboot_info, unsigned int memsize, void *extended_mem_
 		}
 
 		// map the idt into virtual space
-		mmu_map_page(next_vaddr, (unsigned int)idt);
-		ka->arch_args.vir_idt = (unsigned int)next_vaddr;
+		mmu_map_page(next_vaddr, (addr_t)idt);
+		ka->arch_args.vir_idt = (addr_t)next_vaddr;
 		next_vaddr += PAGE_SIZE;
 
 		// load the idt
@@ -243,22 +201,7 @@ void stage2_main(void *multiboot_info, unsigned int memsize, void *extended_mem_
 
 		asm("lidt	%0;"
 			: : "m" (idt_descr));
-
-//		nmessage("idt at virtual address ", next_vpage, "\n");
 	}
-
-#if 0
-	// Map the pg_dir into kernel space at 0xffc00000-0xffffffff
-	// this enables a mmu trick where the 4 MB region that this pgdir entry
-	// represents now maps the 4MB of potential pagetables that the pgdir
-	// points to. Thrown away later in VM bringup, but useful for now.
-	pgdir[1023] = (unsigned int)pgdir | DEFAULT_PAGE_FLAGS;
-
-	// also map it on the next vpage
-	mmu_map_page(next_vaddr, (unsigned int)pgdir);
-	ka->arch_args.vir_pgdir = next_vaddr;
-	next_vaddr += PAGE_SIZE;
-#endif
 
 	// mark memory that we know is used
 	ka->phys_alloc_range[0].start = BOOTDIR_ADDR;
@@ -266,6 +209,9 @@ void stage2_main(void *multiboot_info, unsigned int memsize, void *extended_mem_
 	ka->num_phys_alloc_ranges = 1;
 
 	// figure out the memory map
+	fill_ka_memranges(multiboot_info);
+
+#if 0
 	if(extended_mem_count > 0) {
 		struct emem_struct *buf = (struct emem_struct *)extended_mem_block;
 		unsigned int i;
@@ -313,10 +259,11 @@ void stage2_main(void *multiboot_info, unsigned int memsize, void *extended_mem_
 		ka->phys_alloc_range[ka->num_phys_alloc_ranges].size = 0x61000;
 		ka->num_phys_alloc_ranges++;
 	}
+#endif
 
 	// save the memory we've virtually allocated (for the kernel and other stuff)
-	ka->virt_alloc_range[0].start = KERNEL_BASE;
-	ka->virt_alloc_range[0].size = next_vaddr - KERNEL_BASE;
+	ka->virt_alloc_range[0].start = kernel_base;
+	ka->virt_alloc_range[0].size = next_vaddr - kernel_base;
 	ka->num_virt_alloc_ranges = 1;
 
 	// sort the address ranges
@@ -348,7 +295,6 @@ void stage2_main(void *multiboot_info, unsigned int memsize, void *extended_mem_
 	// save the kernel args
 	ka->arch_args.system_time_cv_factor = cv_factor;
 	ka->str = NULL;
-	ka->arch_args.page_hole = 0xffc00000;
 	ka->num_cpus = 1;
 #if 0
 	dprintf("kernel args at 0x%x\n", ka);
@@ -369,9 +315,9 @@ void stage2_main(void *multiboot_info, unsigned int memsize, void *extended_mem_
 	dprintf("page_hole = 0x%x\n", ka->page_hole);
 #endif
 //	dprintf("finding and booting other cpus...\n");
-	smp_boot(ka, kernel_entry);
+//	smp_boot(ka, kernel_entry);
 
-	dprintf("jumping into kernel at 0x%x\n", kernel_entry);
+	dprintf("jumping into kernel at 0x%lx\n", kernel_entry);
 
 	ka->cons_line = screenOffset / SCREEN_WIDTH;
 
@@ -390,10 +336,10 @@ void stage2_main(void *multiboot_info, unsigned int memsize, void *extended_mem_
 #endif
 }
 
-static void load_elf_image(void *data, unsigned int *next_paddr, addr_range *ar0, addr_range *ar1, unsigned int *start_addr, addr_range *dynamic_section)
+static void load_elf_image(void *data, addr_range *ar0, addr_range *ar1, addr_t *start_addr, addr_range *dynamic_section)
 {
-	struct Elf32_Ehdr *imageHeader = (struct Elf32_Ehdr*) data;
-	struct Elf32_Phdr *segments = (struct Elf32_Phdr*)(imageHeader->e_phoff + (unsigned) imageHeader);
+	struct Elf64_Ehdr *imageHeader = (struct Elf64_Ehdr*) data;
+	struct Elf64_Phdr *segments = (struct Elf64_Phdr*)(imageHeader->e_phoff + (addr_t)imageHeader);
 	int segmentIndex;
 	int foundSegmentIndex = 0;
 
@@ -402,7 +348,7 @@ static void load_elf_image(void *data, unsigned int *next_paddr, addr_range *ar0
 	dynamic_section->size = 0;
 
 	for (segmentIndex = 0; segmentIndex < imageHeader->e_phnum; segmentIndex++) {
-		struct Elf32_Phdr *segment = &segments[segmentIndex];
+		struct Elf64_Phdr *segment = &segments[segmentIndex];
 		unsigned segmentOffset;
 
 		switch(segment->p_type) {
@@ -415,34 +361,34 @@ static void load_elf_image(void *data, unsigned int *next_paddr, addr_range *ar0
 				continue;
 		}
 
-//		dprintf("segment %d\n", segmentIndex);
-//		dprintf("p_vaddr 0x%x p_paddr 0x%x p_filesz 0x%x p_memsz 0x%x\n",
-//			segment->p_vaddr, segment->p_paddr, segment->p_filesz, segment->p_memsz);
+		dprintf("segment %d\n", segmentIndex);
+		dprintf("p_vaddr 0x%lx p_paddr 0x%lx p_filesz 0x%lx p_memsz 0x%lx\n",
+			segment->p_vaddr, segment->p_paddr, segment->p_filesz, segment->p_memsz);
 
 		/* Map initialized portion */
 		for (segmentOffset = 0;
 			segmentOffset < ROUNDUP(segment->p_filesz, PAGE_SIZE);
 			segmentOffset += PAGE_SIZE) {
 
-			mmu_map_page(segment->p_vaddr + segmentOffset, *next_paddr);
+			mmu_map_page(segment->p_vaddr + segmentOffset, next_paddr);
 			memcpy((void *)ROUNDOWN(segment->p_vaddr + segmentOffset, PAGE_SIZE),
-				(void *)ROUNDOWN((unsigned)data + segment->p_offset + segmentOffset, PAGE_SIZE), PAGE_SIZE);
-			(*next_paddr) += PAGE_SIZE;
+				(void *)ROUNDOWN((addr_t)data + segment->p_offset + segmentOffset, PAGE_SIZE), PAGE_SIZE);
+			next_paddr += PAGE_SIZE;
 		}
 
 		/* Clean out the leftover part of the last page */
 		if(segment->p_filesz % PAGE_SIZE > 0) {
-//			dprintf("memsetting 0 to va 0x%x, size %d\n", (void*)((unsigned)segment->p_vaddr + segment->p_filesz), PAGE_SIZE  - (segment->p_filesz % PAGE_SIZE));
-			memset((void*)((unsigned)segment->p_vaddr + segment->p_filesz), 0, PAGE_SIZE
+			dprintf("memsetting 0 to va 0x%lx, size %d\n", (void*)(segment->p_vaddr + segment->p_filesz), PAGE_SIZE  - (segment->p_filesz % PAGE_SIZE));
+			memset((void*)(segment->p_vaddr + segment->p_filesz), 0, PAGE_SIZE
 				- (segment->p_filesz % PAGE_SIZE));
 		}
 
 		/* Map uninitialized portion */
 		for (; segmentOffset < ROUNDUP(segment->p_memsz, PAGE_SIZE); segmentOffset += PAGE_SIZE) {
-//			dprintf("mapping zero page at va 0x%x\n", segment->p_vaddr + segmentOffset);
-			mmu_map_page(segment->p_vaddr + segmentOffset, *next_paddr);
+			dprintf("mapping zero page at va 0x%lx\n", segment->p_vaddr + segmentOffset);
+			mmu_map_page(segment->p_vaddr + segmentOffset, next_paddr);
 			memset((void *)(segment->p_vaddr + segmentOffset), 0, PAGE_SIZE);
-			(*next_paddr) += PAGE_SIZE;
+			next_paddr += PAGE_SIZE;
 		}
 		switch(foundSegmentIndex) {
 			case 0:

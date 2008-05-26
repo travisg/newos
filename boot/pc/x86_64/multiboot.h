@@ -47,5 +47,8 @@ struct multiboot_mmap {
 
 void dump_multiboot(const void *multiboot);
 
+// boot time kernel args copying from the multiboot struct
+void fill_ka_memranges(const void *multiboot);
+
 #endif
 

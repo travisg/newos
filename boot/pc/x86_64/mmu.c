@@ -7,8 +7,6 @@
 
 // working pagedir and pagetables
 static unsigned long *pgtable0 = 0;
-static unsigned long *pgtable1 = 0;
-static unsigned long *pgtable2 = 0;
 
 static unsigned long *pgtables_user = 0;
 
@@ -33,13 +31,13 @@ static void setup_identity_map(void)
 		pgtables_user[512 + i] = (i * 0x200000) | (1<<7) | DEFAULT_PAGE_FLAGS;
 }
 
-static unsigned long *alloc_pagetable(kernel_args *ka, addr_t *next_paddr)
+static unsigned long *alloc_pagetable(kernel_args *ka)
 {
 	int i;
 	unsigned long *table;
 
-	table = (unsigned long *)*next_paddr;
-	(*next_paddr) += PAGE_SIZE;
+	table = (unsigned long *)next_paddr;
+	next_paddr += PAGE_SIZE;
 	ka->arch_args.pgtables[ka->arch_args.num_pgtables++] = (addr_t)table;
 
 	// clear it out
@@ -52,27 +50,15 @@ static unsigned long *alloc_pagetable(kernel_args *ka, addr_t *next_paddr)
 // allocate enough page tables to allow mapping of kernel and identity mapping of user space
 //
 // kernel maps at 0xffffffff00000000 (top of 64bit - 4GB)
-int mmu_init(kernel_args *ka, addr_t *next_paddr)
+int mmu_init(kernel_args *ka)
 {
 	ka->arch_args.num_pgtables = 0;
 
 	// allocate a new top level pgdir
-	pgtable0 = alloc_pagetable(ka, next_paddr);
+	pgtable0 = alloc_pagetable(ka);
 
 	// set up the identity map of low ram
 	setup_identity_map();
-
-	// set up the kernel's 2nd level page table
-	pgtable1 = alloc_pagetable(ka, next_paddr);
-
-	// point the top level page table at it
-	pgtable0[511] = (addr_t)pgtable1 | DEFAULT_PAGE_FLAGS;
-
-	// create a 3rd level kernel pagetable
-	pgtable2 = alloc_pagetable(ka, next_paddr);
-
-	// point the 3nd level at 0xffffff00000000
-	pgtable1[512 - 4] = (addr_t)pgtable2 | DEFAULT_PAGE_FLAGS;
 
 	dprintf("switching page dirs: new one at %p\n", pgtable0);
 
@@ -85,20 +71,69 @@ int mmu_init(kernel_args *ka, addr_t *next_paddr)
 	return 0;
 }
 
-// can only map the 4 meg region right after KERNEL_BASE, may fix this later
-// if need arises.
+#define PGTABLE0_ENTRY(vaddr) (((vaddr) >> 39) & 0x1ff)
+#define PGTABLE1_ENTRY(vaddr) (((vaddr) >> 30) & 0x1ff)
+#define PGTABLE2_ENTRY(vaddr) (((vaddr) >> 21) & 0x1ff)
+#define PGTABLE3_ENTRY(vaddr) (((vaddr) >> 12) & 0x1ff)
+
+#define PGENT_TO_ADDR(ent) ((ent) & 0x7ffffffffffff000UL)
+#define PGENT_PRESENT(ent) ((ent) & 0x1)
+
+static unsigned long *lookup_pgtable_entry(addr_t vaddr)
+{
+	vaddr &= ~(PAGE_SIZE-1);	
+
+//	dprintf("lookup_pgtable_entry: vaddr = (%d, %d, %d, %d)\n",
+//		PGTABLE0_ENTRY(vaddr),
+//		PGTABLE1_ENTRY(vaddr),
+//		PGTABLE2_ENTRY(vaddr),
+//		PGTABLE3_ENTRY(vaddr));
+
+	// dive into the kernel page tables, allocating as they come up
+	unsigned long *pgtable = pgtable0;
+	unsigned long *ent = &pgtable[PGTABLE0_ENTRY(vaddr)];
+
+	if (!PGENT_PRESENT(*ent)) {
+		pgtable = alloc_pagetable(ka);
+		*ent = (addr_t)pgtable | DEFAULT_PAGE_FLAGS;
+	} else {
+		pgtable = (unsigned long *)PGENT_TO_ADDR(*ent);
+	}
+//	dprintf("pgtable_addr 0 %p\n", pgtable);
+
+	ent = &pgtable[PGTABLE1_ENTRY(vaddr)];
+	if (!PGENT_PRESENT(*ent)) {
+		pgtable = alloc_pagetable(ka);
+		*ent = (addr_t)pgtable | DEFAULT_PAGE_FLAGS;
+	} else {
+		pgtable = (unsigned long *)PGENT_TO_ADDR(*ent);
+	}
+//	dprintf("pgtable_addr 1 %p\n", pgtable);
+
+	ent = &pgtable[PGTABLE2_ENTRY(vaddr)];
+	if (!PGENT_PRESENT(*ent)) {
+		pgtable = alloc_pagetable(ka);
+		*ent = (addr_t)pgtable | DEFAULT_PAGE_FLAGS;
+	} else {
+		pgtable = (unsigned long *)PGENT_TO_ADDR(*ent);
+	}
+//	dprintf("pgtable_addr 2 %p\n", pgtable);
+
+	// now map it
+
+	return &pgtable[PGTABLE3_ENTRY(vaddr)];
+}
+
+// can only map in kernel space
 void mmu_map_page(addr_t vaddr, addr_t paddr)
 {
-	dprintf("mmu_map_page: vaddr 0x%lx, paddr 0x%lx\n", vaddr, paddr);
+//	dprintf("mmu_map_page: vaddr 0x%lx, paddr 0x%lx\n", vaddr, paddr);
 
-#if 0
-	if(vaddr < KERNEL_BASE || vaddr >= (KERNEL_BASE + 4096*1024)) {
-		dprintf("mmu_map_page: asked to map invalid page!\n");
-		for(;;);
-	}
+	unsigned long *pgtable_entry;
+
+	pgtable_entry = lookup_pgtable_entry(vaddr);
+
 	paddr &= ~(PAGE_SIZE-1);
-//	dprintf("paddr 0x%x @ index %d\n", paddr, (vaddr % (PAGE_SIZE * 1024)) / PAGE_SIZE);
-	pgtable[(vaddr % (PAGE_SIZE * 1024)) / PAGE_SIZE] = paddr | DEFAULT_PAGE_FLAGS;
-#endif
+	*pgtable_entry = paddr | DEFAULT_PAGE_FLAGS;
 }
 
