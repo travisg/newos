@@ -1,5 +1,5 @@
 /* 
-** Copyright 2003-2004, Travis Geiselbrecht. All rights reserved.
+** Copyright 2003-2008, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #include <kernel/kernel.h>
@@ -9,21 +9,17 @@
 #include <kernel/arch/x86_64/cpu.h>
 
 static uint64 last_rdtsc;
-static bool use_rdtsc;
 
 int arch_time_init(kernel_args *ka)
 {
 	last_rdtsc = 0;
-
-	use_rdtsc = ka->arch_args.supports_rdtsc;
 
 	return 0;
 }
 
 void arch_time_tick(void)
 {
-	if(use_rdtsc)
-		last_rdtsc = x86_64_rdtsc();
+	last_rdtsc = x86_64_rdtsc();
 }
 
 void setup_system_time(unsigned int cv_factor)
@@ -40,13 +36,10 @@ bigtime_t x86_64_cycles_to_time(uint64 cycles)
 
 bigtime_t arch_get_time_delta(void)
 {
-	if(use_rdtsc) {
-		// XXX race here
-		uint64 delta_rdtsc = x86_64_rdtsc() - last_rdtsc;
+	// XXX race here
+	uint64 delta_rdtsc = x86_64_rdtsc() - last_rdtsc;
 
-		return x86_64_cycles_to_time(delta_rdtsc);
-	} else 
-		return 0;
+	return x86_64_cycles_to_time(delta_rdtsc);
 }
 
 /* MC146818 RTC code */

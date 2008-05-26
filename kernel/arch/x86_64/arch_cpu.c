@@ -43,6 +43,13 @@ int arch_cpu_init(kernel_args *ka)
 	return 0;
 }
 
+int arch_cpu_init_percpu(kernel_args *ka, int curr_cpu)
+{
+//	detect_cpu(ka, curr_cpu);
+
+	return 0;
+}
+
 int arch_cpu_init2(kernel_args *ka)
 {
 	region_id rid;
@@ -131,7 +138,7 @@ void reboot(void)
 {
 	static uint16 null_idt_descr[3];
 
-	asm("lidt	%0" : : "m" (null_idt_descr));
+//	asm("lidt	%0" : : "m" (null_idt_descr));
 	asm("int 	$0");
 	for(;;);
 }

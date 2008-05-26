@@ -46,7 +46,7 @@ CONFIG_FILE := $(BOOT_SRCDIR)/dummy.ini
 $(FINAL): $(LOADER)
 	$(OBJCOPY) -O binary $< $@
 
-$(FINAL).bootmaker.gz: $(TOOLS) $(CONFIG_FILE)
+$(FINAL).bootmaker.gz: $(TOOLS) $(CONFIG_FILE) $(KERNEL)
 	@echo creating $@
 	@$(MKDIR)
 	@$(BOOTMAKER) --strip-debug --strip-binary $(STRIP) $(CONFIG_FILE) -o $(FINAL).bootmaker

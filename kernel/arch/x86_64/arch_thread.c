@@ -1,5 +1,5 @@
 /*
-** Copyright 2001-2004, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2008, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #include <kernel/kernel.h>
@@ -15,6 +15,11 @@
 // from arch_interrupts.S
 extern void x86_64_return_from_signal(void);
 extern void x86_64_end_return_from_signal(void);
+
+int arch_thread_init(kernel_args *ka)
+{
+	return 0;
+}
 
 int arch_proc_init_proc_struct(struct proc *p, bool kernel)
 {
@@ -82,7 +87,7 @@ void arch_thread_switch_kstack_and_call(addr_t new_kstack, void (*func)(void *),
 	x86_64_switch_stack_and_call(new_kstack, func, arg);
 }
 
-void arch_thread_context_switch(struct thread *t_from, struct thread *t_to)
+void arch_thread_context_switch(struct thread *t_from, struct thread *t_to, struct vm_translation_map_struct *new_tmap)
 {
 	addr_t new_pgdir;
 #if 0
