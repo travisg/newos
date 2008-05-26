@@ -321,19 +321,12 @@ void stage2_main(void *multiboot_info, unsigned int memsize, void *extended_mem_
 
 	ka->cons_line = screenOffset / SCREEN_WIDTH;
 
-	for(;;);
+	asm volatile("mov	%0, %%rsp;"
+				"call	*%1"
+				:: "r" (ka->cpu_kstack[0].start + ka->cpu_kstack[0].size), "r" (kernel_entry),
+				"rdi" (ka), "rsi" (0));
 
-#if 0
-	asm("movl	%0, %%eax;	"			// move stack out of way
-		"movl	%%eax, %%esp; "
-		: : "m" (ka->cpu_kstack[0].start + ka->cpu_kstack[0].size));
-	asm("pushl  $0x0; "					// we're the BSP cpu (0)
-		"pushl 	%0;	"					// kernel args
-		"pushl 	$0x0;"					// dummy retval for call to main
-		"pushl 	%1;	"					// this is the start address
-		"ret;		"					// jump.
-		: : "g" (ka), "g" (kernel_entry));
-#endif
+	for(;;);
 }
 
 static void load_elf_image(void *data, addr_range *ar0, addr_range *ar1, addr_t *start_addr, addr_range *dynamic_section)
