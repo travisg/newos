@@ -144,7 +144,7 @@ endif
 
 ifeq ($(ARCH),x86_64)
 	GLOBAL_CFLAGS = -O2 -g 
-	KERNEL_CFLAGS = -fpic
+	KERNEL_CFLAGS = -fno-pic -mcmodel=kernel
 	USER_CFLAGS = -fpic
 	GLOBAL_LDFLAGS = -g -m elf_x86_64
 endif
