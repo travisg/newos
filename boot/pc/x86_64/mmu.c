@@ -44,6 +44,8 @@ static unsigned long *alloc_pagetable(kernel_args *ka)
 	for(i = 0; i < 512; i++)
 		table[i] = 0;
 
+//	dprintf("alloc_pagetable returning %p\n", table);
+
 	return table;
 }
 
@@ -97,6 +99,7 @@ static unsigned long *lookup_pgtable_entry(addr_t vaddr)
 		pgtable = alloc_pagetable(ka);
 		*ent = (addr_t)pgtable | DEFAULT_PAGE_FLAGS;
 	} else {
+//		dprintf("existing ent 0x%lx\n", *ent);
 		pgtable = (unsigned long *)PGENT_TO_ADDR(*ent);
 	}
 //	dprintf("pgtable_addr 0 %p\n", pgtable);
@@ -106,6 +109,7 @@ static unsigned long *lookup_pgtable_entry(addr_t vaddr)
 		pgtable = alloc_pagetable(ka);
 		*ent = (addr_t)pgtable | DEFAULT_PAGE_FLAGS;
 	} else {
+//		dprintf("existing ent 0x%lx\n", *ent);
 		pgtable = (unsigned long *)PGENT_TO_ADDR(*ent);
 	}
 //	dprintf("pgtable_addr 1 %p\n", pgtable);
@@ -115,6 +119,7 @@ static unsigned long *lookup_pgtable_entry(addr_t vaddr)
 		pgtable = alloc_pagetable(ka);
 		*ent = (addr_t)pgtable | DEFAULT_PAGE_FLAGS;
 	} else {
+//		dprintf("existing ent 0x%lx\n", *ent);
 		pgtable = (unsigned long *)PGENT_TO_ADDR(*ent);
 	}
 //	dprintf("pgtable_addr 2 %p\n", pgtable);

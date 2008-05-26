@@ -140,9 +140,11 @@ void stage2_main(void *multiboot_info, unsigned int memsize, void *extended_mem_
 	// map in a kernel stack
 	ka->cpu_kstack[0].start = next_vaddr;
 	for (i=0; i<STACK_SIZE; i++) {
-		mmu_map_page(next_vaddr, next_paddr);
-		next_vaddr += PAGE_SIZE;
+		addr_t paddr = next_paddr;
 		next_paddr += PAGE_SIZE;
+		
+		mmu_map_page(next_vaddr, paddr);
+		next_vaddr += PAGE_SIZE;
 	}
 	ka->cpu_kstack[0].size = next_vaddr - ka->cpu_kstack[0].start;
 
@@ -358,34 +360,39 @@ static void load_elf_image(void *data, addr_range *ar0, addr_range *ar1, addr_t 
 				continue;
 		}
 
-		dprintf("segment %d\n", segmentIndex);
-		dprintf("p_vaddr 0x%lx p_paddr 0x%lx p_filesz 0x%lx p_memsz 0x%lx\n",
-			segment->p_vaddr, segment->p_paddr, segment->p_filesz, segment->p_memsz);
+//		dprintf("segment %d\n", segmentIndex);
+//		dprintf("p_vaddr 0x%lx p_paddr 0x%lx p_filesz 0x%lx p_memsz 0x%lx\n",
+//			segment->p_vaddr, segment->p_paddr, segment->p_filesz, segment->p_memsz);
 
 		/* Map initialized portion */
 		for (segmentOffset = 0;
 			segmentOffset < ROUNDUP(segment->p_filesz, PAGE_SIZE);
 			segmentOffset += PAGE_SIZE) {
 
-			mmu_map_page(segment->p_vaddr + segmentOffset, next_paddr);
+			addr_t paddr = next_paddr;
+			next_paddr += PAGE_SIZE;
+			
+			mmu_map_page(segment->p_vaddr + segmentOffset, paddr);
 			memcpy((void *)ROUNDOWN(segment->p_vaddr + segmentOffset, PAGE_SIZE),
 				(void *)ROUNDOWN((addr_t)data + segment->p_offset + segmentOffset, PAGE_SIZE), PAGE_SIZE);
-			next_paddr += PAGE_SIZE;
 		}
 
 		/* Clean out the leftover part of the last page */
 		if(segment->p_filesz % PAGE_SIZE > 0) {
-			dprintf("memsetting 0 to va 0x%lx, size %d\n", (void*)(segment->p_vaddr + segment->p_filesz), PAGE_SIZE  - (segment->p_filesz % PAGE_SIZE));
+//			dprintf("memsetting 0 to va 0x%lx, size %d\n", (void*)(segment->p_vaddr + segment->p_filesz), PAGE_SIZE  - (segment->p_filesz % PAGE_SIZE));
 			memset((void*)(segment->p_vaddr + segment->p_filesz), 0, PAGE_SIZE
 				- (segment->p_filesz % PAGE_SIZE));
 		}
 
 		/* Map uninitialized portion */
 		for (; segmentOffset < ROUNDUP(segment->p_memsz, PAGE_SIZE); segmentOffset += PAGE_SIZE) {
-			dprintf("mapping zero page at va 0x%lx\n", segment->p_vaddr + segmentOffset);
-			mmu_map_page(segment->p_vaddr + segmentOffset, next_paddr);
-			memset((void *)(segment->p_vaddr + segmentOffset), 0, PAGE_SIZE);
+//			dprintf("mapping zero page at va 0x%lx\n", segment->p_vaddr + segmentOffset);
+
+			addr_t paddr = next_paddr;
 			next_paddr += PAGE_SIZE;
+			
+			mmu_map_page(segment->p_vaddr + segmentOffset, paddr);
+			memset((void *)(segment->p_vaddr + segmentOffset), 0, PAGE_SIZE);
 		}
 		switch(foundSegmentIndex) {
 			case 0:
