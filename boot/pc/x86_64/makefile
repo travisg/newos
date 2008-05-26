@@ -19,15 +19,18 @@ MY_TARGET := $(LOADER)
 MY_SRCS := \
 	stage1_entry.S \
 	stage1.c \
-	inflate.c
+	inflate.c \
+	stage2.c \
+	mmu.c \
+	heap.c \
+	multiboot.c \
+	stage2_asm.S
 
-#	stage2.c \
-	stage2_asm.S \
-	smp_boot.c \
+#	smp_boot.c \
 	smp_trampoline.S
 
 MY_INCLUDES := $(STDINCLUDE)
-MY_CFLAGS := $(KERNEL_CFLAGS)
+MY_CFLAGS := $(KERNEL_CFLAGS) -mno-sse
 MY_LDFLAGS := -dN
 MY_LIBS := $(LIBS_BUILD_DIR)/libc.a
 MY_LIBPATHS :=

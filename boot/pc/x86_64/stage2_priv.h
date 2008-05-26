@@ -8,7 +8,7 @@
 #include <boot/stage2.h>
 #include <newos/types.h>
 
-extern void _start(unsigned int mem, void *extended_mem_block, unsigned int extended_mem_count, int in_vesa, unsigned int vesa_ptr, unsigned int console_ptr);
+extern void stage2_main(void *multiboot_info, unsigned int mem, void *extended_mem_block, unsigned int extended_mem_count);
 extern void clearscreen(void);
 extern int dprintf(const char *fmt, ...);
 extern void sleep(uint64 time);
@@ -19,6 +19,15 @@ uint64 rdtsc();
 unsigned int get_eflags(void);
 void set_eflags(unsigned int val);
 void cpuid(unsigned int selector, unsigned int *data);
+
+extern void clearscreen(void);
+extern int dprintf(const char *fmt, ...);
+extern void *kmalloc(unsigned int size);
+extern void kfree(void *ptr);
+extern int panic(const char *fmt, ...);
+
+int mmu_init(kernel_args *ka, addr_t *next_paddr);
+void mmu_map_page(addr_t vaddr, addr_t paddr);
 
 //void put_uint_dec(unsigned int a);
 //void put_uint_hex(unsigned int a);

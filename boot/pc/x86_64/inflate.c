@@ -103,7 +103,6 @@ static char rcsid[] = "$Id$";
 #include <string.h>
 #include <stdio.h>
 #include <stdarg.h>
-#include "stage1.h"
 #include "inflate.h"
 
 typedef unsigned char uch;

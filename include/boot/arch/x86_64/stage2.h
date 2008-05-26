@@ -8,7 +8,7 @@
 #include <boot/stage2_struct.h>
 #include <newos/compiler.h>
 
-#define MAX_BOOT_PTABLES 4
+#define MAX_BOOT_PTABLES 16
 
 #define IDT_LIMIT 0x800
 #define GDT_LIMIT 0x800
@@ -22,12 +22,10 @@ struct gdt_idt_descr {
 // kernel args
 typedef struct {
 	// architecture specific
-	int supports_rdtsc;
 	unsigned int system_time_cv_factor;
 	addr_t phys_pgdir;
-	addr_t vir_pgdir;
 	unsigned int num_pgtables;
-	unsigned int pgtables[MAX_BOOT_PTABLES];
+	addr_t pgtables[MAX_BOOT_PTABLES];
 	addr_t phys_idt;
 	addr_t vir_idt;
 	addr_t phys_gdt;

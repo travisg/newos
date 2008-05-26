@@ -39,19 +39,19 @@ _enter64:
 	// 2MB pages to identity map the first 16MB ram
 	mov     $(0 | (1<<7) | 3), %eax
 	mov     %eax, (PGTABLE_BASE + 0x2000)
-	add     $0x2000, %eax
+	add     $0x200000, %eax
 	mov     %eax, (PGTABLE_BASE + 0x2008)
-	add     $0x2000, %eax        
+	add     $0x200000, %eax        
 	mov     %eax, (PGTABLE_BASE + 0x2010)
-	add     $0x2000, %eax        
+	add     $0x200000, %eax        
 	mov     %eax, (PGTABLE_BASE + 0x2018)
-	add     $0x2000, %eax        
+	add     $0x200000, %eax        
 	mov     %eax, (PGTABLE_BASE + 0x2020)
-	add     $0x2000, %eax        
+	add     $0x200000, %eax        
 	mov     %eax, (PGTABLE_BASE + 0x2028)
-	add     $0x2000, %eax        
+	add     $0x200000, %eax        
 	mov     %eax, (PGTABLE_BASE + 0x2030)
-	add     $0x2000, %eax        
+	add     $0x200000, %eax        
 	mov     %eax, (PGTABLE_BASE + 0x2038)
 
 	// set the page table base

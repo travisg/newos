@@ -7,6 +7,7 @@
 #include "stage2_priv.h"
 #include "vesa.h"
 #include "int86.h"
+#include "multiboot.h"
 
 #include <string.h>
 #include <stdarg.h>
@@ -33,17 +34,10 @@ unsigned int cv_factor = 0;
 // size of bootdir in pages
 static unsigned int bootdir_pages = 0;
 
-// working pagedir and pagetable
-static unsigned int *pgdir = 0;
-static unsigned int *pgtable = 0;
-
 // function decls for this module
 static void calculate_cpu_conversion_factor(void);
 static void load_elf_image(void *data, unsigned int *next_paddr,
 	addr_range *ar0, addr_range *ar1, unsigned int *start_addr, addr_range *dynamic_section);
-static int mmu_init(kernel_args *ka, unsigned int *next_paddr);
-static void mmu_map_page(unsigned int vaddr, unsigned int paddr);
-static int check_cpu(kernel_args *ka);
 static void sort_addr_range(addr_range *range, int count);
 
 // memory structure returned by int 0x15, ax 0xe820
@@ -56,52 +50,28 @@ struct emem_struct {
 
 // called by the stage1 bootloader.
 // State:
-//   32-bit
-//   mmu disabled
+//   long mode (64bit)
+//   mmu enabled, first 16MB identity mapped
 //   stack somewhere below 1 MB
 //   supervisor mode
-void _start(unsigned int memsize, void *extended_mem_block, unsigned int extended_mem_count, int in_vesa, unsigned int vesa_ptr, unsigned int console_ptr)
+void stage2_main(void *multiboot_info, unsigned int memsize, void *extended_mem_block, unsigned int extended_mem_count)
 {
 	unsigned int *idt;
 	unsigned int *gdt;
-	unsigned int next_vaddr;
-	unsigned int next_paddr;
+	addr_t next_vaddr;
+	addr_t next_paddr;
 	unsigned int i;
 	unsigned int kernel_entry;
 
 	asm("cld");			// Ain't nothing but a GCC thang.
 	asm("fninit");		// initialize floating point unit
 
-	screenOffset = console_ptr;
 	dprintf("stage2 bootloader entry.\n");
-	dprintf("args: memsize 0x%x, emem_block %p, emem_count %d, in_vesa %d\n", 
-		memsize, extended_mem_block, extended_mem_count, in_vesa);
-	
-	for (;;);
 
-	// verify we can run on this cpu
-	if(check_cpu(ka) < 0) {
-		dprintf("\nSorry, this computer appears to be lacking some of the features\n");
-		dprintf("needed by NewOS.\n");
-		dprintf("\nPlease reset your computer to continue.");
-
-		for(;;);
-	}
-
-	if(extended_mem_count > 0) {
- 		struct emem_struct *buf = (struct emem_struct *)extended_mem_block;
-		unsigned int i;
-
-		dprintf("extended memory info (from 0xe820):\n");
-		for(i=0; i<extended_mem_count; i++) {
-			dprintf("    base 0x%Lx, len 0x%Lx, type %Ld\n", 
-				buf[i].base_addr, buf[i].length, buf[i].type);
-		}
-	}
+	dump_multiboot(multiboot_info);
 
 	// calculate the conversion factor that translates rdtsc time to real microseconds
-	if(ka->arch_args.supports_rdtsc)
-		calculate_cpu_conversion_factor();
+	calculate_cpu_conversion_factor();
 
 	// calculate how big the bootdir is so we know where we can start grabbing pages
 	{
@@ -113,7 +83,7 @@ void _start(unsigned int memsize, void *extended_mem_block, unsigned int extende
 			bootdir_pages += bootdir[entry].be_size;
 		}
 
-//		nmessage("bootdir is ", bootdir_pages, " pages long\n");
+		dprintf("bootdir is %d pages long\n", bootdir_pages);
 	}
 
 	ka->bootdir_addr.start = (unsigned long)bootdir;
@@ -121,6 +91,7 @@ void _start(unsigned int memsize, void *extended_mem_block, unsigned int extende
 
 	next_paddr = BOOTDIR_ADDR + bootdir_pages * PAGE_SIZE;
 
+#if 0
 	if(in_vesa) {
 		//struct VBEInfoBlock *info = (struct VBEInfoBlock *)vesa_ptr;
 		struct VBEModeInfoBlock *mode_info = (struct VBEModeInfoBlock *)(vesa_ptr + 0x200);
@@ -143,8 +114,11 @@ void _start(unsigned int memsize, void *extended_mem_block, unsigned int extende
 	} else {
 		ka->fb.enabled = 0;
 	}
+#endif
 
 	mmu_init(ka, &next_paddr);
+
+	for (;;);
 
 	// load the kernel (3rd entry in the bootdir)
 	load_elf_image((void *)(bootdir[2].be_offset * PAGE_SIZE + BOOTDIR_ADDR), &next_paddr,
@@ -273,6 +247,7 @@ void _start(unsigned int memsize, void *extended_mem_block, unsigned int extende
 //		nmessage("idt at virtual address ", next_vpage, "\n");
 	}
 
+#if 0
 	// Map the pg_dir into kernel space at 0xffc00000-0xffffffff
 	// this enables a mmu trick where the 4 MB region that this pgdir entry
 	// represents now maps the 4MB of potential pagetables that the pgdir
@@ -283,6 +258,7 @@ void _start(unsigned int memsize, void *extended_mem_block, unsigned int extende
 	mmu_map_page(next_vaddr, (unsigned int)pgdir);
 	ka->arch_args.vir_pgdir = next_vaddr;
 	next_vaddr += PAGE_SIZE;
+#endif
 
 	// mark memory that we know is used
 	ka->phys_alloc_range[0].start = BOOTDIR_ADDR;
@@ -399,6 +375,9 @@ void _start(unsigned int memsize, void *extended_mem_block, unsigned int extende
 
 	ka->cons_line = screenOffset / SCREEN_WIDTH;
 
+	for(;;);
+
+#if 0
 	asm("movl	%0, %%eax;	"			// move stack out of way
 		"movl	%%eax, %%esp; "
 		: : "m" (ka->cpu_kstack[0].start + ka->cpu_kstack[0].size));
@@ -408,6 +387,7 @@ void _start(unsigned int memsize, void *extended_mem_block, unsigned int extende
 		"pushl 	%1;	"					// this is the start address
 		"ret;		"					// jump.
 		: : "g" (ka), "g" (kernel_entry));
+#endif
 }
 
 static void load_elf_image(void *data, unsigned int *next_paddr, addr_range *ar0, addr_range *ar1, unsigned int *start_addr, addr_range *dynamic_section)
@@ -481,118 +461,6 @@ static void load_elf_image(void *data, unsigned int *next_paddr, addr_range *ar0
 	*start_addr = imageHeader->e_entry;
 }
 
-// allocate a page directory and page table to facilitate mapping
-// pages to the 0x80000000 - 0x80400000 region.
-// also identity maps the first 8MB of memory
-static int mmu_init(kernel_args *ka, unsigned int *next_paddr)
-{
-	int i;
-
-	// allocate a new pgdir
-	pgdir = (unsigned int *)*next_paddr;
-	(*next_paddr) += PAGE_SIZE;
-	ka->arch_args.phys_pgdir = (unsigned int)pgdir;
-
-	// clear out the pgdir
-	for(i = 0; i < 1024; i++)
-		pgdir[i] = 0;
-
-	// make a pagetable at this random spot
-	pgtable = (unsigned int *)0x11000;
-
-	for (i = 0; i < 1024; i++) {
-		pgtable[i] = (i * 0x1000) | DEFAULT_PAGE_FLAGS;
-	}
-
-	pgdir[0] = (unsigned int)pgtable | DEFAULT_PAGE_FLAGS;
-
-	// make another pagetable at this random spot
-	pgtable = (unsigned int *)0x12000;
-
-	for (i = 0; i < 1024; i++) {
-		pgtable[i] = (i * 0x1000 + 0x400000) | DEFAULT_PAGE_FLAGS;
-	}
-
-	pgdir[1] = (unsigned int)pgtable | DEFAULT_PAGE_FLAGS;
-
-	// Get new page table and clear it out
-	pgtable = (unsigned int *)*next_paddr;
-	ka->arch_args.pgtables[0] = (unsigned int)pgtable;
-	ka->arch_args.num_pgtables = 1;
-
-	(*next_paddr) += PAGE_SIZE;
-	for (i = 0; i < 1024; i++)
-		pgtable[i] = 0;
-
-	// put the new page table into the page directory
-	// this maps the kernel at KERNEL_BASE
-	pgdir[KERNEL_BASE/(4*1024*1024)] = (unsigned int)pgtable | DEFAULT_PAGE_FLAGS;
-
-	// switch to the new pgdir
-	asm("movl %0, %%eax;"
-		"movl %%eax, %%cr3;" :: "m" (pgdir) : "eax");
-	// Important.  Make sure supervisor threads can fault on read only pages...
-	asm("movl %%eax, %%cr0" : : "a" ((1 << 31) | (1 << 16) | (1 << 5) | 1));
-		// pkx: moved the paging turn-on to here.
-
-	return 0;
-}
-
-// can only map the 4 meg region right after KERNEL_BASE, may fix this later
-// if need arises.
-static void mmu_map_page(unsigned int vaddr, unsigned int paddr)
-{
-//	dprintf("mmu_map_page: vaddr 0x%x, paddr 0x%x\n", vaddr, paddr);
-	if(vaddr < KERNEL_BASE || vaddr >= (KERNEL_BASE + 4096*1024)) {
-		dprintf("mmu_map_page: asked to map invalid page!\n");
-		for(;;);
-	}
-	paddr &= ~(PAGE_SIZE-1);
-//	dprintf("paddr 0x%x @ index %d\n", paddr, (vaddr % (PAGE_SIZE * 1024)) / PAGE_SIZE);
-	pgtable[(vaddr % (PAGE_SIZE * 1024)) / PAGE_SIZE] = paddr | DEFAULT_PAGE_FLAGS;
-}
-
-static int check_cpu(kernel_args *ka)
-{
-	unsigned int data[4];
-	char str[17];
-
-	// check the eflags register to see if the cpuid instruction exists
-	if((get_eflags() & 1<<21) == 0) {
-		set_eflags(get_eflags() | 1<<21);
-		if((get_eflags() & 1<<21) == 0) {
-			// we couldn't set the ID bit of the eflags register, this cpu is old
-			return -1;
-		}
-	}
-
-	// we can safely call cpuid
-
-	// print some fun data
-	cpuid(0, data);
-
-	// build the vendor string
-	memset(str, 0, sizeof(str));
-	*(unsigned int *)&str[0] = data[1];
-	*(unsigned int *)&str[4] = data[3];
-	*(unsigned int *)&str[8] = data[2];
-
-	// get the family, model, stepping
-	cpuid(1, data);
-	dprintf("CPU: family %d model %d stepping %d, string '%s'\n",
-		(data[0] >> 8) & 0xf, (data[0] >> 4) & 0xf, data[0] & 0xf, str);
-
-	// check for bits we need
-	cpuid(1, data);
-	if(data[3] & 1<<4) {
-		ka->arch_args.supports_rdtsc = true;
-	} else {
-		ka->arch_args.supports_rdtsc = false;
-		dprintf("CPU: does not support RDTSC, disabling high resolution timer\n");
-	}
-
-	return 0;
-}
 
 void sleep(uint64 time)
 {
@@ -642,7 +510,6 @@ static void calculate_cpu_conversion_factor(void)
 	uint64         p1, p2, p3;
 	double         r1, r2, r3;
 
-
 	outb(0x34, 0x43);  /* program the timer to count down mode */
 	outb(0xff, 0x40);		/* low and then high */
 	outb(0xff, 0x40);
@@ -663,7 +530,6 @@ quick_sample:
 	t2 = rdtsc();
 	p1= t2-t1;
 	r1= (double)(p1)/(double)(((s_high<<8)|s_low) - ((high<<8)|low));
-
 
 	/* not so quick sample */
 not_so_quick_sample:
@@ -848,5 +714,29 @@ int dprintf(const char *fmt, ...)
 
 	puts(temp);
 	return ret;
+}
+
+int panic(const char *fmt, ...)
+{
+	int ret;
+	va_list args;
+	char temp[256];
+
+	va_start(args, fmt);
+	ret = vsprintf(temp,fmt,args);
+	va_end(args);
+
+	puts("PANIC: ");
+	puts(temp);
+	puts("\n");
+
+	puts("spinning forever...");
+	for(;;);
+	return ret;
+}
+
+uint64 system_time(void)
+{
+	return 0;
 }
 

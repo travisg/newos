@@ -8,6 +8,8 @@
 /* uint64 rdtsc() */
 FUNCTION(rdtsc):
 	rdtsc
+	shl		$32,%rdx
+	or		%rdx,%rax
 	ret
 
 FUNCTION(execute_n_instructions):
@@ -33,6 +35,7 @@ FUNCTION(execute_n_instructions):
 	loop	.again
 	ret
 
+#if 0
 FUNCTION(system_time):
    	/* load 64-bit factor into %eax (low), %edx (high) */
    	/* hand-assemble rdtsc -- read time stamp counter */
@@ -75,4 +78,5 @@ FUNCTION(set_eflags):
  	pushl	4(%esp)
  	popfl
 	ret
+#endif
 
