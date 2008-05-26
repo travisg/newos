@@ -322,9 +322,13 @@ void stage2_main(void *multiboot_info, unsigned int memsize, void *extended_mem_
 	ka->cons_line = screenOffset / SCREEN_WIDTH;
 
 	asm volatile("mov	%0, %%rsp;"
-				"call	*%1"
-				:: "r" (ka->cpu_kstack[0].start + ka->cpu_kstack[0].size), "r" (kernel_entry),
-				"rdi" (ka), "rsi" (0));
+				"mov	%1, %%rdi;"
+				"mov	%2, %%rsi;"
+				"call	*%3"
+				:: "r" (ka->cpu_kstack[0].start + ka->cpu_kstack[0].size), 
+				"rdi" (ka), 
+				"rsi" (0),
+				"r" (kernel_entry));
 
 	for(;;);
 }
