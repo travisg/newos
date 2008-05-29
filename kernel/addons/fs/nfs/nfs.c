@@ -1094,7 +1094,7 @@ static int _nfs_create(nfs_fs *nfs, nfs_vnode *dir, const char *name, stream_typ
 			proc = NFSPROC_MKDIR;
 			break;
 		default:
-			return panic("_nfs_create asked to make file type it doesn't understand\n");
+			panic("_nfs_create asked to make file type it doesn't understand\n");
 	}
 
 	err = rpc_call(&nfs->rpc, NFSPROG, NFSVERS, proc, argbuf, arglen, resbuf, sizeof(resbuf));
@@ -1203,7 +1203,7 @@ static int _nfs_unlink(nfs_fs *nfs, nfs_vnode *dir, const char *name, stream_typ
 			proc = NFSPROC_RMDIR;
 			break;
 		default:
-			return panic("_nfs_unlink asked to remove file type it doesn't understand\n");
+			panic("_nfs_unlink asked to remove file type it doesn't understand\n");
 	}
 
 	err = rpc_call(&nfs->rpc, NFSPROG, NFSVERS, proc, argbuf, arglen, &res, sizeof(res));
