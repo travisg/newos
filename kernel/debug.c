@@ -232,7 +232,7 @@ void kernel_debugger()
 	kernel_debugger_loop();
 }
 
-int panic(const char *fmt, ...)
+void panic(const char *fmt, ...)
 {
 	int ret = 0;
 	va_list args;
@@ -258,8 +258,7 @@ int panic(const char *fmt, ...)
 
 	kernel_debugger();
 
-	int_restore_interrupts();
-	return ret;
+	for(;;);
 }
 
 int dprintf(const char *fmt, ...)

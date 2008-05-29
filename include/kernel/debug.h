@@ -21,7 +21,7 @@ ssize_t dbg_write(const void *buf, ssize_t len);
 bool dbg_set_serial_debug(bool new_val);
 bool dbg_get_serial_debug(void);
 int dprintf(const char *fmt, ...) __PRINTFLIKE(1,2);
-int panic(const char *fmt, ...) __PRINTFLIKE(1,2);
+void panic(const char *fmt, ...) __NO_RETURN __PRINTFLIKE(1,2);
 void kernel_debugger(void);
 int dbg_add_command(void (*func)(int, char **), const char *cmd, const char *desc);
 
