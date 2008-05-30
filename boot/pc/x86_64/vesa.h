@@ -6,6 +6,7 @@
 #define _STAGE2_VESA_H
 
 #include <newos/types.h>
+#include <newos/compiler.h>
 
 struct VBEInfoBlock {
 	char   signature[4]; // should be 'VESA'

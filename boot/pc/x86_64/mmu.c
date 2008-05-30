@@ -58,6 +58,7 @@ int mmu_init(kernel_args *ka)
 
 	// allocate a new top level pgdir
 	pgtable0 = alloc_pagetable(ka);
+	ka->arch_args.phys_pgdir = (addr_t)pgtable0;
 
 	// set up the identity map of low ram
 	setup_identity_map();

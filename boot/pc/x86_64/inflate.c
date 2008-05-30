@@ -101,8 +101,7 @@ static char rcsid[] = "$Id$";
 #endif
 
 #include <string.h>
-#include <stdio.h>
-#include <stdarg.h>
+#include "stage2_priv.h"
 #include "inflate.h"
 
 typedef unsigned char uch;
@@ -110,6 +109,9 @@ typedef unsigned short ush;
 typedef unsigned int ulg;
 
 #define memzero(a, b) memset(a, 0, b)
+
+#define malloc(s) kmalloc(s)
+#define free(p) kfree(p)
 
 /* 32k sliding window */
 #define WSIZE 0x8000
@@ -134,10 +136,6 @@ static void flush_window()
 #define Tracevv(a)
 #define printf dprintf
 #define fprintf(a,b) printf(b)
-
-#if defined(STDC_HEADERS) || !defined(NO_STDLIB_H)
-#  include <stdlib.h>
-#endif
 
 /*#include "gzip.h"*/
 #define slide window
