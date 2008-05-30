@@ -11,17 +11,18 @@
 /* int atomic_add(int *val, int incr) */
 FUNCTION(atomic_add):
 	lock
-	xadd	%rsi,(%rdi)
+	xadd	%esi,(%rdi)
+	mov		%esi, %eax
 	ret
 
 /* int atomic_and(int *val, int incr) */
 FUNCTION(atomic_and):
-	mov		(%rdi),%rax
-	mov		%rsi,%rcx
-	and		%rax,%rcx
+	mov		(%rdi),%eax
+	mov		%esi,%ecx
+	and		%eax,%ecx
 
 	lock
-	cmpxchg	%rcx,(%rdi)
+	cmpxchg	%ecx,(%rdi)
 
 	jnz		atomic_and
 
@@ -29,12 +30,12 @@ FUNCTION(atomic_and):
 
 /* int atomic_or(int *val, int incr) */
 FUNCTION(atomic_or):
-	mov		(%rdi),%rax
-	mov		%rsi,%rcx
-	or		%rax,%rcx
+	mov		(%rdi),%eax
+	mov		%esi,%ecx
+	or		%eax,%ecx
 
 	lock
-	cmpxchg	%rcx,(%rdx)
+	cmpxchg	%ecx,(%rdi)
 
 	jnz		atomic_or
 
@@ -42,16 +43,16 @@ FUNCTION(atomic_or):
 
 /* int atomic_set(int *val, int set_to) */
 FUNCTION(atomic_set):
-	mov		%rsi,%rax
-	xchg	%rax,(%rdi)
+	xchg	%esi,(%rdi)
+	mov		%edi,%eax
 	ret
 
 /* int test_and_set(int *val, int set_to, int test_val) */
 FUNCTION(test_and_set):
-	mov		%rdx,%rax
+	mov		%edx,%eax
 
 	lock
-	cmpxchg	%rsi,(%rdi)
+	cmpxchg	%esi,(%rdi)
 
 	ret
 
@@ -105,7 +106,7 @@ FUNCTION(x86_64_fxsave_swap):
 
 /* void x86_64_context_switch(addr_t *old_sp, addr_t new_sp, addr_t new_pgdir); */
 FUNCTION(x86_64_context_switch):
-	/* push all callee-saved registers (rbp,rbx,r8-r15) */
+	/* push all callee-saved registers (rbp,rbx,r12-r15) */
 	push	%rbx
 	push	%r12
 	push	%r13

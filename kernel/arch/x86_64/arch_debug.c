@@ -105,6 +105,6 @@ void dbg_make_register_file(unsigned int *file, const struct iframe * frame)
 	file[9] = frame->flags;
 	file[10] = frame->cs;
 	file[11] = frame->user_ss;
-	file[12] = frame->ds;
-	file[13] = frame->es;
+	file[12] = 0;
+	file[13] = 0;
 }

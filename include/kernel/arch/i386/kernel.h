@@ -7,6 +7,7 @@
 
 // memory layout
 #define KERNEL_BASE 0x80000000
+#define KERNEL_ALLOC_BASE 0x80000000
 #define KERNEL_SIZE 0x80000000
 #define KERNEL_TOP  (KERNEL_BASE + (KERNEL_SIZE - 1))
 

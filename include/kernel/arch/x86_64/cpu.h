@@ -10,9 +10,15 @@
 #include <kernel/arch/x86_64/thread_struct.h>
 #include <kernel/arch/x86_64/descriptors.h>
 
-typedef struct desc_struct {
-	unsigned long a,b;
-} desc_table;
+
+/* 64-bit interrupt and trap descriptors */
+typedef struct trap_descriptor_struct {
+	uint32 a, b, c, d;
+} trap_descriptor_64;
+
+typedef struct seg_descriptor_struct {
+	uint32 a, b;
+} seg_descriptor;
 
 /* 64-bit TSS */
 struct tss_64 {
@@ -88,8 +94,6 @@ typedef struct ptentry {
 struct iframe {
 	unsigned long gs;
 	unsigned long fs;
-	unsigned long es;
-	unsigned long ds;
 	unsigned long r15;
 	unsigned long r14;
 	unsigned long r13;
@@ -134,7 +138,6 @@ void x86_64_frstor(void *fpu_state);
 void x86_64_fxrstor(void *fpu_state);
 void x86_64_fsave_swap(void *old_fpu_state, void *new_fpu_state);
 void x86_64_fxsave_swap(void *old_fpu_state, void *new_fpu_state);
-desc_table *x86_64_get_gdt(void);
 uint64 x86_64_rdtsc(void);
 
 addr_t read_cr3(void);

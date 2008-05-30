@@ -29,7 +29,7 @@
 
 #define SYSCALL_VECTOR 99
 
-static desc_table *idt = NULL;
+static trap_descriptor_64 *idt = NULL;
 
 static void interrupt_ack(int n)
 {
@@ -68,17 +68,11 @@ void arch_int_disable_io_interrupt(int irq)
 		out8(in8(0xa1) | (1 << (irq - 8)), 0xa1);
 }
 
-static void _set_gate(desc_table *gate_addr, addr_t addr, int type, int dpl)
+static void _set_gate(trap_descriptor_64 *gate_addr, addr_t addr, int type, int dpl)
 {
-	unsigned long gate1; // first byte of gate desc
-	unsigned long gate2; // second byte of gate desc
-
-	gate1 = (KERNEL_CODE_SEG << 16) | (0x0000ffff & addr) |
-		((0xffff0000 & addr) << 32) | 0x8000 | (dpl << 13) | (type << 8);
-	gate2 = (addr >> 32);
-
-	gate_addr->a = gate1;
-	gate_addr->b = gate2;
+	gate_addr->a = (KERNEL_CODE_SEG << 16)| (0x0000ffff & addr);
+	gate_addr->b = (addr & 0xffff0000) | (1<<15) | (dpl << 13) | (type << 8);
+	gate_addr->c = (addr >> 32);
 }
 
 static void set_intr_gate(int n, void *addr)
@@ -118,25 +112,29 @@ bool arch_int_are_interrupts_enabled(void)
 	return flags & 0x200 ? 1 : 0;
 }
 
-void x86_64_handle_trap(struct iframe frame); /* keep the compiler happy, this function must be called only from assembly */
-void x86_64_handle_trap(struct iframe frame)
+void x86_64_handle_trap(struct iframe *frame); /* keep the compiler happy, this function must be called only from assembly */
+void x86_64_handle_trap(struct iframe *frame)
 {
+	dprintf("%s: vector %ld, ip 0x%lx\n", __PRETTY_FUNCTION__, frame->vector, frame->rip);
+
 	int ret = INT_NO_RESCHEDULE;
 	struct thread *t = thread_get_current_thread();
 
+//	dprintf("t %p\n", t);
+	
 	if(t) {
-		x86_64_push_iframe(&frame);
+		x86_64_push_iframe(frame);
 		t->int_disable_level++; // make it look like the ints were disabled
 	}
 
 //	if(frame.vector != 0x20)
 //		dprintf("x86_64_handle_trap: vector 0x%x, ip 0x%x, cpu %d\n", frame.vector, frame.eip, smp_get_current_cpu());
-	switch(frame.vector) {
+	switch(frame->vector) {
 		case 8:
-			ret = x86_64_double_fault(frame.error_code);
+			ret = x86_64_double_fault(frame->error_code);
 			break;
 		case 13:
-			ret = x86_64_general_protection_fault(frame.error_code);
+			ret = x86_64_general_protection_fault(frame->error_code);
 			break;
 		case 14: {
 			addr_t cr2;
@@ -144,10 +142,10 @@ void x86_64_handle_trap(struct iframe frame)
 
 			asm ("mov  %%cr2, %0" : "=r" (cr2) );
 
-			if(!kernel_startup && (frame.flags & 0x200) == 0) {
+			if(!kernel_startup && (frame->flags & 0x200) == 0) {
 				// ints are were disabled when the page fault was taken, that is very bad
 				panic("x86_64_handle_trap: page fault at 0x%lx, ip 0x%lx, write %d with ints disabled\n",
-					cr2, frame.rip, (frame.error_code & 0x2) != 0);
+					cr2, frame->rip, (frame->error_code & 0x2) != 0);
 			}
 
 			if(!kernel_startup) {
@@ -156,14 +154,14 @@ void x86_64_handle_trap(struct iframe frame)
 			}
 
 
-			ret = vm_page_fault(cr2, frame.rip,
-				(frame.error_code & 0x2) != 0,
-				(frame.error_code & 0x4) != 0,
+			ret = vm_page_fault(cr2, frame->rip,
+				(frame->error_code & 0x2) != 0,
+				(frame->error_code & 0x4) != 0,
 				&newip);
 			if(newip != 0) {
 				// the page fault handler wants us to modify the iframe to set the
 				// IP the cpu will return to to be this ip
-				frame.rip = newip;
+				frame->rip = newip;
 			}
 
 			if(!kernel_startup)
@@ -171,11 +169,11 @@ void x86_64_handle_trap(struct iframe frame)
 			break;
 		}
 		default:
-			if(frame.vector >= 0x20) {
-				interrupt_ack(frame.vector - 0x20); // ack the 8239 (if applicable)
-				ret = int_io_interrupt_handler(frame.vector - 0x20);
+			if(frame->vector >= 0x20) {
+				interrupt_ack(frame->vector - 0x20); // ack the 8239 (if applicable)
+				ret = int_io_interrupt_handler(frame->vector - 0x20);
 			} else {
-				panic("x86_64_handle_trap: unhandled cpu trap 0x%lx at ip 0x%lx!\n", frame.vector, frame.rip);
+				panic("x86_64_handle_trap: unhandled cpu trap 0x%lx at ip 0x%lx!\n", frame->vector, frame->rip);
 				ret = INT_NO_RESCHEDULE;
 			}
 			break;
@@ -183,7 +181,7 @@ void x86_64_handle_trap(struct iframe frame)
 
 	// try to deliver signals to the interrupted thread
 	// XXX should we only do it for timer interrupts?
-	if(frame.cs == USER_CODE_SEG)
+	if(frame->cs == USER_CODE_SEG)
 		ret |= thread_atinterrupt_exit();
 	if(ret == INT_RESCHEDULE) {
 		GRAB_THREAD_LOCK();
@@ -201,7 +199,7 @@ void x86_64_handle_trap(struct iframe frame)
 
 int arch_int_init(kernel_args *ka)
 {
-	idt = (desc_table *)ka->arch_args.vir_idt;
+	idt = (trap_descriptor_64 *)ka->arch_args.vir_idt;
 
 	// setup the interrupt controller
 	out8(0x11, 0x20);	// Start initialization sequence for #1.
@@ -265,7 +263,7 @@ int arch_int_init(kernel_args *ka)
 
 int arch_int_init2(kernel_args *ka)
 {
-	idt = (desc_table *)ka->arch_args.vir_idt;
+	idt = (trap_descriptor_64 *)ka->arch_args.vir_idt;
 	vm_create_anonymous_region(vm_get_kernel_aspace_id(), "idt", (void *)&idt,
 		REGION_ADDR_EXACT_ADDRESS, PAGE_SIZE, REGION_WIRING_WIRED_ALREADY, LOCK_RW|LOCK_KERNEL);
 

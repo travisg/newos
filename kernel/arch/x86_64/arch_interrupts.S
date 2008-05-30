@@ -16,7 +16,7 @@
 .type x,@function; \
 .align 8; \
 name: \
-	push	$vector; \
+	pushq	$vector; \
 	jmp		int_bottom
 
 #define TRAP(name, vector) \
@@ -24,8 +24,8 @@ name: \
 .type x,@function; \
 .align 8; \
 name: \
-	push	$0; \
-	push	$vector; \
+	pushq	$0; \
+	pushq	$vector; \
 	jmp		int_bottom
 
 TRAP(trap0, 0)
@@ -97,6 +97,7 @@ int_bottom:
 	push	%gs
 	cld
 
+	mov		%rsp, %rdi
 	call	x86_64_handle_trap
 
 	pop		%gs

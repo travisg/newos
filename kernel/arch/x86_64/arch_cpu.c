@@ -28,7 +28,7 @@ static void dbg_out(int argc, char **argv);
 static struct tss_64 **tss;
 static int *tss_loaded;
 
-static desc_table *gdt = 0;
+static seg_descriptor *gdt = 0;
 
 int arch_cpu_preboot_init(kernel_args *ka)
 {
@@ -57,7 +57,7 @@ int arch_cpu_init2(kernel_args *ka)
 	unsigned int i;
 
 	// account for the segment descriptors
-	gdt = (desc_table *)ka->arch_args.vir_gdt;
+	gdt = (seg_descriptor *)ka->arch_args.vir_gdt;
 	vm_create_anonymous_region(vm_get_kernel_aspace_id(), "gdt", (void **)&gdt,
 		REGION_ADDR_EXACT_ADDRESS, PAGE_SIZE, REGION_WIRING_WIRED_ALREADY, LOCK_RW|LOCK_KERNEL);
 
@@ -111,11 +111,6 @@ int arch_cpu_init2(kernel_args *ka)
 	dbg_add_command(&dbg_out, "out", "write I/O port");
 
 	return 0;
-}
-
-desc_table *x86_64_get_gdt(void)
-{
-	return gdt;
 }
 
 void x86_64_set_kstack(addr_t kstack)
