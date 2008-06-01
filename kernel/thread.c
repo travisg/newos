@@ -2190,7 +2190,7 @@ proc_id proc_create_proc(const char *path, const char *name, char **args, int ar
 	}
 
 	// create an address space for this process
-	p->aspace_id = vm_create_aspace(p->name, USER_BASE, USER_SIZE, false);
+	p->aspace_id = vm_create_aspace(p->name, USER_BASE, USER_BASE, USER_SIZE, false);
 	if(p->aspace_id < 0) {
 		err = p->aspace_id;
 		goto err4;

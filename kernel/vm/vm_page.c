@@ -208,6 +208,7 @@ int vm_page_init(kernel_args *ka)
 		unsigned int last_phys_page = 0;
 
 		dprintf("physical memory ranges:\n");
+		dprintf("count %d\n", ka->num_phys_mem_ranges);
 
 		physical_page_offset = ka->phys_mem_range[0].start / PAGE_SIZE;
 		for(i=0; i<ka->num_phys_mem_ranges; i++) {
@@ -367,6 +368,8 @@ int vm_mark_page_range_inuse(addr_t start_page, addr_t len)
 {
 	vm_page *page;
 	addr_t i;
+
+	dprintf("vm_mark_page_range_inuse: start 0x%lx, len 0x%lx\n", start_page, len);
 
 	if(physical_page_offset > start_page) {
 		dprintf("vm_mark_page_range_inuse: start page %ld is before free list\n", start_page);
@@ -814,7 +817,7 @@ static bool is_page_in_phys_range(kernel_args *ka, addr_t paddr)
 	return false;
 }
 
-static addr_t vm_alloc_ppage_from_kernel_struct(kernel_args *ka)
+addr_t vm_alloc_ppage_from_kernel_struct(kernel_args *ka)
 {
 	unsigned int i;
 

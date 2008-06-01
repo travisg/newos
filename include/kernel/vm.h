@@ -121,6 +121,7 @@ typedef struct vm_virtual_map {
 	sem_id sem;
 	struct vm_address_space *aspace;
 	addr_t base;
+	addr_t alloc_base;
 	addr_t size;
 } vm_virtual_map;
 
@@ -205,7 +206,7 @@ int vm_init(kernel_args *ka);
 int vm_init_postsem(kernel_args *ka);
 int vm_init_postthread(kernel_args *ka);
 
-aspace_id vm_create_aspace(const char *name, addr_t base, addr_t size, bool kernel);
+aspace_id vm_create_aspace(const char *name, addr_t base, addr_t alloc_base, addr_t size, bool kernel);
 int vm_delete_aspace(aspace_id);
 vm_address_space *vm_get_kernel_aspace(void);
 aspace_id vm_get_kernel_aspace_id(void);

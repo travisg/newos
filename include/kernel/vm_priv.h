@@ -46,6 +46,7 @@ addr_t vm_page_num_free_pages(void);
 
 // allocates memory from the ka structure
 addr_t vm_alloc_from_ka_struct(kernel_args *ka, unsigned int size, int lock);
+addr_t vm_alloc_ppage_from_kernel_struct(kernel_args *ka);
 
 // a global structure holding data about the vm for informational purposes
 extern vm_info_t vm_info;

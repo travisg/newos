@@ -1,5 +1,5 @@
 /*
-** Copyright 2001-2004, Travis Geiselbrecht. All rights reserved.
+** Copyright 2001-2008, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
 #include <kernel/kernel.h>
@@ -224,7 +224,7 @@ static int find_and_insert_region_slot(vm_virtual_map *map, addr_t start, addr_t
 
 //	dprintf("find_and_insert_region_slot: map %p, start 0x%lx, size %ld, end 0x%lx, addr_type %d, region %p\n",
 //		map, start, size, end, addr_type, region);
-//	dprintf("map->base 0x%x, map->size 0x%x\n", map->base, map->size);
+//	dprintf("map->base 0x%lx, map->alloc_base 0x%lx, map->size 0x%lx\n", map->base, map->alloc_base, map->size);
 
 	// do some sanity checking
 	if(start < map->base || size == 0 || (end - 1) > (map->base + (map->size - 1)) || start + size > end)
@@ -242,9 +242,9 @@ static int find_and_insert_region_slot(vm_virtual_map *map, addr_t start, addr_t
 	}
 
 #if 0
-	dprintf("last_r 0x%x, next_r 0x%x\n", last_r, next_r);
-	if(last_r) dprintf("last_r->base 0x%x, last_r->size 0x%x\n", last_r->base, last_r->size);
-	if(next_r) dprintf("next_r->base 0x%x, next_r->size 0x%x\n", next_r->base, next_r->size);
+	dprintf("last_r %p, next_r %p\n", last_r, next_r);
+	if(last_r) dprintf("last_r->base 0x%lx, last_r->size 0x%lx\n", last_r->base, last_r->size);
+	if(next_r) dprintf("next_r->base 0x%lx, next_r->size 0x%lx\n", next_r->base, next_r->size);
 #endif
 
 	switch(addr_type) {
@@ -307,6 +307,7 @@ static int find_and_insert_region_slot(vm_virtual_map *map, addr_t start, addr_t
 
 	if(foundspot) {
 		region->size = size;
+//		dprintf("found spot: base 0x%lx, size 0x%lx\n", region->base, region->size);
 		if(last_r) {
 			region->aspace_next = last_r->aspace_next;
 			last_r->aspace_next = region;
@@ -429,8 +430,9 @@ static int map_backing_store(vm_address_space *aspace, vm_store *store, void **v
 			search_addr = (addr_t)*vaddr;
 			search_end = (addr_t)*vaddr + size;
 		} else if(addr_type == REGION_ADDR_ANY_ADDRESS) {
-			search_addr = aspace->virtual_map.base;
-			search_end = aspace->virtual_map.base + (aspace->virtual_map.size - 1);
+			search_addr = aspace->virtual_map.alloc_base;
+			search_end = aspace->virtual_map.alloc_base + 
+				((aspace->virtual_map.size - 1) - (aspace->virtual_map.alloc_base - aspace->virtual_map.base));
 		} else {
 			err = ERR_INVALID_ARGS;
 			goto err1b;
@@ -708,6 +710,7 @@ region_id vm_map_physical_memory(aspace_id aid, char *name, void **address, int 
 	err = map_backing_store(aspace, store, address, 0, size, addr_type, 0, lock, REGION_NO_PRIVATE_MAP, &region, name);
 	vm_cache_release_ref(cache_ref);
 	vm_put_aspace(aspace);
+
 	if(err < 0) {
 		return err;
 	}
@@ -1397,6 +1400,7 @@ static void _dump_aspace(vm_address_space *aspace)
 	dprintf("hash_next: %p\n", aspace->hash_next);
 	dprintf("translation_map: %p\n", &aspace->translation_map);
 	dprintf("virtual_map.base: 0x%lx\n", aspace->virtual_map.base);
+	dprintf("virtual_map.alloc_base: 0x%lx\n", aspace->virtual_map.alloc_base);
 	dprintf("virtual_map.size: 0x%lx\n", aspace->virtual_map.size);
 	dprintf("virtual_map.change_count: 0x%x\n", aspace->virtual_map.change_count);
 	dprintf("virtual_map.sem: 0x%x\n", aspace->virtual_map.sem);
@@ -1528,7 +1532,7 @@ void vm_put_aspace(vm_address_space *aspace)
 	return;
 }
 
-aspace_id vm_create_aspace(const char *name, addr_t base, addr_t size, bool kernel)
+aspace_id vm_create_aspace(const char *name, addr_t base, addr_t alloc_base, addr_t size, bool kernel)
 {
 	vm_address_space *aspace;
 	int err;
@@ -1564,6 +1568,7 @@ aspace_id vm_create_aspace(const char *name, addr_t base, addr_t size, bool kern
 
 	// initialize the virtual map
 	aspace->virtual_map.base = base;
+	aspace->virtual_map.alloc_base = alloc_base;
 	aspace->virtual_map.size = size;
 	aspace->virtual_map.region_list = NULL;
 	aspace->virtual_map.region_hint = NULL;
@@ -1705,7 +1710,7 @@ int vm_init(kernel_args *ka)
 	// create the initial kernel address space
 	{
 		aspace_id aid;
-		aid = vm_create_aspace("kernel_land", KERNEL_BASE, KERNEL_SIZE, true);
+		aid = vm_create_aspace("kernel_land", KERNEL_BASE, KERNEL_ALLOC_BASE, KERNEL_SIZE, true);
 		if(aid < 0)
 			panic("vm_init: error creating kernel address space!\n");
 		kernel_aspace = vm_get_aspace_by_id(aid);
@@ -1807,7 +1812,7 @@ int vm_page_fault(addr_t address, addr_t fault_address, bool is_write, bool is_u
 {
 	int err;
 
-//	dprintf("vm_page_fault: page fault at 0x%x, ip 0x%x\n", address, fault_address);
+//	dprintf("vm_page_fault: page fault at 0x%lx, ip 0x%lx\n", address, fault_address);
 
 	*newip = 0;
 
