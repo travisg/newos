@@ -189,7 +189,7 @@ _copy_more:
 /* void x86_64_switch_stack_and_call(addr_t stack, void (*func)(void *), void *arg); */
 FUNCTION(x86_64_switch_stack_and_call):
 	mov		%rdi,%rsp		// switch the stack
-	push	%rdx			// push the argument
+	mov		%rdx,%rdi		// copy the argument
 	call	*%rsi			// call the target function
 _loop:
 	jmp		_loop

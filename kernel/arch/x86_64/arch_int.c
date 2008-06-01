@@ -115,7 +115,7 @@ bool arch_int_are_interrupts_enabled(void)
 void x86_64_handle_trap(struct iframe *frame); /* keep the compiler happy, this function must be called only from assembly */
 void x86_64_handle_trap(struct iframe *frame)
 {
-	dprintf("%s: vector %ld, ip 0x%lx\n", __PRETTY_FUNCTION__, frame->vector, frame->rip);
+//	dprintf("%s: vector %ld, ip 0x%lx, sp 0x%lx\n", __PRETTY_FUNCTION__, frame->vector, frame->rip, frame->user_sp);
 
 	int ret = INT_NO_RESCHEDULE;
 	struct thread *t = thread_get_current_thread();
@@ -153,6 +153,7 @@ void x86_64_handle_trap(struct iframe *frame)
 				ASSERT(int_are_interrupts_enabled());
 			}
 
+//			dprintf("page fault error code 0x%lx\n", frame->error_code);
 
 			ret = vm_page_fault(cr2, frame->rip,
 				(frame->error_code & 0x2) != 0,
@@ -195,6 +196,8 @@ void x86_64_handle_trap(struct iframe *frame)
 		x86_64_pop_iframe();
 		t->int_disable_level--; // keep the count in sync
 	}
+
+//	dprintf("%s: exiting vector %ld, ip 0x%lx, fs 0x%lx, gs 0x%lx\n", __PRETTY_FUNCTION__, frame->vector, frame->rip, frame->fs, frame->gs);
 }
 
 int arch_int_init(kernel_args *ka)

@@ -75,21 +75,17 @@ struct descriptor_64 {
 	uint32 reserved2 : 19;
 } _PACKED;
 
-/* page table entry, same for all four levels (some bits ignored at various levels) */
-typedef struct ptentry {
-	unsigned long present:1;
-	unsigned long rw:1;
-	unsigned long user:1;
-	unsigned long write_through:1;
-	unsigned long cache_disabled:1;
-	unsigned long accessed:1;
-	unsigned long dirty:1;
-	unsigned long reserved:1;
-	unsigned long global:1;
-	unsigned long avail:3;
-	unsigned long addr:51;	
-	unsigned long no_execute:1;
-} ptentry;
+/* page table bits */
+#define PT_PRESENT (1<<0)
+#define PT_WRITE (1<<1)
+#define PT_USER (1<<2)
+#define PT_WRITETHRU (1<<3)
+#define PT_CACHE_DISABLE (1<<4)
+#define PT_ACCESSED (1<<5)
+#define PT_DIRTY (1<<6)
+#define PT_SIZE (1<<7)
+#define PT_GLOBAL (1<<8)
+#define PT_NX (1UL<<63)
 
 struct iframe {
 	unsigned long gs;

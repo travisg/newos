@@ -164,6 +164,8 @@ void stage2_main(void *multiboot_info, unsigned int memsize, void *extended_mem_
 		gdt[1] = 0;
 		gdt[2] = 0x00000000; // seg 0x8  -- ring 0, 64bit code
 		gdt[3] = 0x00af9a00;
+		gdt[4] = 0x00000000; // seg 0x10 -- ring 0, 64bit data
+		gdt[5] = 0x00009000;
 
 		// map the gdt into virtual space
 		mmu_map_page(next_vaddr, (addr_t)gdt);

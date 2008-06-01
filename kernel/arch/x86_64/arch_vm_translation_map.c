@@ -19,6 +19,9 @@
 #include <boot/stage2.h>
 #include <newos/errors.h>
 
+//#define TMAP_TRACE(x...) dprintf(x)
+#define TMAP_TRACE(x...) do { } while (0)
+
 static addr_t iospace_addr = 0xfffffffe00000000UL;
 static addr_t iospace_len = 0x100000000UL;
 
@@ -44,7 +47,7 @@ static addr_t kernel_pgdir_virt;
 
 static int lock_tmap(vm_translation_map *map)
 {
-	dprintf("lock_tmap: map %p\n", map);
+	TMAP_TRACE("lock_tmap: map %p\n", map);
 
 	if(recursive_lock_lock(&map->lock) == true) {
 		// we were the first one to grab the lock
@@ -55,7 +58,7 @@ static int lock_tmap(vm_translation_map *map)
 
 static int unlock_tmap(vm_translation_map *map)
 {
-	dprintf("unlock_tmap: map %p\n", map);
+	TMAP_TRACE("unlock_tmap: map %p\n", map);
 
 	if(recursive_lock_get_recursion(&map->lock) == 1) {
 		// we're about to release it for the last time
@@ -71,12 +74,144 @@ static void destroy_tmap(vm_translation_map *map)
 
 static int map_tmap(vm_translation_map *map, addr_t va, addr_t pa, unsigned int attributes)
 {
-	PANIC_UNIMPLEMENTED();
+	addr_t pgtable_phys;
+	unsigned long *pgtable;
+	int index;
+	vm_page *page;
+
+	TMAP_TRACE("map_tmap: va 0x%lx pa 0x%lx, attributes 0x%x\n", va, pa, attributes);
+
+	// look up and dereference the first entry
+	pgtable = map->arch_data->pgdir_virt;
+	ASSERT(pgtable);
+	TMAP_TRACE("map_tmap top level pgdir virt %p\n", pgtable);
+	index = PGTABLE0_ENTRY(va);
+	if (!PGENT_PRESENT(pgtable[index])) {
+		page = vm_page_allocate_page(PAGE_STATE_CLEAR);
+		pgtable_phys = page->ppn * PAGE_SIZE;
+		list_add_head(&map->arch_data->pagetable_list, &page->queue_node);
+
+		pgtable[index] = pgtable_phys | (PT_PRESENT|PT_WRITE|PT_USER);
+		map->map_count++;
+
+		TMAP_TRACE("map_tmap: had to allocate level 1: paddr 0x%lx, ent @ %p = 0x%lx\n", pgtable_phys, &pgtable[index], pgtable[index]);
+	} else {
+		pgtable_phys = PGENT_TO_ADDR(pgtable[index]);
+		TMAP_TRACE("map_tmap level 1: paddr 0x%lx\n", pgtable_phys);
+	}
+
+	// level 2
+	pgtable = phys_to_virt(pgtable_phys);
+	index = PGTABLE1_ENTRY(va);
+	if (!PGENT_PRESENT(pgtable[index])) {
+		page = vm_page_allocate_page(PAGE_STATE_CLEAR);
+		pgtable_phys = page->ppn * PAGE_SIZE;
+		list_add_head(&map->arch_data->pagetable_list, &page->queue_node);
+
+		pgtable[index] = pgtable_phys | (PT_PRESENT|PT_WRITE|PT_USER);
+		map->map_count++;
+		
+		TMAP_TRACE("map_tmap: had to allocate level 2: paddr 0x%lx, ent @ %p = 0x%lx\n", pgtable_phys, &pgtable[index], pgtable[index]);
+	} else {
+		pgtable_phys = PGENT_TO_ADDR(pgtable[index]);
+		TMAP_TRACE("map_tmap level 2: paddr 0x%lx\n", pgtable_phys);
+	}
+
+	// level 3
+	pgtable = phys_to_virt(pgtable_phys);
+	index = PGTABLE2_ENTRY(va);
+	if (!PGENT_PRESENT(pgtable[index])) {
+		page = vm_page_allocate_page(PAGE_STATE_CLEAR);
+		pgtable_phys = page->ppn * PAGE_SIZE;
+		list_add_head(&map->arch_data->pagetable_list, &page->queue_node);
+
+		pgtable[index] = pgtable_phys | (PT_PRESENT|PT_WRITE|PT_USER);
+		map->map_count++;
+
+		TMAP_TRACE("map_tmap: had to allocate level 3: paddr 0x%lx, ent @ %p = 0x%lx\n", pgtable_phys, &pgtable[index], pgtable[index]);
+	} else {
+		pgtable_phys = PGENT_TO_ADDR(pgtable[index]);
+		TMAP_TRACE("map_tmap level 3: paddr 0x%lx\n", pgtable_phys);
+	}
+
+	// map the page
+	pgtable = phys_to_virt(pgtable_phys);
+	index = PGTABLE3_ENTRY(va);
+	pa = ROUNDOWN(pa, PAGE_SIZE);
+	pgtable[index] = pa 
+		| ((attributes & LOCK_RW) ? PT_WRITE : 0) 
+		| ((attributes & LOCK_KERNEL) ? 0 : PT_USER) 
+		| PT_PRESENT;
+	map->map_count++;
+
+	TMAP_TRACE("map_tmap: ent @ %p = 0x%lx\n", &pgtable[index], pgtable[index]);
+
+	return 0;
 }
 
 static int unmap_tmap(vm_translation_map *map, addr_t start, addr_t end)
-{
-	PANIC_UNIMPLEMENTED();
+{	
+	TMAP_TRACE("unmap_tmap: start 0x%lx, end 0x%lx\n", start, end);
+
+	start = ROUNDOWN(start, PAGE_SIZE);
+	end = ROUNDUP(end, PAGE_SIZE);
+
+	if(start >= end)
+		return 0;
+
+	unsigned int index0;
+	unsigned int index1;
+	unsigned int index2;
+	unsigned int index3;
+
+	addr_t addr = start;
+
+	unsigned long *pgtable0;
+	unsigned long *pgtable1;
+	unsigned long *pgtable2;
+	unsigned long *pgtable3;
+
+	pgtable0 = map->arch_data->pgdir_virt;
+	for (index0 = PGTABLE0_ENTRY(addr); index0 <= PGTABLE0_ENTRY(end); index0++) {
+		if (!PGENT_PRESENT(pgtable0[index0])) {
+			addr = ROUNDUP(addr, 1UL << 39);
+			continue;
+		}
+
+		pgtable1 = phys_to_virt(PGENT_TO_ADDR(pgtable0[index0]));
+		for (index1 = PGTABLE1_ENTRY(addr); index1 <= PGTABLE1_ENTRY(end); index1++) {
+			if (!PGENT_PRESENT(pgtable1[index1])) {
+				addr = ROUNDUP(addr, 1UL << 30);
+				continue;
+			}
+
+			pgtable2 = phys_to_virt(PGENT_TO_ADDR(pgtable1[index1]));
+			for (index2 = PGTABLE2_ENTRY(addr); index2 <= PGTABLE2_ENTRY(end); index2++) {
+				if (!PGENT_PRESENT(pgtable2[index2])) {
+					addr = ROUNDUP(addr, 1UL << 21);
+					continue;
+				}
+				
+				pgtable3 = phys_to_virt(PGENT_TO_ADDR(pgtable2[index2]));
+				for (index3 = PGTABLE3_ENTRY(addr); index3 <= PGTABLE3_ENTRY(end); index3++) {
+					if (!PGENT_PRESENT(pgtable3[index3])) {
+						addr += PAGE_SIZE;
+						continue;
+					}
+
+					TMAP_TRACE("unmap_tmap: unmapping at va 0x%lx\n", addr);
+					
+					// clear it out
+					pgtable3[index3] &= ~PAGE_PRESENT;
+					map->map_count--;
+
+					addr += PAGE_SIZE;
+				}
+			}
+		}
+	}
+
+	return 0;
 }
 
 static int query_tmap(vm_translation_map *map, addr_t va, addr_t *out_physical, unsigned int *out_flags)
@@ -84,7 +219,7 @@ static int query_tmap(vm_translation_map *map, addr_t va, addr_t *out_physical, 
 	int index;
 	unsigned long *pgtable;
 
-	dprintf("query_tmap: va 0x%lx\n", va);
+//	dprintf("query_tmap: va 0x%lx\n", va);
 	
 	*out_flags = 0;
 	*out_physical = 0;
@@ -112,18 +247,18 @@ static int query_tmap(vm_translation_map *map, addr_t va, addr_t *out_physical, 
 
 	*out_physical = PGENT_TO_ADDR(pgtable[index]);
 	*out_flags = 0;
-	*out_flags |= pgtable[index] & (1<<0) ? PAGE_PRESENT : 0;
-	*out_flags |= pgtable[index] & (1<<1) ? LOCK_RW : LOCK_RO;
-	*out_flags |= pgtable[index] & (1<<2) ? 0 : LOCK_KERNEL;
-	*out_flags |= pgtable[index] & (1<<5) ? PAGE_ACCESSED : 0;
-	*out_flags |= pgtable[index] & (1<<6) ? PAGE_MODIFIED : 0;
+	*out_flags |= pgtable[index] & PT_PRESENT ? PAGE_PRESENT : 0;
+	*out_flags |= pgtable[index] & PT_WRITE ? LOCK_RW : LOCK_RO;
+	*out_flags |= pgtable[index] & PT_USER ? 0 : LOCK_KERNEL;
+	*out_flags |= pgtable[index] & PT_ACCESSED ? PAGE_ACCESSED : 0;
+	*out_flags |= pgtable[index] & PT_DIRTY ? PAGE_MODIFIED : 0;
 	
 	return NO_ERROR;
 }
 
 static addr_t get_mapped_size_tmap(vm_translation_map *map)
 {
-	PANIC_UNIMPLEMENTED();
+	return map->map_count++;
 }
 
 static int protect_tmap(vm_translation_map *map, addr_t base, addr_t top, unsigned int attributes)
@@ -212,7 +347,7 @@ int vm_translation_map_create(vm_translation_map *new_map, bool kernel)
 		new_map->arch_data->pgdir_virt = (unsigned long *)kernel_pgdir_virt;
 
 		vm_page *page = vm_lookup_page(kernel_pgdir_phys / PAGE_SIZE);
-		dprintf("page %p, state %d\n", page, page->state);
+		TMAP_TRACE("page %p, state %d\n", page, page->state);
 		list_add_head(&new_map->arch_data->pagetable_list, &page->queue_node);
 
 		// zero out the bottom of it, where user space mappings would go
@@ -303,7 +438,7 @@ int vm_translation_map_quick_map(kernel_args *ka, addr_t va, addr_t pa, unsigned
 	unsigned long *pgtable;
 	int index;
 
-	dprintf("quick_map: va 0x%lx pa 0x%lx, attributes 0x%x\n", va, pa, attributes);
+	TMAP_TRACE("quick_map: va 0x%lx pa 0x%lx, attributes 0x%x\n", va, pa, attributes);
 
 	// look up and dereference the first entry
 	pgtable_phys = ka->arch_args.phys_pgdir;
@@ -319,7 +454,7 @@ int vm_translation_map_quick_map(kernel_args *ka, addr_t va, addr_t pa, unsigned
 	if (!PGENT_PRESENT(pgtable[index])) {
 		pgtable_phys = get_free_page(ka);
 		pgtable[index] = pgtable_phys | 3;
-		dprintf("had to allocate level 2: paddr 0x%lx\n", pgtable_phys);
+		TMAP_TRACE("had to allocate level 2: paddr 0x%lx\n", pgtable_phys);
 	} else {
 		pgtable_phys = PGENT_TO_ADDR(pgtable[index]);
 //		dprintf("level 2: paddr 0x%lx\n", pgtable_phys);
@@ -331,7 +466,7 @@ int vm_translation_map_quick_map(kernel_args *ka, addr_t va, addr_t pa, unsigned
 	if (!PGENT_PRESENT(pgtable[index])) {
 		pgtable_phys = get_free_page(ka);
 		pgtable[index] = pgtable_phys | 3;
-		dprintf("had to allocate level 3: paddr 0x%lx\n", pgtable_phys);
+		TMAP_TRACE("had to allocate level 3: paddr 0x%lx\n", pgtable_phys);
 	} else {
 		pgtable_phys = PGENT_TO_ADDR(pgtable[index]);
 //		dprintf("level 3: paddr 0x%lx\n", pgtable_phys);
@@ -342,10 +477,6 @@ int vm_translation_map_quick_map(kernel_args *ka, addr_t va, addr_t pa, unsigned
 	index = PGTABLE3_ENTRY(va);
 	pa = ROUNDOWN(pa, PAGE_SIZE);
 	pgtable[index] = pa | ((attributes & LOCK_RW) ? (1<<1) : 0) | ((attributes & LOCK_KERNEL) ? 0 : (1<<2)) | 1;
-	if (pa == 0x99d000) {
-		dprintf("ent = 0x%lx\n", pgtable[index]);
-		hexdump((void *)va, 16);
-	}
 
 	return 0;
 }

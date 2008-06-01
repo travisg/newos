@@ -120,7 +120,7 @@ int_bottom:
 	pop		%rax
 
 	add		$16,%rsp
-	iret
+	iretq
 
 /* syscall entry point. arg passing is as follows:
  * eax: vector number
