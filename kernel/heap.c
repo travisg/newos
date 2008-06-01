@@ -79,12 +79,12 @@ static mutex heap_lock;
 static void dump_bin(int bin_index)
 {
 	struct heap_bin *bin = &bins[bin_index];
-	unsigned int *temp;
+	unsigned long *temp;
 
 	dprintf("%d:\tesize %d\tgrow_size %d\talloc_count %d\tfree_count %d\traw_count %d\traw_list %p\n",
 		bin_index, bin->element_size, bin->grow_size, bin->alloc_count, bin->free_count, bin->raw_count, bin->raw_list);
 	dprintf("free_list: ");
-	for(temp = bin->free_list; temp != NULL; temp = (unsigned int *)*temp) {
+	for(temp = bin->free_list; temp != NULL; temp = (unsigned long *)*temp) {
 		dprintf("%p ", temp);
 	}
 	dprintf("NULL\n");
@@ -110,7 +110,7 @@ int heap_init(addr_t new_heap_base, unsigned int new_heap_size)
 	heap_alloc_table = (struct heap_page *)new_heap_base;
 	//heap_size = ((uint64)new_heap_size * page_entries / (page_entries + 1)) & ~(PAGE_SIZE-1);
 	heap_size = new_heap_size - PAGE_SIZE;  // use above line instead if new_heap_size > sqr(PAGE_SIZE)/2
-	heap_base = (unsigned int)heap_alloc_table + PAGE_ALIGN(heap_size / page_entries);
+	heap_base = (addr_t)heap_alloc_table + PAGE_ALIGN(heap_size / page_entries);
 	heap_base_ptr = heap_base;
 	dprintf("heap_alloc_table = %p, heap_base = 0x%lx, heap_size = 0x%lx\n", heap_alloc_table, heap_base, heap_size);
 
@@ -122,7 +122,9 @@ int heap_init(addr_t new_heap_base, unsigned int new_heap_size)
 	heap_lock.holder = -1;
 
 	// set up some debug commands
+	dprintf("adding debug commands\n");
 	dbg_add_command(&dump_bin_list, "heap_bindump", "dump stats about bin usage");
+	dprintf("done debug commands\n");
 
 	return 0;
 }
@@ -137,10 +139,10 @@ int heap_init_postsem(kernel_args *ka)
 
 static char *raw_alloc(unsigned int size, int bin_index)
 {
-	unsigned int new_heap_ptr;
+	addr_t new_heap_ptr;
 	char *retval;
 	struct heap_page *page;
-	unsigned int addr;
+	addr_t addr;
 
 	new_heap_ptr = heap_base_ptr + PAGE_ALIGN(size);
 	if(new_heap_ptr > heap_base + heap_size) {
@@ -188,7 +190,7 @@ void *kmalloc(unsigned int size)
 	} else {
 		if (bins[bin_index].free_list != NULL) {
 			address = bins[bin_index].free_list;
-			bins[bin_index].free_list = (void *)(*(unsigned int *)bins[bin_index].free_list);
+			bins[bin_index].free_list = (void *)(*(unsigned long *)bins[bin_index].free_list);
 			bins[bin_index].free_count--;
 		} else {
 			if (bins[bin_index].raw_count == 0) {
@@ -202,15 +204,15 @@ void *kmalloc(unsigned int size)
 		}
 
 		bins[bin_index].alloc_count++;
-		page = &heap_alloc_table[((unsigned int)address - heap_base) / PAGE_SIZE];
+		page = &heap_alloc_table[((addr_t)address - heap_base) / PAGE_SIZE];
 		page[0].free_count--;
 #if MAKE_NOIZE
-		dprintf("kmalloc0: page 0x%x: bin_index %d, free_count %d\n", page, page->bin_index, page->free_count);
+		dprintf("kmalloc0: page %p: bin_index %d, free_count %d\n", page, page->bin_index, page->free_count);
 #endif
 		for(i = 1; i < bins[bin_index].element_size / PAGE_SIZE; i++) {
 			page[i].free_count--;
 #if MAKE_NOIZE
-			dprintf("kmalloc1: page 0x%x: bin_index %d, free_count %d\n", page[i], page[i].bin_index, page[i].free_count);
+			dprintf("kmalloc1: page 0x%x: bin_index %d, free_count %d\n", *(unsigned long *)&page[i], page[i].bin_index, page[i].free_count);
 #endif
 		}
 	}
@@ -242,7 +244,7 @@ void kfree(void *address)
 	dprintf("kfree: asked to free at ptr = %p\n", address);
 #endif
 
-	page = &heap_alloc_table[((unsigned)address - heap_base) / PAGE_SIZE];
+	page = &heap_alloc_table[((addr_t)address - heap_base) / PAGE_SIZE];
 
 #if MAKE_NOIZE
 	dprintf("kfree: page 0x%x: bin_index %d, free_count %d\n", page, page->bin_index, page->free_count);
@@ -265,9 +267,9 @@ void kfree(void *address)
 #if PARANOID_KFREE
 	// walk the free list on this bin to make sure this address doesn't exist already
 	{
-		unsigned int *temp;
-		for(temp = bin->free_list; temp != NULL; temp = (unsigned int *)*temp) {
-			if(temp == (unsigned int *)address) {
+		unsigned long *temp;
+		for(temp = bin->free_list; temp != NULL; temp = (unsigned long *)*temp) {
+			if(temp == (unsigned long *)address) {
 				panic("kfree: address %p already exists in bin free list\n", address);
 			}
 		}
@@ -277,7 +279,7 @@ void kfree(void *address)
 	memset(address, 0x99, bin->element_size);
 #endif
 
-	*(unsigned int *)address = (unsigned int)bin->free_list;
+	*(unsigned long *)address = (unsigned long)bin->free_list;
 	bin->free_list = address;
 	bin->alloc_count--;
 	bin->free_count++;
