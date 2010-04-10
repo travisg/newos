@@ -104,8 +104,7 @@ $(warning found newos toolchain!)
 	OBJDUMP = $(TOOLCHAIN_ARCH)-newos-objdump
 	STRIP = $(TOOLCHAIN_ARCH)-newos-strip
 	SIZE = $(TOOLCHAIN_ARCH)-newos-size
-endif 
-
+else 
 FOO := $(shell $(TOOLCHAIN_ARCH)-elf-gcc --version | cat)
 ifneq ($(FOO),)
 $(warning WARNING: custom newos toolchain not found!)
@@ -118,6 +117,7 @@ $(warning falling back to elf toolchain)
 	OBJDUMP = $(TOOLCHAIN_ARCH)-elf-objdump
 	STRIP = $(TOOLCHAIN_ARCH)-elf-strip
 	SIZE = $(TOOLCHAIN_ARCH)-elf-size
+endif
 endif
 ifeq ($(CC),)
 $(warning WARNING: custom newos toolchain not found!)
