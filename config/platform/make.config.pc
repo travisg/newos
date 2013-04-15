@@ -1,3 +1,4 @@
+# vim: syntax=make
 KERNEL_ADDONS += $(addprefix $(KERNEL_ADDONS_BUILD_DIR)/, \
 	modules/console/vga_text/vga_text \
 	modules/console/vmware/vmware \

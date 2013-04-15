@@ -24,6 +24,7 @@ static unsigned char *heap_ptr = (unsigned char *)0x1000000;
 extern void *_end;
 #define TARGET ((void *)0x400000)
 
+__SECTION(".text.boot")
 void _start(unsigned int mem, void *ext_mem_block, int ext_mem_count, int in_vesa, unsigned int vesa_ptr)
 {
 	unsigned long len;
@@ -34,6 +35,7 @@ void _start(unsigned int mem, void *ext_mem_block, int ext_mem_count, int in_ves
 
 	dprintf("stage1 boot, decompressing system");
 
+	dprintf("stage1: decompressing from %p\n", &_end);
 	len = gunzip((unsigned char const *)&_end, TARGET, kmalloc(32*1024));
 	dprintf("done, len %d\n", len);
 

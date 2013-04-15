@@ -7,6 +7,11 @@ SECTIONS
 {
 	. = 0x00200000 + SIZEOF_HEADERS;
 
+	/* text/read-only data */
+	.text :	{ *(.text* .gnu.linkonce.t.*) }
+
+	.rodata : { *(.rodata*) }
+
 	.interp : { *(.interp) }
 	.hash : { *(.hash) }
 	.dynsym : { *(.dynsym) }
@@ -34,16 +39,11 @@ SECTIONS
 	.init : { *(.init) } =0x9090
 	.plt : { *(.plt) }
 
-	/* text/read-only data */
-	.text :	{ *(.text .gnu.linkonce.t.*) }
-
-	.rodata : { *(.rodata) }
-
 	/* writable data  */
-  	. = ALIGN(0x1000) + (. & (0x1000 - 1));
+	. = ALIGN(0x1000);
 	__data_start = .;
 	PROVIDE(_data_start = .);
-	.data : { *(.data .gnu.linkonce.d.*) }
+	.data : { *(.data* .gnu.linkonce.d.*) }
 
 	__ctor_list = .;
 	PROVIDE (_ctor_list = .);

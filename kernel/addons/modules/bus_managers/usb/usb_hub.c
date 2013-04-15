@@ -39,7 +39,7 @@ static void usb_hub_interrupt_callback(usb_hc_transfer *td, void *cookie)
 			schedule_hub_interrupt(device);
 			break;
 		default:
-
+			;
 	}
 
 	kfree(td);

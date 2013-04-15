@@ -39,7 +39,7 @@ typedef struct channel_info {
 
 static int channel_count;
 
-extern ide_controller_interface isa_controller_interface;
+static ide_controller_interface isa_controller_interface;
 
 static ide_controller_params isa_controller_params = {
 	dma_alignment : 0,		// requiring even addresses would improve PIO, but's

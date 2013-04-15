@@ -13,6 +13,9 @@ MY_DEPS_IN := $(MY_DEPS)
 MY_LINKSCRIPT_IN := $(MY_LINKSCRIPT)
 MY_GLUE_IN := $(MY_GLUE)
 
+# XXX remove once we get a libsupc++
+MY_LIBS_IN := $(filter-out -lsupc++,$(MY_LIBS_IN))
+
 #$(warning MY_OBJS = $(MY_OBJS))
 
 # extract the different source types out of the list
@@ -51,7 +54,7 @@ $(MY_TARGET_IN): _TEMP_OBJS:=$(_TEMP_OBJS)
 $(MY_TARGET_IN):: $(_TEMP_OBJS) $(MY_DEPS_IN) $(MY_GLUE_IN)
 	@$(MKDIR)
 	@echo linking $@
-	@$(LD) $(GLOBAL_LDFLAGS) $(MY_LDFLAGS_IN) --script=$(MY_LINKSCRIPT_IN) -L $(LIBGCC_PATH) -L $(LIBS_BUILD_DIR) $(MY_LIBPATHS_IN) -o $@ $(MY_GLUE_IN) $(_TEMP_OBJS) $(MY_LIBS_IN) $(LIBGCC)
+	@$(LD) $(GLOBAL_LDFLAGS) $(MY_LDFLAGS_IN) --script=$(MY_LINKSCRIPT_IN) -L $(LIBS_BUILD_DIR) $(MY_LIBPATHS_IN) -o $@ $(MY_GLUE_IN) $(_TEMP_OBJS) $(MY_LIBS_IN) $(LIBGCC)
 	@echo creating listing file $@.lst
 	@$(OBJDUMP) -C -S $@ > $@.lst
 

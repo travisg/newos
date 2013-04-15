@@ -354,7 +354,6 @@ void _start(unsigned int memsize, void *extended_mem_block, unsigned int extende
 		for(i=0; i < ka->num_phys_mem_ranges; i++) {
 			dprintf("    base 0x%08lx, length 0x%08lx\n", ka->phys_mem_range[i].start, ka->phys_mem_range[i].size);
 		}
-
 		dprintf("allocated phys memory ranges:\n");
 		for(i=0; i < ka->num_phys_alloc_ranges; i++) {
 			dprintf("    base 0x%08lx, length 0x%08lx\n", ka->phys_alloc_range[i].start, ka->phys_alloc_range[i].size);
@@ -397,10 +396,9 @@ void _start(unsigned int memsize, void *extended_mem_block, unsigned int extende
 
 	ka->cons_line = screenOffset / SCREEN_WIDTH;
 
-	asm("movl	%0, %%eax;	"			// move stack out of way
-		"movl	%%eax, %%esp; "
-		: : "m" (ka->cpu_kstack[0].start + ka->cpu_kstack[0].size));
-	asm("pushl  $0x0; "					// we're the BSP cpu (0)
+	asm volatile("movl	%0, %%esp; " // move stack out of the way
+		: : "r" (ka->cpu_kstack[0].start + ka->cpu_kstack[0].size));
+	asm volatile("pushl  $0x0; "					// we're the BSP cpu (0)
 		"pushl 	%0;	"					// kernel args
 		"pushl 	$0x0;"					// dummy retval for call to main
 		"pushl 	%1;	"					// this is the start address

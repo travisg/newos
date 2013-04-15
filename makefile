@@ -22,7 +22,7 @@ $(error Required make feature missing)
 endif
 
 # figures out the system
-include make.syscfg
+include config/make.syscfg
 
 # include top level macros
 include macros.mk

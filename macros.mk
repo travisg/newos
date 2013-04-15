@@ -1,3 +1,4 @@
+# vim: syntax=make
 
 # prepends the BUILD_DIR var to each item in the list
 TOBUILDDIR = $(addprefix $(BUILD_DIR)/,$(1))

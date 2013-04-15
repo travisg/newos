@@ -296,10 +296,10 @@ FUNCTION(dbg_save_registers):
 	popl	%eax
 	mov	%eax, 36(%esi)
 
-	movl	%cs, 40(%esi)
-	movl	%ss, 44(%esi)
-	movl	%ds, 48(%esi)
-	movl	%es, 52(%esi)
+	mov		%cs, 40(%esi)
+	mov		%ss, 44(%esi)
+	mov		%ds, 48(%esi)
+	mov		%es, 52(%esi)
 
 	popl	%eax
 	popl	%esi

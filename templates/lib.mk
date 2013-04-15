@@ -42,7 +42,7 @@ $(MY_TARGET_IN): $(LIBGLUE) $(_TEMP_OBJS)
 	@$(MKDIR)
 	@mkdir -p $(MY_TARGETDIR_IN)
 	@echo linking library $@
-	@$(LD) $(GLOBAL_LDFLAGS) -shared -soname $(notdir $(MY_TARGET_IN)) --script=$(MY_LINKSCRIPT_IN) -o $@ $^
+	@$(LD) $(GLOBAL_LDFLAGS) -shared -soname $(notdir $(MY_TARGET_IN)) --script=$(MY_LINKSCRIPT_IN) -o $@ $^ $(LIBGCC)
 	@echo creating listing file $@.lst
 	@$(OBJDUMP) -C -S $@ > $@.lst
 endif

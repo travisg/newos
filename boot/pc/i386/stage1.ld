@@ -7,16 +7,16 @@ SECTIONS
 	. = 0x100000;
 
 	/* text/read-only data */
-	.text :	{ *(.text .gnu.linkonce.t.*) }
-
-	__ctor_list = .;
-	.ctors : { *(.ctors) }
-	__ctor_end = .;
+	.text :	{
+		*(.text.boot)
+		*(.text* .gnu.linkonce.t.*)
+	}
 
 	.rodata : { *(.rodata .rodata.*) }
+	.got : { *(.got*) }
 
 	/* writable data  */
-	. = ALIGN(0x1000);
+	/*. = ALIGN(0x1000);*/
 	__data_start = .;
 	.data : { *(.data .gnu.linkonce.d.* .bss) }
 
@@ -24,5 +24,5 @@ SECTIONS
 	_end = . ;
 
 	/* Strip unnecessary stuff */
-	/DISCARD/ : { *(.comment .note .eh_frame .dtors .stab .stabstr .debug*) }
+	/DISCARD/ : { *(.comment .note .eh_frame .ctors* .dtors* .stab .stabstr .got* .debug*) }
 }

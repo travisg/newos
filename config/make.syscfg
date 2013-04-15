@@ -1,3 +1,4 @@
+# vim: syntax=make
 
 # figure out a few things about the host build system
 ifeq ($(HOSTTYPE),)
@@ -220,10 +221,14 @@ GLOBAL_CFLAGS += -DPLATFORM_$(PLATFORM)=1
 
 GLOBAL_CPPFLAGS = $(GLOBAL_CFLAGS)
 
+# XXX remove once we get libsupc++ working
+GLOBAL_CPPFLAGS += -fno-threadsafe-statics
+
 GLOBAL_ASFLAGS += -D__ASSEMBLY__
 
 # find libgcc
-LIBGCC := -lgcc
+#LIBGCC := -lgcc
+LIBGCC := $(shell $(CC) $(GLOBAL_CFLAGS) -print-libgcc-file-name)
 LIBGCC_PATH := $(dir $(shell $(CC) $(GLOBAL_CFLAGS) -print-libgcc-file-name))
 ifeq ($(ARCH),arm)
 LIBGCC_PATH := /usr/local/arm-newos/lib/gcc-lib/arm-newos/3.3.3
