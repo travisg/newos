@@ -15,7 +15,7 @@ extern void sleep(uint64 time);
 extern uint64 system_time(void);
 extern void execute_n_instructions(int count);
 void system_time_setup(long a);
-uint64 rdtsc();
+uint64 rdtsc(void);
 unsigned int get_eflags(void);
 void set_eflags(unsigned int val);
 void cpuid(unsigned int selector, unsigned int *data);

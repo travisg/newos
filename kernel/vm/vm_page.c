@@ -97,7 +97,7 @@ static void move_page_to_queue(page_queue *from_q, page_queue *to_q, vm_page *pa
     }
 }
 
-static int pageout_daemon()
+static int pageout_daemon(void *unused)
 {
     vm_page *page;
     vm_region *region;

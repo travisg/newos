@@ -11,9 +11,11 @@
 
 static unsigned int mp_mem_phys = 0;
 static unsigned int mp_mem_virt = 0;
-static struct mp_flt_struct *mp_flt_ptr = NULL;
+static volatile struct mp_flt_struct *mp_flt_ptr = NULL;
 static kernel_args *saved_ka = NULL;
 static unsigned int kernel_entry_point = 0;
+
+static volatile unsigned int cpu_booted_count = 0;
 
 static int smp_get_current_cpu(kernel_args *ka);
 
@@ -46,12 +48,12 @@ static unsigned int map_page(kernel_args *ka, unsigned int paddr, unsigned int v
     return 0;
 }
 
-static unsigned int apic_read(unsigned int *addr)
+static unsigned int apic_read(volatile unsigned int *addr)
 {
     return *addr;
 }
 
-static void apic_write(unsigned int *addr, unsigned int data)
+static void apic_write(volatile unsigned int *addr, unsigned int data)
 {
     *addr = data;
 }
@@ -67,13 +69,13 @@ static void *mp_phys_to_virt(void *ptr)
     return ((void *)(((unsigned int)ptr - mp_mem_phys) + mp_mem_virt));
 }
 
-static unsigned int *smp_probe(unsigned int base, unsigned int limit)
+static volatile unsigned int *smp_probe(unsigned int base, unsigned int limit)
 {
-    unsigned int *ptr;
+    volatile unsigned int *ptr;
 
 //  dprintf("smp_probe: entry base 0x%x, limit 0x%x\n", base, limit);
 
-    for (ptr = (unsigned int *) base; (unsigned int) ptr < limit; ptr++) {
+    for (ptr = (volatile unsigned int *) base; (unsigned int) ptr < limit; ptr++) {
         if (*ptr == MP_FLT_SIGNATURE) {
 //          dprintf("smp_probe: found floating pointer structure at 0x%x\n", ptr);
             return ptr;
@@ -89,7 +91,7 @@ static void smp_do_config(kernel_args *ka)
     struct mp_config_table *mpc;
     struct mp_ext_pe *pe;
     struct mp_ext_ioapic *io;
-    struct mp_ext_bus *bus;
+    __UNUSED struct mp_ext_bus *bus;
 #if CHATTY_SMP
     const char *cpu_family[] = { "", "", "", "", "Intel 486",
                                  "Intel Pentium", "Intel Pentium Pro", "Intel Pentium II"
@@ -188,7 +190,7 @@ static int smp_find_mp_config(kernel_args *ka)
 
     // XXX for now, assume the memory is identity mapped by the 1st stage
     for (i=0; smp_scan_spots[i].len > 0; i++) {
-        mp_flt_ptr = (struct mp_flt_struct *)smp_probe(smp_scan_spots[i].start,
+        mp_flt_ptr = (volatile struct mp_flt_struct *)smp_probe(smp_scan_spots[i].start,
                      smp_scan_spots[i].stop);
         if (mp_flt_ptr != NULL)
             break;
@@ -238,43 +240,43 @@ static int smp_find_mp_config(kernel_args *ka)
 // along with us being on the final stack for this processor. We need
 // to set up the local APIC and load the global idt and gdt. When we're
 // done, we'll jump into the kernel with the cpu number as an argument.
-static int smp_cpu_ready(void)
+static void smp_cpu_ready(void) __NO_RETURN;
+static void smp_cpu_ready(void)
 {
     kernel_args *ka = saved_ka;
     unsigned int curr_cpu = smp_get_current_cpu(ka);
     struct gdt_idt_descr idt_descr;
     struct gdt_idt_descr gdt_descr;
 
-//  dprintf("smp_cpu_ready: entry cpu %d\n", curr_cpu);
+    dprintf("smp_cpu_ready: entry cpu %d\n", curr_cpu);
 
     // Important.  Make sure supervisor threads can fault on read only pages...
-    asm("movl %%eax, %%cr0" : : "a" ((1 << 31) | (1 << 16) | (1 << 5) | 1));
-    asm("cld");
-    asm("fninit");
+    asm volatile("movl %0, %%cr0" : : "r" ((1 << 31) | (1 << 16) | (1 << 5) | 1));
+    asm volatile("cld");
+    asm volatile("fninit");
 
     // Set up the final idt
     idt_descr.a = IDT_LIMIT - 1;
     idt_descr.b = (unsigned int *)ka->arch_args.vir_idt;
 
-    asm("lidt	%0;"
+    asm volatile("lidt	%0;"
         : : "m" (idt_descr));
 
     // Set up the final gdt
     gdt_descr.a = GDT_LIMIT - 1;
     gdt_descr.b = (unsigned int *)ka->arch_args.vir_gdt;
 
-    asm("lgdt	%0;"
+    asm volatile("lgdt	%0;"
         : : "m" (gdt_descr));
 
-    asm("pushl  %0; "                   // push the cpu number
-        "pushl 	%1;	"                   // kernel args
-        "pushl 	$0x0;"                  // dummy retval for call to main
-        "pushl 	%2;	"       // this is the start address
-        "ret;		"                    // jump.
-        : : "r" (curr_cpu), "m" (ka), "g" (kernel_entry_point));
+    // bump our boot count so the booting cpu can get back to work
+    cpu_booted_count++;
 
-    // no where to return to
-    return 0;
+    // enter the kernel
+    void (*kernel_entry)(kernel_args *args, int cpu_num) = (void *)kernel_entry_point;
+    kernel_entry(ka, curr_cpu);
+
+    for (;;);
 }
 
 static int smp_boot_all_cpus(kernel_args *ka)
@@ -386,6 +388,10 @@ static int smp_boot_all_cpus(kernel_args *ka)
 
             while ((apic_read(APIC_ICR1)& 0x00001000) == 0x00001000);
         }
+
+        /* wait for the cpu to start */
+        while (cpu_booted_count < i)
+            ;
     }
 
     return 0;
@@ -423,17 +429,17 @@ static void calculate_apic_timer_conversion_factor(kernel_args *ka)
 
 int smp_boot(kernel_args *ka, unsigned int kernel_entry)
 {
-//  dprintf("smp_boot: entry\n");
+    //dprintf("smp_boot: entry\n");
 
     kernel_entry_point = kernel_entry;
     saved_ka = ka;
 
     if (smp_find_mp_config(ka) > 1) {
-//      dprintf("smp_boot: had found > 1 cpus\n");
-//      dprintf("post config:\n");
-//      dprintf("num_cpus = 0x%p\n", ka->num_cpus);
-//      dprintf("apic_phys = 0x%p\n", ka->arch_args.apic_phys);
-//      dprintf("ioapic_phys = 0x%p\n", ka->arch_args.ioapic_phys);
+        //dprintf("smp_boot: had found > 1 cpus\n");
+        //dprintf("post config:\n");
+        //dprintf("num_cpus = %p\n", ka->num_cpus);
+        //dprintf("apic_phys = %p\n", ka->arch_args.apic_phys);
+        //dprintf("ioapic_phys = %p\n", ka->arch_args.ioapic_phys);
 
         // map in the apic & ioapic
         map_page(ka, ka->arch_args.apic_phys, ka->virt_alloc_range[0].start + ka->virt_alloc_range[0].size);
@@ -444,18 +450,18 @@ int smp_boot(kernel_args *ka, unsigned int kernel_entry)
         ka->arch_args.ioapic = (unsigned int *)(ka->virt_alloc_range[0].start + ka->virt_alloc_range[0].size);
         ka->virt_alloc_range[0].size += PAGE_SIZE;
 
-//      dprintf("apic = 0x%p\n", ka->arch_args.apic);
-//      dprintf("ioapic = 0x%p\n", ka->arch_args.ioapic);
+        //dprintf("apic = %p\n", ka->arch_args.apic);
+        //dprintf("ioapic = %p\n", ka->arch_args.ioapic);
 
         // calculate how fast the apic timer is
         calculate_apic_timer_conversion_factor(ka);
 
-//      dprintf("trampolining other cpus\n");
+        //dprintf("trampolining other cpus\n");
         smp_boot_all_cpus(ka);
-//      dprintf("done trampolining\n");
+        //dprintf("done trampolining\n");
     }
 
-//  dprintf("smp_boot: exit\n");
+    //dprintf("smp_boot: exit\n");
 
     return 0;
 }

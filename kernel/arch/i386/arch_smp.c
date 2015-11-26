@@ -62,12 +62,12 @@ static int i386_smp_error_interrupt(void* data)
     return INT_NO_RESCHEDULE;
 }
 
-static unsigned int apic_read(unsigned int *addr)
+static unsigned int apic_read(volatile unsigned int *addr)
 {
     return *addr;
 }
 
-static void apic_write(unsigned int *addr, unsigned int data)
+static void apic_write(volatile unsigned int *addr, unsigned int data)
 {
     *addr = data;
 }

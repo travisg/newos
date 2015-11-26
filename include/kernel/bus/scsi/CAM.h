@@ -196,7 +196,7 @@ typedef struct ccb_scsiio {
 typedef struct ccb_setasync {
     CCB_HEADER  cam_ch;                 /* Header information fields */
     uint32      cam_async_flags;        /* Event enables for Callback resp */
-    void        (*cam_async_func)();    /* Async Callback function address */
+    void        (*cam_async_func)(void);/* Async Callback function address */
     uchar       *pdrv_buf;              /* Buffer set aside by the Per. drv */
     uchar       pdrv_buf_len;           /* The size of the buffer */
 } CCB_SETASYNC;
@@ -258,7 +258,7 @@ typedef struct ccb_enable_lun {
 typedef struct ccb_immed_notify {
     CCB_HEADER  cam_ch;                 /* Header information fields */
     uchar       *cam_pdrv_ptr;          /* Ptr used by the Peripheral driver */
-    void        (*cam_cbfnot)();        /* Callback on notification function */
+    void        (*cam_cbfnot)(void);    /* Callback on notification function */
     uchar       *cam_sense_ptr;         /* Pointer to the sense data buffer */
     uchar       cam_sense_len;          /* Num of bytes in the Autosense buf */
     uchar       cam_init_id;            /* ID of Initiator that selected */
@@ -281,7 +281,7 @@ typedef struct ccb_accept_targ {
     uchar       *cam_pdrv_ptr;          /* Ptr used by the Peripheral driver */
     CCB_HEADER  *cam_next_ccb;          /* Ptr to the next CCB for action */
     uchar       *cam_req_map;           /* Ptr for mapping info on the Req. */
-    void        (*cam_cbfcnot)();       /* Callback on completion function */
+    void        (*cam_cbfcnot)(void);   /* Callback on completion function */
     uchar       *cam_data_ptr;          /* Pointer to the data buf/SG list */
     uint32      cam_dxfer_len;          /* Data xfer length */
     uchar       *cam_sense_ptr;         /* Pointer to the sense data buffer */
@@ -323,7 +323,7 @@ typedef struct ccb_eng_exec { /* NOTE: must match SCSIIO size */
     uchar       *cam_pdrv_ptr;          /* Ptr used by the Peripheral driver */
     uint32      cam_engrsvd0;           /* Reserved field, for alignment */
     uchar       *cam_req_map;           /* Ptr for mapping info on the Req. */
-    void        (*cam_cbfcnp)();        /* Callback on completion function */
+    void        (*cam_cbfcnp)(void);    /* Callback on completion function */
     uchar       *cam_data_ptr;          /* Pointer to the data buf/SG list */
     uint32      cam_dxfer_len;          /* Data xfer length */
     uchar       *cam_engdata_ptr;       /* Pointer to the engine buffer data */
@@ -352,7 +352,7 @@ entries. */
 typedef struct cam_sim_cookie *cam_sim_cookie;
 
 typedef struct cam_sim_interface {
-    //int               (*init)();
+    //int               (*init)(void);
     // TK: no return value any more
     void (*action)( cam_sim_cookie cookie, CCB_HEADER *ccb );
     // called when all connections to SIM are closed
@@ -592,7 +592,7 @@ in a linked list structure. */
 typedef struct async_info {
     struct async_info   *cam_async_next;        /* pointer to the next structure */
     uint32              cam_event_enable;       /* Event enables for Callback resp */
-    void                (*cam_async_func)();    /* Async Callback function address */
+    void                (*cam_async_func)(void);/* Async Callback function address */
     uint32              cam_async_blen;         /* Length of "information" buffer */
     uchar               *cam_async_ptr;         /* Address for the "information */
 } ASYNC_INFO;

@@ -1,0 +1,6 @@
+#!/bin/sh
+
+ARCH=i386
+PLATFORM=pc
+make &&
+qemu-system-i386 -fda build/i386-pc/final.flp $@

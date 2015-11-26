@@ -89,7 +89,7 @@ static struct elf_image_info *find_image_by_vnode(void *vnode)
     return image;
 }
 
-static struct elf_image_info *create_image_struct()
+static struct elf_image_info *create_image_struct(void)
 {
     struct elf_image_info *image;
 
@@ -105,10 +105,10 @@ static struct elf_image_info *create_image_struct()
     return image;
 }
 
-static unsigned long elf_hash(const unsigned char *name)
+static unsigned int elf_hash(const char *name)
 {
-    unsigned long hash = 0;
-    unsigned long temp;
+    unsigned int hash = 0;
+    unsigned int temp;
 
     while (*name) {
         hash = (hash << 4) + *name++;

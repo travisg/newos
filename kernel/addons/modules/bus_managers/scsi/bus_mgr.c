@@ -123,7 +123,7 @@ static xpt_bus_info *xpt_create_bus( cam_sim_interface *interface, cam_sim_cooki
     bus->interface = interface;
 
     bus->service_thread = thread_create_kernel_thread( "xpt_bus_service",
-                          (int (*)())xpt_service_threadproc, bus );
+                          xpt_service_threadproc, bus );
 
     if ( bus->service_thread < 0 ) {
         res = bus->service_thread;
@@ -154,7 +154,7 @@ err6:
 
 // TBD: it were better if the devfs loads peripheral
 // drivers on demand
-static void load_periph_drivers()
+static void load_periph_drivers(void)
 {
     modules_cookie modules;
     char name[SYS_MAX_PATH_LEN];
@@ -262,7 +262,7 @@ static int xpt_destroy_bus( xpt_bus_info *bus )
     return NO_ERROR;
 }
 
-static void update_max_path_id()
+static void update_max_path_id(void)
 {
     int id;
 

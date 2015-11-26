@@ -587,7 +587,7 @@ int sem_get_next_sem_info(proc_id proc, uint32 *cookie, struct sem_info *info)
     if (proc < 0)
         return ERR_INVALID_ARGS;    // prevents sems[].owner == -1 >= means owned by a port
 
-    if (*cookie == NULL) {
+    if (*cookie == 0) {
         // return first found
         slot = 0;
     } else {
@@ -635,7 +635,7 @@ int set_sem_owner(sem_id id, proc_id proc)
         return ERR_SEM_NOT_ACTIVE;
     if (id < 0)
         return ERR_INVALID_HANDLE;
-    if (proc < NULL)
+    if (proc < 0)
         return ERR_INVALID_ARGS;
 
     // XXX: todo check if proc exists

@@ -41,7 +41,7 @@ int dev_scan_drivers(kernel_args *ka)
 image_id dev_load_driver(const char *name)
 {
     image_id id;
-    int (*bootstrap)();
+    int (*bootstrap)(void);
     int err;
     char path[SYS_MAX_PATH_LEN];
 

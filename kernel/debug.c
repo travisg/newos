@@ -188,7 +188,7 @@ static int debug_parse_line(char *buf, char **argv, int *argc, int max_args)
     return *argc;
 }
 
-static void kernel_debugger_loop()
+static void kernel_debugger_loop(void)
 {
     int argc;
     struct debugger_command *cmd;
@@ -232,7 +232,6 @@ void kernel_debugger()
 
 void panic(const char *fmt, ...)
 {
-    int ret = 0;
     va_list args;
     char temp[128];
 
@@ -241,7 +240,7 @@ void panic(const char *fmt, ...)
     int_disable_interrupts();
 
     va_start(args, fmt);
-    ret = vsprintf(temp, fmt, args);
+    vsprintf(temp, fmt, args);
     va_end(args);
 
     dprintf("PANIC%d: %s", smp_get_current_cpu(), temp);

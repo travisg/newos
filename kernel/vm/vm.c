@@ -511,7 +511,7 @@ region_id user_vm_create_anonymous_region(char *uname, void **uaddress, int addr
     return rc;
 }
 
-region_id vm_create_anonymous_region(aspace_id aid, char *name, void **address, int addr_type,
+region_id vm_create_anonymous_region(aspace_id aid, const char *name, void **address, int addr_type,
                                      addr_t size, int wiring, int lock)
 {
     int err;
@@ -670,7 +670,7 @@ region_id vm_create_anonymous_region(aspace_id aid, char *name, void **address, 
         return ERR_NO_MEMORY;
 }
 
-region_id vm_map_physical_memory(aspace_id aid, char *name, void **address, int addr_type,
+region_id vm_map_physical_memory(aspace_id aid, const char *name, void **address, int addr_type,
                                  addr_t size, int lock, addr_t phys_addr)
 {
     vm_region *region;
@@ -721,7 +721,7 @@ region_id vm_map_physical_memory(aspace_id aid, char *name, void **address, int 
     return region->id;
 }
 
-region_id vm_create_null_region(aspace_id aid, char *name, void **address, int addr_type, addr_t size)
+region_id vm_create_null_region(aspace_id aid, const char *name, void **address, int addr_type, addr_t size)
 {
     vm_region *region;
     vm_cache *cache;
@@ -758,7 +758,7 @@ region_id vm_create_null_region(aspace_id aid, char *name, void **address, int a
     return region->id;
 }
 
-static region_id _vm_map_file(aspace_id aid, char *name, void **address, int addr_type,
+static region_id _vm_map_file(aspace_id aid, const char *name, void **address, int addr_type,
                               addr_t size, int lock, int mapping, const char *path, off_t offset, bool kernel)
 {
     vm_region *region;
@@ -834,13 +834,13 @@ restart:
     return region->id;
 }
 
-region_id vm_map_file(aspace_id aid, char *name, void **address, int addr_type,
+region_id vm_map_file(aspace_id aid, const char *name, void **address, int addr_type,
                       addr_t size, int lock, int mapping, const char *path, off_t offset)
 {
     return _vm_map_file(aid, name, address, addr_type, size, lock, mapping, path, offset, true);
 }
 
-region_id user_vm_map_file(char *uname, void **uaddress, int addr_type,
+region_id user_vm_map_file(const char *uname, void **uaddress, int addr_type,
                            addr_t size, int lock, int mapping, const char *upath, off_t offset)
 {
     char name[SYS_MAX_OS_NAME_LEN];
@@ -882,7 +882,7 @@ region_id user_vm_map_file(char *uname, void **uaddress, int addr_type,
     return rc;
 }
 
-region_id user_vm_clone_region(char *uname, void **uaddress, int addr_type,
+region_id user_vm_clone_region(const char *uname, void **uaddress, int addr_type,
                                region_id source_region, int mapping, int lock)
 {
     char name[SYS_MAX_OS_NAME_LEN];
@@ -915,7 +915,7 @@ region_id user_vm_clone_region(char *uname, void **uaddress, int addr_type,
     return rc;
 }
 
-region_id vm_clone_region(aspace_id aid, char *name, void **address, int addr_type,
+region_id vm_clone_region(aspace_id aid, const char *name, void **address, int addr_type,
                           region_id source_region, int mapping, int lock)
 {
     vm_region *new_region;

@@ -16,21 +16,21 @@
 #define _LIBC_ENGLISH_
 
 #ifdef _LIBC_ENGLISH_
-static char months[12][4] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
-static char* monthNames[] = { "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"};
-static char days[7][4] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
-static char* dayNames[] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
+static const char months[12][4] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+static const char* monthNames[] = { "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"};
+static const char days[7][4] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
+static const char* dayNames[] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
 #endif
 
 #ifdef _LIBC_DEUTSCH_
-static char months[12][4] = {"Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez" };
-static char* monthNames[] = { "Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"};
-static char days[7][4] = {"So ", "Mo ", "Di ", "Mi ", "Do ", "Fr ", "Sa "};
-static char* dayNames[] = {"Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"};
+static const char months[12][4] = {"Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez" };
+static const char* monthNames[] = { "Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"};
+static const char days[7][4] = {"So ", "Mo ", "Di ", "Mi ", "Do ", "Fr ", "Sa "};
+static const char* dayNames[] = {"Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"};
 #endif
 
 
-static char* numbers[] = { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9" };
+static const char* numbers[] = { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9" };
 static int monthDay[12] = { 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334 };
 
 static char buf[26];
@@ -200,7 +200,7 @@ time_t time(time_t *timer)
     return t;
 }
 
-static void _write(char* output, size_t* outdex, char* val, size_t max)
+static void _write(char* output, size_t* outdex, const char* val, size_t max)
 {
     int index = 0;
     /*printf("outdex: %ld max: %ld val[index]: %c\n", *outdex, max, val[index]);*/

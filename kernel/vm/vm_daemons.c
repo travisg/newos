@@ -155,7 +155,7 @@ static void scan_pages(vm_address_space *aspace, addr_t free_target)
             regions_examined, pages_examined, pages_present, pages_unmapped);
 }
 
-static int page_daemon()
+static int page_daemon(void *unused)
 {
     struct hash_iterator i;
     vm_address_space *old_aspace;

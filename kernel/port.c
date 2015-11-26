@@ -434,7 +434,7 @@ port_get_next_port_info(proc_id proc,
     if (cookie == NULL)
         return ERR_INVALID_ARGS;
 
-    if (*cookie == NULL) {
+    if (*cookie == 0) {
         // return first found
         slot = 0;
     } else {

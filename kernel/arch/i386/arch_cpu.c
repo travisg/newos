@@ -175,9 +175,10 @@ static int detect_cpu(kernel_args *ka, int curr_cpu)
 
     // build the vendor string
     memset(vendor_str, 0, sizeof(vendor_str));
-    *(unsigned int *)&vendor_str[0] = data[1];
-    *(unsigned int *)&vendor_str[4] = data[3];
-    *(unsigned int *)&vendor_str[8] = data[2];
+    unsigned int *str = (unsigned int *)vendor_str;
+    str[0] = data[1];
+    str[1] = data[3];
+    str[2] = data[2];
 
     // get the family, model, stepping
     i386_cpuid(1, data);
@@ -502,6 +503,7 @@ error:
 
 void arch_cpu_idle(void)
 {
+#if 0
     switch (smp_get_num_cpus()) {
         case 0:
             panic("You need at least 1 CPU to run NewOS\n");
@@ -510,6 +512,9 @@ void arch_cpu_idle(void)
         default:
             break;
     }
+#else
+    asm volatile("hlt");
+#endif
 }
 
 void arch_cpu_sync_icache(void *address, size_t len)

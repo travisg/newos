@@ -2565,7 +2565,7 @@ int user_dup2(int ofd, int nfd)
 image_id vfs_load_fs_module(const char *name)
 {
     image_id id;
-    void (*bootstrap)();
+    void (*bootstrap)(void);
     char path[SYS_MAX_PATH_LEN];
 
     sprintf(path, "/boot/addons/fs/%s", name);

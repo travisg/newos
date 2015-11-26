@@ -389,7 +389,7 @@ void _start(unsigned int memsize, void *extended_mem_block, unsigned int extende
     dprintf("virt_alloc_range_high = 0x%x\n", ka->virt_alloc_range_high);
     dprintf("page_hole = 0x%x\n", ka->page_hole);
 #endif
-//  dprintf("finding and booting other cpus...\n");
+    dprintf("finding and booting other cpus...\n");
     smp_boot(ka, kernel_entry);
 
     dprintf("jumping into kernel at 0x%x\n", kernel_entry);
@@ -797,7 +797,7 @@ not_so_quick_sample:
     }
 }
 
-void clearscreen()
+void clearscreen(void)
 {
     int i;
 
@@ -806,7 +806,7 @@ void clearscreen()
     }
 }
 
-static void scrup()
+static void scrup(void)
 {
     int i;
     memcpy(kScreenBase, kScreenBase + SCREEN_WIDTH,

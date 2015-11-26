@@ -218,14 +218,14 @@ vm_region *vm_get_region_by_id(region_id rid);
 void vm_put_region(vm_region *region);
 #define vm_aspace_swap(aspace) arch_vm_aspace_swap(aspace)
 
-region_id vm_create_anonymous_region(aspace_id aid, char *name, void **address, int addr_type,
+region_id vm_create_anonymous_region(aspace_id aid, const char *name, void **address, int addr_type,
                                      addr_t size, int wiring, int lock);
-region_id vm_map_physical_memory(aspace_id aid, char *name, void **address, int addr_type,
+region_id vm_map_physical_memory(aspace_id aid, const char *name, void **address, int addr_type,
                                  addr_t size, int lock, addr_t phys_addr);
-region_id vm_map_file(aspace_id aid, char *name, void **address, int addr_type,
+region_id vm_map_file(aspace_id aid, const char *name, void **address, int addr_type,
                       addr_t size, int lock, int mapping, const char *path, off_t offset);
-region_id vm_create_null_region(aspace_id aid, char *name, void **address, int addr_type, addr_t size);
-region_id vm_clone_region(aspace_id aid, char *name, void **address, int addr_type,
+region_id vm_create_null_region(aspace_id aid, const char *name, void **address, int addr_type, addr_t size);
+region_id vm_clone_region(aspace_id aid, const char *name, void **address, int addr_type,
                           region_id source_region, int mapping, int lock);
 int vm_delete_region(aspace_id aid, region_id id);
 region_id vm_find_region_by_name(aspace_id aid, const char *name);
@@ -242,9 +242,9 @@ int user_memset(void *s, char c, size_t count);
 
 region_id user_vm_create_anonymous_region(char *uname, void **uaddress, int addr_type,
         addr_t size, int wiring, int lock);
-region_id user_vm_clone_region(char *uname, void **uaddress, int addr_type,
+region_id user_vm_clone_region(const char *uname, void **uaddress, int addr_type,
                                region_id source_region, int mapping, int lock);
-region_id user_vm_map_file(char *uname, void **uaddress, int addr_type,
+region_id user_vm_map_file(const char *uname, void **uaddress, int addr_type,
                            addr_t size, int lock, int mapping, const char *upath, off_t offset);
 int user_vm_get_region_info(region_id id, vm_region_info *uinfo);
 int user_vm_delete_region(region_id id);

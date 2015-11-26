@@ -15,7 +15,7 @@
 #define MAX_PIO_RETRIES 2
 
 
-static int ide_bus_manager_init()
+static int ide_bus_manager_init(void)
 {
     int res;
 
@@ -31,7 +31,7 @@ static int ide_bus_manager_init()
     return NO_ERROR;
 }
 
-static int ide_bus_manager_uninit()
+static int ide_bus_manager_uninit(void)
 {
     return module_put( CAM_FOR_SIM_MODULE_NAME );
 }

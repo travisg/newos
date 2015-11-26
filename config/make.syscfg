@@ -214,7 +214,7 @@ endif
 
 # these options are on for all architectures
 GLOBAL_COMPILEFLAGS += -finline -fno-builtin
-GLOBAL_COMPILEFLAGS += -Wall -W -Wno-multichar -Wno-unused-parameter -Werror=return-type
+GLOBAL_COMPILEFLAGS += -Wall -W -Wno-multichar -Wno-unused-parameter -Werror=return-type -Wno-unused-function -Wno-unused-label
 GLOBAL_COMPILEFLAGS += -DNEWOS=1
 GLOBAL_COMPILEFLAGS += -DARCH_$(ARCH)=1 -D__ARCH__=$(ARCH) -U$(ARCH)
 GLOBAL_COMPILEFLAGS += -DPLATFORM_$(PLATFORM)=1

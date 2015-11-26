@@ -11,11 +11,36 @@
 
 #define PAGE_ALIGN(x) (((x) + (PAGE_SIZE-1)) & ~(PAGE_SIZE-1))
 
+#if 1
 int atomic_add(volatile int *val, int incr);
 int atomic_and(volatile int *val, int incr);
 int atomic_or(volatile int *val, int incr);
 int atomic_set(volatile int *val, int set_to);
 int test_and_set(int *val, int set_to, int test_val);
+#else
+static inline int atomic_add(volatile int *ptr, int val) {
+    return __atomic_fetch_add(ptr, val, __ATOMIC_RELAXED);
+}
+
+static inline int atomic_and(volatile int *ptr, int val) {
+    return __atomic_fetch_and(ptr, val, __ATOMIC_RELAXED);
+}
+
+static inline int atomic_or(volatile int *ptr, int val) {
+    return __atomic_fetch_or(ptr, val, __ATOMIC_RELAXED);
+}
+
+static inline int atomic_set(volatile int *ptr, int val) {
+    return __atomic_exchange_n(ptr, val, __ATOMIC_RELAXED);
+}
+
+static inline int test_and_set(int *ptr, int set_to, int test_val) {
+    int ret = test_val;
+    return __atomic_compare_exchange_n(ptr, &ret, set_to, false, __ATOMIC_RELAXED, __ATOMIC_RELAXED);
+
+    return ret;
+}
+#endif
 
 int arch_cpu_preboot_init(kernel_args *ka);
 int arch_cpu_init(kernel_args *ka);

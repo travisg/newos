@@ -44,7 +44,16 @@ enum {
 };
 
 typedef uint32 ipv4_addr;
-#define NETADDR_TO_IPV4(naddr) (*(ipv4_addr *)(&((&(naddr))->addr[0])))
+
+#if 0
+static inline ipv4_addr NETADDR_TO_IPV4(const netaddr *addr) {
+    const ipv4_addr *ipaddr = (const ipv4_addr *)&addr->addr[0]; // addr.addr[0] | (addr.addr[1] << 8) | (addr.addr[2] << 16) | (addr.addr[3] << 24);
+
+    return *ipaddr;
+}
+#endif
+
+#define NETADDR_TO_IPV4(naddr) (*(ipv4_addr *)(void *)(&((&(naddr))->addr[0])))
 #define IPV4_DOTADDR_TO_ADDR(a, b, c, d) \
     (((ipv4_addr)(a) << 24) | (((ipv4_addr)(b) & 0xff) << 16) | (((ipv4_addr)(c) & 0xff) << 8) | ((ipv4_addr)(d) & 0xff))
 

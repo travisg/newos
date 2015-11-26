@@ -229,7 +229,6 @@ has_signals_pending(void *_thread)
     return thread->sig_pending & ~thread->sig_block_mask;
 }
 
-
 static int
 sigaction(int signal, const struct sigaction *act, struct sigaction *oact)
 {
