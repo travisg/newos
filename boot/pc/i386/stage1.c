@@ -58,7 +58,7 @@ void kfree(void *ptr)
 {
 }
 
-void clearscreen()
+void clearscreen(void)
 {
     int i;
 
@@ -67,7 +67,7 @@ void clearscreen()
     }
 }
 
-static void scrup()
+static void scrup(void)
 {
     int i;
     memcpy(kScreenBase, kScreenBase + SCREEN_WIDTH,

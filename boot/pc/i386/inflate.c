@@ -122,7 +122,7 @@ static unsigned char *outbuf = 0;
 
 #define get_byte() (inbuf[inptr++])
 
-static void flush_window()
+static void flush_window(void)
 {
     if (!outcnt) return;
     memcpy(outbuf, window, outcnt);
@@ -617,7 +617,7 @@ int bl, bd;             /* number of bits decoded by tl[] and td[] */
 
 
 
-static int inflate_stored()
+static int inflate_stored(void)
 /* "decompress" an inflated type 0 (stored) block. */
 {
     unsigned n;           /* number of bytes in block */
@@ -917,7 +917,7 @@ int *e;                 /* last block flag */
 
 
 
-static int inflate()
+static int inflate(void)
 /* decompress an inflated entry */
 {
     int e;                /* last block flag */
@@ -963,7 +963,7 @@ static int inflate()
 
 static ulg crc32tab[0x100] = { 0, };
 
-static void inittab()
+static void inittab(void)
 {
     ulg i, j, c;
     for (i=0; i<0x100; i++) {

@@ -69,8 +69,8 @@ void _start(unsigned int memsize, void *extended_mem_block, unsigned int extende
     unsigned int i;
     unsigned int kernel_entry;
 
-    asm("cld");         // Ain't nothing but a GCC thang.
-    asm("fninit");      // initialize floating point unit
+    asm volatile("cld");         // Ain't nothing but a GCC thang.
+    asm volatile("fninit");      // initialize floating point unit
 
     screenOffset = console_ptr;
     dprintf("stage2 bootloader entry.\n");
@@ -197,7 +197,7 @@ void _start(unsigned int memsize, void *extended_mem_block, unsigned int extende
         gdt_descr.a = GDT_LIMIT - 1;
         gdt_descr.b = (unsigned int *)ka->arch_args.vir_gdt;
 
-        asm("lgdt	%0;"
+        asm volatile("lgdt	%0;"
             : : "m" (gdt_descr));
 
 //      nmessage("gdt at virtual address ", next_vpage, "\n");
@@ -265,7 +265,7 @@ void _start(unsigned int memsize, void *extended_mem_block, unsigned int extende
         idt_descr.a = IDT_LIMIT - 1;
         idt_descr.b = (unsigned int *)ka->arch_args.vir_idt;
 
-        asm("lidt	%0;"
+        asm volatile("lidt	%0;"
             : : "m" (idt_descr));
 
 //      nmessage("idt at virtual address ", next_vpage, "\n");
@@ -525,10 +525,10 @@ static int mmu_init(kernel_args *ka, unsigned int *next_paddr)
     pgdir[KERNEL_BASE/(4*1024*1024)] = (unsigned int)pgtable | DEFAULT_PAGE_FLAGS;
 
     // switch to the new pgdir
-    asm("movl %0, %%eax;"
+    asm volatile("movl %0, %%eax;"
         "movl %%eax, %%cr3;" :: "m" (pgdir) : "eax");
     // Important.  Make sure supervisor threads can fault on read only pages...
-    asm("movl %%eax, %%cr0" : : "a" ((1 << 31) | (1 << 16) | (1 << 5) | 1));
+    asm volatile("movl %%eax, %%cr0" : : "a" ((1 << 31) | (1 << 16) | (1 << 5) | 1));
     // pkx: moved the paging turn-on to here.
 
     return 0;
@@ -618,7 +618,7 @@ static void sort_addr_range(addr_range *range, int count)
 }
 
 #define outb(value,port) \
-    asm("outb %%al,%%dx"::"a" (value),"d" (port))
+    asm volatile("outb %%al,%%dx"::"a" (value),"d" (port))
 
 
 #define inb(port) ({ \

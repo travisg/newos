@@ -4,6 +4,7 @@
 */
 
 #include <kernel/kernel.h>
+#include <kernel/time.h>
 #include <kernel/bus/scsi/scsi_cmds.h>
 #include "ide_internal.h"
 #include "basic_prot.h"

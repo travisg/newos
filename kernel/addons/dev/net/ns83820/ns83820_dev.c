@@ -425,6 +425,8 @@ out:
 
     return rc;
 #endif
+
+    return 0;
 }
 
 static int ns83820_rxint(ns83820 *ns, uint16 int_status)
@@ -445,6 +447,8 @@ static int ns83820_rxint(ns83820 *ns, uint16 int_status)
 
     return rc;
 #endif
+
+    return 0;
 }
 
 static int ns83820_txint(ns83820 *ns, uint16 int_status)
@@ -478,6 +482,8 @@ static int ns83820_txint(ns83820 *ns, uint16 int_status)
 
     return rc;
 #endif
+
+    return 0;
 }
 
 static int ns83820_int(void* data)
@@ -528,5 +534,7 @@ static int ns83820_int(void* data)
 
     return rc;
 #endif
+
+    return 0;
 }
 

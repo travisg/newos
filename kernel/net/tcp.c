@@ -172,7 +172,7 @@ static void handle_persist_timeout(void *_socket);
 static void handle_retransmit_timeout(void *_socket);
 static void handle_fin_retransmit(void *_socket);
 static void handle_time_wait_timeout(void *_socket);
-static int destroy_tcp_socket(tcp_socket *s);
+static void destroy_tcp_socket(tcp_socket *s);
 static tcp_socket *create_tcp_socket(void);
 static void send_ack(tcp_socket *s);
 static void tcp_remote_close(tcp_socket *s);
@@ -350,7 +350,7 @@ err:
     return NULL;
 }
 
-static int destroy_tcp_socket(tcp_socket *s)
+static void destroy_tcp_socket(tcp_socket *s)
 {
     ASSERT(s->state == STATE_CLOSED);
 

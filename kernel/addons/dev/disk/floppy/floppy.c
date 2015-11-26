@@ -496,6 +496,8 @@ static int floppy_init(floppy *flp)
 
     // enable implicit seek
     config_drive(flp);
+
+    return 0;
 }
 
 static void write_reg(floppy *flp, floppy_reg_selector selector, uint8 data)

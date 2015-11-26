@@ -431,6 +431,8 @@ static int arp_retransmit_thread(void *unused)
             thread_snooze(500000); // 1/2 sec
         }
     }
+
+    return 0;
 }
 
 static int arp_cleanup_thread(void *unused)
@@ -484,6 +486,8 @@ static int arp_cleanup_thread(void *unused)
             kfree(temp);
         }
     }
+
+    return 0;
 }
 
 int arp_init(void)
