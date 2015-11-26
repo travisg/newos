@@ -9,13 +9,6 @@ MY_SRCS := \
 	nfs_xdr.c \
 	rpc.c
 
-MY_INCLUDES := -Iinclude
-MY_CFLAGS := $(KERNEL_CFLAGS)
-MY_LIBS := $(LIBKERNEL)
-MY_LIBPATHS :=
-MY_DEPS :=
-MY_LINKSCRIPT := $(KERNEL_ADDONS_DIR)/ldscripts/$(ARCH)/addon.ld
-
 include templates/kernel_addons.mk
 
 endif

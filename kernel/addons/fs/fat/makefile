@@ -10,13 +10,6 @@ MY_SRCS := \
 	fat_file.c \
 	fat_vnode.c
 
-MY_INCLUDES := -Iinclude
-MY_CFLAGS := $(KERNEL_CFLAGS)
-MY_LIBS := $(LIBKERNEL)
-MY_LIBPATHS :=
-MY_DEPS :=
-MY_LINKSCRIPT := $(KERNEL_ADDONS_DIR)/ldscripts/$(ARCH)/addon.ld
-
 include templates/kernel_addons.mk
 
 endif

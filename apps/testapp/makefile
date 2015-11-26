@@ -14,12 +14,7 @@ MY_SRCS := \
 	threadtests.cpp \
 	vmtests.cpp
 
-MY_INCLUDES := $(STDINCLUDE)
-MY_CFLAGS := $(USER_CFLAGS)
 MY_LIBS := -lc -lnewos -lsupc++
-MY_LIBPATHS :=
-MY_DEPS :=
-MY_GLUE := $(APPSGLUE)
 
 include templates/app.mk
 

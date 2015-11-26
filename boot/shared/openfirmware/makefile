@@ -7,7 +7,7 @@ MY_OBJS := \
 	openfirmware.o
 
 MY_INCLUDES := $(STDINCLUDE)
-MY_CFLAGS := $(KERNEL_CFLAGS)
+MY_COMPILEFLAGS := $(KERNEL_COMPILEFLAGS)
 
 include templates/combined_object.mk
 

@@ -6,13 +6,6 @@ ifeq ($(call FINDINLIST,$(MY_TARGET),$(ALL)),1)
 MY_SRCS := \
 	scsi_dsk.c 
 
-MY_INCLUDES := -Iinclude
-MY_CFLAGS := $(KERNEL_CFLAGS)
-MY_LIBS := $(LIBKERNEL)
-MY_LIBPATHS :=
-MY_DEPS :=
-MY_LINKSCRIPT := $(KERNEL_ADDONS_DIR)/ldscripts/$(ARCH)/addon.ld
-
 include templates/kernel_addons.mk
 
 endif

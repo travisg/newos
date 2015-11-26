@@ -2,8 +2,8 @@ ifneq ($(SECOND_CALL),true)
 
 # if this is the top level instantiation of make, call back into itself with 
 # the implicit rules option turned off. There has to be a simpler way
-# to do this, but I havne't figured it out.
-MKFLAGS := -r 
+# to do this, but I haven't figured it out.
+MKFLAGS := -rR
 
 .PHONY: all
 all:
@@ -26,6 +26,9 @@ include config/make.syscfg
 
 # include top level macros
 include macros.mk
+
+# comment out or override if you want to see the full output of each command
+NOECHO ?= @
 
 # sub-makefiles have to fill these in
 ALL_DEPS =

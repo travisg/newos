@@ -8,13 +8,6 @@ MY_SRCS := \
 	ns83820.c \
 	ns83820_dev.c
 
-MY_INCLUDES := $(STDINCLUDE)
-MY_CFLAGS := $(KERNEL_CFLAGS)
-MY_LIBS := $(LIBKERNEL)
-MY_LIBPATHS :=
-MY_DEPS :=
-MY_LINKSCRIPT := $(KERNEL_ADDONS_DIR)/ldscripts/$(ARCH)/addon.ld
-
 include templates/kernel_addons.mk
 
 endif

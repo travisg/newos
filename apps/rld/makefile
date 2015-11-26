@@ -19,9 +19,8 @@ MY_LIBS := $(LIBC_STATIC) $(LIBNEWOS_STATIC)
 MY_LIBPATHS :=
 MY_DEPS :=
 MY_LINKSCRIPT := $(MY_SRCDIR)/arch/$(ARCH)/rld.ld
-MY_GLUE :=
 
-include templates/app.mk
+include templates/simple_object.mk
 
 endif
 

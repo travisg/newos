@@ -10,10 +10,6 @@ MY_SRCDIR := $(LIBS_DIR)/libsocket
 MY_SRCS := \
 	socket.c
 
-MY_INCLUDES := $(STDINCLUDE)
-MY_CFLAGS := $(USER_CFLAGS)
-MY_LINKSCRIPT := $(LIBS_LDSCRIPT)
-
 include templates/lib.mk
 
 endif

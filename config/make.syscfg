@@ -2,36 +2,36 @@
 
 # figure out a few things about the host build system
 ifeq ($(HOSTTYPE),)
-	HOSTTYPE := $(shell uname -m)
+    HOSTTYPE := $(shell uname -m)
 endif
 ifeq ($(OSTYPE),)
-	OSTYPE := $(shell uname -s | awk -F_ '{print $$1}' | tr A-Z a-z)
+    OSTYPE := $(shell uname -s | awk -F_ '{print $$1}' | tr A-Z a-z)
 endif
 ifeq ($(HOSTTYPE),i586)
-	HOSTTYPE := i386
+    HOSTTYPE := i386
 endif
 ifeq ($(HOSTTYPE),i686)
-	HOSTTYPE := i386
+    HOSTTYPE := i386
 endif
 ifeq ($(HOSTTYPE), )
-	HOSTTYPE := i386
+    HOSTTYPE := i386
 endif
 ifeq ($(findstring Macintosh,$(HOSTTYPE)),Macintosh)
-	HOSTTYPE := ppc
+    HOSTTYPE := ppc
 endif
 ifeq ($(HOSTTYPE),macintosh)
-	ifeq ($(MACHTYPE),powerpc)
-		HOSTTYPE := ppc
-	endif
+    ifeq ($(MACHTYPE),powerpc)
+        HOSTTYPE := ppc
+    endif
 endif
 
 # default platform and arch
 ifeq ($(PLATFORM),)
-	ifeq ($(ARCH),)
-		#	by default, build for a i386-pc
-		ARCH := i386
-		PLATFORM := pc
-	endif
+    ifeq ($(ARCH),)
+        #   by default, build for a i386-pc
+        ARCH := i386
+        PLATFORM := pc
+    endif
 endif
 
 # some platforms only support one arch
@@ -73,12 +73,12 @@ HOST_SIZE := size
 ECHO := echo
 AWK := awk
 ifeq ($(OSTYPE),SunOS)
-	ECHO := /usr/ucb/echo
-	AWK := gawk
+    ECHO := /usr/ucb/echo
+    AWK := gawk
 endif
 ifeq ($(findstring solaris,$(OSTYPE)),solaris)
-	ECHO := /usr/ucb/echo
-	AWK := gawk
+    ECHO := /usr/ucb/echo
+    AWK := gawk
 endif
 
 # TOOLCHAIN_ARCH is usually ARCH, except in a few cases
@@ -90,34 +90,34 @@ endif
 # try to detect if the user has ARCH-newos-gcc installed
 #
 #  NOTE:
-#	the "| cat" below looks unnecesary, this is
-#	to avoid a bug in liberty in certain versions
-#	of gmake for BeOS
+#   the "| cat" below looks unnecesary, this is
+#   to avoid a bug in liberty in certain versions
+#   of gmake for BeOS
 CC :=
 FOO := $(shell $(TOOLCHAIN_ARCH)-newos-gcc --version | cat)
 ifneq ($(FOO),)
 $(warning found newos toolchain!)
-	CC = $(TOOLCHAIN_ARCH)-newos-gcc
-	LD = $(TOOLCHAIN_ARCH)-newos-ld
-	AS = $(TOOLCHAIN_ARCH)-newos-as
-	AR = $(TOOLCHAIN_ARCH)-newos-ar
-	OBJCOPY = $(TOOLCHAIN_ARCH)-newos-objcopy
-	OBJDUMP = $(TOOLCHAIN_ARCH)-newos-objdump
-	STRIP = $(TOOLCHAIN_ARCH)-newos-strip
-	SIZE = $(TOOLCHAIN_ARCH)-newos-size
+    CC = $(TOOLCHAIN_ARCH)-newos-gcc
+    LD = $(TOOLCHAIN_ARCH)-newos-ld
+    AS = $(TOOLCHAIN_ARCH)-newos-as
+    AR = $(TOOLCHAIN_ARCH)-newos-ar
+    OBJCOPY = $(TOOLCHAIN_ARCH)-newos-objcopy
+    OBJDUMP = $(TOOLCHAIN_ARCH)-newos-objdump
+    STRIP = $(TOOLCHAIN_ARCH)-newos-strip
+    SIZE = $(TOOLCHAIN_ARCH)-newos-size
 else 
 FOO := $(shell $(TOOLCHAIN_ARCH)-elf-gcc --version | cat)
 ifneq ($(FOO),)
 $(warning WARNING: custom newos toolchain not found!)
 $(warning falling back to elf toolchain)
-	CC = $(TOOLCHAIN_ARCH)-elf-gcc
-	LD = $(TOOLCHAIN_ARCH)-elf-ld
-	AS = $(TOOLCHAIN_ARCH)-elf-as
-	AR = $(TOOLCHAIN_ARCH)-elf-ar
-	OBJCOPY = $(TOOLCHAIN_ARCH)-elf-objcopy
-	OBJDUMP = $(TOOLCHAIN_ARCH)-elf-objdump
-	STRIP = $(TOOLCHAIN_ARCH)-elf-strip
-	SIZE = $(TOOLCHAIN_ARCH)-elf-size
+    CC = $(TOOLCHAIN_ARCH)-elf-gcc
+    LD = $(TOOLCHAIN_ARCH)-elf-ld
+    AS = $(TOOLCHAIN_ARCH)-elf-as
+    AR = $(TOOLCHAIN_ARCH)-elf-ar
+    OBJCOPY = $(TOOLCHAIN_ARCH)-elf-objcopy
+    OBJDUMP = $(TOOLCHAIN_ARCH)-elf-objdump
+    STRIP = $(TOOLCHAIN_ARCH)-elf-strip
+    SIZE = $(TOOLCHAIN_ARCH)-elf-size
 endif
 endif
 ifeq ($(CC),)
@@ -125,101 +125,102 @@ $(warning WARNING: custom newos toolchain not found!)
 $(warning This build will probably fail miserably)
 $(warning Download the appropriate toolchain for your build environment)
 $(warning at http://newos.sourceforge.net/download.php)
-	CC = $(HOST_CC)
-	LD = $(HOST_LD)
-	AS = $(HOST_AS)
-	AR = $(HOST_AR)
-	OBJCOPY = $(HOST_OBJCOPY)
-	OBJDUMP = $(HOST_OBJDUMP)
-	STRIP = $(HOST_STRIP)
-	SIZE = $(HOST_SIZE)
+    CC = $(HOST_CC)
+    LD = $(HOST_LD)
+    AS = $(HOST_AS)
+    AR = $(HOST_AR)
+    OBJCOPY = $(HOST_OBJCOPY)
+    OBJDUMP = $(HOST_OBJDUMP)
+    STRIP = $(HOST_STRIP)
+    SIZE = $(HOST_SIZE)
 endif
 
 # set up some particular options for various architectures
 ifeq ($(ARCH),i386)
-	GLOBAL_CFLAGS = -O2 -g
-	KERNEL_CFLAGS = -fno-pic
-	USER_CFLAGS = -fpic
-	GLOBAL_LDFLAGS = -g
+    GLOBAL_COMPILEFLAGS = -O2 -g -march=i686
+    KERNEL_COMPILEFLAGS = -fno-pic
+    USER_COMPILEFLAGS = -fpic
+    GLOBAL_LDFLAGS = -g
 endif
 
 ifeq ($(ARCH),x86_64)
-	GLOBAL_CFLAGS = -O2 -g 
-	KERNEL_CFLAGS = -fno-pic -mcmodel=kernel
-	USER_CFLAGS = -fpic
-	GLOBAL_LDFLAGS = -g -m elf_x86_64
+    GLOBAL_COMPILEFLAGS = -O2 -g
+    KERNEL_COMPILEFLAGS = -fno-pic -mcmodel=kernel
+    USER_COMPILEFLAGS = -fpic
+    GLOBAL_LDFLAGS = -g -m elf_x86_64
 endif
 
 ifeq ($(ARCH),ppc)
-	GLOBAL_CFLAGS = -fno-pic -O -D__PPC__ -mregnames
-	GLOBAL_LDFLAGS =
+    GLOBAL_COMPILEFLAGS = -fno-pic -O -D__PPC__ -mregnames
+    GLOBAL_LDFLAGS =
 endif
 
 ifeq ($(ARCH),ppc64)
-	GLOBAL_CFLAGS =
-	GLOBAL_LDFLAGS =
+    GLOBAL_COMPILEFLAGS =
+    GLOBAL_LDFLAGS =
 endif
 
 ifeq ($(ARCH),arm)
-	GLOBAL_CFLAGS = -O2 -g
-	KERNEL_CFLAGS = -fno-pic
-	USER_CFLAGS = -fpic
-	GLOBAL_LDFLAGS =
+    GLOBAL_COMPILEFLAGS = -O2 -g
+    KERNEL_COMPILEFLAGS = -fno-pic
+    USER_COMPILEFLAGS = -fpic
+    GLOBAL_LDFLAGS =
 endif
 
 ifeq ($(ARCH),sh4)
-	GLOBAL_CFLAGS = -ml -m4-single-only -mhitachi -O2 -g -D__SH4__
-	KERNEL_CFLAGS = -fno-pic
-	USER_CFLAGS = -fpic
-	GLOBAL_LDFLAGS = -EL
+    GLOBAL_COMPILEFLAGS = -ml -m4-single-only -mhitachi -O2 -g -D__SH4__
+    KERNEL_COMPILEFLAGS = -fno-pic
+    USER_COMPILEFLAGS = -fpic
+    GLOBAL_LDFLAGS = -EL
 endif
 
 ifeq ($(ARCH),sparc64)
-	GLOBAL_CFLAGS =
-	GLOBAL_LDFLAGS =
+    GLOBAL_COMPILEFLAGS =
+    GLOBAL_LDFLAGS =
 endif
 
 ifeq ($(ARCH),sparc)
-	GLOBAL_CFLAGS =
-	GLOBAL_LDFLAGS =
+    GLOBAL_COMPILEFLAGS =
+    GLOBAL_LDFLAGS =
 endif
 
 ifeq ($(ARCH),m68k)
-	GLOBAL_CFLAGS = -O0 -g -m68040
-	KERNEL_CFLAGS = -fno-pic
-	USER_CFLAGS = -fpic
-	GLOBAL_LDFLAGS = -g
+    GLOBAL_COMPILEFLAGS = -O0 -g -m68040
+    KERNEL_COMPILEFLAGS = -fno-pic
+    USER_COMPILEFLAGS = -fpic
+    GLOBAL_LDFLAGS = -g
 endif
 
 ifeq ($(ARCH),alpha)
-	GLOBAL_CFLAGS =
-	GLOBAL_LDFLAGS =
+    GLOBAL_COMPILEFLAGS =
+    GLOBAL_LDFLAGS =
 endif
 
 ifeq ($(ARCH),mips)
-	GLOBAL_CFLAGS = -fno-pic -mips4 -meb -G 0
-	GLOBAL_LDFLAGS =
+    GLOBAL_COMPILEFLAGS = -fno-pic -mips4 -meb -G 0
+    GLOBAL_LDFLAGS =
 endif
 
 # check to see if we should use distcc and/or ccache
 ifneq ($(USE_DISTCC),)
 $(warning using distcc)
-	CC := distcc $(CC)
+    CC := distcc $(CC)
 endif
 
 ifneq ($(USE_CCACHE),)
 $(warning using ccache)
-	CC := ccache $(CC)
+    CC := ccache $(CC)
 endif
 
 # these options are on for all architectures
-GLOBAL_CFLAGS += -finline -fno-builtin
-GLOBAL_CFLAGS += -Wall -W -Wno-multichar -Wno-unused-parameter -Wmissing-prototypes
-GLOBAL_CFLAGS += -DNEWOS=1
-GLOBAL_CFLAGS += -DARCH_$(ARCH)=1 -D__ARCH__=$(ARCH) -U$(ARCH)
-GLOBAL_CFLAGS += -DPLATFORM_$(PLATFORM)=1
+GLOBAL_COMPILEFLAGS += -finline -fno-builtin
+GLOBAL_COMPILEFLAGS += -Wall -W -Wno-multichar -Wno-unused-parameter -Werror=return-type
+GLOBAL_COMPILEFLAGS += -DNEWOS=1
+GLOBAL_COMPILEFLAGS += -DARCH_$(ARCH)=1 -D__ARCH__=$(ARCH) -U$(ARCH)
+GLOBAL_COMPILEFLAGS += -DPLATFORM_$(PLATFORM)=1
 
-GLOBAL_CPPFLAGS = $(GLOBAL_CFLAGS)
+GLOBAL_CFLAGS += -Wmissing-prototypes -Wstrict-prototypes -Werror-implicit-function-declaration -Wwrite-strings --std=gnu11
+GLOBAL_CPPFLAGS +=
 
 # XXX remove once we get libsupc++ working
 GLOBAL_CPPFLAGS += -fno-threadsafe-statics
@@ -228,7 +229,7 @@ GLOBAL_ASFLAGS += -D__ASSEMBLY__
 
 # find libgcc
 #LIBGCC := -lgcc
-LIBGCC := $(shell $(CC) $(GLOBAL_CFLAGS) -print-libgcc-file-name)
+LIBGCC := $(shell $(CC) $(GLOBAL_COMPILEFLAGS) $(GLOBAL_CFLAGS) -print-libgcc-file-name)
 LIBGCC_PATH := $(dir $(shell $(CC) $(GLOBAL_CFLAGS) -print-libgcc-file-name))
 ifeq ($(ARCH),arm)
 LIBGCC_PATH := /usr/local/arm-newos/lib/gcc-lib/arm-newos/3.3.3
@@ -241,7 +242,6 @@ ifeq ($(ARCH),x86_64)
 LIBGCC32_PATH := $(dir $(shell $(CC) $(GLOBAL_CFLAGS) -m32 -print-libgcc-file-name))
 $(warning LIBGCC32_PATH = $(LIBGCC32_PATH))
 endif
-
 
 # print some info
 $(warning ARCH = $(ARCH))

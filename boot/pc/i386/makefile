@@ -22,15 +22,14 @@ MY_SRCS := \
 	int86.S
 
 MY_INCLUDES := $(STDINCLUDE)
-MY_CFLAGS := $(KERNEL_CFLAGS)
+MY_COMPILEFLAGS := $(KERNEL_COMPILEFLAGS)
 MY_LDFLAGS := -dN
 MY_LIBS := $(LIBS_BUILD_DIR)/libc.a
 MY_LIBPATHS :=
 MY_DEPS := $(MY_LIBS)
 MY_LINKSCRIPT := $(MY_SRCDIR)/stage2.ld
-MY_GLUE := 
 
-include templates/app.mk
+include templates/simple_object.mk
 
 STAGE1 = $(BOOT_TARGETDIR)/stage1/stage1
 
@@ -43,15 +42,14 @@ MY_SRCS := \
 	inflate.c
 
 MY_INCLUDES := $(STDINCLUDE)
-MY_CFLAGS := $(KERNEL_CFLAGS)
+MY_COMPILEFLAGS := $(KERNEL_COMPILEFLAGS)
 MY_LDFLAGS := -dN
 MY_LIBS := $(LIBS_BUILD_DIR)/libc.a
 MY_LIBPATHS :=
 MY_DEPS := $(MY_LIBS)
 MY_LINKSCRIPT := $(MY_SRCDIR)/stage1.ld
-MY_GLUE :=
 
-include templates/app.mk
+include templates/simple_object.mk
 
 # rules to build the bootblock
 BOOTBLOCK = $(BOOT_TARGETDIR)/bootblock/bootblock
@@ -63,15 +61,14 @@ MY_SRCS := \
 	bootblock.S
 
 MY_INCLUDES :=
-MY_CFLAGS := 
+MY_CFLAGS :=
 MY_LDFLAGS := -dN
 MY_LIBS :=
 MY_LIBPATHS :=
 MY_DEPS := 
 MY_LINKSCRIPT := $(MY_SRCDIR)/bootblock.ld
-MY_GLUE :=
 
-include templates/app.mk
+include templates/simple_object.mk
 
 MAKEFLOP := $(BOOT_TARGETDIR)/makeflop
 MAKEFLOPSRC := $(BOOT_SRCDIR)/makeflop.c

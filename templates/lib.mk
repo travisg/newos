@@ -3,11 +3,15 @@ MY_STATIC_TARGET_IN := $(MY_STATIC_TARGET)
 MY_TARGETDIR_IN := $(MY_TARGETDIR)
 MY_SRCDIR_IN := $(MY_SRCDIR)
 MY_SRCS_IN := $(MY_SRCS)
-MY_OBJS_IN := $(MY_OBJS)
+MY_COMPILEFLAGS_IN := $(MY_COMPILEFLAGS)
 MY_CFLAGS_IN := $(MY_CFLAGS)
 MY_CPPFLAGS_IN := $(MY_CPPFLAGS)
-MY_INCLUDES_IN := $(MY_INCLUDES)
+MY_INCLUDES_IN := $(STDINCLUDE) $(MY_INCLUDES)
 MY_LINKSCRIPT_IN := $(MY_LINKSCRIPT)
+
+ifeq ($(MY_LINKSCRIPT_IN), )
+	MY_LINKSCRIPT_IN := $(LIBS_LDSCRIPT)
+endif
 
 #$(warning MY_OBJS = $(MY_OBJS))
 
@@ -34,33 +38,34 @@ ALL_OBJS := $(ALL_OBJS) $(_TEMP_OBJS)
 # add to the global deps
 ALL_DEPS := $(ALL_DEPS) $(_TEMP_OBJS:.o=.d)
 
-ifneq ($(MY_TARGET_IN), ) 
+ifneq ($(MY_TARGET_IN), )
 $(MY_TARGET_IN): MY_TARGET_IN:=$(MY_TARGET_IN)
 $(MY_TARGET_IN): MY_LINKSCRIPT_IN:=$(MY_LINKSCRIPT_IN)
-$(MY_TARGET_IN): MY_TARGETDIR_IN:=$(MY_TARGETDIR_IN) 
+$(MY_TARGET_IN): MY_TARGETDIR_IN:=$(MY_TARGETDIR_IN)
 $(MY_TARGET_IN): $(LIBGLUE) $(_TEMP_OBJS)
 	@$(MKDIR)
 	@mkdir -p $(MY_TARGETDIR_IN)
 	@echo linking library $@
-	@$(LD) $(GLOBAL_LDFLAGS) -shared -soname $(notdir $(MY_TARGET_IN)) --script=$(MY_LINKSCRIPT_IN) -o $@ $^ $(LIBGCC)
+	$(NOECHO)$(LD) $(GLOBAL_LDFLAGS) -shared -soname $(notdir $(MY_TARGET_IN)) --script=$(MY_LINKSCRIPT_IN) -o $@ $^ $(LIBGCC)
 	@echo creating listing file $@.lst
-	@$(OBJDUMP) -C -S $@ > $@.lst
+	$(NOECHO)$(OBJDUMP) -C -S $@ > $@.lst
 endif
 ifneq ($(MY_STATIC_TARGET_IN), ) 
 $(MY_STATIC_TARGET_IN): MY_TARGETDIR_IN:=$(MY_TARGETDIR_IN) 
 $(MY_STATIC_TARGET_IN): $(_TEMP_OBJS)
 	@$(MKDIR)
 	@echo creating static lib $@
-	@$(AR) r $@ $^
+	$(NOECHO)$(AR) r $@ $^
 endif
 
 include templates/compile.mk
 
 MY_TARGET :=
-MY_STATIC_TARGET := 
+MY_STATIC_TARGET :=
 MY_TARGETDIR :=
 MY_SRCDIR :=
 MY_SRCS :=
+MY_COMPILEFLAGS :=
 MY_CFLAGS :=
 MY_CPPFLAGS :=
 MY_INCLUDES :=

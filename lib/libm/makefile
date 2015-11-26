@@ -6,9 +6,7 @@ MY_TARGETDIR := $(LIBS_BUILD_DIR)/libm
 MY_SRCDIR := $(LIBS_DIR)/libm
 MY_SRCS :=
 
-MY_INCLUDES := $(STDINCLUDE) -I$(MY_SRCDIR)/common_source
-MY_CFLAGS := $(USER_CFLAGS)
-MY_LINKSCRIPT := $(LIBS_LDSCRIPT)
+MY_INCLUDES := -I$(MY_SRCDIR)/common_source
 
 # include sub makefiles
 include $(addsuffix /makefile, $(addprefix $(MY_SRCDIR)/, \

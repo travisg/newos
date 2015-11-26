@@ -30,10 +30,7 @@ MY_SRCS := \
 	vfs.c \
 	module.c
 
-MY_INCLUDES := $(STDINCLUDE)
-MY_CFLAGS := $(KERNEL_CFLAGS)
 MY_LIBS := $(LINKHACK).so $(KLIBS)
-MY_LINKSCRIPT := $(KERNEL_DIR)/arch/$(ARCH)/kernel.ld
 
 # include sub makefiles
 include $(addsuffix /makefile, $(addprefix $(KERNEL_DIR)/, \

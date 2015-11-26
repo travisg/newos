@@ -9,7 +9,7 @@ MY_SRCS := \
 	crt0.c
 
 MY_INCLUDES := $(STDINCLUDE)
-MY_CFLAGS := $(USER_CFLAGS)
+MY_COMPILEFLAGS := $(USER_COMPILEFLAGS)
 
 include templates/combined_object.mk
 
@@ -24,7 +24,7 @@ MY_SRCS := \
 	lib0.c
 
 MY_INCLUDES := $(STDINCLUDE)
-MY_CFLAGS := $(USER_CFLAGS)
+MY_COMPILEFLAGS := $(USER_COMPILEFLAGS)
 
 include templates/combined_object.mk
 

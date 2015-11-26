@@ -7,13 +7,7 @@ ifeq ($(call FINDINLIST,$(MY_TARGET),$(ALL)),1)
 MY_SRCS := \
 	main.cpp
 
-MY_INCLUDES := $(STDINCLUDE)
-MY_CFLAGS := $(USER_CFLAGS)
-MY_LDFLAGS := 
 MY_LIBS := -lc -lnewos -lstdc++ -lsupc++
-MY_LIBPATHS :=
-MY_DEPS :=
-MY_GLUE := $(APPSGLUE)
 
 include templates/app.mk
 

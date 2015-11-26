@@ -7,13 +7,6 @@ MY_SRCS := \
 	ide.c \
 	ide_raw.c
 
-MY_INCLUDES := $(STDINCLUDE)
-MY_CFLAGS := $(KERNEL_CFLAGS)
-MY_LIBS := $(LIBKERNEL)
-MY_LIBPATHS :=
-MY_DEPS :=
-MY_LINKSCRIPT := $(KERNEL_ADDONS_DIR)/ldscripts/$(ARCH)/addon.ld
-
 include templates/kernel_addons.mk
 
 endif

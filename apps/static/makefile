@@ -7,12 +7,8 @@ ifeq ($(call FINDINLIST,$(MY_TARGET),$(ALL)),1)
 MY_SRCS := \
 	main.c
 
-MY_INCLUDES := -Iinclude -Iinclude/nulibc
-MY_CFLAGS := $(USER_CFLAGS)
-MY_LIBS := $(LIBC_STATIC) $(APPS_BUILD_DIR)/rldtest/girlfriend.so
-MY_LIBPATHS :=
-MY_DEPS :=
-MY_GLUE := $(APPSGLUE)
+MY_INCLUDES := -Iinclude/nulibc
+MY_LIBS := $(LIBC_STATIC) $(LIBNEWOS_STATIC) $(APPS_BUILD_DIR)/rldtest/girlfriend.so
 
 include templates/app.mk
 

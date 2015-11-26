@@ -35,6 +35,7 @@ include $(addsuffix /makefile, $(addprefix $(APPS_DIR)/, \
 	disktest \
 	vmstat \
 	sleep \
+	static \
 ))
 
 

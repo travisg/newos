@@ -16,7 +16,7 @@ MY_OBJS := \
 	stage2_text.o
 
 MY_INCLUDES := $(STDINCLUDE)
-MY_CFLAGS := $(KERNEL_CFLAGS)
+MY_COMPILEFLAGS := $(KERNEL_COMPILEFLAGS)
 MY_LDFLAGS := -dN
 MY_LIBS := $(BOOT_TARGETDIR)/shared/openfirmware.o $(LIBS_BUILD_DIR)/libc.a
 MY_LIBPATHS :=
@@ -52,11 +52,11 @@ $(FINAL): $(STAGE1_OBJS)
 
 $(BOOT_TARGETDIR)/stage1.o: $(BOOT_SRCDIR)/stage1.S $(FINAL_ASMINCLUDE)
 	@mkdir -p $(BOOT_TARGETDIR)
-	$(CC) $(GLOBAL_CFLAGS) -I. -Iinclude -I$(BOOT_TARGETDIR) -c $< -o $@
+	$(CC) $(GLOBAL_COMPILEFLAGS) $(GLOBAL_CFLAGS) -I. -Iinclude -I$(BOOT_TARGETDIR) -c $< -o $@
 
 $(BOOT_TARGETDIR)/stage1.d: $(BOOT_SRCDIR)/stage1.S
 	@mkdir -p $(BOOT_TARGETDIR)
 	@echo "making deps for $<..."
-	($(ECHO) -n $(dir $@);$(CC) $(GLOBAL_CFLAGS) -g -Iinclude -I$(BOOT_TARGETDIR) -M -MG $<) > $@
+	($(ECHO) -n $(dir $@);$(CC) $(GLOBAL_COMPILEFLAGS) $(GLOBAL_CFLAGS) -g -Iinclude -I$(BOOT_TARGETDIR) -M -MG $<) > $@
 
 include boot/shared/openfirmware/makefile

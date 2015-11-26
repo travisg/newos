@@ -30,7 +30,7 @@ MY_SRCS := \
 	smp_trampoline.S
 
 MY_INCLUDES := $(STDINCLUDE)
-MY_CFLAGS := $(KERNEL_CFLAGS) -mno-sse
+MY_COMPILEFLAGS := $(KERNEL_COMPILEFLAGS) -mno-sse
 MY_LDFLAGS := -dN
 MY_LIBS := $(LIBS_BUILD_DIR)/libc.a
 MY_LIBPATHS :=

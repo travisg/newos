@@ -3,11 +3,17 @@ MY_TARGETLIB_IN := $(MY_TARGETLIB)
 MY_TARGETDIR_IN := $(MY_TARGETDIR)
 MY_SRCDIR_IN := $(MY_SRCDIR)
 MY_SRCS_IN := $(MY_SRCS)
+MY_COMPILEFLAGS_IN := $(KERNEL_COMPILEFLAGS) $(MY_COMPILEFLAGS)
 MY_CFLAGS_IN := $(MY_CFLAGS)
 MY_CPPFLAGS_IN := $(MY_CPPFLAGS)
-MY_INCLUDES_IN := $(MY_INCLUDES)
-MY_LINKSCRIPT_IN := $(MY_LINKSCRIPT)
+MY_INCLUDES_IN := $(STDINCLUDE) $(MY_INCLUDES)
 MY_LIBS_IN := $(MY_LIBS)
+MY_DEPS_IN := $(MY_DEPS)
+MY_LINKSCRIPT_IN := $(MY_LINKSCRIPT)
+
+ifeq ($(MY_LINKSCRIPT_IN), )
+    MY_LINKSCRIPT_IN := $(KERNEL_DIR)/arch/$(ARCH)/kernel.ld
+endif
 
 # extract the different source types out of the list
 #$(warning MY_SRCS_IN = $(MY_SRCS_IN))
@@ -35,20 +41,20 @@ ALL_DEPS := $(ALL_DEPS) $(_TEMP_OBJS:.o=.d)
 $(MY_TARGET_IN): MY_LIBS_IN:=$(MY_LIBS_IN)
 $(MY_TARGET_IN): MY_LINKSCRIPT_IN:=$(MY_LINKSCRIPT_IN)
 $(MY_TARGET_IN): _TEMP_OBJS:=$(_TEMP_OBJS)
-$(MY_TARGET_IN): $(_TEMP_OBJS) $(MY_LIBS_IN)
+$(MY_TARGET_IN): $(_TEMP_OBJS) $(MY_DEPS_IN) $(MY_LIBS_IN)
 	@$(MKDIR)
 	@echo linking $@
-	@$(LD) $(GLOBAL_LDFLAGS) -Bdynamic -export-dynamic -dynamic-linker /foo/bar -T $(MY_LINKSCRIPT_IN) -L $(LIBGCC_PATH) -o $@ $(_TEMP_OBJS) $(MY_LIBS_IN) $(LIBGCC)
+	$(NOECHO)$(LD) $(GLOBAL_LDFLAGS) -Bdynamic -export-dynamic -dynamic-linker /foo/bar -T $(MY_LINKSCRIPT_IN) -L $(LIBGCC_PATH) -o $@ $(_TEMP_OBJS) $(MY_LIBS_IN) $(LIBGCC)
 	@echo creating listing file $@.lst
-	@$(OBJDUMP) -C -S $@ > $@.lst
+	$(NOECHO)$(OBJDUMP) -C -S $@ > $@.lst
 
 $(MY_TARGETLIB_IN): MY_LIBS_IN:=$(MY_LIBS_IN)
 $(MY_TARGETLIB_IN): MY_LINKSCRIPT_IN:=$(MY_LINKSCRIPT_IN)
 $(MY_TARGETLIB_IN): _TEMP_OBJS:=$(_TEMP_OBJS)
-$(MY_TARGETLIB_IN): $(_TEMP_OBJS) $(MY_LIBS_IN)
+$(MY_TARGETLIB_IN): $(_TEMP_OBJS) $(MY_DEPS_IN) $(MY_LIBS_IN)
 	@$(MKDIR)
 	@echo linking $@
-	@$(LD) $(GLOBAL_LDFLAGS) -Bdynamic -shared -export-dynamic -dynamic-linker /foo/bar -T $(MY_LINKSCRIPT_IN) -L $(LIBGCC_PATH) -o $@ $(_TEMP_OBJS) $(MY_LIBS_IN) $(LIBGCC)
+	$(NOECHO)$(LD) $(GLOBAL_LDFLAGS) -Bdynamic -shared -export-dynamic -dynamic-linker /foo/bar -T $(MY_LINKSCRIPT_IN) -L $(LIBGCC_PATH) -o $@ $(_TEMP_OBJS) $(MY_LIBS_IN) $(LIBGCC)
 
 include templates/compile.mk
 
@@ -61,9 +67,11 @@ MY_TARGETLIB :=
 MY_TARGETDIR :=
 MY_SRCDIR :=
 MY_SRCS :=
+MY_COMPILEFLAGS :=
 MY_CFLAGS :=
 MY_CPPFLAGS :=
 MY_INCLUDES :=
 MY_LINKSCRIPT :=
 MY_LIBS :=
+MY_DEPS :=
 

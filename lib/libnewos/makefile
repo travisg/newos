@@ -4,11 +4,7 @@ MY_STATIC_TARGET := $(LIBS_BUILD_DIR)/libnewos.a
 
 MY_TARGETDIR := $(LIBS_BUILD_DIR)/libnewos
 MY_SRCDIR := $(LIBS_DIR)/libnewos
-MY_SRCS := \
-
-MY_INCLUDES := $(STDINCLUDE)
-MY_CFLAGS := $(USER_CFLAGS)
-MY_LINKSCRIPT := $(LIBS_LDSCRIPT)
+MY_SRCS :=
 
 # include sub makefiles
 include $(addsuffix /makefile, $(addprefix $(MY_SRCDIR)/, \

@@ -10,11 +10,6 @@ MY_SRCS := \
 	Rect.cpp \
 	Window.cpp
 
-MY_INCLUDES := $(STDINCLUDE)
-MY_CFLAGS := $(USER_CFLAGS)
-MY_CPPFLAGS := $(USER_CFLAGS)
-MY_LINKSCRIPT := $(LIBS_LDSCRIPT)
-
 # include sub makefiles
 #include $(addsuffix /makefile, $(addprefix $(MY_SRCDIR)/, \
 #))
