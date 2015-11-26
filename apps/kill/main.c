@@ -8,25 +8,25 @@
 
 static void usage(int argc, char **argv)
 {
-	printf("invalid args, usage: %s <process id>\n", argv[1]);	
+    printf("invalid args, usage: %s <process id>\n", argv[1]);
 
-	exit(-1);
+    exit(-1);
 }
 
 int main(int argc, char **argv)
 {
-	proc_id pid;
+    proc_id pid;
 
-	if(argc < 2) {
-		usage(argc, argv);
-	}
+    if (argc < 2) {
+        usage(argc, argv);
+    }
 
-	pid = atoi(argv[1]);
+    pid = atoi(argv[1]);
 
-	printf("sending TERM signal to process %d\n", pid);
+    printf("sending TERM signal to process %d\n", pid);
 
-	kill(pid, SIGTERM);
+    kill(pid, SIGTERM);
 
-	return 0;
+    return 0;
 }
 

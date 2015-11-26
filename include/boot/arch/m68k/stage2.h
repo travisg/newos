@@ -9,8 +9,8 @@
 
 // kernel args
 typedef struct {
-	// architecture specific
-	int foo;
+    // architecture specific
+    int foo;
 } arch_kernel_args;
 
 #endif

@@ -54,22 +54,22 @@
 #define RHINE_MISC_CR1 0x81
 
 struct rhine_rx_desc {
-	uint16 status;
-	uint16 framelen; // also owner bit
-	uint32 buflen;
-	uint32 ptr;
-	uint32 next;
+    uint16 status;
+    uint16 framelen; // also owner bit
+    uint32 buflen;
+    uint32 ptr;
+    uint32 next;
 };
 #define RHINE_RX_OWNER (1<<15)
 #define RHINE_RX_CHAIN (1<<15)
 
 // XXX fix
 struct rhine_tx_desc {
-	uint16 status;
-	uint16 framelen; // also owner bit
-	uint32 buflen;
-	uint32 ptr;
-	uint32 next;
+    uint16 status;
+    uint16 framelen; // also owner bit
+    uint32 buflen;
+    uint32 ptr;
+    uint32 next;
 };
 
 #endif

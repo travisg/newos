@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001-2004, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -7,6 +7,6 @@
 
 int arch_faults_init(kernel_args *ka)
 {
-	return 0;
+    return 0;
 }
 

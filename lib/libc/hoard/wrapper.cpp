@@ -47,10 +47,11 @@
 #include "arch-specific.h"
 
 
-inline static processHeap * getAllocator (void) {
-  static char * buf = (char *) hoardSbrk (sizeof(processHeap));
-  static processHeap * theAllocator = new (buf) processHeap;
-  return theAllocator;
+inline static processHeap * getAllocator (void)
+{
+    static char * buf = (char *) hoardSbrk (sizeof(processHeap));
+    static processHeap * theAllocator = new (buf) processHeap;
+    return theAllocator;
 }
 
 #define HOARD_MALLOC(x) malloc(x)
@@ -71,7 +72,7 @@ extern "C" void * HOARD_VALLOC(size_t);
 #if 0
 void * operator new (size_t size)
 {
-  return HOARD_MALLOC (size);
+    return HOARD_MALLOC (size);
 }
 /*
 void * operator new (size_t size, const std::nothrow_t&) throw() {
@@ -80,7 +81,7 @@ void * operator new (size_t size, const std::nothrow_t&) throw() {
 */
 void * operator new[] (size_t size)
 {
-  return HOARD_MALLOC (size);
+    return HOARD_MALLOC (size);
 }
 /*
 void * operator new[] (size_t size, const std::nothrow_t&) throw() {
@@ -89,92 +90,92 @@ void * operator new[] (size_t size, const std::nothrow_t&) throw() {
 */
 void operator delete (void * ptr)
 {
-  HOARD_FREE (ptr);
+    HOARD_FREE (ptr);
 }
 
 void operator delete[] (void * ptr)
 {
-  HOARD_FREE (ptr);
+    HOARD_FREE (ptr);
 }
 #endif
 
 extern "C" void * HOARD_MALLOC (size_t sz)
 {
-  static processHeap * pHeap = getAllocator();
-  void * addr = pHeap->getHeap(pHeap->getHeapIndex()).malloc (sz);
-  return addr;
+    static processHeap * pHeap = getAllocator();
+    void * addr = pHeap->getHeap(pHeap->getHeapIndex()).malloc (sz);
+    return addr;
 }
 
 extern "C" void * HOARD_CALLOC (size_t nelem, size_t elsize)
 {
-  static processHeap * pHeap = getAllocator();
-  void * ptr = pHeap->getHeap(pHeap->getHeapIndex()).malloc (nelem * elsize);
-  // Zero out the malloc'd block.
-  memset (ptr, 0, nelem * elsize);
-  return ptr;
+    static processHeap * pHeap = getAllocator();
+    void * ptr = pHeap->getHeap(pHeap->getHeapIndex()).malloc (nelem * elsize);
+    // Zero out the malloc'd block.
+    memset (ptr, 0, nelem * elsize);
+    return ptr;
 }
 
 extern "C" void HOARD_FREE (void * ptr)
 {
-  static processHeap * pHeap = getAllocator();
+    static processHeap * pHeap = getAllocator();
 #if USE_PRIVATE_HEAPS
-  pHeap->getHeap(pHeap->getHeapIndex()).free(ptr);
+    pHeap->getHeap(pHeap->getHeapIndex()).free(ptr);
 #else
-  pHeap->free (ptr);
+    pHeap->free (ptr);
 #endif
 }
 
 
 extern "C" void * HOARD_MEMALIGN (size_t alignment, size_t size)
 {
-  static processHeap * pHeap = getAllocator();
-  void * addr = pHeap->getHeap(pHeap->getHeapIndex()).memalign (alignment, size);
-  return addr;
+    static processHeap * pHeap = getAllocator();
+    void * addr = pHeap->getHeap(pHeap->getHeapIndex()).memalign (alignment, size);
+    return addr;
 }
 
 
 extern "C" void * HOARD_VALLOC (size_t size)
 {
-  return HOARD_MEMALIGN (hoardGetPageSize(), size);
+    return HOARD_MEMALIGN (hoardGetPageSize(), size);
 }
 
 
 extern "C" void * HOARD_REALLOC (void * ptr, size_t sz)
 {
-  if (ptr == NULL) {
-    return HOARD_MALLOC (sz);
-  }
-  if (sz == 0) {
+    if (ptr == NULL) {
+        return HOARD_MALLOC (sz);
+    }
+    if (sz == 0) {
+        HOARD_FREE (ptr);
+        return NULL;
+    }
+
+    // If the existing object can hold the new size,
+    // just return it.
+
+    size_t objSize = HEAPTYPE::objectSize (ptr);
+
+    if (objSize >= sz) {
+        return ptr;
+    }
+
+    // Allocate a new block of size sz.
+
+    void * buf = HOARD_MALLOC (sz);
+
+    // Copy the contents of the original object
+    // up to the size of the new block.
+
+    size_t minSize = (objSize < sz) ? objSize : sz;
+    memcpy (buf, ptr, minSize);
+
+    // Free the old block.
+
     HOARD_FREE (ptr);
-    return NULL;
-  }
 
-  // If the existing object can hold the new size,
-  // just return it.
+    // Return a pointer to the new one.
 
-  size_t objSize = HEAPTYPE::objectSize (ptr);
-
-  if (objSize >= sz) {
-    return ptr;
-  }
-
-  // Allocate a new block of size sz.
-
-  void * buf = HOARD_MALLOC (sz);
-
-  // Copy the contents of the original object
-  // up to the size of the new block.
-
-  size_t minSize = (objSize < sz) ? objSize : sz;
-  memcpy (buf, ptr, minSize);
-
-  // Free the old block.
-
-  HOARD_FREE (ptr);
-
-  // Return a pointer to the new one.
-
-  return buf;
+    return buf;
 }
 
 
@@ -183,80 +184,88 @@ extern "C" void * HOARD_REALLOC (void * ptr, size_t sz)
 // Replace the CRT debugging allocation routines, just to be on the safe side.
 // This is not a complete solution, but should avoid inadvertent mixing of allocations.
 
-extern "C" void * _malloc_dbg (size_t sz, int, const char *, int) {
-	return HOARD_MALLOC (sz);
+extern "C" void * _malloc_dbg (size_t sz, int, const char *, int)
+{
+    return HOARD_MALLOC (sz);
 }
 
 void * operator new(
-        unsigned int cb,
-        int nBlockUse,
-        const char * szFileName,
-        int nLine
-        )
+    unsigned int cb,
+    int nBlockUse,
+    const char * szFileName,
+    int nLine
+)
 {
-	return HOARD_MALLOC (cb);
+    return HOARD_MALLOC (cb);
 }
 
-extern "C" void * _calloc_dbg (size_t num, size_t size, int, const char *, int) {
-	return HOARD_CALLOC (num, size);
+extern "C" void * _calloc_dbg (size_t num, size_t size, int, const char *, int)
+{
+    return HOARD_CALLOC (num, size);
 }
 
-extern "C" void * _realloc_dbg (void * ptr, size_t newSize, int, const char *, int) {
-	return HOARD_REALLOC (ptr, newSize);
+extern "C" void * _realloc_dbg (void * ptr, size_t newSize, int, const char *, int)
+{
+    return HOARD_REALLOC (ptr, newSize);
 }
 
-extern "C" void _free_dbg (void * ptr, int) {
-	HOARD_FREE (ptr);
+extern "C" void _free_dbg (void * ptr, int)
+{
+    HOARD_FREE (ptr);
 }
 
-extern "C" size_t _msize_dbg (void * ptr) {
-  // Find the block and superblock corresponding to this ptr.
+extern "C" size_t _msize_dbg (void * ptr)
+{
+    // Find the block and superblock corresponding to this ptr.
 
-  block * b = (block *) ptr - 1;
-  assert (b->isValid());
-
-  // Check to see if this block came from a memalign() call.
-  if (((unsigned long) b->getNext() & 1) == 1) {
-    // It did. Set the block to the actual block header.
-    b = (block *) ((unsigned long) b->getNext() & ~1);
+    block * b = (block *) ptr - 1;
     assert (b->isValid());
-  }
 
-  superblock * sb = b->getSuperblock();
-  assert (sb);
-  assert (sb->isValid());
+    // Check to see if this block came from a memalign() call.
+    if (((unsigned long) b->getNext() & 1) == 1) {
+        // It did. Set the block to the actual block header.
+        b = (block *) ((unsigned long) b->getNext() & ~1);
+        assert (b->isValid());
+    }
 
-  const int sizeclass = sb->getBlockSizeClass();
-  return hoardHeap::sizeFromClass (sizeclass);
+    superblock * sb = b->getSuperblock();
+    assert (sb);
+    assert (sb->isValid());
+
+    const int sizeclass = sb->getBlockSizeClass();
+    return hoardHeap::sizeFromClass (sizeclass);
 }
 
-extern "C" size_t _msize (void * ptr) {
-  // Find the block and superblock corresponding to this ptr.
+extern "C" size_t _msize (void * ptr)
+{
+    // Find the block and superblock corresponding to this ptr.
 
-  block * b = (block *) ptr - 1;
-  assert (b->isValid());
-
-  // Check to see if this block came from a memalign() call.
-  if (((unsigned long) b->getNext() & 1) == 1) {
-    // It did. Set the block to the actual block header.
-    b = (block *) ((unsigned long) b->getNext() & ~1);
+    block * b = (block *) ptr - 1;
     assert (b->isValid());
-  }
 
-  superblock * sb = b->getSuperblock();
-  assert (sb);
-  assert (sb->isValid());
+    // Check to see if this block came from a memalign() call.
+    if (((unsigned long) b->getNext() & 1) == 1) {
+        // It did. Set the block to the actual block header.
+        b = (block *) ((unsigned long) b->getNext() & ~1);
+        assert (b->isValid());
+    }
 
-  const int sizeclass = sb->getBlockSizeClass();
-  return hoardHeap::sizeFromClass (sizeclass);
+    superblock * sb = b->getSuperblock();
+    assert (sb);
+    assert (sb->isValid());
+
+    const int sizeclass = sb->getBlockSizeClass();
+    return hoardHeap::sizeFromClass (sizeclass);
 }
 
-extern "C" void * _nh_malloc_base (size_t sz, int) {
-	return HOARD_MALLOC (sz);
+extern "C" void * _nh_malloc_base (size_t sz, int)
+{
+    return HOARD_MALLOC (sz);
 }
 
-extern "C" void * _nh_malloc_dbg (size_t sz, size_t, int, int, const char *, int) {
-	return HOARD_MALLOC (sz);
+extern "C" void * _nh_malloc_dbg (size_t sz, size_t, int, int, const char *, int)
+{
+    return HOARD_MALLOC (sz);
 }
 
 #endif // WIN32
@@ -265,6 +274,6 @@ extern "C" void * _nh_malloc_dbg (size_t sz, size_t, int, int, const char *, int
 #if 0
 extern "C" void malloc_stats (void)
 {
-  TheWrapper.TheAllocator()->stats();
+    TheWrapper.TheAllocator()->stats();
 }
 #endif

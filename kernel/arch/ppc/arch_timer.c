@@ -14,31 +14,31 @@ static uint32 periodic_tick_val;
 
 void arch_timer_set_hardware_timer(bigtime_t timeout, int type)
 {
-	bigtime_t new_val_64;
+    bigtime_t new_val_64;
 
-	if(timeout < 1000)
-		timeout = 1000;
+    if (timeout < 1000)
+        timeout = 1000;
 
-	new_val_64 = (timeout * tick_rate) / 1000000;
+    new_val_64 = (timeout * tick_rate) / 1000000;
 
-	asm("mtdec	%0" :: "r"((uint32)new_val_64));
-	
-	periodic_tick_val = new_val_64;
+    asm("mtdec	%0" :: "r"((uint32)new_val_64));
+
+    periodic_tick_val = new_val_64;
 }
 
 void ppc_timer_reset(void)
 {
-	asm("mtdec	%0" :: "r"((uint32)periodic_tick_val));
+    asm("mtdec	%0" :: "r"((uint32)periodic_tick_val));
 }
 
 void arch_timer_clear_hardware_timer()
 {
-	asm("mtdec	%0" :: "r"(0x7fffffff));
+    asm("mtdec	%0" :: "r"(0x7fffffff));
 }
 
 int arch_init_timer(kernel_args *ka)
 {
-	tick_rate = (66*1000*1000) / 4; // XXX fix
+    tick_rate = (66*1000*1000) / 4; // XXX fix
 
-	return 0;
+    return 0;
 }

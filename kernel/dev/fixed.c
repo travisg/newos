@@ -20,14 +20,14 @@
 /* loads all the fixed drivers */
 int fixed_devs_init(kernel_args *ka)
 {
-	null_dev_init(ka);
-	zero_dev_init(ka);
-	dprint_dev_init(ka);
+    null_dev_init(ka);
+    zero_dev_init(ka);
+    dprint_dev_init(ka);
 
 #ifdef ARCH_sh4
-	maple_bus_init(ka);
-	keyboard_dev_init(ka);
+    maple_bus_init(ka);
+    keyboard_dev_init(ka);
 #endif
 
-	return 0;
+    return 0;
 }

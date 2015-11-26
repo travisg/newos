@@ -10,13 +10,13 @@
 ssize_t
 read(int fd, void *buf, size_t len)
 {
-	int retval;
+    int retval;
 
-	retval= _kern_read(fd, buf, -1, len);
+    retval= _kern_read(fd, buf, -1, len);
 
-	if(retval< 0) {
-		errno = retval;
-	}
+    if (retval< 0) {
+        errno = retval;
+    }
 
-	return retval;
+    return retval;
 }

@@ -1,9 +1,9 @@
-/*	$OpenBSD: saerrno.h,v 1.4 1996/10/29 08:00:58 mickey Exp $	*/
-/*	$NetBSD: saerrno.h,v 1.6 1995/09/18 21:19:45 pk Exp $	*/
+/*  $OpenBSD: saerrno.h,v 1.4 1996/10/29 08:00:58 mickey Exp $  */
+/*  $NetBSD: saerrno.h,v 1.6 1995/09/18 21:19:45 pk Exp $   */
 
 /*
  * Copyright (c) 1988, 1993
- *	The Regents of the University of California.  All rights reserved.
+ *  The Regents of the University of California.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -15,8 +15,8 @@
  *    documentation and/or other materials provided with the distribution.
  * 3. All advertising materials mentioning features or use of this software
  *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
+ *  This product includes software developed by the University of
+ *  California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -33,7 +33,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	@(#)saerrno.h	8.1 (Berkeley) 6/11/93
+ *  @(#)saerrno.h   8.1 (Berkeley) 6/11/93
  */
 
 #include <sys/errno.h>
@@ -41,19 +41,19 @@
 extern int errno;
 
 /* special stand error codes */
-#define	EADAPT	(ELAST+1)	/* bad adaptor */
-#define	ECTLR	(ELAST+2)	/* bad controller */
-#define	EUNIT	(ELAST+3)	/* bad drive */
-#define	EPART	(ELAST+4)	/* bad partition */
-#define	ERDLAB	(ELAST+5)	/* can't read disk label */
-#define	EUNLAB	(ELAST+6)	/* unlabeled disk */
-#define	EOFFSET	(ELAST+7)	/* relative seek not supported */
-#define	ECMD	(ELAST+8)	/* undefined driver command */
-#define	EBSE	(ELAST+9)	/* bad sector error */
-#define	EWCK	(ELAST+10)	/* write check error */
-#define	EECC	(ELAST+11)	/* uncorrectable ecc error */
-#define	EHER	(ELAST+12)	/* hard error */
-#define	ESALAST	(ELAST+12)	/* */
+#define EADAPT  (ELAST+1)   /* bad adaptor */
+#define ECTLR   (ELAST+2)   /* bad controller */
+#define EUNIT   (ELAST+3)   /* bad drive */
+#define EPART   (ELAST+4)   /* bad partition */
+#define ERDLAB  (ELAST+5)   /* can't read disk label */
+#define EUNLAB  (ELAST+6)   /* unlabeled disk */
+#define EOFFSET (ELAST+7)   /* relative seek not supported */
+#define ECMD    (ELAST+8)   /* undefined driver command */
+#define EBSE    (ELAST+9)   /* bad sector error */
+#define EWCK    (ELAST+10)  /* write check error */
+#define EECC    (ELAST+11)  /* uncorrectable ecc error */
+#define EHER    (ELAST+12)  /* hard error */
+#define ESALAST (ELAST+12)  /* */
 
-char	*strerror __P((int err));
+char    *strerror __P((int err));
 

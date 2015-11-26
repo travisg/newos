@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 1987, 1993
- *	The Regents of the University of California.  All rights reserved.
+ *  The Regents of the University of California.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -12,8 +12,8 @@
  *    documentation and/or other materials provided with the distribution.
  * 3. All advertising materials mentioning features or use of this software
  *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
+ *  This product includes software developed by the University of
+ *  California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	@(#)trig.h	8.1 (Berkeley) 6/4/93
+ *  @(#)trig.h  8.1 (Berkeley) 6/4/93
  */
 
 #include "mathimpl.h"
@@ -50,30 +50,30 @@ ic(PI,     3.1415926535897931160E0  ,  1, 1.921FB54442D18)
 ic(PI2,    6.2831853071795862320E0  ,  2, 1.921FB54442D18)
 
 #ifdef vccast
-#define	thresh	vccast(thresh)
-#define	PIo4	vccast(PIo4)
-#define	PIo2	vccast(PIo2)
-#define	PI3o4	vccast(PI3o4)
-#define	PI	vccast(PI)
-#define	PI2	vccast(PI2)
+#define thresh  vccast(thresh)
+#define PIo4    vccast(PIo4)
+#define PIo2    vccast(PIo2)
+#define PI3o4   vccast(PI3o4)
+#define PI  vccast(PI)
+#define PI2 vccast(PI2)
 #endif
 
 #ifdef national
-static long fmaxx[]	= { 0xffffffff, 0x7fefffff};
+static long fmaxx[] = { 0xffffffff, 0x7fefffff};
 #define   fmax    (*(double*)fmaxx)
-#endif	/* national */
+#endif  /* national */
 
 static const double
-	zero = 0,
-	one = 1,
-	negone = -1,
-	half = 1.0/2.0,
-	small = 1E-10,	/* 1+small**2 == 1; better values for small:
-			 *		small	= 1.5E-9 for VAX D
-			 *			= 1.2E-8 for IEEE Double
-			 *			= 2.8E-10 for IEEE Extended
-			 */
-	big = 1E20;	/* big := 1/(small**2) */
+zero = 0,
+one = 1,
+negone = -1,
+half = 1.0/2.0,
+small = 1E-10,  /* 1+small**2 == 1; better values for small:
+             *      small   = 1.5E-9 for VAX D
+             *          = 1.2E-8 for IEEE Double
+             *          = 2.8E-10 for IEEE Extended
+             */
+        big = 1E20; /* big := 1/(small**2) */
 
 /* sin__S(x*x) ... re-implemented as a macro
  * DOUBLE PRECISION (VAX D format 56 bits, IEEE DOUBLE 53 BITS)
@@ -81,32 +81,32 @@ static const double
  * CODED IN C BY K.C. NG, 1/21/85;
  * REVISED BY K.C. NG on 8/13/85.
  *
- *	    sin(x*k) - x
+ *      sin(x*k) - x
  * RETURN  --------------- on [-PI/4,PI/4] , where k=pi/PI, PI is the rounded
- *	            x
+ *              x
  * value of pi in machine precision:
  *
- *	Decimal:
- *		pi = 3.141592653589793 23846264338327 .....
+ *  Decimal:
+ *      pi = 3.141592653589793 23846264338327 .....
  *    53 bits   PI = 3.141592653589793 115997963 ..... ,
  *    56 bits   PI = 3.141592653589793 227020265 ..... ,
  *
- *	Hexadecimal:
- *		pi = 3.243F6A8885A308D313198A2E....
+ *  Hexadecimal:
+ *      pi = 3.243F6A8885A308D313198A2E....
  *    53 bits   PI = 3.243F6A8885A30  =  2 * 1.921FB54442D18
  *    56 bits   PI = 3.243F6A8885A308 =  4 * .C90FDAA22168C2
  *
  * Method:
- *	1. Let z=x*x. Create a polynomial approximation to
- *	    (sin(k*x)-x)/x  =  z*(S0 + S1*z^1 + ... + S5*z^5).
- *	Then
+ *  1. Let z=x*x. Create a polynomial approximation to
+ *      (sin(k*x)-x)/x  =  z*(S0 + S1*z^1 + ... + S5*z^5).
+ *  Then
  *      sin__S(x*x) = z*(S0 + S1*z^1 + ... + S5*z^5)
  *
- *	The coefficient S's are obtained by a special Remez algorithm.
+ *  The coefficient S's are obtained by a special Remez algorithm.
  *
  * Accuracy:
- *	In the absence of rounding error, the approximation has absolute error
- *	less than 2**(-61.11) for VAX D FORMAT, 2**(-57.45) for IEEE DOUBLE.
+ *  In the absence of rounding error, the approximation has absolute error
+ *  less than 2**(-61.11) for VAX D FORMAT, 2**(-57.45) for IEEE DOUBLE.
  *
  * Constants:
  * The hexadecimal values are the intended ones for the following constants.
@@ -132,20 +132,20 @@ ic(S4, -2.5050225177523807003E-8  , -26, -1.AE5C0E319A4EF)
 ic(S5,  1.5868926979889205164E-10 , -33,  1.5CF61DF672B13)
 
 #ifdef vccast
-#define	S0	vccast(S0)
-#define	S1	vccast(S1)
-#define	S2	vccast(S2)
-#define	S3	vccast(S3)
-#define	S4	vccast(S4)
-#define	S5	vccast(S5)
-#define	S6	vccast(S6)
+#define S0  vccast(S0)
+#define S1  vccast(S1)
+#define S2  vccast(S2)
+#define S3  vccast(S3)
+#define S4  vccast(S4)
+#define S5  vccast(S5)
+#define S6  vccast(S6)
 #endif
 
 #if defined(vax)||defined(tahoe)
-#  define	sin__S(z)	(z*(S0+z*(S1+z*(S2+z*(S3+z*(S4+z*(S5+z*S6)))))))
-#else 	/* defined(vax)||defined(tahoe) */
-#  define	sin__S(z)	(z*(S0+z*(S1+z*(S2+z*(S3+z*(S4+z*S5))))))
-#endif 	/* defined(vax)||defined(tahoe) */
+#  define   sin__S(z)   (z*(S0+z*(S1+z*(S2+z*(S3+z*(S4+z*(S5+z*S6)))))))
+#else   /* defined(vax)||defined(tahoe) */
+#  define   sin__S(z)   (z*(S0+z*(S1+z*(S2+z*(S3+z*(S4+z*S5))))))
+#endif  /* defined(vax)||defined(tahoe) */
 
 /* cos__C(x*x) ... re-implemented as a macro
  * DOUBLE PRECISION (VAX D FORMAT 56 BITS, IEEE DOUBLE 53 BITS)
@@ -153,33 +153,33 @@ ic(S5,  1.5868926979889205164E-10 , -33,  1.5CF61DF672B13)
  * CODED IN C BY K.C. NG, 1/21/85;
  * REVISED BY K.C. NG on 8/13/85.
  *
- *	   		    x*x
+ *              x*x
  * RETURN   cos(k*x) - 1 + ----- on [-PI/4,PI/4],  where k = pi/PI,
- *	  		     2
+ *               2
  * PI is the rounded value of pi in machine precision :
  *
- *	Decimal:
- *		pi = 3.141592653589793 23846264338327 .....
+ *  Decimal:
+ *      pi = 3.141592653589793 23846264338327 .....
  *    53 bits   PI = 3.141592653589793 115997963 ..... ,
  *    56 bits   PI = 3.141592653589793 227020265 ..... ,
  *
- *	Hexadecimal:
- *		pi = 3.243F6A8885A308D313198A2E....
+ *  Hexadecimal:
+ *      pi = 3.243F6A8885A308D313198A2E....
  *    53 bits   PI = 3.243F6A8885A30  =  2 * 1.921FB54442D18
  *    56 bits   PI = 3.243F6A8885A308 =  4 * .C90FDAA22168C2
  *
  *
  * Method:
- *	1. Let z=x*x. Create a polynomial approximation to
- *	    cos(k*x)-1+z/2  =  z*z*(C0 + C1*z^1 + ... + C5*z^5)
- *	then
+ *  1. Let z=x*x. Create a polynomial approximation to
+ *      cos(k*x)-1+z/2  =  z*z*(C0 + C1*z^1 + ... + C5*z^5)
+ *  then
  *      cos__C(z) =  z*z*(C0 + C1*z^1 + ... + C5*z^5)
  *
- *	The coefficient C's are obtained by a special Remez algorithm.
+ *  The coefficient C's are obtained by a special Remez algorithm.
  *
  * Accuracy:
- *	In the absence of rounding error, the approximation has absolute error
- *	less than 2**(-64) for VAX D FORMAT, 2**(-58.3) for IEEE DOUBLE.
+ *  In the absence of rounding error, the approximation has absolute error
+ *  less than 2**(-64) for VAX D FORMAT, 2**(-58.3) for IEEE DOUBLE.
  *
  *
  * Constants:
@@ -204,12 +204,12 @@ ic(C4,  2.0873958177697780076E-9  , -29,  1.1EE3B60DDDC8C)
 ic(C5, -1.1250289076471311557E-11 , -37, -1.8BD5986B2A52E)
 
 #ifdef vccast
-#define	C0	vccast(C0)
-#define	C1	vccast(C1)
-#define	C2	vccast(C2)
-#define	C3	vccast(C3)
-#define	C4	vccast(C4)
-#define	C5	vccast(C5)
+#define C0  vccast(C0)
+#define C1  vccast(C1)
+#define C2  vccast(C2)
+#define C3  vccast(C3)
+#define C4  vccast(C4)
+#define C5  vccast(C5)
 #endif
 
-#define cos__C(z)	(z*z*(C0+z*(C1+z*(C2+z*(C3+z*(C4+z*C5))))))
+#define cos__C(z)   (z*z*(C0+z*(C1+z*(C2+z*(C3+z*(C4+z*C5))))))

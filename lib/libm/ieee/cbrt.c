@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 1985, 1993
- *	The Regents of the University of California.  All rights reserved.
+ *  The Regents of the University of California.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -12,8 +12,8 @@
  *    documentation and/or other materials provided with the distribution.
  * 3. All advertising materials mentioning features or use of this software
  *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
+ *  This product includes software developed by the University of
+ *  California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -43,7 +43,7 @@ static char sccsid[] = "@(#)cbrt.c	8.1 (Berkeley) 6/4/93";
  * coded in C by K.C. Ng, 4/30/85
  *
  * Accuracy:
- *	better than 0.667 ulps according to an error analysis. Maximum
+ *  better than 0.667 ulps according to an error analysis. Maximum
  * error observed was 0.666 ulps in an 1,000,000 random arguments test.
  *
  * Warning: this code is semi machine dependent; the ordering of words in
@@ -67,61 +67,62 @@ static double const G= 5./14.;
 double
 cbrt(double x)
 {
-	double r;
-	double s;
-	double t=0.0;
-	double w;
-	unsigned long *px = (unsigned long *) &x;
-	unsigned long *pt = (unsigned long *) &t;
-	unsigned long mexp;
-	unsigned long sign;
+    double r;
+    double s;
+    double t=0.0;
+    double w;
+    unsigned long *px = (unsigned long *) &x;
+    unsigned long *pt = (unsigned long *) &t;
+    unsigned long mexp;
+    unsigned long sign;
 
 #ifdef national /* ordering of words in a floating points number */
-	const int n0=1;
-	const int n1=0;
-#else	/* national */
-	const int n0=0;
-	const int n1=1;
-#endif	/* national */
+    const int n0=1;
+    const int n1=0;
+#else   /* national */
+    const int n0=0;
+    const int n1=1;
+#endif  /* national */
 
-	mexp=px[n0]&0x7ff00000;
-	if(mexp==0x7ff00000) return(x); /* cbrt(NaN,INF) is itself */
-	if(x==0.0) return(x);		/* cbrt(0) is itself */
+    mexp=px[n0]&0x7ff00000;
+    if (mexp==0x7ff00000) return (x); /* cbrt(NaN,INF) is itself */
+    if (x==0.0) return (x);     /* cbrt(0) is itself */
 
-	sign=px[n0]&0x80000000; /* sign= sign(x) */
-	px[n0] ^= sign;		/* x=|x| */
+    sign=px[n0]&0x80000000; /* sign= sign(x) */
+    px[n0] ^= sign;     /* x=|x| */
 
 
     /* rough cbrt to 5 bits */
-	if(mexp==0) {
- 	   /* subnormal number */
-	    pt[n0]=0x43500000; 	/* set t= 2**54 */
-	    t*=x;
-	    pt[n0]=pt[n0]/3+B2;
-	} else {
-	   pt[n0]=px[n0]/3+B1;
-	}
+    if (mexp==0) {
+        /* subnormal number */
+        pt[n0]=0x43500000;  /* set t= 2**54 */
+        t*=x;
+        pt[n0]=pt[n0]/3+B2;
+    } else {
+        pt[n0]=px[n0]/3+B1;
+    }
 
 
     /* new cbrt to 23 bits, may be implemented in single precision */
-	r=t*t/x;
-	s=C+r*t;
-	t*=G+F/(s+E+D/s);
+    r=t*t/x;
+    s=C+r*t;
+    t*=G+F/(s+E+D/s);
 
     /* chopped to 20 bits and make it larger than cbrt(x) */
-	pt[n1]=0; pt[n0]+=0x00000001;
+    pt[n1]=0;
+    pt[n0]+=0x00000001;
 
 
     /* one step newton iteration to 53 bits with error less than 0.667 ulps */
-	s=t*t;		/* t*t is exact */
-	r=x/s;
-	w=t+t;
-	r=(r-t)/(w+r);	/* r-t is exact */
-	t=t+t*r;
+    s=t*t;      /* t*t is exact */
+    r=x/s;
+    w=t+t;
+    r=(r-t)/(w+r);  /* r-t is exact */
+    t=t+t*r;
 
 
     /* retore the sign bit */
-	pt[n0] |= sign;
-	return(t);
+    pt[n0] |= sign;
+    return (t);
 }
 #endif

@@ -1,5 +1,5 @@
-/*	$OpenBSD: dvma.c,v 1.1 1997/09/17 10:46:18 downsj Exp $	*/
-/*	$NetBSD: dvma.c,v 1.2 1995/09/17 00:50:56 pk Exp $	*/
+/*  $OpenBSD: dvma.c,v 1.1 1997/09/17 10:46:18 downsj Exp $ */
+/*  $NetBSD: dvma.c,v 1.2 1995/09/17 00:50:56 pk Exp $  */
 /*
  * Copyright (c) 1995 Gordon W. Ross
  * All rights reserved.
@@ -44,22 +44,22 @@
 
 #include <promdev.h>
 
-#define	DVMA_BASE	0xFFF00000
-#define DVMA_MAPLEN	0xE0000	/* 1 MB - 128K (save MONSHORTSEG) */
+#define DVMA_BASE   0xFFF00000
+#define DVMA_MAPLEN 0xE0000 /* 1 MB - 128K (save MONSHORTSEG) */
 
-#define SA_MIN_VA	(RELOC - 0x40000)	/* XXX - magic constant */
-#define SA_MAX_VA	(SA_MIN_VA + DVMA_MAPLEN)
+#define SA_MIN_VA   (RELOC - 0x40000)   /* XXX - magic constant */
+#define SA_MAX_VA   (SA_MIN_VA + DVMA_MAPLEN)
 
 void
 dvma_init()
 {
-	register int segva, dmava;
+    register int segva, dmava;
 
-	dmava = DVMA_BASE;
-	for (segva = SA_MIN_VA; segva < SA_MAX_VA; segva += NBPSG) {
-		setsegmap(dmava, getsegmap(segva));
-		dmava += NBPSG;
-	}
+    dmava = DVMA_BASE;
+    for (segva = SA_MIN_VA; segva < SA_MAX_VA; segva += NBPSG) {
+        setsegmap(dmava, getsegmap(segva));
+        dmava += NBPSG;
+    }
 }
 
 /*
@@ -68,15 +68,15 @@ dvma_init()
 char *
 dvma_mapin(char *addr, size_t len)
 {
-	register int va = (int)addr;
+    register int va = (int)addr;
 
-	/* Make sure the address is in the DVMA map. */
-	if ((va < SA_MIN_VA) || (va >= SA_MAX_VA))
-		panic("dvma_mapin");
+    /* Make sure the address is in the DVMA map. */
+    if ((va < SA_MIN_VA) || (va >= SA_MAX_VA))
+        panic("dvma_mapin");
 
-	va += DVMA_BASE - SA_MIN_VA;
+    va += DVMA_BASE - SA_MIN_VA;
 
-	return ((char *)va);
+    return ((char *)va);
 }
 
 /*
@@ -85,15 +85,15 @@ dvma_mapin(char *addr, size_t len)
 char *
 dvma_mapout(char *addr, size_t len)
 {
-	int va = (int)addr;
+    int va = (int)addr;
 
-	/* Make sure the address is in the DVMA map. */
-	if ((va < DVMA_BASE) || (va >= (DVMA_BASE + DVMA_MAPLEN)))
-		panic("dvma_mapout");
+    /* Make sure the address is in the DVMA map. */
+    if ((va < DVMA_BASE) || (va >= (DVMA_BASE + DVMA_MAPLEN)))
+        panic("dvma_mapout");
 
-	va -= DVMA_BASE - SA_MIN_VA;
+    va -= DVMA_BASE - SA_MIN_VA;
 
-	return ((char *)va);
+    return ((char *)va);
 }
 
 extern char *alloc __P((int));
@@ -101,22 +101,22 @@ extern char *alloc __P((int));
 char *
 dvma_alloc(int len)
 {
-	char *mem;
+    char *mem;
 
-	mem = alloc(len);
-	if (!mem)
-		return (mem);
-	return (dvma_mapin(mem, len));
+    mem = alloc(len);
+    if (!mem)
+        return (mem);
+    return (dvma_mapin(mem, len));
 }
 
 extern void free(void *ptr, int len);
 void
 dvma_free(char *dvma, int len)
 {
-	char *mem;
+    char *mem;
 
-	mem = dvma_mapout(dvma, len);
-	if (mem)
-		free(mem, len);
+    mem = dvma_mapout(dvma, len);
+    if (mem)
+        free(mem, len);
 }
 

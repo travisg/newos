@@ -12,23 +12,23 @@
 #include <signal.h>
 
 typedef enum {
-	STREAM_TYPE_ANY = 0,
-	STREAM_TYPE_FILE,
-	STREAM_TYPE_DIR,
-	STREAM_TYPE_DEVICE,
-	STREAM_TYPE_PIPE
+    STREAM_TYPE_ANY = 0,
+    STREAM_TYPE_FILE,
+    STREAM_TYPE_DIR,
+    STREAM_TYPE_DEVICE,
+    STREAM_TYPE_PIPE
 } stream_type;
 
 typedef enum {
-	_SEEK_SET = 0,
-	_SEEK_CUR,
-	_SEEK_END
+    _SEEK_SET = 0,
+    _SEEK_CUR,
+    _SEEK_END
 } seek_type;
 
 struct file_stat {
-	vnode_id 	vnid;
-	stream_type	type;
-	off_t		size;
+    vnode_id    vnid;
+    stream_type type;
+    off_t       size;
 };
 
 #define SEM_FLAG_NO_RESCHED 1
@@ -39,78 +39,78 @@ struct file_stat {
 
 // info about a region that external entities may want to know
 typedef struct vm_region_info {
-	region_id id;
-	addr_t base;
-	addr_t size;
-	int lock;
-	int wiring;
-	char name[SYS_MAX_OS_NAME_LEN];
+    region_id id;
+    addr_t base;
+    addr_t size;
+    int lock;
+    int wiring;
+    char name[SYS_MAX_OS_NAME_LEN];
 } vm_region_info;
 
 typedef struct sem_info {
-	sem_id		sem;
-	proc_id		proc;
-	char		name[SYS_MAX_OS_NAME_LEN];
-	int32		count;
-	thread_id	latest_holder;
+    sem_id      sem;
+    proc_id     proc;
+    char        name[SYS_MAX_OS_NAME_LEN];
+    int32       count;
+    thread_id   latest_holder;
 } sem_info;
 
 typedef struct port_info {
-	port_id id;
-	proc_id owner;
-	char name[SYS_MAX_OS_NAME_LEN];
-	int32 capacity;
-	int32 queue_count;
-	int32 total_count;
+    port_id id;
+    proc_id owner;
+    char name[SYS_MAX_OS_NAME_LEN];
+    int32 capacity;
+    int32 queue_count;
+    int32 total_count;
 } port_info;
 
 struct proc_info {
-	proc_id pid;
-	proc_id ppid;
-	pgrp_id pgid;
-	sess_id sid;
-	int state;
-	int num_threads;
-	char name[SYS_MAX_OS_NAME_LEN];
+    proc_id pid;
+    proc_id ppid;
+    pgrp_id pgid;
+    sess_id sid;
+    int state;
+    int num_threads;
+    char name[SYS_MAX_OS_NAME_LEN];
 };
 
 struct thread_info {
-	thread_id id;
-	proc_id owner_proc_id;
+    thread_id id;
+    proc_id owner_proc_id;
 
-	char name[SYS_MAX_OS_NAME_LEN];
-	int state;
-	int priority;
+    char name[SYS_MAX_OS_NAME_LEN];
+    int state;
+    int priority;
 
-	addr_t user_stack_base;
+    addr_t user_stack_base;
 
-	bigtime_t user_time;
-	bigtime_t kernel_time;
+    bigtime_t user_time;
+    bigtime_t kernel_time;
 };
 
 // args to proc_create_proc()
 enum {
-	PROC_FLAG_SUSPENDED = 1,
-	PROC_FLAG_NEW_PGROUP = 2,
-	PROC_FLAG_NEW_SESSION = 4
+    PROC_FLAG_SUSPENDED = 1,
+    PROC_FLAG_NEW_PGROUP = 2,
+    PROC_FLAG_NEW_SESSION = 4
 };
 
 // args for the create_area funcs
 enum {
-	REGION_ADDR_ANY_ADDRESS = 0,
-	REGION_ADDR_EXACT_ADDRESS
+    REGION_ADDR_ANY_ADDRESS = 0,
+    REGION_ADDR_EXACT_ADDRESS
 };
 
 enum {
-	REGION_WIRING_LAZY = 0,
-	REGION_WIRING_WIRED,
-	REGION_WIRING_WIRED_ALREADY,
-	REGION_WIRING_WIRED_CONTIG
- };
+    REGION_WIRING_LAZY = 0,
+    REGION_WIRING_WIRED,
+    REGION_WIRING_WIRED_ALREADY,
+    REGION_WIRING_WIRED_CONTIG
+};
 
 enum {
-	REGION_NO_PRIVATE_MAP = 0,
-	REGION_PRIVATE_MAP
+    REGION_NO_PRIVATE_MAP = 0,
+    REGION_PRIVATE_MAP
 };
 
 #define LOCK_RO        0x0
@@ -120,31 +120,31 @@ enum {
 
 // state of the vm
 typedef struct {
-	// info about the size of memory in the system
-	int physical_page_size;
-	int physical_pages;
+    // info about the size of memory in the system
+    int physical_page_size;
+    int physical_pages;
 
-	// amount of virtual memory left to commit
-	int max_commit;
+    // amount of virtual memory left to commit
+    int max_commit;
 
-	// info about the page queues
-	int active_pages;
-	int inactive_pages;
-	int busy_pages;
-	int unused_pages;
-	int modified_pages;
-	int modified_temporary_pages;
-	int free_pages;
-	int clear_pages;
-	int wired_pages;
+    // info about the page queues
+    int active_pages;
+    int inactive_pages;
+    int busy_pages;
+    int unused_pages;
+    int modified_pages;
+    int modified_temporary_pages;
+    int free_pages;
+    int clear_pages;
+    int wired_pages;
 
-	// info about vm activity
-	int page_faults;
+    // info about vm activity
+    int page_faults;
 } vm_info_t;
 
 typedef enum {
-	TIMER_MODE_ONESHOT = 0,
-	TIMER_MODE_PERIODIC
+    TIMER_MODE_ONESHOT = 0,
+    TIMER_MODE_PERIODIC
 } timer_mode;
 
 #ifdef __cplusplus
@@ -214,11 +214,11 @@ int _kern_proc_wait_on_proc(proc_id pid, int *retcode);
 int _kern_proc_get_proc_info(proc_id id, struct proc_info *info);
 int _kern_proc_get_next_proc_info(uint32 *cookie, struct proc_info *info);
 region_id _kern_vm_create_anonymous_region(const char *name, void **address, int addr_type,
-	addr_t size, int wiring, int lock);
+        addr_t size, int wiring, int lock);
 region_id _kern_vm_clone_region(const char *name, void **address, int addr_type,
-	region_id source_region, int mapping, int lock);
+                                region_id source_region, int mapping, int lock);
 region_id _kern_vm_map_file(const char *name, void **address, int addr_type,
-	addr_t size, int lock, int mapping, const char *path, off_t offset);
+                            addr_t size, int lock, int mapping, const char *path, off_t offset);
 int _kern_vm_delete_region(region_id id);
 int _kern_vm_get_region_info(region_id id, vm_region_info *info);
 int _kern_vm_get_vm_info(vm_info_t *uinfo);
@@ -229,20 +229,20 @@ pgrp_id _kern_getpgid(proc_id);
 sess_id _kern_setsid(void);
 
 /* kernel port functions */
-port_id		_kern_port_create(int32 queue_length, const char *name);
-int			_kern_port_close(port_id id);
-int			_kern_port_delete(port_id id);
-port_id		_kern_port_find(const char *port_name);
-int			_kern_port_get_info(port_id id, struct port_info *info);
-int		 	_kern_port_get_next_port_info(proc_id proc, uint32 *cookie, struct port_info *info);
-ssize_t		_kern_port_buffer_size(port_id port);
-ssize_t		_kern_port_buffer_size_etc(port_id port, uint32 flags, bigtime_t timeout);
-int32		_kern_port_count(port_id port);
-ssize_t		_kern_port_read(port_id port, int32 *msg_code, void *msg_buffer, size_t buffer_size);
-ssize_t		_kern_port_read_etc(port_id port,	int32 *msg_code, void *msg_buffer, size_t buffer_size, uint32 flags, bigtime_t timeout);
-int			_kern_port_set_owner(port_id port, proc_id proc);
-int			_kern_port_write(port_id port, int32 msg_code, void *msg_buffer, size_t buffer_size);
-int			_kern_port_write_etc(port_id port, int32 msg_code, void *msg_buffer, size_t buffer_size, uint32 flags, bigtime_t timeout);
+port_id     _kern_port_create(int32 queue_length, const char *name);
+int         _kern_port_close(port_id id);
+int         _kern_port_delete(port_id id);
+port_id     _kern_port_find(const char *port_name);
+int         _kern_port_get_info(port_id id, struct port_info *info);
+int         _kern_port_get_next_port_info(proc_id proc, uint32 *cookie, struct port_info *info);
+ssize_t     _kern_port_buffer_size(port_id port);
+ssize_t     _kern_port_buffer_size_etc(port_id port, uint32 flags, bigtime_t timeout);
+int32       _kern_port_count(port_id port);
+ssize_t     _kern_port_read(port_id port, int32 *msg_code, void *msg_buffer, size_t buffer_size);
+ssize_t     _kern_port_read_etc(port_id port,   int32 *msg_code, void *msg_buffer, size_t buffer_size, uint32 flags, bigtime_t timeout);
+int         _kern_port_set_owner(port_id port, proc_id proc);
+int         _kern_port_write(port_id port, int32 msg_code, void *msg_buffer, size_t buffer_size);
+int         _kern_port_write_etc(port_id port, int32 msg_code, void *msg_buffer, size_t buffer_size, uint32 flags, bigtime_t timeout);
 
 /* atomic_* ops (needed for cpus that dont support them directly) */
 int _kern_atomic_add(int *val, int incr);

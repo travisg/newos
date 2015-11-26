@@ -12,8 +12,8 @@
 #define MAX_PHYS_ALLOC_ADDR_RANGE 16
 
 typedef struct {
-	addr_t start;
-	addr_t size;
+    addr_t start;
+    addr_t size;
 } addr_range;
 
 #endif

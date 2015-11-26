@@ -10,13 +10,13 @@
 int
 ioctl(int fd, int op, void *buf, size_t len)
 {
-	int retval;
+    int retval;
 
-	retval= _kern_ioctl(fd, op, buf, len);
+    retval= _kern_ioctl(fd, op, buf, len);
 
-	if(retval< 0) {
-		errno = retval;
-	}
+    if (retval< 0) {
+        errno = retval;
+    }
 
-	return retval;
+    return retval;
 }

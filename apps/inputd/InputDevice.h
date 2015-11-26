@@ -9,14 +9,14 @@ class InputServer;
 
 class InputDevice {
 public:
-	InputDevice(int fd, InputServer *srv) {};
-	virtual ~InputDevice() {};
+    InputDevice(int fd, InputServer *srv) {};
+    virtual ~InputDevice() {};
 
-	int Run();
+    int Run();
 protected:
-	virtual int _Run() = 0;
+    virtual int _Run() = 0;
 private:
-	static int ThreadEntry(void *dev);
+    static int ThreadEntry(void *dev);
 };
 
 #endif

@@ -6,9 +6,9 @@
 #include <errno.h>
 #include <sys/syscalls.h>
 
-pid_t 
+pid_t
 getpgid(pid_t pid)
 {
-	return (pid_t)_kern_getpgid((proc_id)pid);
+    return (pid_t)_kern_getpgid((proc_id)pid);
 }
 

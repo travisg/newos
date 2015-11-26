@@ -19,11 +19,11 @@
 #define CB_FR             1   // feature reg              out pio_base_addr1+1
 #define CB_SC             2   // sector count reg      in/out pio_base_addr1+2
 #define CB_SN             3   // sector number reg     in/out pio_base_addr1+3
-                              // or block address 0-7
+// or block address 0-7
 #define CB_CL             4   // cylinder low reg      in/out pio_base_addr1+4
-                              // or block address 8-15
+// or block address 8-15
 #define CB_CH             5   // cylinder high reg     in/out pio_base_addr1+5
-                              // or block address 16-23
+// or block address 16-23
 #define CB_DH             6   // drive/head reg        in/out pio_base_addr1+6
 #define CB_STAT           7   // primary status reg    in     pio_base_addr1+7
 #define CB_CMD            7   // command reg              out pio_base_addr1+7
@@ -174,12 +174,12 @@
 #if 0
 enum {
 //  NO_ERROR = 0,
-  ERR_TIMEOUT = 1,
-  ERR_HARDWARE_ERROR,
-  ERR_DRQ_NOT_SET,
-  ERR_DISK_BUSY,
-  ERR_DEVICE_FAULT,
-  ERR_BUFFER_NOT_EMPTY
+    ERR_TIMEOUT = 1,
+    ERR_HARDWARE_ERROR,
+    ERR_DRQ_NOT_SET,
+    ERR_DISK_BUSY,
+    ERR_DEVICE_FAULT,
+    ERR_BUFFER_NOT_EMPTY
 };
 #endif
 

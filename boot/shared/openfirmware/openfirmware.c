@@ -8,81 +8,81 @@
 #include <stdarg.h>
 
 // OpenFirmware entry function
-static int (*gCallOpenFirmware)(void *) = 0; 
+static int (*gCallOpenFirmware)(void *) = 0;
 int gChosen;
 
 
 int
 of_init(int (*openFirmwareEntry)(void *))
 {
-	gCallOpenFirmware = openFirmwareEntry;
+    gCallOpenFirmware = openFirmwareEntry;
 
-	gChosen = of_finddevice("/chosen");
-	if (gChosen == OF_FAILED)
-		return ERR_NOT_FOUND;
+    gChosen = of_finddevice("/chosen");
+    if (gChosen == OF_FAILED)
+        return ERR_NOT_FOUND;
 
-	return NO_ERROR;
+    return NO_ERROR;
 }
 
 
 int
 of_call_method(const char *method, int numArgs, int numReturns, ...)
 {
-	struct {
-		const char	*name;
-		int			num_args;
-		int			num_returns;
-		void		*args[10];
-	} args = {method, numArgs, numReturns};
-	va_list list;
-	int i;
+    struct {
+        const char  *name;
+        int         num_args;
+        int         num_returns;
+        void        *args[10];
+    } args = {method, numArgs, numReturns};
+    va_list list;
+    int i;
 
-	// iterate over all arguments and copy them into the
-	// structure passed over to the OpenFirmware
+    // iterate over all arguments and copy them into the
+    // structure passed over to the OpenFirmware
 
-	va_start(list, numReturns);
-	for (i = 0; i < numArgs; i++) {
-		// copy args
-		args.args[i] = (void *)va_arg(list, void *);
-	}
-	for (i = numArgs; i < numArgs + numReturns; i++) {
-		// clear return values
-		args.args[i] = NULL;
-	}
-	
-	if (gCallOpenFirmware(&args) == OF_FAILED)
-		return OF_FAILED;
+    va_start(list, numReturns);
+    for (i = 0; i < numArgs; i++) {
+        // copy args
+        args.args[i] = (void *)va_arg(list, void *);
+    }
+    for (i = numArgs; i < numArgs + numReturns; i++) {
+        // clear return values
+        args.args[i] = NULL;
+    }
 
-	if (numReturns > 0) {
-		// copy return values over to the provided location
-	
-		for (i = numArgs; i < numArgs + numReturns; i++) {
-			void **store = va_arg(list, void **);
-			if (store)
-				*store = args.args[i];
-		}
-	}
-	va_end(list);
+    if (gCallOpenFirmware(&args) == OF_FAILED)
+        return OF_FAILED;
 
-	return 0;
+    if (numReturns > 0) {
+        // copy return values over to the provided location
+
+        for (i = numArgs; i < numArgs + numReturns; i++) {
+            void **store = va_arg(list, void **);
+            if (store)
+                *store = args.args[i];
+        }
+    }
+    va_end(list);
+
+    return 0;
 }
 
 
-int 
+int
 of_finddevice(const char *device)
 {
-	struct {
-		const char	*name;
-		int			num_args;
-		int			num_returns;
-		const char	*device;
-		int			handle;
-	} args = {"finddevice", 1, 1, device, 0};
+    struct {
+        const char  *name;
+        int         num_args;
+        int         num_returns;
+        const char  *device;
+        int         handle;
+    } args = {"finddevice", 1, 1, device, 0};
 
-	if (gCallOpenFirmware(&args) == OF_FAILED)
-		return OF_FAILED;
+    if (gCallOpenFirmware(&args) == OF_FAILED)
+        return OF_FAILED;
 
-	return args.handle;
+    return args.handle;
 }
 
 
@@ -92,18 +92,18 @@ of_finddevice(const char *device)
 int
 of_child(int node)
 {
-	struct {
-		const char	*name;
-		int			num_args;
-		int			num_returns;
-		int			node;
-		int			child;
-	} args = {"child", 1, 1, node, 0};
+    struct {
+        const char  *name;
+        int         num_args;
+        int         num_returns;
+        int         node;
+        int         child;
+    } args = {"child", 1, 1, node, 0};
 
-	if (gCallOpenFirmware(&args) == OF_FAILED)
-		return OF_FAILED;
+    if (gCallOpenFirmware(&args) == OF_FAILED)
+        return OF_FAILED;
 
-	return args.child;
+    return args.child;
 }
 
 
@@ -113,18 +113,18 @@ of_child(int node)
 int
 of_peer(int node)
 {
-	struct {
-		const char	*name;
-		int			num_args;
-		int			num_returns;
-		int			node;
-		int			next_sibling;
-	} args = {"peer", 1, 1, node, 0};
+    struct {
+        const char  *name;
+        int         num_args;
+        int         num_returns;
+        int         node;
+        int         next_sibling;
+    } args = {"peer", 1, 1, node, 0};
 
-	if (gCallOpenFirmware(&args) == OF_FAILED)
-		return OF_FAILED;
+    if (gCallOpenFirmware(&args) == OF_FAILED)
+        return OF_FAILED;
 
-	return args.next_sibling;
+    return args.next_sibling;
 }
 
 
@@ -134,251 +134,251 @@ of_peer(int node)
 int
 of_parent(int node)
 {
-	struct {
-		const char	*name;
-		int			num_args;
-		int			num_returns;
-		int			node;
-		int			parent;
-	} args = {"parent", 1, 1, node, 0};
+    struct {
+        const char  *name;
+        int         num_args;
+        int         num_returns;
+        int         node;
+        int         parent;
+    } args = {"parent", 1, 1, node, 0};
 
-	if (gCallOpenFirmware(&args) == OF_FAILED)
-		return OF_FAILED;
+    if (gCallOpenFirmware(&args) == OF_FAILED)
+        return OF_FAILED;
 
-	return args.parent;
+    return args.parent;
 }
 
 
 int
 of_instance_to_path(int instance, char *pathBuffer, int bufferSize)
 {
-	struct {
-		const char	*name;
-		int			num_args;
-		int			num_returns;
-		int			instance;
-		char		*path_buffer;
-		int			buffer_size;
-		int			size;
-	} args = {"instance-to-path", 3, 1, instance, pathBuffer, bufferSize, 0};
+    struct {
+        const char  *name;
+        int         num_args;
+        int         num_returns;
+        int         instance;
+        char        *path_buffer;
+        int         buffer_size;
+        int         size;
+    } args = {"instance-to-path", 3, 1, instance, pathBuffer, bufferSize, 0};
 
-	if (gCallOpenFirmware(&args) == OF_FAILED)
-		return OF_FAILED;
+    if (gCallOpenFirmware(&args) == OF_FAILED)
+        return OF_FAILED;
 
-	return args.size;
+    return args.size;
 }
 
 
-int 
+int
 of_instance_to_package(int instance)
 {
-	struct {
-		const char	*name;
-		int			num_args;
-		int			num_returns;
-		int			instance;
-		int			package;
-	} args = {"instance-to-package", 1, 1, instance, 0};
+    struct {
+        const char  *name;
+        int         num_args;
+        int         num_returns;
+        int         instance;
+        int         package;
+    } args = {"instance-to-package", 1, 1, instance, 0};
 
-	if (gCallOpenFirmware(&args) == OF_FAILED)
-		return OF_FAILED;
+    if (gCallOpenFirmware(&args) == OF_FAILED)
+        return OF_FAILED;
 
-	return args.package;
+    return args.package;
 }
 
 
-int 
+int
 of_getprop(int package, const char *property, void *buffer, int bufferSize)
 {
-	struct {
-		const char	*name;
-		int			num_args;
-		int			num_returns;
-		int			package;
-		const char	*property;
-		void		*buffer;
-		int			buffer_size;
-		int			size;
-	} args = {"getprop", 4, 1, package, property, buffer, bufferSize, 0};
+    struct {
+        const char  *name;
+        int         num_args;
+        int         num_returns;
+        int         package;
+        const char  *property;
+        void        *buffer;
+        int         buffer_size;
+        int         size;
+    } args = {"getprop", 4, 1, package, property, buffer, bufferSize, 0};
 
-	if (gCallOpenFirmware(&args) == OF_FAILED)
-		return OF_FAILED;
+    if (gCallOpenFirmware(&args) == OF_FAILED)
+        return OF_FAILED;
 
-	return args.size;
+    return args.size;
 }
 
 
-int 
+int
 of_setprop(int package, const char *property, const void *buffer, int bufferSize)
 {
-	struct {
-		const char	*name;
-		int			num_args;
-		int			num_returns;
-		int			package;
-		const char	*property;
-		const void	*buffer;
-		int			buffer_size;
-		int			size;
-	} args = {"setprop", 4, 1, package, property, buffer, bufferSize, 0};
+    struct {
+        const char  *name;
+        int         num_args;
+        int         num_returns;
+        int         package;
+        const char  *property;
+        const void  *buffer;
+        int         buffer_size;
+        int         size;
+    } args = {"setprop", 4, 1, package, property, buffer, bufferSize, 0};
 
-	if (gCallOpenFirmware(&args) == OF_FAILED)
-		return OF_FAILED;
+    if (gCallOpenFirmware(&args) == OF_FAILED)
+        return OF_FAILED;
 
-	return args.size;
+    return args.size;
 }
 
 
 int
 of_getproplen(int package, const char *property)
 {
-	struct {
-		const char	*name;
-		int			num_args;
-		int			num_returns;
-		int			package;
-		const char	*property;
-		int			size;
-	} args = {"getproplen", 2, 1, package, property, 0};
+    struct {
+        const char  *name;
+        int         num_args;
+        int         num_returns;
+        int         package;
+        const char  *property;
+        int         size;
+    } args = {"getproplen", 2, 1, package, property, 0};
 
-	if (gCallOpenFirmware(&args) == OF_FAILED)
-		return OF_FAILED;
+    if (gCallOpenFirmware(&args) == OF_FAILED)
+        return OF_FAILED;
 
-	return args.size;
+    return args.size;
 }
 
 
 int
 of_nextprop(int package, const char *previousProperty, char *nextProperty)
 {
-	struct {
-		const char	*name;
-		int			num_args;
-		int			num_returns;
-		int			package;
-		const char	*previous_property;
-		char		*next_property;
-		int			flag;
-	} args = {"nextprop", 3, 1, package, previousProperty, nextProperty, 0};
+    struct {
+        const char  *name;
+        int         num_args;
+        int         num_returns;
+        int         package;
+        const char  *previous_property;
+        char        *next_property;
+        int         flag;
+    } args = {"nextprop", 3, 1, package, previousProperty, nextProperty, 0};
 
-	if (gCallOpenFirmware(&args) == OF_FAILED)
-		return OF_FAILED;
+    if (gCallOpenFirmware(&args) == OF_FAILED)
+        return OF_FAILED;
 
-	return args.flag;
+    return args.flag;
 }
 
 
 int
 of_package_to_path(int package, char *pathBuffer, int bufferSize)
 {
-	struct {
-		const char	*name;
-		int			num_args;
-		int			num_returns;
-		int			package;
-		char		*path_buffer;
-		int			buffer_size;
-		int			size;
-	} args = {"package-to-path", 3, 1, package, pathBuffer, bufferSize, 0};
+    struct {
+        const char  *name;
+        int         num_args;
+        int         num_returns;
+        int         package;
+        char        *path_buffer;
+        int         buffer_size;
+        int         size;
+    } args = {"package-to-path", 3, 1, package, pathBuffer, bufferSize, 0};
 
-	if (gCallOpenFirmware(&args) == OF_FAILED)
-		return OF_FAILED;
+    if (gCallOpenFirmware(&args) == OF_FAILED)
+        return OF_FAILED;
 
-	return args.size;
+    return args.size;
 }
 
 
-//	I/O functions
+//  I/O functions
 
 
-int 
+int
 of_open(const char *nodeName)
 {
-	struct {
-		const char	*name;
-		int			num_args;
-		int			num_returns;
-		const char	*node_name;
-		int			handle;
-	} args = {"open", 1, 1, nodeName, 0};
+    struct {
+        const char  *name;
+        int         num_args;
+        int         num_returns;
+        const char  *node_name;
+        int         handle;
+    } args = {"open", 1, 1, nodeName, 0};
 
-	if (gCallOpenFirmware(&args) == OF_FAILED || args.handle == 0)
-		return OF_FAILED;
+    if (gCallOpenFirmware(&args) == OF_FAILED || args.handle == 0)
+        return OF_FAILED;
 
-	return args.handle;
+    return args.handle;
 }
 
 
 void
 of_close(int handle)
 {
-	struct {
-		const char	*name;
-		int			num_args;
-		int			num_returns;
-		int			handle;
-	} args = {"close", 1, 0, handle};
+    struct {
+        const char  *name;
+        int         num_args;
+        int         num_returns;
+        int         handle;
+    } args = {"close", 1, 0, handle};
 
-	gCallOpenFirmware(&args);
+    gCallOpenFirmware(&args);
 }
 
 
-int 
+int
 of_read(int handle, void *buffer, int bufferSize)
 {
-	struct {
-		const char	*name;
-		int			num_args;
-		int			num_returns;
-		int			handle;
-		void		*buffer;
-		int			buffer_size;
-		int			size;
-	} args = {"read", 3, 1, handle, buffer, bufferSize, 0};
+    struct {
+        const char  *name;
+        int         num_args;
+        int         num_returns;
+        int         handle;
+        void        *buffer;
+        int         buffer_size;
+        int         size;
+    } args = {"read", 3, 1, handle, buffer, bufferSize, 0};
 
-	if (gCallOpenFirmware(&args) == OF_FAILED)
-		return OF_FAILED;
+    if (gCallOpenFirmware(&args) == OF_FAILED)
+        return OF_FAILED;
 
-	return args.size;
+    return args.size;
 }
 
 
-int 
+int
 of_write(int handle, const void *buffer, int bufferSize)
 {
-	struct {
-		const char	*name;
-		int			num_args;
-		int			num_returns;
-		int			handle;
-		const void	*buffer;
-		int			buffer_size;
-		int			size;
-	} args = {"write", 3, 1, handle, buffer, bufferSize, 0};
+    struct {
+        const char  *name;
+        int         num_args;
+        int         num_returns;
+        int         handle;
+        const void  *buffer;
+        int         buffer_size;
+        int         size;
+    } args = {"write", 3, 1, handle, buffer, bufferSize, 0};
 
-	if (gCallOpenFirmware(&args) == OF_FAILED)
-		return OF_FAILED;
+    if (gCallOpenFirmware(&args) == OF_FAILED)
+        return OF_FAILED;
 
-	return args.size;
+    return args.size;
 }
 
 
-int 
+int
 of_seek(int handle, long long pos)
 {
-	struct {
-		const char	*name;
-		int			num_args;
-		int			num_returns;
-		int			handle;
-		int64		pos;
-		int			status;
-	} args = {"seek", 3, 1, handle, pos, 0};
+    struct {
+        const char  *name;
+        int         num_args;
+        int         num_returns;
+        int         handle;
+        int64       pos;
+        int         status;
+    } args = {"seek", 3, 1, handle, pos, 0};
 
-	if (gCallOpenFirmware(&args) == OF_FAILED)
-		return OF_FAILED;
+    if (gCallOpenFirmware(&args) == OF_FAILED)
+        return OF_FAILED;
 
-	return args.status;
+    return args.status;
 }
 
 
@@ -388,35 +388,35 @@ of_seek(int handle, long long pos)
 int
 of_release(void *virtual, int size)
 {
-	struct {
-		const char *name;
-		int			num_args;
-		int			num_returns;
-		void		*virtual;
-		int			size;
-	} args = {"release", 2, 0, virtual, size};
-	
-	return gCallOpenFirmware(&args);
+    struct {
+        const char *name;
+        int         num_args;
+        int         num_returns;
+        void        *virtual;
+        int         size;
+    } args = {"release", 2, 0, virtual, size};
+
+    return gCallOpenFirmware(&args);
 }
 
 
 void *
 of_claim(void *virtual, int size, int align)
 {
-	struct {
-		const char	*name;
-		int			num_args;
-		int			num_returns;
-		void		*virtual;
-		int			size;
-		int			align;
-		void		*address;
-	} args = {"claim", 3, 1, virtual, size, align};
+    struct {
+        const char  *name;
+        int         num_args;
+        int         num_returns;
+        void        *virtual;
+        int         size;
+        int         align;
+        void        *address;
+    } args = {"claim", 3, 1, virtual, size, align};
 
-	if (gCallOpenFirmware(&args) == OF_FAILED)
-		return NULL;
+    if (gCallOpenFirmware(&args) == OF_FAILED)
+        return NULL;
 
-	return args.address;
+    return args.address;
 }
 
 
@@ -429,18 +429,18 @@ of_claim(void *virtual, int size, int align)
 int
 of_test(const char *service)
 {
-	struct {
-		const char	*name;
-		int			num_args;
-		int			num_returns;
-		const char	*service;
-		int			missing;
-	} args = {"test", 1, 1, service, 0};
+    struct {
+        const char  *name;
+        int         num_args;
+        int         num_returns;
+        const char  *service;
+        int         missing;
+    } args = {"test", 1, 1, service, 0};
 
-	if (gCallOpenFirmware(&args) == OF_FAILED)
-		return OF_FAILED;
+    if (gCallOpenFirmware(&args) == OF_FAILED)
+        return OF_FAILED;
 
-	return args.missing;
+    return args.missing;
 }
 
 
@@ -450,28 +450,28 @@ of_test(const char *service)
 int
 of_milliseconds(void)
 {
-	struct {
-		const char	*name;
-		int			num_args;
-		int			num_returns;
-		int			milliseconds;
-	} args = {"milliseconds", 0, 1, 0};
+    struct {
+        const char  *name;
+        int         num_args;
+        int         num_returns;
+        int         milliseconds;
+    } args = {"milliseconds", 0, 1, 0};
 
-	gCallOpenFirmware(&args);
+    gCallOpenFirmware(&args);
 
-	return args.milliseconds;
+    return args.milliseconds;
 }
 
 
 void
 of_exit(void)
 {
-	struct {
-		const char	*name;
-		int			num_args;
-		int			num_returns;
-	} args = {"exit", 0, 0};
+    struct {
+        const char  *name;
+        int         num_args;
+        int         num_returns;
+    } args = {"exit", 0, 0};
 
-	gCallOpenFirmware(&args);
+    gCallOpenFirmware(&args);
 }
 

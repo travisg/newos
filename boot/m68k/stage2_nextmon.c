@@ -104,85 +104,85 @@ static char *mg = 0;
 
 int init_nextmon(char *monitor)
 {
-	mg = monitor;
+    mg = monitor;
 
-	return 0;
+    return 0;
 }
 
 int probe_memory(kernel_args *ka)
 {
-	int i, r;
-	char machine_type = MON(char,MG_machine_type);
-	int msize1, msize4, msize16;
+    int i, r;
+    char machine_type = MON(char,MG_machine_type);
+    int msize1, msize4, msize16;
 
-	/* depending on the machine, the bank layout is different */
-	dprintf("machine type: 0x%x\n", machine_type);
-	switch(machine_type) {
-		case NeXT_WARP9:
-		case NeXT_X15:
-			msize16 = 0x10000000;
-			msize4 = 0x400000;
-			msize1 = 0x100000;
-			break;
-		case NeXT_WARP9C:
-			msize16 = 0x800000;
-			msize4 = 0x200000;
-			msize1 = 0x80000;
-			break;
-		case NeXT_TURBO:
-		case NeXT_TURBO_COLOR:
-			msize16 = 0x2000000;
-			msize4 = 0x800000;
-			msize1 = 0x200000;
-			break;
-		default:
-			msize16 = 0x100000;
-			msize4 = 0x100000;
-			msize1 = 0x100000;
-	}
+    /* depending on the machine, the bank layout is different */
+    dprintf("machine type: 0x%x\n", machine_type);
+    switch (machine_type) {
+        case NeXT_WARP9:
+        case NeXT_X15:
+            msize16 = 0x10000000;
+            msize4 = 0x400000;
+            msize1 = 0x100000;
+            break;
+        case NeXT_WARP9C:
+            msize16 = 0x800000;
+            msize4 = 0x200000;
+            msize1 = 0x80000;
+            break;
+        case NeXT_TURBO:
+        case NeXT_TURBO_COLOR:
+            msize16 = 0x2000000;
+            msize4 = 0x800000;
+            msize1 = 0x200000;
+            break;
+        default:
+            msize16 = 0x100000;
+            msize4 = 0x100000;
+            msize1 = 0x100000;
+    }
 
-	/* start probing ram */
-	dprintf("memory probe:\n");
-	ka->num_phys_mem_ranges = 0;
-	for(i=0; i<N_SIMM; i++) {
-		char probe = MON(char,MG_simm+i);
+    /* start probing ram */
+    dprintf("memory probe:\n");
+    ka->num_phys_mem_ranges = 0;
+    for (i=0; i<N_SIMM; i++) {
+        char probe = MON(char,MG_simm+i);
 
-		if((probe & SIMM_SIZE) != SIMM_SIZE_EMPTY) {
-			ka->phys_mem_range[ka->num_phys_mem_ranges].start = NEXT_RAMBASE + (msize16 * i);
-		}
-		switch(probe & SIMM_SIZE) {
-			case SIMM_SIZE_16MB:
-				ka->phys_mem_range[ka->num_phys_mem_ranges].size = msize16;
-				break;
-			case SIMM_SIZE_4MB:
-				ka->phys_mem_range[ka->num_phys_mem_ranges].size = msize4;
-				break;
-			case SIMM_SIZE_1MB:
-				ka->phys_mem_range[ka->num_phys_mem_ranges].size = msize1;
-				break;
-		}
-		dprintf("bank %i: start 0x%x, size 0x%x\n", i,
-			ka->phys_mem_range[ka->num_phys_mem_ranges].start, ka->phys_mem_range[ka->num_phys_mem_ranges].size);
-		ka->num_phys_mem_ranges++;
-	}
+        if ((probe & SIMM_SIZE) != SIMM_SIZE_EMPTY) {
+            ka->phys_mem_range[ka->num_phys_mem_ranges].start = NEXT_RAMBASE + (msize16 * i);
+        }
+        switch (probe & SIMM_SIZE) {
+            case SIMM_SIZE_16MB:
+                ka->phys_mem_range[ka->num_phys_mem_ranges].size = msize16;
+                break;
+            case SIMM_SIZE_4MB:
+                ka->phys_mem_range[ka->num_phys_mem_ranges].size = msize4;
+                break;
+            case SIMM_SIZE_1MB:
+                ka->phys_mem_range[ka->num_phys_mem_ranges].size = msize1;
+                break;
+        }
+        dprintf("bank %i: start 0x%x, size 0x%x\n", i,
+                ka->phys_mem_range[ka->num_phys_mem_ranges].start, ka->phys_mem_range[ka->num_phys_mem_ranges].size);
+        ka->num_phys_mem_ranges++;
+    }
 
-	dprintf("alloc_base: 0x%x\n", MON(int, MG_alloc_base));
-	dprintf("alloc_brk: 0x%x\n", MON(int, MG_alloc_brk));
-	dprintf("mon_stack: 0x%x\n", MON(int, MG_mon_stack));
+    dprintf("alloc_base: 0x%x\n", MON(int, MG_alloc_base));
+    dprintf("alloc_brk: 0x%x\n", MON(int, MG_alloc_brk));
+    dprintf("mon_stack: 0x%x\n", MON(int, MG_mon_stack));
 
-	/* record allocated ram */
-	ka->num_phys_alloc_ranges = 1;
-	ka->phys_alloc_range[0].start = ROUNDOWN(MON(int, MG_alloc_base), PAGE_SIZE);
+    /* record allocated ram */
+    ka->num_phys_alloc_ranges = 1;
+    ka->phys_alloc_range[0].start = ROUNDOWN(MON(int, MG_alloc_base), PAGE_SIZE);
 
-	return 0;
+    return 0;
 }
 
 void putc(int c)
 {
-	MON(putcptr,MG_putc)(c);
+    MON(putcptr,MG_putc)(c);
 }
 
 int getc(void)
 {
-	return(MON(getcptr,MG_getc)());
+    return (MON(getcptr,MG_getc)());
 }

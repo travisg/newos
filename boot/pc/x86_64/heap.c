@@ -9,9 +9,9 @@ static unsigned char *heap_ptr = (unsigned char *)0x01000000; // 16MB
 
 void *kmalloc(unsigned int size)
 {
-//	dprintf("kmalloc: size %d, ptr %p\n", size, heap_ptr - size);
+//  dprintf("kmalloc: size %d, ptr %p\n", size, heap_ptr - size);
 
-	return (heap_ptr -= size);
+    return (heap_ptr -= size);
 }
 
 void kfree(void *ptr)

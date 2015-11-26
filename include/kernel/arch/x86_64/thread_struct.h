@@ -9,18 +9,18 @@
 
 // architecture specific thread info
 struct arch_thread {
-	addr_t sp;
+    addr_t sp;
 
-	// used to track interrupts on this thread
-	struct iframe *iframes[IFRAME_TRACE_DEPTH];
-	int iframe_ptr;
+    // used to track interrupts on this thread
+    struct iframe *iframes[IFRAME_TRACE_DEPTH];
+    int iframe_ptr;
 
-	// 512 byte floating point save point
-	uint8 fpu_state[512];
+    // 512 byte floating point save point
+    uint8 fpu_state[512];
 };
 
 struct arch_proc {
-	// nothing here
+    // nothing here
 };
 
 #endif

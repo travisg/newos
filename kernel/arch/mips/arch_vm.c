@@ -8,17 +8,17 @@
 
 int arch_vm_init(kernel_args *ka)
 {
-	return 0;
+    return 0;
 }
 
 int arch_vm_init2(kernel_args *ka)
 {
-	return 0;
+    return 0;
 }
 
 int map_page_into_kspace(addr_t paddr, addr_t kaddr, int lock)
 {
-	panic("map_page_into_kspace: XXX finish or dont use!\n");
-	return 0;
+    panic("map_page_into_kspace: XXX finish or dont use!\n");
+    return 0;
 }
 

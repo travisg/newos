@@ -1,4 +1,4 @@
-/*	$OpenBSD: bzero.c,v 1.3 1997/11/07 15:56:38 niklas Exp $	*/
+/*  $OpenBSD: bzero.c,v 1.3 1997/11/07 15:56:38 niklas Exp $    */
 
 /*
  * Copyright (c) 1987 Regents of the University of California.
@@ -14,8 +14,8 @@
  *    documentation and/or other materials provided with the distribution.
  * 3. All advertising materials mentioning features or use of this software
  *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
+ *  This product includes software developed by the University of
+ *  California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -34,7 +34,7 @@
  */
 
 #if defined(LIBC_SCCS) && !defined(lint)
-/*static char *sccsid = "from: @(#)bzero.c	5.7 (Berkeley) 2/24/91";*/
+/*static char *sccsid = "from: @(#)bzero.c  5.7 (Berkeley) 2/24/91";*/
 static char *rcsid = "$OpenBSD: bzero.c,v 1.3 1997/11/07 15:56:38 niklas Exp $";
 #endif /* LIBC_SCCS and not lint */
 
@@ -49,12 +49,12 @@ static char *rcsid = "$OpenBSD: bzero.c,v 1.3 1997/11/07 15:56:38 niklas Exp $";
  */
 void
 bzero(b, length)
-	void *b;
-	register size_t length;
+void *b;
+register size_t length;
 {
-	register char *p;
+    register char *p;
 
-	for (p = b; length--;)
-		*p++ = '\0';
+    for (p = b; length--;)
+        *p++ = '\0';
 }
 

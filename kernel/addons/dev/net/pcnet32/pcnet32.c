@@ -27,138 +27,133 @@ int dev_bootstrap(void);
 
 static int pcnet32_open(dev_ident ident, dev_cookie *cookie)
 {
-	pcnet32 *nic = (pcnet32 *)ident;
+    pcnet32 *nic = (pcnet32 *)ident;
 
-	*cookie = nic;
+    *cookie = nic;
 
-	return 0;
+    return 0;
 }
 
 static int pcnet32_freecookie(dev_cookie cookie)
 {
-	return 0;
+    return 0;
 }
 
 static int pcnet32_seek(dev_cookie cookie, off_t pos, seek_type st)
 {
-	return ERR_NOT_ALLOWED;
+    return ERR_NOT_ALLOWED;
 }
 
 static int pcnet32_close(dev_cookie cookie)
 {
-	return 0;
+    return 0;
 }
 
 static ssize_t pcnet32_read(dev_cookie cookie, void *buf, off_t pos, ssize_t len)
 {
-	pcnet32 *nic = (pcnet32 *)cookie;
+    pcnet32 *nic = (pcnet32 *)cookie;
 
-	if(len < ETHERNET_MAX_SIZE)
-		return ERR_VFS_INSUFFICIENT_BUF;
-	return pcnet32_rx(nic, buf, len);
+    if (len < ETHERNET_MAX_SIZE)
+        return ERR_VFS_INSUFFICIENT_BUF;
+    return pcnet32_rx(nic, buf, len);
 }
 
 static ssize_t pcnet32_write(dev_cookie cookie, const void *buf, off_t pos, ssize_t len)
 {
-	pcnet32 *nic = (pcnet32 *)cookie;
+    pcnet32 *nic = (pcnet32 *)cookie;
 
-	if(len < 0)
-		return ERR_INVALID_ARGS;
+    if (len < 0)
+        return ERR_INVALID_ARGS;
 
-	return pcnet32_xmit(nic, buf, len);
+    return pcnet32_xmit(nic, buf, len);
 }
 
 static int pcnet32_ioctl(dev_cookie cookie, int op, void *buf, size_t len)
 {
-	pcnet32 *nic = (pcnet32 *)cookie;
-	int err = NO_ERROR;
+    pcnet32 *nic = (pcnet32 *)cookie;
+    int err = NO_ERROR;
 
-	SHOW_FLOW(3, "op %d, buf %p, len %Ld\n", op, buf, (long long)len);
+    SHOW_FLOW(3, "op %d, buf %p, len %Ld\n", op, buf, (long long)len);
 
-	if(!nic)
-		return ERR_IO_ERROR;
+    if (!nic)
+        return ERR_IO_ERROR;
 
-	switch(op) {
-		case IOCTL_NET_IF_GET_ADDR: // get the ethernet MAC address
-			if(len >= sizeof(nic->mac_addr)) {
-				memcpy(buf, nic->mac_addr, sizeof(nic->mac_addr));
-			} else {
-				err = ERR_VFS_INSUFFICIENT_BUF;
-			}
-			break;
-	        case IOCTL_NET_IF_GET_TYPE:
-			if (len >= sizeof(int)) {
-				*(int *)buf = IF_TYPE_ETHERNET;
-			} else {
-				err = ERR_VFS_INSUFFICIENT_BUF;
-			}
-			break;
-		default:
-			err = ERR_INVALID_ARGS;
-	}
+    switch (op) {
+        case IOCTL_NET_IF_GET_ADDR: // get the ethernet MAC address
+            if (len >= sizeof(nic->mac_addr)) {
+                memcpy(buf, nic->mac_addr, sizeof(nic->mac_addr));
+            } else {
+                err = ERR_VFS_INSUFFICIENT_BUF;
+            }
+            break;
+        case IOCTL_NET_IF_GET_TYPE:
+            if (len >= sizeof(int)) {
+                *(int *)buf = IF_TYPE_ETHERNET;
+            } else {
+                err = ERR_VFS_INSUFFICIENT_BUF;
+            }
+            break;
+        default:
+            err = ERR_INVALID_ARGS;
+    }
 
-	return err;
+    return err;
 }
 
 static struct dev_calls pcnet32_hooks = {
-	&pcnet32_open,
-	&pcnet32_close,
-	&pcnet32_freecookie,
-	&pcnet32_seek,
-	&pcnet32_ioctl,
-	&pcnet32_read,
-	&pcnet32_write,
-	/* no paging here */
-	NULL,
-	NULL,
-	NULL
+    &pcnet32_open,
+    &pcnet32_close,
+    &pcnet32_freecookie,
+    &pcnet32_seek,
+    &pcnet32_ioctl,
+    &pcnet32_read,
+    &pcnet32_write,
+    /* no paging here */
+    NULL,
+    NULL,
+    NULL
 };
 
 int dev_bootstrap(void)
 {
-	int err = 0;
-	pcnet32 *nic = NULL;
-	pci_module_hooks *bus = NULL;
+    int err = 0;
+    pcnet32 *nic = NULL;
+    pci_module_hooks *bus = NULL;
 
-	SHOW_FLOW0(3, "entry");
-	
-	err = module_get(PCI_BUS_MODULE_NAME, 0, (void **)&bus);
-        if(err < 0)
-	{
-                SHOW_FLOW(3, "Error finding ISA bus module: %d", err);
-                return err;
+    SHOW_FLOW0(3, "entry");
+
+    err = module_get(PCI_BUS_MODULE_NAME, 0, (void **)&bus);
+    if (err < 0) {
+        SHOW_FLOW(3, "Error finding ISA bus module: %d", err);
+        return err;
+    }
+    SHOW_FLOW(3, "Got bus module: %p", bus);
+
+    nic = pcnet32_new(bus,
+                      PCNET_INIT_MODE0 | PCNET_INIT_RXLEN_128 | PCNET_INIT_TXLEN_32,
+                      2048, 2048);
+
+    if (nic == NULL) {
+        SHOW_FLOW0(3, "pcnet_new returned 0.");
+        return ERR_GENERAL;
+    }
+
+    if (pcnet32_detect(nic) > -1) {
+        if (pcnet32_init(nic) < 0) {
+            SHOW_FLOW0(3, "pcnet_init failed.");
+
+            pcnet32_delete(nic);
+            return ERR_GENERAL;
         }
-	SHOW_FLOW(3, "Got bus module: %p", bus);
 
-	nic = pcnet32_new(bus,
-		PCNET_INIT_MODE0 | PCNET_INIT_RXLEN_128 | PCNET_INIT_TXLEN_32,
-		2048, 2048);
+        pcnet32_start(nic);
 
-	if (nic == NULL)
-	{
-		SHOW_FLOW0(3, "pcnet_new returned 0.");
-		return ERR_GENERAL;
-	}
+        if (devfs_publish_indexed_device("net/pcnet32", nic, &pcnet32_hooks) < 0) {
+            SHOW_FLOW0(3, "failed to register device /dev/net/pcnet32/0");
+            return ERR_GENERAL;
+        }
+    }
 
-	if (pcnet32_detect(nic) > -1)
-	{
-		if (pcnet32_init(nic) < 0)
-		{
-			SHOW_FLOW0(3, "pcnet_init failed.");
-			
-			pcnet32_delete(nic);
-			return ERR_GENERAL;
-		}
-
-		pcnet32_start(nic);
-
-		if (devfs_publish_indexed_device("net/pcnet32", nic, &pcnet32_hooks) < 0)
-		{
-			SHOW_FLOW0(3, "failed to register device /dev/net/pcnet32/0");
-			return ERR_GENERAL;
-		}
-	}
-
-	return 0;
+    return 0;
 }
 

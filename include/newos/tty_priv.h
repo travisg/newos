@@ -14,23 +14,23 @@
 #define TTY_FLAG_DEFAULT_INPUT  (TTY_FLAG_CANON | TTY_FLAG_ECHO | TTY_FLAG_NLCR)
 
 struct tty_flags {
-	int input_flags;
-	int output_flags;
+    int input_flags;
+    int output_flags;
 };
 
 struct tty_winsize {
-	unsigned short cols;
-	unsigned short rows;
+    unsigned short cols;
+    unsigned short rows;
 };
 
 enum {
-	_TTY_IOCTL_GET_TTY_NUM = 10000,
-	_TTY_IOCTL_GET_TTY_FLAGS,
-	_TTY_IOCTL_SET_TTY_FLAGS,
-	_TTY_IOCTL_IS_A_TTY,
-	_TTY_IOCTL_SET_PGRP,
-	_TTY_IOCTL_SET_WINSIZE,
-	_TTY_IOCTL_GET_WINSIZE
+    _TTY_IOCTL_GET_TTY_NUM = 10000,
+    _TTY_IOCTL_GET_TTY_FLAGS,
+    _TTY_IOCTL_SET_TTY_FLAGS,
+    _TTY_IOCTL_IS_A_TTY,
+    _TTY_IOCTL_SET_PGRP,
+    _TTY_IOCTL_SET_WINSIZE,
+    _TTY_IOCTL_GET_WINSIZE
 };
 
 #endif

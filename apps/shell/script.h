@@ -4,18 +4,18 @@
 
 #include <ctype.h>
 
-struct _text_item{
-        struct _text_item *next;
-		char *text;
+struct _text_item {
+    struct _text_item *next;
+    char *text;
 };
 
 typedef struct _text_item text_item;
 
 
-struct _text_file{
-	char *buffer;
-	text_item *list;
-	text_item *top;
+struct _text_file {
+    char *buffer;
+    text_item *list;
+    text_item *top;
 };
 
 typedef struct _text_file text_file;

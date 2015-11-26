@@ -57,9 +57,9 @@
 #endif
 
 #define SWAP32(x) \
-	((((x) & 0xff) << 24) | (((x) & 0xff00) << 8) | (((x) & 0xff0000) >> 8) | (((x) & 0xff000000) >> 24))
+    ((((x) & 0xff) << 24) | (((x) & 0xff00) << 8) | (((x) & 0xff0000) >> 8) | (((x) & 0xff000000) >> 24))
 #define SWAP64(x) \
-	SWAP32((x) << 32) | SWAP32((x) >> 32)
+    SWAP32((x) << 32) | SWAP32((x) >> 32)
 
 #if xBIG_ENDIAN
 #define HOST_TO_BENDIAN32(x) (x)
@@ -80,7 +80,7 @@
 
 // ELF stuff
 #define ELF_MAGIC "\x7f""ELF"
-#define EI_MAG0	0
+#define EI_MAG0 0
 #define EI_MAG1 1
 #define EI_MAG2 2
 #define EI_MAG3 3
@@ -103,31 +103,31 @@ typedef int Elf32_Sword;
 typedef unsigned int Elf32_Word;
 
 struct Elf32_Ehdr {
-	unsigned char	e_ident[EI_NIDENT];
-	Elf32_Half		e_type;
-	Elf32_Half		e_machine;
-	Elf32_Word		e_version;
-	Elf32_Addr		e_entry;
-	Elf32_Off		e_phoff;
-	Elf32_Off		e_shoff;
-	Elf32_Word		e_flags;
-	Elf32_Half		e_ehsize;
-	Elf32_Half		e_phentsize;
-	Elf32_Half		e_phnum;
-	Elf32_Half		e_shentsize;
-	Elf32_Half		e_shnum;
-	Elf32_Half		e_shstrndx;
+    unsigned char   e_ident[EI_NIDENT];
+    Elf32_Half      e_type;
+    Elf32_Half      e_machine;
+    Elf32_Word      e_version;
+    Elf32_Addr      e_entry;
+    Elf32_Off       e_phoff;
+    Elf32_Off       e_shoff;
+    Elf32_Word      e_flags;
+    Elf32_Half      e_ehsize;
+    Elf32_Half      e_phentsize;
+    Elf32_Half      e_phnum;
+    Elf32_Half      e_shentsize;
+    Elf32_Half      e_shnum;
+    Elf32_Half      e_shstrndx;
 };
 
 struct Elf32_Phdr {
-	Elf32_Word		p_type;
-	Elf32_Off		p_offset;
-	Elf32_Addr		p_vaddr;
-	Elf32_Addr		p_paddr;
-	Elf32_Word		p_filesz;
-	Elf32_Word		p_memsz;
-	Elf32_Word		p_flags;
-	Elf32_Word		p_align;
+    Elf32_Word      p_type;
+    Elf32_Off       p_offset;
+    Elf32_Addr      p_vaddr;
+    Elf32_Addr      p_paddr;
+    Elf32_Word      p_filesz;
+    Elf32_Word      p_memsz;
+    Elf32_Word      p_flags;
+    Elf32_Word      p_align;
 };
 
 // ELF64 stuff
@@ -140,31 +140,31 @@ typedef long long Elf64_Sword;
 typedef unsigned long long Elf64_Word;
 
 struct Elf64_Ehdr {
-	unsigned char	e_ident[EI_NIDENT];
-	Elf64_Quarter	e_type;
-	Elf64_Quarter	e_machine;
-	Elf64_Half		e_version;
-	Elf64_Addr		e_entry;
-	Elf64_Off		e_phoff;
-	Elf64_Off		e_shoff;
-	Elf64_Half		e_flags;
-	Elf64_Quarter	e_ehsize;
-	Elf64_Quarter	e_phentsize;
-	Elf64_Quarter	e_phnum;
-	Elf64_Quarter	e_shentsize;
-	Elf64_Quarter	e_shnum;
-	Elf64_Quarter	e_shstrndx;
+    unsigned char   e_ident[EI_NIDENT];
+    Elf64_Quarter   e_type;
+    Elf64_Quarter   e_machine;
+    Elf64_Half      e_version;
+    Elf64_Addr      e_entry;
+    Elf64_Off       e_phoff;
+    Elf64_Off       e_shoff;
+    Elf64_Half      e_flags;
+    Elf64_Quarter   e_ehsize;
+    Elf64_Quarter   e_phentsize;
+    Elf64_Quarter   e_phnum;
+    Elf64_Quarter   e_shentsize;
+    Elf64_Quarter   e_shnum;
+    Elf64_Quarter   e_shstrndx;
 };
 
 struct Elf64_Phdr {
-	Elf64_Half		p_type;
-	Elf64_Half		p_flags;
-	Elf64_Off		p_offset;
-	Elf64_Addr		p_vaddr;
-	Elf64_Addr		p_paddr;
-	Elf64_Size		p_filesz;
-	Elf64_Size		p_memsz;
-	Elf64_Size		p_align;
+    Elf64_Half      p_type;
+    Elf64_Half      p_flags;
+    Elf64_Off       p_offset;
+    Elf64_Addr      p_vaddr;
+    Elf64_Addr      p_paddr;
+    Elf64_Size      p_filesz;
+    Elf64_Size      p_memsz;
+    Elf64_Size      p_align;
 };
 
 #ifndef O_BINARY
@@ -196,26 +196,26 @@ void *loadtextfile(char *file, int *size)
     char *data;
     char c;
     struct stat info;
-	int ret;
-	int i;
+    int ret;
+    int i;
 
-	*size = 0;
+    *size = 0;
 
-    if((fd = open(file,O_BINARY|O_RDONLY)) != -1){
-        if(fstat(fd,&info)){
+    if ((fd = open(file,O_BINARY|O_RDONLY)) != -1) {
+        if (fstat(fd,&info)) {
             close(fd);
             return NULL;
         }
 
         data = (char *) malloc(info.st_size);
 
-		i = 0;
-		while((ret = read(fd, &c, 1)) > 0) {
-			if(c != '\r') {
-				data[i++] = c;
-				(*size)++;
-			}
-		}
+        i = 0;
+        while ((ret = read(fd, &c, 1)) > 0) {
+            if (c != '\r') {
+                data[i++] = c;
+                (*size)++;
+            }
+        }
 
         close(fd);
         return data;
@@ -229,14 +229,14 @@ void *loadfile(char *file, int *size)
     char *data;
     struct stat info;
 
-    if((fd = open(file,O_BINARY|O_RDONLY)) != -1){
-        if(fstat(fd,&info)){
+    if ((fd = open(file,O_BINARY|O_RDONLY)) != -1) {
+        if (fstat(fd,&info)) {
             close(fd);
             *size = 0;
             return NULL;
         }
         data = (char *) malloc(info.st_size);
-        if(read(fd, data, info.st_size) != info.st_size) {
+        if (read(fd, data, info.st_size) != info.st_size) {
             close(fd);
             *size = 0;
             return NULL;
@@ -256,12 +256,12 @@ void *loadstripfile(char *file, int *size)
     void *retval;
 
 
-    if(strip_debug) {
+    if (strip_debug) {
         /*  This is broken for cygwin
-		strcpy(temp, "/tmp/mkboot.XXXXXXXX");
+        strcpy(temp, "/tmp/mkboot.XXXXXXXX");
         mkstemp(temp); */
-		tmpnam(temp);
-		
+        tmpnam(temp);
+
         sprintf(cmd, "cp %s %s; %s %s", file, temp, strip_binary, temp);
         system(cmd);
 
@@ -280,24 +280,22 @@ void *loadstripfile(char *file, int *size)
 // which makes the whole file off by 0x20 bytes
 int writesparcbootblock(int fd, unsigned int blocks)
 {
-	unsigned char bb[0x200+0x20];
+    unsigned char bb[0x200+0x20];
 
-	memset(bb, 0, sizeof(bb));
-	memcpy(bb, sparcbootblock, sizeof(sparcbootblock));
+    memset(bb, 0, sizeof(bb));
+    memcpy(bb, sparcbootblock, sizeof(sparcbootblock));
 
-	return write(fd, bb, sizeof(bb));
- }
+    return write(fd, bb, sizeof(bb));
+}
 
-typedef struct _nvpair
-{
+typedef struct _nvpair {
     struct _nvpair *next;
     char *name;
     char *value;
 } nvpair;
 
 
-typedef struct _section
-{
+typedef struct _section {
     struct _section *next;
     char *name;
     struct _nvpair *firstnv;
@@ -307,9 +305,9 @@ void print_sections(section *first)
 {
     nvpair *p;
 
-    while(first){
+    while (first) {
         printf("\n[%s]\n",first->name);
-        for(p = first->firstnv; p; p = p->next){
+        for (p = first->firstnv; p; p = p->next) {
             printf("%s=%s\n",p->name,p->value);
         }
         first = first->next;
@@ -330,84 +328,84 @@ section *load_ini(char *file)
     char *data,*end;
     int size;
     int state = stNEWLINE;
-	section *cur;
+    section *cur;
 
     char *lhs,*rhs;
 
-    if(!(data = loadfile(file,&size))){
+    if (!(data = loadfile(file,&size))) {
         return NULL;
     }
     end = data+size;
 
-    while(data < end){
-        switch(state){
-        case stSKIPLINE:
-            if(*data == '\n' || *data == '\r'){
-                state = stNEWLINE;
-            }
-            data++;
-            break;
-
-        case stNEWLINE:
-            if(*data == '\n' || *data == '\r'){
-                data++;
-                break;
-            }
-            if(*data == '['){
-                lhs = data+1;
-                state = stHEADER;
-                data++;
-                break;
-            }
-            if(*data == '#' || *data <= ' '){
-                state = stSKIPLINE;
-                data++;
-                break;
-            }
-            lhs = data;
-            data++;
-            state = stLHS;
-            break;
-        case stHEADER:
-            if(*data == ']'){
-                cur = (section *) malloc(sizeof(section));
-                cur->name = lhs;
-                cur->firstnv = NULL;
-                cur->next = NULL;
-                if(last){
-                    last->next = cur;
-                    last = cur;
-                } else {
-                    last = first = cur;
+    while (data < end) {
+        switch (state) {
+            case stSKIPLINE:
+                if (*data == '\n' || *data == '\r') {
+                    state = stNEWLINE;
                 }
-                *data = 0;
-                state = stSKIPLINE;
-            }
-            data++;
-            break;
-        case stLHS:
-            if(*data == '\n' || *data == '\r'){
-                state = stNEWLINE;
-            }
-            if(*data == '='){
-                *data = 0;
-                rhs = data+1;
-                state = stRHS;
-            }
-            data++;
-            continue;
-        case stRHS:
-            if(*data == '\n' || *data == '\r'){
-                nvpair *p = (nvpair *) malloc(sizeof(nvpair));
-                p->name = lhs;
-                p->value = rhs;
-                *data = 0;
-                p->next = cur->firstnv;
-                cur->firstnv = p;
-                state = stNEWLINE;
-            }
-            data++;
-            break;
+                data++;
+                break;
+
+            case stNEWLINE:
+                if (*data == '\n' || *data == '\r') {
+                    data++;
+                    break;
+                }
+                if (*data == '[') {
+                    lhs = data+1;
+                    state = stHEADER;
+                    data++;
+                    break;
+                }
+                if (*data == '#' || *data <= ' ') {
+                    state = stSKIPLINE;
+                    data++;
+                    break;
+                }
+                lhs = data;
+                data++;
+                state = stLHS;
+                break;
+            case stHEADER:
+                if (*data == ']') {
+                    cur = (section *) malloc(sizeof(section));
+                    cur->name = lhs;
+                    cur->firstnv = NULL;
+                    cur->next = NULL;
+                    if (last) {
+                        last->next = cur;
+                        last = cur;
+                    } else {
+                        last = first = cur;
+                    }
+                    *data = 0;
+                    state = stSKIPLINE;
+                }
+                data++;
+                break;
+            case stLHS:
+                if (*data == '\n' || *data == '\r') {
+                    state = stNEWLINE;
+                }
+                if (*data == '=') {
+                    *data = 0;
+                    rhs = data+1;
+                    state = stRHS;
+                }
+                data++;
+                continue;
+            case stRHS:
+                if (*data == '\n' || *data == '\r') {
+                    nvpair *p = (nvpair *) malloc(sizeof(nvpair));
+                    p->name = lhs;
+                    p->value = rhs;
+                    *data = 0;
+                    p->next = cur->firstnv;
+                    cur->firstnv = p;
+                    state = stNEWLINE;
+                }
+                data++;
+                break;
         }
     }
     return first;
@@ -418,8 +416,8 @@ section *load_ini(char *file)
 char *getval(section *s, char *name)
 {
     nvpair *p;
-    for(p = s->firstnv; p; p = p->next){
-        if(!strcmp(p->name,name)) return p->value;
+    for (p = s->firstnv; p; p = p->next) {
+        if (!strcmp(p->name,name)) return p->value;
     }
     return NULL;
 }
@@ -427,90 +425,90 @@ char *getval(section *s, char *name)
 char *getvaldef(section *s, char *name, char *def)
 {
     nvpair *p;
-    for(p = s->firstnv; p; p = p->next){
-        if(!strcmp(p->name,name)) return p->value;
+    for (p = s->firstnv; p; p = p->next) {
+        if (!strcmp(p->name,name)) return p->value;
     }
     return def;
 }
 
 Elf32_Off elf32_find_entry(void *buf, int size)
 {
-	struct Elf32_Ehdr *header;
-	char *cbuf = buf;
-	int byte_swap;
-	int index;
+    struct Elf32_Ehdr *header;
+    char *cbuf = buf;
+    int byte_swap;
+    int index;
 
 #define SWAPIT(x) ((byte_swap) ? SWAP32(x) : (x))
 
-	if(memcmp(cbuf, ELF_MAGIC, sizeof(ELF_MAGIC)-1) != 0) {
-		fprintf(stderr, "file does not have proper magic value\n");
-		return 0;
-	}
+    if (memcmp(cbuf, ELF_MAGIC, sizeof(ELF_MAGIC)-1) != 0) {
+        fprintf(stderr, "file does not have proper magic value\n");
+        return 0;
+    }
 
-	if(cbuf[EI_CLASS] != ELFCLASS32) {
-		fprintf(stderr, "wrong elf class (%d)\n", cbuf[EI_CLASS]);
-		return 0;
-	}
+    if (cbuf[EI_CLASS] != ELFCLASS32) {
+        fprintf(stderr, "wrong elf class (%d)\n", cbuf[EI_CLASS]);
+        return 0;
+    }
 
-	if(cbuf[EI_VERSION] != 1) {
-		fprintf(stderr, "elf file has unsupported version (%d)\n", cbuf[EI_VERSION]);
-		return 0;
-	}
+    if (cbuf[EI_VERSION] != 1) {
+        fprintf(stderr, "elf file has unsupported version (%d)\n", cbuf[EI_VERSION]);
+        return 0;
+    }
 
-	byte_swap = 0;
+    byte_swap = 0;
 #if xBIG_ENDIAN
-	if(cbuf[EI_DATA] == ELFDATA2LSB) {
-		byte_swap = 1;
-	}
+    if (cbuf[EI_DATA] == ELFDATA2LSB) {
+        byte_swap = 1;
+    }
 #else
-	if(cbuf[EI_DATA] == ELFDATA2MSB) {
-		byte_swap = 1;
-	}
+    if (cbuf[EI_DATA] == ELFDATA2MSB) {
+        byte_swap = 1;
+    }
 #endif
 
-	header = (struct Elf32_Ehdr *)buf;
-	return SWAPIT(header->e_entry);
+    header = (struct Elf32_Ehdr *)buf;
+    return SWAPIT(header->e_entry);
 #undef SWAPIT
 }
 
 Elf64_Off elf64_find_entry(void *buf, int size)
 {
-	struct Elf64_Ehdr *header;
-	char *cbuf = buf;
-	int byte_swap;
-	int index;
+    struct Elf64_Ehdr *header;
+    char *cbuf = buf;
+    int byte_swap;
+    int index;
 
 #define SWAPIT(x) ((byte_swap) ? SWAP64(x) : (x))
 
-	if(memcmp(cbuf, ELF_MAGIC, sizeof(ELF_MAGIC)-1) != 0) {
-		fprintf(stderr, "file does not have proper magic value\n");
-		return 0;
-	}
-	
-	if(cbuf[EI_CLASS] != ELFCLASS64) {
-		fprintf(stderr, "wrong elf class (%d)\n", cbuf[EI_CLASS]);
-		return 0;
-	}
+    if (memcmp(cbuf, ELF_MAGIC, sizeof(ELF_MAGIC)-1) != 0) {
+        fprintf(stderr, "file does not have proper magic value\n");
+        return 0;
+    }
 
-	if(cbuf[EI_VERSION] != 1) {
-		fprintf(stderr, "elf file has unsupported version (%d)\n", cbuf[EI_VERSION]);
-		return 0;
-	}
+    if (cbuf[EI_CLASS] != ELFCLASS64) {
+        fprintf(stderr, "wrong elf class (%d)\n", cbuf[EI_CLASS]);
+        return 0;
+    }
 
-	byte_swap = 0;
+    if (cbuf[EI_VERSION] != 1) {
+        fprintf(stderr, "elf file has unsupported version (%d)\n", cbuf[EI_VERSION]);
+        return 0;
+    }
+
+    byte_swap = 0;
 #if xBIG_ENDIAN
-	if(cbuf[EI_DATA] == ELFDATA2LSB) {
-		byte_swap = 1;
-	}
+    if (cbuf[EI_DATA] == ELFDATA2LSB) {
+        byte_swap = 1;
+    }
 #else
-	if(cbuf[EI_DATA] == ELFDATA2MSB) {
-		byte_swap = 1;
-	}
+    if (cbuf[EI_DATA] == ELFDATA2MSB) {
+        byte_swap = 1;
+    }
 #endif
 
-	// XXX 64bit entrypoint doesn't fit here
-	header = (struct Elf64_Ehdr *)buf;
-	return SWAPIT(header->e_entry);
+    // XXX 64bit entrypoint doesn't fit here
+    header = (struct Elf64_Ehdr *)buf;
+    return SWAPIT(header->e_entry);
 #undef SWAPIT
 }
 
@@ -524,12 +522,12 @@ void makeboot(section *s, char *outfile)
     boot_dir bdir;
     int i,c;
     int nextpage = 0; /* page rel offset of next loaded object */
-	long outlen = 0;
+    long outlen = 0;
 
     memset(fill,0,4096);
 
     memset(&bdir, 0, sizeof(bdir));
-    for(i=0;i<BOOTDIR_MAX_ENTRIES;i++){
+    for (i=0; i<BOOTDIR_MAX_ENTRIES; i++) {
         rawdata[i] = NULL;
         rawsize[i] = 0;
     }
@@ -541,34 +539,34 @@ void makeboot(section *s, char *outfile)
     bdir.bd_entry[0].be_vsize = fix(sizeof(bdir));
     rawdata[0] = (void *) &bdir;
     rawsize[0] = sizeof(bdir);
-	nextpage += sizeof(bdir)/4096;
+    nextpage += sizeof(bdir)/4096;
 
     strcpy(bdir.bd_entry[0].be_name,"SBBB/Directory");
-	printf("directory size %d\n", rawsize[0]);
+    printf("directory size %d\n", rawsize[0]);
 
-    while(s){
+    while (s) {
         char *type = getvaldef(s,"type","NONE");
         char *file = getval(s,"file");
 
-        if(!type) die("section %s has no type",s->name);
+        if (!type) die("section %s has no type",s->name);
 
         strncpy(centry.be_name,s->name,BOOTDIR_NAMELEN);
         centry.be_name[BOOTDIR_NAMELEN-1] = 0;
 
-        if(!file) die("section %s has no file",s->name);
+        if (!file) die("section %s has no file",s->name);
 
-        if(!strcmp(type, "elf32") || !strcmp(type, "elf64"))
-        	rawdata[c] = loadstripfile(file,&rawsize[c]);
-        else if(!strcmp(type, "text"))
-        	rawdata[c] = loadtextfile(file,&rawsize[c]);
+        if (!strcmp(type, "elf32") || !strcmp(type, "elf64"))
+            rawdata[c] = loadstripfile(file,&rawsize[c]);
+        else if (!strcmp(type, "text"))
+            rawdata[c] = loadtextfile(file,&rawsize[c]);
         else
-        	rawdata[c] = loadfile(file,&rawsize[c]);
+            rawdata[c] = loadfile(file,&rawsize[c]);
 
-        if(!rawdata[c])
-           die("cannot load \"%s\"",file);
+        if (!rawdata[c])
+            die("cannot load \"%s\"",file);
 
         centry.be_size = rawsize[c] / 4096 + (rawsize[c] % 4096 ? 1 : 0);
-		centry.be_vsize = rawsize[c];
+        centry.be_vsize = rawsize[c];
 
         centry.be_offset = nextpage;
         nextpage += centry.be_size;
@@ -577,124 +575,124 @@ void makeboot(section *s, char *outfile)
         centry.be_vsize = fix(centry.be_vsize);
         centry.be_offset = fix(centry.be_offset);
 
-        if(!strcmp(type,"boot")){
+        if (!strcmp(type,"boot")) {
             centry.be_type = fix(BE_TYPE_BOOTSTRAP);
             centry.be_code_vaddr = fix(atoi(getvaldef(s,"vaddr","0")));
             centry.be_code_ventr = fix(atoi(getvaldef(s,"ventry","0")));
         }
-        if(!strcmp(type,"code")){
+        if (!strcmp(type,"code")) {
             centry.be_type = fix(BE_TYPE_CODE);
             centry.be_code_vaddr = fix(atoi(getvaldef(s,"vaddr","0")));
             centry.be_code_ventr = fix(atoi(getvaldef(s,"ventry","0")));
         }
-        if(!strcmp(type,"data") || !strcmp(type,"text")){
+        if (!strcmp(type,"data") || !strcmp(type,"text")) {
             centry.be_type = fix(BE_TYPE_DATA);
         }
-        if(!strcmp(type,"elf32")){
+        if (!strcmp(type,"elf32")) {
             centry.be_type = fix(BE_TYPE_ELF32);
             centry.be_code_vaddr = 0;
             centry.be_code_ventr = fix(elf32_find_entry(rawdata[c], rawsize[c]));
         }
-        if(!strcmp(type,"elf64")){
+        if (!strcmp(type,"elf64")) {
             centry.be_type = fix(BE_TYPE_ELF64);
             centry.be_code_vaddr = 0;
             centry.be_code_ventr = fix(elf64_find_entry(rawdata[c], rawsize[c]));
         }
 
-        if(centry.be_type == BE_TYPE_NONE){
+        if (centry.be_type == BE_TYPE_NONE) {
             die("unrecognized section type \"%s\"",type);
         }
 
-		printf(" %8s %8d %s\n", type, fix(centry.be_vsize), centry.be_name);
-		
+        printf(" %8s %8d %s\n", type, fix(centry.be_vsize), centry.be_name);
+
         c++;
         s = s->next;
 
-        if(c==BOOTDIR_MAX_ENTRIES) die("too many sections (>128)",NULL);
+        if (c==BOOTDIR_MAX_ENTRIES) die("too many sections (>128)",NULL);
     }
 
-    if((fd = open(outfile, O_BINARY|O_WRONLY|O_CREAT|O_TRUNC, 0666)) < 0) {
+    if ((fd = open(outfile, O_BINARY|O_WRONLY|O_CREAT|O_TRUNC, 0666)) < 0) {
         die("cannot write to \"%s\"",outfile);
     }
 
-    if(make_sparcboot) {
+    if (make_sparcboot) {
         writesparcbootblock(fd, nextpage+1);
     }
 
-    for(i=0;i<c;i++){
+    for (i=0; i<c; i++) {
         write(fd, rawdata[i], rawsize[i]);
-		outlen += rawsize[i];
-        if(rawsize[i]%4096) {
+        outlen += rawsize[i];
+        if (rawsize[i]%4096) {
             write(fd, fill, 4096 - (rawsize[i]%4096));
-			outlen += 4096 - (rawsize[i]%4096);
-		}
+            outlen += 4096 - (rawsize[i]%4096);
+        }
     }
     close(fd);
-	printf("wrote %ld bytes to output file %s\n", outlen, outfile);
+    printf("wrote %ld bytes to output file %s\n", outlen, outfile);
 }
 
 int main(int argc, char **argv)
 {
-	char *file = NULL;
+    char *file = NULL;
     section *s;
 
-    if(argc < 2){
+    if (argc < 2) {
 usage:
         fprintf(stderr,"usage: %s [--littleendian (default)] [--bigendian ] [ --strip-binary <binary ] [ --strip-debug] [ --sparc | -s ] [ <inifile> ... ] -o <bootfile>\n",argv[0]);
         return 1;
     }
 
-	argc--;
-	argv++;
+    argc--;
+    argv++;
 
-	while(argc){
-		if(!strcmp(*argv,"--sparc")) {
-			make_sparcboot = 1;
-		} else if(!strcmp(*argv, "--bigendian")) {
-			target_endian = BE;
-		} else if(!strcmp(*argv,"-o")) {
-			argc--;
-			argv++;
-			if(argc) {
-				file = *argv;
-			} else {
-				goto usage;
-			}
-		} else if(!strcmp(*argv, "--strip-binary")) {
-			argc--;
-			argv++;
-			if(argc) {
-				strip_binary = *argv;
-			} else {
-				goto usage;
-			}
-		} else if(!strcmp(*argv, "--strip-debug")) {
-			strip_debug = 1;
-		} else {
-			if(load_ini(*argv) == NULL) {
-				fprintf(stderr,"warning: cannot load '%s'\n",*argv);
-			}
-		}
-		argc--;
-		argv++;
-	}
+    while (argc) {
+        if (!strcmp(*argv,"--sparc")) {
+            make_sparcboot = 1;
+        } else if (!strcmp(*argv, "--bigendian")) {
+            target_endian = BE;
+        } else if (!strcmp(*argv,"-o")) {
+            argc--;
+            argv++;
+            if (argc) {
+                file = *argv;
+            } else {
+                goto usage;
+            }
+        } else if (!strcmp(*argv, "--strip-binary")) {
+            argc--;
+            argv++;
+            if (argc) {
+                strip_binary = *argv;
+            } else {
+                goto usage;
+            }
+        } else if (!strcmp(*argv, "--strip-debug")) {
+            strip_debug = 1;
+        } else {
+            if (load_ini(*argv) == NULL) {
+                fprintf(stderr,"warning: cannot load '%s'\n",*argv);
+            }
+        }
+        argc--;
+        argv++;
+    }
 
 
-    if((argc > 3) && !strcmp(argv[3],"-sparc")){
+    if ((argc > 3) && !strcmp(argv[3],"-sparc")) {
         make_sparcboot = 1;
     }
 
-	if(!file){
-		fprintf(stderr,"error: no output specified\n");
-		goto usage;
-	}
+    if (!file) {
+        fprintf(stderr,"error: no output specified\n");
+        goto usage;
+    }
 
-	if(!first){
-		fprintf(stderr,"error: no data to write?!\n");
-		goto usage;
-	}
+    if (!first) {
+        fprintf(stderr,"error: no data to write?!\n");
+        goto usage;
+    }
 
-	makeboot(first,file);
+    makeboot(first,file);
 
     return 0;
 }

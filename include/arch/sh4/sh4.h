@@ -31,18 +31,18 @@
 
 #define PHYS_ADDR_SIZE     (0x1fffffff+1)
 
-//#define PAGE_SIZE	4096
-#define PAGE_SIZE_1K	0
-#define PAGE_SIZE_4K	1
-#define PAGE_SIZE_64K	2
-#define PAGE_SIZE_1M	3
+//#define PAGE_SIZE 4096
+#define PAGE_SIZE_1K    0
+#define PAGE_SIZE_4K    1
+#define PAGE_SIZE_64K   2
+#define PAGE_SIZE_1M    3
 
-#define PTEH 	0xff000000
-#define PTEL 	0xff000004
-#define PTEA	0xff000034
-#define TTB  	0xff000008
-#define TEA  	0xff00000c
-#define MMUCR 	0xff000010
+#define PTEH    0xff000000
+#define PTEL    0xff000004
+#define PTEA    0xff000034
+#define TTB     0xff000008
+#define TEA     0xff00000c
+#define MMUCR   0xff000010
 
 #define UTLB    0xf6000000
 #define UTLB1   0xf7000000
@@ -51,102 +51,102 @@
 #define UTLB_COUNT 64
 
 struct utlb_addr_array {
-	unsigned int asid: 8;
-	unsigned int valid: 1;
-	unsigned int dirty: 1;
-	unsigned int vpn: 22;
+    unsigned int asid: 8;
+    unsigned int valid: 1;
+    unsigned int dirty: 1;
+    unsigned int vpn: 22;
 };
 
 struct utlb_data_array_1 {
-	unsigned int wt: 1;
-	unsigned int sh: 1;
-	unsigned int dirty: 1;
-	unsigned int cacheability: 1;
-	unsigned int psize0: 1;
-	unsigned int prot_key: 2;
-	unsigned int psize1: 1;
-	unsigned int valid: 1;
-	unsigned int unused: 1;
-	unsigned int ppn: 19;
-	unsigned int unused2: 3;
+    unsigned int wt: 1;
+    unsigned int sh: 1;
+    unsigned int dirty: 1;
+    unsigned int cacheability: 1;
+    unsigned int psize0: 1;
+    unsigned int prot_key: 2;
+    unsigned int psize1: 1;
+    unsigned int valid: 1;
+    unsigned int unused: 1;
+    unsigned int ppn: 19;
+    unsigned int unused2: 3;
 };
 
 struct utlb_data_array_2 {
-	unsigned int sa: 2;
-	unsigned int tc: 1;
-	unsigned int unused: 29;
+    unsigned int sa: 2;
+    unsigned int tc: 1;
+    unsigned int unused: 29;
 };
 
 struct utlb_data {
-	struct utlb_addr_array a;
-	struct utlb_data_array_1 da1;
-	struct utlb_data_array_2 da2;
+    struct utlb_addr_array a;
+    struct utlb_data_array_1 da1;
+    struct utlb_data_array_2 da2;
 };
 
-#define	ITLB	0xf2000000
-#define	ITLB1	0xf3000000
-#define ITLB2	0xf3800000
+#define ITLB    0xf2000000
+#define ITLB1   0xf3000000
+#define ITLB2   0xf3800000
 #define ITLB_ADDR_SHIFT 0x8
 #define ITLB_COUNT 4
 
 struct itlb_addr_array {
-	unsigned int asid: 8;
-	unsigned int valid: 1;
-	unsigned int unused: 1;
-	unsigned int vpn: 22;
+    unsigned int asid: 8;
+    unsigned int valid: 1;
+    unsigned int unused: 1;
+    unsigned int vpn: 22;
 };
 
 struct itlb_data_array_1 {
-	unsigned int unused1: 1;
-	unsigned int sh: 1;
-	unsigned int unused2: 1;
-	unsigned int cacheability: 1;
-	unsigned int psize0: 1;
-	unsigned int unused3: 1;
-	unsigned int prot_key: 1;
-	unsigned int psize1: 1;
-	unsigned int valid: 1;
-	unsigned int unused4: 1;
-	unsigned int ppn: 19;
-	unsigned int unused5: 3;
+    unsigned int unused1: 1;
+    unsigned int sh: 1;
+    unsigned int unused2: 1;
+    unsigned int cacheability: 1;
+    unsigned int psize0: 1;
+    unsigned int unused3: 1;
+    unsigned int prot_key: 1;
+    unsigned int psize1: 1;
+    unsigned int valid: 1;
+    unsigned int unused4: 1;
+    unsigned int ppn: 19;
+    unsigned int unused5: 3;
 };
 
 struct itlb_data_array_2 {
-	unsigned int sa: 2;
-	unsigned int tc: 1;
-	unsigned int unused: 29;
+    unsigned int sa: 2;
+    unsigned int tc: 1;
+    unsigned int unused: 29;
 };
 
 struct itlb_data {
-	struct itlb_addr_array a;
-	struct itlb_data_array_1 da1;
-	struct itlb_data_array_2 da2;
+    struct itlb_addr_array a;
+    struct itlb_data_array_1 da1;
+    struct itlb_data_array_2 da2;
 };
 
 // timer stuff
-#define	TOCR	0xffd80000
-#define TSTR	0xffd80004
-#define	TCOR0	0xffd80008
-#define TCNT0	0xffd8000c
-#define TCR0	0xffd80010
-#define TCOR1	0xffd80014
-#define TCNT1	0xffd80018
-#define TCR1	0xffd8001c
-#define TCOR2	0xffd80020
-#define TCNT2	0xffd80024
-#define TCR2	0xffd80028
-#define TCPR2	0xffd8002c
+#define TOCR    0xffd80000
+#define TSTR    0xffd80004
+#define TCOR0   0xffd80008
+#define TCNT0   0xffd8000c
+#define TCR0    0xffd80010
+#define TCOR1   0xffd80014
+#define TCNT1   0xffd80018
+#define TCR1    0xffd8001c
+#define TCOR2   0xffd80020
+#define TCNT2   0xffd80024
+#define TCR2    0xffd80028
+#define TCPR2   0xffd8002c
 
 // interrupt controller stuff
-#define ICR		0xffd00000
-#define IPRA	0xffd00004
-#define IPRB	0xffd00008
-#define IPRC	0xffd0000c
+#define ICR     0xffd00000
+#define IPRA    0xffd00004
+#define IPRB    0xffd00008
+#define IPRC    0xffd0000c
 
 // cache stuff
-#define CCR		0xff00001c
-#define QACR0	0xff000038
-#define QACR1	0xff00003c
+#define CCR     0xff00001c
+#define QACR0   0xff000038
+#define QACR1   0xff00003c
 
 #endif
 

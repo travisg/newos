@@ -8,12 +8,12 @@
 
 int InputDevice::Run()
 {
-	return _kern_thread_resume_thread(_kern_thread_create_thread("InputDevice", &ThreadEntry, this));
+    return _kern_thread_resume_thread(_kern_thread_create_thread("InputDevice", &ThreadEntry, this));
 }
 
 int InputDevice::ThreadEntry(void *_dev)
 {
-	InputDevice *dev = (InputDevice *)_dev;
-	return dev->_Run();
+    InputDevice *dev = (InputDevice *)_dev;
+    return dev->_Run();
 }
 

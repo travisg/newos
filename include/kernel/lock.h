@@ -9,9 +9,9 @@
 #include <kernel/debug.h>
 
 typedef struct recursive_lock {
-	thread_id holder;
-	sem_id sem;
-	int recursion;
+    thread_id holder;
+    sem_id sem;
+    int recursion;
 } recursive_lock;
 
 int recursive_lock_create(recursive_lock *lock);
@@ -23,8 +23,8 @@ int recursive_lock_get_recursion(recursive_lock *lock);
 #define ASSERT_LOCKED_RECURSIVE(r) { ASSERT(thread_get_current_thread_id() == (r)->holder); }
 
 typedef struct mutex {
-	thread_id holder;
-	sem_id sem;
+    thread_id holder;
+    sem_id sem;
 } mutex;
 
 int mutex_init(mutex *m, const char *name);

@@ -21,7 +21,7 @@ void sh4_switch_stack_and_call(addr_t stack, void (*func)(void *), void *arg);
 
 
 struct arch_cpu_info {
-	// empty
+    // empty
 };
 
 #endif

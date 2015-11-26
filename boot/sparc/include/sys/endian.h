@@ -1,4 +1,4 @@
-/*	$OpenBSD: endian.h,v 1.4 1999/07/21 05:58:25 csapuntz Exp $	*/
+/*  $OpenBSD: endian.h,v 1.4 1999/07/21 05:58:25 csapuntz Exp $ */
 
 /*-
  * Copyright (c) 1997 Niklas Hallqvist.  All rights reserved.
@@ -13,7 +13,7 @@
  *    documentation and/or other materials provided with the distribution.
  * 3. All advertising materials mentioning features or use of this software
  *    must display the following acknowledgement:
- *	This product includes software developed by Niklas Hallqvist.
+ *  This product includes software developed by Niklas Hallqvist.
  * 4. The name of the author may not be used to endorse or promote products
  *    derived from this software without specific prior written permission.
  *
@@ -45,39 +45,39 @@
 
 #include <sys/cdefs.h>
 
-#define LITTLE_ENDIAN	1234
+#define LITTLE_ENDIAN   1234
 
 
-#define BIG_ENDIAN	4321
-#define PDP_ENDIAN	3412
+#define BIG_ENDIAN  4321
+#define PDP_ENDIAN  3412
 
 #ifdef __GNUC__
 
-#define __swap16gen(x) ({						\
-	u_int16_t __swap16gen_x = (x);					\
-									\
-	(u_int16_t)((__swap16gen_x & 0xff) << 8 |			\
-	    (__swap16gen_x & 0xff00) >> 8);				\
+#define __swap16gen(x) ({                       \
+    u_int16_t __swap16gen_x = (x);                  \
+                                    \
+    (u_int16_t)((__swap16gen_x & 0xff) << 8 |           \
+        (__swap16gen_x & 0xff00) >> 8);             \
 })
 
-#define __swap32gen(x) ({						\
-	u_int32_t __swap32gen_x = (x);					\
-									\
-	(u_int32_t)((__swap32gen_x & 0xff) << 24 |			\
-	    (__swap32gen_x & 0xff00) << 8 |				\
-	    (__swap32gen_x & 0xff0000) >> 8 |				\
-	    (__swap32gen_x & 0xff000000) >> 24);			\
+#define __swap32gen(x) ({                       \
+    u_int32_t __swap32gen_x = (x);                  \
+                                    \
+    (u_int32_t)((__swap32gen_x & 0xff) << 24 |          \
+        (__swap32gen_x & 0xff00) << 8 |             \
+        (__swap32gen_x & 0xff0000) >> 8 |               \
+        (__swap32gen_x & 0xff000000) >> 24);            \
 })
 
 #else /* __GNUC__ */
 
 /* Note that these macros evaluate their arguments several times.  */
-#define __swap16gen(x)							\
+#define __swap16gen(x)                          \
     (u_int16_t)(((u_int16_t)(x) & 0xff) << 8 | ((u_int16_t)(x) & 0xff00) >> 8)
 
-#define __swap32gen(x)							\
-    (u_int32_t)(((u_int32_t)(x) & 0xff) << 24 |				\
-    ((u_int32_t)(x) & 0xff00) << 8 | ((u_int32_t)(x) & 0xff0000) >> 8 |	\
+#define __swap32gen(x)                          \
+    (u_int32_t)(((u_int32_t)(x) & 0xff) << 24 |             \
+    ((u_int32_t)(x) & 0xff00) << 8 | ((u_int32_t)(x) & 0xff0000) >> 8 | \
     ((u_int32_t)(x) & 0xff000000) >> 24)
 
 #endif /* __GNUC__ */
@@ -91,18 +91,18 @@
 #ifdef MD_SWAP
 #if __GNUC__
 
-#define swap16(x) ({							\
-	u_int16_t __swap16_x = (x);					\
-									\
-	__builtin_constant_p(x) ? __swap16gen(__swap16_x) :		\
-	    __swap16md(__swap16_x);					\
+#define swap16(x) ({                            \
+    u_int16_t __swap16_x = (x);                 \
+                                    \
+    __builtin_constant_p(x) ? __swap16gen(__swap16_x) :     \
+        __swap16md(__swap16_x);                 \
 })
 
-#define swap32(x) ({							\
-	u_int32_t __swap32_x = (x);					\
-									\
-	__builtin_constant_p(x) ? __swap32gen(__swap32_x) :		\
-	    __swap32md(__swap32_x);					\
+#define swap32(x) ({                            \
+    u_int32_t __swap32_x = (x);                 \
+                                    \
+    __builtin_constant_p(x) ? __swap32gen(__swap32_x) :     \
+        __swap32md(__swap32_x);                 \
 })
 
 #endif /* __GNUC__  */
@@ -112,27 +112,27 @@
 #define swap32 __swap32gen
 #endif /* MD_SWAP */
 
-#define swap16_multi(v, n) do {					        \
-	size_t __swap16_multi_n = (n);					\
-	u_int16_t *__swap16_multi_v = (v);				\
-									\
-	while (__swap16_multi_n) {					\
-		*__swap16_multi_v = swap16(*__swap16_multi_v);		\
-		__swap16_multi_v++;					\
-		__swap16_multi_n--;					\
-	}								\
+#define swap16_multi(v, n) do {                         \
+    size_t __swap16_multi_n = (n);                  \
+    u_int16_t *__swap16_multi_v = (v);              \
+                                    \
+    while (__swap16_multi_n) {                  \
+        *__swap16_multi_v = swap16(*__swap16_multi_v);      \
+        __swap16_multi_v++;                 \
+        __swap16_multi_n--;                 \
+    }                               \
 } while (0)
 
 __BEGIN_DECLS
-u_int32_t	htobe32 __P((u_int32_t));
-u_int16_t	htobe16 __P((u_int16_t));
-u_int32_t	betoh32 __P((u_int32_t));
-u_int16_t	betoh16 __P((u_int16_t));
+u_int32_t   htobe32 __P((u_int32_t));
+u_int16_t   htobe16 __P((u_int16_t));
+u_int32_t   betoh32 __P((u_int32_t));
+u_int16_t   betoh16 __P((u_int16_t));
 
-u_int32_t	htole32 __P((u_int32_t));
-u_int16_t	htole16 __P((u_int16_t));
-u_int32_t	letoh32 __P((u_int32_t));
-u_int16_t	letoh16 __P((u_int16_t));
+u_int32_t   htole32 __P((u_int32_t));
+u_int16_t   htole16 __P((u_int16_t));
+u_int32_t   letoh32 __P((u_int32_t));
+u_int16_t   letoh16 __P((u_int16_t));
 __END_DECLS
 
 #if BYTE_ORDER == LITTLE_ENDIAN
@@ -184,10 +184,10 @@ __END_DECLS
 #define ntohs betoh16
 #define ntohl betoh32
 
-#define	NTOHL(x) (x) = ntohl((u_int32_t)(x))
-#define	NTOHS(x) (x) = ntohs((u_int16_t)(x))
-#define	HTONL(x) (x) = htonl((u_int32_t)(x))
-#define	HTONS(x) (x) = htons((u_int16_t)(x))
+#define NTOHL(x) (x) = ntohl((u_int32_t)(x))
+#define NTOHS(x) (x) = ntohs((u_int16_t)(x))
+#define HTONL(x) (x) = htonl((u_int32_t)(x))
+#define HTONS(x) (x) = htons((u_int16_t)(x))
 
 #endif /* _POSIX_SOURCE */
 #endif /* _SYS_ENDIAN_H_ */

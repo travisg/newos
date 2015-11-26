@@ -15,8 +15,8 @@
  *    documentation and/or other materials provided with the distribution.
  * 3. All advertising materials mentioning features or use of this software
  *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
+ *  This product includes software developed by the University of
+ *  California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -45,17 +45,17 @@ static char *rcsid = "$OpenBSD: memcmp.c,v 1.4 1997/04/07 05:59:30 millert Exp $
  */
 int
 memcmp(s1, s2, n)
-	const void *s1, *s2;
-	size_t n;
+const void *s1, *s2;
+size_t n;
 {
-	if (n != 0) {
-		register const unsigned char *p1 = s1, *p2 = s2;
+    if (n != 0) {
+        register const unsigned char *p1 = s1, *p2 = s2;
 
-		do {
-			if (*p1++ != *p2++)
-				return (*--p1 - *--p2);
-		} while (--n != 0);
-	}
-	return (0);
+        do {
+            if (*p1++ != *p2++)
+                return (*--p1 - *--p2);
+        } while (--n != 0);
+    }
+    return (0);
 }
 

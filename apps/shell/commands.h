@@ -14,8 +14,8 @@ int cmd_create_proc(int argc,char *argv[]);
 typedef int(cmd_handler_proc)(int argc,char *argv[]);
 
 struct command {
-	char *cmd_text;
-	cmd_handler_proc *cmd_handler;
+    char *cmd_text;
+    cmd_handler_proc *cmd_handler;
 };
 
 extern struct command cmds[];

@@ -1,6 +1,6 @@
 /*-
  * Copyright (c) 1990, 1993
- *	The Regents of the University of California.  All rights reserved.
+ *  The Regents of the University of California.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -12,8 +12,8 @@
  *    documentation and/or other materials provided with the distribution.
  * 3. All advertising materials mentioning features or use of this software
  *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
+ *  This product includes software developed by the University of
+ *  California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -47,16 +47,16 @@ static char sccsid[] = "@(#)rand.c	8.1 (Berkeley) 6/14/93";
 static int
 do_rand(unsigned long *ctx)
 {
-	return ((*ctx = *ctx * 1103515245 + 12345) % ((u_long)RAND_MAX + 1));
+    return ((*ctx = *ctx * 1103515245 + 12345) % ((u_long)RAND_MAX + 1));
 }
 
 
 int
 rand_r(unsigned int *ctx)
 {
-	u_long val = (u_long) *ctx;
-	*ctx = do_rand(&val);
-	return (int) *ctx;
+    u_long val = (u_long) *ctx;
+    *ctx = do_rand(&val);
+    return (int) *ctx;
 }
 
 
@@ -65,14 +65,14 @@ static u_long next = 1;
 int
 rand()
 {
-	return do_rand(&next);
+    return do_rand(&next);
 }
 
 void
 srand(seed)
 u_int seed;
 {
-	next = seed;
+    next = seed;
 }
 
 #ifdef TEST
@@ -86,16 +86,14 @@ main()
     srand(0x19610910);
 
     printf("generating three pseudo-random numbers:\n");
-    for (i = 0; i < 3; i++)
-    {
-	printf("next random number = %d\n", rand());
+    for (i = 0; i < 3; i++) {
+        printf("next random number = %d\n", rand());
     }
 
     printf("generating the same sequence with rand_r:\n");
     myseed = 0x19610910;
-    for (i = 0; i < 3; i++)
-    {
-	printf("next random number = %d\n", rand_r(&myseed));
+    for (i = 0; i < 3; i++) {
+        printf("next random number = %d\n", rand_r(&myseed));
     }
 
     return 0;

@@ -11,28 +11,28 @@
 #include "rhine_dev.h"
 
 typedef struct rhine {
-	struct rhine *next; // next in the list of rhine devices
+    struct rhine *next; // next in the list of rhine devices
 
-	int irq;
-	addr_t phys_base;
-	addr_t phys_size;
-	addr_t virt_base;
-	uint16 io_port;
-	region_id region;
-	uint8 mac_addr[6];
+    int irq;
+    addr_t phys_base;
+    addr_t phys_size;
+    addr_t virt_base;
+    uint16 io_port;
+    region_id region;
+    uint8 mac_addr[6];
 
-	mutex lock;
-	spinlock_t reg_spinlock;
+    mutex lock;
+    spinlock_t reg_spinlock;
 
-	region_id txdesc_region;
-	struct rhine_tx_desc *txdesc;
-	addr_t txdesc_phys;
+    region_id txdesc_region;
+    struct rhine_tx_desc *txdesc;
+    addr_t txdesc_phys;
 
-	region_id rxdesc_region;
-	struct rhine_rx_desc *rxdesc;
-	addr_t rxdesc_phys;
-	int rx_head; // the nic consumes rx descriptors from the head of the list
-	int rx_tail; // more descriptors are filled in at the tail
+    region_id rxdesc_region;
+    struct rhine_rx_desc *rxdesc;
+    addr_t rxdesc_phys;
+    int rx_head; // the nic consumes rx descriptors from the head of the list
+    int rx_tail; // more descriptors are filled in at the tail
 } rhine;
 
 #define RXDESC_COUNT 256

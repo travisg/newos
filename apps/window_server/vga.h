@@ -30,5 +30,5 @@
 
 void SetPalette(int color, int red, int green, int blue);
 int InitVGA();
-  
+
 #endif

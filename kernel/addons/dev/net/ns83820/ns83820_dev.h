@@ -12,7 +12,7 @@
 #define NS_DEVICE_ID_83820 0x0022
 
 /* registers */
-#define REG_CR 	  0x0
+#define REG_CR    0x0
 #define REG_CFG   0x4
 #define REG_MEAR  0x8
 #define REG_PTSCR 0xc
@@ -54,23 +54,23 @@
 #define REG_PCI_CFG_BASE 0x200
 
 struct ns_desc_32 {
-	uint32 link;
-	uint32 bufptr;
-	uint32 cmdsts;
-	uint32 extsts;
+    uint32 link;
+    uint32 bufptr;
+    uint32 cmdsts;
+    uint32 extsts;
 
-	// our data
-	struct ns_desc_32 *next;
+    // our data
+    struct ns_desc_32 *next;
 };
 
 struct ns_desc_64 {
-	uint64 link;
-	uint64 bufptr;
-	uint32 cmdsts;
-	uint32 extsts;
+    uint64 link;
+    uint64 bufptr;
+    uint32 cmdsts;
+    uint32 extsts;
 
-	// our data
-	struct ns_desc_32 *next;
+    // our data
+    struct ns_desc_32 *next;
 };
 
 #endif

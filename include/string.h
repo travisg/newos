@@ -11,8 +11,9 @@
 #include <arch/string.h>
 
 #ifdef __cplusplus
-namespace std
-{extern "C" {
+namespace std {
+extern "C"
+{
 #endif
 
 
@@ -42,7 +43,8 @@ size_t      strxfrm(char *dest, const char *src, size_t n);
 char       *strdup(const char *str);
 
 #ifdef __cplusplus
-}} /* extern "C" */
+}
+} /* extern "C" */
 #endif
 
 #ifdef __cplusplus

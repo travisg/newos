@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Manuel J. Petit. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -17,25 +17,25 @@
 char *
 getcwd(char *buf, size_t len)
 {
-	int   rc;
-	char *_buf;
+    int   rc;
+    char *_buf;
 
-	_buf= buf?buf:malloc(len);
-	rc= _kern_getcwd(_buf, len);
+    _buf= buf?buf:malloc(len);
+    rc= _kern_getcwd(_buf, len);
 
-	if(rc< 0) {
-		if(buf!= _buf) {
-			free(_buf);
-		}
-		_buf= 0;
-	}
+    if (rc< 0) {
+        if (buf!= _buf) {
+            free(_buf);
+        }
+        _buf= 0;
+    }
 
-	return _buf;
+    return _buf;
 }
 
 
 char *
 getwd(char *buf)
 {
-	return getcwd(buf, MAXPATHLEN);
+    return getcwd(buf, MAXPATHLEN);
 }

@@ -1,7 +1,7 @@
 /*
-	rm: remove util.
-	Parameters: Filenames
-	exit      : 1 when deleting  one of the files failed
+    rm: remove util.
+    Parameters: Filenames
+    exit      : 1 when deleting  one of the files failed
 */
 
 #include <sys/syscalls.h>
@@ -15,46 +15,46 @@
 
 static int do_delete(const char *name)
 {
-	struct file_stat stat;
-	int err = _kern_rstat(name,&stat);
+    struct file_stat stat;
+    int err = _kern_rstat(name,&stat);
 
-	if(err<0) return err;
+    if (err<0) return err;
 
-	if(stat.type == STREAM_TYPE_DIR) return RMS_FILE_IS_DIR;
+    if (stat.type == STREAM_TYPE_DIR) return RMS_FILE_IS_DIR;
 
-	return  unlink(name);
+    return  unlink(name);
 }
 
 int main(int argc,char *argv[])
 {
-	int cnt;
-	const char *name;
-	int err;
-	const char *err_text;
-	int ret = 0;
+    int cnt;
+    const char *name;
+    int err;
+    const char *err_text;
+    int ret = 0;
 
-	if(argc <= 1){
+    if (argc <= 1) {
 
-		printf("rm: Missing arguments\n");
-		ret = 1;
+        printf("rm: Missing arguments\n");
+        ret = 1;
 
-	}
+    }
 
-	for(cnt=1;cnt<argc;cnt++){
-		name = argv[cnt];
-		err = do_delete(name);
+    for (cnt=1; cnt<argc; cnt++) {
+        name = argv[cnt];
+        err = do_delete(name);
 
-		if(err != 0){
-			ret = 1;
-			if(err == 1) {
-				err_text = "File is a directory";
-			} else {
-				err_text = strerror(err);
-			}
-			printf("rm: %s \n",err_text);
-		}
-	}
+        if (err != 0) {
+            ret = 1;
+            if (err == 1) {
+                err_text = "File is a directory";
+            } else {
+                err_text = strerror(err);
+            }
+            printf("rm: %s \n",err_text);
+        }
+    }
 
-	return ret;
+    return ret;
 }
 

@@ -1,9 +1,9 @@
-/*	$OpenBSD: memcpy.c,v 1.3 1996/10/16 11:32:07 mickey Exp $	*/
-/*	$NetBSD: bcopy.c,v 1.5 1995/04/22 13:46:50 cgd Exp $	*/
+/*  $OpenBSD: memcpy.c,v 1.3 1996/10/16 11:32:07 mickey Exp $   */
+/*  $NetBSD: bcopy.c,v 1.5 1995/04/22 13:46:50 cgd Exp $    */
 
 /*-
  * Copyright (c) 1993
- *	The Regents of the University of California.  All rights reserved.
+ *  The Regents of the University of California.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -15,8 +15,8 @@
  *    documentation and/or other materials provided with the distribution.
  * 3. All advertising materials mentioning features or use of this software
  *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
+ *  This product includes software developed by the University of
+ *  California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -33,7 +33,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	@(#)bcopy.c	8.1 (Berkeley) 6/11/93
+ *  @(#)bcopy.c 8.1 (Berkeley) 6/11/93
  */
 
 #include <sys/types.h>
@@ -44,21 +44,21 @@
  */
 void *
 memcpy(s1, s2, n)
-	void *s1;
-	const void *s2;
-	size_t n;
+void *s1;
+const void *s2;
+size_t n;
 {
-	register const char *f = s2;
-	register char *t = s1;
+    register const char *f = s2;
+    register char *t = s1;
 
-	if (f < t) {
-		f += n;
-		t += n;
-		while (n-- > 0)
-			*--t = *--f;
-	} else
-		while (n-- > 0)
-			*t++ = *f++;
-	return s1;
+    if (f < t) {
+        f += n;
+        t += n;
+        while (n-- > 0)
+            *--t = *--f;
+    } else
+        while (n-- > 0)
+            *t++ = *f++;
+    return s1;
 }
 

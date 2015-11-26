@@ -10,13 +10,13 @@
 ssize_t
 write(int fd, void const *buf, size_t len)
 {
-	int retval;
+    int retval;
 
-	retval= _kern_write(fd, buf, -1, len);
+    retval= _kern_write(fd, buf, -1, len);
 
-	if(retval< 0) {
-		errno = retval;
-	}
+    if (retval< 0) {
+        errno = retval;
+    }
 
-	return retval;
+    return retval;
 }

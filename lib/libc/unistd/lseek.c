@@ -10,11 +10,11 @@
 off_t
 lseek(int fd, off_t pos, int whence)
 {
-	off_t retval;
+    off_t retval;
 
-	retval = _kern_seek(fd, pos, whence);
-	if(retval < 0)
-		errno = retval;
+    retval = _kern_seek(fd, pos, whence);
+    if (retval < 0)
+        errno = retval;
 
-	return retval;
+    return retval;
 }

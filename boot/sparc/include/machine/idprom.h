@@ -1,5 +1,5 @@
-/*	$OpenBSD: idprom.h,v 1.2 1997/08/08 08:26:22 downsj Exp $	*/
-/*	$NetBSD: idprom.h,v 1.5 1997/03/10 22:47:52 pk Exp $ */
+/*  $OpenBSD: idprom.h,v 1.2 1997/08/08 08:26:22 downsj Exp $   */
+/*  $NetBSD: idprom.h,v 1.5 1997/03/10 22:47:52 pk Exp $ */
 
 /*
  * Copyright (c) 1993 Adam Glass
@@ -15,7 +15,7 @@
  *    documentation and/or other materials provided with the distribution.
  * 3. All advertising materials mentioning features or use of this software
  *    must display the following acknowledgement:
- *	This product includes software developed by Adam Glass.
+ *  This product includes software developed by Adam Glass.
  * 4. The name of the Author may not be used to endorse or promote products
  *    derived from this software without specific prior written permission.
  *
@@ -42,19 +42,19 @@
  * not actually used.  The checksum seems to include them, however.
  */
 struct idprom {
-	u_char	id_format;		/* format identifier (= 1) */
-	u_char	id_machine;		/* machine type (see param.h) */
-	u_char	id_ether[6];		/* ethernet address */
-	long	id_date;		/* date of manufacture */
-	u_char	id_hostid[3];		/* ``host id'' bytes */
-	u_char	id_checksum;		/* xor of everything else */
-	char	id_undef[16];		/* undefined */
+    u_char  id_format;      /* format identifier (= 1) */
+    u_char  id_machine;     /* machine type (see param.h) */
+    u_char  id_ether[6];        /* ethernet address */
+    long    id_date;        /* date of manufacture */
+    u_char  id_hostid[3];       /* ``host id'' bytes */
+    u_char  id_checksum;        /* xor of everything else */
+    char    id_undef[16];       /* undefined */
 };
 
-#define ID_SUN4_100	0x22
-#define ID_SUN4_200	0x21
-#define ID_SUN4_300	0x23
-#define ID_SUN4_400	0x24
+#define ID_SUN4_100 0x22
+#define ID_SUN4_200 0x21
+#define ID_SUN4_300 0x23
+#define ID_SUN4_400 0x24
 
 #define IDPROM_VERSION 1
 

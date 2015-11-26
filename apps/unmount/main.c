@@ -8,20 +8,20 @@
 
 int main(int argc, char *argv[])
 {
-	int rc;
+    int rc;
 
-	if(argc < 2) {
-		printf("not enough arguments to unmount\n");
-		return 0;
-	}
+    if (argc < 2) {
+        printf("not enough arguments to unmount\n");
+        return 0;
+    }
 
-	rc = _kern_unmount(argv[1]);
-	if (rc < 0) {
-		printf("_kern_unmount() returned error: %s\n", strerror(rc));
-	} else {
-		printf("%s successfully unmounted.\n", argv[1]);
-	}
+    rc = _kern_unmount(argv[1]);
+    if (rc < 0) {
+        printf("_kern_unmount() returned error: %s\n", strerror(rc));
+    } else {
+        printf("%s successfully unmounted.\n", argv[1]);
+    }
 
-	return 0;
+    return 0;
 }
 

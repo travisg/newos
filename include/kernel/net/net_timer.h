@@ -11,15 +11,15 @@
 typedef void (*net_timer_callback)(void *);
 
 typedef struct net_timer_event {
-	struct net_timer_event *next;
-	struct net_timer_event *prev;
+    struct net_timer_event *next;
+    struct net_timer_event *prev;
 
-	net_timer_callback func;
-	void *args;
+    net_timer_callback func;
+    void *args;
 
-	bigtime_t sched_time;
+    bigtime_t sched_time;
 
-	bool pending;
+    bool pending;
 } net_timer_event;
 
 #define NET_TIMER_PENDING_IGNORE 0x1
@@ -31,8 +31,8 @@ int cancel_net_timer(net_timer_event *e);
 
 static inline void clear_net_timer(net_timer_event *e)
 {
-	e->prev = e->next = NULL;
-	e->pending = false;
+    e->prev = e->next = NULL;
+    e->pending = false;
 }
 
 #endif

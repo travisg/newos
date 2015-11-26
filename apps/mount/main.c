@@ -8,21 +8,21 @@
 
 int main(int argc, char *argv[])
 {
-	int rc;
+    int rc;
 
-	if(argc < 4) {
-		printf("not enough arguments to mount:\n");
-		printf("usage: mount <path> <device> <fsname>\n");
-		return 0;
-	}
+    if (argc < 4) {
+        printf("not enough arguments to mount:\n");
+        printf("usage: mount <path> <device> <fsname>\n");
+        return 0;
+    }
 
-	rc = _kern_mount(argv[1], argv[2], argv[3], NULL);
-	if (rc < 0) {
-		printf("_kern_mount() returned error: %s\n", strerror(rc));
-	} else {
-		printf("%s successfully mounted on %s.\n", argv[2], argv[1]);
-	}
+    rc = _kern_mount(argv[1], argv[2], argv[3], NULL);
+    if (rc < 0) {
+        printf("_kern_mount() returned error: %s\n", strerror(rc));
+    } else {
+        printf("%s successfully mounted on %s.\n", argv[2], argv[1]);
+    }
 
-	return 0;
+    return 0;
 }
 

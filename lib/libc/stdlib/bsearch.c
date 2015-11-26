@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 1990, 1993
- *	The Regents of the University of California.  All rights reserved.
+ *  The Regents of the University of California.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -12,8 +12,8 @@
  *    documentation and/or other materials provided with the distribution.
  * 3. All advertising materials mentioning features or use of this software
  *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
+ *  This product includes software developed by the University of
+ *  California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -56,29 +56,29 @@ static char sccsid[] = "@(#)bsearch.c	8.1 (Berkeley) 6/4/93";
  */
 void *
 bsearch(
-	void const *key,
-	void const *base0,
-	size_t nmemb,
-	size_t size,
-	int (*compar)(void const *, void const *)
+    void const *key,
+    void const *base0,
+    size_t nmemb,
+    size_t size,
+    int (*compar)(void const *, void const *)
 )
 {
-	char const *base = base0;
-	size_t lim;
-	int cmp;
-	void const *p;
+    char const *base = base0;
+    size_t lim;
+    int cmp;
+    void const *p;
 
-	for (lim = nmemb; lim != 0; lim >>= 1) {
-		p = base + (lim >> 1) * size;
-		cmp = (*compar)(key, p);
-		if (cmp == 0) {
-			return (void *)p;
-		}
-		if (cmp > 0) {	/* key > p: move right */
-			base = (char *)p + size;
-			lim--;
-		}		/* else move left */
-	}
+    for (lim = nmemb; lim != 0; lim >>= 1) {
+        p = base + (lim >> 1) * size;
+        cmp = (*compar)(key, p);
+        if (cmp == 0) {
+            return (void *)p;
+        }
+        if (cmp > 0) {  /* key > p: move right */
+            base = (char *)p + size;
+            lim--;
+        }       /* else move left */
+    }
 
-	return NULL;
+    return NULL;
 }

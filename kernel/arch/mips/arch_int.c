@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -11,25 +11,25 @@ struct vector *vector_table;
 
 void arch_int_enable_io_interrupt(int irq)
 {
-	return;
+    return;
 }
 
 void arch_int_disable_io_interrupt(int irq)
 {
-	return;
+    return;
 }
 
 int arch_int_init(kernel_args *ka)
 {
-	int i;
+    int i;
 
-	dprintf("arch_int_init: entry\n");
+    dprintf("arch_int_init: entry\n");
 
-	return 0;
+    return 0;
 }
 
 int arch_int_init2(kernel_args *ka)
 {
-	return 0;
+    return 0;
 }
 

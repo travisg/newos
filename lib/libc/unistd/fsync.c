@@ -10,13 +10,13 @@
 int
 fsync(int fd)
 {
-	int retval;
+    int retval;
 
-	retval= _kern_fsync(fd);
+    retval= _kern_fsync(fd);
 
-	if(retval< 0) {
-		errno = retval;
-	}
+    if (retval< 0) {
+        errno = retval;
+    }
 
-	return retval;
+    return retval;
 }

@@ -14,12 +14,13 @@
 #endif
 
 #ifdef __cplusplus
-namespace std
-{ extern "C" {
+namespace std {
+extern "C"
+{
 #endif
 
 
-int	      atoi(char const *);
+int       atoi(char const *);
 unsigned int  atoui(const char *num);
 long          atol(const char *num);
 unsigned long atoul(const char *num);
@@ -37,18 +38,18 @@ char *getenv(char const *);
 void *bsearch(void const *, void const *, size_t, size_t, int (*) (void const *, void const *));
 void  qsort(void *, size_t, size_t, int (*)(void const *, void const *));
 
-#define	RAND_MAX	0x7fffffff
+#define RAND_MAX    0x7fffffff
 int   rand(void);
 void  srand(unsigned);
 
 typedef struct {
-	int quot;
-	int rem;
+    int quot;
+    int rem;
 } div_t;
 
 typedef struct {
-	long quot;
-	long rem;
+    long quot;
+    long rem;
 } ldiv_t;
 
 div_t  div(int num, int denom);
@@ -73,7 +74,8 @@ void _Exit(int);
 #endif
 
 #ifdef __cplusplus
-}} /* extern "C" */
+}
+} /* extern "C" */
 #endif
 
 /* terrible hack to get around the different kernel name for malloc and free */

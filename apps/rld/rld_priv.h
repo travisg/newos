@@ -12,7 +12,7 @@
 
 #define DEBUG_RLD 0
 
-#define NEWOS_MAGIC_APPNAME	"__NEWOS_APP__"
+#define NEWOS_MAGIC_APPNAME "__NEWOS_APP__"
 
 typedef unsigned dynmodule_id;
 int RLD_STARTUP(void *);

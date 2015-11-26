@@ -8,7 +8,7 @@
 #include <newos/types.h>
 
 #define ELF_MAGIC "\x7f""ELF"
-#define EI_MAG0	0
+#define EI_MAG0 0
 #define EI_MAG1 1
 #define EI_MAG2 2
 #define EI_MAG3 3
@@ -19,19 +19,19 @@
 #define EI_ABIVERSION 8
 #define EI_NIDENT 16
 
-#define EM_SPARC	2
-#define EM_386		3
-#define EM_68K		4
-#define EM_MIPS		8
-#define EM_SPARC32PLUS	18
-#define EM_PPC		20
-#define EM_PPC64	21
-#define EM_ARM		40
-#define EM_SH		42
-#define EM_SPARCV9	43
-#define EM_IA_64	50
-#define EM_X86_64	62
-#define EM_ALPHA	0x9026
+#define EM_SPARC    2
+#define EM_386      3
+#define EM_68K      4
+#define EM_MIPS     8
+#define EM_SPARC32PLUS  18
+#define EM_PPC      20
+#define EM_PPC64    21
+#define EM_ARM      40
+#define EM_SH       42
+#define EM_SPARCV9  43
+#define EM_IA_64    50
+#define EM_X86_64   62
+#define EM_ALPHA    0x9026
 
 #define ELFCLASS32 1
 #define ELFCLASS64 2
@@ -69,10 +69,10 @@
 #define SHF_TLS 0x400
 #define SHF_MASKPROC 0xf0000000
 
-#define PF_X		0x1
-#define PF_W		0x2
-#define PF_R		0x4
-#define PF_MASKPROC	0xf0000000
+#define PF_X        0x1
+#define PF_W        0x2
+#define PF_R        0x4
+#define PF_MASKPROC 0xf0000000
 
 #define PT_NULL 0
 #define PT_LOAD 1

@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 1985, 1993
- *	The Regents of the University of California.  All rights reserved.
+ *  The Regents of the University of California.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -12,8 +12,8 @@
  *    documentation and/or other materials provided with the distribution.
  * 3. All advertising materials mentioning features or use of this software
  *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
+ *  This product includes software developed by the University of
+ *  California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -36,9 +36,9 @@ static char sccsid[] = "@(#)log__L.c	8.1 (Berkeley) 6/4/93";
 #endif /* not lint */
 
 /* log__L(Z)
- *		LOG(1+X) - 2S			       X
+ *      LOG(1+X) - 2S                  X
  * RETURN      ---------------  WHERE Z = S*S,  S = ------- , 0 <= Z <= .0294...
- *		      S				     2 + X
+ *            S                  2 + X
  *
  * DOUBLE PRECISION (VAX D FORMAT 56 bits or IEEE DOUBLE 53 BITS)
  * KERNEL FUNCTION FOR LOG; TO BE USED IN LOG1P, LOG, AND POW FUNCTIONS
@@ -46,21 +46,21 @@ static char sccsid[] = "@(#)log__L.c	8.1 (Berkeley) 6/4/93";
  * REVISED BY K.C. Ng, 2/3/85, 4/16/85.
  *
  * Method :
- *	1. Polynomial approximation: let s = x/(2+x).
- *	   Based on log(1+x) = log(1+s) - log(1-s)
- *		 = 2s + 2/3 s**3 + 2/5 s**5 + .....,
+ *  1. Polynomial approximation: let s = x/(2+x).
+ *     Based on log(1+x) = log(1+s) - log(1-s)
+ *       = 2s + 2/3 s**3 + 2/5 s**5 + .....,
  *
- *	   (log(1+x) - 2s)/s is computed by
+ *     (log(1+x) - 2s)/s is computed by
  *
- *	       z*(L1 + z*(L2 + z*(... (L7 + z*L8)...)))
+ *         z*(L1 + z*(L2 + z*(... (L7 + z*L8)...)))
  *
- *	   where z=s*s. (See the listing below for Lk's values.) The
- *	   coefficients are obtained by a special Remez algorithm.
+ *     where z=s*s. (See the listing below for Lk's values.) The
+ *     coefficients are obtained by a special Remez algorithm.
  *
  * Accuracy:
- *	Assuming no rounding error, the maximum magnitude of the approximation
- *	error (absolute) is 2**(-58.49) for IEEE double, and 2**(-63.63)
- *	for VAX D format.
+ *  Assuming no rounding error, the maximum magnitude of the approximation
+ *  error (absolute) is 2**(-58.49) for IEEE double, and 2**(-63.63)
+ *  for VAX D format.
  *
  * Constants:
  * The hexadecimal values are the intended ones for the following constants.
@@ -89,22 +89,22 @@ ic(L6, 1.5314087275331442206E-1, -3, 1.39A1EC014045B)
 ic(L7, 1.4795612545334174692E-1, -3, 1.2F039F0085122)
 
 #ifdef vccast
-#define	L1	vccast(L1)
-#define	L2	vccast(L2)
-#define	L3	vccast(L3)
-#define	L4	vccast(L4)
-#define	L5	vccast(L5)
-#define	L6	vccast(L6)
-#define	L7	vccast(L7)
-#define	L8	vccast(L8)
+#define L1  vccast(L1)
+#define L2  vccast(L2)
+#define L3  vccast(L3)
+#define L4  vccast(L4)
+#define L5  vccast(L5)
+#define L6  vccast(L6)
+#define L7  vccast(L7)
+#define L8  vccast(L8)
 #endif
 
 double __log__L(z)
 double z;
 {
 #if defined(vax)||defined(tahoe)
-    return(z*(L1+z*(L2+z*(L3+z*(L4+z*(L5+z*(L6+z*(L7+z*L8))))))));
-#else	/* defined(vax)||defined(tahoe) */
-    return(z*(L1+z*(L2+z*(L3+z*(L4+z*(L5+z*(L6+z*L7)))))));
-#endif	/* defined(vax)||defined(tahoe) */
+    return (z*(L1+z*(L2+z*(L3+z*(L4+z*(L5+z*(L6+z*(L7+z*L8))))))));
+#else   /* defined(vax)||defined(tahoe) */
+    return (z*(L1+z*(L2+z*(L3+z*(L4+z*(L5+z*(L6+z*L7)))))));
+#endif  /* defined(vax)||defined(tahoe) */
 }

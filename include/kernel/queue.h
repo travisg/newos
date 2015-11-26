@@ -8,13 +8,13 @@
 #include <kernel/kernel.h>
 
 typedef struct queue_element {
-	void *next;
+    void *next;
 } queue_element;
 
 typedef struct queue {
-	void *head;
-	void *tail;
-	int count;
+    void *head;
+    void *tail;
+    int count;
 } queue;
 
 int queue_init(queue *q);
@@ -24,11 +24,11 @@ void *queue_dequeue(queue *q);
 void *queue_peek(queue *q);
 
 typedef struct fixed_queue {
-	void **table;
-	int head;
-	int tail;
-	int count;
-	int size;
+    void **table;
+    int head;
+    int tail;
+    int count;
+    int size;
 } fixed_queue;
 
 int fixed_queue_init(fixed_queue *q, int size);

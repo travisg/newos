@@ -15,13 +15,13 @@
 
 // user function list and management function lists are separated
 struct module_header {
-	const char *name;				// with path (for clients convinience)
-	uint32 version;
-	uint32 flags;
-	void *interface;				// pointer to function list
-	
-	int ( *init )( void );
-	int ( *uninit )( void );
+    const char *name;               // with path (for clients convinience)
+    uint32 version;
+    uint32 flags;
+    void *interface;                // pointer to function list
+
+    int ( *init )( void );
+    int ( *uninit )( void );
 };
 
 typedef struct modules_cookie {} *modules_cookie;

@@ -15,22 +15,22 @@
 // one per cpu. put per cpu stuff here, to keep the data local and reduce
 // the amount of cache thrashing that goes on otherwise.
 typedef struct cpu_ent {
-	int cpu_num;
+    int cpu_num;
 
-	// thread.c: used to force a reschedule at quantum expiration time
-	int preempted;
-	struct timer_event quantum_timer;
+    // thread.c: used to force a reschedule at quantum expiration time
+    int preempted;
+    struct timer_event quantum_timer;
 
-	// remember which thread's fpu state we hold
-	// NULL means we dont hold any state
-	struct thread *fpu_state_thread;
+    // remember which thread's fpu state we hold
+    // NULL means we dont hold any state
+    struct thread *fpu_state_thread;
 
-	// timer.c: per-cpu timer queues
-	struct timer_event * volatile timer_events;
-	spinlock_t timer_spinlock;
+    // timer.c: per-cpu timer queues
+    struct timer_event * volatile timer_events;
+    spinlock_t timer_spinlock;
 
-	// arch-specific stuff
-	struct arch_cpu_info arch;
+    // arch-specific stuff
+    struct arch_cpu_info arch;
 } cpu_ent _ALIGNED(64);
 
 extern cpu_ent cpu[_MAX_CPUS];
@@ -41,13 +41,14 @@ int cpu_init_percpu(kernel_args *ka, int curr_cpu);
 
 static inline cpu_ent *get_cpu_struct(int cpu_num) { return &cpu[cpu_num]; }
 
-static inline cpu_ent *get_curr_cpu_struct(void) { 
-	struct thread *t = thread_get_current_thread();
-	if(t)
-		return t->cpu;
-	else {
-		return get_cpu_struct(smp_get_current_cpu());
-	}
+static inline cpu_ent *get_curr_cpu_struct(void)
+{
+    struct thread *t = thread_get_current_thread();
+    if (t)
+        return t->cpu;
+    else {
+        return get_cpu_struct(smp_get_current_cpu());
+    }
 }
 
 void cpu_spin(bigtime_t interval);

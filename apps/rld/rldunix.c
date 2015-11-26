@@ -8,26 +8,26 @@
 int
 export_dl_open(char const *name, unsigned flags)
 {
-	(void)(name);
-	(void)(flags);
+    (void)(name);
+    (void)(flags);
 
-	return load_library(name);
+    return load_library(name);
 }
 
 int
 export_dl_close(int lib, unsigned flags)
 {
-	(void)(flags);
+    (void)(flags);
 
-	return unload_library(lib);
+    return unload_library(lib);
 }
 
 void *
 export_dl_sym(int lib, char const *sym, unsigned flags)
 {
-	(void)(lib);
-	(void)(sym);
-	(void)(flags);
+    (void)(lib);
+    (void)(sym);
+    (void)(flags);
 
-	return dynamic_symbol(lib, sym);
+    return dynamic_symbol(lib, sym);
 }

@@ -7,11 +7,11 @@
 
 // architecture specific thread info
 struct arch_thread {
-	// blank
+    // blank
 };
 
 struct arch_proc {
-	// nothing here
+    // nothing here
 };
 
 #endif

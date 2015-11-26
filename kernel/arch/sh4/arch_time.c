@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2006, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -9,7 +9,7 @@
 
 int arch_time_init(kernel_args *ka)
 {
-	return 0;
+    return 0;
 }
 
 void arch_time_tick(void)
@@ -18,11 +18,11 @@ void arch_time_tick(void)
 
 bigtime_t arch_get_time_delta(void)
 {
-	return 0;
+    return 0;
 }
 
 bigtime_t arch_get_rtc_delta(void)
 {
-	return 0;
+    return 0;
 }
 

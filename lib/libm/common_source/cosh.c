@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 1985, 1993
- *	The Regents of the University of California.  All rights reserved.
+ *  The Regents of the University of California.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -12,8 +12,8 @@
  *    documentation and/or other materials provided with the distribution.
  * 3. All advertising materials mentioning features or use of this software
  *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
+ *  This product includes software developed by the University of
+ *  California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -38,38 +38,38 @@
  * REVISED BY K.C. NG on 2/8/85, 2/23/85, 3/7/85, 3/29/85, 4/16/85.
  *
  * Required system supported functions :
- *	copysign(x,y)
- *	scalb(x,N)
+ *  copysign(x,y)
+ *  scalb(x,N)
  *
  * Required kernel function:
- *	exp(x)
- *	exp__E(x,c)	...return exp(x+c)-1-x for |x|<0.3465
+ *  exp(x)
+ *  exp__E(x,c) ...return exp(x+c)-1-x for |x|<0.3465
  *
  * Method :
- *	1. Replace x by |x|.
- *	2.
- *		                                        [ exp(x) - 1 ]^2
- *	    0        <= x <= 0.3465  :  cosh(x) := 1 + -------------------
- *			       			           2*exp(x)
+ *  1. Replace x by |x|.
+ *  2.
+ *                                              [ exp(x) - 1 ]^2
+ *      0        <= x <= 0.3465  :  cosh(x) := 1 + -------------------
+ *                                     2*exp(x)
  *
- *		                                   exp(x) +  1/exp(x)
- *	    0.3465   <= x <= 22      :  cosh(x) := -------------------
- *			       			           2
- *	    22       <= x <= lnovfl  :  cosh(x) := exp(x)/2
- *	    lnovfl   <= x <= lnovfl+log(2)
- *				     :  cosh(x) := exp(x)/2 (avoid overflow)
- *	    log(2)+lnovfl <  x <  INF:  overflow to INF
+ *                                         exp(x) +  1/exp(x)
+ *      0.3465   <= x <= 22      :  cosh(x) := -------------------
+ *                                     2
+ *      22       <= x <= lnovfl  :  cosh(x) := exp(x)/2
+ *      lnovfl   <= x <= lnovfl+log(2)
+ *                   :  cosh(x) := exp(x)/2 (avoid overflow)
+ *      log(2)+lnovfl <  x <  INF:  overflow to INF
  *
- *	Note: .3465 is a number near one half of ln2.
+ *  Note: .3465 is a number near one half of ln2.
  *
  * Special cases:
- *	cosh(x) is x if x is +INF, -INF, or NaN.
- *	only cosh(0)=1 is exact for finite x.
+ *  cosh(x) is x if x is +INF, -INF, or NaN.
+ *  only cosh(0)=1 is exact for finite x.
  *
  * Accuracy:
- *	cosh(x) returns the exact hyperbolic cosine of x nearly rounded.
- *	In a test run with 768,000 random arguments on a VAX, the maximum
- *	observed error was 1.23 ulps (units in the last place).
+ *  cosh(x) returns the exact hyperbolic cosine of x nearly rounded.
+ *  In a test run with 768,000 random arguments on a VAX, the maximum
+ *  observed error was 1.23 ulps (units in the last place).
  *
  * Constants:
  * The hexadecimal values are the intended ones for the following constants.
@@ -96,36 +96,36 @@ ic(lnovfl, 7.0978271289338397310E2,     9, 1.62E42FEFA39EF)
 
 #if defined(vax)||defined(tahoe)
 static int const max = 126                      ;
-#else	/* defined(vax)||defined(tahoe) */
+#else   /* defined(vax)||defined(tahoe) */
 static int const max = 1023                     ;
-#endif	/* defined(vax)||defined(tahoe) */
+#endif  /* defined(vax)||defined(tahoe) */
 
 double
 cosh(double x)
 {
-	static double const half=1.0/2.0;
-	static double const one=1.0;
-	static double const small=1.0E-18; /* fl(1+small)==1 */
-	double t;
+    static double const half=1.0/2.0;
+    static double const one=1.0;
+    static double const small=1.0E-18; /* fl(1+small)==1 */
+    double t;
 
 #if !defined(vax)&&!defined(tahoe)
-	if(x!=x) return(x);	/* x is NaN */
-#endif	/* !defined(vax)&&!defined(tahoe) */
-	if((x=copysign(x,one)) <= 22) {
-	    if(x<0.3465)
-		if(x<small) return(one+x);
-		else {t=x+__exp__E(x,0.0);x=t+t; return(one+t*t/(2.0+x)); }
+    if (x!=x) return (x); /* x is NaN */
+#endif  /* !defined(vax)&&!defined(tahoe) */
+    if ((x=copysign(x,one)) <= 22) {
+        if (x<0.3465)
+            if (x<small) return (one+x);
+            else {t=x+__exp__E(x,0.0); x=t+t; return (one+t*t/(2.0+x)); }
 
-	    else /* for x lies in [0.3465,22] */
-	        { t=exp(x); return((t+one/t)*half); }
-	}
+        else /* for x lies in [0.3465,22] */
+        { t=exp(x); return ((t+one/t)*half); }
+    }
 
-	if( lnovfl <= x && x <= (lnovfl+0.7))
+    if ( lnovfl <= x && x <= (lnovfl+0.7))
         /* for x lies in [lnovfl, lnovfl+ln2], decrease x by ln(2^(max+1))
          * and return 2^max*exp(x) to avoid unnecessary overflow
          */
-	    return(scalb(exp((x-mln2hi)-mln2lo), max));
+        return (scalb(exp((x-mln2hi)-mln2lo), max));
 
-	else
-	    return(exp(x)*half);	/* for large x,  cosh(x)=exp(x)/2 */
+    else
+        return (exp(x)*half);   /* for large x,  cosh(x)=exp(x)/2 */
 }

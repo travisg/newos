@@ -10,7 +10,7 @@
 #if _KERNEL
 
 /* set the debug level of the kernel */
-/* debug level 0 prints no messages, 
+/* debug level 0 prints no messages,
  * >= 1 turns on a lot of debug spew and extra internal consistency checks */
 #define DEBUG 10
 

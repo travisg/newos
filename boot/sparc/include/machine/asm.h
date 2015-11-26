@@ -1,5 +1,5 @@
-/*	$OpenBSD: asm.h,v 1.2 1997/08/08 08:26:02 downsj Exp $	*/
-/*	$NetBSD: asm.h,v 1.5 1997/07/16 15:16:43 christos Exp $ */
+/*  $OpenBSD: asm.h,v 1.2 1997/08/08 08:26:02 downsj Exp $  */
+/*  $NetBSD: asm.h,v 1.5 1997/07/16 15:16:43 christos Exp $ */
 
 /*
  * Copyright (c) 1994 Allen Briggs
@@ -23,8 +23,8 @@
  *    documentation and/or other materials provided with the distribution.
  * 3. All advertising materials mentioning features or use of this software
  *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
+ *  This product includes software developed by the University of
+ *  California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -46,11 +46,11 @@
 #define _ASM_H_
 
 #ifdef __STDC__
-#define _C_LABEL(name)		_ ## name
+#define _C_LABEL(name)      _ ## name
 #else
-#define _C_LABEL(name)		_/**/name
+#define _C_LABEL(name)      _/**/name
 #endif
-#define	_ASM_LABEL(name)	name
+#define _ASM_LABEL(name)    name
 
 #ifdef PIC
 /*
@@ -60,10 +60,10 @@
  * to work without a stack frame (doing so requires saving %o7) .
  */
 #define PIC_PROLOGUE(dest,tmp) \
-	mov %o7,tmp; 3: call 4f; nop; 4: \
-	sethi %hi(__GLOBAL_OFFSET_TABLE_-(3b-.)),dest; \
-	or dest,%lo(__GLOBAL_OFFSET_TABLE_-(3b-.)),dest; \
-	add dest,%o7,dest; mov tmp,%o7
+    mov %o7,tmp; 3: call 4f; nop; 4: \
+    sethi %hi(__GLOBAL_OFFSET_TABLE_-(3b-.)),dest; \
+    or dest,%lo(__GLOBAL_OFFSET_TABLE_-(3b-.)),dest; \
+    add dest,%o7,dest; mov tmp,%o7
 
 /*
  * PICCY_SET() does the equivalent of a `set var, %dest' instruction in
@@ -71,36 +71,36 @@
  * only works for VARs defined in the same file *and* in the text segment.
  */
 #define PICCY_SET(var,dest,tmp) \
-	mov %o7,tmp; 3: call 4f; nop; 4: \
-	add %o7,(var-3b),dest; mov tmp,%o7
+    mov %o7,tmp; 3: call 4f; nop; 4: \
+    add %o7,(var-3b),dest; mov tmp,%o7
 #else
 #define PIC_PROLOGUE(dest,tmp)
 #define PICCY_OFFSET(var,dest,tmp)
 #endif
 
-#define FTYPE(x)		.type x,@function
-#define OTYPE(x)		.type x,@object
+#define FTYPE(x)        .type x,@function
+#define OTYPE(x)        .type x,@object
 
-#define	_ENTRY(name) \
-	.align 4; .globl name; .proc 1; FTYPE(name); name:
+#define _ENTRY(name) \
+    .align 4; .globl name; .proc 1; FTYPE(name); name:
 
 #ifdef GPROF
 #define _PROF_PROLOGUE \
-	.data; .align 4; 1: .long 0; \
-	.text; save %sp,-96,%sp; sethi %hi(1b),%o0; call mcount; \
-	or %o0,%lo(1b),%o0; restore
+    .data; .align 4; 1: .long 0; \
+    .text; save %sp,-96,%sp; sethi %hi(1b),%o0; call mcount; \
+    or %o0,%lo(1b),%o0; restore
 #else
 #define _PROF_PROLOGUE
 #endif
 
-#define ENTRY(name)		_ENTRY(_C_LABEL(name)); _PROF_PROLOGUE
-#define	ASENTRY(name)		_ENTRY(_ASM_LABEL(name)); _PROF_PROLOGUE
-#define	FUNC(name)		ASENTRY(name)
+#define ENTRY(name)     _ENTRY(_C_LABEL(name)); _PROF_PROLOGUE
+#define ASENTRY(name)       _ENTRY(_ASM_LABEL(name)); _PROF_PROLOGUE
+#define FUNC(name)      ASENTRY(name)
 
 
-#define ASMSTR			.asciz
+#define ASMSTR          .asciz
 
-#define RCSID(name)		.asciz name
+#define RCSID(name)     .asciz name
 
 #endif /* _ASM_H_ */
 

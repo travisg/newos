@@ -9,17 +9,16 @@
 
 #include <stddef.h>
 
-struct tm
-{
-	int tm_sec;    /* seconds*/
-	int tm_min;    /* minutes*/
-	int tm_hour;   /* hours*/
-	int tm_mday;   /* day of the month */
-	int tm_mon;    /* months (0 to 11) */
-	int tm_year;   /* years */
-	int tm_wday;   /* day of week (0 to 6) */
-	int tm_yday;   /* day of year (0 to 365) */
-	int tm_isdst;  /* Daylight Savings Time */
+struct tm {
+    int tm_sec;    /* seconds*/
+    int tm_min;    /* minutes*/
+    int tm_hour;   /* hours*/
+    int tm_mday;   /* day of the month */
+    int tm_mon;    /* months (0 to 11) */
+    int tm_year;   /* years */
+    int tm_wday;   /* day of week (0 to 6) */
+    int tm_yday;   /* day of year (0 to 365) */
+    int tm_isdst;  /* Daylight Savings Time */
 };
 
 typedef unsigned long long clock_t;

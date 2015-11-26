@@ -1,5 +1,5 @@
-/*	$OpenBSD: oldmon.h,v 1.4 1997/08/08 08:26:32 downsj Exp $	*/
-/*	$NetBSD: oldmon.h,v 1.11 1996/03/31 22:21:38 pk Exp $ */
+/*  $OpenBSD: oldmon.h,v 1.4 1997/08/08 08:26:32 downsj Exp $   */
+/*  $NetBSD: oldmon.h,v 1.11 1996/03/31 22:21:38 pk Exp $ */
 
 /*
  * Copyright (C) 1985 Regents of the University of California
@@ -16,7 +16,7 @@
  *    documentation and/or other materials provided with the distribution.
  * 3. All advertising materials mentioning features or use of this software
  *    must display the following acknowledgement:
- *	This product includes software developed by Adam Glass.
+ *  This product includes software developed by Adam Glass.
  * 4. The name of the Author may not be used to endorse or promote products
  *    derived from this software without specific prior written permission.
  *
@@ -32,8 +32,8 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	from: Sprite /cdrom/src/kernel/Cvsroot/kernel/mach/sun3.md/machMon.h,v
- *	    9.1 90/10/03 13:52:34 mgbaker Exp SPRITE (Berkeley)
+ *  from: Sprite /cdrom/src/kernel/Cvsroot/kernel/mach/sun3.md/machMon.h,v
+ *      9.1 90/10/03 13:52:34 mgbaker Exp SPRITE (Berkeley)
  */
 #ifndef _MACHINE_OLDMON_H
 #define _MACHINE_OLDMON_H
@@ -50,28 +50,28 @@
 #define PROM_BASE       0xffe81000
 
 enum maptypes { /* Page map entry types. */
-	MAP_MAINMEM,
-	MAP_OBIO,
-	MAP_MBMEM,
-	MAP_MBIO,
-	MAP_VME16A16D,
-	MAP_VME16A32D,
-	MAP_VME24A16D,
-	MAP_VME24A32D,
-	MAP_VME32A16D,
-	MAP_VME32A32D
+    MAP_MAINMEM,
+    MAP_OBIO,
+    MAP_MBMEM,
+    MAP_MBIO,
+    MAP_VME16A16D,
+    MAP_VME16A32D,
+    MAP_VME24A16D,
+    MAP_VME24A32D,
+    MAP_VME32A16D,
+    MAP_VME32A32D
 };
 /*
  * This table gives information about the resources needed by a device.
  */
 struct devinfo {
-	unsigned int	d_devbytes;  /* Bytes occupied by device in IO space.*/
-	unsigned int	d_dmabytes;  /* Bytes needed by device in DMA memory.*/
-	unsigned int	d_localbytes;/* Bytes needed by device for local info.*/
-	unsigned int	d_stdcount;  /* How many standard addresses. */
-	unsigned long	*d_stdaddrs; /* The vector of standard addresses. */
-	enum maptypes	d_devtype;   /* What map space device is in. */
-	unsigned int	d_maxiobytes;/* Size to break big I/O's into. */
+    unsigned int    d_devbytes;  /* Bytes occupied by device in IO space.*/
+    unsigned int    d_dmabytes;  /* Bytes needed by device in DMA memory.*/
+    unsigned int    d_localbytes;/* Bytes needed by device for local info.*/
+    unsigned int    d_stdcount;  /* How many standard addresses. */
+    unsigned long   *d_stdaddrs; /* The vector of standard addresses. */
+    enum maptypes   d_devtype;   /* What map space device is in. */
+    unsigned int    d_maxiobytes;/* Size to break big I/O's into. */
 };
 
 /*
@@ -80,27 +80,27 @@ struct devinfo {
  * in the `om_boottable' structure.
  */
 struct saioreq {
-	char	si_flgs;
-	struct om_boottable *si_boottab;/* Points to boottab entry if any */
-	char	*si_devdata;		/* Device-specific data pointer */
-	int	si_ctlr;		/* Controller number or address */
-	int	si_unit;		/* Unit number within controller */
-	long	si_boff;		/* Partition number within unit */
-	long	si_cyloff;
-	long	si_offset;
-	long	si_bn;			/* Block number to R/W */
-	char	*si_ma;			/* Memory address to R/W */
-	int	si_cc;			/* Character count to R/W */
-	struct	saif *si_sif;		/* net if. pointer (set by b_open) */
-	char 	*si_devaddr;		/* Points to mapped in device */
-	char	*si_dmaaddr;		/* Points to allocated DMA space */
+    char    si_flgs;
+    struct om_boottable *si_boottab;/* Points to boottab entry if any */
+    char    *si_devdata;        /* Device-specific data pointer */
+    int si_ctlr;        /* Controller number or address */
+    int si_unit;        /* Unit number within controller */
+    long    si_boff;        /* Partition number within unit */
+    long    si_cyloff;
+    long    si_offset;
+    long    si_bn;          /* Block number to R/W */
+    char    *si_ma;         /* Memory address to R/W */
+    int si_cc;          /* Character count to R/W */
+    struct  saif *si_sif;       /* net if. pointer (set by b_open) */
+    char    *si_devaddr;        /* Points to mapped in device */
+    char    *si_dmaaddr;        /* Points to allocated DMA space */
 };
-#define SAIO_F_READ	0x01
-#define SAIO_F_WRITE	0x02
-#define SAIO_F_ALLOC	0x04
-#define SAIO_F_FILE	0x08
-#define	SAIO_F_EOF	0x10	/* EOF on device */
-#define SAIO_F_AJAR	0x20	/* Descriptor "ajar" (stopped but not closed) */
+#define SAIO_F_READ 0x01
+#define SAIO_F_WRITE    0x02
+#define SAIO_F_ALLOC    0x04
+#define SAIO_F_FILE 0x08
+#define SAIO_F_EOF  0x10    /* EOF on device */
+#define SAIO_F_AJAR 0x20    /* Descriptor "ajar" (stopped but not closed) */
 
 
 /*
@@ -115,18 +115,18 @@ struct saioreq {
  * should figure this out eventually if we need it.
  */
 struct om_boottable {
-	char	b_devname[2];		/* The name of the device */
-	int	(*b_probe) __P((void));	/* probe() --> -1 or found controller
-					   number */
-	int	(*b_boot) __P((void));	/* boot(bp) --> -1 or start address */
-	int	(*b_open)
-		__P((struct saioreq *));/* open(iobp) --> -1 or 0 */
-	int	(*b_close)
-		__P((struct saioreq *));/* close(iobp) --> -1 or 0 */
-	int	(*b_strategy)
-		__P((struct saioreq *, int));/* strategy(iobp,rw) --> -1 or 0 */
-	char	*b_desc;		/* Printable string describing dev */
-	struct devinfo *b_devinfo;      /* info to configure device. */
+    char    b_devname[2];       /* The name of the device */
+    int (*b_probe) __P((void)); /* probe() --> -1 or found controller
+                       number */
+    int (*b_boot) __P((void));  /* boot(bp) --> -1 or start address */
+    int (*b_open)
+    __P((struct saioreq *));/* open(iobp) --> -1 or 0 */
+    int (*b_close)
+    __P((struct saioreq *));/* close(iobp) --> -1 or 0 */
+    int (*b_strategy)
+    __P((struct saioreq *, int));/* strategy(iobp,rw) --> -1 or 0 */
+    char    *b_desc;        /* Printable string describing dev */
+    struct devinfo *b_devinfo;      /* info to configure device. */
 };
 
 /*
@@ -134,14 +134,14 @@ struct om_boottable {
  * is booted.
  */
 struct om_bootparam {
-	char	*argPtr[8];		/* String arguments */
-	char	strings[100];		/* String table for string arguments */
-	char	devName[2];		/* Device name */
-	int	ctlrNum;		/* Controller number */
-	int	unitNum;		/* Unit number */
-	int	partNum;		/* Partition/file number */
-	char	*fileName;		/* File name, points into strings */
-	struct om_boottable *bootTable;	/* Points to table entry for device */
+    char    *argPtr[8];     /* String arguments */
+    char    strings[100];       /* String table for string arguments */
+    char    devName[2];     /* Device name */
+    int ctlrNum;        /* Controller number */
+    int unitNum;        /* Unit number */
+    int partNum;        /* Partition/file number */
+    char    *fileName;      /* File name, points into strings */
+    struct om_boottable *bootTable; /* Points to table entry for device */
 };
 
 /*
@@ -153,102 +153,102 @@ struct om_bootparam {
  *       translate these structs into Sprite format.
  */
 struct om_vector {
-	char	*initSp;		/* Initial system stack ptr for hardware */
-	int	(*startMon) __P((void));/* Initial PC for hardware */
-	int	*diagberr;		/* Bus err handler for diags */
+    char    *initSp;        /* Initial system stack ptr for hardware */
+    int (*startMon) __P((void));/* Initial PC for hardware */
+    int *diagberr;      /* Bus err handler for diags */
 
-	/* Monitor and hardware revision and identification */
-	struct om_bootparam **bootParam;	/* Info for bootstrapped pgm */
- 	u_long	*memorySize;		/* Usable memory in bytes */
+    /* Monitor and hardware revision and identification */
+    struct om_bootparam **bootParam;    /* Info for bootstrapped pgm */
+    u_long  *memorySize;        /* Usable memory in bytes */
 
-	/* Single-character input and output */
-	int	(*getChar) __P((void));	/* Get char from input source */
-	void	(*putChar) __P((int));	/* Put char to output sink */
-	int	(*mayGet) __P((void));	/* Maybe get char, or -1 */
-	int	(*mayPut) __P((int));	/* Maybe put char, or -1 */
-	u_char	*echo;			/* Should getchar echo? */
-	u_char	*inSource;		/* Input source selector */
-	u_char	*outSink;		/* Output sink selector */
-#define	PROMDEV_KBD	0		/* input from keyboard */
-#define	PROMDEV_SCREEN	0		/* output to screen */
-#define	PROMDEV_TTYA	1		/* in/out to ttya */
-#define	PROMDEV_TTYB	2		/* in/out to ttyb */
+    /* Single-character input and output */
+    int (*getChar) __P((void)); /* Get char from input source */
+    void    (*putChar) __P((int));  /* Put char to output sink */
+    int (*mayGet) __P((void));  /* Maybe get char, or -1 */
+    int (*mayPut) __P((int));   /* Maybe put char, or -1 */
+    u_char  *echo;          /* Should getchar echo? */
+    u_char  *inSource;      /* Input source selector */
+    u_char  *outSink;       /* Output sink selector */
+#define PROMDEV_KBD 0       /* input from keyboard */
+#define PROMDEV_SCREEN  0       /* output to screen */
+#define PROMDEV_TTYA    1       /* in/out to ttya */
+#define PROMDEV_TTYB    2       /* in/out to ttyb */
 
-	/* Keyboard input (scanned by monitor nmi routine) */
-	int	(*getKey) __P((void));	/* Get next key if one exists */
-	int	(*initGetKey) __P((void));/* Initialize get key */
-	u_int	*translation;		/* Kbd translation selector */
-	u_char	*keyBid;		/* Keyboard ID byte */
-	int	*screen_x;		/* V2: Screen x pos (R/O) */
-	int	*screen_y;		/* V2: Screen y pos (R/O) */
-	struct keybuf	*keyBuf;	/* Up/down keycode buffer */
+    /* Keyboard input (scanned by monitor nmi routine) */
+    int (*getKey) __P((void));  /* Get next key if one exists */
+    int (*initGetKey) __P((void));/* Initialize get key */
+    u_int   *translation;       /* Kbd translation selector */
+    u_char  *keyBid;        /* Keyboard ID byte */
+    int *screen_x;      /* V2: Screen x pos (R/O) */
+    int *screen_y;      /* V2: Screen y pos (R/O) */
+    struct keybuf   *keyBuf;    /* Up/down keycode buffer */
 
-	/* Monitor revision level. */
-	char	*monId;
+    /* Monitor revision level. */
+    char    *monId;
 
-	/* Frame buffer output and terminal emulation */
-	int	(*fbWriteChar) __P((void));/* Write a character to FB */
-	int	*fbAddr;		/* Address of frame buffer */
-	char	**font;			/* Font table for FB */
-	void	(*fbWriteStr) __P((char *, int));
-					/* Quickly write string to FB */
+    /* Frame buffer output and terminal emulation */
+    int (*fbWriteChar) __P((void));/* Write a character to FB */
+    int *fbAddr;        /* Address of frame buffer */
+    char    **font;         /* Font table for FB */
+    void    (*fbWriteStr) __P((char *, int));
+    /* Quickly write string to FB */
 
-	/* Reboot interface routine -- resets and reboots system. */
-	void	(*reBoot) __P((char *));	/* e.g. reBoot("xy()vmunix") */
+    /* Reboot interface routine -- resets and reboots system. */
+    void    (*reBoot) __P((char *));    /* e.g. reBoot("xy()vmunix") */
 
-	/* Line input and parsing */
-	u_char	*lineBuf;		/* The line input buffer */
-	u_char	**linePtr;		/* Cur pointer into linebuf */
-	int	*lineSize;		/* length of line in linebuf */
-	int	(*getLine) __P((void));	/* Get line from user */
-	u_char	(*getNextChar) __P((void));/* Get next char from linebuf */
-	u_char	(*peekNextChar) __P((void));/* Peek at next char */
-	int	*fbThere;		/* =1 if frame buffer there */
-	int	(*getNum) __P((void));	/* Grab hex num from line */
+    /* Line input and parsing */
+    u_char  *lineBuf;       /* The line input buffer */
+    u_char  **linePtr;      /* Cur pointer into linebuf */
+    int *lineSize;      /* length of line in linebuf */
+    int (*getLine) __P((void)); /* Get line from user */
+    u_char  (*getNextChar) __P((void));/* Get next char from linebuf */
+    u_char  (*peekNextChar) __P((void));/* Peek at next char */
+    int *fbThere;       /* =1 if frame buffer there */
+    int (*getNum) __P((void));  /* Grab hex num from line */
 
-	/* Print formatted output to current output sink */
-	int	(*printf) __P((void));	/* Similar to "Kernel printf" */
-	int	(*printHex) __P((void));/* Format N digits in hex */
+    /* Print formatted output to current output sink */
+    int (*printf) __P((void));  /* Similar to "Kernel printf" */
+    int (*printHex) __P((void));/* Format N digits in hex */
 
-	/* Led stuff */
-	u_char	*leds;			/* RAM copy of LED register */
-	int	(*setLeds) __P((void));	/* Sets LED's and RAM copy */
+    /* Led stuff */
+    u_char  *leds;          /* RAM copy of LED register */
+    int (*setLeds) __P((void)); /* Sets LED's and RAM copy */
 
-	/* Non-maskable interrupt  (nmi) information */
-	int	(*nmiAddr) __P((void));	/* Addr for level 7 vector */
-	void	(*abortEntry) __P((void));/* Entry for keyboard abort */
-	int	*nmiClock;		/* Counts up in msec */
+    /* Non-maskable interrupt  (nmi) information */
+    int (*nmiAddr) __P((void)); /* Addr for level 7 vector */
+    void    (*abortEntry) __P((void));/* Entry for keyboard abort */
+    int *nmiClock;      /* Counts up in msec */
 
-	/* Frame buffer type: see <machine/fbio.h> */
-	int	*fbType;
+    /* Frame buffer type: see <machine/fbio.h> */
+    int *fbType;
 
-	/* Assorted other things */
-	u_long	romvecVersion;		/* Version # of Romvec */
-	struct globram *globRam;	/* monitor global variables */
-	caddr_t	kbdZscc;		/* Addr of keyboard in use */
+    /* Assorted other things */
+    u_long  romvecVersion;      /* Version # of Romvec */
+    struct globram *globRam;    /* monitor global variables */
+    caddr_t kbdZscc;        /* Addr of keyboard in use */
 
-	int	*keyrInit;		/* ms before kbd repeat */
-	u_char	*keyrTick; 		/* ms between repetitions */
-	u_long	*memoryAvail;		/* V1: Main mem usable size */
-	long	*resetAddr;		/* where to jump on a reset */
-	long	*resetMap;		/* pgmap entry for resetaddr */
-					/* Really struct pgmapent *  */
+    int *keyrInit;      /* ms before kbd repeat */
+    u_char  *keyrTick;      /* ms between repetitions */
+    u_long  *memoryAvail;       /* V1: Main mem usable size */
+    long    *resetAddr;     /* where to jump on a reset */
+    long    *resetMap;      /* pgmap entry for resetaddr */
+    /* Really struct pgmapent *  */
 
-	__dead void (*exitToMon)
-	    __P((void)) __attribute__((noreturn));/* Exit from user program */
-	u_char	**memorybitmap;		/* V1: &{0 or &bits} */
-	void	(*setcxsegmap)		/* Set seg in any context */
-		    __P((int, caddr_t, int));
-	void	(**vector_cmd) __P((u_long, char *));/* V2: Handler for 'v' cmd */
-  	u_long	*ExpectedTrapSig;
-  	u_long	*TrapVectorTable;
-	int	dummy1z;
-	int	dummy2z;
-	int	dummy3z;
-	int	dummy4z;
+    __dead void (*exitToMon)
+    __P((void)) __attribute__((noreturn));/* Exit from user program */
+    u_char  **memorybitmap;     /* V1: &{0 or &bits} */
+    void    (*setcxsegmap)      /* Set seg in any context */
+    __P((int, caddr_t, int));
+    void    (**vector_cmd) __P((u_long, char *));/* V2: Handler for 'v' cmd */
+    u_long  *ExpectedTrapSig;
+    u_long  *TrapVectorTable;
+    int dummy1z;
+    int dummy2z;
+    int dummy3z;
+    int dummy4z;
 };
 
-#define	romVectorPtr	((struct om_vector *)PROM_BASE)
+#define romVectorPtr    ((struct om_vector *)PROM_BASE)
 
 #define mon_printf (romVectorPtr->printf)
 #define mon_putchar (romVectorPtr->putChar)
@@ -267,8 +267,8 @@ struct om_vector {
  * supposedly you can steal pmegs within this range that do not contain
  * valid pages.
  */
-#define OLDMON_STARTVADDR	0xFFD00000
-#define OLDMON_ENDVADDR		0xFFF00000
+#define OLDMON_STARTVADDR   0xFFD00000
+#define OLDMON_ENDVADDR     0xFFF00000
 
 /*
  * These describe the monitor's short segment which it basically uses to map
@@ -281,8 +281,8 @@ struct om_vector {
  * it is confusing, and serves no obvious purpose if you aren't the monitor.
  *
  */
-#define MONSHORTPAGE	0x0FFFE000
-#define MONSHORTSEG	0x0FFE0000
+#define MONSHORTPAGE    0x0FFFE000
+#define MONSHORTSEG 0x0FFE0000
 
 
 
@@ -296,19 +296,19 @@ struct om_vector {
  * Note that the buffer must be in DVMA space...
  */
 struct saif {
-	/* transmit packet, returns zero on success. */
-	int	(*sif_xmit)(void *devdata, char *buf, int len);
-	/* wait for packet, zero if none arrived */
-	int	(*sif_poll)(void *devdata, char *buf);
-	/* reset interface, set addresses, etc. */
-	int	(*sif_reset)(void *devdata, struct saioreq *sip);
-	/* Later (sun4 only) proms have more stuff here. */
+    /* transmit packet, returns zero on success. */
+    int (*sif_xmit)(void *devdata, char *buf, int len);
+    /* wait for packet, zero if none arrived */
+    int (*sif_poll)(void *devdata, char *buf);
+    /* reset interface, set addresses, etc. */
+    int (*sif_reset)(void *devdata, struct saioreq *sip);
+    /* Later (sun4 only) proms have more stuff here. */
 };
 
 
 #if defined(SUN4)
-void	oldmon_w_trace __P((u_long));
-void	oldmon_w_cmd __P((u_long, char *));
+void    oldmon_w_trace __P((u_long));
+void    oldmon_w_cmd __P((u_long, char *));
 #endif
 
 #endif /* _MACHINE_OLDMON_H */

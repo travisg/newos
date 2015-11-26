@@ -7,27 +7,27 @@
 
 void setup_io()
 {
-	int i;
+    int i;
 
-	for(i= 0; i< 256; i++) {
-		close(i);
-	}
+    for (i= 0; i< 256; i++) {
+        close(i);
+    }
 
-	open("/dev/console", 0); /* stdin  */
-	open("/dev/console", 0); /* stdout */
-	open("/dev/console", 0); /* stderr */
+    open("/dev/console", 0); /* stdin  */
+    open("/dev/console", 0); /* stdout */
+    open("/dev/console", 0); /* stderr */
 }
 
 int main()
 {
-	int i;
+    int i;
 
-	setup_io();
+    setup_io();
 
-	for(i=0; i<10; i++) {
-		printf("static app\n");
-	}
+    for (i=0; i<10; i++) {
+        printf("static app\n");
+    }
 
-	return 0;
+    return 0;
 }
 

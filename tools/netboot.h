@@ -27,10 +27,9 @@
 */
 #pragma pack(2)
 
-typedef struct 
-{
-    unsigned short cmd;  
-    unsigned short blk;  
+typedef struct {
+    unsigned short cmd;
+    unsigned short blk;
     unsigned char data[1024];
 } net_boot;
 

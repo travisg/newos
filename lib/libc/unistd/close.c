@@ -10,13 +10,13 @@
 int
 close(int fd)
 {
-	int retval;
+    int retval;
 
-	retval= _kern_close(fd);
+    retval= _kern_close(fd);
 
-	if(retval< 0) {
-		errno = retval;
-	}
+    if (retval< 0) {
+        errno = retval;
+    }
 
-	return retval;
+    return retval;
 }

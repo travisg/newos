@@ -11,13 +11,13 @@
 int
 dup2(int ofd, int nfd)
 {
-	int retval;
+    int retval;
 
-	retval= _kern_dup2(ofd, nfd);
+    retval= _kern_dup2(ofd, nfd);
 
-	if(retval< 0) {
-		errno = retval;
-	}
+    if (retval< 0) {
+        errno = retval;
+    }
 
-	return retval;
+    return retval;
 }

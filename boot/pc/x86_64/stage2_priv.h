@@ -145,56 +145,53 @@ extern void smp_trampoline_end(void);
 #define MP_EXT_LOCAL_INT_LEN   8
 
 struct mp_config_table {
-	unsigned int signature;       /* "PCMP" */
-	unsigned short table_len;     /* length of this structure */
-	unsigned char mp_rev;         /* spec supported, 1 for 1.1 or 4 for 1.4 */
-	unsigned char checksum;       /* checksum, all bytes add up to zero */
-	char oem[8];                  /* oem identification, not null-terminated */
-	char product[12];             /* product name, not null-terminated */
-	void *oem_table_ptr;          /* addr of oem-defined table, zero if none */
-	unsigned short oem_len;       /* length of oem table */
-	unsigned short num_entries;   /* number of entries in base table */
-	unsigned int apic;            /* address of apic */
-	unsigned short ext_len;       /* length of extended section */
-	unsigned char ext_checksum;   /* checksum of extended table entries */
+    unsigned int signature;       /* "PCMP" */
+    unsigned short table_len;     /* length of this structure */
+    unsigned char mp_rev;         /* spec supported, 1 for 1.1 or 4 for 1.4 */
+    unsigned char checksum;       /* checksum, all bytes add up to zero */
+    char oem[8];                  /* oem identification, not null-terminated */
+    char product[12];             /* product name, not null-terminated */
+    void *oem_table_ptr;          /* addr of oem-defined table, zero if none */
+    unsigned short oem_len;       /* length of oem table */
+    unsigned short num_entries;   /* number of entries in base table */
+    unsigned int apic;            /* address of apic */
+    unsigned short ext_len;       /* length of extended section */
+    unsigned char ext_checksum;   /* checksum of extended table entries */
 };
 
 struct mp_flt_struct {
-	unsigned int signature;       /* "_MP_" */
-	struct mp_config_table *mpc;  /* address of mp configuration table */
-	unsigned char mpc_len;        /* length of this structure in 16-byte units */
-	unsigned char mp_rev;         /* spec supported, 1 for 1.1 or 4 for 1.4 */
-	unsigned char checksum;       /* checksum, all bytes add up to zero */
-	unsigned char mp_feature_1;   /* mp system configuration type if no mpc */
-	unsigned char mp_feature_2;   /* imcrp */
-	unsigned char mp_feature_3, mp_feature_4, mp_feature_5; /* reserved */
+    unsigned int signature;       /* "_MP_" */
+    struct mp_config_table *mpc;  /* address of mp configuration table */
+    unsigned char mpc_len;        /* length of this structure in 16-byte units */
+    unsigned char mp_rev;         /* spec supported, 1 for 1.1 or 4 for 1.4 */
+    unsigned char checksum;       /* checksum, all bytes add up to zero */
+    unsigned char mp_feature_1;   /* mp system configuration type if no mpc */
+    unsigned char mp_feature_2;   /* imcrp */
+    unsigned char mp_feature_3, mp_feature_4, mp_feature_5; /* reserved */
 };
 
-struct mp_ext_pe
-{
-	unsigned char type;
-	unsigned char apic_id;
-	unsigned char apic_version;
-	unsigned char cpu_flags;
-	unsigned int signature;       /* stepping, model, family, each four bits */
-	unsigned int feature_flags;
-	unsigned int res1, res2;
+struct mp_ext_pe {
+    unsigned char type;
+    unsigned char apic_id;
+    unsigned char apic_version;
+    unsigned char cpu_flags;
+    unsigned int signature;       /* stepping, model, family, each four bits */
+    unsigned int feature_flags;
+    unsigned int res1, res2;
 };
 
-struct mp_ext_ioapic
-{
-	unsigned char type;
-	unsigned char ioapic_id;
-	unsigned char ioapic_version;
-	unsigned char ioapic_flags;
-	unsigned int *addr;
+struct mp_ext_ioapic {
+    unsigned char type;
+    unsigned char ioapic_id;
+    unsigned char ioapic_version;
+    unsigned char ioapic_flags;
+    unsigned int *addr;
 };
 
-struct mp_ext_bus
-{
-	unsigned char type;
-	unsigned char bus_id;
-	char          name[6];
+struct mp_ext_bus {
+    unsigned char type;
+    unsigned char bus_id;
+    char          name[6];
 };
 
 #endif

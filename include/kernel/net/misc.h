@@ -15,9 +15,9 @@
 #define htons(n) _ARCH_BSWAP16(n)
 #else
 #define ntohs(n) \
-	((((uint16)(n) & 0xff) << 8) | ((uint16)(n) >> 8))
+    ((((uint16)(n) & 0xff) << 8) | ((uint16)(n) >> 8))
 #define htons(h) \
-	((((uint16)(h) & 0xff) << 8) | ((uint16)(h) >> 8))
+    ((((uint16)(h) & 0xff) << 8) | ((uint16)(h) >> 8))
 #endif
 
 #if defined(_ARCH_BSWAP32)
@@ -25,19 +25,19 @@
 #define htonl(n) _ARCH_BSWAP32(n)
 #else
 #define ntohl(n) \
-	(((uint32)(n) << 24) | (((uint32)(n) & 0xff00) << 8) |(((uint32)(n) & 0x00ff0000) >> 8) | ((uint32)(n) >> 24))
+    (((uint32)(n) << 24) | (((uint32)(n) & 0xff00) << 8) |(((uint32)(n) & 0x00ff0000) >> 8) | ((uint32)(n) >> 24))
 #define htonl(h) \
-	(((uint32)(h) << 24) | (((uint32)(h) & 0xff00) << 8) |(((uint32)(h) & 0x00ff0000) >> 8) | ((uint32)(h) >> 24))
+    (((uint32)(h) << 24) | (((uint32)(h) & 0xff00) << 8) |(((uint32)(h) & 0x00ff0000) >> 8) | ((uint32)(h) >> 24))
 #endif
 #elif BYTE_ORDER == BIG_ENDIAN
 #define ntohs(n) \
-	((uint16)(n))
+    ((uint16)(n))
 #define htons(h) \
-	((uint16)(h))
+    ((uint16)(h))
 #define ntohl(n) \
-	((uint32)(n))
+    ((uint32)(n))
 #define htonl(h) \
-	((uint32)(h))
+    ((uint32)(h))
 #else
 #error need to define BYTE_ORDER
 #endif

@@ -28,43 +28,43 @@ int errno = 0;
 
 int _start(struct uspace_prog_args_t *uspa)
 {
-	int retcode;
+    int retcode;
 
-	__stdio_init();
-	_call_ctors();
+    __stdio_init();
+    _call_ctors();
 
-	/* set up __progname */
-	if(uspa->argv[0] != NULL) {
-		char *temp;
-		__progname = uspa->argv[0];
-		for(temp = __progname; *temp != '\0'; temp++)
-			if(*temp == '/')
-				__progname = temp + 1;
-	}
+    /* set up __progname */
+    if (uspa->argv[0] != NULL) {
+        char *temp;
+        __progname = uspa->argv[0];
+        for (temp = __progname; *temp != '\0'; temp++)
+            if (*temp == '/')
+                __progname = temp + 1;
+    }
 
-	retcode = main(uspa->argc, uspa->argv);
+    retcode = main(uspa->argc, uspa->argv);
 
-	_call_dtors();
-	__stdio_deinit();
+    _call_dtors();
+    __stdio_deinit();
 
-	_kern_exit(retcode);
-	return 0;
+    _kern_exit(retcode);
+    return 0;
 }
 
 void _call_ctors(void)
-{ 
-	void (**f)(void);
+{
+    void (**f)(void);
 
-	for(f = &__ctor_list; f < &__ctor_end; f++) {
-		(**f)();
-	}
+    for (f = &__ctor_list; f < &__ctor_end; f++) {
+        (**f)();
+    }
 }
 
 void _call_dtors(void)
 {
-	void (**f)(void);
+    void (**f)(void);
 
-	for (f = &__dtor_list; f < &__dtor_end; f++) {
-		(**f)();
-	}
+    for (f = &__dtor_list; f < &__dtor_end; f++) {
+        (**f)();
+    }
 }

@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -13,9 +13,9 @@
 // to the screen (or whatever the console is). These calls need to bypass
 // any high level locks and go directly to hardware.
 typedef struct {
-	int (*kputs)(const char *str);
-	int (*kputs_xy)(const char *str, int x, int y);
-	int (*kputchar_xy)(char c, int x, int y);
+    int (*kputs)(const char *str);
+    int (*kputs_xy)(const char *str, int x, int y);
+    int (*kputchar_xy)(char c, int x, int y);
 } kernel_console_ops;
 
 void con_register_ops(kernel_console_ops *ops);

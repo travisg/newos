@@ -8,27 +8,27 @@
 int
 export_load_addon(char const *name, unsigned flags)
 {
-	(void)(name);
-	(void)(flags);
+    (void)(name);
+    (void)(flags);
 
-	return -1;
+    return -1;
 }
 
 int
 export_unload_addon(int lib, unsigned flags)
 {
-	(void)(lib);
-	(void)(flags);
+    (void)(lib);
+    (void)(flags);
 
-	return -1;
+    return -1;
 }
 
 void *
 export_addon_symbol(int lib, char const *sym, unsigned flags)
 {
-	(void)(lib);
-	(void)(sym);
-	(void)(flags);
+    (void)(lib);
+    (void)(sym);
+    (void)(flags);
 
-	return 0;
+    return 0;
 }

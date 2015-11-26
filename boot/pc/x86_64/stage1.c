@@ -17,15 +17,15 @@ void stage1_main(void *multiboot_info);
 
 void stage1_main(void *multiboot_info)
 {
-	unsigned long len;
+    unsigned long len;
 
-	clearscreen();
+    clearscreen();
 
-	dprintf("stage1 boot\n");
+    dprintf("stage1 boot\n");
 
-	dprintf("decompressing system, payload at %p...\n", &_payload_start);
-	len = gunzip((unsigned char const *)&_payload_start, TARGET, kmalloc(32*1024));
+    dprintf("decompressing system, payload at %p...\n", &_payload_start);
+    len = gunzip((unsigned char const *)&_payload_start, TARGET, kmalloc(32*1024));
 
-	stage2_main(multiboot_info, 0, 0, 0);
+    stage2_main(multiboot_info, 0, 0, 0);
 }
 

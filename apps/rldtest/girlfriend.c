@@ -9,5 +9,5 @@ extern void girlfriend(void);
 
 void girlfriend(void)
 {
-	printf("Freston needs a girlfriend!\n");
+    printf("Freston needs a girlfriend!\n");
 }

@@ -44,495 +44,525 @@ static int beos2newos_err(int err);
 
 /* device translation object */
 struct beos_device_node {
-	struct beos_device_node *next;
-	const char *name;
+    struct beos_device_node *next;
+    const char *name;
 
-	beos_device_hooks *beos_hooks;
+    beos_device_hooks *beos_hooks;
 };
 
 struct beos_device_node *nodes = NULL;
 
 /* our cookie, which will wrap around the beos cookie */
 struct beos_device_cookie {
-	struct beos_device_node *node;
-	void *beos_cookie;
-	off_t pos;
+    struct beos_device_node *node;
+    void *beos_cookie;
+    off_t pos;
 };
 
 /* our device hooks structure */
 struct dev_calls translation_hooks = {
-	&translation_open,
-	&translation_close,
-	&translation_freecookie,
-	&translation_seek,
-	&translation_ioctl,
-	&translation_read,
-	&translation_write,
-	&translation_canpage,
-	&translation_readpage,
-	&translation_writepage
+    &translation_open,
+    &translation_close,
+    &translation_freecookie,
+    &translation_seek,
+    &translation_ioctl,
+    &translation_read,
+    &translation_write,
+    &translation_canpage,
+    &translation_readpage,
+    &translation_writepage
 };
 
 isa_module_info isa = {
-	{ /* binfo */
-		{ "isa", 0, NULL }, /* minfo */
-		(void *)unhandled_isa_call
-	},
-	read8,
-	write8,
-	read16,
-	write16,
-	read32,
-	write32,
-	(void *)unhandled_isa_call,
-	(void *)unhandled_isa_call,
-	(void *)unhandled_isa_call,
-	(void *)unhandled_isa_call,
-	(void *)unhandled_isa_call,
-	(void *)unhandled_isa_call
+    { /* binfo */
+        { "isa", 0, NULL }, /* minfo */
+        (void *)unhandled_isa_call
+    },
+    read8,
+    write8,
+    read16,
+    write16,
+    read32,
+    write32,
+    (void *)unhandled_isa_call,
+    (void *)unhandled_isa_call,
+    (void *)unhandled_isa_call,
+    (void *)unhandled_isa_call,
+    (void *)unhandled_isa_call,
+    (void *)unhandled_isa_call
 };
 
 struct module {
-	const char *name;
-	void *data;
+    const char *name;
+    void *data;
 } modules[] = {
-	{ B_ISA_MODULE_NAME, &isa },
-	{ NULL, NULL }
+    { B_ISA_MODULE_NAME, &isa },
+    { NULL, NULL }
 };
 
 int beos_layer_init(void)
 {
-	return 0;
+    return 0;
 }
 
 int _beos_atomic_add(volatile int *val, int incr)
 {
-	return atomic_add(val, incr);
+    return atomic_add(val, incr);
 }
 
 int _beos_atomic_and(volatile int *val, int incr)
 {
-	return atomic_and(val, incr);
+    return atomic_and(val, incr);
 }
 
 int _beos_atomic_or(volatile int *val, int incr)
 {
-	return atomic_or(val, incr);
+    return atomic_or(val, incr);
 }
 
 int _beos_acquire_sem(sem_id id)
 {
-	return newos2beos_err(sem_acquire(id, 1));
+    return newos2beos_err(sem_acquire(id, 1));
 }
 
 int _beos_acquire_sem_etc(sem_id id, uint32 count, uint32 flags, bigtime_t timeout)
 {
-	int nuflags = 0;
-	bigtime_t nutimeout = timeout;
+    int nuflags = 0;
+    bigtime_t nutimeout = timeout;
 
-	if(flags & B_CAN_INTERRUPT)
-		nuflags |= SEM_FLAG_INTERRUPTABLE;
-	if(flags & B_DO_NOT_RESCHEDULE)
-		nuflags |= SEM_FLAG_NO_RESCHED;
-	if(flags & B_RELATIVE_TIMEOUT)
-		nuflags |= SEM_FLAG_TIMEOUT;
-	if(flags & B_ABSOLUTE_TIMEOUT) {
-		nuflags |= SEM_FLAG_TIMEOUT;
-		nutimeout = timeout - system_time();
-		if(nutimeout < 0)
-			nutimeout = 0;
-	}
-	return newos2beos_err(sem_acquire_etc(id, count, nuflags, nutimeout, NULL));
+    if (flags & B_CAN_INTERRUPT)
+        nuflags |= SEM_FLAG_INTERRUPTABLE;
+    if (flags & B_DO_NOT_RESCHEDULE)
+        nuflags |= SEM_FLAG_NO_RESCHED;
+    if (flags & B_RELATIVE_TIMEOUT)
+        nuflags |= SEM_FLAG_TIMEOUT;
+    if (flags & B_ABSOLUTE_TIMEOUT) {
+        nuflags |= SEM_FLAG_TIMEOUT;
+        nutimeout = timeout - system_time();
+        if (nutimeout < 0)
+            nutimeout = 0;
+    }
+    return newos2beos_err(sem_acquire_etc(id, count, nuflags, nutimeout, NULL));
 }
 
 sem_id _beos_create_sem(uint32 count, const char *name)
 {
-	return newos2beos_err(sem_create(count, name));
+    return newos2beos_err(sem_create(count, name));
 }
 
 int _beos_delete_sem(sem_id id)
 {
-	return newos2beos_err(sem_delete(id));
+    return newos2beos_err(sem_delete(id));
 }
 
 int _beos_get_sem_count(sem_id id, int32 *count)
 {
-	panic("_beos_get_sem_count: not supported\n");
-	return 0;
+    panic("_beos_get_sem_count: not supported\n");
+    return 0;
 }
 
 int _beos_release_sem(sem_id id)
 {
-	return newos2beos_err(sem_release(id, 1));
+    return newos2beos_err(sem_release(id, 1));
 }
 
 int _beos_release_sem_etc(sem_id id, int32 count, uint32 flags)
 {
-	int nuflags = 0;
+    int nuflags = 0;
 
-	if(flags & B_DO_NOT_RESCHEDULE)
-		nuflags = SEM_FLAG_NO_RESCHED;
+    if (flags & B_DO_NOT_RESCHEDULE)
+        nuflags = SEM_FLAG_NO_RESCHED;
 
-	return newos2beos_err(sem_release_etc(id, count, nuflags));
+    return newos2beos_err(sem_release_etc(id, count, nuflags));
 }
 
 int _beos_strcmp(const char *cs, const char *ct)
 {
-	return strcmp(cs, ct);
+    return strcmp(cs, ct);
 }
 
 void _beos_spin(bigtime_t microseconds)
 {
-	bigtime_t time = system_time();
+    bigtime_t time = system_time();
 
-	while((system_time() - time) < microseconds)
-		;
+    while ((system_time() - time) < microseconds)
+        ;
 }
 
 int _beos_get_module(const char *path, module_info **vec)
 {
-	struct module *m;
+    struct module *m;
 
-	dprintf("get_module: called on '%s'\n", path);
-	for(m = modules; m->name; m++) {
-		if(!strcmp(path, m->name)) {
-			*vec = m->data;
-			return NO_ERROR;
-		}
-	}
-	return ERR_GENERAL;
+    dprintf("get_module: called on '%s'\n", path);
+    for (m = modules; m->name; m++) {
+        if (!strcmp(path, m->name)) {
+            *vec = m->data;
+            return NO_ERROR;
+        }
+    }
+    return ERR_GENERAL;
 }
 
 int _beos_put_module(const char *path)
 {
-	dprintf("put_module: called on '%s'\n", path);
-	return NO_ERROR;
+    dprintf("put_module: called on '%s'\n", path);
+    return NO_ERROR;
 }
 
 static uint8 read8(int port)
 {
-	return in8(port);
+    return in8(port);
 }
 
 static void write8(int port, uint8 data)
 {
-//	dprintf("w8 0x%x, 0x%x\n", port, data);
-	out8(data, port);
+//  dprintf("w8 0x%x, 0x%x\n", port, data);
+    out8(data, port);
 }
 
 static uint16 read16(int port)
 {
-	return in16(port);
+    return in16(port);
 }
 
 static void write16(int port, uint16 data)
 {
-//	dprintf("w16 0x%x, 0x%x\n", port, data);
-	out16(data, port);
+//  dprintf("w16 0x%x, 0x%x\n", port, data);
+    out16(data, port);
 }
 
 static uint32 read32(int port)
 {
-	return in32(port);
+    return in32(port);
 }
 
 static void write32(int port, uint32 data)
 {
-//	dprintf("w32 0x%x, 0x%x\n", port, data);
-	out32(data, port);
+//  dprintf("w32 0x%x, 0x%x\n", port, data);
+    out32(data, port);
 }
 
 static void unhandled_isa_call(void)
 {
-	panic("call into unhandled isa function\n");
+    panic("call into unhandled isa function\n");
 }
 
 static int beos2newos_err(int err)
 {
-	if(err >= 0)
-		return err;
+    if (err >= 0)
+        return err;
 
-	switch(err) {
-		case B_NO_MEMORY: return ERR_NO_MEMORY;
-		case B_IO_ERROR: return ERR_IO_ERROR;
-		case B_PERMISSION_DENIED: return ERR_PERMISSION_DENIED;
-		case B_NAME_NOT_FOUND: return ERR_NOT_FOUND;
-		case B_TIMED_OUT: return ERR_SEM_TIMED_OUT;
-		case B_INTERRUPTED: return ERR_INTERRUPTED;
-		case B_NOT_ALLOWED: return ERR_NOT_ALLOWED;
-		case B_ERROR: return ERR_GENERAL;
-		case B_BAD_SEM_ID: return ERR_INVALID_HANDLE;
-		case B_NO_MORE_SEMS: return ERR_SEM_OUT_OF_SLOTS;
-		case B_BAD_THREAD_ID: return ERR_INVALID_HANDLE;
-		case B_NO_MORE_THREADS: return ERR_NO_MORE_HANDLES;
-		case B_BAD_TEAM_ID: return ERR_INVALID_HANDLE;
-		case B_NO_MORE_TEAMS: return ERR_NO_MORE_HANDLES;
-		case B_BAD_PORT_ID: return ERR_INVALID_HANDLE;
-		case B_NO_MORE_PORTS: return ERR_NO_MORE_HANDLES;
-		case B_BAD_IMAGE_ID: return ERR_INVALID_HANDLE;
-		case B_NOT_AN_EXECUTABLE: return ERR_INVALID_BINARY;
-		default: return ERR_GENERAL;
-	}
+    switch (err) {
+        case B_NO_MEMORY:
+            return ERR_NO_MEMORY;
+        case B_IO_ERROR:
+            return ERR_IO_ERROR;
+        case B_PERMISSION_DENIED:
+            return ERR_PERMISSION_DENIED;
+        case B_NAME_NOT_FOUND:
+            return ERR_NOT_FOUND;
+        case B_TIMED_OUT:
+            return ERR_SEM_TIMED_OUT;
+        case B_INTERRUPTED:
+            return ERR_INTERRUPTED;
+        case B_NOT_ALLOWED:
+            return ERR_NOT_ALLOWED;
+        case B_ERROR:
+            return ERR_GENERAL;
+        case B_BAD_SEM_ID:
+            return ERR_INVALID_HANDLE;
+        case B_NO_MORE_SEMS:
+            return ERR_SEM_OUT_OF_SLOTS;
+        case B_BAD_THREAD_ID:
+            return ERR_INVALID_HANDLE;
+        case B_NO_MORE_THREADS:
+            return ERR_NO_MORE_HANDLES;
+        case B_BAD_TEAM_ID:
+            return ERR_INVALID_HANDLE;
+        case B_NO_MORE_TEAMS:
+            return ERR_NO_MORE_HANDLES;
+        case B_BAD_PORT_ID:
+            return ERR_INVALID_HANDLE;
+        case B_NO_MORE_PORTS:
+            return ERR_NO_MORE_HANDLES;
+        case B_BAD_IMAGE_ID:
+            return ERR_INVALID_HANDLE;
+        case B_NOT_AN_EXECUTABLE:
+            return ERR_INVALID_BINARY;
+        default:
+            return ERR_GENERAL;
+    }
 }
 
 static int newos2beos_err(int err)
 {
-	if(err >= 0)
-		return err;
+    if (err >= 0)
+        return err;
 
-	switch(err) {
-		case ERR_NO_MEMORY: return B_NO_MEMORY;
-		case ERR_IO_ERROR: return B_IO_ERROR;
-		case ERR_TIMED_OUT: return B_TIMED_OUT;
-		case ERR_NOT_ALLOWED: return B_NOT_ALLOWED;
-		case ERR_PERMISSION_DENIED: return B_PERMISSION_DENIED;
-		case ERR_INVALID_BINARY: return B_NOT_AN_EXECUTABLE;
+    switch (err) {
+        case ERR_NO_MEMORY:
+            return B_NO_MEMORY;
+        case ERR_IO_ERROR:
+            return B_IO_ERROR;
+        case ERR_TIMED_OUT:
+            return B_TIMED_OUT;
+        case ERR_NOT_ALLOWED:
+            return B_NOT_ALLOWED;
+        case ERR_PERMISSION_DENIED:
+            return B_PERMISSION_DENIED;
+        case ERR_INVALID_BINARY:
+            return B_NOT_AN_EXECUTABLE;
 
-		case ERR_SEM_DELETED: return B_CANCELED;
-		case ERR_SEM_TIMED_OUT: return B_TIMED_OUT;
-		case ERR_SEM_OUT_OF_SLOTS: return B_NO_MORE_SEMS;
-		case ERR_INTERRUPTED: return B_INTERRUPTED;
-		default: return B_ERROR;
-	}
+        case ERR_SEM_DELETED:
+            return B_CANCELED;
+        case ERR_SEM_TIMED_OUT:
+            return B_TIMED_OUT;
+        case ERR_SEM_OUT_OF_SLOTS:
+            return B_NO_MORE_SEMS;
+        case ERR_INTERRUPTED:
+            return B_INTERRUPTED;
+        default:
+            return B_ERROR;
+    }
 }
 
 static int translation_open(dev_ident ident, dev_cookie *_cookie)
 {
-	struct beos_device_node *node = (struct beos_device_node *)ident;
-	struct beos_device_cookie *cookie;
-	void *beos_cookie;
-	int err;
+    struct beos_device_node *node = (struct beos_device_node *)ident;
+    struct beos_device_cookie *cookie;
+    void *beos_cookie;
+    int err;
 
-	err = node->beos_hooks->open(node->name, 0, &beos_cookie);
-	if(err < 0)
-		return beos2newos_err(err);
+    err = node->beos_hooks->open(node->name, 0, &beos_cookie);
+    if (err < 0)
+        return beos2newos_err(err);
 
-	cookie = kmalloc(sizeof(struct beos_device_cookie));
-	if(!cookie)
-		return ERR_NO_MEMORY;
+    cookie = kmalloc(sizeof(struct beos_device_cookie));
+    if (!cookie)
+        return ERR_NO_MEMORY;
 
-	cookie->node = node;
-	cookie->beos_cookie = beos_cookie;
-	cookie->pos = 0;
+    cookie->node = node;
+    cookie->beos_cookie = beos_cookie;
+    cookie->pos = 0;
 
-	*_cookie = cookie;
+    *_cookie = cookie;
 
-	return NO_ERROR;
+    return NO_ERROR;
 }
 
 static int translation_close(dev_cookie _cookie)
 {
-	struct beos_device_cookie *cookie = _cookie;
-	int err;
+    struct beos_device_cookie *cookie = _cookie;
+    int err;
 
-	err = cookie->node->beos_hooks->close(cookie->beos_cookie);
-	if(err < 0)
-		return beos2newos_err(err);
+    err = cookie->node->beos_hooks->close(cookie->beos_cookie);
+    if (err < 0)
+        return beos2newos_err(err);
 
-	return NO_ERROR;
+    return NO_ERROR;
 }
 
 static int translation_freecookie(dev_cookie _cookie)
 {
-	struct beos_device_cookie *cookie = _cookie;
-	int err;
+    struct beos_device_cookie *cookie = _cookie;
+    int err;
 
-	err = cookie->node->beos_hooks->free(cookie->beos_cookie);
-	if(err < 0)
-		return beos2newos_err(err);
+    err = cookie->node->beos_hooks->free(cookie->beos_cookie);
+    if (err < 0)
+        return beos2newos_err(err);
 
-	kfree(cookie);
+    kfree(cookie);
 
-	return NO_ERROR;
+    return NO_ERROR;
 }
 
 static int translation_seek(dev_cookie _cookie, off_t pos, seek_type st)
 {
-	struct beos_device_cookie *cookie = _cookie;
-	int err = NO_ERROR;
-	off_t nupos;
+    struct beos_device_cookie *cookie = _cookie;
+    int err = NO_ERROR;
+    off_t nupos;
 
-	switch(st) {
-	case _SEEK_SET:
-		if(pos < 0)
-			pos = 0;
- 		cookie->pos = pos;
-		break;
-	case _SEEK_CUR:
-		nupos = cookie->pos + pos;
-		if(nupos < 0)
-			nupos = 0;
-		cookie->pos = nupos;
-		break;
-	case _SEEK_END:
-	default:
-		err = ERR_INVALID_ARGS;
-	}
-	return err;
+    switch (st) {
+        case _SEEK_SET:
+            if (pos < 0)
+                pos = 0;
+            cookie->pos = pos;
+            break;
+        case _SEEK_CUR:
+            nupos = cookie->pos + pos;
+            if (nupos < 0)
+                nupos = 0;
+            cookie->pos = nupos;
+            break;
+        case _SEEK_END:
+        default:
+            err = ERR_INVALID_ARGS;
+    }
+    return err;
 }
 
 static int translation_ioctl(dev_cookie _cookie, int op, void *buf, size_t len)
 {
-	struct beos_device_cookie *cookie = _cookie;
-	int err;
+    struct beos_device_cookie *cookie = _cookie;
+    int err;
 
-	err = cookie->node->beos_hooks->control(cookie->beos_cookie, op, buf, len);
-	if(err < 0)
-		return beos2newos_err(err);
-	return NO_ERROR;
+    err = cookie->node->beos_hooks->control(cookie->beos_cookie, op, buf, len);
+    if (err < 0)
+        return beos2newos_err(err);
+    return NO_ERROR;
 }
 
 static ssize_t translation_read(dev_cookie _cookie, void *buf, off_t pos, ssize_t _len)
 {
-	struct beos_device_cookie *cookie = _cookie;
-	int err;
-	bool update_cookie = false;
-	size_t len;
+    struct beos_device_cookie *cookie = _cookie;
+    int err;
+    bool update_cookie = false;
+    size_t len;
 
-	if(pos < 0) {
-		update_cookie = true;
-		pos = cookie->pos;
-	}
+    if (pos < 0) {
+        update_cookie = true;
+        pos = cookie->pos;
+    }
 
-	if(_len < 0)
-		len = 0;
-	else
-		len = _len;
+    if (_len < 0)
+        len = 0;
+    else
+        len = _len;
 
-	err = cookie->node->beos_hooks->read(cookie->beos_cookie, pos, buf, &len);
-	if(err < 0)
-		return beos2newos_err(err);
+    err = cookie->node->beos_hooks->read(cookie->beos_cookie, pos, buf, &len);
+    if (err < 0)
+        return beos2newos_err(err);
 
-	if(update_cookie) {
-		cookie->pos += len;
-	}
-	return len;
+    if (update_cookie) {
+        cookie->pos += len;
+    }
+    return len;
 }
 
 static ssize_t translation_write(dev_cookie _cookie, const void *buf, off_t pos, ssize_t _len)
 {
-	struct beos_device_cookie *cookie = _cookie;
-	int err;
-	bool update_cookie = false;
-	size_t len;
+    struct beos_device_cookie *cookie = _cookie;
+    int err;
+    bool update_cookie = false;
+    size_t len;
 
-	if(pos < 0) {
-		update_cookie = true;
-		pos = cookie->pos;
-	}
+    if (pos < 0) {
+        update_cookie = true;
+        pos = cookie->pos;
+    }
 
-	if(_len < 0)
-		len = 0;
-	else
-		len = _len;
+    if (_len < 0)
+        len = 0;
+    else
+        len = _len;
 
-	err = cookie->node->beos_hooks->write(cookie->beos_cookie, pos, buf, &len);
-	if(err < 0)
-		return beos2newos_err(err);
+    err = cookie->node->beos_hooks->write(cookie->beos_cookie, pos, buf, &len);
+    if (err < 0)
+        return beos2newos_err(err);
 
-	if(update_cookie) {
-		cookie->pos += len;
-	}
-	return len;
+    if (update_cookie) {
+        cookie->pos += len;
+    }
+    return len;
 }
 
 static int translation_canpage(dev_ident ident)
 {
-	return 0;
+    return 0;
 }
 
 static ssize_t translation_readpage(dev_ident ident, iovecs *vecs, off_t pos)
 {
-	return ERR_NOT_ALLOWED;
+    return ERR_NOT_ALLOWED;
 }
 
 static ssize_t translation_writepage(dev_ident ident, iovecs *vecs, off_t pos)
 {
-	return ERR_NOT_ALLOWED;
+    return ERR_NOT_ALLOWED;
 }
 
 image_id beos_load_beos_driver(const char *name)
 {
-	image_id id;
-	char path[SYS_MAX_PATH_LEN];
-	char **names;
-	int i;
+    image_id id;
+    char path[SYS_MAX_PATH_LEN];
+    char **names;
+    int i;
 
-	int (*init_hardware)(void);
-	int (*init_driver)(void);
-	char **(*publish_devices)(void);
-	beos_device_hooks *(*find_device)(const char *name);
-	int *api_version;
+    int (*init_hardware)(void);
+    int (*init_driver)(void);
+    char **(*publish_devices)(void);
+    beos_device_hooks *(*find_device)(const char *name);
+    int *api_version;
 
-	sprintf(path, "/boot/addons/beosdev/%s", name);
+    sprintf(path, "/boot/addons/beosdev/%s", name);
 
-	id = elf_load_kspace(path, "_beos_");
-	if(id < 0)
-		return id;
+    id = elf_load_kspace(path, "_beos_");
+    if (id < 0)
+        return id;
 
-	api_version = (int *)elf_lookup_symbol(id, "api_version");
-	if(!api_version || *api_version != B_CUR_DRIVER_API_VERSION)
-		return ERR_INVALID_BINARY;
+    api_version = (int *)elf_lookup_symbol(id, "api_version");
+    if (!api_version || *api_version != B_CUR_DRIVER_API_VERSION)
+        return ERR_INVALID_BINARY;
 
-//	dprintf("calling init_hardware\n");
+//  dprintf("calling init_hardware\n");
 
-	init_hardware = (void *)elf_lookup_symbol(id, "init_hardware");
-	if(!init_hardware)
-		return ERR_INVALID_BINARY;
-	init_hardware();
+    init_hardware = (void *)elf_lookup_symbol(id, "init_hardware");
+    if (!init_hardware)
+        return ERR_INVALID_BINARY;
+    init_hardware();
 
-//	dprintf("done calling init_hardware\n");
+//  dprintf("done calling init_hardware\n");
 
-//	dprintf("calling init_driver\n");
+//  dprintf("calling init_driver\n");
 
-	init_driver = (void *)elf_lookup_symbol(id, "init_driver");
-	if(!init_driver)
-		return ERR_INVALID_BINARY;
-	init_driver();
+    init_driver = (void *)elf_lookup_symbol(id, "init_driver");
+    if (!init_driver)
+        return ERR_INVALID_BINARY;
+    init_driver();
 
-//	dprintf("done calling init_driver\n");
+//  dprintf("done calling init_driver\n");
 
-//	dprintf("calling publish_devices\n");
+//  dprintf("calling publish_devices\n");
 
-	publish_devices = (void *)elf_lookup_symbol(id, "publish_devices");
-	if(!publish_devices)
-		return ERR_INVALID_BINARY;
-	names = publish_devices();
+    publish_devices = (void *)elf_lookup_symbol(id, "publish_devices");
+    if (!publish_devices)
+        return ERR_INVALID_BINARY;
+    names = publish_devices();
 
-//	dprintf("done calling publish_devices\n");
+//  dprintf("done calling publish_devices\n");
 
-	find_device = (void *)elf_lookup_symbol(id, "find_device");
-	if(!publish_devices)
-		return ERR_INVALID_BINARY;
+    find_device = (void *)elf_lookup_symbol(id, "find_device");
+    if (!publish_devices)
+        return ERR_INVALID_BINARY;
 
-	for(i=0; names[i]; i++) {
-		struct beos_device_node *node;
+    for (i=0; names[i]; i++) {
+        struct beos_device_node *node;
 
-//		dprintf("publishing name '%s'\n", names[i]);
+//      dprintf("publishing name '%s'\n", names[i]);
 
-		node = kmalloc(sizeof(struct beos_device_node));
+        node = kmalloc(sizeof(struct beos_device_node));
 
-		node->name = names[i];
-		node->beos_hooks = find_device(names[i]);
+        node->name = names[i];
+        node->beos_hooks = find_device(names[i]);
 
-		devfs_publish_device(names[i], node, &translation_hooks);
+        devfs_publish_device(names[i], node, &translation_hooks);
 
-		node->next = nodes;
-		nodes = node;
-	}
+        node->next = nodes;
+        nodes = node;
+    }
 
-	return id;
+    return id;
 }
 #else
 
 int beos_layer_init(void)
 {
-	return 0;
+    return 0;
 }
 
 image_id beos_load_beos_driver(const char *name)
 {
-	return ERR_GENERAL;
+    return ERR_GENERAL;
 }
 
 #endif

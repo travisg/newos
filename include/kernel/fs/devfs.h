@@ -13,19 +13,19 @@ typedef void * dev_ident;
 typedef void * dev_cookie;
 
 struct dev_calls {
-	int (*dev_open)(dev_ident ident, dev_cookie *cookie);
-	int (*dev_close)(dev_cookie cookie);
-	int (*dev_freecookie)(dev_cookie cookie);
+    int (*dev_open)(dev_ident ident, dev_cookie *cookie);
+    int (*dev_close)(dev_cookie cookie);
+    int (*dev_freecookie)(dev_cookie cookie);
 
-	int (*dev_seek)(dev_cookie cookie, off_t pos, seek_type st);
-	int (*dev_ioctl)(dev_cookie cookie, int op, void *buf, size_t len);
+    int (*dev_seek)(dev_cookie cookie, off_t pos, seek_type st);
+    int (*dev_ioctl)(dev_cookie cookie, int op, void *buf, size_t len);
 
-	ssize_t (*dev_read)(dev_cookie cookie, void *buf, off_t pos, ssize_t len);
-	ssize_t (*dev_write)(dev_cookie cookie, const void *buf, off_t pos, ssize_t len);
+    ssize_t (*dev_read)(dev_cookie cookie, void *buf, off_t pos, ssize_t len);
+    ssize_t (*dev_write)(dev_cookie cookie, const void *buf, off_t pos, ssize_t len);
 
-	int (*dev_canpage)(dev_ident ident);
-	ssize_t (*dev_readpage)(dev_ident ident, iovecs *vecs, off_t pos);
-	ssize_t (*dev_writepage)(dev_ident ident, iovecs *vecs, off_t pos);
+    int (*dev_canpage)(dev_ident ident);
+    ssize_t (*dev_readpage)(dev_ident ident, iovecs *vecs, off_t pos);
+    ssize_t (*dev_writepage)(dev_ident ident, iovecs *vecs, off_t pos);
 };
 
 /* api drivers will use these to publish devices */

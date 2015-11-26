@@ -13,41 +13,41 @@
 
 // kernel args
 typedef struct {
-	unsigned int cons_line;
-	char *str;
-	addr_range bootdir_addr;
-	addr_range kernel_seg0_addr;
-	addr_range kernel_seg1_addr;
-	addr_range kernel_dynamic_section_addr;
-	unsigned int num_phys_mem_ranges;
-	addr_range phys_mem_range[MAX_PHYS_MEM_ADDR_RANGE];
-	unsigned int num_phys_alloc_ranges;
-	addr_range phys_alloc_range[MAX_PHYS_ALLOC_ADDR_RANGE];
-	unsigned int num_virt_alloc_ranges;
-	addr_range virt_alloc_range[MAX_VIRT_ALLOC_ADDR_RANGE];
-	unsigned int num_cpus;
-	addr_range cpu_kstack[_MAX_CPUS];
+    unsigned int cons_line;
+    char *str;
+    addr_range bootdir_addr;
+    addr_range kernel_seg0_addr;
+    addr_range kernel_seg1_addr;
+    addr_range kernel_dynamic_section_addr;
+    unsigned int num_phys_mem_ranges;
+    addr_range phys_mem_range[MAX_PHYS_MEM_ADDR_RANGE];
+    unsigned int num_phys_alloc_ranges;
+    addr_range phys_alloc_range[MAX_PHYS_ALLOC_ADDR_RANGE];
+    unsigned int num_virt_alloc_ranges;
+    addr_range virt_alloc_range[MAX_VIRT_ALLOC_ADDR_RANGE];
+    unsigned int num_cpus;
+    addr_range cpu_kstack[_MAX_CPUS];
 
-	// framebuffer stuff
-	struct framebuffer {
-		int enabled;
-		int x_size;
-		int y_size;
-		int bit_depth;
-		unsigned char red_mask_size;
-		unsigned char red_field_position;
-		unsigned char green_mask_size;
-		unsigned char green_field_position;
-		unsigned char blue_mask_size;
-		unsigned char blue_field_position;
-		unsigned char reserved_mask_size;
-		unsigned char reserved_field_position;
-		int already_mapped;
-		addr_range mapping;
-		addr_range phys_addr;
-	} fb;
-	// architecture specific
-	arch_kernel_args arch_args;
+    // framebuffer stuff
+    struct framebuffer {
+        int enabled;
+        int x_size;
+        int y_size;
+        int bit_depth;
+        unsigned char red_mask_size;
+        unsigned char red_field_position;
+        unsigned char green_mask_size;
+        unsigned char green_field_position;
+        unsigned char blue_mask_size;
+        unsigned char blue_field_position;
+        unsigned char reserved_mask_size;
+        unsigned char reserved_field_position;
+        int already_mapped;
+        addr_range mapping;
+        addr_range phys_addr;
+    } fb;
+    // architecture specific
+    arch_kernel_args arch_args;
 } kernel_args;
 
 #endif

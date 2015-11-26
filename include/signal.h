@@ -1,14 +1,14 @@
 #ifndef _SIGNAL_H_
 #define _SIGNAL_H_
 
-/* 
+/*
 ** Distributed under the terms of the OpenBeOS License.
 */
 
 #include <sys/types.h>
 
 
-typedef int	 sig_atomic_t;
+typedef int  sig_atomic_t;
 typedef long sigset_t;
 
 typedef void (*sig_func_t)(int);
@@ -18,9 +18,9 @@ typedef void (*__signal_func_ptr)(int);  /* deprecated, for compatibility with B
 /*
  * macros defining the standard signal handling behavior
  */
-#define SIG_DFL	((sig_func_t) 0)   /* the signal was treated in the "default" manner */
-#define SIG_IGN	((sig_func_t) 1)   /* the signal was ignored */
-#define SIG_ERR	((sig_func_t)-1)   /* an error ocurred during signal processing */
+#define SIG_DFL ((sig_func_t) 0)   /* the signal was treated in the "default" manner */
+#define SIG_IGN ((sig_func_t) 1)   /* the signal was ignored */
+#define SIG_ERR ((sig_func_t)-1)   /* an error ocurred during signal processing */
 
 
 /*
@@ -28,13 +28,13 @@ typedef void (*__signal_func_ptr)(int);  /* deprecated, for compatibility with B
  *
  * Note: the 'sa_userdata' field is a non-Posix extension.
  * See the SPECIAL NOTES below for an explanation of this.
- * 
+ *
  */
 struct sigaction {
-	sig_func_t sa_handler;
-	sigset_t   sa_mask;
-	int        sa_flags;
-	void      *sa_userdata;  /* will be passed to the signal handler */
+    sig_func_t sa_handler;
+    sigset_t   sa_mask;
+    int        sa_flags;
+    void      *sa_userdata;  /* will be passed to the signal handler */
 };
 
 
@@ -54,9 +54,9 @@ struct sigaction {
  * for signals using an alternate stack
  */
 typedef struct stack_t {
-	void   *ss_sp;
-	size_t  ss_size;
-	int     ss_flags;
+    void   *ss_sp;
+    size_t  ss_size;
+    int     ss_flags;
 } stack_t;
 
 
@@ -72,32 +72,32 @@ typedef struct stack_t {
 /*
  * The list of all defined signals:
  *
- * The numbering of signals for OpenBeOS attempts to maintain 
- * some consistency with UN*X conventions so that things 
+ * The numbering of signals for OpenBeOS attempts to maintain
+ * some consistency with UN*X conventions so that things
  * like "kill -9" do what you expect.
  */
-#define	SIGHUP      1      /* hangup -- tty is gone! */
+#define SIGHUP      1      /* hangup -- tty is gone! */
 #define SIGINT      2      /* interrupt */
 #define SIGQUIT     3      /* `quit' special character typed in tty  */
-#define SIGILL	    4      /* illegal instruction */
+#define SIGILL      4      /* illegal instruction */
 #define SIGCHLD     5      /* child process exited */
-#define SIGABRT	    6      /* abort() called, dont' catch */
-#define SIGPIPE	    7      /* write to a pipe w/no readers */
-#define SIGFPE	    8      /* floating point exception */
-#define SIGKILL	    9      /* kill a team (not catchable) */
-#define SIGSTOP	   10      /* suspend a thread (not catchable) */
-#define SIGSEGV	   11      /* segmentation violation (read: invalid pointer) */
+#define SIGABRT     6      /* abort() called, dont' catch */
+#define SIGPIPE     7      /* write to a pipe w/no readers */
+#define SIGFPE      8      /* floating point exception */
+#define SIGKILL     9      /* kill a team (not catchable) */
+#define SIGSTOP    10      /* suspend a thread (not catchable) */
+#define SIGSEGV    11      /* segmentation violation (read: invalid pointer) */
 #define SIGCONT    12      /* continue execution if suspended */
-#define SIGTSTP	   13      /* `stop' special character typed in tty */
+#define SIGTSTP    13      /* `stop' special character typed in tty */
 #define SIGALRM    14      /* an alarm has gone off (see alarm()) */
-#define SIGTERM	   15      /* termination requested */
-#define SIGTTIN	   16      /* read of tty from bg process */
-#define SIGTTOU	   17      /* write to tty from bg process */
-#define SIGUSR1	   18      /* app defined signal 1 */
-#define SIGUSR2	   19      /* app defined signal 2 */
+#define SIGTERM    15      /* termination requested */
+#define SIGTTIN    16      /* read of tty from bg process */
+#define SIGTTOU    17      /* write to tty from bg process */
+#define SIGUSR1    18      /* app defined signal 1 */
+#define SIGUSR2    19      /* app defined signal 2 */
 #define SIGWINCH   20      /* tty window size changed */
 #define SIGKILLTHR 21      /* be specific: kill just the thread, not team */
-#define SIGTRAP	   22
+#define SIGTRAP    22
 
 #define SIGBUS     SIGSEGV /* for old style code */
 
@@ -164,7 +164,7 @@ int         sigaltstack(const stack_t *ss, stack_t *oss);         /* XXXdbg */
  *
  *    // install the handler
  *    signal(SIGINT, &my_signal_handler);
- *    
+ *
  * The sigaction() function allows finer grained control of the signal
  * handling. It also allows an opportunity, via the 'sigaction' struct, to
  * enable additional data to be passed to the handler. For example:
@@ -225,158 +225,157 @@ int         sigaltstack(const stack_t *ss, stack_t *oss);         /* XXXdbg */
 typedef struct vregs vregs;
 
 #if ARCH_ppc
-struct vregs
-{
-	ulong pc,                                         /* program counter */
-	      r0,                                         /* scratch */
-	      r1,                                         /* stack ptr */
-	      r2,                                         /* TOC */
-	      r3,r4,r5,r6,r7,r8,r9,r10,                   /* volatile regs */
-	      r11,r12;                                    /* scratch regs */
+struct vregs {
+    ulong pc,                                         /* program counter */
+          r0,                                         /* scratch */
+          r1,                                         /* stack ptr */
+          r2,                                         /* TOC */
+          r3,r4,r5,r6,r7,r8,r9,r10,                   /* volatile regs */
+          r11,r12;                                    /* scratch regs */
 
-   double f0,                                         /* fp scratch */
-	      f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11,f12,f13; /* fp volatile regs */
+    double f0,                                         /* fp scratch */
+           f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11,f12,f13; /* fp volatile regs */
 
-	ulong filler1,                                    /* place holder */
-	      fpscr,                                      /* fp condition codes */
-	      ctr, xer, cr, msr, lr;                      /* misc. status */
+    ulong filler1,                                    /* place holder */
+          fpscr,                                      /* fp condition codes */
+          ctr, xer, cr, msr, lr;                      /* misc. status */
 };
-#endif /* __POWERPC__ */ 
+#endif /* __POWERPC__ */
 
 #if ARCH_i386
 
 typedef struct packed_fp_stack {
-	unsigned char	st0[10];
-	unsigned char	st1[10];
-	unsigned char	st2[10];
-	unsigned char	st3[10];
-	unsigned char	st4[10];
-	unsigned char	st5[10];
-	unsigned char	st6[10];
-	unsigned char	st7[10];
+    unsigned char   st0[10];
+    unsigned char   st1[10];
+    unsigned char   st2[10];
+    unsigned char   st3[10];
+    unsigned char   st4[10];
+    unsigned char   st5[10];
+    unsigned char   st6[10];
+    unsigned char   st7[10];
 } packed_fp_stack;
 
 typedef struct packed_mmx_regs {
-	unsigned char	mm0[10];
-	unsigned char	mm1[10];
-	unsigned char	mm2[10];
-	unsigned char	mm3[10];
-	unsigned char	mm4[10];
-	unsigned char	mm5[10];
-	unsigned char	mm6[10];
-	unsigned char	mm7[10];
+    unsigned char   mm0[10];
+    unsigned char   mm1[10];
+    unsigned char   mm2[10];
+    unsigned char   mm3[10];
+    unsigned char   mm4[10];
+    unsigned char   mm5[10];
+    unsigned char   mm6[10];
+    unsigned char   mm7[10];
 } packed_mmx_regs;
 
 typedef struct old_extended_regs {
-	unsigned short	fp_control;
-	unsigned short	_reserved1;
-	unsigned short	fp_status;
-	unsigned short	_reserved2;
-	unsigned short	fp_tag;
-	unsigned short	_reserved3;
-	unsigned long	fp_eip;
-	unsigned short	fp_cs;
-	unsigned short	fp_opcode;
-	unsigned long	fp_datap;
-	unsigned short	fp_ds;
-	unsigned short	_reserved4;
-	union {
-		packed_fp_stack	fp;
-		packed_mmx_regs	mmx;
-	} fp_mmx;
+    unsigned short  fp_control;
+    unsigned short  _reserved1;
+    unsigned short  fp_status;
+    unsigned short  _reserved2;
+    unsigned short  fp_tag;
+    unsigned short  _reserved3;
+    unsigned long   fp_eip;
+    unsigned short  fp_cs;
+    unsigned short  fp_opcode;
+    unsigned long   fp_datap;
+    unsigned short  fp_ds;
+    unsigned short  _reserved4;
+    union {
+        packed_fp_stack fp;
+        packed_mmx_regs mmx;
+    } fp_mmx;
 } old_extended_regs;
 
 typedef struct fp_stack {
-	unsigned char	st0[10];
-	unsigned char	_reserved_42_47[6];
-	unsigned char	st1[10];
-	unsigned char	_reserved_58_63[6];
-	unsigned char	st2[10];
-	unsigned char	_reserved_74_79[6];
-	unsigned char	st3[10];
-	unsigned char	_reserved_90_95[6];
-	unsigned char	st4[10];
-	unsigned char	_reserved_106_111[6];
-	unsigned char	st5[10];
-	unsigned char	_reserved_122_127[6];
-	unsigned char	st6[10];
-	unsigned char	_reserved_138_143[6];
-	unsigned char	st7[10];
-	unsigned char	_reserved_154_159[6];
+    unsigned char   st0[10];
+    unsigned char   _reserved_42_47[6];
+    unsigned char   st1[10];
+    unsigned char   _reserved_58_63[6];
+    unsigned char   st2[10];
+    unsigned char   _reserved_74_79[6];
+    unsigned char   st3[10];
+    unsigned char   _reserved_90_95[6];
+    unsigned char   st4[10];
+    unsigned char   _reserved_106_111[6];
+    unsigned char   st5[10];
+    unsigned char   _reserved_122_127[6];
+    unsigned char   st6[10];
+    unsigned char   _reserved_138_143[6];
+    unsigned char   st7[10];
+    unsigned char   _reserved_154_159[6];
 } fp_stack;
 
 typedef struct mmx_regs {
-	unsigned char	mm0[10];
-	unsigned char	_reserved_42_47[6];
-	unsigned char	mm1[10];
-	unsigned char	_reserved_58_63[6];
-	unsigned char	mm2[10];
-	unsigned char	_reserved_74_79[6];
-	unsigned char	mm3[10];
-	unsigned char	_reserved_90_95[6];
-	unsigned char	mm4[10];
-	unsigned char	_reserved_106_111[6];
-	unsigned char	mm5[10];
-	unsigned char	_reserved_122_127[6];
-	unsigned char	mm6[10];
-	unsigned char	_reserved_138_143[6];
-	unsigned char	mm7[10];
-	unsigned char	_reserved_154_159[6];
+    unsigned char   mm0[10];
+    unsigned char   _reserved_42_47[6];
+    unsigned char   mm1[10];
+    unsigned char   _reserved_58_63[6];
+    unsigned char   mm2[10];
+    unsigned char   _reserved_74_79[6];
+    unsigned char   mm3[10];
+    unsigned char   _reserved_90_95[6];
+    unsigned char   mm4[10];
+    unsigned char   _reserved_106_111[6];
+    unsigned char   mm5[10];
+    unsigned char   _reserved_122_127[6];
+    unsigned char   mm6[10];
+    unsigned char   _reserved_138_143[6];
+    unsigned char   mm7[10];
+    unsigned char   _reserved_154_159[6];
 } mmx_regs;
-	
+
 typedef struct xmmx_regs {
-	unsigned char	xmm0[16];
-	unsigned char	xmm1[16];
-	unsigned char	xmm2[16];
-	unsigned char	xmm3[16];
-	unsigned char	xmm4[16];
-	unsigned char	xmm5[16];
-	unsigned char	xmm6[16];
-	unsigned char	xmm7[16];
+    unsigned char   xmm0[16];
+    unsigned char   xmm1[16];
+    unsigned char   xmm2[16];
+    unsigned char   xmm3[16];
+    unsigned char   xmm4[16];
+    unsigned char   xmm5[16];
+    unsigned char   xmm6[16];
+    unsigned char   xmm7[16];
 } xmmx_regs;
 
 typedef struct new_extended_regs {
-	unsigned short	fp_control;
-	unsigned short	fp_status;
-	unsigned short	fp_tag;  
-	unsigned short	fp_opcode;
-	unsigned long	fp_eip;
-	unsigned short	fp_cs;
-	unsigned short	res_14_15;
-	unsigned long	fp_datap;
-	unsigned short	fp_ds;
-	unsigned short	_reserved_22_23;
-	unsigned long	mxcsr;
-	unsigned long	_reserved_28_31;
-	union {
-		fp_stack fp;
-		mmx_regs mmx;
-	} fp_mmx;
-	xmmx_regs xmmx;
-	unsigned char	_reserved_288_511[224];
+    unsigned short  fp_control;
+    unsigned short  fp_status;
+    unsigned short  fp_tag;
+    unsigned short  fp_opcode;
+    unsigned long   fp_eip;
+    unsigned short  fp_cs;
+    unsigned short  res_14_15;
+    unsigned long   fp_datap;
+    unsigned short  fp_ds;
+    unsigned short  _reserved_22_23;
+    unsigned long   mxcsr;
+    unsigned long   _reserved_28_31;
+    union {
+        fp_stack fp;
+        mmx_regs mmx;
+    } fp_mmx;
+    xmmx_regs xmmx;
+    unsigned char   _reserved_288_511[224];
 } new_extended_regs;
 
 typedef struct extended_regs {
-	union {
-		old_extended_regs	old_format;
-		new_extended_regs	new_format;
-	} state;
-	unsigned long	format;  
+    union {
+        old_extended_regs   old_format;
+        new_extended_regs   new_format;
+    } state;
+    unsigned long   format;
 } extended_regs;
 
 struct vregs {
-	unsigned long			eip;
-	unsigned long			eflags;
-	unsigned long			eax;
-	unsigned long			ecx;
-	unsigned long			edx;
-	unsigned long			esp;
-	unsigned long			ebp;
-	unsigned long			_reserved_1;
-	extended_regs	xregs;
-	unsigned long			_reserved_2[3];
+    unsigned long           eip;
+    unsigned long           eflags;
+    unsigned long           eax;
+    unsigned long           ecx;
+    unsigned long           edx;
+    unsigned long           esp;
+    unsigned long           ebp;
+    unsigned long           _reserved_1;
+    extended_regs   xregs;
+    unsigned long           _reserved_2[3];
 };
- 
+
 #endif /* __INTEL__ */
 
 

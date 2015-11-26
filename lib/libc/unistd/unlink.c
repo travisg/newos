@@ -10,13 +10,13 @@
 int
 unlink(const char *path)
 {
-	int retval;
+    int retval;
 
-	retval= _kern_unlink(path);
+    retval= _kern_unlink(path);
 
-	if(retval< 0) {
-		errno = retval;
-	}
+    if (retval< 0) {
+        errno = retval;
+    }
 
-	return retval;
+    return retval;
 }

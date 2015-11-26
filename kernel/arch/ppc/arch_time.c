@@ -13,24 +13,24 @@ void ppc_timer_reset(void);
 
 int arch_time_init(kernel_args *ka)
 {
-	return 0;
+    return 0;
 }
 
 void arch_time_tick(void)
 {
-	// kick the decrementer over
-	ppc_timer_reset();	
+    // kick the decrementer over
+    ppc_timer_reset();
 }
 
 bigtime_t arch_get_time_delta(void)
 {
-	// XXX implement
-	return 0;
+    // XXX implement
+    return 0;
 }
 
 bigtime_t arch_get_rtc_delta(void)
 {
-	// XXX implement. Return RTC time in usecs since 0AD
-	return 0;
+    // XXX implement. Return RTC time in usecs since 0AD
+    return 0;
 }
 

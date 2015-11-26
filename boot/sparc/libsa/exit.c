@@ -1,10 +1,10 @@
-/*	$OpenBSD: exit.c,v 1.4 1997/07/25 18:21:56 mickey Exp $	*/
-/*	$NetBSD: exit.c,v 1.11 1996/12/01 20:22:19 pk Exp $	*/
+/*  $OpenBSD: exit.c,v 1.4 1997/07/25 18:21:56 mickey Exp $ */
+/*  $NetBSD: exit.c,v 1.11 1996/12/01 20:22:19 pk Exp $ */
 
 /*-
  *  Copyright (c) 1993 John Brezak
  *  All rights reserved.
- * 
+ *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
  *  are met:
@@ -15,7 +15,7 @@
  *     documentation and/or other materials provided with the distribution.
  *  3. The name of the author may not be used to endorse or promote products
  *     derived from this software without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR `AS IS'' AND ANY EXPRESS OR
  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -41,13 +41,13 @@ __dead void
 panic(const char *fmt, ...)
 #else
 panic(fmt /*, va_alist */)
-	char *fmt;
+char *fmt;
 #endif
 {
     extern void closeall __P((void));
     va_list ap;
     static int paniced;
-    
+
     if (!paniced) {
         paniced = 1;
         closeall();

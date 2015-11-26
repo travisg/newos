@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 1985, 1993
- *	The Regents of the University of California.  All rights reserved.
+ *  The Regents of the University of California.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -12,8 +12,8 @@
  *    documentation and/or other materials provided with the distribution.
  * 3. All advertising materials mentioning features or use of this software
  *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
+ *  This product includes software developed by the University of
+ *  California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -36,9 +36,9 @@
  * (c is the correction term for x)
  * exp__E RETURNS
  *
- *			 /  exp(x+c) - 1 - x ,  1E-19 < |x| < .3465736
- *       exp__E(x,c) = 	|
- *			 \  0 ,  |x| < 1E-19.
+ *           /  exp(x+c) - 1 - x ,  1E-19 < |x| < .3465736
+ *       exp__E(x,c) =  |
+ *           \  0 ,  |x| < 1E-19.
  *
  * DOUBLE PRECISION (IEEE 53 bits, VAX D FORMAT 56 BITS)
  * KERNEL FUNCTION OF EXP, EXPM1, POW FUNCTIONS
@@ -46,34 +46,34 @@
  * REVISED BY K.C. NG on 3/16/85, 4/16/85.
  *
  * Required system supported function:
- *	copysign(x,y)
+ *  copysign(x,y)
  *
  * Method:
- *	1. Rational approximation. Let r=x+c.
- *	   Based on
+ *  1. Rational approximation. Let r=x+c.
+ *     Based on
  *                                   2 * sinh(r/2)
  *                exp(r) - 1 =   ----------------------   ,
  *                               cosh(r/2) - sinh(r/2)
- *	   exp__E(r) is computed using
+ *     exp__E(r) is computed using
  *                   x*x            (x/2)*W - ( Q - ( 2*P  + x*P ) )
  *                   --- + (c + x*[---------------------------------- + c ])
  *                    2                          1 - W
- * 	   where  P := p1*x^2 + p2*x^4,
- *	          Q := q1*x^2 + q2*x^4 (for 56 bits precision, add q3*x^6)
- *	          W := x/2-(Q-x*P),
+ *     where  P := p1*x^2 + p2*x^4,
+ *            Q := q1*x^2 + q2*x^4 (for 56 bits precision, add q3*x^6)
+ *            W := x/2-(Q-x*P),
  *
- *	   (See the listing below for the values of p1,p2,q1,q2,q3. The poly-
- *	    nomials P and Q may be regarded as the approximations to sinh
- *	    and cosh :
- *		sinh(r/2) =  r/2 + r * P  ,  cosh(r/2) =  1 + Q . )
+ *     (See the listing below for the values of p1,p2,q1,q2,q3. The poly-
+ *      nomials P and Q may be regarded as the approximations to sinh
+ *      and cosh :
+ *      sinh(r/2) =  r/2 + r * P  ,  cosh(r/2) =  1 + Q . )
  *
  *         The coefficients were obtained by a special Remez algorithm.
  *
  * Approximation error:
  *
- *   |	exp(x) - 1			   |        2**(-57),  (IEEE double)
+ *   |  exp(x) - 1             |        2**(-57),  (IEEE double)
  *   | ------------  -  (exp__E(x,0)+x)/x  |  <=
- *   |	     x			           |	    2**(-69).  (VAX D)
+ *   |       x                     |        2**(-69).  (VAX D)
  *
  * Constants:
  * The hexadecimal values are the intended ones for the following constants.
@@ -106,36 +106,36 @@ ic(q2, 9.9176615021572857300E-4, -10, 1.03FC4CB8C98E8)
 double
 __exp__E(double x, double c)
 {
-	static double const zero=0.0;
-	static double const one=1.0;
-	static double const half=1.0/2.0;
-	static double const small=1.0E-19;
-	double z;
-	double p;
-	double q;
-	double xp;
-	double xh;
-	double w;
+    static double const zero=0.0;
+    static double const one=1.0;
+    static double const half=1.0/2.0;
+    static double const small=1.0E-19;
+    double z;
+    double p;
+    double q;
+    double xp;
+    double xh;
+    double w;
 
-	if(copysign(x,one)>small) {
-           z = x*x  ;
-	   p = z*( p1 +z* p2 );
+    if (copysign(x,one)>small) {
+        z = x*x  ;
+        p = z*( p1 +z* p2 );
 #if defined(vax)||defined(tahoe)
-           q = z*( q1 +z*( q2 +z* q3 ));
-#else	/* defined(vax)||defined(tahoe) */
-           q = z*( q1 +z*  q2 );
-#endif	/* defined(vax)||defined(tahoe) */
-           xp= x*p     ;
-	   xh= x*half  ;
-           w = xh-(q-xp)  ;
-	   p = p+p;
-	   c += x*((xh*w-(q-(p+xp)))/(one-w)+c);
-	   return(z*half+c);
-	}
-	/* end of |x| > small */
+        q = z*( q1 +z*( q2 +z* q3 ));
+#else   /* defined(vax)||defined(tahoe) */
+        q = z*( q1 +z*  q2 );
+#endif  /* defined(vax)||defined(tahoe) */
+        xp= x*p     ;
+        xh= x*half  ;
+        w = xh-(q-xp)  ;
+        p = p+p;
+        c += x*((xh*w-(q-(p+xp)))/(one-w)+c);
+        return (z*half+c);
+    }
+    /* end of |x| > small */
 
-	else {
-	    if(x!=zero) (void volatile)(one+small);	/* raise the inexact flag */
-	    return(copysign(zero,x));
-	}
+    else {
+        if (x!=zero) (void volatile)(one+small); /* raise the inexact flag */
+        return (copysign(zero,x));
+    }
 }

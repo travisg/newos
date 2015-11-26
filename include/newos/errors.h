@@ -74,7 +74,7 @@
 #define ERR_VM_BAD_USER_MEMORY   (ERR_VM_GENERAL-10)
 
 /* Elf errors */
-#define ERR_ELF_GENERAL		  (-5120)
+#define ERR_ELF_GENERAL       (-5120)
 #define ERR_ELF_RESOLVING_SYMBOL  (ERR_ELF_GENERAL-1)
 
 /* Ports errors */
@@ -82,7 +82,7 @@
 #define ERR_PORT_DELETED          (ERR_PORT_GENERAL-1)
 #define ERR_PORT_OUT_OF_SLOTS     (ERR_PORT_GENERAL-2)
 #define ERR_PORT_NOT_ACTIVE       (ERR_PORT_GENERAL-3)
-#define ERR_PORT_CLOSED	          (ERR_PORT_GENERAL-4)
+#define ERR_PORT_CLOSED           (ERR_PORT_GENERAL-4)
 #define ERR_PORT_TIMED_OUT        (ERR_PORT_GENERAL-5)
 #define ERR_PORT_NOT_FOUND        (ERR_PORT_GENERAL-6)
 

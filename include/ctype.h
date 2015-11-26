@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -6,8 +6,9 @@
 #define _CTYPE_H
 
 #ifdef __cplusplus
-namespace std
-{extern "C" {
+namespace std {
+extern "C"
+{
 #endif
 
 int isalnum(int c);
@@ -28,7 +29,8 @@ unsigned char tolower(unsigned char c);
 unsigned char toupper(unsigned char c);
 
 #ifdef __cplusplus
-}} /* "C" */
+}
+} /* "C" */
 #endif
 
 #endif

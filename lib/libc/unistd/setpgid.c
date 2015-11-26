@@ -9,6 +9,6 @@
 int
 setpgid(pid_t pid, pid_t pgid)
 {
-	return _kern_setpgid((proc_id)pid, (pgrp_id)pgid);
+    return _kern_setpgid((proc_id)pid, (pgrp_id)pgid);
 }
 

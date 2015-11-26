@@ -9,18 +9,18 @@
 
 void exit(int code)
 {
-	// XXX fix me
-	_kern_exit(code);
+    // XXX fix me
+    _kern_exit(code);
 }
 
 void _exit(int code)
 {
-	_kern_exit(code);
+    _kern_exit(code);
 }
-	
+
 void _Exit(int code)
 {
-	_kern_exit(code);
+    _kern_exit(code);
 }
 
 #endif

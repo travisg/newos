@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Manuel J. Petit. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -10,13 +10,13 @@
 ssize_t
 pread(int fd, void *buf, size_t len, off_t pos)
 {
-	int retval;
+    int retval;
 
-	retval= _kern_read(fd, buf, pos, len);
+    retval= _kern_read(fd, buf, pos, len);
 
-	if(retval< 0) {
-		// set errno
-	}
+    if (retval< 0) {
+        // set errno
+    }
 
-	return retval;
+    return retval;
 }

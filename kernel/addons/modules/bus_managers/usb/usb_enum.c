@@ -23,41 +23,41 @@
 #include <kernel/debug_ext.h>
 
 static usb_endpoint_descriptor null_endpoint = {
-	sizeof(usb_endpoint_descriptor),
-	USB_DESCRIPTOR_ENDPOINT,
-	0, 0, 8, 0
+    sizeof(usb_endpoint_descriptor),
+    USB_DESCRIPTOR_ENDPOINT,
+    0, 0, 8, 0
 };
 
 int usb_enumerator_thread(void *hc_struct)
 {
-	usb_hc *hc = (usb_hc *)hc_struct;
-	int err;
+    usb_hc *hc = (usb_hc *)hc_struct;
+    int err;
 
-	SHOW_FLOW(1, "starting up on hc %p, cookie %p", hc, hc->hc_cookie);
+    SHOW_FLOW(1, "starting up on hc %p, cookie %p", hc, hc->hc_cookie);
 
-	// create the null endpoint for address 0 so we can talk to unconfigured devices
-	create_usb_pipe(hc, NULL, &hc->default_lowspeed_pipe, &null_endpoint, 0, true);
-	create_usb_pipe(hc, NULL, &hc->default_fullspeed_pipe, &null_endpoint, 0, false);
+    // create the null endpoint for address 0 so we can talk to unconfigured devices
+    create_usb_pipe(hc, NULL, &hc->default_lowspeed_pipe, &null_endpoint, 0, true);
+    create_usb_pipe(hc, NULL, &hc->default_fullspeed_pipe, &null_endpoint, 0, false);
 
-	// create a root hub device
-	err = create_usb_device(hc, &hc->roothub, NULL, 0, false);
-	if(err < 0) {
-		SHOW_ERROR0(1, "error creating root hub device, bailing...");
-		return -1;
-	}
+    // create a root hub device
+    err = create_usb_device(hc, &hc->roothub, NULL, 0, false);
+    if (err < 0) {
+        SHOW_ERROR0(1, "error creating root hub device, bailing...");
+        return -1;
+    }
 
-	// set up the hub
-	err = setup_usb_hub(hc->roothub);
-	if(err < 0) {
-		SHOW_ERROR0(1, "error setting up root hub, bailing...");
-		return -1;
-	}
+    // set up the hub
+    err = setup_usb_hub(hc->roothub);
+    if (err < 0) {
+        SHOW_ERROR0(1, "error setting up root hub, bailing...");
+        return -1;
+    }
 
-	for(;;) {
-		thread_snooze(1000000);
-		// XXX finish
-	}
+    for (;;) {
+        thread_snooze(1000000);
+        // XXX finish
+    }
 
-	return 0;
+    return 0;
 }
 

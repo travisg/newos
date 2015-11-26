@@ -29,9 +29,9 @@
 /*
 **  PCI GAPS & Original 8139C Code:
 **
-**  Naive RealTek 8139C driver for the DC Broadband Adapter. Some 
+**  Naive RealTek 8139C driver for the DC Broadband Adapter. Some
 **  assistance on names of things from the NetBSD-DC sources.
-**  
+**
 **  (c)2001 Dan Potter
 **  License: X11
 **
@@ -53,7 +53,7 @@
 #define vuc volatile unsigned char
 
 /* Configuration definitions */
-#define RX_BUFFER_LEN		8192
+#define RX_BUFFER_LEN       8192
 
 #define ADDR_RXBUF 0x01840000
 #define ADDR_TXBUF0 0x01846000
@@ -75,192 +75,193 @@ static vul * const mem32 = REGL(0xa1840000);
 
   This really detects a "GAPS PCI" bridge chip, but the only device
   for the Dreamcast that uses it is the net card.
-  
+
   Returns 0 if one is present, -1 if one is not.
  */
-int rtl8139_detect() {
-	const char *str = (char*)REGC(0xa1001400);
-	const char *chk = "GAPSPCI_BRIDGE_2";
-	int i;
-	
-	for(i = 0; i < 16; i++){
-		if(str[i] != chk[i]) return -1;
-	}
-	return 0;
+int rtl8139_detect()
+{
+    const char *str = (char*)REGC(0xa1001400);
+    const char *chk = "GAPSPCI_BRIDGE_2";
+    int i;
+
+    for (i = 0; i < 16; i++) {
+        if (str[i] != chk[i]) return -1;
+    }
+    return 0;
 }
 
 int bb_exit()
 {
-	int i;
-	dprintf("rtl8139c: shutdown\n");
+    int i;
+    dprintf("rtl8139c: shutdown\n");
 
-	/* Soft-reset the chip */
-	nic8[RT_CHIPCMD] = RT_CMD_RESET;
-	
-	/* Wait for it to come back */
-	i = 1000000;
-	while ((nic8[RT_CHIPCMD] & RT_CMD_RESET) && i > 0)
-		i--;
+    /* Soft-reset the chip */
+    nic8[RT_CHIPCMD] = RT_CMD_RESET;
 
-	if(i == 0) {
-		dprintf("rtl8139: CANNOT RESET\n");
-	} else {
-		dprintf("rtl8139: RESET OKAY\n");
-	}
-	return 0;
+    /* Wait for it to come back */
+    i = 1000000;
+    while ((nic8[RT_CHIPCMD] & RT_CMD_RESET) && i > 0)
+        i--;
+
+    if (i == 0) {
+        dprintf("rtl8139: CANNOT RESET\n");
+    } else {
+        dprintf("rtl8139: RESET OKAY\n");
+    }
+    return 0;
 }
 /*
   Initializes the BBA
-  
+
   Returns 0 for success or -1 for failure.
  */
-int rtl8139_init() {
-	vuc * const g28 = REGC(0xa1000000);
-	vus * const g216 = REGS(0xa1000000);
-	vul * const g232 = REGL(0xa1000000);
+int rtl8139_init()
+{
+    vuc * const g28 = REGC(0xa1000000);
+    vus * const g216 = REGS(0xa1000000);
+    vul * const g232 = REGL(0xa1000000);
 
-	int i;
-	u4 tmp;
-	
-	
-	/* Initialize the "GAPS" PCI glue controller.
-	   It ain't pretty but it works. */
-	g232[0x1418/4] = 0x5a14a501;		/* M */
-	i = 10000;
-	while (!(g232[0x1418/4] & 1) && i > 0)
-		i--;
-	if (!(g232[0x1418/4] & 1)) {
-		dprintf("rtl8139: GAPS PCI controller not responding; giving up!\n");
-		return -1;
-	}
-	g232[0x1420/4] = 0x01000000;
-	g232[0x1424/4] = 0x01000000;
-	g232[0x1428/4] = 0x01840000;		/* DMA Base */
-	g232[0x142c/4] = 0x01840000 + 32*1024;	/* DMA End */
-	g232[0x1414/4] = 0x00000001;
-	g232[0x1434/4] = 0x00000001;
+    int i;
+    u4 tmp;
 
-	/* Configure PCI bridge (very very hacky). If we wanted to be proper,
-	   we ought to implement a full PCI subsystem. In this case that is
-	   ridiculous for accessing a single card that will probably never
-	   change. Considering that the DC is now out of production officially,
-	   there is a VERY good chance it will never change. */
-	g216[0x1606/2] = 0xf900;
-	g232[0x1630/4] = 0x00000000;
-	g28[0x163c] = 0x00;
-	g28[0x160d] = 0xf0;
-	(void)g216[0x04/2];
-	g216[0x1604/2] = 0x0006;
-	g232[0x1614/4] = 0x01000000;
-	(void)g28[0x1650];
-	
-	memset((void *)PHYS_ADDR_TO_P1(ADDR_RXBUF), 0, 32*1024);
 
-	/* Soft-reset the chip */
-	nic8[RT_CHIPCMD] = RT_CMD_RESET;
-	
-	/* Wait for it to come back */
-	i = 1000000;
-	while ((nic8[RT_CHIPCMD] & RT_CMD_RESET) && i > 0)
-		i--;
+    /* Initialize the "GAPS" PCI glue controller.
+       It ain't pretty but it works. */
+    g232[0x1418/4] = 0x5a14a501;        /* M */
+    i = 10000;
+    while (!(g232[0x1418/4] & 1) && i > 0)
+        i--;
+    if (!(g232[0x1418/4] & 1)) {
+        dprintf("rtl8139: GAPS PCI controller not responding; giving up!\n");
+        return -1;
+    }
+    g232[0x1420/4] = 0x01000000;
+    g232[0x1424/4] = 0x01000000;
+    g232[0x1428/4] = 0x01840000;        /* DMA Base */
+    g232[0x142c/4] = 0x01840000 + 32*1024;  /* DMA End */
+    g232[0x1414/4] = 0x00000001;
+    g232[0x1434/4] = 0x00000001;
 
-	if(i == 0) {
-		dprintf("rtl8139: CANNOT RESET\n");
-		return -1;
-	} else {
-		dprintf("rtl8139: RESET OKAY\n");
-	}
-	dprintf("0x%x\n", nic16[RT_RXBUFHEAD/2]);
-	/* Reset CONFIG1 */
-	nic8[RT_CONFIG1] = 0;
-	
-	/* Enable auto-negotiation and restart that process */
-	nic16[RT_MII_BMCR/2] = 0x1200;
-	for(i = 0; i < 100000; i++);
-	
-	/* Do another reset */
+    /* Configure PCI bridge (very very hacky). If we wanted to be proper,
+       we ought to implement a full PCI subsystem. In this case that is
+       ridiculous for accessing a single card that will probably never
+       change. Considering that the DC is now out of production officially,
+       there is a VERY good chance it will never change. */
+    g216[0x1606/2] = 0xf900;
+    g232[0x1630/4] = 0x00000000;
+    g28[0x163c] = 0x00;
+    g28[0x160d] = 0xf0;
+    (void)g216[0x04/2];
+    g216[0x1604/2] = 0x0006;
+    g232[0x1614/4] = 0x01000000;
+    (void)g28[0x1650];
+
+    memset((void *)PHYS_ADDR_TO_P1(ADDR_RXBUF), 0, 32*1024);
+
+    /* Soft-reset the chip */
+    nic8[RT_CHIPCMD] = RT_CMD_RESET;
+
+    /* Wait for it to come back */
+    i = 1000000;
+    while ((nic8[RT_CHIPCMD] & RT_CMD_RESET) && i > 0)
+        i--;
+
+    if (i == 0) {
+        dprintf("rtl8139: CANNOT RESET\n");
+        return -1;
+    } else {
+        dprintf("rtl8139: RESET OKAY\n");
+    }
+    dprintf("0x%x\n", nic16[RT_RXBUFHEAD/2]);
+    /* Reset CONFIG1 */
+    nic8[RT_CONFIG1] = 0;
+
+    /* Enable auto-negotiation and restart that process */
+    nic16[RT_MII_BMCR/2] = 0x1200;
+    for (i = 0; i < 100000; i++);
+
+    /* Do another reset */
 #if 0
-	nic8[RT_CHIPCMD] = RT_CMD_RESET;
-	
-	/* Wait for it to come back */
-	i = 1000;
-	while ((nic8[RT_CHIPCMD] & RT_CMD_RESET) && i > 0)
-		i--;
+    nic8[RT_CHIPCMD] = RT_CMD_RESET;
+
+    /* Wait for it to come back */
+    i = 1000;
+    while ((nic8[RT_CHIPCMD] & RT_CMD_RESET) && i > 0)
+        i--;
 #endif
-	
-	/* Enable writing to the config registers */
-//	nic8[RT_CFG9346] = 0xc0;
-	
-	/* Read MAC address */
-	tmp = nic32[RT_IDR0];
-	rtl_mac[0] = tmp & 0xff;
-	rtl_mac[1] = (tmp >> 8) & 0xff;
-	rtl_mac[2] = (tmp >> 16) & 0xff;
-	rtl_mac[3] = (tmp >> 24) & 0xff;
-	tmp = nic32[RT_IDR0+1];
-	rtl_mac[4] = tmp & 0xff;
-	rtl_mac[5] = (tmp >> 8) & 0xff;
-	dprintf("rtl8139: MAC ADDR %X:%X:%X:%X:%X:%X\n",
-		rtl_mac[0], rtl_mac[1], rtl_mac[2],
-		rtl_mac[3], rtl_mac[4], rtl_mac[5]);
 
-	/* Enable receive and transmit functions */
-	nic8[RT_CHIPCMD] = RT_CMD_RX_ENABLE | RT_CMD_TX_ENABLE;
+    /* Enable writing to the config registers */
+//  nic8[RT_CFG9346] = 0xc0;
 
-	/* Set Rx FIFO threashold to 1K, Rx size to 8k+16, 1024 byte DMA burst, WRAP mode */
-	nic32[RT_RXCONFIG/4] = 0x0000c680;
-	
-	/* Set Tx 1024 byte DMA burst */
-	nic32[RT_TXCONFIG/4] = 0x03000600;
+    /* Read MAC address */
+    tmp = nic32[RT_IDR0];
+    rtl_mac[0] = tmp & 0xff;
+    rtl_mac[1] = (tmp >> 8) & 0xff;
+    rtl_mac[2] = (tmp >> 16) & 0xff;
+    rtl_mac[3] = (tmp >> 24) & 0xff;
+    tmp = nic32[RT_IDR0+1];
+    rtl_mac[4] = tmp & 0xff;
+    rtl_mac[5] = (tmp >> 8) & 0xff;
+    dprintf("rtl8139: MAC ADDR %X:%X:%X:%X:%X:%X\n",
+            rtl_mac[0], rtl_mac[1], rtl_mac[2],
+            rtl_mac[3], rtl_mac[4], rtl_mac[5]);
 
-	/* Turn off lan-wake and set the driver-loaded bit */
-	nic8[RT_CONFIG1] = (nic8[RT_CONFIG1] & ~0x30) | 0x20;
-	
-	/* Enable FIFO auto-clear */
-	nic8[RT_CONFIG4] |= 0x80;
-	
-	/* Switch back to normal operation mode */
-	nic8[RT_CFG9346] = 0;
-	
-	/* Setup Rx buffers */
-	nic32[RT_RXBUF/4] = ADDR_RXBUF;
-	nic32[RT_TXADDR0/4 + 0] = ADDR_TXBUF0;
-	nic32[RT_TXADDR0/4 + 1] = 0x01846800;
-	nic32[RT_TXADDR0/4 + 2] = 0x01847000;
-	nic32[RT_TXADDR0/4 + 3] = 0x01847800;
-	
-	/* Reset RXMISSED counter */
-	nic32[RT_RXMISSED/4] = 0;
-	
-	/* Enable receiving broadcast and physical match packets */
-//	nic32[RT_RXCONFIG/4] |= 0x0000000a;
-	nic32[RT_RXCONFIG/4] |= 0x0000000f;
-	
-	/* Filter out all multicast packets */
-	nic32[RT_MAR0/4 + 0] = 0;
-	nic32[RT_MAR0/4 + 1] = 0;
-	
-	/* Disable all multi-interrupts */
-	nic16[RT_MULTIINTR/2] = 0;
+    /* Enable receive and transmit functions */
+    nic8[RT_CHIPCMD] = RT_CMD_RX_ENABLE | RT_CMD_TX_ENABLE;
 
-//	nic16[RT_INTRMASK/2] = 0x807f;
-	nic16[RT_INTRMASK/2] = 0;
-	
-	/* Enable RX/TX once more */
-	nic8[RT_CHIPCMD] = RT_CMD_RX_ENABLE | RT_CMD_TX_ENABLE;
+    /* Set Rx FIFO threashold to 1K, Rx size to 8k+16, 1024 byte DMA burst, WRAP mode */
+    nic32[RT_RXCONFIG/4] = 0x0000c680;
 
-	nic8[RT_CFG9346] = 0;
+    /* Set Tx 1024 byte DMA burst */
+    nic32[RT_TXCONFIG/4] = 0x03000600;
 
-	dprintf("rtl8139: ready.\n");
-	
-	return 0;
+    /* Turn off lan-wake and set the driver-loaded bit */
+    nic8[RT_CONFIG1] = (nic8[RT_CONFIG1] & ~0x30) | 0x20;
+
+    /* Enable FIFO auto-clear */
+    nic8[RT_CONFIG4] |= 0x80;
+
+    /* Switch back to normal operation mode */
+    nic8[RT_CFG9346] = 0;
+
+    /* Setup Rx buffers */
+    nic32[RT_RXBUF/4] = ADDR_RXBUF;
+    nic32[RT_TXADDR0/4 + 0] = ADDR_TXBUF0;
+    nic32[RT_TXADDR0/4 + 1] = 0x01846800;
+    nic32[RT_TXADDR0/4 + 2] = 0x01847000;
+    nic32[RT_TXADDR0/4 + 3] = 0x01847800;
+
+    /* Reset RXMISSED counter */
+    nic32[RT_RXMISSED/4] = 0;
+
+    /* Enable receiving broadcast and physical match packets */
+//  nic32[RT_RXCONFIG/4] |= 0x0000000a;
+    nic32[RT_RXCONFIG/4] |= 0x0000000f;
+
+    /* Filter out all multicast packets */
+    nic32[RT_MAR0/4 + 0] = 0;
+    nic32[RT_MAR0/4 + 1] = 0;
+
+    /* Disable all multi-interrupts */
+    nic16[RT_MULTIINTR/2] = 0;
+
+//  nic16[RT_INTRMASK/2] = 0x807f;
+    nic16[RT_INTRMASK/2] = 0;
+
+    /* Enable RX/TX once more */
+    nic8[RT_CHIPCMD] = RT_CMD_RX_ENABLE | RT_CMD_TX_ENABLE;
+
+    nic8[RT_CFG9346] = 0;
+
+    dprintf("rtl8139: ready.\n");
+
+    return 0;
 }
 
-typedef struct 
-{
-	volatile u2 status;
-	volatile u2 len;
-	volatile u1 data[1];
+typedef struct {
+    volatile u2 status;
+    volatile u2 len;
+    volatile u1 data[1];
 } rx_entry;
 
 #define RXSIZE (8192)
@@ -273,93 +274,93 @@ static int txbn = 0;
 
 void rtl8139_xmit(const char *ptr, int len)
 {
-	int i;
-		dprintf("XMIT(%d) %x (%d)\n",txbn,ptr,len);
-		/* wait for clear-to-send */
-	while(!(nic32[txbn + RT_TXSTATUS0/4] & 0x2000)) {
-		if(nic32[txbn + RT_TXSTATUS0/4] & 0x40000000){
-			dprintf("rtl8139: XMIT STATUS ABORT!?\n");
-			nic32[txbn + RT_TXCONFIG/4] = 0x03000601;
-		}
-		for(i = 0; i < 1000; i++);
-	}
-	
-	memcpy((void*) ((txbn * 0x800) + PHYS_ADDR_TO_P1(ADDR_TXBUF0)), ptr, len);
-	if(len < 64) len = 64;
-	
-	nic32[txbn + RT_TXADDR0/4] = (txbn * 0x800) + ADDR_TXBUF0;
-	nic32[txbn + RT_TXSTATUS0/4] = len | 0x80000;
+    int i;
+    dprintf("XMIT(%d) %x (%d)\n",txbn,ptr,len);
+    /* wait for clear-to-send */
+    while (!(nic32[txbn + RT_TXSTATUS0/4] & 0x2000)) {
+        if (nic32[txbn + RT_TXSTATUS0/4] & 0x40000000) {
+            dprintf("rtl8139: XMIT STATUS ABORT!?\n");
+            nic32[txbn + RT_TXCONFIG/4] = 0x03000601;
+        }
+        for (i = 0; i < 1000; i++);
+    }
+
+    memcpy((void*) ((txbn * 0x800) + PHYS_ADDR_TO_P1(ADDR_TXBUF0)), ptr, len);
+    if (len < 64) len = 64;
+
+    nic32[txbn + RT_TXADDR0/4] = (txbn * 0x800) + ADDR_TXBUF0;
+    nic32[txbn + RT_TXSTATUS0/4] = len | 0x80000;
 
 #if 0
-		/* wait for clear-to-send */
-	while(!(nic32[txbn + RT_TXSTATUS0/4] & (0x20000 | 0x4000))) {
-		for(i = 0; i < 100; i++);
-	}
+    /* wait for clear-to-send */
+    while (!(nic32[txbn + RT_TXSTATUS0/4] & (0x20000 | 0x4000))) {
+        for (i = 0; i < 100; i++);
+    }
 #endif
-		dprintf("XMIT DONE %x\n",nic32[txbn + RT_TXSTATUS0/4]);
+    dprintf("XMIT DONE %x\n",nic32[txbn + RT_TXSTATUS0/4]);
 
-	txbn = (txbn + 1) & 3;
-	
+    txbn = (txbn + 1) & 3;
+
 }
 
 int rtl8139_rx(char *buf, int buf_len)
 {
-	int len, status, i, crx;
-	int processed = 0;
-	rx_entry *rxe;
+    int len, status, i, crx;
+    int processed = 0;
+    rx_entry *rxe;
 
-//	if(1) {
-	dprintf("0x%x\n", nic8[RT_CHIPCMD]);
-	if (!(nic8[RT_CHIPCMD] & 1)) {
-		rxe = (rx_entry*) rxptr;
-		len = rxe->len;
-		status = rxe->status;
+//  if(1) {
+    dprintf("0x%x\n", nic8[RT_CHIPCMD]);
+    if (!(nic8[RT_CHIPCMD] & 1)) {
+        rxe = (rx_entry*) rxptr;
+        len = rxe->len;
+        status = rxe->status;
 
-		crx = nic16[RT_RXBUFTAIL/2];
+        crx = nic16[RT_RXBUFTAIL/2];
 
 #if 1
-		dprintf("RX: @%x L:%x S:%x CRX:%x\n",rxptr,len,status,crx);
+        dprintf("RX: @%x L:%x S:%x CRX:%x\n",rxptr,len,status,crx);
 #endif
-		
-		if(len > 1500) {
-			panic("rtl8139_rx: frame too large 0x%x\n", len);
-		}
-		if(status & 1){
-			memcpy(buf, (char *)rxe->data, len - 4);
-			processed++;
-		} else {
-				/* error */
-		}
 
-			/* advance to next packet */
-		rxptr += ((len + 4 + 3) & ~3);
-		if(rxptr >= rxend){
-			rxptr = rxstart + (rxptr - rxend);
-		}
+        if (len > 1500) {
+            panic("rtl8139_rx: frame too large 0x%x\n", len);
+        }
+        if (status & 1) {
+            memcpy(buf, (char *)rxe->data, len - 4);
+            processed++;
+        } else {
+            /* error */
+        }
 
-			/* tell the 8139 where we are */
-		nic16[RT_RXBUFTAIL/2] = ((u4) (rxptr - rxstart)) - 16;
-	}
+        /* advance to next packet */
+        rxptr += ((len + 4 + 3) & ~3);
+        if (rxptr >= rxend) {
+            rxptr = rxstart + (rxptr - rxend);
+        }
 
-	return processed;
+        /* tell the 8139 where we are */
+        nic16[RT_RXBUFTAIL/2] = ((u4) (rxptr - rxstart)) - 16;
+    }
+
+    return processed;
 }
 
 int chatter = 1;
 
 int rtl8139_foo()
 {
-	for(;;) {
-		dprintf("0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x\n", 
-			(int)nic8[RT_CHIPCMD], (int)nic32[RT_RXCONFIG/4], 
-			(int)nic8[RT_MEDIASTATUS],
-			(int)nic16[RT_INTRSTATUS/2],
-			(int)nic32[RT_RXBUF/4], 
-			(int)nic16[RT_RXBUFHEAD/2],
-			(int)nic32[RT_RXMISSED/4]
-			);
-//		nic16[RT_RXBUFHEAD] = 0;
-//		if(nic16[RT_INTRSTATUS/2] == 0x20) 
-//			panic("y0\n");
-	}
-	return 0;
+    for (;;) {
+        dprintf("0x%x 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x\n",
+                (int)nic8[RT_CHIPCMD], (int)nic32[RT_RXCONFIG/4],
+                (int)nic8[RT_MEDIASTATUS],
+                (int)nic16[RT_INTRSTATUS/2],
+                (int)nic32[RT_RXBUF/4],
+                (int)nic16[RT_RXBUFHEAD/2],
+                (int)nic32[RT_RXMISSED/4]
+               );
+//      nic16[RT_RXBUFHEAD] = 0;
+//      if(nic16[RT_INTRSTATUS/2] == 0x20)
+//          panic("y0\n");
+    }
+    return 0;
 }

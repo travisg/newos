@@ -18,30 +18,30 @@ static void _call_ctors(void);
 int
 _start(unsigned imid, struct uspace_prog_args_t *uspa)
 {
-	void *ibc;
-	void *iac;
+    void *ibc;
+    void *iac;
 
-	ibc= uspa->rld_export->dl_sym(imid, "INIT_BEFORE_CTORS", 0);
-	iac= uspa->rld_export->dl_sym(imid, "INIT_AFTER_CTORS", 0);
+    ibc= uspa->rld_export->dl_sym(imid, "INIT_BEFORE_CTORS", 0);
+    iac= uspa->rld_export->dl_sym(imid, "INIT_AFTER_CTORS", 0);
 
-	if(ibc) {
-		((libinit_f*)(ibc))(imid, uspa);
-	}
-	_call_ctors();
-	if(iac) {
-		((libinit_f*)(iac))(imid, uspa);
-	}
+    if (ibc) {
+        ((libinit_f*)(ibc))(imid, uspa);
+    }
+    _call_ctors();
+    if (iac) {
+        ((libinit_f*)(iac))(imid, uspa);
+    }
 
-	return 0;
+    return 0;
 }
 
 static
 void _call_ctors(void)
 {
-	void (**f)(void);
+    void (**f)(void);
 
-	for(f = &__ctor_list; f < &__ctor_end; f++) {
-		(**f)();
-	}
+    for (f = &__ctor_list; f < &__ctor_end; f++) {
+        (**f)();
+    }
 }
 

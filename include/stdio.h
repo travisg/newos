@@ -15,8 +15,9 @@
 #include <stdarg.h>
 
 #ifdef __cplusplus
-namespace std
-{extern "C" {
+namespace std {
+extern "C"
+{
 #endif
 
 #define _STDIO_READ 0x0001
@@ -32,11 +33,11 @@ namespace std
 typedef off_t fpos_t;
 
 struct __FILE {
-	int fd; 		/* system file descriptor */
+    int fd;         /* system file descriptor */
     ptrdiff_t rpos;       /* The first unread buffer position */
-	ptrdiff_t buf_pos;		/* first unwritten buffer position */ 
-	unsigned char* buf;		/* buffer */
-	ptrdiff_t buf_size;	/* buffer size */
+    ptrdiff_t buf_pos;      /* first unwritten buffer position */
+    unsigned char* buf;     /* buffer */
+    ptrdiff_t buf_size; /* buffer size */
     unsigned char unget;     /* for  ungetc */
     int flags;      /* for feof and ferror */
     struct __FILE* next; /* for fflush */
@@ -125,7 +126,8 @@ int vfscanf(FILE *stream, char const *format, va_list ap);
 int _v_printf(int (*_write)(void*, const void *, ssize_t ), void* arg, const char *fmt, va_list args);
 
 #ifdef __cplusplus
-}}
+}
+}
 #endif
 
 // getchar goes off in it's own little non-standard world

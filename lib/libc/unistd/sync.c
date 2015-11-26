@@ -10,6 +10,6 @@
 void
 sync(void)
 {
-	_kern_sync();
+    _kern_sync();
 }
 

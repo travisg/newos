@@ -26,7 +26,7 @@ char* longString = "To fully test the TTY, one should lower the line buffer size
 
 static char* getLongString()
 {
-	return longString;
+    return longString;
 }
 
 
@@ -61,8 +61,8 @@ static void testPrintf(FILE* f)
 
 static void testFputs(FILE* f)
 {
-	fputs("\nfputs:\n\n\n", f);
-	fputs(getLongString(), f);
+    fputs("\nfputs:\n\n\n", f);
+    fputs(getLongString(), f);
 }
 
 int main(int argc, char** argv)
@@ -70,25 +70,19 @@ int main(int argc, char** argv)
     char* path;
     FILE* f;
 
-    if(argc > 1)
-    {
+    if (argc > 1) {
         f = fopen(argv[1], "w");
         path = argv[1];
-    }
-    else
-    {
+    } else {
         f = stdout;
         path = "stdout";
     }
     printf("A test of \"fprintf\" to file: \"%s\".\r\n\n", path);
 
-    if(f != (FILE*)0)
-    {
+    if (f != (FILE*)0) {
         testPrintf(f);
-		testFputs(f);
-    }
-    else
-    {
+        testFputs(f);
+    } else {
         printf("File could not be opened.\r\n" );
     }
 

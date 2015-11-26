@@ -10,94 +10,94 @@
 #include <kernel/arch/i386/descriptors.h>
 
 typedef struct desc_struct {
-	unsigned int a,b;
+    unsigned int a,b;
 } desc_table;
 
 struct tss {
-	uint16 prev_task;
-	uint16 unused0;
-	uint32 sp0;
-	uint32 ss0;
-	uint32 sp1;
-	uint32 ss1;
-	uint32 sp2;
-	uint32 ss2;
-	uint32 sp3;
-	uint32 ss3;
-	uint32 cr3;
-	uint32 eip, eflags, eax, ecx, edx, ebx, esp, ebp, esi, edi;
-	uint32 es, cs, ss, ds, fs, gs;
-	uint32 ldt_seg_selector;
-	uint16 unused1;
-	uint16 io_map_base;
+    uint16 prev_task;
+    uint16 unused0;
+    uint32 sp0;
+    uint32 ss0;
+    uint32 sp1;
+    uint32 ss1;
+    uint32 sp2;
+    uint32 ss2;
+    uint32 sp3;
+    uint32 ss3;
+    uint32 cr3;
+    uint32 eip, eflags, eax, ecx, edx, ebx, esp, ebp, esi, edi;
+    uint32 es, cs, ss, ds, fs, gs;
+    uint32 ldt_seg_selector;
+    uint16 unused1;
+    uint16 io_map_base;
 };
 
 struct tss_descriptor {
-	uint16 limit_00_15;
-	uint16 base_00_15;
-	uint32 base_23_16 : 8;
-	uint32 type : 4;
-	uint32 zero : 1;
-	uint32 dpl : 2;
-	uint32 present : 1;
-	uint32 limit_19_16 : 4;
-	uint32 avail : 1;
-	uint32 zero1 : 1;
-	uint32 zero2 : 1;
-	uint32 granularity : 1;
-	uint32 base_31_24 : 8;
+    uint16 limit_00_15;
+    uint16 base_00_15;
+    uint32 base_23_16 : 8;
+    uint32 type : 4;
+    uint32 zero : 1;
+    uint32 dpl : 2;
+    uint32 present : 1;
+    uint32 limit_19_16 : 4;
+    uint32 avail : 1;
+    uint32 zero1 : 1;
+    uint32 zero2 : 1;
+    uint32 granularity : 1;
+    uint32 base_31_24 : 8;
 };
 
 typedef struct ptentry {
-	unsigned int present:1;
-	unsigned int rw:1;
-	unsigned int user:1;
-	unsigned int write_through:1;
-	unsigned int cache_disabled:1;
-	unsigned int accessed:1;
-	unsigned int dirty:1;
-	unsigned int reserved:1;
-	unsigned int global:1;
-	unsigned int avail:3;
-	unsigned int addr:20;
+    unsigned int present:1;
+    unsigned int rw:1;
+    unsigned int user:1;
+    unsigned int write_through:1;
+    unsigned int cache_disabled:1;
+    unsigned int accessed:1;
+    unsigned int dirty:1;
+    unsigned int reserved:1;
+    unsigned int global:1;
+    unsigned int avail:3;
+    unsigned int addr:20;
 } ptentry;
 
 typedef struct pdentry {
-	unsigned int present:1;
-	unsigned int rw:1;
-	unsigned int user:1;
-	unsigned int write_through:1;
-	unsigned int cache_disabled:1;
-	unsigned int accessed:1;
-	unsigned int reserved:1;
-	unsigned int page_size:1;
-	unsigned int global:1;
-	unsigned int avail:3;
-	unsigned int addr:20;
+    unsigned int present:1;
+    unsigned int rw:1;
+    unsigned int user:1;
+    unsigned int write_through:1;
+    unsigned int cache_disabled:1;
+    unsigned int accessed:1;
+    unsigned int reserved:1;
+    unsigned int page_size:1;
+    unsigned int global:1;
+    unsigned int avail:3;
+    unsigned int addr:20;
 } pdentry;
 
 struct iframe {
-	unsigned int gs;
-	unsigned int fs;
-	unsigned int es;
-	unsigned int ds;
-	unsigned int edi;		/* 0x10 */
-	unsigned int esi;
-	unsigned int ebp;
-	unsigned int esp;
-	unsigned int ebx;		/* 0x20 */
-	unsigned int edx;
-	unsigned int ecx;
-	unsigned int eax;
-	unsigned int orig_eax;	/* 0x30 */
-	unsigned int orig_edx;
-	unsigned int vector;
-	unsigned int error_code;
-	unsigned int eip;		/* 0x40 */
-	unsigned int cs;
-	unsigned int flags;
-	unsigned int user_esp;
-	unsigned int user_ss;	/* 0x50 */
+    unsigned int gs;
+    unsigned int fs;
+    unsigned int es;
+    unsigned int ds;
+    unsigned int edi;       /* 0x10 */
+    unsigned int esi;
+    unsigned int ebp;
+    unsigned int esp;
+    unsigned int ebx;       /* 0x20 */
+    unsigned int edx;
+    unsigned int ecx;
+    unsigned int eax;
+    unsigned int orig_eax;  /* 0x30 */
+    unsigned int orig_edx;
+    unsigned int vector;
+    unsigned int error_code;
+    unsigned int eip;       /* 0x40 */
+    unsigned int cs;
+    unsigned int flags;
+    unsigned int user_esp;
+    unsigned int user_ss;   /* 0x50 */
 };
 
 // x86 features from cpuid eax 1, ecx register
@@ -151,37 +151,37 @@ struct iframe {
 
 // features
 enum i386_feature_type {
-	FEATURE_COMMON = 0,     // cpuid eax=1, ecx register
-	FEATURE_EXT,            // cpuid eax=1, edx register
-	FEATURE_EXT_AMD,        // cpuid eax=0x80000001, edx register (AMD)
+    FEATURE_COMMON = 0,     // cpuid eax=1, ecx register
+    FEATURE_EXT,            // cpuid eax=1, edx register
+    FEATURE_EXT_AMD,        // cpuid eax=0x80000001, edx register (AMD)
 
-	FEATURE_NUM
+    FEATURE_NUM
 };
 
 enum i386_vendors {
-	VENDOR_INTEL = 0,
-	VENDOR_AMD,
-	VENDOR_CYRIX,
-	VENDOR_UMC,
-	VENDOR_NEXGEN,
-	VENDOR_CENTAUR,
-	VENDOR_RISE,
-	VENDOR_TRANSMETA,
-	VENDOR_NSC,
+    VENDOR_INTEL = 0,
+    VENDOR_AMD,
+    VENDOR_CYRIX,
+    VENDOR_UMC,
+    VENDOR_NEXGEN,
+    VENDOR_CENTAUR,
+    VENDOR_RISE,
+    VENDOR_TRANSMETA,
+    VENDOR_NSC,
 
-	VENDOR_NUM,
-	VENDOR_UNKNOWN,
+    VENDOR_NUM,
+    VENDOR_UNKNOWN,
 };
 
 struct arch_cpu_info {
-	enum i386_vendors vendor;
-	enum i386_feature_type feature[FEATURE_NUM];
-	char model_name[49];
-	const char *vendor_name;
-	char feature_string[512];
-	int family;
-	int stepping;
-	int model;
+    enum i386_vendors vendor;
+    enum i386_feature_type feature[FEATURE_NUM];
+    char model_name[49];
+    const char *vendor_name;
+    char feature_string[512];
+    int family;
+    int stepping;
+    int model;
 };
 
 #define nop() __asm__ ("nop"::)
@@ -211,40 +211,40 @@ void i386_set_task_switched(void);
 void i386_clear_task_switched(void);
 
 #define read_cr0(value) \
-	__asm__("movl	%%cr0,%0" : "=r" (value))
+    __asm__("movl	%%cr0,%0" : "=r" (value))
 
 #define write_cr0(value) \
-	__asm__("movl	%0,%%cr0" :: "r" (value))
+    __asm__("movl	%0,%%cr0" :: "r" (value))
 
 #define read_cr2(value) \
-	__asm__("movl	%%cr2,%0" : "=r" (value))
+    __asm__("movl	%%cr2,%0" : "=r" (value))
 
 #define write_cr2(value) \
-	__asm__("movl	%0,%%cr2" :: "r" (value))
+    __asm__("movl	%0,%%cr2" :: "r" (value))
 
 #define read_cr3(value) \
-	__asm__("movl	%%cr3,%0" : "=r" (value))
+    __asm__("movl	%%cr3,%0" : "=r" (value))
 
 #define write_cr3(value) \
-	__asm__("movl	%0,%%cr3" :: "r" (value))
+    __asm__("movl	%0,%%cr3" :: "r" (value))
 
 #define read_cr4(value) \
-	__asm__("movl	%%cr4,%0" : "=r" (value))
+    __asm__("movl	%%cr4,%0" : "=r" (value))
 
 #define write_cr4(value) \
-	__asm__("movl	%0,%%cr4" :: "r" (value))
+    __asm__("movl	%0,%%cr4" :: "r" (value))
 
 #define read_ebp(value) \
-	__asm__("movl	%%ebp,%0" : "=r" (value))
+    __asm__("movl	%%ebp,%0" : "=r" (value))
 
 #define read_dr3(value) \
-	__asm__("movl	%%dr3,%0" : "=r" (value))
+    __asm__("movl	%%dr3,%0" : "=r" (value))
 
 #define write_dr3(value) \
-	__asm__("movl	%0,%%dr3" :: "r" (value))
+    __asm__("movl	%0,%%dr3" :: "r" (value))
 
 #define invalidate_TLB(va) \
-	__asm__("invlpg (%0)" : : "r" (va))
+    __asm__("invlpg (%0)" : : "r" (va))
 
 #define out8(value,port) \
 __asm__ ("outb %%al,%%dx"::"a" (value),"d" (port))
@@ -275,16 +275,16 @@ _v; \
 
 #define out8_p(value,port) \
 __asm__ ("outb %%al,%%dx\n" \
-		"\tjmp 1f\n" \
-		"1:\tjmp 1f\n" \
-		"1:"::"a" (value),"d" (port))
+        "\tjmp 1f\n" \
+        "1:\tjmp 1f\n" \
+        "1:"::"a" (value),"d" (port))
 
 #define in8_p(port) ({ \
 unsigned char _v; \
 __asm__ volatile ("inb %%dx,%%al\n" \
-	"\tjmp 1f\n" \
-	"1:\tjmp 1f\n" \
-	"1:":"=a" (_v):"d" (port)); \
+    "\tjmp 1f\n" \
+    "1:\tjmp 1f\n" \
+    "1:":"=a" (_v):"d" (port)); \
 _v; \
 })
 

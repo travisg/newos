@@ -11,36 +11,36 @@
 #include "rtl8169_dev.h"
 
 typedef struct rtl8169 {
-	struct rtl8169 *next; // next in the list of rtl8169 devices
+    struct rtl8169 *next; // next in the list of rtl8169 devices
 
-	int irq;
-	addr_t phys_base;
-	addr_t phys_size;
-	addr_t virt_base;
-	uint16 io_port;
-	region_id region;
-	uint8 mac_addr[6];
+    int irq;
+    addr_t phys_base;
+    addr_t phys_size;
+    addr_t virt_base;
+    uint16 io_port;
+    region_id region;
+    uint8 mac_addr[6];
 
-	mutex lock;
-	spinlock_t reg_spinlock;
+    mutex lock;
+    spinlock_t reg_spinlock;
 
-	region_id txdesc_region;
-	struct rtl_tx_descriptor *txdesc;
-	addr_t txdesc_phys;
-	region_id txbuf_region;
-	uint8 *txbuf;
-	int tx_idx_free; // first free descriptor (owned by us)
-	int tx_idx_full; // first full descriptor (owned by the NIC)
-	sem_id tx_sem;
+    region_id txdesc_region;
+    struct rtl_tx_descriptor *txdesc;
+    addr_t txdesc_phys;
+    region_id txbuf_region;
+    uint8 *txbuf;
+    int tx_idx_free; // first free descriptor (owned by us)
+    int tx_idx_full; // first full descriptor (owned by the NIC)
+    sem_id tx_sem;
 
-	region_id rxdesc_region;
-	struct rtl_rx_descriptor *rxdesc;
-	addr_t rxdesc_phys;
-	region_id rxbuf_region;
-	uint8 *rxbuf;
-	int rx_idx_free; // first free descriptor (owned by us)
-	int rx_idx_full; // first full descriptor (owned by the NIC)
-	sem_id rx_sem;
+    region_id rxdesc_region;
+    struct rtl_rx_descriptor *rxdesc;
+    addr_t rxdesc_phys;
+    region_id rxbuf_region;
+    uint8 *rxbuf;
+    int rx_idx_free; // first free descriptor (owned by us)
+    int rx_idx_full; // first full descriptor (owned by the NIC)
+    sem_id rx_sem;
 } rtl8169;
 
 #if 0

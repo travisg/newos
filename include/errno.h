@@ -10,8 +10,9 @@
 #include <newos/errors.h>
 
 #ifdef __cplusplus
-namespace std
-{extern "C" {
+namespace std {
+extern "C"
+{
 #endif
 
 
@@ -84,7 +85,8 @@ extern int errno;
 
 
 #ifdef __cplusplus
-}} /* "C" */
+}
+} /* "C" */
 #endif
 
 

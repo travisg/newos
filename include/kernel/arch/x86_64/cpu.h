@@ -13,66 +13,66 @@
 
 /* 64-bit interrupt and trap descriptors */
 typedef struct trap_descriptor_struct {
-	uint32 a, b, c, d;
+    uint32 a, b, c, d;
 } trap_descriptor_64;
 
 typedef struct seg_descriptor_struct {
-	uint32 a, b;
+    uint32 a, b;
 } seg_descriptor;
 
 /* 64-bit TSS */
 struct tss_64 {
-	uint32 reserved;
-	uint64 rsp0;
-	uint64 rsp1;
-	uint64 rsp2;
-	uint64 reserved2;
-	uint64 ist1;
-	uint64 ist2;
-	uint64 ist3;
-	uint64 ist4;
-	uint64 ist5;
-	uint64 ist6;
-	uint64 ist7;
-	uint64 reserved3;
-	uint32 reserved4;
-	uint32 io_map_base;
-} _PACKED;	
+    uint32 reserved;
+    uint64 rsp0;
+    uint64 rsp1;
+    uint64 rsp2;
+    uint64 reserved2;
+    uint64 ist1;
+    uint64 ist2;
+    uint64 ist3;
+    uint64 ist4;
+    uint64 ist5;
+    uint64 ist6;
+    uint64 ist7;
+    uint64 reserved3;
+    uint32 reserved4;
+    uint32 io_map_base;
+} _PACKED;
 
 /* non system descriptors */
 struct descriptor_32 {
-	uint16 limit_00_15;
-	uint16 base_00_15;
-	uint32 base_23_16 : 8;
-	uint32 type : 4;
-	uint32 system : 1;
-	uint32 dpl : 2;
-	uint32 present : 1;
-	uint32 limit_19_16 : 4;
-	uint32 avail : 1;
-	uint32 long_mode : 1;
-	uint32 def_size : 1;
-	uint32 granularity : 1;
-	uint32 base_31_24 : 8;
+    uint16 limit_00_15;
+    uint16 base_00_15;
+    uint32 base_23_16 : 8;
+    uint32 type : 4;
+    uint32 system : 1;
+    uint32 dpl : 2;
+    uint32 present : 1;
+    uint32 limit_19_16 : 4;
+    uint32 avail : 1;
+    uint32 long_mode : 1;
+    uint32 def_size : 1;
+    uint32 granularity : 1;
+    uint32 base_31_24 : 8;
 } _PACKED;
 
 /* system descriptors */
 struct descriptor_64 {
-	uint16 limit_00_15;
-	uint16 base_00_15;
-	uint32 base_23_16 : 8;
-	uint32 type : 4;
-	uint32 system : 1;
-	uint32 dpl : 2;
-	uint32 present : 1;
-	uint32 limit_19_16 : 4;
-	uint32 zero : 2;
-	uint32 granularity : 1;
-	uint32 base_31_24 : 8;
-	uint32 base_63_32;
-	uint32 reserved : 8;
-	uint32 zero2 : 5;
-	uint32 reserved2 : 19;
+    uint16 limit_00_15;
+    uint16 base_00_15;
+    uint32 base_23_16 : 8;
+    uint32 type : 4;
+    uint32 system : 1;
+    uint32 dpl : 2;
+    uint32 present : 1;
+    uint32 limit_19_16 : 4;
+    uint32 zero : 2;
+    uint32 granularity : 1;
+    uint32 base_31_24 : 8;
+    uint32 base_63_32;
+    uint32 reserved : 8;
+    uint32 zero2 : 5;
+    uint32 reserved2 : 19;
 } _PACKED;
 
 /* page table bits */
@@ -88,35 +88,35 @@ struct descriptor_64 {
 #define PT_NX (1UL<<63)
 
 struct iframe {
-	unsigned long gs;
-	unsigned long fs;
-	unsigned long r15;
-	unsigned long r14;
-	unsigned long r13;
-	unsigned long r12;
-	unsigned long r11;
-	unsigned long r10;
-	unsigned long r9;
-	unsigned long r8;
-	unsigned long rdi;
-	unsigned long rsi;
-	unsigned long rbp;
-	unsigned long rsp;
-	unsigned long rbx;
-	unsigned long rdx;
-	unsigned long rcx;
-	unsigned long rax;
-	unsigned long vector;
-	unsigned long error_code;
-	unsigned long rip;
-	unsigned long cs;
-	unsigned long flags;
-	unsigned long user_sp;
-	unsigned long user_ss;
+    unsigned long gs;
+    unsigned long fs;
+    unsigned long r15;
+    unsigned long r14;
+    unsigned long r13;
+    unsigned long r12;
+    unsigned long r11;
+    unsigned long r10;
+    unsigned long r9;
+    unsigned long r8;
+    unsigned long rdi;
+    unsigned long rsi;
+    unsigned long rbp;
+    unsigned long rsp;
+    unsigned long rbx;
+    unsigned long rdx;
+    unsigned long rcx;
+    unsigned long rax;
+    unsigned long vector;
+    unsigned long error_code;
+    unsigned long rip;
+    unsigned long cs;
+    unsigned long flags;
+    unsigned long user_sp;
+    unsigned long user_ss;
 };
 
 struct arch_cpu_info {
-	// empty
+    // empty
 };
 
 #define nop() __asm__ ("nop"::)
@@ -136,30 +136,34 @@ void x86_64_fsave_swap(void *old_fpu_state, void *new_fpu_state);
 void x86_64_fxsave_swap(void *old_fpu_state, void *new_fpu_state);
 uint64 x86_64_rdtsc(void);
 
-static inline addr_t read_cr3(void) {
-	addr_t val;
-	__asm__("mov	%%cr3,%0" : "=r" (val));
-	return val;
+static inline addr_t read_cr3(void)
+{
+    addr_t val;
+    __asm__("mov	%%cr3,%0" : "=r" (val));
+    return val;
 }
 
-static inline addr_t read_rbp(void) {
-	addr_t val;
-	__asm__("mov	%%rbp,%0" : "=r" (val));
-	return val;
+static inline addr_t read_rbp(void)
+{
+    addr_t val;
+    __asm__("mov	%%rbp,%0" : "=r" (val));
+    return val;
 }
 
-static inline addr_t read_dr3(void) {
-	addr_t val;
-	__asm__("mov	%%dr3,%0" : "=r" (val));
-	return val;
+static inline addr_t read_dr3(void)
+{
+    addr_t val;
+    __asm__("mov	%%dr3,%0" : "=r" (val));
+    return val;
 }
 
-static inline void write_dr3(addr_t val) {
-	__asm__("mov	%0,%%dr3" :: "r" (val));
+static inline void write_dr3(addr_t val)
+{
+    __asm__("mov	%0,%%dr3" :: "r" (val));
 }
 
 #define invalidate_TLB(va) \
-	__asm__("invlpg (%0)" : : "r" (va))
+    __asm__("invlpg (%0)" : : "r" (va))
 
 #define out8(value,port) \
 __asm__ ("outb %%al,%%dx"::"a" (value),"d" (port))
@@ -190,16 +194,16 @@ _v; \
 
 #define out8_p(value,port) \
 __asm__ ("outb %%al,%%dx\n" \
-		"\tjmp 1f\n" \
-		"1:\tjmp 1f\n" \
-		"1:"::"a" (value),"d" (port))
+        "\tjmp 1f\n" \
+        "1:\tjmp 1f\n" \
+        "1:"::"a" (value),"d" (port))
 
 #define in8_p(port) ({ \
 unsigned char _v; \
 __asm__ volatile ("inb %%dx,%%al\n" \
-	"\tjmp 1f\n" \
-	"1:\tjmp 1f\n" \
-	"1:":"=a" (_v):"d" (port)); \
+    "\tjmp 1f\n" \
+    "1:\tjmp 1f\n" \
+    "1:":"=a" (_v):"d" (port)); \
 _v; \
 })
 

@@ -9,14 +9,14 @@
 
 class KeyboardDevice : public InputDevice {
 public:
-	KeyboardDevice(int fd, InputServer *srv);
-	virtual ~KeyboardDevice();
+    KeyboardDevice(int fd, InputServer *srv);
+    virtual ~KeyboardDevice();
 
 private:
-	virtual int _Run();
+    virtual int _Run();
 
-	int mFd;
-	InputServer *mSrv;
+    int mFd;
+    InputServer *mSrv;
 };
 
 #endif

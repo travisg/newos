@@ -13,10 +13,10 @@ typedef uint64 selector_type;
 // DATA segments are read-only
 // CODE segments are execute-only
 // both can be modified by using the suffixed enum versions
-// legend:	w = writable
-//			d = expand down
-//			r = readable
-//			c = conforming
+// legend:  w = writable
+//          d = expand down
+//          r = readable
+//          c = conforming
 
 #endif
 

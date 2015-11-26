@@ -9,13 +9,13 @@
 
 #include "ide_private.h"
 
-#define	NO_ERR                   0
-#define	ERR_TIMEOUT              1
-#define	ERR_HARDWARE_ERROR       2
-#define	ERR_DRQ_NOT_SET          3
-#define	ERR_DISK_BUSY            4
-#define	ERR_DEVICE_FAULT         5
-#define	ERR_BUFFER_NOT_EMPTY     6
+#define NO_ERR                   0
+#define ERR_TIMEOUT              1
+#define ERR_HARDWARE_ERROR       2
+#define ERR_DRQ_NOT_SET          3
+#define ERR_DISK_BUSY            4
+#define ERR_DEVICE_FAULT         5
+#define ERR_BUFFER_NOT_EMPTY     6
 
 int  ide_read_block(ide_device *device, char *buffer, uint32 block, uint8 numSectors);
 int  ide_write_block(ide_device *device, const char *buffer, uint32 block, uint8 numSectors);

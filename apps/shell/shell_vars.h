@@ -3,12 +3,12 @@
 
 //#include <types.h>
 
-struct _shell_value{
-	bool isnumber;
-   union{
-		char *val_text;
-		long int val_number;
-	} value;
+struct _shell_value {
+    bool isnumber;
+    union {
+        char *val_text;
+        long int val_number;
+    } value;
 };
 
 typedef struct _shell_value shell_value;
@@ -38,7 +38,7 @@ int shell_value_get_text(shell_value * value,char **text);
 shell_value *shell_value_clone(shell_value *var);
 
 
-bool 		string_to_long_int(const char *str,long int *out);
+bool        string_to_long_int(const char *str,long int *out);
 
 
 #endif

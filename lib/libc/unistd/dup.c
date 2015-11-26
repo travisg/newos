@@ -11,13 +11,13 @@
 int
 dup(int fd)
 {
-	int retval;
+    int retval;
 
-	retval= _kern_dup(fd);
+    retval= _kern_dup(fd);
 
-	if(retval< 0) {
-		errno = retval;
-	}
+    if (retval< 0) {
+        errno = retval;
+    }
 
-	return retval;
+    return retval;
 }

@@ -8,10 +8,10 @@
  * publish, distribute, sublicense, and/or sell copies of the Software,
  * and to permit persons to whom the Software is furnished to do so,
  * subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
  * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -38,7 +38,7 @@
 #define __SECTION(x) __attribute((section(x)))
 #define __PURE __attribute((pure))
 #define __CONST __attribute((const))
-#define __NO_RETURN __attribute__((noreturn)) 
+#define __NO_RETURN __attribute__((noreturn))
 #define __MALLOC __attribute__((malloc))
 
 /* look for gcc 3.0 and above */
@@ -59,7 +59,7 @@
 
 /* look for gcc 3.3 and above */
 #if (__GNUC__ > 3) || (__GNUC__ == 3 && __GNUC_MINOR__ >= 3)
-#define __MAY_ALIAS __attribute__((may_alias)) 
+#define __MAY_ALIAS __attribute__((may_alias))
 
 /* nonnull was added in gcc 3.3 as well */
 #define __NONNULL(x) __attribute((nonnull x))
@@ -85,8 +85,8 @@
 
 #define likely(x)       (x)
 #define unlikely(x)     (x)
-#define __UNUSED 
-#define __PACKED 
+#define __UNUSED
+#define __PACKED
 #define __ALIGNED(x)
 #define __PRINTFLIKE(__fmt,__varargs)
 #define __SCANFLIKE(__fmt,__varargs)

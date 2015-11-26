@@ -6,9 +6,9 @@
 #include <errno.h>
 #include <sys/syscalls.h>
 
-pid_t 
+pid_t
 setsid(void)
 {
-	return (pid_t)_kern_setsid();
+    return (pid_t)_kern_setsid();
 }
 

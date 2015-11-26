@@ -10,21 +10,21 @@
 
 void puts(const char *str)
 {
-	while (*str)
-		putc(*str++);
+    while (*str)
+        putc(*str++);
 }
 
 int dprintf(const char *fmt, ...)
 {
-	int ret;
-	va_list args;
-	char temp[256];
+    int ret;
+    va_list args;
+    char temp[256];
 
-	va_start(args, fmt);
-	ret = vsprintf(temp,fmt,args);
-	va_end(args);
+    va_start(args, fmt);
+    ret = vsprintf(temp,fmt,args);
+    va_end(args);
 
-	puts(temp);
-	return ret;
+    puts(temp);
+    return ret;
 }
 

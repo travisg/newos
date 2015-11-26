@@ -6,9 +6,9 @@
 #define _NEWOS_KERNEL_ARCH_ELF_H
 
 int arch_elf_relocate_rel(struct elf_image_info *image, const char *sym_prepend,
-	struct elf_image_info *resolve_image, struct Elf32_Rel *rel, int rel_len);
+                          struct elf_image_info *resolve_image, struct Elf32_Rel *rel, int rel_len);
 int arch_elf_relocate_rela(struct elf_image_info *image, const char *sym_prepend,
-	struct elf_image_info *resolve_image, struct Elf32_Rela *rel, int rel_len);
+                           struct elf_image_info *resolve_image, struct Elf32_Rela *rel, int rel_len);
 
 #include INC_ARCH(kernel/arch,elf.h)
 

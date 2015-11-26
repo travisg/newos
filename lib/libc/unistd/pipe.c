@@ -10,16 +10,16 @@
 int
 pipe(int fds[2])
 {
-	int fd;
-	int err;
+    int fd;
+    int err;
 
-	fd = open("/pipe/anon", 0);
-	if(fd < 0)
-		return fd;
+    fd = open("/pipe/anon", 0);
+    if (fd < 0)
+        return fd;
 
-	err = _kern_ioctl(fd, _PIPEFS_IOCTL_CREATE_ANONYMOUS, fds, sizeof(int) * 2);
+    err = _kern_ioctl(fd, _PIPEFS_IOCTL_CREATE_ANONYMOUS, fds, sizeof(int) * 2);
 
-	close(fd);
+    close(fd);
 
-	return err;
+    return err;
 }

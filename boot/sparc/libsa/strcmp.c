@@ -1,4 +1,4 @@
-/*	$OpenBSD: strcmp.c,v 1.2 1996/10/16 11:32:07 mickey Exp $ */
+/*  $OpenBSD: strcmp.c,v 1.2 1996/10/16 11:32:07 mickey Exp $ */
 
 /*-
  * Copyright (c) 1996 Michael Shalayeff
@@ -14,12 +14,12 @@
  *    documentation and/or other materials provided with the distribution.
  * 3. All advertising materials mentioning features or use of this software
  *    must display the following acknowledgement:
- *	This product includes software developed by Michael Shalayeff.
+ *  This product includes software developed by Michael Shalayeff.
  * 4. The name of the author may not be used to endorse or promote products
  *    derived from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR 
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
@@ -37,11 +37,11 @@
 
 int
 strcmp(s1, s2)
-	register const char *s1;
-	register const char *s2;
+register const char *s1;
+register const char *s2;
 {
-	while(*s1 && *s2 && *s1 == *s2)
-		s1++, s2++;
-	return *s1 - *s2;
+    while (*s1 && *s2 && *s1 == *s2)
+        s1++, s2++;
+    return *s1 - *s2;
 }
 

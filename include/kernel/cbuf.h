@@ -13,16 +13,16 @@
 #define CBUF_FLAG_CHAIN_TAIL 2
 
 typedef struct cbuf {
-	struct cbuf *next;
-	size_t len;
-	size_t total_len;
-	void *data;
-	int flags;
+    struct cbuf *next;
+    size_t len;
+    size_t total_len;
+    void *data;
+    int flags;
 
-	/* used by the network stack to chain a list of these together */
-	struct cbuf *packet_next;
+    /* used by the network stack to chain a list of these together */
+    struct cbuf *packet_next;
 
-	char dat[CBUF_LEN - 2*sizeof(struct cbuf *) - 2*sizeof(size_t) - sizeof(void *) - sizeof(int)];
+    char dat[CBUF_LEN - 2*sizeof(struct cbuf *) - 2*sizeof(size_t) - sizeof(void *) - sizeof(int)];
 } cbuf;
 
 int cbuf_init(void);

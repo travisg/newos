@@ -6,10 +6,10 @@
 #include <errno.h>
 #include <sys/syscalls.h>
 
-pid_t 
+pid_t
 getsid(pid_t pid)
 {
-	// XXX implement
-	return 1;
-//	return _kern_setpgid((proc_id)pid, (pgrp_id)pgid);
+    // XXX implement
+    return 1;
+//  return _kern_setpgid((proc_id)pid, (pgrp_id)pgid);
 }

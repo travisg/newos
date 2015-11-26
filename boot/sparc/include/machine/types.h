@@ -1,9 +1,9 @@
-/*	$OpenBSD: types.h,v 1.9 1999/07/07 23:16:41 art Exp $	*/
-/*	$NetBSD: types.h,v 1.11 1996/12/10 23:19:38 pk Exp $	*/
+/*  $OpenBSD: types.h,v 1.9 1999/07/07 23:16:41 art Exp $   */
+/*  $NetBSD: types.h,v 1.11 1996/12/10 23:19:38 pk Exp $    */
 
 /*
  * Copyright (c) 1992, 1993
- *	The Regents of the University of California.  All rights reserved.
+ *  The Regents of the University of California.  All rights reserved.
  *
  * This software was developed by the Computer Systems Engineering group
  * at Lawrence Berkeley Laboratory under DARPA contract BG 91-66 and
@@ -11,8 +11,8 @@
  *
  * All advertising materials mentioning features or use of this software
  * must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Lawrence Berkeley Laboratory.
+ *  This product includes software developed by the University of
+ *  California, Lawrence Berkeley Laboratory.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,8 +24,8 @@
  *    documentation and/or other materials provided with the distribution.
  * 3. All advertising materials mentioning features or use of this software
  *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
+ *  This product includes software developed by the University of
+ *  California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -42,51 +42,51 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	@(#)types.h	8.1 (Berkeley) 6/11/93
+ *  @(#)types.h 8.1 (Berkeley) 6/11/93
  */
 
-#ifndef	_MACHTYPES_H_
-#define	_MACHTYPES_H_
+#ifndef _MACHTYPES_H_
+#define _MACHTYPES_H_
 
 #include <sys/cdefs.h>
 
 #if !defined(_ANSI_SOURCE) && !defined(_POSIX_SOURCE)
 typedef struct _physadr {
-	short r[1];
+    short r[1];
 } *physadr;
 
 typedef struct label_t {
-	int val[2];
+    int val[2];
 } label_t;
 #endif
 
-typedef	unsigned long	vm_offset_t;
-typedef	unsigned long	vm_size_t;
+typedef unsigned long   vm_offset_t;
+typedef unsigned long   vm_size_t;
 
-typedef unsigned long	vaddr_t;
-typedef unsigned long	paddr_t;
-typedef unsigned long	vsize_t;
-typedef unsigned long	psize_t;
+typedef unsigned long   vaddr_t;
+typedef unsigned long   paddr_t;
+typedef unsigned long   vsize_t;
+typedef unsigned long   psize_t;
 
 /*
  * Basic integral types.  Omit the typedef if
  * not possible for a machine/compiler combination.
  */
-#define	__BIT_TYPES_DEFINED__
-typedef	__signed char		   int8_t;
-typedef	unsigned char		 u_int8_t;
-typedef	unsigned char		  uint8_t;
-typedef	short			  int16_t;
-typedef	unsigned short		u_int16_t;
-typedef	unsigned short		 uint16_t;
-typedef	int			  int32_t;
-typedef	unsigned int		u_int32_t;
-typedef	unsigned int		 uint32_t;
-typedef	long long		  int64_t;
-typedef	unsigned long long	u_int64_t;
-typedef	unsigned long long	 uint64_t;
+#define __BIT_TYPES_DEFINED__
+typedef __signed char          int8_t;
+typedef unsigned char        u_int8_t;
+typedef unsigned char         uint8_t;
+typedef short             int16_t;
+typedef unsigned short      u_int16_t;
+typedef unsigned short       uint16_t;
+typedef int           int32_t;
+typedef unsigned int        u_int32_t;
+typedef unsigned int         uint32_t;
+typedef long long         int64_t;
+typedef unsigned long long  u_int64_t;
+typedef unsigned long long   uint64_t;
 
-typedef int32_t			register_t;
+typedef int32_t         register_t;
 
-#endif	/* _MACHTYPES_H_ */
+#endif  /* _MACHTYPES_H_ */
 

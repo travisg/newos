@@ -1,6 +1,6 @@
 /*-
  * Copyright (c) 1992, 1993
- *	The Regents of the University of California.  All rights reserved.
+ *  The Regents of the University of California.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -12,8 +12,8 @@
  *    documentation and/or other materials provided with the distribution.
  * 3. All advertising materials mentioning features or use of this software
  *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
+ *  This product includes software developed by the University of
+ *  California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -36,150 +36,151 @@
 static char sccsid[] = "@(#)qsort.c	8.1 (Berkeley) 6/4/93";
 #endif
 static const char rcsid[] =
-  "$FreeBSD: src/lib/libc/stdlib/qsort.c,v 1.8 1999/08/28 00:01:35 peter Exp $";
+    "$FreeBSD: src/lib/libc/stdlib/qsort.c,v 1.8 1999/08/28 00:01:35 peter Exp $";
 #endif /* LIBC_SCCS and not lint */
 
 #include <stdlib.h>
 
-typedef int		 cmp_t(void const *, void const *);
-static inline char	*med3(char *, char *, char *, cmp_t *);
-static inline void	 swapfunc(char *, char *, int, int);
+typedef int      cmp_t(void const *, void const *);
+static inline char  *med3(char *, char *, char *, cmp_t *);
+static inline void   swapfunc(char *, char *, int, int);
 
 #ifdef min
 # undef min
 #endif
-#define min(a, b)	(a) < (b) ? a : b
+#define min(a, b)   (a) < (b) ? a : b
 
 /*
  * Qsort routine from Bentley & McIlroy's "Engineering a Sort Function".
  */
-#define swapcode(TYPE, parmi, parmj, n) { 		\
-	long i = (n) / sizeof (TYPE); 			\
-	register TYPE *pi = (TYPE *) (parmi); 		\
-	register TYPE *pj = (TYPE *) (parmj); 		\
-	do { 						\
-		register TYPE	t = *pi;		\
-		*pi++ = *pj;				\
-		*pj++ = t;				\
-        } while (--i > 0);				\
+#define swapcode(TYPE, parmi, parmj, n) {       \
+    long i = (n) / sizeof (TYPE);           \
+    register TYPE *pi = (TYPE *) (parmi);       \
+    register TYPE *pj = (TYPE *) (parmj);       \
+    do {                        \
+        register TYPE   t = *pi;        \
+        *pi++ = *pj;                \
+        *pj++ = t;              \
+        } while (--i > 0);              \
 }
 
 #define SWAPINIT(a, es) swaptype = ((char *)a - (char *)0) % sizeof(long) || \
-	es % sizeof(long) ? 2 : es == sizeof(long)? 0 : 1;
+    es % sizeof(long) ? 2 : es == sizeof(long)? 0 : 1;
 
 static inline
 void
 swapfunc(char *a, char *b, int n, int swaptype)
 {
-	if(swaptype <= 1)
-		swapcode(long, a, b, n)
-	else
-		swapcode(char, a, b, n)
-}
+    if (swaptype <= 1)
+        swapcode(long, a, b, n)
+        else
+            swapcode(char, a, b, n)
+        }
 
-#define swap(a, b)					\
-	if (swaptype == 0) {				\
-		long t = *(long *)(a);			\
-		*(long *)(a) = *(long *)(b);		\
-		*(long *)(b) = t;			\
-	} else						\
-		swapfunc(a, b, es, swaptype)
+#define swap(a, b)                  \
+    if (swaptype == 0) {                \
+        long t = *(long *)(a);          \
+        *(long *)(a) = *(long *)(b);        \
+        *(long *)(b) = t;           \
+    } else                      \
+        swapfunc(a, b, es, swaptype)
 
-#define vecswap(a, b, n) 	if ((n) > 0) swapfunc(a, b, n, swaptype)
+#define vecswap(a, b, n)    if ((n) > 0) swapfunc(a, b, n, swaptype)
 
 static inline
 char *
 med3(char *a, char *b, char *c, cmp_t *cmp)
 {
-	return cmp(a, b) < 0 ?
-	       (cmp(b, c) < 0 ? b : (cmp(a, c) < 0 ? c : a ))
-              :(cmp(b, c) > 0 ? b : (cmp(a, c) < 0 ? a : c ));
+    return cmp(a, b) < 0 ?
+           (cmp(b, c) < 0 ? b : (cmp(a, c) < 0 ? c : a ))
+               :(cmp(b, c) > 0 ? b : (cmp(a, c) < 0 ? a : c ));
 }
 
 void
 qsort(void *a, size_t n, size_t es, cmp_t *cmp)
 {
-	char *pa;
-	char *pb;
-	char *pc;
-	char *pd;
-	char *pl;
-	char *pm;
-	char *pn;
-	int d;
-	int r;
-	int swaptype;
-	int swap_cnt;
+    char *pa;
+    char *pb;
+    char *pc;
+    char *pd;
+    char *pl;
+    char *pm;
+    char *pn;
+    int d;
+    int r;
+    int swaptype;
+    int swap_cnt;
 
-loop:	SWAPINIT(a, es);
-	swap_cnt = 0;
-	if (n < 7) {
-		for (pm = (char *)a + es; pm < (char *)a + n * es; pm += es)
-			for (pl = pm; pl > (char *)a && cmp(pl - es, pl) > 0;
-			     pl -= es)
-				swap(pl, pl - es);
-		return;
-	}
-	pm = (char *)a + (n / 2) * es;
-	if (n > 7) {
-		pl = a;
-		pn = (char *)a + (n - 1) * es;
-		if (n > 40) {
-			d = (n / 8) * es;
-			pl = med3(pl, pl + d, pl + 2 * d, cmp);
-			pm = med3(pm - d, pm, pm + d, cmp);
-			pn = med3(pn - 2 * d, pn - d, pn, cmp);
-		}
-		pm = med3(pl, pm, pn, cmp);
-	}
-	swap(a, pm);
-	pa = pb = (char *)a + es;
+loop:
+    SWAPINIT(a, es);
+    swap_cnt = 0;
+    if (n < 7) {
+        for (pm = (char *)a + es; pm < (char *)a + n * es; pm += es)
+            for (pl = pm; pl > (char *)a && cmp(pl - es, pl) > 0;
+                    pl -= es)
+                swap(pl, pl - es);
+        return;
+    }
+    pm = (char *)a + (n / 2) * es;
+    if (n > 7) {
+        pl = a;
+        pn = (char *)a + (n - 1) * es;
+        if (n > 40) {
+            d = (n / 8) * es;
+            pl = med3(pl, pl + d, pl + 2 * d, cmp);
+            pm = med3(pm - d, pm, pm + d, cmp);
+            pn = med3(pn - 2 * d, pn - d, pn, cmp);
+        }
+        pm = med3(pl, pm, pn, cmp);
+    }
+    swap(a, pm);
+    pa = pb = (char *)a + es;
 
-	pc = pd = (char *)a + (n - 1) * es;
-	for (;;) {
-		while (pb <= pc && (r = cmp(pb, a)) <= 0) {
-			if (r == 0) {
-				swap_cnt = 1;
-				swap(pa, pb);
-				pa += es;
-			}
-			pb += es;
-		}
-		while (pb <= pc && (r = cmp(pc, a)) >= 0) {
-			if (r == 0) {
-				swap_cnt = 1;
-				swap(pc, pd);
-				pd -= es;
-			}
-			pc -= es;
-		}
-		if (pb > pc)
-			break;
-		swap(pb, pc);
-		swap_cnt = 1;
-		pb += es;
-		pc -= es;
-	}
-	if (swap_cnt == 0) {  /* Switch to insertion sort */
-		for (pm = (char *)a + es; pm < (char *)a + n * es; pm += es)
-			for (pl = pm; pl > (char *)a && cmp(pl - es, pl) > 0;
-			     pl -= es)
-				swap(pl, pl - es);
-		return;
-	}
+    pc = pd = (char *)a + (n - 1) * es;
+    for (;;) {
+        while (pb <= pc && (r = cmp(pb, a)) <= 0) {
+            if (r == 0) {
+                swap_cnt = 1;
+                swap(pa, pb);
+                pa += es;
+            }
+            pb += es;
+        }
+        while (pb <= pc && (r = cmp(pc, a)) >= 0) {
+            if (r == 0) {
+                swap_cnt = 1;
+                swap(pc, pd);
+                pd -= es;
+            }
+            pc -= es;
+        }
+        if (pb > pc)
+            break;
+        swap(pb, pc);
+        swap_cnt = 1;
+        pb += es;
+        pc -= es;
+    }
+    if (swap_cnt == 0) {  /* Switch to insertion sort */
+        for (pm = (char *)a + es; pm < (char *)a + n * es; pm += es)
+            for (pl = pm; pl > (char *)a && cmp(pl - es, pl) > 0;
+                    pl -= es)
+                swap(pl, pl - es);
+        return;
+    }
 
-	pn = (char *)a + n * es;
-	r = min(pa - (char *)a, pb - pa);
-	vecswap(a, pb - r, r);
-	r = min((int)(pd - pc), (int)(pn - pd - es));
-	vecswap(pb, pn - r, r);
-	if ((r = pb - pa) > (int)es)
-		qsort(a, r / es, es, cmp);
-	if ((r = pd - pc) > (int)es) {
-		/* Iterate rather than recurse to save stack space */
-		a = pn - r;
-		n = r / es;
-		goto loop;
-	}
-/*		qsort(pn - r, r / es, es, cmp);*/
+    pn = (char *)a + n * es;
+    r = min(pa - (char *)a, pb - pa);
+    vecswap(a, pb - r, r);
+    r = min((int)(pd - pc), (int)(pn - pd - es));
+    vecswap(pb, pn - r, r);
+    if ((r = pb - pa) > (int)es)
+        qsort(a, r / es, es, cmp);
+    if ((r = pd - pc) > (int)es) {
+        /* Iterate rather than recurse to save stack space */
+        a = pn - r;
+        n = r / es;
+        goto loop;
+    }
+    /*      qsort(pn - r, r / es, es, cmp);*/
 }

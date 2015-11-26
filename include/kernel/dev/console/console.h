@@ -6,7 +6,7 @@
 #define _CONSOLE_DEV_H
 
 enum {
-	CONSOLE_OP_WRITEXY = 2376
+    CONSOLE_OP_WRITEXY = 2376
 };
 
 #endif

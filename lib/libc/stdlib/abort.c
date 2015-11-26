@@ -10,9 +10,9 @@
 
 void abort(void)
 {
-	printf("abort() called\n");
+    printf("abort() called\n");
 
-	exit(0);
+    exit(0);
 }
 #endif
 

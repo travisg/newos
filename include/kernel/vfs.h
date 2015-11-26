@@ -8,21 +8,21 @@
 #include <kernel/kernel.h>
 #include <boot/stage2.h>
 
-#define DEFAULT_FD_TABLE_SIZE	128
-#define MAX_FD_TABLE_SIZE		2048
+#define DEFAULT_FD_TABLE_SIZE   128
+#define MAX_FD_TABLE_SIZE       2048
 
 typedef enum {
-	STREAM_TYPE_ANY = 0,
-	STREAM_TYPE_FILE,
-	STREAM_TYPE_DIR,
-	STREAM_TYPE_DEVICE,
-	STREAM_TYPE_PIPE
+    STREAM_TYPE_ANY = 0,
+    STREAM_TYPE_FILE,
+    STREAM_TYPE_DIR,
+    STREAM_TYPE_DEVICE,
+    STREAM_TYPE_PIPE
 } stream_type;
 
 typedef enum {
-	_SEEK_SET = 0,
-	_SEEK_CUR,
-	_SEEK_END
+    _SEEK_SET = 0,
+    _SEEK_CUR,
+    _SEEK_END
 } seek_type;
 
 typedef void * fs_cookie;
@@ -31,66 +31,66 @@ typedef void * dir_cookie;
 typedef void * fs_vnode;
 
 typedef struct iovec {
-	void *start;
-	size_t len;
+    void *start;
+    size_t len;
 } iovec;
 
 typedef struct iovecs {
-	size_t num;
-	size_t total_len;
-	iovec vec[0];
+    size_t num;
+    size_t total_len;
+    iovec vec[0];
 } iovecs;
 
 /* macro to allocate a iovec array on the stack */
 #define IOVECS(name, size) \
-	uint8 _##name[sizeof(iovecs) + (size)*sizeof(iovec)]; \
-	iovecs *name = (iovecs *)_##name
+    uint8 _##name[sizeof(iovecs) + (size)*sizeof(iovec)]; \
+    iovecs *name = (iovecs *)_##name
 
 struct file_stat {
-	vnode_id 	vnid;
-	stream_type	type;
-	off_t		size;
+    vnode_id    vnid;
+    stream_type type;
+    off_t       size;
 };
 
 struct fs_calls {
-	int (*fs_mount)(fs_cookie *fs, fs_id id, const char *device, void *args, vnode_id *root_vnid);
-	int (*fs_unmount)(fs_cookie fs);
-	int (*fs_sync)(fs_cookie fs);
+    int (*fs_mount)(fs_cookie *fs, fs_id id, const char *device, void *args, vnode_id *root_vnid);
+    int (*fs_unmount)(fs_cookie fs);
+    int (*fs_sync)(fs_cookie fs);
 
-	int (*fs_lookup)(fs_cookie fs, fs_vnode dir, const char *name, vnode_id *id);
+    int (*fs_lookup)(fs_cookie fs, fs_vnode dir, const char *name, vnode_id *id);
 
-	int (*fs_getvnode)(fs_cookie fs, vnode_id id, fs_vnode *v, bool r);
-	int (*fs_putvnode)(fs_cookie fs, fs_vnode v, bool r);
-	int (*fs_removevnode)(fs_cookie fs, fs_vnode v, bool r);
+    int (*fs_getvnode)(fs_cookie fs, vnode_id id, fs_vnode *v, bool r);
+    int (*fs_putvnode)(fs_cookie fs, fs_vnode v, bool r);
+    int (*fs_removevnode)(fs_cookie fs, fs_vnode v, bool r);
 
-	int (*fs_opendir)(fs_cookie fs, fs_vnode v, dir_cookie *cookie);
-	int (*fs_closedir)(fs_cookie fs, fs_vnode v, dir_cookie cookie);
-	int (*fs_rewinddir)(fs_cookie fs, fs_vnode v, dir_cookie cookie);
-	int (*fs_readdir)(fs_cookie fs, fs_vnode v, dir_cookie cookie, void *buf, size_t buflen);
+    int (*fs_opendir)(fs_cookie fs, fs_vnode v, dir_cookie *cookie);
+    int (*fs_closedir)(fs_cookie fs, fs_vnode v, dir_cookie cookie);
+    int (*fs_rewinddir)(fs_cookie fs, fs_vnode v, dir_cookie cookie);
+    int (*fs_readdir)(fs_cookie fs, fs_vnode v, dir_cookie cookie, void *buf, size_t buflen);
 
-	int (*fs_open)(fs_cookie fs, fs_vnode v, file_cookie *cookie, int oflags);
-	int (*fs_close)(fs_cookie fs, fs_vnode v, file_cookie cookie);
-	int (*fs_freecookie)(fs_cookie fs, fs_vnode v, file_cookie cookie);
-	int (*fs_fsync)(fs_cookie fs, fs_vnode v);
+    int (*fs_open)(fs_cookie fs, fs_vnode v, file_cookie *cookie, int oflags);
+    int (*fs_close)(fs_cookie fs, fs_vnode v, file_cookie cookie);
+    int (*fs_freecookie)(fs_cookie fs, fs_vnode v, file_cookie cookie);
+    int (*fs_fsync)(fs_cookie fs, fs_vnode v);
 
-	ssize_t (*fs_read)(fs_cookie fs, fs_vnode v, file_cookie cookie, void *buf, off_t pos, ssize_t len);
-	ssize_t (*fs_write)(fs_cookie fs, fs_vnode v, file_cookie cookie, const void *buf, off_t pos, ssize_t len);
-	int (*fs_seek)(fs_cookie fs, fs_vnode v, file_cookie cookie, off_t pos, seek_type st);
-	int (*fs_ioctl)(fs_cookie fs, fs_vnode v, file_cookie cookie, int op, void *buf, size_t len);
+    ssize_t (*fs_read)(fs_cookie fs, fs_vnode v, file_cookie cookie, void *buf, off_t pos, ssize_t len);
+    ssize_t (*fs_write)(fs_cookie fs, fs_vnode v, file_cookie cookie, const void *buf, off_t pos, ssize_t len);
+    int (*fs_seek)(fs_cookie fs, fs_vnode v, file_cookie cookie, off_t pos, seek_type st);
+    int (*fs_ioctl)(fs_cookie fs, fs_vnode v, file_cookie cookie, int op, void *buf, size_t len);
 
-	int (*fs_canpage)(fs_cookie fs, fs_vnode v);
-	ssize_t (*fs_readpage)(fs_cookie fs, fs_vnode v, iovecs *vecs, off_t pos);
-	ssize_t (*fs_writepage)(fs_cookie fs, fs_vnode v, iovecs *vecs, off_t pos);
+    int (*fs_canpage)(fs_cookie fs, fs_vnode v);
+    ssize_t (*fs_readpage)(fs_cookie fs, fs_vnode v, iovecs *vecs, off_t pos);
+    ssize_t (*fs_writepage)(fs_cookie fs, fs_vnode v, iovecs *vecs, off_t pos);
 
-	int (*fs_create)(fs_cookie fs, fs_vnode dir, const char *name, void *create_args, vnode_id *new_vnid);
-	int (*fs_unlink)(fs_cookie fs, fs_vnode dir, const char *name);
-	int (*fs_rename)(fs_cookie fs, fs_vnode olddir, const char *oldname, fs_vnode newdir, const char *newname);
+    int (*fs_create)(fs_cookie fs, fs_vnode dir, const char *name, void *create_args, vnode_id *new_vnid);
+    int (*fs_unlink)(fs_cookie fs, fs_vnode dir, const char *name);
+    int (*fs_rename)(fs_cookie fs, fs_vnode olddir, const char *oldname, fs_vnode newdir, const char *newname);
 
-	int (*fs_mkdir)(fs_cookie fs, fs_vnode base_dir, const char *name);
-	int (*fs_rmdir)(fs_cookie fs, fs_vnode base_dir, const char *name);
+    int (*fs_mkdir)(fs_cookie fs, fs_vnode base_dir, const char *name);
+    int (*fs_rmdir)(fs_cookie fs, fs_vnode base_dir, const char *name);
 
-	int (*fs_rstat)(fs_cookie fs, fs_vnode v, struct file_stat *stat);
-	int (*fs_wstat)(fs_cookie fs, fs_vnode v, struct file_stat *stat, int stat_mask);
+    int (*fs_rstat)(fs_cookie fs, fs_vnode v, struct file_stat *stat);
+    int (*fs_wstat)(fs_cookie fs, fs_vnode v, struct file_stat *stat, int stat_mask);
 };
 
 int vfs_init(kernel_args *ka);

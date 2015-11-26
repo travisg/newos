@@ -23,11 +23,11 @@
 #define CB_FR             1   // feature reg              out pio_base_addr1+1
 #define CB_SC             2   // sector count reg      in/out pio_base_addr1+2
 #define CB_SN             3   // sector number reg     in/out pio_base_addr1+3
-                              // or block address 0-7
+// or block address 0-7
 #define CB_CL             4   // cylinder low reg      in/out pio_base_addr1+4
-                              // or block address 8-15
+// or block address 8-15
 #define CB_CH             5   // cylinder high reg     in/out pio_base_addr1+5
-                              // or block address 16-23
+// or block address 16-23
 #define CB_DH             6   // drive/head reg        in/out pio_base_addr1+6
 #define CB_STAT           7   // primary status reg    in     pio_base_addr1+7
 #define CB_CMD            7   // command reg              out pio_base_addr1+7
@@ -53,7 +53,7 @@
 #define CB_DH_DEV0     0xa0   // select device 0
 #define CB_DH_DEV1     0xb0   // select device 1
 
-#define	DRIVE_SUPPORT_LBA     0x20 // test mask for LBA support
+#define DRIVE_SUPPORT_LBA     0x20 // test mask for LBA support
 
 // status register bits
 #define CB_STAT_ERR    0x01   // error (ATA)
@@ -118,8 +118,8 @@
 #define DIAG_SLAVE_DRIVE_MASK            0x80
 
 // Accoustic Management commands
-#define CMD_SET_ACCOUSTIC_LEVEL			0x2A
-#define CMD_GET_ACCOUSTIC_LEVEL			0xAB
+#define CMD_SET_ACCOUSTIC_LEVEL         0x2A
+#define CMD_GET_ACCOUSTIC_LEVEL         0xAB
 
 // Command codes for CMD_FORMAT_TRACK
 #define FMT_GOOD_SECTOR                  0x00
@@ -199,105 +199,99 @@ unsigned char pio_last_write[10];
 
 static uint8 pio_inbyte(uint16 port)
 {
-  return in8(pio_reg_addrs[port]);
+    return in8(pio_reg_addrs[port]);
 }
 
 static uint16 pio_inword(uint16 port)
 {
-  return in16(pio_reg_addrs[port]);
+    return in16(pio_reg_addrs[port]);
 }
 
-static void	pio_outbyte(uint16 port, uint8 data)
+static void pio_outbyte(uint16 port, uint8 data)
 {
-	out8(data, pio_reg_addrs[port]);
+    out8(data, pio_reg_addrs[port]);
 }
 
-static void	pio_rep_inword(uint16 port, uint16 *addr, unsigned long count)
+static void pio_rep_inword(uint16 port, uint16 *addr, unsigned long count)
 {
-  __asm__ __volatile__
+    __asm__ __volatile__
     (
-     "rep ; insw" : "=D" (addr_t), "=c" (count) : "d" (pio_reg_addrs[port]),
-     "0" (addr), "1" (count)
-     );
+        "rep ; insw" : "=D" (addr_t), "=c" (count) : "d" (pio_reg_addrs[port]),
+        "0" (addr), "1" (count)
+    );
 }
 
-static void	pio_rep_outword(uint16 port, uint16 *addr, unsigned long count)
+static void pio_rep_outword(uint16 port, uint16 *addr, unsigned long count)
 {
-  __asm__ __volatile__
+    __asm__ __volatile__
     (
-     "rep ; outsw" : "=S" (addr), "=c" (count) : "d" (pio_reg_addrs[port]),
-     "0" (addr), "1" (count)
-     );
+        "rep ; outsw" : "=S" (addr), "=c" (count) : "d" (pio_reg_addrs[port]),
+        "0" (addr), "1" (count)
+    );
 }
 
-static void	ide_reg_poll()
+static void ide_reg_poll()
 {
-	while(1)
-	{
-	  if ((pio_inbyte(CB_ASTAT) & CB_STAT_BSY) == 0)  // If not busy
-        break;
-	}
+    while (1) {
+        if ((pio_inbyte(CB_ASTAT) & CB_STAT_BSY) == 0)  // If not busy
+            break;
+    }
 }
 
 static bool ide_wait_busy()
 {
-  int i;
+    int i;
 
-  for(i=0; i<10000; i++)
-	{
-      if ((pio_inbyte(CB_ASTAT) & CB_STAT_BSY) == 0)
-        return true;
-	}
-  return false;
+    for (i=0; i<10000; i++) {
+        if ((pio_inbyte(CB_ASTAT) & CB_STAT_BSY) == 0)
+            return true;
+    }
+    return false;
 }
 
 static int ide_select_device(int bus, int device)
 {
-	uint8		status;
-	int			i;
-	ide_device	ide = devices[(bus*2) + device];
+    uint8       status;
+    int         i;
+    ide_device  ide = devices[(bus*2) + device];
 
-	// Test for a known, valid device
-	if(ide.device_type == (NO_DEVICE | UNKNOWN_DEVICE))
-      return NO_ERR;
-	// See if we can get its attention
-	if(ide_wait_busy() == false)
-	  return ERR_TIMEOUT;
-	// Select required device
-	pio_outbyte(CB_DH, device ? CB_DH_DEV1 : CB_DH_DEV0);
-	DELAY400NS;
-	for(i=0; i<10000; i++)
-      {
-		// Read the device status
-		status = pio_inbyte(CB_STAT);
-		if (ide.device_type == ATA_DEVICE)
-		  {
-		    if ((status & (CB_STAT_BSY | CB_STAT_RDY | CB_STAT_SKC))
+    // Test for a known, valid device
+    if (ide.device_type == (NO_DEVICE | UNKNOWN_DEVICE))
+        return NO_ERR;
+    // See if we can get its attention
+    if (ide_wait_busy() == false)
+        return ERR_TIMEOUT;
+    // Select required device
+    pio_outbyte(CB_DH, device ? CB_DH_DEV1 : CB_DH_DEV0);
+    DELAY400NS;
+    for (i=0; i<10000; i++) {
+        // Read the device status
+        status = pio_inbyte(CB_STAT);
+        if (ide.device_type == ATA_DEVICE) {
+            if ((status & (CB_STAT_BSY | CB_STAT_RDY | CB_STAT_SKC))
                     == (CB_STAT_RDY | CB_STAT_SKC))
-			  return NO_ERR;
-		  }
-		else
-		  {
-			if ((status & CB_STAT_BSY) == 0)
-			  return NO_ERR;
-		  }
-      }
-  return ERR_TIMEOUT;
+                return NO_ERR;
+        } else {
+            if ((status & CB_STAT_BSY) == 0)
+                return NO_ERR;
+        }
+    }
+    return ERR_TIMEOUT;
 }
 
 static void ide_delay(int bus, int device)
 {
-	ide_device	ide = devices[(bus*2) + device];
+    ide_device  ide = devices[(bus*2) + device];
 
-	if(ide.device_type == ATAPI_DEVICE)
-	  thread_snooze(1000000);
+    if (ide.device_type == ATAPI_DEVICE)
+        thread_snooze(1000000);
 
-	return;
+    return;
 }
 
 static int reg_pio_data_in(int bus, int dev, int cmd, int fr, int sc,
-					unsigned int cyl, int head, int sect, uint8 *output,
-					unsigned int numSect, unsigned int multiCnt)
+                           unsigned int cyl, int head, int sect, uint8 *output,
+                           unsigned int numSect, unsigned int multiCnt)
 {
     unsigned char devHead;
     unsigned char devCtrl;
@@ -308,7 +302,7 @@ static int reg_pio_data_in(int bus, int dev, int cmd, int fr, int sc,
     int           i;
 
 //  dprintf("reg_pio_data_in: bus %d dev %d cmd %d fr %d sc %d cyl %d head %d sect %d numSect %d multiCnt %d\n",
-//  	bus, dev, cmd, fr, sc, cyl, head, sect, numSect, multiCnt);
+//      bus, dev, cmd, fr, sc, cyl, head, sect, numSect, multiCnt);
 
     devCtrl = CB_DC_HD15 | CB_DC_NIEN;
     devHead = dev ? CB_DH_DEV1 : CB_DH_DEV0;
@@ -316,14 +310,14 @@ static int reg_pio_data_in(int bus, int dev, int cmd, int fr, int sc,
     cylLow = cyl & 0x00ff;
     cylHigh = (cyl & 0xff00) >> 8;
     // these commands transfer only 1 sector
-    if(cmd == (CMD_IDENTIFY_DEVICE | CMD_IDENTIFY_DEVICE_PACKET | CMD_READ_BUFFER))
-      numSect = 1;
+    if (cmd == (CMD_IDENTIFY_DEVICE | CMD_IDENTIFY_DEVICE_PACKET | CMD_READ_BUFFER))
+        numSect = 1;
     // multiCnt = 1 unless CMD_READ_MULTIPLE true
-    if(cmd != CMD_READ_MULTIPLE || !multiCnt)
-      multiCnt = 1;
+    if (cmd != CMD_READ_MULTIPLE || !multiCnt)
+        multiCnt = 1;
     // select the drive
-    if(ide_select_device(bus, dev) == ERR_TIMEOUT)
-      return ERR_TIMEOUT;
+    if (ide_select_device(bus, dev) == ERR_TIMEOUT)
+        return ERR_TIMEOUT;
     // set up the registers
     pio_outbyte(CB_DC, devCtrl);
     pio_outbyte(CB_FR, fr);
@@ -335,49 +329,47 @@ static int reg_pio_data_in(int bus, int dev, int cmd, int fr, int sc,
     // Start the command. The drive should immediately set BUSY status.
     pio_outbyte(CB_CMD, cmd);
     DELAY400NS;
-    while(1)
-    {
-      ide_delay(bus, dev);
-      // ensure drive isn't still busy
-      ide_reg_poll();
-      // check status once per read
-      status = pio_inbyte(CB_STAT);
-      if((numSect < 1) && (status & CB_STAT_DRQ))
-        return ERR_BUFFER_NOT_EMPTY;
-      if (numSect < 1)
-        break;
-      if((status & (CB_STAT_BSY | CB_STAT_DRQ)) == CB_STAT_DRQ)
-      {
-        unsigned int wordCnt = multiCnt > numSect ? numSect : multiCnt;
-        wordCnt = wordCnt * 256;
-        pio_rep_inword(CB_DATA, buffer, wordCnt);
-        DELAY400NS;
-        numSect = numSect - multiCnt;
-        buffer += wordCnt;
-      }
-      // catch all possible fault conditions
-      if(status & CB_STAT_BSY)
-        return ERR_DISK_BUSY;
-      if(status & CB_STAT_DF)
-        return ERR_DEVICE_FAULT;
-      if(status & CB_STAT_ERR)
-        return ERR_HARDWARE_ERROR;
-      if((status & CB_STAT_DRQ) == 0)
-        return ERR_DRQ_NOT_SET;
+    while (1) {
+        ide_delay(bus, dev);
+        // ensure drive isn't still busy
+        ide_reg_poll();
+        // check status once per read
+        status = pio_inbyte(CB_STAT);
+        if ((numSect < 1) && (status & CB_STAT_DRQ))
+            return ERR_BUFFER_NOT_EMPTY;
+        if (numSect < 1)
+            break;
+        if ((status & (CB_STAT_BSY | CB_STAT_DRQ)) == CB_STAT_DRQ) {
+            unsigned int wordCnt = multiCnt > numSect ? numSect : multiCnt;
+            wordCnt = wordCnt * 256;
+            pio_rep_inword(CB_DATA, buffer, wordCnt);
+            DELAY400NS;
+            numSect = numSect - multiCnt;
+            buffer += wordCnt;
+        }
+        // catch all possible fault conditions
+        if (status & CB_STAT_BSY)
+            return ERR_DISK_BUSY;
+        if (status & CB_STAT_DF)
+            return ERR_DEVICE_FAULT;
+        if (status & CB_STAT_ERR)
+            return ERR_HARDWARE_ERROR;
+        if ((status & CB_STAT_DRQ) == 0)
+            return ERR_DRQ_NOT_SET;
     }
     return NO_ERR;
 }
 
 static int reg_pio_data_out( int bus, int dev, int cmd, int fr, int sc,
-			     unsigned int cyl, int head, int sect, const uint8 *output,
-			     unsigned int numSect, unsigned int multiCnt )
+                             unsigned int cyl, int head, int sect, const uint8 *output,
+                             unsigned int numSect, unsigned int multiCnt )
 {
     unsigned char devHead;
     unsigned char devCtrl;
     unsigned char cylLow;
     unsigned char cylHigh;
     unsigned char status;
-    uint16		  *buffer = (uint16*)output;
+    uint16        *buffer = (uint16*)output;
 
     devCtrl = CB_DC_HD15 | CB_DC_NIEN;
     devHead = dev ? CB_DH_DEV1 : CB_DH_DEV0;
@@ -385,13 +377,13 @@ static int reg_pio_data_out( int bus, int dev, int cmd, int fr, int sc,
     cylLow  = cyl & 0x00ff;
     cylHigh = (cyl & 0xff00) >> 8;
     if (cmd == CMD_WRITE_BUFFER)
-      numSect = 1;
+        numSect = 1;
     // only Write Multiple and CFA Write Multiple W/O Erase uses multCnt
     if ((cmd != CMD_WRITE_MULTIPLE) && (cmd != CMD_CFA_WRITE_MULTIPLE_WO_ERASE))
-      multiCnt = 1;
+        multiCnt = 1;
     // select the drive
     if (ide_select_device(bus, dev) != NO_ERR)
-      return ERR_TIMEOUT;
+        return ERR_TIMEOUT;
     // set up the registers
     pio_outbyte(CB_DC, devCtrl);
     pio_outbyte(CB_FR, fr);
@@ -404,35 +396,32 @@ static int reg_pio_data_out( int bus, int dev, int cmd, int fr, int sc,
     pio_outbyte(CB_CMD, cmd);
     DELAY400NS;
     if (ide_wait_busy() == false)
-      return ERR_TIMEOUT;
+        return ERR_TIMEOUT;
     status = pio_inbyte(CB_STAT);
-    while (1)
-    {
-      if ((status & (CB_STAT_BSY | CB_STAT_DRQ)) == CB_STAT_DRQ)
-      {
-        unsigned int wordCnt = multiCnt > numSect ? numSect : multiCnt;
-        wordCnt = wordCnt * 256;
-        pio_rep_outword(CB_DATA, buffer, wordCnt);
-        DELAY400NS;
-        numSect = numSect - multiCnt;
-        buffer += wordCnt;
-      }
-      // check all possible fault conditions
-      if(status & CB_STAT_BSY)
-        return ERR_DISK_BUSY;
-      if(status & CB_STAT_DF)
-        return ERR_DEVICE_FAULT;
-      if(status & CB_STAT_ERR)
-        return ERR_HARDWARE_ERROR;
-      if ((status & CB_STAT_DRQ) == 0)
-        return ERR_DRQ_NOT_SET;
-      ide_delay(bus, dev);
-      // ensure drive isn't still busy
-      ide_reg_poll();
-      if(numSect < 1 && status & (CB_STAT_BSY | CB_STAT_DF | CB_STAT_ERR))
-        {
-          dprintf("status = 0x%x\n", status);
-          return ERR_BUFFER_NOT_EMPTY;
+    while (1) {
+        if ((status & (CB_STAT_BSY | CB_STAT_DRQ)) == CB_STAT_DRQ) {
+            unsigned int wordCnt = multiCnt > numSect ? numSect : multiCnt;
+            wordCnt = wordCnt * 256;
+            pio_rep_outword(CB_DATA, buffer, wordCnt);
+            DELAY400NS;
+            numSect = numSect - multiCnt;
+            buffer += wordCnt;
+        }
+        // check all possible fault conditions
+        if (status & CB_STAT_BSY)
+            return ERR_DISK_BUSY;
+        if (status & CB_STAT_DF)
+            return ERR_DEVICE_FAULT;
+        if (status & CB_STAT_ERR)
+            return ERR_HARDWARE_ERROR;
+        if ((status & CB_STAT_DRQ) == 0)
+            return ERR_DRQ_NOT_SET;
+        ide_delay(bus, dev);
+        // ensure drive isn't still busy
+        ide_reg_poll();
+        if (numSect < 1 && status & (CB_STAT_BSY | CB_STAT_DF | CB_STAT_ERR)) {
+            dprintf("status = 0x%x\n", status);
+            return ERR_BUFFER_NOT_EMPTY;
         }
     }
     return NO_ERR;
@@ -440,258 +429,251 @@ static int reg_pio_data_out( int bus, int dev, int cmd, int fr, int sc,
 
 static void ide_btochs(uint32 block, ide_device *dev, int *cylinder, int *head, int *sect)
 {
-  *sect = (block % dev->hardware_device.sectors) + 1;
-  block /= dev->hardware_device.sectors;
-  *head = (block % dev->hardware_device.heads) | (dev->device ? 1 : 0);
-  block /= dev->hardware_device.heads;
-  *cylinder = block & 0xFFFF;
+    *sect = (block % dev->hardware_device.sectors) + 1;
+    block /= dev->hardware_device.sectors;
+    *head = (block % dev->hardware_device.heads) | (dev->device ? 1 : 0);
+    block /= dev->hardware_device.heads;
+    *cylinder = block & 0xFFFF;
 //  dprintf("ide_btochs: block %d -> cyl %d head %d sect %d\n", block, *cylinder, *head, *sect);
 }
 
 static void ide_btolba(uint32 block, ide_device *dev, int *cylinder, int *head, int *sect)
 {
-  *sect = block & 0xFF;
-  *cylinder = (block >> 8) & 0xFFFF;
-  *head = ((block >> 24) & 0xF) | (dev->device ? 1: 0) | CB_DH_LBA;
+    *sect = block & 0xFF;
+    *cylinder = (block >> 8) & 0xFFFF;
+    *head = ((block >> 24) & 0xF) | (dev->device ? 1: 0) | CB_DH_LBA;
 //  dprintf("ide_btolba: block %d -> cyl %d head %d sect %d\n", block, *cylinder, *head, *sect);
 }
 
-int	ide_read_block(ide_device *device, char *data, uint32 block, uint8 numSectors)
+int ide_read_block(ide_device *device, char *data, uint32 block, uint8 numSectors)
 {
-  int cyl, head, sect;
+    int cyl, head, sect;
 
-  if(device->lba_supported)
-    ide_btolba(block, device, &cyl, &head, &sect);
-  else
-    ide_btochs(block, device, &cyl, &head, &sect);
+    if (device->lba_supported)
+        ide_btolba(block, device, &cyl, &head, &sect);
+    else
+        ide_btochs(block, device, &cyl, &head, &sect);
 
-  return reg_pio_data_in(device->bus, device->device, CMD_READ_SECTORS,
-			          0, numSectors, cyl, head, sect, data, numSectors, 2);
+    return reg_pio_data_in(device->bus, device->device, CMD_READ_SECTORS,
+                           0, numSectors, cyl, head, sect, data, numSectors, 2);
 }
 
-int	ide_write_block(ide_device *device, const char *data, uint32 block, uint8 numSectors)
+int ide_write_block(ide_device *device, const char *data, uint32 block, uint8 numSectors)
 {
-  int cyl, head, sect;
+    int cyl, head, sect;
 
-  if(device->lba_supported)
-    ide_btolba(block, device, &cyl, &head, &sect);
-  else
-    ide_btochs(block, device, &cyl, &head, &sect);
+    if (device->lba_supported)
+        ide_btolba(block, device, &cyl, &head, &sect);
+    else
+        ide_btochs(block, device, &cyl, &head, &sect);
 
-  return reg_pio_data_out(device->bus, device->device, CMD_WRITE_SECTORS,
-			          0, numSectors, cyl, head, sect, data, numSectors, 2);
+    return reg_pio_data_out(device->bus, device->device, CMD_WRITE_SECTORS,
+                            0, numSectors, cyl, head, sect, data, numSectors, 2);
 }
 
 void ide_string_conv (char *str, int len)
 {
-  unsigned int i;
-  int	       j;
+    unsigned int i;
+    int          j;
 
-  for (i=0; i<len/sizeof(unsigned short); i++)
-  {
-    char c     = str[i*2+1];
-    str[i*2+1] = str[i*2];
-    str[i*2]   = c;
-  }
+    for (i=0; i<len/sizeof(unsigned short); i++) {
+        char c     = str[i*2+1];
+        str[i*2+1] = str[i*2];
+        str[i*2]   = c;
+    }
 
-  str[len - 1] = 0;
-  for (j=len-1; j>=0 && str[j]==' '; j--)
-    str[j] = 0;
+    str[len - 1] = 0;
+    for (j=len-1; j>=0 && str[j]==' '; j--)
+        str[j] = 0;
 }
 
 // ide_reset() - execute a software reset
 bool ide_reset (int bus, int device)
 {
-  unsigned char devCtrl = CB_DC_HD15 | CB_DC_NIEN;
+    unsigned char devCtrl = CB_DC_HD15 | CB_DC_NIEN;
 
-  // Set and then reset the soft reset bit in the Device
-  // Control register.  This causes device 0 be selected
-  pio_outbyte(CB_DC, devCtrl | CB_DC_SRST);
-  DELAY400NS;
-  pio_outbyte(CB_DC, devCtrl);
-  DELAY400NS;
+    // Set and then reset the soft reset bit in the Device
+    // Control register.  This causes device 0 be selected
+    pio_outbyte(CB_DC, devCtrl | CB_DC_SRST);
+    DELAY400NS;
+    pio_outbyte(CB_DC, devCtrl);
+    DELAY400NS;
 
-  return (ide_wait_busy() ? true : false);
+    return (ide_wait_busy() ? true : false);
 }
 
 bool ide_identify_device(int bus, int device)
 {
-	ide_device* ide = &devices[(bus*2) + device];
-	uint8* buffer;
-	int rc;
+    ide_device* ide = &devices[(bus*2) + device];
+    uint8* buffer;
+    int rc;
 
-	// Store specs for device
-	ide->bus         = bus;
-	ide->device      = device;
+    // Store specs for device
+    ide->bus         = bus;
+    ide->device      = device;
 
-	// Do an IDENTIFY DEVICE command
-	buffer = (uint8*)&ide->hardware_device;
-	rc = reg_pio_data_in(bus, device, CMD_IDENTIFY_DEVICE,
-						1, 0, 0, 0, 0, buffer, 1, 0);
+    // Do an IDENTIFY DEVICE command
+    buffer = (uint8*)&ide->hardware_device;
+    rc = reg_pio_data_in(bus, device, CMD_IDENTIFY_DEVICE,
+                         1, 0, 0, 0, 0, buffer, 1, 0);
 
-	if (rc == NO_ERR) {
-		// If command was ok, lets assume ATA device
-		ide->device_type = ATA_DEVICE;
+    if (rc == NO_ERR) {
+        // If command was ok, lets assume ATA device
+        ide->device_type = ATA_DEVICE;
 
-		// Convert the model string to ASCIIZ
-		ide_string_conv(ide->hardware_device.model, 40);
+        // Convert the model string to ASCIIZ
+        ide_string_conv(ide->hardware_device.model, 40);
 
-		// Get copy over interesting data
-		ide->sector_count = ide->hardware_device.cyls * ide->hardware_device.heads
-		* ide->hardware_device.sectors;
-		ide->bytes_per_sector = 512;
-		ide->lba_supported = ide->hardware_device.capabilities & DRIVE_SUPPORT_LBA;
-		ide->start_block = 0;
-		ide->end_block = ide->sector_count + ide->start_block;
+        // Get copy over interesting data
+        ide->sector_count = ide->hardware_device.cyls * ide->hardware_device.heads
+                            * ide->hardware_device.sectors;
+        ide->bytes_per_sector = 512;
+        ide->lba_supported = ide->hardware_device.capabilities & DRIVE_SUPPORT_LBA;
+        ide->start_block = 0;
+        ide->end_block = ide->sector_count + ide->start_block;
 
-		// Give some debugging output to show what was found
-		dprintf ("ide: disk at bus %d, device %d %s\n", bus, device, ide->hardware_device.model);
-		dprintf ("ide/%d/%d: %dMB; %d cyl, %d head, %d sec, %d bytes/sec  (LBA=%d)\n",
-		bus, device, ide->sector_count * ide->bytes_per_sector / (1024*1024),
-		ide->hardware_device.cyls, ide->hardware_device.heads,
-		ide->hardware_device.sectors, ide->bytes_per_sector, ide->lba_supported );
-	} else {
-		// Something went wrong, let's forget about this device
-		ide->device_type = NO_DEVICE;
-	}
+        // Give some debugging output to show what was found
+        dprintf ("ide: disk at bus %d, device %d %s\n", bus, device, ide->hardware_device.model);
+        dprintf ("ide/%d/%d: %dMB; %d cyl, %d head, %d sec, %d bytes/sec  (LBA=%d)\n",
+                 bus, device, ide->sector_count * ide->bytes_per_sector / (1024*1024),
+                 ide->hardware_device.cyls, ide->hardware_device.heads,
+                 ide->hardware_device.sectors, ide->bytes_per_sector, ide->lba_supported );
+    } else {
+        // Something went wrong, let's forget about this device
+        ide->device_type = NO_DEVICE;
+    }
 
-	return (rc == NO_ERROR) ? true : false;
+    return (rc == NO_ERROR) ? true : false;
 }
 
 // Set the pio base addresses
 void ide_raw_init(int base1, int base2)
 {
-  unsigned int pio_base_addr1 = base1;
-  unsigned int pio_base_addr2 = base2;
+    unsigned int pio_base_addr1 = base1;
+    unsigned int pio_base_addr2 = base2;
 
-  pio_reg_addrs[CB_DATA] = pio_base_addr1 + 0;  // 0
-  pio_reg_addrs[CB_FR  ] = pio_base_addr1 + 1;  // 1
-  pio_reg_addrs[CB_SC  ] = pio_base_addr1 + 2;  // 2
-  pio_reg_addrs[CB_SN  ] = pio_base_addr1 + 3;  // 3
-  pio_reg_addrs[CB_CL  ] = pio_base_addr1 + 4;  // 4
-  pio_reg_addrs[CB_CH  ] = pio_base_addr1 + 5;  // 5
-  pio_reg_addrs[CB_DH  ] = pio_base_addr1 + 6;  // 6
-  pio_reg_addrs[CB_CMD ] = pio_base_addr1 + 7;  // 7
-  pio_reg_addrs[CB_DC  ] = pio_base_addr2 + 6;  // 8
-  pio_reg_addrs[CB_DA  ] = pio_base_addr2 + 7;  // 9
+    pio_reg_addrs[CB_DATA] = pio_base_addr1 + 0;  // 0
+    pio_reg_addrs[CB_FR  ] = pio_base_addr1 + 1;  // 1
+    pio_reg_addrs[CB_SC  ] = pio_base_addr1 + 2;  // 2
+    pio_reg_addrs[CB_SN  ] = pio_base_addr1 + 3;  // 3
+    pio_reg_addrs[CB_CL  ] = pio_base_addr1 + 4;  // 4
+    pio_reg_addrs[CB_CH  ] = pio_base_addr1 + 5;  // 5
+    pio_reg_addrs[CB_DH  ] = pio_base_addr1 + 6;  // 6
+    pio_reg_addrs[CB_CMD ] = pio_base_addr1 + 7;  // 7
+    pio_reg_addrs[CB_DC  ] = pio_base_addr2 + 6;  // 8
+    pio_reg_addrs[CB_DA  ] = pio_base_addr2 + 7;  // 9
 }
 
 static char getHexChar(uint8 value)
 {
-  if(value < 10)
-    return value + '0';
-  return 'A' + (value - 10);
+    if (value < 10)
+        return value + '0';
+    return 'A' + (value - 10);
 }
 
 static void dumpHexLine(uint8 *buffer, int numberPerLine)
 {
-  uint8	*copy = buffer;
-  int	i;
+    uint8 *copy = buffer;
+    int   i;
 
-  for(i=0; i<numberPerLine; i++)
-    {
-      uint8	value1 = getHexChar(((*copy) >> 4));
-      uint8	value2 = getHexChar(((*copy) & 0xF));
-      dprintf("%c%c ", value1, value2);
-      copy++;
+    for (i=0; i<numberPerLine; i++) {
+        uint8 value1 = getHexChar(((*copy) >> 4));
+        uint8 value2 = getHexChar(((*copy) & 0xF));
+        dprintf("%c%c ", value1, value2);
+        copy++;
     }
-  copy = buffer;
-  for(i=0; i<numberPerLine; i++)
-    {
-      if(*copy >= ' ' && *copy <= 'Z')
-		dprintf("%c", *copy);
-      else
-		dprintf(".");
-      copy++;
+    copy = buffer;
+    for (i=0; i<numberPerLine; i++) {
+        if (*copy >= ' ' && *copy <= 'Z')
+            dprintf("%c", *copy);
+        else
+            dprintf(".");
+        copy++;
     }
-  dprintf("\n");
+    dprintf("\n");
 }
 
 static void dumpHexBuffer(uint8 *buffer, int size)
 {
-  int	numberPerLine = 8;
-  int	numberOfLines = size / numberPerLine;
-  int	i, j;
+    int   numberPerLine = 8;
+    int   numberOfLines = size / numberPerLine;
+    int   i, j;
 
-  for(i=0; i<numberOfLines; i++)
-    {
-      dprintf("%d ", i*numberPerLine);
-      dumpHexLine(buffer, numberPerLine);
-      buffer += numberPerLine;
+    for (i=0; i<numberOfLines; i++) {
+        dprintf("%d ", i*numberPerLine);
+        dumpHexLine(buffer, numberPerLine);
+        buffer += numberPerLine;
     }
 }
 
 static bool ide_get_partition_info(ide_device *device, tPartition *partition, uint32 position)
 {
-	char buffer[512];
-	uint8* partitionBuffer = buffer;
+    char buffer[512];
+    uint8* partitionBuffer = buffer;
 
-	// Try to read partition table
-	if (ide_read_block(device, buffer, position, 1) != 0) {
-		dprintf("unable to read partition table\n");
-		return false;
-	}
+    // Try to read partition table
+    if (ide_read_block(device, buffer, position, 1) != 0) {
+        dprintf("unable to read partition table\n");
+        return false;
+    }
 
-	// Check partition table signature
-	if (partitionBuffer[PART_MAGIC_OFFSET] != PARTITION_MAGIC1 ||
-		partitionBuffer[PART_MAGIC_OFFSET+1] != PARTITION_MAGIC2) {
-		dprintf("partition table magic is incorrect\n");
-		return false;
-	}
+    // Check partition table signature
+    if (partitionBuffer[PART_MAGIC_OFFSET] != PARTITION_MAGIC1 ||
+            partitionBuffer[PART_MAGIC_OFFSET+1] != PARTITION_MAGIC2) {
+        dprintf("partition table magic is incorrect\n");
+        return false;
+    }
 
-	memcpy(partition, partitionBuffer + PARTITION_OFFSET, sizeof(tPartition) * NUM_PARTITIONS);
+    memcpy(partition, partitionBuffer + PARTITION_OFFSET, sizeof(tPartition) * NUM_PARTITIONS);
 
-	return true;
+    return true;
 }
 
 bool ide_get_partitions(ide_device *device)
 {
-  int		i;
+    int       i;
 
-  memset(&device->partitions, 0, sizeof(tPartition) * 2 * NUM_PARTITIONS);
-  if(ide_get_partition_info(device, device->partitions, 0) == false)
-    return false;
-
-  dprintf("Primary Partition Table\n");
-  for (i = 0; i < NUM_PARTITIONS; i++)
-    {
-      dprintf("  %d: flags:%x type:%x start:%d:%d:%d end:%d:%d:%d stblk:%d count:%d\n",
-	      i,
-	  device->partitions[i].boot_flags,
-	  device->partitions[i].partition_type,
-	  device->partitions[i].starting_head,
-	  device->partitions[i].starting_sector,
-	  device->partitions[i].starting_cylinder,
-	  device->partitions[i].ending_head,
-	  device->partitions[i].ending_sector,
-	  device->partitions[i].ending_cylinder,
-	  device->partitions[i].starting_block,
-	  device->partitions[i].sector_count);
-    }
-  if(device->partitions[1].partition_type == PTDosExtended)
-    {
-      int extOffset = device->partitions[1].starting_block;
-      if(ide_get_partition_info(device, &device->partitions[4], extOffset) == false)
+    memset(&device->partitions, 0, sizeof(tPartition) * 2 * NUM_PARTITIONS);
+    if (ide_get_partition_info(device, device->partitions, 0) == false)
         return false;
-      dprintf("Extended Partition Table\n");
-      for (i=4; i<4+NUM_PARTITIONS; i++)
-        {
-          device->partitions[i].starting_block += extOffset;
-          dprintf("  %d: flags:%x type:%x start:%d:%d:%d end:%d:%d:%d stblk:%d count:%d\n",
-		  i,
-		  device->partitions[i].boot_flags,
-		  device->partitions[i].partition_type,
-		  device->partitions[i].starting_head,
-		  device->partitions[i].starting_sector,
-		  device->partitions[i].starting_cylinder,
-		  device->partitions[i].ending_head,
-		  device->partitions[i].ending_sector,
-		  device->partitions[i].ending_cylinder,
-		  device->partitions[i].starting_block,
-		  device->partitions[i].sector_count);
+
+    dprintf("Primary Partition Table\n");
+    for (i = 0; i < NUM_PARTITIONS; i++) {
+        dprintf("  %d: flags:%x type:%x start:%d:%d:%d end:%d:%d:%d stblk:%d count:%d\n",
+                i,
+                device->partitions[i].boot_flags,
+                device->partitions[i].partition_type,
+                device->partitions[i].starting_head,
+                device->partitions[i].starting_sector,
+                device->partitions[i].starting_cylinder,
+                device->partitions[i].ending_head,
+                device->partitions[i].ending_sector,
+                device->partitions[i].ending_cylinder,
+                device->partitions[i].starting_block,
+                device->partitions[i].sector_count);
+    }
+    if (device->partitions[1].partition_type == PTDosExtended) {
+        int extOffset = device->partitions[1].starting_block;
+        if (ide_get_partition_info(device, &device->partitions[4], extOffset) == false)
+            return false;
+        dprintf("Extended Partition Table\n");
+        for (i=4; i<4+NUM_PARTITIONS; i++) {
+            device->partitions[i].starting_block += extOffset;
+            dprintf("  %d: flags:%x type:%x start:%d:%d:%d end:%d:%d:%d stblk:%d count:%d\n",
+                    i,
+                    device->partitions[i].boot_flags,
+                    device->partitions[i].partition_type,
+                    device->partitions[i].starting_head,
+                    device->partitions[i].starting_sector,
+                    device->partitions[i].starting_cylinder,
+                    device->partitions[i].ending_head,
+                    device->partitions[i].ending_sector,
+                    device->partitions[i].ending_cylinder,
+                    device->partitions[i].starting_block,
+                    device->partitions[i].sector_count);
         }
     }
-  return true;
+    return true;
 }
 
 
@@ -702,15 +684,15 @@ bool ide_get_partitions(ide_device *device)
 
 int ide_get_accoustic(ide_device *device, int8* level_ptr)
 {
-	return ERR_UNIMPLEMENTED;
+    return ERR_UNIMPLEMENTED;
 }
 
 int ide_set_accoustic(ide_device *device, int8 level)
 {
-	pio_outbyte(CB_DH, (device->device == 1) ? CB_DH_DEV1 : CB_DH_DEV0);
-	pio_outbyte(CB_CMD, CMD_SET_ACCOUSTIC_LEVEL);
-	pio_outbyte(CB_SC, level);
-	pio_outbyte(CB_STAT, 0xEF);
+    pio_outbyte(CB_DH, (device->device == 1) ? CB_DH_DEV1 : CB_DH_DEV0);
+    pio_outbyte(CB_CMD, CMD_SET_ACCOUSTIC_LEVEL);
+    pio_outbyte(CB_SC, level);
+    pio_outbyte(CB_STAT, 0xEF);
 
-	return NO_ERROR;
+    return NO_ERROR;
 }

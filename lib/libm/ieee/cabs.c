@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 1985, 1993
- *	The Regents of the University of California.  All rights reserved.
+ *  The Regents of the University of California.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -12,8 +12,8 @@
  *    documentation and/or other materials provided with the distribution.
  * 3. All advertising materials mentioning features or use of this software
  *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
+ *  This product includes software developed by the University of
+ *  California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -42,44 +42,44 @@ static char sccsid[] = "@(#)cabs.c	8.1 (Berkeley) 6/4/93";
  * REVISED BY K.C. NG, 7/12/85.
  *
  * Required system supported functions :
- *	copysign(x,y)
- *	finite(x)
- *	scalb(x,N)
- *	sqrt(x)
+ *  copysign(x,y)
+ *  finite(x)
+ *  scalb(x,N)
+ *  sqrt(x)
  *
  * Method :
- *	1. replace x by |x| and y by |y|, and swap x and
- *	   y if y > x (hence x is never smaller than y).
- *	2. Hypot(x,y) is computed by:
- *	   Case I, x/y > 2
+ *  1. replace x by |x| and y by |y|, and swap x and
+ *     y if y > x (hence x is never smaller than y).
+ *  2. Hypot(x,y) is computed by:
+ *     Case I, x/y > 2
  *
- *				       y
- *		hypot = x + -----------------------------
- *			 		    2
- *			    sqrt ( 1 + [x/y]  )  +  x/y
+ *                     y
+ *      hypot = x + -----------------------------
+ *                      2
+ *              sqrt ( 1 + [x/y]  )  +  x/y
  *
- *	   Case II, x/y <= 2
- *				                   y
- *		hypot = x + --------------------------------------------------
- *				          		     2
- *				     			[x/y]   -  2
- *			   (sqrt(2)+1) + (x-y)/y + -----------------------------
- *			 		    			  2
- *			    			  sqrt ( 1 + [x/y]  )  + sqrt(2)
+ *     Case II, x/y <= 2
+ *                                 y
+ *      hypot = x + --------------------------------------------------
+ *                                   2
+ *                              [x/y]   -  2
+ *             (sqrt(2)+1) + (x-y)/y + -----------------------------
+ *                                    2
+ *                            sqrt ( 1 + [x/y]  )  + sqrt(2)
  *
  *
  *
  * Special cases:
- *	hypot(x,y) is INF if x or y is +INF or -INF; else
- *	hypot(x,y) is NAN if x or y is NAN.
+ *  hypot(x,y) is INF if x or y is +INF or -INF; else
+ *  hypot(x,y) is NAN if x or y is NAN.
  *
  * Accuracy:
- * 	hypot(x,y) returns the sqrt(x^2+y^2) with error less than 1 ulps (units
- *	in the last place). See Kahan's "Interval Arithmetic Options in the
- *	Proposed IEEE Floating Point Arithmetic Standard", Interval Mathematics
+ *  hypot(x,y) returns the sqrt(x^2+y^2) with error less than 1 ulps (units
+ *  in the last place). See Kahan's "Interval Arithmetic Options in the
+ *  Proposed IEEE Floating Point Arithmetic Standard", Interval Mathematics
  *      1980, Edited by Karl L.E. Nickel, pp 99-128. (A faster but less accurate
- *	code follows in	comments.) In a test run with 500,000 random arguments
- *	on a VAX, the maximum observed error was .959 ulps.
+ *  code follows in comments.) In a test run with 500,000 random arguments
+ *  on a VAX, the maximum observed error was .959 ulps.
  *
  * Constants:
  * The hexadecimal values are the intended ones for the following constants.
@@ -98,70 +98,74 @@ ic(r2p1lo, 1.2537167179050217666E-16 , -53, 1.21165F626CDD5)
 ic(sqrt2,  1.4142135623730951455E0   ,   0, 1.6A09E667F3BCD)
 
 #ifdef vccast
-#define	r2p1hi	vccast(r2p1hi)
-#define	r2p1lo	vccast(r2p1lo)
-#define	sqrt2	vccast(sqrt2)
+#define r2p1hi  vccast(r2p1hi)
+#define r2p1lo  vccast(r2p1lo)
+#define sqrt2   vccast(sqrt2)
 #endif
 
 double
 hypot(double x, double y)
 {
-	static double const zero=0;
-	static double const one=1;
-	static double const small=1.0E-18;	/* fl(1+small)==1 */
-	static int const ibig=30;	/* fl(1+2**(2*ibig))==1 */
-	double t;
-	double r;
-	int exp;
+    static double const zero=0;
+    static double const one=1;
+    static double const small=1.0E-18;  /* fl(1+small)==1 */
+    static int const ibig=30;   /* fl(1+2**(2*ibig))==1 */
+    double t;
+    double r;
+    int exp;
 
-	if(finite(x)) {
-	    if(finite(y)) {
-		x=copysign(x,one);
-		y=copysign(y,one);
-		if(y > x) {
-		    t=x; x=y; y=t;
-		}
-		if(x == zero) return(zero);
-		if(y == zero) return(x);
-		exp= logb(x);
-		if(exp-(int)logb(y) > ibig ) {
-		    /* raise inexact flag and return |x| */
-		    (void volatile)(one+small);
-		    return(x);
-		}
+    if (finite(x)) {
+        if (finite(y)) {
+            x=copysign(x,one);
+            y=copysign(y,one);
+            if (y > x) {
+                t=x;
+                x=y;
+                y=t;
+            }
+            if (x == zero) return (zero);
+            if (y == zero) return (x);
+            exp= logb(x);
+            if (exp-(int)logb(y) > ibig ) {
+                /* raise inexact flag and return |x| */
+                (void volatile)(one+small);
+                return (x);
+            }
 
-	    /* start computing sqrt(x^2 + y^2) */
-		r=x-y;
-		if(r>y) { 	/* x/y > 2 */
-		    r=x/y;
-		    r=r+sqrt(one+r*r);
-		} else {		/* 1 <= x/y <= 2 */
-		    r/=y; t=r*(r+2.0);
-		    r+=t/(sqrt2+sqrt(2.0+t));
-		    r+=r2p1lo; r+=r2p1hi;
-		}
+            /* start computing sqrt(x^2 + y^2) */
+            r=x-y;
+            if (r>y) {  /* x/y > 2 */
+                r=x/y;
+                r=r+sqrt(one+r*r);
+            } else {        /* 1 <= x/y <= 2 */
+                r/=y;
+                t=r*(r+2.0);
+                r+=t/(sqrt2+sqrt(2.0+t));
+                r+=r2p1lo;
+                r+=r2p1hi;
+            }
 
-		r=y/r;
-		return(x+r);
+            r=y/r;
+            return (x+r);
 
-	    }
+        }
 
-	    else if(y==y)   	   /* y is +-INF */
-		     return(copysign(y,one));
-	    else
-		     return(y);	   /* y is NaN and x is finite */
+        else if (y==y)         /* y is +-INF */
+            return (copysign(y,one));
+        else
+            return (y);   /* y is NaN and x is finite */
 
-	} else if(x==x) {
-	    return (copysign(x,one)); /* x is +-INF */
-	} else if(finite(y)) {
-	    return(x);		   /* x is NaN, y is finite */
+    } else if (x==x) {
+        return (copysign(x,one)); /* x is +-INF */
+    } else if (finite(y)) {
+        return (x);        /* x is NaN, y is finite */
 #if !defined(vax)&&!defined(tahoe)
-	} else if(y!=y) {
-	    return(y);  /* x and y is NaN */
-#endif	/* !defined(vax)&&!defined(tahoe) */
-	} else {
-	    return(copysign(y,one));   /* y is INF */
-	}
+    } else if (y!=y) {
+        return (y); /* x and y is NaN */
+#endif  /* !defined(vax)&&!defined(tahoe) */
+    } else {
+        return (copysign(y,one));  /* y is INF */
+    }
 }
 
 /* CABS(Z)
@@ -171,22 +175,22 @@ hypot(double x, double y)
  * REVISED BY K.C. NG, 7/12/85.
  *
  * Required kernel function :
- *	hypot(x,y)
+ *  hypot(x,y)
  *
  * Method :
- *	cabs(z) = hypot(x,y) .
+ *  cabs(z) = hypot(x,y) .
  */
 
 double
 cabs(struct complex z)
 {
-	return hypot(z.x,z.y);
+    return hypot(z.x,z.y);
 }
 
 double
 z_abs(struct complex const *z)
 {
-	return hypot(z->x,z->y);
+    return hypot(z->x,z->y);
 }
 
 /* A faster but less accurate version of cabs(x,y) */
@@ -194,40 +198,39 @@ z_abs(struct complex const *z)
 double hypot(x,y)
 double x, y;
 {
-	static const double zero=0, one=1;
-		      small=1.0E-18;	/* fl(1+small)==1 */
-	static const ibig=30;	/* fl(1+2**(2*ibig))==1 */
-	double temp;
-	int exp;
+    static const double zero=0, one=1;
+    small=1.0E-18;    /* fl(1+small)==1 */
+    static const ibig=30;   /* fl(1+2**(2*ibig))==1 */
+    double temp;
+    int exp;
 
-	if(finite(x))
-	    if(finite(y))
-	    {
-		x=copysign(x,one);
-		y=copysign(y,one);
-		if(y > x)
-		    { temp=x; x=y; y=temp; }
-		if(x == zero) return(zero);
-		if(y == zero) return(x);
-		exp= logb(x);
-		x=scalb(x,-exp);
-		if(exp-(int)logb(y) > ibig )
-			/* raise inexact flag and return |x| */
-		   { one+small; return(scalb(x,exp)); }
-		else y=scalb(y,-exp);
-		return(scalb(sqrt(x*x+y*y),exp));
-	    }
+    if (finite(x))
+        if (finite(y)) {
+            x=copysign(x,one);
+            y=copysign(y,one);
+            if (y > x)
+            { temp=x; x=y; y=temp; }
+            if (x == zero) return (zero);
+            if (y == zero) return (x);
+            exp= logb(x);
+            x=scalb(x,-exp);
+            if (exp-(int)logb(y) > ibig )
+                /* raise inexact flag and return |x| */
+            { one+small; return (scalb(x,exp)); }
+            else y=scalb(y,-exp);
+            return (scalb(sqrt(x*x+y*y),exp));
+        }
 
-	    else if(y==y)   	   /* y is +-INF */
-		     return(copysign(y,one));
-	    else
-		     return(y);	   /* y is NaN and x is finite */
+        else if (y==y)         /* y is +-INF */
+            return (copysign(y,one));
+        else
+            return (y);   /* y is NaN and x is finite */
 
-	else if(x==x) 		   /* x is +-INF */
-	         return (copysign(x,one));
-	else if(finite(y))
-	         return(x);		   /* x is NaN, y is finite */
-	else if(y!=y) return(y);  	/* x and y is NaN */
-	else return(copysign(y,one));   /* y is INF */
+    else if (x==x)         /* x is +-INF */
+        return (copysign(x,one));
+    else if (finite(y))
+        return (x);       /* x is NaN, y is finite */
+    else if (y!=y) return (y);  /* x and y is NaN */
+    else return (copysign(y,one));  /* y is INF */
 }
 #endif

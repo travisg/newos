@@ -9,9 +9,9 @@
 
 #define _ARCH_BSWAP32(x) \
 ({ \
-	unsigned int temp = (x); \
-	__asm__ volatile ("bswap %0" : "+r" (temp)); \
-	temp; \
+    unsigned int temp = (x); \
+    __asm__ volatile ("bswap %0" : "+r" (temp)); \
+    temp; \
 })
 
 #endif

@@ -14,67 +14,67 @@
 #define LOCK_MAX_COUNT 2000000000
 
 typedef struct spinlock_irq {
-	spinlock_t lock;
+    spinlock_t lock;
 } spinlock_irq;
 
 static inline void spinlock_irq_init( spinlock_irq *lock )
 {
-	lock->lock = 0;
+    lock->lock = 0;
 }
 
 static inline void acquire_spinlock_irq( spinlock_irq *lock )
 {
-	int_disable_interrupts();
+    int_disable_interrupts();
 
-	acquire_spinlock( &lock->lock );
+    acquire_spinlock( &lock->lock );
 }
 
 static inline void release_spinlock_irq( spinlock_irq *lock )
 {
-	release_spinlock( &lock->lock );
-	int_restore_interrupts();
+    release_spinlock( &lock->lock );
+    int_restore_interrupts();
 }
 
 
 // general: upon lock, you have to lock a global lock and check that
 // the referred object is registered
 typedef struct ref_lock {
-	int nonexcl_count;
-	sem_id nonexcl_lock;
+    int nonexcl_count;
+    sem_id nonexcl_lock;
 
-	int excl_count;
-	sem_id excl_lock;
-	sem_id excl_mutex_lock;
+    int excl_count;
+    sem_id excl_lock;
+    sem_id excl_mutex_lock;
 
-	sem_id destroy_lock;
-	bool destroying;
+    sem_id destroy_lock;
+    bool destroying;
 } ref_lock;
 
 
 // must own global_lock
 static inline bool ref_lock_nonexcl_lock( ref_lock *lock, mutex *global_lock )
 {
-	int non_excl_count;
+    int non_excl_count;
 
-	non_excl_count = atomic_add( &lock->nonexcl_count, 1 );
-	mutex_unlock( global_lock );
+    non_excl_count = atomic_add( &lock->nonexcl_count, 1 );
+    mutex_unlock( global_lock );
 
-	if( non_excl_count >= 0 )
-		return true;
+    if ( non_excl_count >= 0 )
+        return true;
 
-	sem_acquire( lock->nonexcl_lock, 1 );
+    sem_acquire( lock->nonexcl_lock, 1 );
 
-	if( !lock->destroying )
-		return true;
+    if ( !lock->destroying )
+        return true;
 
-	sem_release( lock->destroy_lock, 1 );
-	return false;
+    sem_release( lock->destroy_lock, 1 );
+    return false;
 }
 
 static inline void ref_lock_nonexcl_unlock( ref_lock *lock )
 {
-	if( atomic_add( &lock->nonexcl_count, -1 ) < 0 )
-		sem_release_etc( lock->excl_lock, 1, SEM_FLAG_NO_RESCHED );
+    if ( atomic_add( &lock->nonexcl_count, -1 ) < 0 )
+        sem_release_etc( lock->excl_lock, 1, SEM_FLAG_NO_RESCHED );
 }
 
 // must own global_lock

@@ -11,14 +11,16 @@ void i386_push_iframe(struct iframe *frame);
 void i386_pop_iframe(void);
 struct iframe *i386_get_curr_iframe(void);
 
-static inline struct thread *arch_thread_get_current_thread(void) {
-	struct thread *t;
-	read_dr3(t);
-	return t;
+static inline struct thread *arch_thread_get_current_thread(void)
+{
+    struct thread *t;
+    read_dr3(t);
+    return t;
 }
 
-static inline void arch_thread_set_current_thread(struct thread *t) {
-	write_dr3(t);
+static inline void arch_thread_set_current_thread(struct thread *t)
+{
+    write_dr3(t);
 }
 
 #endif

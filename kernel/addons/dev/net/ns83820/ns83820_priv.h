@@ -10,16 +10,16 @@
 #include <kernel/smp.h>
 
 typedef struct ns83820 {
-	int irq;
-	addr_t phys_base;
-	addr_t phys_size;
-	addr_t virt_base;
-	uint16 io_port;
-	region_id region;
-	uint8 mac_addr[6];
+    int irq;
+    addr_t phys_base;
+    addr_t phys_size;
+    addr_t virt_base;
+    uint16 io_port;
+    region_id region;
+    uint8 mac_addr[6];
 
-	mutex lock;
-	spinlock_t reg_spinlock;
+    mutex lock;
+    spinlock_t reg_spinlock;
 } ns83820;
 
 int ns83820_detect(ns83820 **ns, int *num);

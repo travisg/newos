@@ -1,6 +1,6 @@
 /*-
  * Copyright (c) 1990, 1993
- *	The Regents of the University of California.  All rights reserved.
+ *  The Regents of the University of California.  All rights reserved.
  *
  * This code is derived from software contributed to Berkeley by
  * Sean Eric Fagan.
@@ -15,8 +15,8 @@
  *    documentation and/or other materials provided with the distribution.
  * 3. All advertising materials mentioning features or use of this software
  *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
+ *  This product includes software developed by the University of
+ *  California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -57,20 +57,20 @@ static const char rcsid[] = "$FreeBSD: src/lib/libc/i386/gen/ldexp.c,v 1.6 1999/
 double
 ldexp (double value, int exp)
 {
-	double temp, texp, temp2;
-	texp = exp;
+    double temp, texp, temp2;
+    texp = exp;
 #ifdef __GNUC__
 #if    __GNUC__ >= 2
-	asm ("fscale "
-		: "=u" (temp2), "=t" (temp)
-		: "0" (texp), "1" (value));
+    asm ("fscale "
+         : "=u" (temp2), "=t" (temp)
+         : "0" (texp), "1" (value));
 #else
-	asm ("fscale ; fxch %%st(1) ; fstp%L1 %1 "
-		: "=f" (temp), "=0" (temp2)
-		: "0" (texp), "f" (value));
+    asm ("fscale ; fxch %%st(1) ; fstp%L1 %1 "
+         : "=f" (temp), "=0" (temp2)
+         : "0" (texp), "f" (value));
 #endif
 #else
-error unknown asm
+    error unknown asm
 #endif
-	return (temp);
+    return (temp);
 }

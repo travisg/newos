@@ -10,48 +10,47 @@
 
 
 
-static struct rld_export_t exports=
-{
-	/*
-	 * Unix like stuff
-	 */
-	export_dl_open,
-	export_dl_close,
-	export_dl_sym,
+static struct rld_export_t exports= {
+    /*
+     * Unix like stuff
+     */
+    export_dl_open,
+    export_dl_close,
+    export_dl_sym,
 
 
-	/*
-	 * BeOS like stuff
-	 */
-	export_load_addon,
-	export_unload_addon,
-	export_addon_symbol
+    /*
+     * BeOS like stuff
+     */
+    export_load_addon,
+    export_unload_addon,
+    export_addon_symbol
 };
 
 
 int
 rldmain(void *arg)
 {
-	int retval;
-	unsigned long entry;
-	struct uspace_prog_args_t *uspa= (struct uspace_prog_args_t *)arg;
+    int retval;
+    unsigned long entry;
+    struct uspace_prog_args_t *uspa= (struct uspace_prog_args_t *)arg;
 
-	rldheap_init();
+    rldheap_init();
 
-	entry= 0;
+    entry= 0;
 
-	uspa->rld_export= &exports;
+    uspa->rld_export= &exports;
 
-	rldelf_init(uspa);
+    rldelf_init(uspa);
 
-	load_program(uspa->prog_path, (void**)&entry);
+    load_program(uspa->prog_path, (void**)&entry);
 
-	if(entry) {
-		retval= ((int(*)(void*))(entry))(uspa);
-	} else {
-		return -1;
-	}
+    if (entry) {
+        retval= ((int(*)(void*))(entry))(uspa);
+    } else {
+        return -1;
+    }
 
-	return retval;
+    return retval;
 }
 

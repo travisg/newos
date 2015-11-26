@@ -17,29 +17,29 @@
 
 int main(int argc,char *argv[])
 {
-	char buf[1024];
+    char buf[1024];
 
-	init_vars();
-	init_statements();
-	init_arguments(argc,argv);
+    init_vars();
+    init_statements();
+    init_arguments(argc,argv);
 
-	if(af_script_file_name != NULL){
-		run_script(af_script_file_name);
-		if(af_exit_after_script) exit(0);
-	}
+    if (af_script_file_name != NULL) {
+        run_script(af_script_file_name);
+        if (af_exit_after_script) exit(0);
+    }
 
-	for(;;) {
+    for (;;) {
 
-		printf("> ");
+        printf("> ");
 
-		fgets(buf, sizeof(buf), stdin);
- 		if(strlen(buf) > 0) {
-			parse_string(buf);
-		}
-		buf[0] = '\0';
-	}
+        fgets(buf, sizeof(buf), stdin);
+        if (strlen(buf) > 0) {
+            parse_string(buf);
+        }
+        buf[0] = '\0';
+    }
 
-	return 0;
+    return 0;
 }
 
 

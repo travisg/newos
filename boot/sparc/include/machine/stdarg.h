@@ -1,9 +1,9 @@
-/*	$OpenBSD: stdarg.h,v 1.4 1997/08/08 08:26:50 downsj Exp $	*/
-/*	$NetBSD: stdarg.h,v 1.10 1996/12/27 20:55:28 pk Exp $ */
+/*  $OpenBSD: stdarg.h,v 1.4 1997/08/08 08:26:50 downsj Exp $   */
+/*  $NetBSD: stdarg.h,v 1.10 1996/12/27 20:55:28 pk Exp $ */
 
 /*
  * Copyright (c) 1992, 1993
- *	The Regents of the University of California.  All rights reserved.
+ *  The Regents of the University of California.  All rights reserved.
  *
  * This software was developed by the Computer Systems Engineering group
  * at Lawrence Berkeley Laboratory under DARPA contract BG 91-66 and
@@ -11,8 +11,8 @@
  *
  * All advertising materials mentioning features or use of this software
  * must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Lawrence Berkeley Laboratory.
+ *  This product includes software developed by the University of
+ *  California, Lawrence Berkeley Laboratory.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,8 +24,8 @@
  *    documentation and/or other materials provided with the distribution.
  * 3. All advertising materials mentioning features or use of this software
  *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
+ *  This product includes software developed by the University of
+ *  California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -42,30 +42,30 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	from: @(#)stdarg.h	8.2 (Berkeley) 9/27/93
+ *  from: @(#)stdarg.h  8.2 (Berkeley) 9/27/93
  */
 
 #ifndef _SPARC_STDARG_H_
-#define	_SPARC_STDARG_H_
+#define _SPARC_STDARG_H_
 
 #include <machine/ansi.h>
 
 #ifdef __lint__
-#define	__extension__(x)		(0)
-#define	__builtin_classify_type(t)	(0)
+#define __extension__(x)        (0)
+#define __builtin_classify_type(t)  (0)
 #endif
 
-typedef _BSD_VA_LIST_	va_list;
+typedef _BSD_VA_LIST_   va_list;
 
-#define	__va_size(type) \
-	(((sizeof(type) + sizeof(long) - 1) / sizeof(long)) * sizeof(long))
+#define __va_size(type) \
+    (((sizeof(type) + sizeof(long) - 1) / sizeof(long)) * sizeof(long))
 
 #if __GNUC__ > 2 || __GNUC_MINOR__ >= 6
-#define	va_start(ap, last) \
-	(__builtin_next_arg(last), (ap) = (va_list)__builtin_saveregs())
+#define va_start(ap, last) \
+    (__builtin_next_arg(last), (ap) = (va_list)__builtin_saveregs())
 #else
-#define	va_start(ap, last) \
-	(__builtin_next_arg(), (ap) = (va_list)__builtin_saveregs())
+#define va_start(ap, last) \
+    (__builtin_next_arg(), (ap) = (va_list)__builtin_saveregs())
 #endif
 
 /*
@@ -84,30 +84,30 @@ typedef _BSD_VA_LIST_	va_list;
  * have a constructor.
  */
 #if __GNUC__ == 1
-#define	__extension__
+#define __extension__
 #endif
 
-#define	__va_8byte(ap, type) \
-	__extension__ ({						\
-		union { char __d[sizeof(type)]; int __i[2]; } __va_u;	\
-		__va_u.__i[0] = ((int *)(void *)(ap))[0];		\
-		__va_u.__i[1] = ((int *)(void *)(ap))[1];		\
-		(ap) += 8; *(type *)(va_list)__va_u.__d;		\
-	})
+#define __va_8byte(ap, type) \
+    __extension__ ({                        \
+        union { char __d[sizeof(type)]; int __i[2]; } __va_u;   \
+        __va_u.__i[0] = ((int *)(void *)(ap))[0];       \
+        __va_u.__i[1] = ((int *)(void *)(ap))[1];       \
+        (ap) += 8; *(type *)(va_list)__va_u.__d;        \
+    })
 
-#define	__va_arg(ap, type) \
-	(*(type *)((ap) += __va_size(type),			\
-		   (ap) - (sizeof(type) < sizeof(long) &&	\
-			   sizeof(type) != __va_size(type) ?	\
-			   sizeof(type) : __va_size(type))))
+#define __va_arg(ap, type) \
+    (*(type *)((ap) += __va_size(type),         \
+           (ap) - (sizeof(type) < sizeof(long) &&   \
+               sizeof(type) != __va_size(type) ?    \
+               sizeof(type) : __va_size(type))))
 
-#define	__RECORD_TYPE_CLASS	12
+#define __RECORD_TYPE_CLASS 12
 #define va_arg(ap, type) \
-	(__builtin_classify_type(*(type *)0) >= __RECORD_TYPE_CLASS ?	\
-	 *__va_arg(ap, type *) : __va_size(type) == 8 ?			\
-	 __va_8byte(ap, type) : __va_arg(ap, type))
+    (__builtin_classify_type(*(type *)0) >= __RECORD_TYPE_CLASS ?   \
+     *__va_arg(ap, type *) : __va_size(type) == 8 ?         \
+     __va_8byte(ap, type) : __va_arg(ap, type))
 
-#define va_end(ap)	((void)0)
+#define va_end(ap)  ((void)0)
 
 #endif /* !_SPARC_STDARG_H_ */
 

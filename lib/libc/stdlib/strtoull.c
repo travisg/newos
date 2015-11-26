@@ -1,6 +1,6 @@
 /*-
  * Copyright (c) 1992, 1993
- *	The Regents of the University of California.  All rights reserved.
+ *  The Regents of the University of California.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -12,8 +12,8 @@
  *    documentation and/or other materials provided with the distribution.
  * 3. All advertising materials mentioning features or use of this software
  *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
+ *  This product includes software developed by the University of
+ *  California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -37,7 +37,7 @@ static char sccsid[] = "@(#)strtouq.c	8.1 (Berkeley) 6/4/93";
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: src/lib/libc/stdlib/strtoull.c,v 1.5.2.1 2001/03/02 09:45:20 obrien Exp $";
+    "$FreeBSD: src/lib/libc/stdlib/strtoull.c,v 1.5.2.1 2001/03/02 09:45:20 obrien Exp $";
 #endif
 
 #include <sys/types.h>
@@ -55,69 +55,69 @@ static const char rcsid[] =
  */
 unsigned long long
 strtoull(nptr, endptr, base)
-	const char *nptr;
-	char **endptr;
-	register int base;
+const char *nptr;
+char **endptr;
+register int base;
 {
-	register const char *s = nptr;
-	register unsigned long long acc;
-	register unsigned char c;
-	register unsigned long long qbase, cutoff;
-	register int neg, any, cutlim;
+    register const char *s = nptr;
+    register unsigned long long acc;
+    register unsigned char c;
+    register unsigned long long qbase, cutoff;
+    register int neg, any, cutlim;
 
-	/*
-	 * See strtoq for comments as to the logic used.
-	 */
-	s = nptr;
-	do {
-		c = *s++;
-	} while (isspace(c));
-	if (c == '-') {
-		neg = 1;
-		c = *s++;
-	} else {
-		neg = 0;
-		if (c == '+')
-			c = *s++;
-	}
-	if ((base == 0 || base == 16) &&
-	    c == '0' && (*s == 'x' || *s == 'X')) {
-		c = s[1];
-		s += 2;
-		base = 16;
-	}
-	if (base == 0)
-		base = c == '0' ? 8 : 10;
-	qbase = (unsigned)base;
-	cutoff = (unsigned long long)ULLONG_MAX / qbase;
-	cutlim = (unsigned long long)ULLONG_MAX % qbase;
-	for (acc = 0, any = 0;; c = *s++) {
-		if (!isascii(c))
-			break;
-		if (isdigit(c))
-			c -= '0';
-		else if (isalpha(c))
-			c -= isupper(c) ? 'A' - 10 : 'a' - 10;
-		else
-			break;
-		if (c >= base)
-			break;
-		if (any < 0 || acc > cutoff || (acc == cutoff && c > cutlim))
-			any = -1;
-		else {
-			any = 1;
-			acc *= qbase;
-			acc += c;
-		}
-	}
-	if (any < 0) {
-		acc = ULLONG_MAX;
+    /*
+     * See strtoq for comments as to the logic used.
+     */
+    s = nptr;
+    do {
+        c = *s++;
+    } while (isspace(c));
+    if (c == '-') {
+        neg = 1;
+        c = *s++;
+    } else {
+        neg = 0;
+        if (c == '+')
+            c = *s++;
+    }
+    if ((base == 0 || base == 16) &&
+            c == '0' && (*s == 'x' || *s == 'X')) {
+        c = s[1];
+        s += 2;
+        base = 16;
+    }
+    if (base == 0)
+        base = c == '0' ? 8 : 10;
+    qbase = (unsigned)base;
+    cutoff = (unsigned long long)ULLONG_MAX / qbase;
+    cutlim = (unsigned long long)ULLONG_MAX % qbase;
+    for (acc = 0, any = 0;; c = *s++) {
+        if (!isascii(c))
+            break;
+        if (isdigit(c))
+            c -= '0';
+        else if (isalpha(c))
+            c -= isupper(c) ? 'A' - 10 : 'a' - 10;
+        else
+            break;
+        if (c >= base)
+            break;
+        if (any < 0 || acc > cutoff || (acc == cutoff && c > cutlim))
+            any = -1;
+        else {
+            any = 1;
+            acc *= qbase;
+            acc += c;
+        }
+    }
+    if (any < 0) {
+        acc = ULLONG_MAX;
 #if __WITH_ERRNO
-		errno = ERANGE;
+        errno = ERANGE;
 #endif
-	} else if (neg)
-		acc = -acc;
-	if (endptr != 0)
-		*endptr = (char *)(any ? s - 1 : nptr);
-	return (acc);
+    } else if (neg)
+        acc = -acc;
+    if (endptr != 0)
+        *endptr = (char *)(any ? s - 1 : nptr);
+    return (acc);
 }

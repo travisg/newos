@@ -10,10 +10,10 @@
 
 /* mount structure */
 typedef struct zfs_fs {
-	fs_id id;
-	int fd;
-	void *dev_vnode;
-	zfs_superblock sb;
+    fs_id id;
+    int fd;
+    void *dev_vnode;
+    zfs_superblock sb;
 } zfs_fs;
 
 /* fs calls */

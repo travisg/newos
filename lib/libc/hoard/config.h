@@ -20,14 +20,14 @@
 #define _CONFIG_H_
 
 #ifndef _REENTRANT
-#define _REENTRANT		// If defined, generate a multithreaded-capable version.
+#define _REENTRANT      // If defined, generate a multithreaded-capable version.
 #endif
 
 #ifndef USER_LOCKS
-#define USER_LOCKS 1		// Use our own user-level locks if they're available for the current architecture.
+#define USER_LOCKS 1        // Use our own user-level locks if they're available for the current architecture.
 #endif
 
-#define HEAP_LOG 0		// If non-zero, keep a log of heap accesses.
+#define HEAP_LOG 0      // If non-zero, keep a log of heap accesses.
 
 
 ///// You should not change anything below here. /////
@@ -55,9 +55,9 @@ enum { SUPERBLOCK_FULLNESS_GROUP = 9 };
 // DO NOT CHANGE THESE.  They require running of maketable to replace
 // the values in heap.cpp for the _numBlocks array.
 
-#define HEAP_DEBUG 0		// If non-zero, keeps extra info for sanity checking.
-#define HEAP_STATS 0		// If non-zero, maintain blowup statistics.
-#define HEAP_FRAG_STATS 0	// If non-zero, maintain fragmentation statistics.
+#define HEAP_DEBUG 0        // If non-zero, keeps extra info for sanity checking.
+#define HEAP_STATS 0        // If non-zero, maintain blowup statistics.
+#define HEAP_FRAG_STATS 0   // If non-zero, maintain fragmentation statistics.
 
 
 // CACHE_LINE = The number of bytes in a cache line.

@@ -10,13 +10,13 @@
 int
 open(char const *path, int omode, ...)
 {
-	int retval;
+    int retval;
 
-	retval= _kern_open(path, omode);
+    retval= _kern_open(path, omode);
 
-	if(retval< 0) {
-		errno = retval;
-	}
+    if (retval< 0) {
+        errno = retval;
+    }
 
-	return retval;
+    return retval;
 }

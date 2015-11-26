@@ -22,37 +22,37 @@
 #define ENDPOINT_MASTER_READ 1
 
 enum {
-	TTY_STATE_NORMAL = 0,
-	TTY_STATE_WRITE_CR,
-	TTY_STATE_WRITE_LF
+    TTY_STATE_NORMAL = 0,
+    TTY_STATE_WRITE_CR,
+    TTY_STATE_WRITE_LF
 };
 
 struct line_buffer {
-	int head;
-	int tail;
-	int line_start;
-	int len;
-	sem_id read_sem;
-	sem_id write_sem;
-	char buffer[TTY_BUFFER_SIZE];
-	int state;
-	int flags;
+    int head;
+    int tail;
+    int line_start;
+    int len;
+    sem_id read_sem;
+    sem_id write_sem;
+    char buffer[TTY_BUFFER_SIZE];
+    int state;
+    int flags;
 };
 
 typedef struct tty_desc {
-	bool inuse;
-	int ref_count;
-	int index;
-	mutex lock;
-	pgrp_id pgid;
-	struct tty_winsize wsize;
-	struct line_buffer buf[2]; /* one buffer in either direction */
+    bool inuse;
+    int ref_count;
+    int index;
+    mutex lock;
+    pgrp_id pgid;
+    struct tty_winsize wsize;
+    struct line_buffer buf[2]; /* one buffer in either direction */
 } tty_desc;
 
 typedef struct tty_global {
-	mutex lock;
+    mutex lock;
 
-	tty_desc ttys[NUM_TTYS];
+    tty_desc ttys[NUM_TTYS];
 } tty_global;
 
 extern tty_global thetty;

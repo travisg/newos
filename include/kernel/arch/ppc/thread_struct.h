@@ -7,11 +7,11 @@
 
 // architecture specific thread info
 struct arch_thread {
-	addr_t sp; // current stack pointer
+    addr_t sp; // current stack pointer
 };
 
 struct arch_proc {
-	// nothing here
+    // nothing here
 };
 
 #endif

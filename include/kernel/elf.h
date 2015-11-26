@@ -17,35 +17,35 @@ int elf_init(kernel_args *ka);
 
 /* internal stuff */
 struct elf_region {
-	region_id id;
-	addr_t start;
-	addr_t size;
-	long delta;
+    region_id id;
+    addr_t start;
+    addr_t size;
+    long delta;
 };
 
 struct elf_image_info {
-	struct elf_image_info *next;
-	image_id id;
-	int ref_count;
-	void *vnode;
-	struct elf_region regions[2]; // describes the text and data regions
-	addr_t dynamic_ptr; // pointer to the dynamic section
-	struct elf_linked_image *linked_images;
+    struct elf_image_info *next;
+    image_id id;
+    int ref_count;
+    void *vnode;
+    struct elf_region regions[2]; // describes the text and data regions
+    addr_t dynamic_ptr; // pointer to the dynamic section
+    struct elf_linked_image *linked_images;
 
-	struct Elf32_Ehdr *eheader;
+    struct Elf32_Ehdr *eheader;
 
-	// pointer to symbol participation data structures
-	char *needed;
-	unsigned int *symhash;
-	struct Elf32_Sym *syms;
-	char *strtab;
-	struct Elf32_Rel *rel;
-	int rel_len;
-	struct Elf32_Rela *rela;
-	int rela_len;
-	struct Elf32_Rel *pltrel;
-	int pltrel_len;
-	int pltrel_type;
+    // pointer to symbol participation data structures
+    char *needed;
+    unsigned int *symhash;
+    struct Elf32_Sym *syms;
+    char *strtab;
+    struct Elf32_Rel *rel;
+    int rel_len;
+    struct Elf32_Rela *rela;
+    int rela_len;
+    struct Elf32_Rel *pltrel;
+    int pltrel_len;
+    int pltrel_type;
 };
 
 #define STRING(image, offset) ((char *)(&(image)->strtab[(offset)]))

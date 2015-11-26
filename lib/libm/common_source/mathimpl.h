@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 1988, 1993
- *	The Regents of the University of California.  All rights reserved.
+ *  The Regents of the University of California.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -12,8 +12,8 @@
  *    documentation and/or other materials provided with the distribution.
  * 3. All advertising materials mentioning features or use of this software
  *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
+ *  This product includes software developed by the University of
+ *  California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -30,7 +30,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	@(#)mathimpl.h	8.1 (Berkeley) 6/4/93
+ *  @(#)mathimpl.h  8.1 (Berkeley) 6/4/93
  */
 
 #include <sys/cdefs.h>
@@ -40,58 +40,58 @@
 
 /* Deal with different ways to concatenate in cpp */
 #  ifdef __STDC__
-#    define	cat3(a,b,c) a ## b ## c
+#    define cat3(a,b,c) a ## b ## c
 #  else
-#    define	cat3(a,b,c) a/**/b/**/c
+#    define cat3(a,b,c) a/**/b/**/c
 #  endif
 
 /* Deal with vax/tahoe byte order issues */
 #  ifdef vax
-#    define	cat3t(a,b,c) cat3(a,b,c)
+#    define cat3t(a,b,c) cat3(a,b,c)
 #  else
-#    define	cat3t(a,b,c) cat3(a,c,b)
+#    define cat3t(a,b,c) cat3(a,c,b)
 #  endif
 
 #  define vccast(name) (*(const double *)(cat3(name,,x)))
 
-   /*
-    * Define a constant to high precision on a Vax or Tahoe.
-    *
-    * Args are the name to define, the decimal floating point value,
-    * four 16-bit chunks of the float value in hex
-    * (because the vax and tahoe differ in float format!), the power
-    * of 2 of the hex-float exponent, and the hex-float mantissa.
-    * Most of these arguments are not used at compile time; they are
-    * used in a post-check to make sure the constants were compiled
-    * correctly.
-    *
-    * People who want to use the constant will have to do their own
-    *     #define foo vccast(foo)
-    * since CPP cannot do this for them from inside another macro (sigh).
-    * We define "vccast" if this needs doing.
-    */
+/*
+ * Define a constant to high precision on a Vax or Tahoe.
+ *
+ * Args are the name to define, the decimal floating point value,
+ * four 16-bit chunks of the float value in hex
+ * (because the vax and tahoe differ in float format!), the power
+ * of 2 of the hex-float exponent, and the hex-float mantissa.
+ * Most of these arguments are not used at compile time; they are
+ * used in a post-check to make sure the constants were compiled
+ * correctly.
+ *
+ * People who want to use the constant will have to do their own
+ *     #define foo vccast(foo)
+ * since CPP cannot do this for them from inside another macro (sigh).
+ * We define "vccast" if this needs doing.
+ */
 #  define vc(name, value, x1,x2,x3,x4, bexp, xval) \
-	static long const cat3(name,,x)[] = {cat3t(0x,x1,x2), cat3t(0x,x3,x4)};
+    static long const cat3(name,,x)[] = {cat3t(0x,x1,x2), cat3t(0x,x3,x4)};
 
 #  define ic(name, value, bexp, xval) ;
 
-#else	/* vax or tahoe */
+#else   /* vax or tahoe */
 
-   /* Hooray, we have an IEEE machine */
+/* Hooray, we have an IEEE machine */
 #  undef vccast
 #  define vc(name, value, x1,x2,x3,x4, bexp, xval) ;
 
 #  define ic(name, value, bexp, xval) \
-	static double const name = value;
+    static double const name = value;
 
-#endif	/* defined(vax)||defined(tahoe) */
+#endif  /* defined(vax)||defined(tahoe) */
 
 
 /*
  * Functions internal to the math package, yet not static.
  */
-extern double	__exp__E(double, double);
-extern double	__log__L(double);
+extern double   __exp__E(double, double);
+extern double   __log__L(double);
 
 struct Double {double a, b;};
 double __exp__D(double, double);

@@ -1,6 +1,6 @@
 /*-
  * Copyright (c) 1991, 1993
- *	The Regents of the University of California.  All rights reserved.
+ *  The Regents of the University of California.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -12,8 +12,8 @@
  *    documentation and/or other materials provided with the distribution.
  * 3. All advertising materials mentioning features or use of this software
  *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
+ *  This product includes software developed by the University of
+ *  California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -42,28 +42,28 @@ static const char rcsid[] = "$FreeBSD: src/lib/libc/i386/gen/isinf.c,v 1.6 1999/
 
 int
 isnan(d)
-	double d;
+double d;
 {
-	register struct IEEEdp {
-		unsigned manl : 32;
-		unsigned manh : 20;
-		unsigned  exp : 11;
-		unsigned sign :  1;
-	} *p = (struct IEEEdp *)&d;
+    register struct IEEEdp {
+        unsigned manl : 32;
+        unsigned manh : 20;
+        unsigned  exp : 11;
+        unsigned sign :  1;
+    } *p = (struct IEEEdp *)&d;
 
-	return(p->exp == 2047 && (p->manh || p->manl));
+    return (p->exp == 2047 && (p->manh || p->manl));
 }
 
 int
 isinf(d)
-	double d;
+double d;
 {
-	register struct IEEEdp {
-		u_int manl : 32;
-		u_int manh : 20;
-		u_int  exp : 11;
-		u_int sign :  1;
-	} *p = (struct IEEEdp *)&d;
+    register struct IEEEdp {
+        u_int manl : 32;
+        u_int manh : 20;
+        u_int  exp : 11;
+        u_int sign :  1;
+    } *p = (struct IEEEdp *)&d;
 
-	return(p->exp == 2047 && !p->manh && !p->manl);
+    return (p->exp == 2047 && !p->manh && !p->manl);
 }

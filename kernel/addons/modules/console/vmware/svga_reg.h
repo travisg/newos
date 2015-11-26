@@ -76,40 +76,40 @@
  */
 
 enum {
-   SVGA_REG_ID = 0,
-   SVGA_REG_ENABLE = 1,
-   SVGA_REG_WIDTH = 2,
-   SVGA_REG_HEIGHT = 3,
-   SVGA_REG_MAX_WIDTH = 4,
-   SVGA_REG_MAX_HEIGHT = 5,
-   SVGA_REG_DEPTH = 6,
-   SVGA_REG_BITS_PER_PIXEL = 7,
-   SVGA_REG_PSEUDOCOLOR = 8,
-   SVGA_REG_RED_MASK = 9,
-   SVGA_REG_GREEN_MASK = 10,
-   SVGA_REG_BLUE_MASK = 11,
-   SVGA_REG_BYTES_PER_LINE = 12,
-   SVGA_REG_FB_START = 13,
-   SVGA_REG_FB_OFFSET = 14,
-   SVGA_REG_FB_MAX_SIZE = 15,
-   SVGA_REG_FB_SIZE = 16,
+    SVGA_REG_ID = 0,
+    SVGA_REG_ENABLE = 1,
+    SVGA_REG_WIDTH = 2,
+    SVGA_REG_HEIGHT = 3,
+    SVGA_REG_MAX_WIDTH = 4,
+    SVGA_REG_MAX_HEIGHT = 5,
+    SVGA_REG_DEPTH = 6,
+    SVGA_REG_BITS_PER_PIXEL = 7,
+    SVGA_REG_PSEUDOCOLOR = 8,
+    SVGA_REG_RED_MASK = 9,
+    SVGA_REG_GREEN_MASK = 10,
+    SVGA_REG_BLUE_MASK = 11,
+    SVGA_REG_BYTES_PER_LINE = 12,
+    SVGA_REG_FB_START = 13,
+    SVGA_REG_FB_OFFSET = 14,
+    SVGA_REG_FB_MAX_SIZE = 15,
+    SVGA_REG_FB_SIZE = 16,
 
-   SVGA_REG_CAPABILITIES = 17,
-   SVGA_REG_MEM_START = 18,       /* Memory for command FIFO and bitmaps */
-   SVGA_REG_MEM_SIZE = 19,
-   SVGA_REG_CONFIG_DONE = 20,      /* Set when memory area configured */
-   SVGA_REG_SYNC = 21,             /* Write to force synchronization */
-   SVGA_REG_BUSY = 22,             /* Read to check if sync is done */
-   SVGA_REG_GUEST_ID = 23,        /* Set guest OS identifier */
-   SVGA_REG_CURSOR_ID = 24,       /* ID of cursor */
-   SVGA_REG_CURSOR_X = 25,        /* Set cursor X position */
-   SVGA_REG_CURSOR_Y = 26,        /* Set cursor Y position */
-   SVGA_REG_CURSOR_ON = 27,       /* Turn cursor on/off */
-   SVGA_REG_HOST_BITS_PER_PIXEL = 28, /* Current bpp in the host */
+    SVGA_REG_CAPABILITIES = 17,
+    SVGA_REG_MEM_START = 18,       /* Memory for command FIFO and bitmaps */
+    SVGA_REG_MEM_SIZE = 19,
+    SVGA_REG_CONFIG_DONE = 20,      /* Set when memory area configured */
+    SVGA_REG_SYNC = 21,             /* Write to force synchronization */
+    SVGA_REG_BUSY = 22,             /* Read to check if sync is done */
+    SVGA_REG_GUEST_ID = 23,        /* Set guest OS identifier */
+    SVGA_REG_CURSOR_ID = 24,       /* ID of cursor */
+    SVGA_REG_CURSOR_X = 25,        /* Set cursor X position */
+    SVGA_REG_CURSOR_Y = 26,        /* Set cursor Y position */
+    SVGA_REG_CURSOR_ON = 27,       /* Turn cursor on/off */
+    SVGA_REG_HOST_BITS_PER_PIXEL = 28, /* Current bpp in the host */
 
-   SVGA_REG_TOP = 28,             /* Must be 1 greater than the last register */
+    SVGA_REG_TOP = 28,             /* Must be 1 greater than the last register */
 
-   SVGA_PALETTE_BASE = 1024       /* Base of SVGA color map */
+    SVGA_PALETTE_BASE = 1024       /* Base of SVGA color map */
 };
 
 
@@ -124,8 +124,8 @@ enum {
 #define        SVGA_CAP_RASTER_OP       0x0010
 #define        SVGA_CAP_CURSOR          0x0020
 #define        SVGA_CAP_CURSOR_BYPASS   0x0040
-#define	       SVGA_CAP_CURSOR_BYPASS_2    0x0080
-#define	       SVGA_CAP_8BIT_EMULATION     0x0100
+#define        SVGA_CAP_CURSOR_BYPASS_2    0x0080
+#define        SVGA_CAP_8BIT_EMULATION     0x0100
 #define        SVGA_CAP_ALPHA_CURSOR       0x0200
 #define        SVGA_CAP_GLYPH              0x0400
 #define        SVGA_CAP_GLYPH_CLIPPING     0x0800
@@ -157,35 +157,35 @@ enum {
 
 /*
  *  Ops
- *  For each pixel, the four channels of the image are computed with: 
+ *  For each pixel, the four channels of the image are computed with:
  *
- *	C = Ca * Fa + Cb * Fb
+ *  C = Ca * Fa + Cb * Fb
  *
- *  where C, Ca, Cb are the values of the respective channels and Fa 
- *  and Fb come from the following table: 
+ *  where C, Ca, Cb are the values of the respective channels and Fa
+ *  and Fb come from the following table:
  *
- *	BlendOp		Fa			Fb
- *	------------------------------------------
- *	Clear		0			0
- *	Src		1			0
- *	Dst		0			1
- *	Over		1			1-Aa
- *	OverReverse	1-Ab			1
- *	In		Ab			0
- *	InReverse	0			Aa
- *	Out		1-Ab			0
- *	OutReverse	0			1-Aa
- *	Atop		Ab			1-Aa
- *	AtopReverse	1-Ab			Aa
- *	Xor		1-Ab			1-Aa
- *	Add		1			1
- *	Saturate	min(1,(1-Ab)/Aa)	1
+ *  BlendOp     Fa          Fb
+ *  ------------------------------------------
+ *  Clear       0           0
+ *  Src     1           0
+ *  Dst     0           1
+ *  Over        1           1-Aa
+ *  OverReverse 1-Ab            1
+ *  In      Ab          0
+ *  InReverse   0           Aa
+ *  Out     1-Ab            0
+ *  OutReverse  0           1-Aa
+ *  Atop        Ab          1-Aa
+ *  AtopReverse 1-Ab            Aa
+ *  Xor     1-Ab            1-Aa
+ *  Add     1           1
+ *  Saturate    min(1,(1-Ab)/Aa)    1
  *
  *  Flags
  *  You can use the following flags to achieve additional affects:
- * 
+ *
  *      Flag                    Effect
- *	------------------------------------------
+ *  ------------------------------------------
  *      ConstantSourceAlpha     Ca = Ca * Param0
  *      ConstantDestAlpha       Cb = Cb * Param1
  *
@@ -205,7 +205,7 @@ enum {
 #define SVGA_BLENDOP_IN_REVERSE                 6
 #define SVGA_BLENDOP_OUT                        7
 #define SVGA_BLENDOP_OUT_REVERSE                8
-#define SVGA_BLENDOP_ATOP                       9 
+#define SVGA_BLENDOP_ATOP                       9
 #define SVGA_BLENDOP_ATOP_REVERSE               10
 #define SVGA_BLENDOP_XOR                        11
 #define SVGA_BLENDOP_ADD                        12
@@ -273,132 +273,132 @@ enum {
  *  Commands in the command FIFO
  */
 
-#define	        SVGA_CMD_INVALID_CMD		      0
-	    /* FIFO layout:
-            <nothing> (well, undefined) */
+#define         SVGA_CMD_INVALID_CMD              0
+/* FIFO layout:
+    <nothing> (well, undefined) */
 
 #define         SVGA_CMD_UPDATE                   1
-        /* FIFO layout:
-           X, Y, Width, Height */
+/* FIFO layout:
+   X, Y, Width, Height */
 
 #define         SVGA_CMD_RECT_FILL                2
-        /* FIFO layout:
-           Color, X, Y, Width, Height */
+/* FIFO layout:
+   Color, X, Y, Width, Height */
 
 #define         SVGA_CMD_RECT_COPY                3
-        /* FIFO layout:
-           Source X, Source Y, Dest X, Dest Y, Width, Height */
+/* FIFO layout:
+   Source X, Source Y, Dest X, Dest Y, Width, Height */
 
 #define         SVGA_CMD_DEFINE_BITMAP            4
-        /* FIFO layout:
-           Pixmap ID, Width, Height, <scanlines> */
+/* FIFO layout:
+   Pixmap ID, Width, Height, <scanlines> */
 
 #define         SVGA_CMD_DEFINE_BITMAP_SCANLINE   5
-        /* FIFO layout:
-           Pixmap ID, Width, Height, Line #, scanline */
+/* FIFO layout:
+   Pixmap ID, Width, Height, Line #, scanline */
 
 #define         SVGA_CMD_DEFINE_PIXMAP            6
-        /* FIFO layout:
-           Pixmap ID, Width, Height, Depth, <scanlines> */
+/* FIFO layout:
+   Pixmap ID, Width, Height, Depth, <scanlines> */
 
 #define         SVGA_CMD_DEFINE_PIXMAP_SCANLINE   7
-        /* FIFO layout:
-           Pixmap ID, Width, Height, Depth, Line #, scanline */
+/* FIFO layout:
+   Pixmap ID, Width, Height, Depth, Line #, scanline */
 
 #define         SVGA_CMD_RECT_BITMAP_FILL         8
-        /* FIFO layout:
-           Bitmap ID, X, Y, Width, Height, Foreground, Background */
+/* FIFO layout:
+   Bitmap ID, X, Y, Width, Height, Foreground, Background */
 
 #define         SVGA_CMD_RECT_PIXMAP_FILL         9
-        /* FIFO layout:
-           Pixmap ID, X, Y, Width, Height */
+/* FIFO layout:
+   Pixmap ID, X, Y, Width, Height */
 
 #define         SVGA_CMD_RECT_BITMAP_COPY        10
-        /* FIFO layout:
-           Bitmap ID, Source X, Source Y, Dest X, Dest Y,
-           Width, Height, Foreground, Background */
+/* FIFO layout:
+   Bitmap ID, Source X, Source Y, Dest X, Dest Y,
+   Width, Height, Foreground, Background */
 
 #define         SVGA_CMD_RECT_PIXMAP_COPY        11
-        /* FIFO layout:
-           Pixmap ID, Source X, Source Y, Dest X, Dest Y, Width, Height */
+/* FIFO layout:
+   Pixmap ID, Source X, Source Y, Dest X, Dest Y, Width, Height */
 
 #define         SVGA_CMD_FREE_OBJECT             12
-        /* FIFO layout:
-           Object (pixmap, bitmap, ...) ID */
+/* FIFO layout:
+   Object (pixmap, bitmap, ...) ID */
 
 #define         SVGA_CMD_RECT_ROP_FILL           13
-         /* FIFO layout:
-            Color, X, Y, Width, Height, ROP */
+/* FIFO layout:
+   Color, X, Y, Width, Height, ROP */
 
 #define         SVGA_CMD_RECT_ROP_COPY           14
-         /* FIFO layout:
-            Source X, Source Y, Dest X, Dest Y, Width, Height, ROP */
+/* FIFO layout:
+   Source X, Source Y, Dest X, Dest Y, Width, Height, ROP */
 
 #define         SVGA_CMD_RECT_ROP_BITMAP_FILL    15
-         /* FIFO layout:
-            ID, X, Y, Width, Height, Foreground, Background, ROP */
+/* FIFO layout:
+   ID, X, Y, Width, Height, Foreground, Background, ROP */
 
 #define         SVGA_CMD_RECT_ROP_PIXMAP_FILL    16
-         /* FIFO layout:
-            ID, X, Y, Width, Height, ROP */
+/* FIFO layout:
+   ID, X, Y, Width, Height, ROP */
 
 #define         SVGA_CMD_RECT_ROP_BITMAP_COPY    17
-         /* FIFO layout:
-            ID, Source X, Source Y,
-            Dest X, Dest Y, Width, Height, Foreground, Background, ROP */
+/* FIFO layout:
+   ID, Source X, Source Y,
+   Dest X, Dest Y, Width, Height, Foreground, Background, ROP */
 
 #define         SVGA_CMD_RECT_ROP_PIXMAP_COPY    18
-         /* FIFO layout:
-            ID, Source X, Source Y, Dest X, Dest Y, Width, Height, ROP */
+/* FIFO layout:
+   ID, Source X, Source Y, Dest X, Dest Y, Width, Height, ROP */
 
 #define        SVGA_CMD_DEFINE_CURSOR            19
-       /* FIFO layout:
-          ID, Hotspot X, Hotspot Y, Width, Height,
-          Depth for AND mask, Depth for XOR mask,
-          <scanlines for AND mask>, <scanlines for XOR mask> */
+/* FIFO layout:
+   ID, Hotspot X, Hotspot Y, Width, Height,
+   Depth for AND mask, Depth for XOR mask,
+   <scanlines for AND mask>, <scanlines for XOR mask> */
 
 #define        SVGA_CMD_DISPLAY_CURSOR           20
-       /* FIFO layout:
-          ID, On/Off (1 or 0) */
+/* FIFO layout:
+   ID, On/Off (1 or 0) */
 
 #define        SVGA_CMD_MOVE_CURSOR              21
-       /* FIFO layout:
-          X, Y */
+/* FIFO layout:
+   X, Y */
 
 #define SVGA_CMD_DEFINE_ALPHA_CURSOR      22
-	/* FIFO layout:
-	   ID, Hotspot X, Hotspot Y, Width, Height,
-	   <scanlines> */
+/* FIFO layout:
+   ID, Hotspot X, Hotspot Y, Width, Height,
+   <scanlines> */
 
 #define SVGA_CMD_DRAW_GLYPH               23
-	/* FIFO layout:
-	   X, Y, W, H, FGCOLOR, <stencil buffer> */
+/* FIFO layout:
+   X, Y, W, H, FGCOLOR, <stencil buffer> */
 
 #define SVGA_CMD_DRAW_GLYPH_CLIPPED       24
-	/* FIFO layout:
-	   X, Y, W, H, FGCOLOR, BGCOLOR, <cliprect>, <stencil buffer>
-           Transparent color expands are done by setting BGCOLOR to ~0 */
+/* FIFO layout:
+   X, Y, W, H, FGCOLOR, BGCOLOR, <cliprect>, <stencil buffer>
+       Transparent color expands are done by setting BGCOLOR to ~0 */
 
-#define	SVGA_CMD_UPDATE_VERBOSE	          25
-        /* FIFO layout:
-	   X, Y, Width, Height, Reason */
+#define SVGA_CMD_UPDATE_VERBOSE           25
+/* FIFO layout:
+X, Y, Width, Height, Reason */
 
 #define SVGA_CMD_SURFACE_FILL             26
-        /* FIFO layout:
-	   color, dstSurfaceOffset, x, y, w, h, rop */
+/* FIFO layout:
+color, dstSurfaceOffset, x, y, w, h, rop */
 
 #define SVGA_CMD_SURFACE_COPY             27
-        /* FIFO layout:
-	   srcSurfaceOffset, dstSurfaceOffset, srcX, srcY,
-           destX, destY, w, h, rop */
+/* FIFO layout:
+srcSurfaceOffset, dstSurfaceOffset, srcX, srcY,
+   destX, destY, w, h, rop */
 
 #define SVGA_CMD_SURFACE_ALPHA_BLEND      28
-        /* FIFO layout:
-	   srcSurfaceOffset, dstSurfaceOffset, srcX, srcY,
-           destX, destY, w, h, op (SVGA_BLENDOP*), flags (SVGA_BLENDFLAGS*), 
-           param1, param2 */
+/* FIFO layout:
+srcSurfaceOffset, dstSurfaceOffset, srcX, srcY,
+   destX, destY, w, h, op (SVGA_BLENDOP*), flags (SVGA_BLENDFLAGS*),
+   param1, param2 */
 
-#define	SVGA_CMD_MAX			  29
+#define SVGA_CMD_MAX              29
 
 /* SURFACE_ALPHA_BLEND currently has the most (non-data) arguments: 12 */
 #define SVGA_CMD_MAX_ARGS                 12
@@ -409,27 +409,27 @@ enum {
  * indicating exactly why the sync is necessary
  */
 enum {
-   SVGA_SYNC_INVALIDREASON = 0,     /* Don't ever write a zero */
-   SVGA_SYNC_GENERIC = 1,           /* Legacy drivers will always write a 1 */
-   SVGA_SYNC_FIFOFULL = 2,          /* Need to drain FIFO for next write */
-   SVGA_SYNC_FB_WRITE = 3,          /* About write to shadow frame buffer (generic) */
-   SVGA_SYNC_FB_BITBLT = 4,         /* Unaccelerated DrvBitBlt */
-   SVGA_SYNC_FB_COPYBITS = 5,       /* Unacclerated DrvCopyBits bits */
-   SVGA_SYNC_FB_FILLPATH = 6,       /* Unacclerated DrvFillPath */
-   SVGA_SYNC_FB_LINETO = 7,         /* Unacclerated DrvLineTo */
-   SVGA_SYNC_FB_PAINT = 8,          /* Unacclerated DrvPaint */
-   SVGA_SYNC_FB_STRETCHBLT = 9,     /* Unacclerated DrvStretchBlt */
-   SVGA_SYNC_FB_STROKEFILL = 10,    /* Unacclerated DrvStrokeAndFillPath */
-   SVGA_SYNC_FB_STROKE = 11,        /* Unacclerated DrvStrokePath */
-   SVGA_SYNC_FB_TEXTOUT = 12,       /* Unacclerated DrvTextOut */
-   SVGA_SYNC_FB_ALPHABLEND = 13,    /* Unacclerated DrvAlphaBlend */
-   SVGA_SYNC_FB_GRADIENT = 14,      /* Unacclerated DrvGradientFill */
-   SVGA_SYNC_FB_PLGBLT = 15,        /* Unacclerated DrvPlgBlt */
-   SVGA_SYNC_FB_STRETCHROP = 16,    /* Unacclerated DrvStretchBltROP */
-   SVGA_SYNC_FB_TRANSPARENT = 17,   /* Unacclerated DrvTransparentBlt */
-   SVGA_SYNC_FB_NEWCURSOR = 18,     /* Defined a new cursor */
-   SVGA_SYNC_FB_SYNCSURFACE = 19,   /* DrvSynchrnoizeSurface call */
-   SVGA_SYNC_FB_NUM_REASONS         /* Total number of reasons */
+    SVGA_SYNC_INVALIDREASON = 0,     /* Don't ever write a zero */
+    SVGA_SYNC_GENERIC = 1,           /* Legacy drivers will always write a 1 */
+    SVGA_SYNC_FIFOFULL = 2,          /* Need to drain FIFO for next write */
+    SVGA_SYNC_FB_WRITE = 3,          /* About write to shadow frame buffer (generic) */
+    SVGA_SYNC_FB_BITBLT = 4,         /* Unaccelerated DrvBitBlt */
+    SVGA_SYNC_FB_COPYBITS = 5,       /* Unacclerated DrvCopyBits bits */
+    SVGA_SYNC_FB_FILLPATH = 6,       /* Unacclerated DrvFillPath */
+    SVGA_SYNC_FB_LINETO = 7,         /* Unacclerated DrvLineTo */
+    SVGA_SYNC_FB_PAINT = 8,          /* Unacclerated DrvPaint */
+    SVGA_SYNC_FB_STRETCHBLT = 9,     /* Unacclerated DrvStretchBlt */
+    SVGA_SYNC_FB_STROKEFILL = 10,    /* Unacclerated DrvStrokeAndFillPath */
+    SVGA_SYNC_FB_STROKE = 11,        /* Unacclerated DrvStrokePath */
+    SVGA_SYNC_FB_TEXTOUT = 12,       /* Unacclerated DrvTextOut */
+    SVGA_SYNC_FB_ALPHABLEND = 13,    /* Unacclerated DrvAlphaBlend */
+    SVGA_SYNC_FB_GRADIENT = 14,      /* Unacclerated DrvGradientFill */
+    SVGA_SYNC_FB_PLGBLT = 15,        /* Unacclerated DrvPlgBlt */
+    SVGA_SYNC_FB_STRETCHROP = 16,    /* Unacclerated DrvStretchBltROP */
+    SVGA_SYNC_FB_TRANSPARENT = 17,   /* Unacclerated DrvTransparentBlt */
+    SVGA_SYNC_FB_NEWCURSOR = 18,     /* Defined a new cursor */
+    SVGA_SYNC_FB_SYNCSURFACE = 19,   /* DrvSynchrnoizeSurface call */
+    SVGA_SYNC_FB_NUM_REASONS         /* Total number of reasons */
 };
 
 

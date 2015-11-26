@@ -18,118 +18,118 @@
 #if 0
 static int zfs_read_superblock(zfs_fs *fs)
 {
-	return 0;
+    return 0;
 }
 #endif
 
 int zfs_mount(fs_cookie *fs, fs_id id, const char *device, void *args, vnode_id *root_vnid)
 {
-	zfs_fs *zfs;
-	int err;
+    zfs_fs *zfs;
+    int err;
 
-	dprintf("zfs_mount: device %s\n", device);
+    dprintf("zfs_mount: device %s\n", device);
 
-	zfs = kmalloc(sizeof(zfs_fs));
-	if(!zfs) {
-		err = ERR_NO_MEMORY;
-		goto err;
-	}
-	memset(zfs, 0, sizeof(zfs_fs));
+    zfs = kmalloc(sizeof(zfs_fs));
+    if (!zfs) {
+        err = ERR_NO_MEMORY;
+        goto err;
+    }
+    memset(zfs, 0, sizeof(zfs_fs));
 
-	zfs->id = id;
+    zfs->id = id;
 
-	zfs->fd = sys_open(device, 0);
-	if(zfs->fd < 0) {
-		err = zfs->fd;
-		goto err1;
-	}
+    zfs->fd = sys_open(device, 0);
+    if (zfs->fd < 0) {
+        err = zfs->fd;
+        goto err1;
+    }
 
-	err = vfs_get_vnode_from_fd(zfs->fd, true, &zfs->dev_vnode);
-	if(err < 0)
-		goto err2;
+    err = vfs_get_vnode_from_fd(zfs->fd, true, &zfs->dev_vnode);
+    if (err < 0)
+        goto err2;
 
-	// see if we can page from this device
-	if(!vfs_canpage(zfs->dev_vnode)) {
-		err = ERR_VFS_WRONG_STREAM_TYPE;
-		goto err3;
-	}
+    // see if we can page from this device
+    if (!vfs_canpage(zfs->dev_vnode)) {
+        err = ERR_VFS_WRONG_STREAM_TYPE;
+        goto err3;
+    }
 
-	*fs = zfs;
+    *fs = zfs;
 
-	return 0;
+    return 0;
 
 err3:
-	vfs_put_vnode_ptr(zfs->dev_vnode);
+    vfs_put_vnode_ptr(zfs->dev_vnode);
 err2:
-	sys_close(zfs->fd);
+    sys_close(zfs->fd);
 err1:
-	kfree(zfs);
+    kfree(zfs);
 err:
-	return err;
+    return err;
 }
 
 int zfs_unmount(fs_cookie fs)
 {
-	zfs_fs *zfs = (zfs_fs *)fs;
+    zfs_fs *zfs = (zfs_fs *)fs;
 
-	vfs_put_vnode_ptr(zfs->dev_vnode);
-	sys_close(zfs->fd);
+    vfs_put_vnode_ptr(zfs->dev_vnode);
+    sys_close(zfs->fd);
 
-	kfree(zfs);
+    kfree(zfs);
 
-	return 0;
+    return 0;
 }
 
 int zfs_sync(fs_cookie fs)
 {
-	return 0;
+    return 0;
 }
 
 static struct fs_calls zfs_calls = {
-	&zfs_mount,
-	&zfs_unmount,
-	&zfs_sync,
+    &zfs_mount,
+    &zfs_unmount,
+    &zfs_sync,
 
-	&zfs_lookup,
+    &zfs_lookup,
 
-	&zfs_getvnode,
-	&zfs_putvnode,
-	&zfs_removevnode,
+    &zfs_getvnode,
+    &zfs_putvnode,
+    &zfs_removevnode,
 
-	&zfs_opendir,
-	&zfs_closedir,
-	&zfs_rewinddir,
-	&zfs_readdir,
+    &zfs_opendir,
+    &zfs_closedir,
+    &zfs_rewinddir,
+    &zfs_readdir,
 
-	&zfs_open,
-	&zfs_close,
-	&zfs_freecookie,
-	&zfs_fsync,
+    &zfs_open,
+    &zfs_close,
+    &zfs_freecookie,
+    &zfs_fsync,
 
-	&zfs_read,
-	&zfs_write,
-	&zfs_seek,
-	&zfs_ioctl,
+    &zfs_read,
+    &zfs_write,
+    &zfs_seek,
+    &zfs_ioctl,
 
-	&zfs_canpage,
-	&zfs_readpage,
-	&zfs_writepage,
+    &zfs_canpage,
+    &zfs_readpage,
+    &zfs_writepage,
 
-	&zfs_create,
-	&zfs_unlink,
-	&zfs_rename,
+    &zfs_create,
+    &zfs_unlink,
+    &zfs_rename,
 
-	&zfs_mkdir,
-	&zfs_rmdir,
+    &zfs_mkdir,
+    &zfs_rmdir,
 
-	&zfs_rstat,
-	&zfs_wstat
+    &zfs_rstat,
+    &zfs_wstat
 };
 
 int fs_bootstrap(void);
 int fs_bootstrap(void)
 {
-	dprintf("bootstrap_zfs: entry\n");
-	return vfs_register_filesystem("zfs", &zfs_calls);
+    dprintf("bootstrap_zfs: entry\n");
+    return vfs_register_filesystem("zfs", &zfs_calls);
 }
 

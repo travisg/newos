@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 1985, 1993
- *	The Regents of the University of California.  All rights reserved.
+ *  The Regents of the University of California.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -12,8 +12,8 @@
  *    documentation and/or other materials provided with the distribution.
  * 3. All advertising materials mentioning features or use of this software
  *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
+ *  This product includes software developed by the University of
+ *  California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -38,24 +38,24 @@
  * REVISED BY K.C. NG on 3/7/85, 3/24/85, 4/16/85.
  *
  * Required system supported functions :
- *	copysign(x,y)
- *	sqrt(x)
+ *  copysign(x,y)
+ *  sqrt(x)
  *
  * Required kernel function:
- *	log1p(x) 		...return log(1+x)
+ *  log1p(x)        ...return log(1+x)
  *
  * Method :
- *	Based on
- *		asinh(x) = sign(x) * log [ |x| + sqrt(x*x+1) ]
- *	we have
- *	asinh(x) := x  if  1+x*x=1,
- *		 := sign(x)*(log1p(x)+ln2))	 if sqrt(1+x*x)=x, else
- *		 := sign(x)*log1p(|x| + |x|/(1/|x| + sqrt(1+(1/|x|)^2)) )
+ *  Based on
+ *      asinh(x) = sign(x) * log [ |x| + sqrt(x*x+1) ]
+ *  we have
+ *  asinh(x) := x  if  1+x*x=1,
+ *       := sign(x)*(log1p(x)+ln2))  if sqrt(1+x*x)=x, else
+ *       := sign(x)*log1p(|x| + |x|/(1/|x| + sqrt(1+(1/|x|)^2)) )
  *
  * Accuracy:
- *	asinh(x) returns the exact inverse hyperbolic sine of x nearly rounded.
- *	In a test run with 52,000 random arguments on a VAX, the maximum
- *	observed error was 1.58 ulps (units in the last place).
+ *  asinh(x) returns the exact inverse hyperbolic sine of x nearly rounded.
+ *  In a test run with 52,000 random arguments on a VAX, the maximum
+ *  observed error was 1.58 ulps (units in the last place).
  *
  * Constants:
  * The hexadecimal values are the intended ones for the following constants.
@@ -79,21 +79,22 @@ ic(ln2lo, 1.9082149292705877000E-10, -33, 1.A39EF35793C76)
 double
 asinh(double x)
 {
-	double t;
-	double s;
-	static double const small = 1.0E-10;	/* fl(1+small*small) == 1 */
-	static double const big   =1.0E20;	/* fl(1+big) == big */
-	static double const one   =1.0;
+    double t;
+    double s;
+    static double const small = 1.0E-10;    /* fl(1+small*small) == 1 */
+    static double const big   =1.0E20;  /* fl(1+big) == big */
+    static double const one   =1.0;
 
 #if !defined(vax)&&!defined(tahoe)
-	if(x!=x) return(x);	/* x is NaN */
-#endif	/* !defined(vax)&&!defined(tahoe) */
-	if((t=copysign(x,one))>small) {
-	    if(t<big) {
-	     	s=one/t; return(copysign(log1p(t+t/(s+sqrt(one+s*s))),x)); }
-	    else	/* if |x| > big */
-		{s=log1p(t)+ln2lo; return(copysign(s+ln2hi,x));}
-	} else {	/* if |x| < small */
-	    return(x);
-	}
+    if (x!=x) return (x); /* x is NaN */
+#endif  /* !defined(vax)&&!defined(tahoe) */
+    if ((t=copysign(x,one))>small) {
+        if (t<big) {
+            s=one/t;
+            return (copysign(log1p(t+t/(s+sqrt(one+s*s))),x));
+        } else  /* if |x| > big */
+        {s=log1p(t)+ln2lo; return (copysign(s+ln2hi,x));}
+    } else {    /* if |x| < small */
+        return (x);
+    }
 }

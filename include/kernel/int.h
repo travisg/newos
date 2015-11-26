@@ -20,8 +20,8 @@ void int_restore_interrupts(void);
 bool int_are_interrupts_enabled(void);
 
 enum {
-	INT_NO_RESCHEDULE,
-	INT_RESCHEDULE
+    INT_NO_RESCHEDULE,
+    INT_RESCHEDULE
 };
 
 #endif

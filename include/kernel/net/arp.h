@@ -10,8 +10,8 @@
 #include <kernel/cbuf.h>
 
 enum {
-	ARP_CALLBACK_CODE_OK = 0,
-	ARP_CALLBACK_CODE_FAILED
+    ARP_CALLBACK_CODE_OK = 0,
+    ARP_CALLBACK_CODE_FAILED
 };
 
 int arp_input(cbuf *buf, ifnet *i);

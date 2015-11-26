@@ -10,12 +10,12 @@
 
 int arch_dbg_init(kernel_args *ka)
 {
-	return NO_ERROR;
+    return NO_ERROR;
 }
 
 int arch_dbg_init2(kernel_args *ka)
 {
-	return NO_ERROR;
+    return NO_ERROR;
 }
 
 void dbg_make_register_file(unsigned int *file, const struct iframe * frame)

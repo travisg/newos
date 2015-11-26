@@ -7,27 +7,27 @@
 
 #include <newos/types.h>
 
-#define OF_FAILED	(-1)
+#define OF_FAILED   (-1)
 
 /* global device tree/properties access */
 extern int gChosen;
 
 
 struct of_arguments {
-	const char	*name;
-	int			num_args;
-	int			num_returns;
-	int			data[0];
+    const char  *name;
+    int         num_args;
+    int         num_returns;
+    int         data[0];
 
 #ifdef __cplusplus
-	int &Argument(int index) { return data[index]; }
-	int &ReturnValue(int index) { return data[num_args + index]; }
+    int &Argument(int index) { return data[index]; }
+    int &ReturnValue(int index) { return data[num_args + index]; }
 #endif
 };
 
 struct of_region {
-	void	*base;
-	uint32	size;
+    void    *base;
+    uint32  size;
 };
 
 
@@ -71,4 +71,4 @@ extern void of_exit(void);
 }
 #endif
 
-#endif	/* OPEN_FIRMWARE_H */
+#endif  /* OPEN_FIRMWARE_H */

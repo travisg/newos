@@ -10,22 +10,22 @@
 
 /* mount structure */
 typedef struct fat_fs {
-	fs_id id;
-	int fd;
-	void *dev_vnode;
-	vnode_id root_vnid;
-	sem_id sem;
+    fs_id id;
+    int fd;
+    void *dev_vnode;
+    vnode_id root_vnid;
+    sem_id sem;
 
-	int fat_type; // 12/16/32
-	uint32 first_data_sector;
-	uint32 cluster_count;
-	uint16 root_dir_sectors; // always zero on fat 32
-	uint32 fat_sector_offset;
-	uint32 cluster_size;
+    int fat_type; // 12/16/32
+    uint32 first_data_sector;
+    uint32 cluster_count;
+    uint16 root_dir_sectors; // always zero on fat 32
+    uint32 fat_sector_offset;
+    uint32 cluster_size;
 
-	fat_bpb bpb;
-	fat_bpb16 bpb16;
-	fat_bpb32 bpb32;
+    fat_bpb bpb;
+    fat_bpb16 bpb16;
+    fat_bpb32 bpb32;
 } fat_fs;
 
 /* reader/writer lock for fat */
@@ -37,11 +37,11 @@ typedef struct fat_fs {
 
 /* vnode structure */
 typedef struct fat_vnode {
-	vnode_id id;
+    vnode_id id;
 
-	bool is_dir;
-	uint32 size;
-	uint32 start_cluster; // for fat 12/16 and the root dir, means 'starting sector'
+    bool is_dir;
+    uint32 size;
+    uint32 start_cluster; // for fat 12/16 and the root dir, means 'starting sector'
 } fat_vnode;
 
 #define CLUSTERS_TO_VNID(dir_cluster, file_cluster) ((((vnode_id)dir_cluster) << 32) | ((vnode_id)file_cluster))

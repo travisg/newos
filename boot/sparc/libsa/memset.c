@@ -1,8 +1,8 @@
-/*	$OpenBSD: memset.c,v 1.1 1996/10/15 09:41:55 mickey Exp $	*/
+/*  $OpenBSD: memset.c,v 1.1 1996/10/15 09:41:55 mickey Exp $   */
 
 /*-
  * Copyright (c) 1993
- *	The Regents of the University of California.  All rights reserved.
+ *  The Regents of the University of California.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -14,8 +14,8 @@
  *    documentation and/or other materials provided with the distribution.
  * 3. All advertising materials mentioning features or use of this software
  *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
+ *  This product includes software developed by the University of
+ *  California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -32,7 +32,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	from: @(#)bcopy.c	8.1 (Berkeley) 6/11/93
+ *  from: @(#)bcopy.c   8.1 (Berkeley) 6/11/93
  */
 
 #include <sys/types.h>
@@ -40,13 +40,13 @@
 
 void *
 memset(s1, c, n)
-	void *s1;
-	int c;
-	size_t n;
+void *s1;
+int c;
+size_t n;
 {
-	register char *p = s1;
-	while (n--)
-		*p++ = c;
-	return s1;
+    register char *p = s1;
+    while (n--)
+        *p++ = c;
+    return s1;
 }
 

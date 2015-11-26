@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -8,8 +8,8 @@
 #include <boot/stage2.h>
 
 enum {
-	HW_TIMER_ONESHOT,
-	HW_TIMER_REPEATING
+    HW_TIMER_ONESHOT,
+    HW_TIMER_REPEATING
 };
 
 void arch_timer_set_hardware_timer(bigtime_t timeout, int type);

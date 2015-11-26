@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001-2002, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -10,18 +10,18 @@
 typedef int (*timer_callback)(void *);
 
 typedef enum {
-	TIMER_MODE_ONESHOT = 0,
-	TIMER_MODE_PERIODIC
+    TIMER_MODE_ONESHOT = 0,
+    TIMER_MODE_PERIODIC
 } timer_mode;
 
 struct timer_event {
-	struct timer_event *next;
-	timer_mode mode;
-	int scheduled_cpu;
-	bigtime_t sched_time;
-	bigtime_t periodic_time;
-	timer_callback func;
-	void *data;
+    struct timer_event *next;
+    timer_mode mode;
+    int scheduled_cpu;
+    bigtime_t sched_time;
+    bigtime_t periodic_time;
+    timer_callback func;
+    void *data;
 };
 
 int timer_init(kernel_args *ka);

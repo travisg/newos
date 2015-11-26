@@ -13,11 +13,11 @@
 #define SEM_FLAG_INTERRUPTABLE 4
 
 struct sem_info {
-	sem_id		sem;
-	proc_id		proc;
-	char		name[SYS_MAX_OS_NAME_LEN];
-	int32		count;
-	thread_id	latest_holder;
+    sem_id      sem;
+    proc_id     proc;
+    char        name[SYS_MAX_OS_NAME_LEN];
+    int32       count;
+    thread_id   latest_holder;
 };
 
 int sem_init(kernel_args *ka);

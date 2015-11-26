@@ -25,7 +25,7 @@
 #define TOUCH(x) ((void)(x))
 
 #define containerof(ptr, type, member) \
-	((type *)((addr_t)(ptr) - offsetof(type, member)))
+    ((type *)((addr_t)(ptr) - offsetof(type, member)))
 
 extern bool kernel_startup;
 extern kernel_args global_kernel_args;

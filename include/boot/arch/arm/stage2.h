@@ -9,7 +9,7 @@
 
 // kernel args
 typedef struct {
-	// architecture specific
+    // architecture specific
 } arch_kernel_args;
 
 #endif

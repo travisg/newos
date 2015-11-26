@@ -8,11 +8,11 @@
 #include <arch/cpu.h>
 
 struct arch_cpu_info {
-	// empty
+    // empty
 };
 
 struct iframe {
-	// XXX define
+    // XXX define
 };
 
 #if 0

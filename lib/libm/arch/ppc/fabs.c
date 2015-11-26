@@ -5,5 +5,5 @@
 double
 fabs(double x)
 {
-	__asm__ __volatile("fabs %0,%1" : "=f"(x) : "f"(x));
+    __asm__ __volatile("fabs %0,%1" : "=f"(x) : "f"(x));
 }

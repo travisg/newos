@@ -19,101 +19,101 @@
  */
 
 typedef struct usb_bus {
-	struct usb_hc *hc_list;
+    struct usb_hc *hc_list;
 } usb_bus;
 
 extern usb_bus *usb;
 
 // one per host controller
 typedef struct usb_hc {
-	struct usb_hc *next;
+    struct usb_hc *next;
 
-	// callback stuff
-	struct usb_hc_module_hooks *hooks;
-	void *hc_cookie;
+    // callback stuff
+    struct usb_hc_module_hooks *hooks;
+    void *hc_cookie;
 
-	// each hc instance has an enumerator thread
-	thread_id enumerator_thread;
+    // each hc instance has an enumerator thread
+    thread_id enumerator_thread;
 
-	// a pipe used to talk to devices as they're initially brought up
-	struct usb_pipe *default_lowspeed_pipe;
-	struct usb_pipe *default_fullspeed_pipe;
+    // a pipe used to talk to devices as they're initially brought up
+    struct usb_pipe *default_lowspeed_pipe;
+    struct usb_pipe *default_fullspeed_pipe;
 
-	// device list
-	struct usb_device *roothub;
+    // device list
+    struct usb_device *roothub;
 
-	// bitmask of addresses in use
-	uint8 device_address_bitmask[128/8];
+    // bitmask of addresses in use
+    uint8 device_address_bitmask[128/8];
 } usb_hc;
 
 // one per device
 typedef struct usb_device {
-	usb_device_descriptor desc;
-	int address; 	// 0..127
-	usb_hc *hc;
+    usb_device_descriptor desc;
+    int address;    // 0..127
+    usb_hc *hc;
 
-	// control pipe
-	struct usb_pipe *control_pipe;
+    // control pipe
+    struct usb_pipe *control_pipe;
 
-	// configuration list
-	struct usb_configuration *configs;
-	struct usb_configuration *active_config;
+    // configuration list
+    struct usb_configuration *configs;
+    struct usb_configuration *active_config;
 
-	// hub stuff
-	bool is_hub;
-	usb_hub_descriptor *hub_desc;
-	int num_children;
-	struct usb_device *parent;
-	struct usb_device *child_list;
-	struct usb_device *next_sibling;
-	uint8 hub_data[8];
+    // hub stuff
+    bool is_hub;
+    usb_hub_descriptor *hub_desc;
+    int num_children;
+    struct usb_device *parent;
+    struct usb_device *child_list;
+    struct usb_device *next_sibling;
+    uint8 hub_data[8];
 
 } usb_device;
 
 // one per configuration
 typedef struct usb_configuration {
-	// NOTE: freeing this will free all of the desc pointers for sub interfaces and endpoints
-	// memory is allocated all at once.
-	usb_configuration_descriptor *desc;
+    // NOTE: freeing this will free all of the desc pointers for sub interfaces and endpoints
+    // memory is allocated all at once.
+    usb_configuration_descriptor *desc;
 
-	// next in list of configurations per device
-	struct usb_configuration *next;
+    // next in list of configurations per device
+    struct usb_configuration *next;
 
-	struct usb_device *dev;
+    struct usb_device *dev;
 
-	// list of interfaces
-	struct usb_interface *interfaces;
+    // list of interfaces
+    struct usb_interface *interfaces;
 } usb_configuration;
 
 // one per interface
 typedef struct usb_interface {
-	// next in list of interfaces per configuration
-	struct usb_interface *next;
+    // next in list of interfaces per configuration
+    struct usb_interface *next;
 
-	usb_interface_descriptor *desc;
+    usb_interface_descriptor *desc;
 
-	// list of alternate interfaces
-	struct usb_interface *alternates;
-	struct usb_interface *active_interface;
+    // list of alternate interfaces
+    struct usb_interface *alternates;
+    struct usb_interface *active_interface;
 
-	// list of endpoints
-	struct usb_endpoint *endpoints;
+    // list of endpoints
+    struct usb_endpoint *endpoints;
 } usb_interface;
 
 // one per endpoint
 typedef struct usb_endpoint {
-	// next in list of endpoints
-	struct usb_endpoint *next;
+    // next in list of endpoints
+    struct usb_endpoint *next;
 
-	usb_endpoint_descriptor *desc;
+    usb_endpoint_descriptor *desc;
 
-	struct usb_pipe *pipe;
+    struct usb_pipe *pipe;
 } usb_endpoint;
 
 typedef struct usb_pipe {
-	hc_endpoint *endpoint;
-	bool lowspeed;
-	struct usb_hc *hc;
+    hc_endpoint *endpoint;
+    bool lowspeed;
+    struct usb_hc *hc;
 } usb_pipe;
 
 // local functions
@@ -121,9 +121,9 @@ int usb_enumerator_thread(void *hc_struct);
 
 // usb_pipe.c
 int create_usb_pipe(usb_hc *hc, usb_interface *iface, usb_pipe **p,
-	usb_endpoint_descriptor *desc, int address, bool lowspeed);
+                    usb_endpoint_descriptor *desc, int address, bool lowspeed);
 int send_usb_request(usb_device *device, uint8 request_type, uint8 request, uint16 value,
-	uint16 index, uint16 len, void *data);
+                     uint16 index, uint16 len, void *data);
 int queue_interrupt_transfer(usb_pipe *pipe, void *data, size_t len, void (*callback)(usb_hc_transfer *, void *), void *cookie);
 
 // usb_device.c

@@ -1,9 +1,9 @@
-/*	$OpenBSD: param.h,v 1.15 2000/03/08 22:13:23 deraadt Exp $	*/
-/*	$NetBSD: param.h,v 1.29 1997/03/10 22:50:37 pk Exp $ */
+/*  $OpenBSD: param.h,v 1.15 2000/03/08 22:13:23 deraadt Exp $  */
+/*  $NetBSD: param.h,v 1.29 1997/03/10 22:50:37 pk Exp $ */
 
 /*
  * Copyright (c) 1992, 1993
- *	The Regents of the University of California.  All rights reserved.
+ *  The Regents of the University of California.  All rights reserved.
  *
  * This software was developed by the Computer Systems Engineering group
  * at Lawrence Berkeley Laboratory under DARPA contract BG 91-66 and
@@ -11,8 +11,8 @@
  *
  * All advertising materials mentioning features or use of this software
  * must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Lawrence Berkeley Laboratory.
+ *  This product includes software developed by the University of
+ *  California, Lawrence Berkeley Laboratory.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,8 +24,8 @@
  *    documentation and/or other materials provided with the distribution.
  * 3. All advertising materials mentioning features or use of this software
  *    must display the following acknowledgement:
- *	This product includes software developed by the University of
- *	California, Berkeley and its contributors.
+ *  This product includes software developed by the University of
+ *  California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -42,7 +42,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	@(#)param.h	8.1 (Berkeley) 6/11/93
+ *  @(#)param.h 8.1 (Berkeley) 6/11/93
  */
 
 #ifndef _SPARC_PARAM_H_
@@ -53,17 +53,17 @@
  * Changes Copyright (c) 1995 The President and Fellows of Harvard College.
  * All rights reserved.
  */
-#define	_MACHINE	sparc
-#define	MACHINE		"sparc"
-#define	_MACHINE_ARCH	sparc
-#define	MACHINE_ARCH	"sparc"
-#define	MID_MACHINE	MID_SPARC
+#define _MACHINE    sparc
+#define MACHINE     "sparc"
+#define _MACHINE_ARCH   sparc
+#define MACHINE_ARCH    "sparc"
+#define MID_MACHINE MID_SPARC
 
-#ifdef _KERNEL				/* XXX */
-#ifndef _LOCORE				/* XXX */
-#include <machine/cpu.h>		/* XXX */
-#endif					/* XXX */
-#endif					/* XXX */
+#ifdef _KERNEL              /* XXX */
+#ifndef _LOCORE             /* XXX */
+#include <machine/cpu.h>        /* XXX */
+#endif                  /* XXX */
+#endif                  /* XXX */
 
 /*
  * Round p (pointer or byte index) up to a correctly-aligned value for
@@ -73,15 +73,15 @@
  * ALIGNED_POINTER is a boolean macro that checks whether an address
  * is valid to fetch data elements of type t from on this architecture.
  * This does not reflect the optimal alignment, just the possibility
- * (within reasonable limits). 
+ * (within reasonable limits).
  *
  */
-#define	ALIGNBYTES		7
-#define	ALIGN(p)		(((u_int)(p) + ALIGNBYTES) & ~ALIGNBYTES)
-#define ALIGNED_POINTER(p,t)	((((u_long)(p)) & (sizeof(t)-1)) == 0)
+#define ALIGNBYTES      7
+#define ALIGN(p)        (((u_int)(p) + ALIGNBYTES) & ~ALIGNBYTES)
+#define ALIGNED_POINTER(p,t)    ((((u_long)(p)) & (sizeof(t)-1)) == 0)
 
-#define SUN4_PGSHIFT	13	/* for a sun4 machine */
-#define SUN4CM_PGSHIFT	12	/* for a sun4c or sun4m machine */
+#define SUN4_PGSHIFT    13  /* for a sun4 machine */
+#define SUN4CM_PGSHIFT  12  /* for a sun4c or sun4m machine */
 
 /*
  * The following variables are always defined and initialized (in locore)
@@ -93,20 +93,20 @@
 extern int nbpg, pgofset, pgshift;
 #endif
 
-#define	KERNBASE	0xf8000000	/* start of kernel virtual space */
-#define	KERNTEXTOFF	0xf8004000	/* start of kernel text */
+#define KERNBASE    0xf8000000  /* start of kernel virtual space */
+#define KERNTEXTOFF 0xf8004000  /* start of kernel text */
 
-#define	DEV_BSIZE	512
-#define	DEV_BSHIFT	9		/* log2(DEV_BSIZE) */
-#define	BLKDEV_IOSIZE	2048
-#define	MAXPHYS		(64 * 1024)
+#define DEV_BSIZE   512
+#define DEV_BSHIFT  9       /* log2(DEV_BSIZE) */
+#define BLKDEV_IOSIZE   2048
+#define MAXPHYS     (64 * 1024)
 
-#define	CLSIZE		1
-#define	CLSIZELOG2	0
+#define CLSIZE      1
+#define CLSIZELOG2  0
 
 /* NOTE: SSIZE must be multiple of CLSIZE */
-#define	SSIZE		1		/* initial stack size in pages */
-#define	USPACE		8192
+#define SSIZE       1       /* initial stack size in pages */
+#define USPACE      8192
 
 /*
  * Constants related to network buffer management.
@@ -115,39 +115,39 @@ extern int nbpg, pgofset, pgshift;
  * clusters (MAPPED_MBUFS), MCLBYTES must also be an integral multiple
  * of the hardware page size.
  */
-#define	MSIZE		128		/* size of an mbuf */
-#define	MCLBYTES	2048		/* enough for whole Ethernet packet */
-#define	MCLSHIFT	11		/* log2(MCLBYTES) */
-#define	MCLOFSET	(MCLBYTES - 1)
+#define MSIZE       128     /* size of an mbuf */
+#define MCLBYTES    2048        /* enough for whole Ethernet packet */
+#define MCLSHIFT    11      /* log2(MCLBYTES) */
+#define MCLOFSET    (MCLBYTES - 1)
 
 #ifndef NMBCLUSTERS
 #ifdef GATEWAY
-#define	NMBCLUSTERS	1024		/* map size, max cluster allocation */
+#define NMBCLUSTERS 1024        /* map size, max cluster allocation */
 #else
-#define	NMBCLUSTERS	512		/* map size, max cluster allocation */
+#define NMBCLUSTERS 512     /* map size, max cluster allocation */
 #endif
 #endif
 
-#define MSGBUFSIZE	4096		/* cannot be changed without great pain */
+#define MSGBUFSIZE  4096        /* cannot be changed without great pain */
 
 /*
  * Size of kernel malloc arena in CLBYTES-sized logical pages.
  */
-#ifndef	NKMEMCLUSTERS
-#define	NKMEMCLUSTERS	(6 * 1024 * 1024 / CLBYTES)
+#ifndef NKMEMCLUSTERS
+#define NKMEMCLUSTERS   (6 * 1024 * 1024 / CLBYTES)
 #endif
 
 /* pages ("clicks") to disk blocks */
-#define	ctod(x)		((x) << (PGSHIFT - DEV_BSHIFT))
-#define	dtoc(x)		((x) >> (PGSHIFT - DEV_BSHIFT))
+#define ctod(x)     ((x) << (PGSHIFT - DEV_BSHIFT))
+#define dtoc(x)     ((x) >> (PGSHIFT - DEV_BSHIFT))
 
 /* pages to bytes */
-#define	ctob(x)		((x) << PGSHIFT)
-#define	btoc(x)		(((x) + PGOFSET) >> PGSHIFT)
+#define ctob(x)     ((x) << PGSHIFT)
+#define btoc(x)     (((x) + PGOFSET) >> PGSHIFT)
 
 /* bytes to disk blocks */
-#define	btodb(x)	((x) >> DEV_BSHIFT)
-#define	dbtob(x)	((x) << DEV_BSHIFT)
+#define btodb(x)    ((x) >> DEV_BSHIFT)
+#define dbtob(x)    ((x) << DEV_BSHIFT)
 
 /*
  * Map a ``block device block'' to a file system block.
@@ -155,13 +155,13 @@ extern int nbpg, pgofset, pgshift;
  * field from the disk label.
  * For now though just use DEV_BSIZE.
  */
-#define	bdbtofsb(bn)	((bn) / (BLKDEV_IOSIZE / DEV_BSIZE))
+#define bdbtofsb(bn)    ((bn) / (BLKDEV_IOSIZE / DEV_BSIZE))
 
 /*
  * Mach derived conversion macros
  */
-#define sparc_btop(x)	((unsigned)(x) >> PGSHIFT)
-#define sparc_ptob(x)	((unsigned)(x) << PGSHIFT)
+#define sparc_btop(x)   ((unsigned)(x) >> PGSHIFT)
+#define sparc_ptob(x)   ((unsigned)(x) << PGSHIFT)
 
 /*
  * dvmamap manages a range of DVMA addresses intended to create double
@@ -175,16 +175,16 @@ extern int nbpg, pgofset, pgshift;
  */
 #ifdef _KERNEL
 #ifndef _LOCORE
-extern vaddr_t		dvma_base;
-extern vaddr_t		dvma_end;
-extern struct extent	*dvmamap_extent;
+extern vaddr_t      dvma_base;
+extern vaddr_t      dvma_end;
+extern struct extent    *dvmamap_extent;
 
-extern caddr_t	kdvma_mapin __P((caddr_t, int, int));
-extern caddr_t	dvma_malloc __P((size_t, void *, int));
-extern void	dvma_free __P((caddr_t, size_t, void *));
+extern caddr_t  kdvma_mapin __P((caddr_t, int, int));
+extern caddr_t  dvma_malloc __P((size_t, void *, int));
+extern void dvma_free __P((caddr_t, size_t, void *));
 
-extern void	delay __P((unsigned int));
-#define	DELAY(n)	delay(n)
+extern void delay __P((unsigned int));
+#define DELAY(n)    delay(n)
 
 extern int cputyp;
 #if 0
@@ -198,9 +198,9 @@ extern int mmumod;
 /*
  * Values for the cputyp variable.
  */
-#define CPU_SUN4	0
-#define CPU_SUN4C	1
-#define CPU_SUN4M	2
+#define CPU_SUN4    0
+#define CPU_SUN4C   1
+#define CPU_SUN4M   2
 
 /*
  * Shorthand CPU-type macros. Enumerate all eight cases.
@@ -216,89 +216,89 @@ extern int mmumod;
  * extra memory references they'll generate.
  */
 #if   defined(SUN4M) && defined(SUN4C) && defined(SUN4)
-#	define CPU_ISSUN4M	(cputyp == CPU_SUN4M)
-#	define CPU_ISSUN4C	(cputyp == CPU_SUN4C)
-#	define CPU_ISSUN4	(cputyp == CPU_SUN4)
-#	define CPU_ISSUN4OR4C	(cputyp == CPU_SUN4 || cputyp == CPU_SUN4C)
-#	define CPU_ISSUN4COR4M	(cputyp == CPU_SUN4C || cputyp == CPU_SUN4M)
-#	define NBPG		nbpg
-#	define PGOFSET		pgofset
-#	define PGSHIFT		pgshift
+#   define CPU_ISSUN4M  (cputyp == CPU_SUN4M)
+#   define CPU_ISSUN4C  (cputyp == CPU_SUN4C)
+#   define CPU_ISSUN4   (cputyp == CPU_SUN4)
+#   define CPU_ISSUN4OR4C   (cputyp == CPU_SUN4 || cputyp == CPU_SUN4C)
+#   define CPU_ISSUN4COR4M  (cputyp == CPU_SUN4C || cputyp == CPU_SUN4M)
+#   define NBPG     nbpg
+#   define PGOFSET      pgofset
+#   define PGSHIFT      pgshift
 #elif defined(SUN4M) && defined(SUN4C) && !defined(SUN4)
-#	define CPU_ISSUN4M	(cputyp == CPU_SUN4M)
-#	define CPU_ISSUN4C	(cputyp == CPU_SUN4C)
-#	define CPU_ISSUN4	(0)
-#	define CPU_ISSUN4OR4C	(cputyp == CPU_SUN4C)
-#	define CPU_ISSUN4COR4M	(cputyp == CPU_SUN4C || cputyp == CPU_SUN4M)
-#	define NBPG		4096
-#	define PGOFSET		(NBPG-1)
-#	define PGSHIFT		SUN4CM_PGSHIFT
-#	define PAGE_SIZE	4096
-#	define PAGE_MASK	(PAGE_SIZE - 1)
-#	define PAGE_SHIFT	SUN4CM_PGSHIFT
+#   define CPU_ISSUN4M  (cputyp == CPU_SUN4M)
+#   define CPU_ISSUN4C  (cputyp == CPU_SUN4C)
+#   define CPU_ISSUN4   (0)
+#   define CPU_ISSUN4OR4C   (cputyp == CPU_SUN4C)
+#   define CPU_ISSUN4COR4M  (cputyp == CPU_SUN4C || cputyp == CPU_SUN4M)
+#   define NBPG     4096
+#   define PGOFSET      (NBPG-1)
+#   define PGSHIFT      SUN4CM_PGSHIFT
+#   define PAGE_SIZE    4096
+#   define PAGE_MASK    (PAGE_SIZE - 1)
+#   define PAGE_SHIFT   SUN4CM_PGSHIFT
 #elif defined(SUN4M) && !defined(SUN4C) && defined(SUN4)
-#	define CPU_ISSUN4M	(cputyp == CPU_SUN4M)
-#	define CPU_ISSUN4C	(0)
-#	define CPU_ISSUN4	(cputyp == CPU_SUN4)
-#	define CPU_ISSUN4OR4C	(cputyp == CPU_SUN4)
-#	define CPU_ISSUN4COR4M	(cputyp == CPU_SUN4M)
-#	define NBPG		nbpg
-#	define PGOFSET		pgofset
-#	define PGSHIFT		pgshift
+#   define CPU_ISSUN4M  (cputyp == CPU_SUN4M)
+#   define CPU_ISSUN4C  (0)
+#   define CPU_ISSUN4   (cputyp == CPU_SUN4)
+#   define CPU_ISSUN4OR4C   (cputyp == CPU_SUN4)
+#   define CPU_ISSUN4COR4M  (cputyp == CPU_SUN4M)
+#   define NBPG     nbpg
+#   define PGOFSET      pgofset
+#   define PGSHIFT      pgshift
 #elif defined(SUN4M) && !defined(SUN4C) && !defined(SUN4)
-#	define CPU_ISSUN4M	(1)
-#	define CPU_ISSUN4C	(0)
-#	define CPU_ISSUN4	(0)
-#	define CPU_ISSUN4OR4C	(0)
-#	define CPU_ISSUN4COR4M	(1)
-#	define NBPG		4096
-#	define PGOFSET		(NBPG-1)
-#	define PGSHIFT		SUN4CM_PGSHIFT
-#	define PAGE_SIZE	4096
-#	define PAGE_MASK	(PAGE_SIZE - 1)
-#	define PAGE_SHIFT	SUN4CM_PGSHIFT
+#   define CPU_ISSUN4M  (1)
+#   define CPU_ISSUN4C  (0)
+#   define CPU_ISSUN4   (0)
+#   define CPU_ISSUN4OR4C   (0)
+#   define CPU_ISSUN4COR4M  (1)
+#   define NBPG     4096
+#   define PGOFSET      (NBPG-1)
+#   define PGSHIFT      SUN4CM_PGSHIFT
+#   define PAGE_SIZE    4096
+#   define PAGE_MASK    (PAGE_SIZE - 1)
+#   define PAGE_SHIFT   SUN4CM_PGSHIFT
 #elif !defined(SUN4M) && defined(SUN4C) && defined(SUN4)
-#	define CPU_ISSUN4M	(0)
-#	define CPU_ISSUN4C	(cputyp == CPU_SUN4C)
-#	define CPU_ISSUN4	(cputyp == CPU_SUN4)
-#	define CPU_ISSUN4OR4C	(1)
-#	define CPU_ISSUN4COR4M	(cputyp == CPU_SUN4C)
-#	define NBPG		nbpg
-#	define PGOFSET		pgofset
-#	define PGSHIFT		pgshift
+#   define CPU_ISSUN4M  (0)
+#   define CPU_ISSUN4C  (cputyp == CPU_SUN4C)
+#   define CPU_ISSUN4   (cputyp == CPU_SUN4)
+#   define CPU_ISSUN4OR4C   (1)
+#   define CPU_ISSUN4COR4M  (cputyp == CPU_SUN4C)
+#   define NBPG     nbpg
+#   define PGOFSET      pgofset
+#   define PGSHIFT      pgshift
 #elif !defined(SUN4M) && defined(SUN4C) && !defined(SUN4)
-#	define CPU_ISSUN4M	(0)
-#	define CPU_ISSUN4C	(1)
-#	define CPU_ISSUN4	(0)
-#	define CPU_ISSUN4OR4C	(1)
-#	define CPU_ISSUN4COR4M	(1)
-#	define NBPG		4096
-#	define PGOFSET		(NBPG-1)
-#	define PGSHIFT		SUN4CM_PGSHIFT
-#	define PAGE_SIZE	4096
-#	define PAGE_MASK	(PAGE_SIZE - 1)
-#	define PAGE_SHIFT	SUN4CM_PGSHIFT
+#   define CPU_ISSUN4M  (0)
+#   define CPU_ISSUN4C  (1)
+#   define CPU_ISSUN4   (0)
+#   define CPU_ISSUN4OR4C   (1)
+#   define CPU_ISSUN4COR4M  (1)
+#   define NBPG     4096
+#   define PGOFSET      (NBPG-1)
+#   define PGSHIFT      SUN4CM_PGSHIFT
+#   define PAGE_SIZE    4096
+#   define PAGE_MASK    (PAGE_SIZE - 1)
+#   define PAGE_SHIFT   SUN4CM_PGSHIFT
 #elif !defined(SUN4M) && !defined(SUN4C) && defined(SUN4)
-#	define CPU_ISSUN4M	(0)
-#	define CPU_ISSUN4C	(0)
-#	define CPU_ISSUN4	(1)
-#	define CPU_ISSUN4OR4C	(1)
-#	define CPU_ISSUN4COR4M	(0)
-#	define NBPG		8192
-#	define PGOFSET		(NBPG-1)
-#	define PGSHIFT		SUN4_PGSHIFT
-#	define PAGE_SIZE	8192
-#	define PAGE_MASK	(PAGE_SIZE - 1)
-#	define PAGE_SHIFT	SUN4_PGSHIFT
+#   define CPU_ISSUN4M  (0)
+#   define CPU_ISSUN4C  (0)
+#   define CPU_ISSUN4   (1)
+#   define CPU_ISSUN4OR4C   (1)
+#   define CPU_ISSUN4COR4M  (0)
+#   define NBPG     8192
+#   define PGOFSET      (NBPG-1)
+#   define PGSHIFT      SUN4_PGSHIFT
+#   define PAGE_SIZE    8192
+#   define PAGE_MASK    (PAGE_SIZE - 1)
+#   define PAGE_SHIFT   SUN4_PGSHIFT
 #elif !defined(SUN4M) && !defined(SUN4C) && !defined(SUN4)
-#	define CPU_ISSUN4M	(cputyp == CPU_SUN4M)
-#	define CPU_ISSUN4C	(cputyp == CPU_SUN4C)
-#	define CPU_ISSUN4	(cputyp == CPU_SUN4)
-#	define CPU_ISSUN4OR4C	(cputyp == CPU_SUN4 || cputyp == CPU_SUN4C)
-#	define CPU_ISSUN4COR4M	(cputyp == CPU_SUN4C || cputyp == CPU_SUN4M)
-#	define NBPG		nbpg
-#	define PGOFSET		pgofset
-#	define PGSHIFT		pgshift
+#   define CPU_ISSUN4M  (cputyp == CPU_SUN4M)
+#   define CPU_ISSUN4C  (cputyp == CPU_SUN4C)
+#   define CPU_ISSUN4   (cputyp == CPU_SUN4)
+#   define CPU_ISSUN4OR4C   (cputyp == CPU_SUN4 || cputyp == CPU_SUN4C)
+#   define CPU_ISSUN4COR4M  (cputyp == CPU_SUN4C || cputyp == CPU_SUN4M)
+#   define NBPG     nbpg
+#   define PGOFSET      pgofset
+#   define PGSHIFT      pgshift
 #endif
 
 #endif /* _SPARC_PARAM_H_ */

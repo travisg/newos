@@ -35,129 +35,129 @@ extern spinlock_t thread_spinlock;
 #define RELEASE_THREAD_LOCK() release_spinlock(&thread_spinlock)
 
 enum {
-	THREAD_STATE_READY = 0,   // ready to run
-	THREAD_STATE_RUNNING, // running right now somewhere
-	THREAD_STATE_WAITING, // blocked on something
-	THREAD_STATE_SUSPENDED, // suspended, not in queue
-	THREAD_STATE_FREE_ON_RESCHED, // free the thread structure upon reschedule
-	THREAD_STATE_BIRTH	// thread is being created
+    THREAD_STATE_READY = 0,   // ready to run
+    THREAD_STATE_RUNNING, // running right now somewhere
+    THREAD_STATE_WAITING, // blocked on something
+    THREAD_STATE_SUSPENDED, // suspended, not in queue
+    THREAD_STATE_FREE_ON_RESCHED, // free the thread structure upon reschedule
+    THREAD_STATE_BIRTH  // thread is being created
 };
 
 enum {
-	PROC_STATE_NORMAL,	// normal state
-	PROC_STATE_BIRTH,	// being contructed
-	PROC_STATE_DEATH	// being killed
+    PROC_STATE_NORMAL,  // normal state
+    PROC_STATE_BIRTH,   // being contructed
+    PROC_STATE_DEATH    // being killed
 };
 
 enum {
-	KERNEL_TIME,
-	USER_TIME
+    KERNEL_TIME,
+    USER_TIME
 };
 
 // args to proc_create_proc()
 enum {
-	PROC_FLAG_SUSPENDED = 1,
-	PROC_FLAG_NEW_PGROUP = 2,
-	PROC_FLAG_NEW_SESSION = 4
+    PROC_FLAG_SUSPENDED = 1,
+    PROC_FLAG_NEW_PGROUP = 2,
+    PROC_FLAG_NEW_SESSION = 4
 };
 
 struct proc {
-	struct proc *next;
-	struct proc *parent;
-	struct list_node siblings_node;	
-	struct list_node children;
+    struct proc *next;
+    struct proc *parent;
+    struct list_node siblings_node;
+    struct list_node children;
 
-	// process id, process group id, session id
-	proc_id id;
-	pgrp_id pgid;
-	sess_id sid;
+    // process id, process group id, session id
+    proc_id id;
+    pgrp_id pgid;
+    sess_id sid;
 
-	// list of other threads in the same process group and session
-	struct list_node pg_node;
-	struct list_node session_node;
+    // list of other threads in the same process group and session
+    struct list_node pg_node;
+    struct list_node session_node;
 
-	char name[SYS_MAX_OS_NAME_LEN];
-	int num_threads;
-	int state;
-	void *ioctx;
-	aspace_id aspace_id;
-	struct vm_address_space *aspace;
-	struct vm_address_space *kaspace;
-	struct thread *main_thread;
-	struct list_node thread_list;
-	struct arch_proc arch_info;
+    char name[SYS_MAX_OS_NAME_LEN];
+    int num_threads;
+    int state;
+    void *ioctx;
+    aspace_id aspace_id;
+    struct vm_address_space *aspace;
+    struct vm_address_space *kaspace;
+    struct thread *main_thread;
+    struct list_node thread_list;
+    struct arch_proc arch_info;
 };
 
 struct thread {
-	struct thread *next;
-	thread_id id;
-	struct list_node proc_node;
-	struct list_node q_node;
-	struct proc *proc;
-	char name[SYS_MAX_OS_NAME_LEN];
-	int priority;
-	int state;
-	int next_state;
-	struct cpu_ent *cpu;
-	bool in_kernel;
+    struct thread *next;
+    thread_id id;
+    struct list_node proc_node;
+    struct list_node q_node;
+    struct proc *proc;
+    char name[SYS_MAX_OS_NAME_LEN];
+    int priority;
+    int state;
+    int next_state;
+    struct cpu_ent *cpu;
+    bool in_kernel;
 
-	struct cpu_ent *fpu_cpu; // this cpu holds our fpu state
-	bool fpu_state_saved; // does the thread structure hold our fpu state
+    struct cpu_ent *fpu_cpu; // this cpu holds our fpu state
+    bool fpu_state_saved; // does the thread structure hold our fpu state
 
-	int int_disable_level;
+    int int_disable_level;
 
-	sem_id sem_blocking;
-	int sem_count;
-	int sem_acquire_count;
-	int sem_deleted_retcode;
-	int sem_errcode;
-	int sem_flags;
+    sem_id sem_blocking;
+    int sem_count;
+    int sem_acquire_count;
+    int sem_deleted_retcode;
+    int sem_errcode;
+    int sem_flags;
 
-	addr_t fault_handler;
-	addr_t entry;
-	void *args;
-	sem_id return_code_sem;
-	region_id kernel_stack_region_id;
-	addr_t kernel_stack_base;
-	region_id user_stack_region_id;
-	addr_t user_stack_base;
+    addr_t fault_handler;
+    addr_t entry;
+    void *args;
+    sem_id return_code_sem;
+    region_id kernel_stack_region_id;
+    addr_t kernel_stack_base;
+    region_id user_stack_region_id;
+    addr_t user_stack_base;
 
-	bigtime_t user_time;
-	bigtime_t kernel_time;
-	bigtime_t last_time;
-	int last_time_type; // KERNEL_TIME or USER_TIME
+    bigtime_t user_time;
+    bigtime_t kernel_time;
+    bigtime_t last_time;
+    int last_time_type; // KERNEL_TIME or USER_TIME
 
-	sigset_t		sig_pending;
-	sigset_t		sig_block_mask;
-	struct sigaction sig_action[32];
-	struct timer_event alarm_event;
+    sigset_t        sig_pending;
+    sigset_t        sig_block_mask;
+    struct sigaction sig_action[32];
+    struct timer_event alarm_event;
 
-	// architecture dependant section
-	struct arch_thread arch_info;
+    // architecture dependant section
+    struct arch_thread arch_info;
 };
 
 struct proc_info {
-	proc_id pid;
-	proc_id ppid;
-	pgrp_id pgid;
-	sess_id sid;
-	int state;
-	int num_threads;
-	char name[SYS_MAX_OS_NAME_LEN];
+    proc_id pid;
+    proc_id ppid;
+    pgrp_id pgid;
+    sess_id sid;
+    int state;
+    int num_threads;
+    char name[SYS_MAX_OS_NAME_LEN];
 };
 
 struct thread_info {
-	thread_id id;
-	proc_id owner_proc_id;
+    thread_id id;
+    proc_id owner_proc_id;
 
-	char name[SYS_MAX_OS_NAME_LEN];
-	int state;
-	int priority;
+    char name[SYS_MAX_OS_NAME_LEN];
+    int state;
+    int priority;
 
-	addr_t user_stack_base;
+    addr_t user_stack_base;
 
-	bigtime_t user_time;
-	bigtime_t kernel_time;
+    bigtime_t user_time;
+    bigtime_t kernel_time;
 };
 
 #include <kernel/arch/thread.h>
@@ -184,13 +184,16 @@ int thread_init_percpu(int cpu_num);
 void thread_exit(int retcode);
 int thread_kill_thread(thread_id id);
 int thread_kill_thread_nowait(thread_id id);
-static inline struct thread *thread_get_current_thread(void) {
-	return arch_thread_get_current_thread();
+static inline struct thread *thread_get_current_thread(void)
+{
+    return arch_thread_get_current_thread();
 }
 struct thread *thread_get_thread_struct(thread_id id);
 struct thread *thread_get_thread_struct_locked(thread_id id);
-static inline thread_id thread_get_current_thread_id(void) {
-	struct thread *t = thread_get_current_thread(); return t ? t->id : 0;
+static inline thread_id thread_get_current_thread_id(void)
+{
+    struct thread *t = thread_get_current_thread();
+    return t ? t->id : 0;
 }
 int thread_wait_on_thread(thread_id id, int *retcode);
 

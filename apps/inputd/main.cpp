@@ -9,10 +9,10 @@ using os::gui::Event;
 
 int main(int argc, char **argv)
 {
-	InputServer *srv = new InputServer;
-	srv->Run();
-	delete srv;
+    InputServer *srv = new InputServer;
+    srv->Run();
+    delete srv;
 
-	return 0;
+    return 0;
 }
 

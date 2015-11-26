@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -8,12 +8,12 @@
 
 int arch_cpu_init(kernel_args *ka)
 {
-	return 0;
+    return 0;
 }
 
 int arch_cpu_init2(kernel_args *ka)
 {
-	return 0;
+    return 0;
 }
 
 void arch_cpu_idle(void)

@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright 2001, Travis Geiselbrecht. All rights reserved.
 ** Distributed under the terms of the NewOS License.
 */
@@ -9,8 +9,8 @@
 
 // kernel args
 typedef struct {
-	// architecture specific
-	int foo;
+    // architecture specific
+    int foo;
 } arch_kernel_args;
 
 #endif

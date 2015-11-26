@@ -9,17 +9,17 @@
 
 // intercpu messages
 enum {
-	SMP_MSG_INVL_PAGE_RANGE = 0,
-	SMP_MSG_INVL_PAGE_LIST,
-	SMP_MSG_GLOBAL_INVL_PAGE,
-	SMP_MSG_RESCHEDULE,
-	SMP_MSG_CPU_HALT,
-	SMP_MSG_1,
+    SMP_MSG_INVL_PAGE_RANGE = 0,
+    SMP_MSG_INVL_PAGE_LIST,
+    SMP_MSG_GLOBAL_INVL_PAGE,
+    SMP_MSG_RESCHEDULE,
+    SMP_MSG_CPU_HALT,
+    SMP_MSG_1,
 };
 
 enum {
-	SMP_MSG_FLAG_ASYNC = 0,
-	SMP_MSG_FLAG_SYNC,
+    SMP_MSG_FLAG_ASYNC = 0,
+    SMP_MSG_FLAG_SYNC,
 };
 
 int smp_init(kernel_args *ka);
@@ -50,10 +50,10 @@ static inline int smp_trap_non_boot_cpus(kernel_args *ka, int cpu) { return 0; }
 static inline void smp_wake_up_all_non_boot_cpus(void) {}
 static inline void smp_wait_for_ap_cpus(kernel_args *ka) {}
 
-static inline void smp_send_ici(int target_cpu, int message, unsigned long data, 
-	unsigned long data2, unsigned long data3, void *data_ptr, int flags) {}
-static inline void smp_send_broadcast_ici(int message, unsigned long data, 
-	unsigned long data2, unsigned long data3, void *data_ptr, int flags) {}
+static inline void smp_send_ici(int target_cpu, int message, unsigned long data,
+                                unsigned long data2, unsigned long data3, void *data_ptr, int flags) {}
+static inline void smp_send_broadcast_ici(int message, unsigned long data,
+        unsigned long data2, unsigned long data3, void *data_ptr, int flags) {}
 static inline int smp_enable_ici(void) { return 0; }
 static inline int smp_disable_ici(void) { return 0; }
 

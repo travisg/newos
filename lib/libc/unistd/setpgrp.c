@@ -6,9 +6,9 @@
 #include <errno.h>
 #include <sys/syscalls.h>
 
-int 
+int
 setpgrp(void)
 {
-	return _kern_setpgid((proc_id)0, (pgrp_id)0);
+    return _kern_setpgid((proc_id)0, (pgrp_id)0);
 }
 

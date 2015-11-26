@@ -7,6 +7,6 @@
 double
 ldexp (double value, int exp)
 {
-	/* XXX Bad */
-	return value;
+    /* XXX Bad */
+    return value;
 }

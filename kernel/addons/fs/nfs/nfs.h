@@ -14,42 +14,42 @@
 
 /* fs structure */
 typedef struct nfs_fs {
-	fs_id id;
-	mutex lock;
+    fs_id id;
+    mutex lock;
 
-	void *handle_hash;
+    void *handle_hash;
 
-	struct nfs_vnode *root_vnode;
+    struct nfs_vnode *root_vnode;
 
-	rpc_state rpc;
-	netaddr server_addr;
-	int mount_port;
-	int nfs_port;
+    rpc_state rpc;
+    netaddr server_addr;
+    int mount_port;
+    int nfs_port;
 
-	char server_path[MNTPATHLEN];
+    char server_path[MNTPATHLEN];
 } nfs_fs;
 
 /* vnode structure */
 typedef struct nfs_vnode {
-	struct nfs_vnode *hash_next; // next in the per mount vnode table
-	nfs_fs *fs;
-	mutex lock;
-	stream_type st;
-	nfs_fhandle nfs_handle;
+    struct nfs_vnode *hash_next; // next in the per mount vnode table
+    nfs_fs *fs;
+    mutex lock;
+    stream_type st;
+    nfs_fhandle nfs_handle;
 } nfs_vnode;
 
 typedef struct nfs_cookie {
-	nfs_vnode *v;
-	union {
-		struct nfs_dircookie {
-			unsigned int nfscookie;
-			bool at_end;
-		} dir;
-		struct nfs_filecookie {
-			off_t pos;
-			int oflags;
-		} file;
-	} u;
+    nfs_vnode *v;
+    union {
+        struct nfs_dircookie {
+            unsigned int nfscookie;
+            bool at_end;
+        } dir;
+        struct nfs_filecookie {
+            off_t pos;
+            int oflags;
+        } file;
+    } u;
 } nfs_cookie;
 
 #define VNODETOVNID(vno) ((vnode_id)((addr_t)(vno)))
@@ -85,7 +85,7 @@ int nfs_unlink(fs_cookie fs, fs_vnode dir, const char *name);
 int nfs_rename(fs_cookie fs, fs_vnode olddir, const char *oldname, fs_vnode newdir, const char *newname);
 
 int nfs_mkdir(fs_cookie _fs, fs_vnode _base_dir, const char *name);
-	int nfs_rmdir(fs_cookie _fs, fs_vnode _base_dir, const char *name);
+int nfs_rmdir(fs_cookie _fs, fs_vnode _base_dir, const char *name);
 
 int nfs_rstat(fs_cookie fs, fs_vnode v, struct file_stat *stat);
 int nfs_wstat(fs_cookie fs, fs_vnode v, struct file_stat *stat, int stat_mask);
