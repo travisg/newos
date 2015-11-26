@@ -1,13 +1,3 @@
-
 LIBS_DIR := lib
 
-include $(addsuffix /makefile, $(addprefix $(LIBS_DIR)/, \
-	glue \
-	libc \
-	libm \
-	libnewos \
-	libsocket \
-	libwin \
-))
-
-
+include $(wildcard $(LIBS_DIR)/*/makefile)

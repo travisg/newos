@@ -1,7 +1,6 @@
 # main kernel make file
 MY_TARGET := $(KERNEL)
 MY_TARGETLIB := $(LIBKERNEL)
-ifeq ($(call FINDINLIST,$(MY_TARGET),$(ALL)),1)
 
 LINKHACK = $(KERNEL_BUILD_DIR)/linkhack
 
@@ -53,6 +52,4 @@ $(LINKHACK).o: $(KERNEL_DIR)/linkhack.c
 
 $(LINKHACK).so: $(LINKHACK).o
 	$(LD) $(GLOBAL_LDFLAGS) --shared -Bdynamic $< -o $@
-
-endif
 

@@ -1,3 +1,6 @@
+# only build this if FORCE_BUILD is set or MY_TARGET is in the ALL list
+ifeq ($(if $(FORCE_BUILD),1,$(call FINDINLIST,$(MY_TARGET),$(ALL))),1)
+
 MY_TARGET_IN := $(MY_TARGET)
 MY_TARGETDIR_IN := $(MY_TARGETDIR)
 MY_SRCDIR_IN := $(MY_SRCDIR)
@@ -38,6 +41,8 @@ $(MY_TARGET_IN): $(_TEMP_OBJS)
 	$(NOECHO)$(LD) $(GLOBAL_LDFLAGS) -r -o $@ $^
 
 include templates/compile.mk
+
+endif # find in ALL
 
 MY_TARGET :=
 MY_TARGETDIR :=

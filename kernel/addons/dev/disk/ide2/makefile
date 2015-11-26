@@ -1,7 +1,6 @@
 MY_SRCDIR := $(GET_LOCAL_DIR)
 MY_TARGETDIR := $(call TOBUILDDIR, $(MY_SRCDIR))
 MY_TARGET := $(MY_TARGETDIR)/ide2
-ifeq ($(call FINDINLIST,$(MY_TARGET),$(ALL)),1)
 
 MY_SRCS := \
 	ata_ide_drive.c \
@@ -14,5 +13,3 @@ MY_SRCS := \
 	pci_ide_bus.c
 
 include templates/kernel_addons.mk
-
-endif

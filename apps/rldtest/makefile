@@ -1,8 +1,8 @@
 # app makefile
+LOCAL_DIR := $(GET_LOCAL_DIR)
+MY_SRCDIR := $(LOCAL_DIR)
 MY_TARGETDIR := $(APPS_BUILD_DIR)/rldtest
-MY_SRCDIR := $(APPS_DIR)/rldtest
 MY_TARGET :=  $(MY_TARGETDIR)/rldtest
-ifeq ($(call FINDINLIST,$(MY_TARGET),$(ALL)),1)
 
 MY_SRCS := \
 	rldtest.c
@@ -13,8 +13,8 @@ MY_DEPS := $(MY_TARGETDIR)/librldtest.so $(MY_TARGETDIR)/girlfriend.so
 include templates/app.mk
 
 # build the librldtest.so object
+MY_SRCDIR := $(LOCAL_DIR)
 MY_TARGETDIR := $(APPS_BUILD_DIR)/rldtest
-MY_SRCDIR := $(APPS_DIR)/rldtest
 MY_TARGET := $(MY_TARGETDIR)/librldtest.so
 
 MY_SRCS := \
@@ -23,8 +23,8 @@ MY_SRCS := \
 include templates/lib.mk
 
 # build the girlfriend.so object
+MY_SRCDIR := $(LOCAL_DIR)
 MY_TARGETDIR := $(APPS_BUILD_DIR)/rldtest
-MY_SRCDIR := $(APPS_DIR)/rldtest
 MY_TARGET := $(MY_TARGETDIR)/girlfriend.so
 
 MY_SRCS := \
@@ -32,4 +32,3 @@ MY_SRCS := \
 
 include templates/lib.mk
 
-endif

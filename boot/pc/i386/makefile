@@ -28,6 +28,7 @@ MY_LIBS := $(LIBS_BUILD_DIR)/libc.a
 MY_LIBPATHS :=
 MY_DEPS := $(MY_LIBS)
 MY_LINKSCRIPT := $(MY_SRCDIR)/stage2.ld
+FORCE_BUILD := 1
 
 include templates/simple_object.mk
 
@@ -48,6 +49,7 @@ MY_LIBS := $(LIBS_BUILD_DIR)/libc.a
 MY_LIBPATHS :=
 MY_DEPS := $(MY_LIBS)
 MY_LINKSCRIPT := $(MY_SRCDIR)/stage1.ld
+FORCE_BUILD := 1
 
 include templates/simple_object.mk
 
@@ -67,6 +69,7 @@ MY_LIBS :=
 MY_LIBPATHS :=
 MY_DEPS := 
 MY_LINKSCRIPT := $(MY_SRCDIR)/bootblock.ld
+FORCE_BUILD := 1
 
 include templates/simple_object.mk
 
@@ -75,6 +78,7 @@ MAKEFLOPSRC := $(BOOT_SRCDIR)/makeflop.c
 CONFIG_FILE := $(BOOT_SRCDIR)/config.ini
 
 $(FINAL): $(BOOTBLOCK) $(STAGE1) $(STAGE2) $(ALL) $(TOOLS) $(MAKEFLOP) $(CONFIG_FILE) $(BOOTBLOCK)
+	$(MKDIR)
 	$(BOOTMAKER) --strip-debug --strip-binary $(STRIP) $(CONFIG_FILE) -o $(FINAL).prepre
 	gzip -f -9 $(FINAL).prepre
 	cat $(STAGE1) $(FINAL).prepre.gz > $(FINAL).pre
@@ -83,13 +87,16 @@ $(FINAL): $(BOOTBLOCK) $(STAGE1) $(STAGE2) $(ALL) $(TOOLS) $(MAKEFLOP) $(CONFIG_
 	#@rm -f $(FINAL).pre $(FINAL).prepre $(FINAL).prepre.gz
 
 $(STAGE1): $(STAGE1).elf
+	$(MKDIR)
 	$(OBJCOPY) -O binary $< $@
 
 $(BOOTBLOCK): $(BOOTBLOCK).elf
+	$(MKDIR)
 	$(OBJCOPY) -O binary $< $@
 	$(OBJDUMP) -mi8086 -d $< > $@.16-bit.lst
 
 disk: $(FINAL)
+	$(MKDIR)
 ifeq ($(OSTYPE),cygwin)
 	fdimage -q $(FINAL) $(BOOT_IMAGE_TARGET)
 else
@@ -97,5 +104,6 @@ else
 endif
 
 $(MAKEFLOP): $(MAKEFLOPSRC)
+	$(MKDIR)
 	$(HOST_CC) -O $(MAKEFLOPSRC) -o $@
 

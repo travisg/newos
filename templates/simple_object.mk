@@ -1,3 +1,6 @@
+# only build this if FORCE_BUILD is set or MY_TARGET is in the ALL list
+ifeq ($(if $(FORCE_BUILD),1,$(call FINDINLIST,$(MY_TARGET),$(ALL))),1)
+
 MY_TARGET_IN := $(MY_TARGET)
 MY_TARGETDIR_IN := $(MY_TARGETDIR)
 MY_SRCDIR_IN := $(MY_SRCDIR)
@@ -13,7 +16,13 @@ MY_LIBPATHS_IN := $(MY_LIBPATHS)
 MY_DEPS_IN := $(MY_DEPS)
 MY_LINKSCRIPT_IN := $(MY_LINKSCRIPT)
 
-#$(warning MY_OBJS = $(MY_OBJS))
+# if the targetdir isn't passed in, construct it from the srcdir path
+ifeq ($(MY_TARGETDIR_IN),)
+MY_TARGETDIR_IN := $(call TOBUILDDIR,$(MY_SRCDIR_IN))
+endif
+
+#$(warning MY_SRCDIR_IN = $(MY_SRCDIR_IN))
+#$(warning MY_TARGETDIR_IN = $(MY_TARGETDIR_IN))
 
 # extract the different source types out of the list
 #$(warning MY_SRCS_IN = $(MY_SRCS_IN))
@@ -52,6 +61,8 @@ $(MY_TARGET_IN):: $(_TEMP_OBJS) $(MY_DEPS_IN) $(MY_GLUE_IN)
 
 include templates/compile.mk
 
+endif # find in ALL
+
 MY_TARGET :=
 MY_TARGETDIR :=
 MY_SRCDIR :=
@@ -66,3 +77,4 @@ MY_LIBS :=
 MY_LIBPATHS :=
 MY_DEPS :=
 MY_LINKSCRIPT :=
+FORCE_BUILD :=
