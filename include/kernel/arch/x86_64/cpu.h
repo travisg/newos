@@ -136,29 +136,25 @@ void x86_64_fsave_swap(void *old_fpu_state, void *new_fpu_state);
 void x86_64_fxsave_swap(void *old_fpu_state, void *new_fpu_state);
 uint64 x86_64_rdtsc(void);
 
-addr_t read_cr3(void);
-extern inline addr_t read_cr3(void) {
+static inline addr_t read_cr3(void) {
 	addr_t val;
 	__asm__("mov	%%cr3,%0" : "=r" (val));
 	return val;
 }
 
-addr_t read_rbp(void);
-extern inline addr_t read_rbp(void) {
+static inline addr_t read_rbp(void) {
 	addr_t val;
 	__asm__("mov	%%rbp,%0" : "=r" (val));
 	return val;
 }
 
-addr_t read_dr3(void);
-extern inline addr_t read_dr3(void) {
+static inline addr_t read_dr3(void) {
 	addr_t val;
 	__asm__("mov	%%dr3,%0" : "=r" (val));
 	return val;
 }
 
-void write_dr3(addr_t val);
-extern inline void write_dr3(addr_t val) {
+static inline void write_dr3(addr_t val) {
 	__asm__("mov	%0,%%dr3" :: "r" (val));
 }
 

@@ -29,8 +29,7 @@ int net_timer_init(void);
 int set_net_timer(net_timer_event *e, unsigned int delay_ms, net_timer_callback callback, void *args, int flags);
 int cancel_net_timer(net_timer_event *e);
 
-void clear_net_timer(net_timer_event *e);
-extern inline void clear_net_timer(net_timer_event *e)
+static inline void clear_net_timer(net_timer_event *e)
 {
 	e->prev = e->next = NULL;
 	e->pending = false;

@@ -11,11 +11,11 @@ void x86_64_push_iframe(struct iframe *frame);
 void x86_64_pop_iframe(void);
 struct iframe *x86_64_get_curr_iframe(void);
 
-extern inline struct thread *arch_thread_get_current_thread(void) {
+static inline struct thread *arch_thread_get_current_thread(void) {
 	return (struct thread *)read_dr3();
 }
 
-extern inline void arch_thread_set_current_thread(struct thread *t) {
+static inline void arch_thread_set_current_thread(struct thread *t) {
 	write_dr3((addr_t)t);
 }
 

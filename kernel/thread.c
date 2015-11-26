@@ -530,13 +530,6 @@ int thread_suspend_thread(thread_id id)
 	return send_signal_etc(id, SIGSTOP, SIG_FLAG_NO_RESCHED);
 }
 
-thread_id thread_get_current_thread_id(void)
-{
-	struct thread *t = thread_get_current_thread();
-
-	return t ? t->id : 0;
-}
-
 int thread_resume_thread(thread_id id)
 {
 	return send_signal_etc(id, SIGCONT, SIG_FLAG_NO_RESCHED);

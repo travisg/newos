@@ -46,24 +46,24 @@ void release_spinlock(spinlock_t *lock);
 
 #if !_WITH_SMP
 // configuration does not support SMP
-extern inline int smp_trap_non_boot_cpus(kernel_args *ka, int cpu) { return 0; }
-extern inline void smp_wake_up_all_non_boot_cpus(void) {}
-extern inline void smp_wait_for_ap_cpus(kernel_args *ka) {}
+static inline int smp_trap_non_boot_cpus(kernel_args *ka, int cpu) { return 0; }
+static inline void smp_wake_up_all_non_boot_cpus(void) {}
+static inline void smp_wait_for_ap_cpus(kernel_args *ka) {}
 
-extern inline void smp_send_ici(int target_cpu, int message, unsigned long data, 
+static inline void smp_send_ici(int target_cpu, int message, unsigned long data, 
 	unsigned long data2, unsigned long data3, void *data_ptr, int flags) {}
-extern inline void smp_send_broadcast_ici(int message, unsigned long data, 
+static inline void smp_send_broadcast_ici(int message, unsigned long data, 
 	unsigned long data2, unsigned long data3, void *data_ptr, int flags) {}
-extern inline int smp_enable_ici(void) { return 0; }
-extern inline int smp_disable_ici(void) { return 0; }
+static inline int smp_enable_ici(void) { return 0; }
+static inline int smp_disable_ici(void) { return 0; }
 
-extern inline int smp_get_num_cpus(void) { return 1; }
-extern inline void smp_set_num_cpus(int num_cpus) {}
-extern inline int smp_get_current_cpu(void) { return 0; }
+static inline int smp_get_num_cpus(void) { return 1; }
+static inline void smp_set_num_cpus(int num_cpus) {}
+static inline int smp_get_current_cpu(void) { return 0; }
 
 // spinlock functions
-extern inline void acquire_spinlock(spinlock_t *lock) {}
-extern inline void release_spinlock(spinlock_t *lock) {}
+static inline void acquire_spinlock(spinlock_t *lock) {}
+static inline void release_spinlock(spinlock_t *lock) {}
 
 #endif
 

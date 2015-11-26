@@ -39,11 +39,9 @@ int cpu_preboot_init(kernel_args *ka);
 int cpu_init(kernel_args *ka);
 int cpu_init_percpu(kernel_args *ka, int curr_cpu);
 
-cpu_ent *get_cpu_struct(int cpu_num);
-extern inline cpu_ent *get_cpu_struct(int cpu_num) { return &cpu[cpu_num]; }
+static inline cpu_ent *get_cpu_struct(int cpu_num) { return &cpu[cpu_num]; }
 
-cpu_ent *get_curr_cpu_struct(void);
-extern inline cpu_ent *get_curr_cpu_struct(void) { 
+static inline cpu_ent *get_curr_cpu_struct(void) { 
 	struct thread *t = thread_get_current_thread();
 	if(t)
 		return t->cpu;

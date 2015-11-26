@@ -22,8 +22,8 @@ void arch_thread_dump_info(void *info);
 void arch_thread_enter_uspace(struct thread *t, addr_t entry, void *args, addr_t ustack_top);
 void arch_thread_switch_kstack_and_call(addr_t new_kstack, void (*func)(void *), void *arg);
 
-struct thread *arch_thread_get_current_thread(void);
-void arch_thread_set_current_thread(struct thread *t);
+static struct thread *arch_thread_get_current_thread(void);
+static void arch_thread_set_current_thread(struct thread *t);
 
 int arch_setup_signal_frame(struct thread *t, struct sigaction *sa, int sig, int sig_mask);
 int64 arch_restore_signal_frame(void);
